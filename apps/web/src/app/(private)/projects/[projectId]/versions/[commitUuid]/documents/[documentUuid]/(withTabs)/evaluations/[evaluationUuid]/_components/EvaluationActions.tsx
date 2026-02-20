@@ -17,9 +17,9 @@ import EvaluationV2Form, {
 } from '$/components/evaluations/EvaluationV2Form'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
-import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   EvaluationMetric,
@@ -66,8 +66,6 @@ export function EvaluationActions<
     <div className='flex flex-row items-center gap-4'>
       {evaluation.type === EvaluationType.Llm && (
         <EditPrompt
-          project={project}
-          commit={commit}
           document={document}
           evaluation={
             evaluation as EvaluationV2<EvaluationType.Llm, LlmEvaluationMetric>
@@ -98,44 +96,29 @@ export function EvaluationActions<
 }
 
 function EditPrompt<M extends LlmEvaluationMetric>({
-  project,
-  commit,
   document,
   evaluation,
   cloneEvaluation,
   isCloningEvaluation,
 }: {
-  project: IProjectContextType['project']
-  commit: ICommitContextType['commit']
   document: DocumentVersion
   evaluation: EvaluationV2<EvaluationType.Llm, M>
   cloneEvaluation: ReturnType<typeof useEvaluationsV2>['cloneEvaluation']
   isCloningEvaluation: boolean
 }) {
   const navigate = useNavigate()
+  const { evaluationEditor } = useEvaluationRoutes()
   const cloneModal = useToggleModal()
-
-  const baseEvaluationRoute = useCallback(
-    ({ evaluationUuid }: { evaluationUuid: string }) =>
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({ uuid: commit.uuid })
-        .documents.detail({ uuid: document.documentUuid })
-        .evaluations.detail({ uuid: evaluationUuid }),
-    [project.id, commit.uuid, document.documentUuid],
-  )
 
   const onClickEditPrompt = useCallback(() => {
     if (evaluation.metric.startsWith(LlmEvaluationMetric.Custom)) {
-      return navigate.push(
-        baseEvaluationRoute({ evaluationUuid: evaluation.uuid }).editor.root,
-      )
+      return navigate.push(evaluationEditor(evaluation.uuid))
     }
 
     return cloneModal.onOpen()
   }, [
     evaluation.metric,
-    baseEvaluationRoute,
+    evaluationEditor,
     cloneModal,
     navigate,
     evaluation.uuid,
@@ -151,16 +134,13 @@ function EditPrompt<M extends LlmEvaluationMetric>({
 
     cloneModal.onClose()
 
-    const newEvaluationUrl = baseEvaluationRoute({
-      evaluationUuid: result.evaluation.uuid,
-    }).editor.root
-    navigate.push(newEvaluationUrl)
+    navigate.push(evaluationEditor(result.evaluation.uuid))
   }, [
     isCloningEvaluation,
     cloneEvaluation,
     evaluation,
     navigate,
-    baseEvaluationRoute,
+    evaluationEditor,
     cloneModal,
     document.documentUuid,
   ])

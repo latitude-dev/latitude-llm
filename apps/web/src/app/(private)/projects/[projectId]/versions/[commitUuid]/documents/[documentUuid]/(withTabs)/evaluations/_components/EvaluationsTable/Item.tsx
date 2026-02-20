@@ -1,9 +1,7 @@
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
 import { EvaluationType, EvaluationV2 } from '@latitude-data/core/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import {
@@ -38,9 +36,7 @@ export function EvaluationTableItem({
   isDeletingEvaluation: boolean
 }) {
   const navigate = useNavigate()
-
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
+  const { evaluationDetail } = useEvaluationRoutes()
   const { document } = useCurrentDocument()
 
   const specification = getEvaluationMetricSpecification(evaluation)
@@ -118,17 +114,7 @@ export function EvaluationTableItem({
     <TableRow
       key={evaluation.uuid}
       className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border transition-colors'
-      onClick={() =>
-        navigate.push(
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: commit.uuid })
-            .documents.detail({
-              uuid: document.documentUuid,
-            })
-            .evaluations.detail({ uuid: evaluation.uuid }).root,
-        )
-      }
+      onClick={() => navigate.push(evaluationDetail(evaluation.uuid))}
     >
       <TableCell>
         <div className='flex items-center justify-between gap-2 truncate'>

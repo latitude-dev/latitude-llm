@@ -1,23 +1,22 @@
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import EvaluationV2Form, {
   EvaluationV2FormErrors,
 } from '$/components/evaluations/EvaluationV2Form'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
+import {
+  EvaluationOptions,
+  EvaluationSettings,
+} from '@latitude-data/core/constants'
 import { FormWrapper } from '@latitude-data/web-ui/atoms/FormWrapper'
 import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TextArea } from '@latitude-data/web-ui/atoms/TextArea'
 import { FakeProgress } from '@latitude-data/web-ui/molecules/FakeProgress'
 import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useMemo, useState } from 'react'
-import {
-  EvaluationOptions,
-  EvaluationSettings,
-} from '@latitude-data/core/constants'
 
 const DEFAULT_EVALUATION_OPTIONS = {
   evaluateLiveLogs: true,
@@ -41,7 +40,7 @@ export function EvaluationsGenerator({
   isGeneratingEvaluation: boolean
 }) {
   const navigate = useNavigate()
-  const { project } = useCurrentProject()
+  const { evaluationDetail } = useEvaluationRoutes()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const [instructions, setInstructions] = useState<string>()
@@ -89,14 +88,7 @@ export function EvaluationsGenerator({
       setOptions(DEFAULT_EVALUATION_OPTIONS)
       setErrors(undefined)
 
-      const { evaluation } = result
-      navigate.push(
-        ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid })
-          .documents.detail({ uuid: document.documentUuid })
-          .evaluations.detail({ uuid: evaluation.uuid }).root,
-      )
+      navigate.push(evaluationDetail(result.evaluation.uuid))
     }
   }, [
     isCreatingEvaluation,
@@ -108,10 +100,9 @@ export function EvaluationsGenerator({
     setOptions,
     setErrors,
     setOpen,
-    project,
-    commit,
     document,
     navigate,
+    evaluationDetail,
   ])
 
   const step = useMemo(() => {
