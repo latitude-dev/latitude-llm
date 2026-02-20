@@ -12,19 +12,15 @@ export const TRACE_SPAN_SELECTION_PARAMS = Object.values(
   TRACE_SPAN_SELECTION_PARAM_KEYS,
 )
 
-export function buildTraceUrl({
-  projectId,
-  commitUuid,
-  documentUuid,
+export function buildTraceUrlWithParams({
+  routePath,
   span,
   expandedDocumentLogUuid,
 }: {
-  projectId: number
-  commitUuid: string
-  documentUuid: string
+  routePath: string
   span: Pick<Span, 'id' | 'documentLogUuid'>
   expandedDocumentLogUuid?: string
-}) {
+}): string {
   const params = new URLSearchParams()
   params.set(TRACE_SPAN_SELECTION_PARAM_KEYS.spanId, span.id)
   if (span.documentLogUuid) {
@@ -40,11 +36,28 @@ export function buildTraceUrl({
       expandedUuid,
     )
   }
-  return (
-    ROUTES.projects
+  return `${routePath}?${params.toString()}`
+}
+
+export function buildTraceUrl({
+  projectId,
+  commitUuid,
+  documentUuid,
+  span,
+  expandedDocumentLogUuid,
+}: {
+  projectId: number
+  commitUuid: string
+  documentUuid: string
+  span: Pick<Span, 'id' | 'documentLogUuid'>
+  expandedDocumentLogUuid?: string
+}) {
+  return buildTraceUrlWithParams({
+    routePath: ROUTES.projects
       .detail({ id: projectId })
       .commits.detail({ uuid: commitUuid })
-      .documents.detail({ uuid: documentUuid }).traces.root +
-    `?${params.toString()}`
-  )
+      .documents.detail({ uuid: documentUuid }).traces.root,
+    span,
+    expandedDocumentLogUuid,
+  })
 }

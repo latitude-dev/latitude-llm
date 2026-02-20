@@ -175,8 +175,25 @@ export const ROUTES = {
     detail: ({ id }: { id: number }) => {
       const root = `/projects/${id}`
       const rootCommits = `${root}/versions`
+      const rootEvaluations = `${root}/evaluations`
+      const rootTraces = `${root}/traces`
       return {
         root,
+        evaluations: {
+          root: rootEvaluations,
+          detail: ({ uuid }: { uuid: string }) => {
+            const evalRoot = `${rootEvaluations}/${uuid}`
+            return {
+              root: evalRoot,
+              [EvaluationRoutes.editor]: {
+                root: `${evalRoot}/editor`,
+              },
+            }
+          },
+        },
+        traces: {
+          root: rootTraces,
+        },
         commits: {
           root: rootCommits,
           latest: `${rootCommits}/${HEAD_COMMIT}`,
