@@ -104,13 +104,13 @@ async function getExperimentRows(
 async function getExperimentSpansRows(
   {
     workspace,
-    project,
+    projectId,
     experiment,
     document,
     count,
   }: {
     workspace: Workspace
-    project: Project
+    projectId: number
     experiment: Experiment
     document: DocumentVersion
     count: number
@@ -124,7 +124,7 @@ async function getExperimentSpansRows(
   const spanResults = shouldUseClickHouse
     ? await getExperimentPromptSpansBefore({
         workspaceId: workspace.id,
-        projectId: project.id,
+        projectId,
         documentUuid: document.documentUuid,
         before: experiment.createdAt,
         limit: count,
@@ -248,7 +248,7 @@ export async function getExperimentJobPayload(
     const rows = await getExperimentSpansRows(
       {
         workspace,
-        project,
+        projectId: commit.projectId,
         experiment,
         document,
         count: parametersSource.count,

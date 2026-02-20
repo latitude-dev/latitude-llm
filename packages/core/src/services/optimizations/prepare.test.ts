@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/constants'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import * as getSpansByEvaluationModule from '../../data-access/evaluations/getSpansByEvaluation'
-import * as getSpansByIssueModule from '../../queries/issues/getSpansByIssue'
+import * as getSpansByIssueModule from '../../queries/issues/getSpansByIssueForOptimization'
 import * as getSpansWithoutIssuesModule from '../../queries/issues/getSpansWithoutIssues'
 import * as getSpansByDocumentModule from '../../data-access/spans/getSpansByDocument'
 import { publisher } from '../../events/publisher'
@@ -342,7 +342,7 @@ describe('prepareOptimization', () => {
         .mockResolvedValue(Result.ok({ spans: [], next: null }))
 
       getSpansByIssueMock = vi
-        .spyOn(getSpansByIssueModule, 'getSpansByIssue')
+        .spyOn(getSpansByIssueModule, 'getSpansByIssueForOptimization')
         .mockResolvedValue(Result.ok({ spans: [], next: null }))
 
       getSpansWithoutIssuesMock = vi

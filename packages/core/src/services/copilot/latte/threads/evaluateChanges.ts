@@ -49,7 +49,11 @@ export async function evaluateLatteThreadChanges(
 
   const spansRepo = new SpansRepository(latteWorkspace.id, db)
   const metadataRepo = new SpanMetadatasRepository(latteWorkspace.id)
-  const span = await spansRepo.findByDocumentLogUuid(threadUuid)
+  const span = await spansRepo.findByDocumentLogUuid(threadUuid, {
+    projectId: latteProject.id,
+    commitUuid: latteCommit.uuid,
+    documentUuid: latteDocument.documentUuid,
+  })
   if (!span) {
     return Result.error(
       new NotFoundError(`Span not found with threadUuid ${threadUuid}`),

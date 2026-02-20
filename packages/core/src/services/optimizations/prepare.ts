@@ -21,7 +21,7 @@ import { interleaveList } from '../../lib/interleaveList'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { findActiveIssuesByDocument } from '../../queries/issues/findActiveByDocument'
-import { getSpansByIssue } from '../../queries/issues/getSpansByIssue'
+import { getSpansByIssueForOptimization } from '../../queries/issues/getSpansByIssueForOptimization'
 import { getSpansWithoutIssues } from '../../queries/issues/getSpansWithoutIssues'
 import { findProjectById } from '../../queries/projects/findById'
 import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
@@ -318,7 +318,7 @@ const SPANS_BATCH_SIZE = 100
 const SPANS_MAX_SEARCH = 3 // Try to search at most 3 times to get enough spans
 
 type SpanValidator = (
-  span: Span<SpanType.Prompt>,
+  span: Pick<Span<SpanType.Prompt>, 'id' | 'traceId'>,
 ) => Promise<SpanWithDetails<SpanType.Prompt> | null>
 
 function createSpanValidator({
@@ -332,7 +332,9 @@ function createSpanValidator({
   seenParameters: Set<string>
   metadatasRepository: SpanMetadatasRepository
 }): SpanValidator {
-  return async function validateSpan(span: Span<SpanType.Prompt>) {
+  return async function validateSpan(
+    span: Pick<Span<SpanType.Prompt>, 'id' | 'traceId'>,
+  ) {
     const spanhash = hashSpan(span)
     if (seenSpans.has(spanhash)) return null
 
@@ -393,7 +395,7 @@ async function getNegativeExamples({
 
       searches++
 
-      const gettingsp = await getSpansByIssue({
+      const gettingsp = await getSpansByIssueForOptimization({
         issue: issue,
         spanTypes: [SpanType.Prompt],
         commit: baselineCommit,
@@ -402,10 +404,9 @@ async function getNegativeExamples({
         limit: SPANS_BATCH_SIZE,
       })
       if (gettingsp.error) break
-      const { spans: rawSpans, next } = gettingsp.value
+      const { spans, next } = gettingsp.value
 
-      if (rawSpans.length === 0) break
-      const spans = rawSpans as Span<SpanType.Prompt>[]
+      if (spans.length === 0) break
 
       for (const span of spans) {
         if (validSpans.length >= target) break
@@ -986,6 +987,6 @@ async function createDatasets(
   })
 }
 
-function hashSpan(span: Span<SpanType.Prompt>) {
+function hashSpan(span: Pick<Span<SpanType.Prompt>, 'id' | 'traceId'>) {
   return `${span.traceId}:${span.id}`
 }

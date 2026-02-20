@@ -58,6 +58,7 @@ export async function runEvaluationV2<
 ) {
   const resultsRepository = new EvaluationResultsV2Repository(workspace.id)
   const found = await resultsRepository.findByEvaluatedSpanAndEvaluation({
+    projectId: commit.projectId,
     evaluatedSpanId: span.id,
     evaluatedTraceId: span.traceId,
     evaluationUuid: evaluation.uuid,

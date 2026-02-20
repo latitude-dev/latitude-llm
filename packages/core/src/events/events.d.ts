@@ -91,6 +91,8 @@ export type Events =
   | 'issueUnresolved'
   | 'issueIgnored'
   | 'issueUnignored'
+  | 'issueEvaluationResultLinked'
+  | 'issueEvaluationResultUnlinked'
   | 'weeklyEmailPreferenceUpdated'
   | 'escalatingIssuesEmailPreferenceUpdated'
   | 'workspaceIssuesDashboardUnlocked'
@@ -836,6 +838,24 @@ export type IssueUnignoredEvent = LatitudeEventGeneric<
   }
 >
 
+export type IssueEvaluationResultLinkedEvent = LatitudeEventGeneric<
+  'issueEvaluationResultLinked',
+  {
+    workspaceId: number
+    issueId: number
+    evaluationResultId: number
+  }
+>
+
+export type IssueEvaluationResultUnlinkedEvent = LatitudeEventGeneric<
+  'issueEvaluationResultUnlinked',
+  {
+    workspaceId: number
+    issueId: number
+    evaluationResultId: number
+  }
+>
+
 export type WeeklyEmailPreferenceUpdatedEvent = LatitudeEventGeneric<
   'weeklyEmailPreferenceUpdated',
   {
@@ -1030,6 +1050,8 @@ export type LatitudeEvent =
   | IssueUnresolvedEvent
   | IssueIgnoredEvent
   | IssueUnignoredEvent
+  | IssueEvaluationResultLinkedEvent
+  | IssueEvaluationResultUnlinkedEvent
   | EvaluationQueuedEvent
   | EvaluationStartedEvent
   | EvaluationProgressEvent
@@ -1118,6 +1140,8 @@ export interface IEventsHandlers {
   issueUnresolved: EventHandler<IssueUnresolvedEvent>[]
   issueIgnored: EventHandler<IssueIgnoredEvent>[]
   issueUnignored: EventHandler<IssueUnignoredEvent>[]
+  issueEvaluationResultLinked: EventHandler<IssueEvaluationResultLinkedEvent>[]
+  issueEvaluationResultUnlinked: EventHandler<IssueEvaluationResultUnlinkedEvent>[]
   evaluationQueued: EventHandler<EvaluationQueuedEvent>[]
   evaluationStarted: EventHandler<EvaluationStartedEvent>[]
   evaluationProgress: EventHandler<EvaluationProgressEvent>[]

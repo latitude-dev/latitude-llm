@@ -10,9 +10,9 @@ export const notifyClientOfConversationUpdated = async ({
 }: {
   data: SpanCreatedEvent
 }): Promise<void> => {
-  const { workspaceId, spanId, traceId, documentUuid } = data.data
+  const { workspaceId, spanId, traceId, commitUuid, documentUuid } = data.data
 
-  if (!documentUuid) return
+  if (!documentUuid || !commitUuid) return
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) return
@@ -24,14 +24,15 @@ export const notifyClientOfConversationUpdated = async ({
   const span = result.value
   if (!span || !isMainSpan(span)) return
   if (!span.documentLogUuid) return
+  if (!span.projectId) return
 
   // TODO(clickhouse): some spans won't have commit / document uuids
   const conversationResult = await fetchConversation({
     workspace,
     projectId: span.projectId,
-    documentUuid: span.documentUuid,
-    commitUuid: span.commitUuid,
     documentLogUuid: span.documentLogUuid,
+    commitUuid,
+    documentUuid,
   })
 
   if (!conversationResult.ok || !conversationResult.value) return

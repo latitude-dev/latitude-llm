@@ -18,17 +18,14 @@ export async function getResultsForConversation(
   },
   db = database,
 ) {
-  const spansRepository = new SpansRepository(workspace.id, db)
-  const traceIds = await spansRepository.listTraceIdsByLogUuid(conversationId)
+  const useClickHouse = await isClickHouseEvaluationResultsReadEnabled(
+    workspace.id,
+    db,
+  )
 
-  if (traceIds.length === 0) {
-    return Result.ok<ResultWithEvaluationV2[]>([])
-  }
-
-  const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
-  const resultsData = await resultsRepository
-    .listByTraceIds(traceIds)
-    .then((r) => r.unwrap())
+  const resultsData = useClickHouse
+    ? await getResultsFromClickHouse({ workspace, conversationId }, db)
+    : await getResultsFromPostgres({ workspace, conversationId }, db)
 
   if (resultsData.length === 0) {
     return Result.ok<ResultWithEvaluationV2[]>([])
@@ -65,4 +62,32 @@ export async function getResultsForConversation(
   }
 
   return Result.ok<ResultWithEvaluationV2[]>(resultsWithEvaluations)
+}
+
+async function getResultsFromClickHouse(
+  {
+    workspace,
+    conversationId,
+  }: { workspace: Workspace; conversationId: string },
+  db = database,
+) {
+  const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
+  return resultsRepository
+    .listBySessionId(conversationId)
+    .then((r) => r.unwrap())
+}
+
+async function getResultsFromPostgres(
+  {
+    workspace,
+    conversationId,
+  }: { workspace: Workspace; conversationId: string },
+  db = database,
+) {
+  const spansRepository = new SpansRepository(workspace.id, db)
+  const traceIds = await spansRepository.listTraceIdsByLogUuid(conversationId)
+  if (traceIds.length === 0) return []
+
+  const resultsRepository = new EvaluationResultsV2Repository(workspace.id, db)
+  return resultsRepository.listByTraceIds(traceIds).then((r) => r.unwrap())
 }

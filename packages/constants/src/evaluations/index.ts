@@ -243,11 +243,11 @@ export type EvaluationResultV2<
   evaluatedTraceId?: string | null
   createdAt: Date
   updatedAt: Date
+  error: EvaluationResultError | null
 } & EvaluationResultValue<T, M>
 
 export type PublicManualEvaluationResultV2 = Pick<
   EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>,
-  | 'uuid'
   | 'score'
   | 'normalizedScore'
   | 'metadata'
