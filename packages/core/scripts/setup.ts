@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import fs from 'fs'
 import { database } from '../src/client'
+import { runMigrations } from './migrations/runMigrations'
 import { users } from '../src/schema/models/users'
 import { workspaces } from '../src/schema/models/workspaces'
 import { projects } from '../src/schema/models/projects'
@@ -456,6 +457,10 @@ async function main() {
   console.log(`  - Prompts created: ${created}`)
   console.log(`  - Prompts updated: ${updated}`)
   console.log(`  - Total prompts: ${promptFiles.length}`)
+
+  // Run SQL migrations
+  console.log(`\n--- Running SQL migrations ---`)
+  await runMigrations()
 }
 
 main()
