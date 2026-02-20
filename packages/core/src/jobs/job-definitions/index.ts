@@ -32,6 +32,7 @@ export * from '../../events/handlers/stopDeploymentTestsForCommitHandler'
 export * from '../../events/handlers/enqueueShadowTestChallenger'
 export * from '../../events/handlers/notifyClientOfOptimizationStatus'
 export * from '../../events/handlers/unassignIssuesOnDocumentsDeleted'
+export * from '../../events/handlers/createInstantlyLead'
 
 // Jobs
 export * from './datasets/createDatasetFromSpansJob'

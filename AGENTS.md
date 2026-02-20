@@ -21,15 +21,11 @@ Before writing any code, load the `coding-standards` skill (`/coding-standards`)
 - `pnpm prettier` - Format code
 - `pnpm tc` - Type check all packages
 - `pnpm catchup` - Installs dependencies and builds required internal packages. ALWAYS run this command when starting a new worktree.
-- `pnpm test` - Run all tests. NEVER run this command against the whole repo, only against packages you are working on, and one at a time, otherwise the host machine will run out of memory.
+- `pnpm test` - Run all tests. NEVER run this command against the whole repo, only against packages you are working on, and one at a time, otherwise the host machine will run out of memory. If `pnpm test` does not work, stop—do not use workarounds. Never use `pnpm exec vitest` or `npx vitest`; run tests only via `pnpm test` from the package directory.
 
 ### Running Tests
 
-To run tests for a specific package, `cd` into the package directory first and use `npx vitest` directly. Do NOT use `pnpm --filter` for running tests, as it fails due to permission issues.
-
-```bash
-cd packages/core && npx vitest run src/path/to/test.ts --no-coverage
-```
+To run tests for a specific package, `cd` into the package directory and run `pnpm test` (optionally with a path or pattern to limit scope). Do NOT use `pnpm --filter` for running tests, as it fails due to permission issues. Do NOT use `pnpm exec vitest` or `npx vitest`. If `pnpm test` fails, stop and report; do not fall back to other test runners.
 
 ## Code Style
 
