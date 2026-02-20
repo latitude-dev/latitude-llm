@@ -1,39 +1,46 @@
-import { randomBytes } from 'crypto'
+import { getData } from '$/common/documents/getData'
+import { AppRouteHandler } from '$/openApi/types'
+import { cache as redis } from '@latitude-data/core/cache'
 import { database } from '@latitude-data/core/client'
 import {
-  LogSources,
-  PromptSpanMetadata,
+  ATTRIBUTES,
   CompletionSpanMetadata,
+  LogSources,
+  Message,
+  PromptSpanMetadata,
   SPAN_METADATA_STORAGE_KEY,
   SpanKind,
   SpanStatus,
   SpanType,
-  ATTRIBUTES,
 } from '@latitude-data/core/constants'
-import { cache as redis } from '@latitude-data/core/cache'
 import { diskFactory } from '@latitude-data/core/lib/disk'
 import { compressString } from '@latitude-data/core/lib/disk/compression'
 import { LatitudeError } from '@latitude-data/core/lib/errors'
-import { publishSpanCreated } from '@latitude-data/core/services/tracing/publishSpanCreated'
-import { bulkCreate as bulkCreateClickHouseSpans } from '@latitude-data/core/services/tracing/spans/clickhouse/bulkCreate'
-import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
-import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
 import {
   DEFAULT_RETENTION_PERIOD_DAYS,
   SubscriptionPlans,
 } from '@latitude-data/core/plans'
+import { spans } from '@latitude-data/core/schema/models/spans'
+import type { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
+import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { findWorkspaceSubscription } from '@latitude-data/core/services/subscriptions/data-access/find'
+import { publishSpanCreated } from '@latitude-data/core/services/tracing/publishSpanCreated'
+import { bulkCreate as bulkCreateClickHouseSpans } from '@latitude-data/core/services/tracing/spans/clickhouse/bulkCreate'
+import { isFeatureEnabledByName } from '@latitude-data/core/services/workspaceFeatures/isFeatureEnabledByName'
 import {
   captureException,
   captureMessage,
 } from '@latitude-data/core/utils/datadogCapture'
-import { AppRouteHandler } from '$/openApi/types'
+import { randomBytes } from 'crypto'
+import { Provider, Translator } from 'rosetta-ai'
 import { CreateLogRoute } from './create.route'
-import { getData } from '$/common/documents/getData'
-import { spans } from '@latitude-data/core/schema/models/spans'
-import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import type { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
-import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
-import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+
+const translator = new Translator({
+  filterEmptyMessages: true,
+  providerMetadata: 'passthrough',
+})
 
 // @ts-expect-error: broken types
 export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {
@@ -47,8 +54,6 @@ export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {
     commitUuid: versionUuid!,
     documentPath: path!,
   }).then((r) => r.unwrap())
-  const last = messages[messages.length - 1]
-  const content = last ? last.content : undefined
 
   const { documentLogUuid, promptSpanId, completionSpanId, traceId } =
     await createSpansFromLogData({
@@ -58,7 +63,6 @@ export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {
       commit,
       messages,
       response,
-      content,
     })
 
   return c.json(
@@ -86,15 +90,13 @@ async function createSpansFromLogData({
   commit,
   messages,
   response,
-  content,
 }: {
   workspace: Workspace
   apiKey: ApiKey
   document: DocumentVersion
   commit: Commit
-  messages: unknown[]
+  messages: Record<string, unknown>[]
   response?: string
-  content?: unknown
 }) {
   // Generate IDs for spans
   const traceId = randomBytes(16).toString('hex')
@@ -105,28 +107,41 @@ async function createSpansFromLogData({
   const now = new Date()
   const startedAt = new Date(now.getTime() - 1000) // 1 second ago
   const endedAt = now
-  const duration = endedAt.getTime() - startedAt.getTime()
+
+  const input = translator.translate(messages, {
+    to: Provider.Promptl,
+    direction: 'input',
+  }).messages as Message[]
+
+  const output = response
+    ? (translator.translate(response, {
+        to: Provider.Promptl,
+        direction: 'output',
+      }).messages as Message[])
+    : undefined
 
   // Create prompt span
   await database
     .insert(spans)
     .values({
       id: promptSpanId,
-      traceId,
+      traceId: traceId,
+      documentLogUuid: documentLogUuid,
       workspaceId: workspace.id,
+      projectId: commit.projectId,
       apiKeyId: apiKey.id,
-      name: 'prompt',
-      kind: SpanKind.Client,
-      type: SpanType.Prompt,
-      status: SpanStatus.Ok,
-      duration,
-      startedAt,
-      endedAt: new Date(startedAt.getTime() + 500), // Midpoint
-      documentLogUuid,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
-      projectId: commit.projectId,
+      name: document.path.split('/').pop() ?? 'prompt',
+      kind: SpanKind.Client,
+      type: SpanType.Prompt,
       source: LogSources.API,
+      status: SpanStatus.Ok,
+      duration: endedAt.getTime() - startedAt.getTime(),
+      startedAt: startedAt,
+      endedAt: endedAt,
+      createdAt: now,
+      updatedAt: now,
     })
     .returning()
 
@@ -135,105 +150,79 @@ async function createSpansFromLogData({
     .insert(spans)
     .values({
       id: completionSpanId,
-      traceId,
+      traceId: traceId,
+      documentLogUuid: documentLogUuid,
       parentId: promptSpanId,
       workspaceId: workspace.id,
+      projectId: commit.projectId,
       apiKeyId: apiKey.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
       name: 'completion',
       kind: SpanKind.Client,
       type: SpanType.Completion,
+      source: LogSources.API,
       status: SpanStatus.Ok,
-      duration,
-      startedAt: new Date(startedAt.getTime() + 500), // After prompt
-      endedAt,
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
+      duration: endedAt.getTime() - startedAt.getTime(),
+      startedAt: startedAt,
+      endedAt: endedAt,
+      createdAt: now,
+      updatedAt: now,
     })
     .returning()
 
   // Create metadata for prompt span
   const promptMetadata: PromptSpanMetadata = {
-    traceId,
+    traceId: traceId,
     spanId: promptSpanId,
     type: SpanType.Prompt,
-    documentLogUuid,
     attributes: {
       [ATTRIBUTES.LATITUDE.type]: SpanType.Prompt,
-      [ATTRIBUTES.LATITUDE.request.template]: document.content,
-      [ATTRIBUTES.LATITUDE.request.parameters]: JSON.stringify({}),
-      [ATTRIBUTES.LATITUDE.documentUuid]: document.documentUuid,
-      [ATTRIBUTES.LATITUDE.commitUuid]: commit.uuid,
-      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
       [ATTRIBUTES.LATITUDE.source]: LogSources.API,
+      [ATTRIBUTES.LATITUDE.projectId]: String(commit.projectId),
+      [ATTRIBUTES.LATITUDE.commitUuid]: commit.uuid,
+      [ATTRIBUTES.LATITUDE.documentUuid]: document.documentUuid,
+      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
     },
     events: [],
     links: [],
-    template: document.content,
-    parameters: {},
-    promptUuid: document.documentUuid,
-    projectId: commit.projectId,
-    versionUuid: commit.uuid,
     source: LogSources.API,
-    experimentUuid: undefined,
-    externalId: '',
+    documentLogUuid: documentLogUuid,
+    projectId: commit.projectId,
+    promptUuid: document.documentUuid,
+    versionUuid: commit.uuid,
+    parameters: {},
+    template: document.content,
   }
 
-  // Create metadata for completion span
-  let responseText: string = response || ''
-  if (!responseText && content) {
-    if (typeof content === 'string') {
-      responseText = content
-    } else if (Array.isArray(content)) {
-      const textContent = content.find((c: any) => c.type === 'text')
-      responseText =
-        textContent && 'text' in textContent ? textContent.text : ''
-    } else if (
-      typeof content === 'object' &&
-      content !== null &&
-      'text' in content
-    ) {
-      responseText = (content as { text: string }).text
-    }
-  }
   const completionMetadata: CompletionSpanMetadata = {
-    traceId,
+    traceId: traceId,
     spanId: completionSpanId,
     type: SpanType.Completion,
     attributes: {
       [ATTRIBUTES.LATITUDE.type]: SpanType.Completion,
-      [ATTRIBUTES.LATITUDE.request.messages]: JSON.stringify(messages),
-      [ATTRIBUTES.LATITUDE.response.messages]: JSON.stringify([
-        {
-          role: 'assistant',
-          content:
-            typeof responseText === 'string'
-              ? responseText
-              : JSON.stringify(responseText),
-        },
-      ]),
-      [ATTRIBUTES.LATITUDE.documentUuid]: document.documentUuid,
+      [ATTRIBUTES.LATITUDE.source]: LogSources.API,
+      [ATTRIBUTES.LATITUDE.projectId]: String(commit.projectId),
       [ATTRIBUTES.LATITUDE.commitUuid]: commit.uuid,
+      [ATTRIBUTES.LATITUDE.documentUuid]: document.documentUuid,
+      [ATTRIBUTES.LATITUDE.documentLogUuid]: documentLogUuid,
     },
     events: [],
     links: [],
+    source: LogSources.API,
+    documentLogUuid: documentLogUuid,
+    projectId: commit.projectId,
+    promptUuid: document.documentUuid,
+    versionUuid: commit.uuid,
     provider: 'unknown',
     model: 'unknown',
-    configuration: {},
-    input: messages as any,
-    output: [
-      {
-        role: 'assistant',
-        content: [
-          {
-            type: 'text',
-            text:
-              typeof responseText === 'string'
-                ? responseText
-                : JSON.stringify(responseText),
-          },
-        ],
-      },
-    ] as any,
+    configuration: {
+      provider: 'unknown',
+      model: 'unknown',
+    },
+    input: input,
+    output: output,
+    finishReason: 'stop',
   }
 
   // Save metadata to disk
@@ -285,9 +274,7 @@ async function createSpansFromLogData({
     )
     if (subscriptionResult.error) {
       captureException(
-        new LatitudeError(
-          'Failed to resolve workspace subscription for spans',
-        ),
+        new LatitudeError('Failed to resolve workspace subscription for spans'),
         { workspaceId: workspace.id },
       )
     }
@@ -303,22 +290,22 @@ async function createSpansFromLogData({
     const clickhouseResult = await bulkCreateClickHouseSpans([
       {
         id: promptSpanId,
-        traceId,
+        traceId: traceId,
         workspaceId: workspace.id,
         apiKeyId: apiKey.id,
-        name: 'prompt',
+        name: document.path.split('/').pop() ?? 'prompt',
         kind: SpanKind.Client,
         type: SpanType.Prompt,
         status: SpanStatus.Ok,
-        duration,
-        startedAt,
-        endedAt: new Date(startedAt.getTime() + 500),
+        duration: endedAt.getTime() - startedAt.getTime(),
+        startedAt: startedAt,
+        endedAt: endedAt,
         metadata: promptMetadata,
         retentionExpiresAt,
       },
       {
         id: completionSpanId,
-        traceId,
+        traceId: traceId,
         parentId: promptSpanId,
         workspaceId: workspace.id,
         apiKeyId: apiKey.id,
@@ -326,9 +313,9 @@ async function createSpansFromLogData({
         kind: SpanKind.Client,
         type: SpanType.Completion,
         status: SpanStatus.Ok,
-        duration,
-        startedAt: new Date(startedAt.getTime() + 500),
-        endedAt,
+        duration: endedAt.getTime() - startedAt.getTime(),
+        startedAt: startedAt,
+        endedAt: endedAt,
         metadata: completionMetadata,
         retentionExpiresAt,
       },
@@ -352,7 +339,7 @@ async function createSpansFromLogData({
   await publishSpanCreated({
     spanId: promptSpanId,
     commitUuid: commit.uuid,
-    traceId,
+    traceId: traceId,
     apiKeyId: apiKey.id,
     workspaceId: workspace.id,
     documentUuid: document.documentUuid,
