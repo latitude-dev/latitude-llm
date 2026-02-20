@@ -1,12 +1,11 @@
 import { Metadata } from 'next'
 import {
-  findCommitsByProjectCached,
   findProjectCached,
   listEvaluationsV2AtCommitByDocumentCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { env } from '@latitude-data/env'
-import { getOrCreateProjectMainDocument } from '@latitude-data/core/services/documents/getOrCreateProjectMainDocument'
+import { getProjectMainDocumentCached } from '$/lib/dualScope/getProjectMainDocumentCached'
 import { EvaluationsPage as ClientEvaluationsPage } from '../versions/[commitUuid]/documents/[documentUuid]/(withTabs)/evaluations/_components/EvaluationsPage'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { notFound, redirect } from 'next/navigation'
@@ -34,19 +33,9 @@ export default async function ProjectEvaluationsPage({
     workspaceId: session.workspace.id,
   })
 
-  const commits = await findCommitsByProjectCached({ projectId: project.id })
-  const commit = commits[0]
-  if (!commit) return notFound()
-
-  const mainDocResult = await getOrCreateProjectMainDocument({
-    workspace: session.workspace,
-    user: session.user,
-    commit,
-  })
-  if (mainDocResult.error) {
-    throw mainDocResult.error
-  }
-  const mainDoc = mainDocResult.value
+  const result = await getProjectMainDocumentCached({ project })
+  if (!result) return notFound()
+  const { commit, document: mainDoc } = result
 
   const evaluations = await listEvaluationsV2AtCommitByDocumentCached({
     projectId: project.id,

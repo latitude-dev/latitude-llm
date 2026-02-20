@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react'
 import {
-  findCommitsByProjectCached,
   findProjectCached,
   getEvaluationV2AtCommitByDocumentCached,
 } from '$/app/(private)/_data-access'
@@ -10,7 +9,7 @@ import buildMetatags from '$/app/_lib/buildMetatags'
 import { EvaluationV2Provider } from '$/app/providers/EvaluationV2Provider'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { getOrCreateProjectMainDocument } from '@latitude-data/core/services/documents/getOrCreateProjectMainDocument'
+import { getProjectMainDocumentCached } from '$/lib/dualScope/getProjectMainDocumentCached'
 import { notFound, redirect } from 'next/navigation'
 
 export async function generateMetadata() {
@@ -40,19 +39,9 @@ export default async function ProjectEvaluationLayout({
     workspaceId: session.workspace.id,
   })
 
-  const commits = await findCommitsByProjectCached({ projectId: project.id })
-  const commit = commits[0]
-  if (!commit) return notFound()
-
-  const mainDocResult = await getOrCreateProjectMainDocument({
-    workspace: session.workspace,
-    user: session.user,
-    commit,
-  })
-  if (mainDocResult.error) {
-    throw mainDocResult.error
-  }
-  const mainDoc = mainDocResult.value
+  const result = await getProjectMainDocumentCached({ project })
+  if (!result) return notFound()
+  const { commit, document: mainDoc } = result
 
   const evaluation = await getEvaluationV2AtCommitByDocumentCached({
     projectId: project.id,

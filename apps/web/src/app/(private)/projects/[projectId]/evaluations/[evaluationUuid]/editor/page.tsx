@@ -1,6 +1,5 @@
 import { Metadata } from 'next'
 import {
-  findCommitsByProjectCached,
   findProjectCached,
   getEvaluationV2AtCommitByDocumentCached,
   getProviderApiKeysCached,
@@ -10,9 +9,9 @@ import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
-import { getOrCreateProjectMainDocument } from '@latitude-data/core/services/documents/getOrCreateProjectMainDocument'
+import { getProjectMainDocumentCached } from '$/lib/dualScope/getProjectMainDocumentCached'
 import { env } from '@latitude-data/env'
-import { notFound, redirect } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { EvaluationEditor } from '../../../versions/[commitUuid]/documents/[documentUuid]/(withTabs)/evaluations/[evaluationUuid]/editor/_components/EvaluationEditor'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import {
@@ -38,27 +37,15 @@ export default async function ProjectEvaluationEditorPage({
   const projectId = Number(pjid)
   const queryParams = await searchParams
 
-  const session = await getCurrentUserOrRedirect()
-  if (!session.workspace || !session.user) return redirect(ROUTES.root)
-
+  const { workspace } = await getCurrentUserOrRedirect()
   const project = await findProjectCached({
     projectId,
-    workspaceId: session.workspace.id,
+    workspaceId: workspace.id,
   })
 
-  const commits = await findCommitsByProjectCached({ projectId: project.id })
-  const commit = commits[0]
-  if (!commit) return notFound()
-
-  const mainDocResult = await getOrCreateProjectMainDocument({
-    workspace: session.workspace,
-    user: session.user,
-    commit,
-  })
-  if (mainDocResult.error) {
-    throw mainDocResult.error
-  }
-  const document = mainDocResult.value
+  const { commit, document } = await getProjectMainDocumentCached({
+    project,
+  }).then((r) => r.unwrap())
 
   const providerApiKeys = await getProviderApiKeysCached()
 
@@ -83,7 +70,7 @@ export default async function ProjectEvaluationEditorPage({
 
   const selectedSpanId = queryParams.spanId
   const selectedDocumentLogUuid = queryParams.documentLogUuid
-  const freeRunsCount = await getFreeRuns(session.workspace.id)
+  const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
     <EvaluationEditor

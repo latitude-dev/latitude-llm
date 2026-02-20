@@ -1,16 +1,13 @@
 'use server'
 
 import { ReactNode } from 'react'
-import {
-  findCommitsByProjectCached,
-  findProjectCached,
-} from '$/app/(private)/_data-access'
+import { findProjectCached } from '$/app/(private)/_data-access'
 import { ProjectProvider } from '$/app/providers/ProjectProvider'
 import { CommitProvider } from '$/app/providers/CommitProvider'
 import { DocumentVersionProvider } from '$/app/providers/DocumentProvider'
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { getOrCreateProjectMainDocument } from '@latitude-data/core/services/documents/getOrCreateProjectMainDocument'
+import { getProjectMainDocumentCached } from '$/lib/dualScope/getProjectMainDocumentCached'
 import { notFound, redirect } from 'next/navigation'
 import ProjectLayout from '../versions/[commitUuid]/_components/ProjectLayout'
 
@@ -30,15 +27,10 @@ export default async function ProjectEvaluationsLayout({
     projectId,
     workspaceId: session.workspace.id,
   })
-  const commits = await findCommitsByProjectCached({ projectId: project.id })
-  const commit = commits[0]
-  if (!commit) return notFound()
 
-  const document = await getOrCreateProjectMainDocument({
-    workspace: session.workspace,
-    user: session.user,
-    commit,
-  }).then((r) => r.unwrap())
+  const result = await getProjectMainDocumentCached({ project })
+  if (!result) return notFound()
+  const { commit, document } = result
 
   return (
     <ProjectProvider project={project}>

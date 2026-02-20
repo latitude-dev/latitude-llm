@@ -17,7 +17,7 @@ import EvaluationV2Form, {
 } from '$/components/evaluations/EvaluationV2Form'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { RunExperimentModal } from '$/components/RunExperimentModal'
-import { useEvaluationRoutes } from '$/lib/hooks/onlyTraces/useEvaluationRoutes'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'

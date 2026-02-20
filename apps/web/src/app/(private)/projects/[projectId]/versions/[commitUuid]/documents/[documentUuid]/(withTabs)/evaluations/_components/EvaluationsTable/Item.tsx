@@ -1,6 +1,6 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
-import { useEvaluationRoutes } from '$/lib/hooks/onlyTraces/useEvaluationRoutes'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useNavigate } from '$/hooks/useNavigate'
 import { EvaluationType, EvaluationV2 } from '@latitude-data/core/constants'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'

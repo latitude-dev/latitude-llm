@@ -8,7 +8,7 @@ import EvaluationV2Form, {
   EvaluationV2FormErrors,
 } from '$/components/evaluations/EvaluationV2Form'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
-import { useEvaluationRoutes } from '$/lib/hooks/onlyTraces/useEvaluationRoutes'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
