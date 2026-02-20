@@ -5,7 +5,7 @@ import {
   SpanStatus,
 } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
+import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { Cursor } from '../../../schema/types'
 import { scopedQuery } from '../../scope'
@@ -16,6 +16,7 @@ export const getSpansWithoutIssues = scopedQuery(
   async function getSpansWithoutIssues(
     {
       workspaceId,
+      projectId,
       documentUuid,
       commitUuids,
       spanTypes,
@@ -26,6 +27,7 @@ export const getSpansWithoutIssues = scopedQuery(
       limit,
     }: {
       workspaceId: number
+      projectId: number
       documentUuid: string
       commitUuids: string[]
       spanTypes: MainSpanType[]
@@ -35,7 +37,6 @@ export const getSpansWithoutIssues = scopedQuery(
       cursor: Cursor<Date, string> | null
       limit: number
     },
-    _db,
   ): Promise<{
     spans: Span<MainSpanType>[]
     next: Cursor<Date, string> | null
@@ -46,6 +47,7 @@ export const getSpansWithoutIssues = scopedQuery(
 
     const params: Record<string, unknown> = {
       workspaceId,
+      projectId,
       documentUuid,
       commitUuids,
       spanTypes,
@@ -57,6 +59,9 @@ export const getSpansWithoutIssues = scopedQuery(
 
     const conditions = [
       `workspace_id = {workspaceId: UInt64}`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+      `project_id = {projectId: UInt64}`,
+      `project_id_key = {projectId: UInt64}`,
       // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `document_uuid = {documentUuid: UUID}`,
       `document_uuid_key = {documentUuid: UUID}`,
@@ -93,7 +98,7 @@ export const getSpansWithoutIssues = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE ${conditions.join(' AND ')}
       ORDER BY started_at DESC, span_id DESC
       LIMIT {fetchLimit: UInt32}
@@ -116,7 +121,6 @@ export const getSpansWithActiveIssues = scopedQuery(
       workspaceId: number
       evaluationResultIds: number[]
     },
-    _db,
   ): Promise<{ spanIds: string[]; traceIds: string[] }> {
     if (evaluationResultIds.length === 0) {
       return { spanIds: [], traceIds: [] }
@@ -163,7 +167,6 @@ export const getSpansWithFailedResults = scopedQuery(
       documentUuid: string
       commitUuids: string[]
     },
-    _db,
   ): Promise<{ spanIds: string[]; traceIds: string[] }> {
     if (commitUuids.length === 0) {
       return { spanIds: [], traceIds: [] }
@@ -214,7 +217,6 @@ export const getSpansWithPassedResults = scopedQuery(
       commitUuids: string[]
       requireHumanEvaluation: boolean
     },
-    _db,
   ): Promise<{ spanIds: string[]; traceIds: string[] }> {
     if (commitUuids.length === 0) {
       return { spanIds: [], traceIds: [] }

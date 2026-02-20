@@ -1,6 +1,6 @@
 import { LogSources, Span, SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
+import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import {
   applyDefaultSpansCreatedAtRange,
@@ -9,7 +9,7 @@ import {
   shouldFallbackToAllTime,
 } from '../../../services/spans/defaultCreatedAtWindow'
 import { scopedQuery } from '../../scope'
-import { spanRowToSpan } from './toSpan'
+import { mapRow } from './toSpan'
 
 type LimitedQueryParams = {
   workspaceId: number
@@ -76,21 +76,18 @@ function buildWhereClause(
   }
 }
 
-const executeLimitedQuery = scopedQuery(async function executeLimitedQuery(
-  {
-    workspaceId,
-    baseConditions,
-    baseParams,
-    filters,
-    from,
-    limit,
-  }: LimitedQueryParams & {
-    baseConditions: string[]
-    baseParams: Record<string, unknown>
-    filters: FilterParams
-  },
-  _db,
-): Promise<{ items: Span[]; next: { startedAt: string; id: string } | null }> {
+const executeLimitedQuery = scopedQuery(async function executeLimitedQuery({
+  workspaceId,
+  baseConditions,
+  baseParams,
+  filters,
+  from,
+  limit,
+}: LimitedQueryParams & {
+  baseConditions: string[]
+  baseParams: Record<string, unknown>
+  filters: FilterParams
+}): Promise<{ items: Span[]; next: { startedAt: string; id: string } | null }> {
   const { where, params } = buildWhereClause(
     baseConditions,
     baseParams,
@@ -101,7 +98,7 @@ const executeLimitedQuery = scopedQuery(async function executeLimitedQuery(
   const result = await clickhouseClient().query({
     query: `
         SELECT *
-        FROM ${SPANS_TABLE}
+        FROM ${TABLE_NAME}
         ${where}
         ORDER BY started_at DESC, span_id DESC
         LIMIT {fetchLimit: UInt32}
@@ -113,7 +110,7 @@ const executeLimitedQuery = scopedQuery(async function executeLimitedQuery(
   const rows = await result.json<SpanRow>()
   const hasMore = rows.length > limit
   const items = hasMore ? rows.slice(0, limit) : rows
-  const spans = items.map(spanRowToSpan)
+  const spans = items.map(mapRow)
 
   const next =
     hasMore && spans.length > 0
@@ -180,39 +177,45 @@ async function executeWithDefaultCreatedAtAndFallback({
 }
 
 export const findByDocumentAndCommitLimited = scopedQuery(
-  async function findByDocumentAndCommitLimited(
-    {
-      workspaceId,
-      documentUuid,
-      types,
-      from,
-      limit,
-      commitUuids,
-      experimentUuids,
-      source,
-      testDeploymentIds,
-      createdAt,
-    }: {
-      workspaceId: number
-      documentUuid: string
-      types?: SpanType[]
-      from?: { startedAt: string; id: string }
-      limit: number
-      commitUuids?: string[]
-      experimentUuids?: string[]
-      source?: LogSources[]
-      testDeploymentIds?: number[]
-      createdAt?: CreatedAtRange
-    },
-    _db,
-  ) {
+  async function findByDocumentAndCommitLimited({
+    workspaceId,
+    projectId,
+    documentUuid,
+    types,
+    from,
+    limit,
+    commitUuids,
+    experimentUuids,
+    source,
+    testDeploymentIds,
+    createdAt,
+  }: {
+    workspaceId: number
+    projectId: number
+    documentUuid: string
+    types?: SpanType[]
+    from?: { startedAt: string; id: string }
+    limit: number
+    commitUuids?: string[]
+    experimentUuids?: string[]
+    source?: LogSources[]
+    testDeploymentIds?: number[]
+    createdAt?: CreatedAtRange
+  }) {
     const baseConditions = [
       `workspace_id = {workspaceId: UInt64}`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+      `project_id = {projectId: UInt64}`,
+      `project_id_key = {projectId: UInt64}`,
       // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `document_uuid = {documentUuid: UUID}`,
       `document_uuid_key = {documentUuid: UUID}`,
     ]
-    const baseParams: Record<string, unknown> = { workspaceId, documentUuid }
+    const baseParams: Record<string, unknown> = {
+      workspaceId,
+      projectId,
+      documentUuid,
+    }
 
     if (commitUuids && commitUuids.length > 0) {
       // TODO(clickhouse): remove non-_key predicate after key-column rollout.
@@ -240,28 +243,25 @@ export const findByDocumentAndCommitLimited = scopedQuery(
 )
 
 export const findByProjectLimited = scopedQuery(
-  async function findByProjectLimited(
-    {
-      workspaceId,
-      projectId,
-      types,
-      from,
-      source,
-      limit,
-      experimentUuids,
-      createdAt,
-    }: {
-      workspaceId: number
-      projectId: number
-      types?: SpanType[]
-      from?: { startedAt: string; id: string }
-      source?: LogSources[]
-      limit: number
-      experimentUuids?: string[]
-      createdAt?: CreatedAtRange
-    },
-    _db,
-  ) {
+  async function findByProjectLimited({
+    workspaceId,
+    projectId,
+    types,
+    from,
+    source,
+    limit,
+    experimentUuids,
+    createdAt,
+  }: {
+    workspaceId: number
+    projectId: number
+    types?: SpanType[]
+    from?: { startedAt: string; id: string }
+    source?: LogSources[]
+    limit: number
+    experimentUuids?: string[]
+    createdAt?: CreatedAtRange
+  }) {
     const baseConditions = [
       `workspace_id = {workspaceId: UInt64}`,
       // TODO(clickhouse): remove non-_key predicate after key-column rollout.

@@ -1,6 +1,7 @@
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { issueEvaluationResults } from '../../schema/models/issueEvaluationResults'
+import { publisher } from '../../events/publisher'
 
 /**
  * Bulk links evaluation results to a single issue.
@@ -23,20 +24,36 @@ export async function bulkLinkIssueEvaluationResults(
 ) {
   if (evaluationResultIds.length === 0) return Result.nil()
 
-  return await transaction.call(async (tx) => {
-    await tx
-      .insert(issueEvaluationResults)
-      .values(
-        evaluationResultIds.map((evaluationResultId) => ({
-          workspaceId,
-          issueId: issueId,
-          evaluationResultId,
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        })),
-      )
-      .onConflictDoNothing()
+  return await transaction.call(
+    async (tx) => {
+      await tx
+        .insert(issueEvaluationResults)
+        .values(
+          evaluationResultIds.map((evaluationResultId) => ({
+            workspaceId,
+            issueId: issueId,
+            evaluationResultId,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          })),
+        )
+        .onConflictDoNothing()
 
-    return Result.nil()
-  })
+      return Result.ok({ issueId, evaluationResultIds })
+    },
+    async ({ issueId, evaluationResultIds }) => {
+      await Promise.all(
+        evaluationResultIds.map((evaluationResultId) =>
+          publisher.publishLater({
+            type: 'issueEvaluationResultLinked',
+            data: {
+              workspaceId,
+              issueId,
+              evaluationResultId,
+            },
+          }),
+        ),
+      )
+    },
+  )
 }

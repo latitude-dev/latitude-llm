@@ -1,6 +1,6 @@
 import { LogSources } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
 
 export type ConversationItem = {
@@ -21,22 +21,27 @@ export type ConversationItem = {
 export const fetchConversation = scopedQuery(async function fetchConversation(
   {
     workspaceId,
+    projectId,
     documentLogUuid,
     documentUuid,
+    commitUuid,
   }: {
     workspaceId: number
+    projectId: number
     documentLogUuid: string
     documentUuid?: string
+    commitUuid?: string
   },
-  _db,
 ): Promise<ConversationItem | null> {
   const params: Record<string, unknown> = {
     workspaceId,
+    projectId,
     documentLogUuid,
   }
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
+    `project_id_key = {projectId: UInt64}`,
     `document_log_uuid = {documentLogUuid: UUID}`,
   ]
 
@@ -45,6 +50,13 @@ export const fetchConversation = scopedQuery(async function fetchConversation(
     // TODO(clickhouse): remove non-_key predicate after key-column rollout.
     conditions.push(`document_uuid = {documentUuid: UUID}`)
     conditions.push(`document_uuid_key = {documentUuid: UUID}`)
+  }
+
+  if (commitUuid) {
+    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+    conditions.push(`commit_uuid = {commitUuid: UUID}`)
+    conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
+    params.commitUuid = commitUuid
   }
 
   const result = await clickhouseClient().query({
@@ -67,7 +79,7 @@ export const fetchConversation = scopedQuery(async function fetchConversation(
         anyLast(source) AS latest_source,
         anyLast(commit_uuid) AS latest_commit_uuid,
         anyLast(experiment_uuid) AS latest_experiment_uuid
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE ${conditions.join(' AND ')}
       GROUP BY document_log_uuid
       LIMIT 1

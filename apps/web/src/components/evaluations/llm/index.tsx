@@ -38,6 +38,7 @@ import {
   ResultRowCellsProps,
   ResultRowHeadersProps,
 } from '../index'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import LlmEvaluationBinarySpecification from './Binary'
 import LlmEvaluationComparisonSpecification from './Comparison'
 import LlmEvaluationCustomSpecification from './Custom'
@@ -339,7 +340,13 @@ function ResultPanelContent<M extends LlmEvaluationMetric>({
 
   return (
     <>
-      {selectedTab === 'messages' && <ResultPanelMessages result={result} />}
+      {selectedTab === 'messages' && (
+        <ResultPanelMessages
+          result={result}
+          commit={rest.commit}
+          documentUuid={rest.evaluation.documentUuid}
+        />
+      )}
       {!!metricSpecification.ResultPanelContent && (
         <metricSpecification.ResultPanelContent
           result={result}
@@ -353,11 +360,18 @@ function ResultPanelContent<M extends LlmEvaluationMetric>({
 
 function ResultPanelMessages<M extends LlmEvaluationMetric>({
   result,
+  commit,
+  documentUuid,
 }: {
   result: EvaluationResultV2<EvaluationType.Llm, M>
+  commit: Commit
+  documentUuid: string
 }) {
   const { traces, isLoading: isLoadingTraces } = useConversation({
     conversationId: result.uuid,
+    projectId: commit.projectId ?? undefined,
+    commitUuid: commit.uuid,
+    documentUuid,
   })
 
   const { traceId, spanId } = useMemo(() => {

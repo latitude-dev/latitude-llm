@@ -5,6 +5,8 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
 import { useConversation } from '$/stores/conversations'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { use, useCallback, useMemo, useState } from 'react'
 import { TimelineScale } from '$/components/tracing/traces/TimelineScale'
 import { useTickMarks } from '$/components/tracing/traces/TimelineScale/useTickMarks'
@@ -20,11 +22,18 @@ const GRAPH_MIN_WIDTH = 750
 
 export function ConversationTimeline({
   documentLogUuid,
+  commitUuid,
 }: {
   documentLogUuid: string
+  commitUuid: string
 }) {
+  const { project } = useCurrentProject()
+  const { document } = useCurrentDocument()
   const { traces, isLoading } = useConversation({
     conversationId: documentLogUuid,
+    commitUuid,
+    projectId: project.id,
+    documentUuid: document.documentUuid,
   })
 
   if (isLoading) {

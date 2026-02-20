@@ -11,25 +11,25 @@ import { BadgeCommit } from '../../../../../../../_components/Sidebar/CommitSele
 
 function CommitCheckbox({
   commit,
-  selectedCommitsIds,
+  selectedCommitsUuids,
   onSelectCommits,
 }: {
   commit: Commit
-  selectedCommitsIds: number[]
-  onSelectCommits: (selectedCommitsIds: number[]) => void
+  selectedCommitsUuids: string[]
+  onSelectCommits: (selectedCommitsUuids: string[]) => void
 }) {
   const isSelected = useMemo(
-    () => selectedCommitsIds.includes(commit.id),
-    [selectedCommitsIds, commit],
+    () => selectedCommitsUuids.includes(commit.uuid),
+    [selectedCommitsUuids, commit],
   )
 
   const onSelect = useCallback(() => {
     onSelectCommits(
       isSelected
-        ? selectedCommitsIds.filter((id) => id !== commit.id)
-        : [...selectedCommitsIds, commit.id],
+        ? selectedCommitsUuids.filter((uuid) => uuid !== commit.uuid)
+        : [...selectedCommitsUuids, commit.uuid],
     )
-  }, [selectedCommitsIds, commit, isSelected, onSelectCommits])
+  }, [selectedCommitsUuids, commit, isSelected, onSelectCommits])
 
   return (
     <Checkbox
@@ -52,13 +52,13 @@ function CommitCheckbox({
 function CommitsList({
   title,
   commits,
-  selectedCommitsIds,
+  selectedCommitsUuids,
   onSelectCommits,
 }: {
   title: string
   commits: Commit[]
-  selectedCommitsIds: number[]
-  onSelectCommits: (selectedCommitsIds: number[]) => void
+  selectedCommitsUuids: string[]
+  onSelectCommits: (selectedCommitsUuids: string[]) => void
 }) {
   return (
     <div className='flex flex-col gap-2 w-full'>
@@ -68,7 +68,7 @@ function CommitsList({
           <li key={commit.id}>
             <CommitCheckbox
               commit={commit}
-              selectedCommitsIds={selectedCommitsIds}
+              selectedCommitsUuids={selectedCommitsUuids}
               onSelectCommits={onSelectCommits}
             />
           </li>
@@ -79,14 +79,14 @@ function CommitsList({
 }
 
 export function CommitFilter({
-  selectedCommitsIds,
+  selectedCommitsUuids,
   onSelectCommits,
   isDefault,
   reset,
   disabled,
 }: {
-  selectedCommitsIds: number[]
-  onSelectCommits: (selectedCommitsIds: number[]) => void
+  selectedCommitsUuids: string[]
+  onSelectCommits: (selectedCommitsUuids: string[]) => void
   isDefault: boolean
   reset: () => void
   disabled?: boolean
@@ -94,10 +94,10 @@ export function CommitFilter({
   const { data: commits } = useCommits()
 
   const headerState = useMemo(() => {
-    if (selectedCommitsIds.length === 0) return false
-    if (selectedCommitsIds.length === commits.length) return true
+    if (selectedCommitsUuids.length === 0) return false
+    if (selectedCommitsUuids.length === commits.length) return true
     return 'indeterminate'
-  }, [selectedCommitsIds, commits])
+  }, [selectedCommitsUuids, commits])
 
   const mergedCommits = useMemo(
     () =>
@@ -113,19 +113,19 @@ export function CommitFilter({
 
   const filterLabel = useMemo(() => {
     if (isDefault) return 'Current versions'
-    if (selectedCommitsIds.length === 0) return 'No versions selected'
-    if (selectedCommitsIds.length > 1) {
-      return `${selectedCommitsIds.length} versions`
+    if (selectedCommitsUuids.length === 0) return 'No versions selected'
+    if (selectedCommitsUuids.length > 1) {
+      return `${selectedCommitsUuids.length} versions`
     }
     const selectedCommit = commits.find(
-      (commit) => commit.id === selectedCommitsIds[0],
+      (commit) => commit.uuid === selectedCommitsUuids[0],
     )
     return selectedCommit?.title ?? '1 version'
-  }, [isDefault, selectedCommitsIds, commits])
+  }, [isDefault, selectedCommitsUuids, commits])
 
   const filterColor = useFilterButtonColor({
     isDefault,
-    isSelected: selectedCommitsIds.length > 0,
+    isSelected: selectedCommitsUuids.length > 0,
   })
 
   return (
@@ -138,11 +138,11 @@ export function CommitFilter({
         <Checkbox
           checked={headerState}
           onClick={() =>
-            onSelectCommits(headerState ? [] : commits.map((c) => c.id))
+            onSelectCommits(headerState ? [] : commits.map((c) => c.uuid))
           }
           label={
             <Text.H5 noWrap ellipsis>
-              {selectedCommitsIds.length} selected
+              {selectedCommitsUuids.length} selected
             </Text.H5>
           }
           disabled={disabled}
@@ -161,14 +161,14 @@ export function CommitFilter({
           <CommitsList
             title='Drafts'
             commits={drafts}
-            selectedCommitsIds={selectedCommitsIds}
+            selectedCommitsUuids={selectedCommitsUuids}
             onSelectCommits={onSelectCommits}
           />
         ) : null}
         <CommitsList
           title='Published versions'
           commits={mergedCommits}
-          selectedCommitsIds={selectedCommitsIds}
+          selectedCommitsUuids={selectedCommitsUuids}
           onSelectCommits={onSelectCommits}
         />
       </div>

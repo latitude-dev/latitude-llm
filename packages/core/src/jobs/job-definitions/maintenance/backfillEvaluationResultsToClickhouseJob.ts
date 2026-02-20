@@ -5,7 +5,7 @@ import { database } from '../../../client'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { insertRows } from '../../../clickhouse/insert'
 import {
-  EVALUATION_RESULTS_TABLE,
+  TABLE_NAME,
   EvaluationResultV2Row,
 } from '../../../schema/models/clickhouse/evaluationResults'
 import { buildEvaluationResultRow } from '../../../services/evaluationsV2/results/clickhouse/buildRow'
@@ -123,7 +123,7 @@ export async function backfillEvaluationResultsToClickhouseJob(
     const existingResult = await clickhouseClient().query({
       query: `
         SELECT id
-        FROM ${EVALUATION_RESULTS_TABLE} FINAL
+        FROM ${TABLE_NAME} FINAL
         WHERE workspace_id = {workspaceId: UInt64}
           AND id IN ({ids: Array(UInt64)})
       `,
@@ -177,7 +177,7 @@ export async function backfillEvaluationResultsToClickhouseJob(
     }
 
     if (rows.length > 0) {
-      const insertResult = await insertRows(EVALUATION_RESULTS_TABLE, rows)
+      const insertResult = await insertRows(TABLE_NAME, rows)
       if (insertResult.error) {
         await logger.error(`ClickHouse insertion failed`, {
           workspaceId,

@@ -146,6 +146,8 @@ export async function evaluateFactory<
       expectedCount: run.turnsExecuted,
       workspace: workspace,
       abortSignal: abortSignal,
+      commitUuid: commit.uuid,
+      documentUuid: document.documentUuid,
     })
     if (waiting.error) {
       return Result.error(waiting.error)
@@ -519,11 +521,15 @@ async function waitForMainSpans({
   expectedCount,
   workspace,
   abortSignal,
+  commitUuid,
+  documentUuid,
 }: {
   logUuid: string
   expectedCount: number
   workspace: WorkspaceDto
   abortSignal?: AbortSignal
+  commitUuid?: string
+  documentUuid?: string
 }) {
   const spansRepository = new SpansRepository(workspace.id)
 
@@ -535,7 +541,10 @@ async function waitForMainSpans({
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
 
-    const allSpans = await spansRepository.listByDocumentLogUuid(logUuid)
+    const allSpans = await spansRepository.listByDocumentLogUuid(logUuid, {
+      commitUuid,
+      documentUuid,
+    })
     const mainSpans = allSpans.filter(isMainSpan)
     if (mainSpans.length >= expectedCount) {
       return Result.ok(mainSpans)

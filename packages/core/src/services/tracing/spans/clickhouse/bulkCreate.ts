@@ -5,9 +5,13 @@ import {
 } from '../../../../constants'
 import { insertRows, toClickHouseDateTime } from '../../../../clickhouse/insert'
 import { TypedResult } from '../../../../lib/Result'
-import { SpanRow, SPANS_TABLE } from '../../../../clickhouse/models/spans'
+import {
+  SpanInput,
+  SpanRow,
+  TABLE_NAME,
+} from '../../../../schema/models/clickhouse/spans'
 
-type SpanInput = {
+type LocalSpanInput = {
   id: string
   traceId: string
   parentId?: string
@@ -43,7 +47,7 @@ function metadataField<T>(metadata: SpanMetadata, key: string): T | null {
   return ((metadata as Record<string, unknown>)[key] as T) ?? null
 }
 
-function toRow(span: SpanInput): SpanRow {
+function toRow(span: LocalSpanInput): SpanInput {
   const isCompletion = span.type === SpanType.Completion
   const completion = isCompletion
     ? extractCompletionFields(span.metadata)
@@ -89,8 +93,8 @@ function toRow(span: SpanInput): SpanRow {
 }
 
 export function bulkCreate(
-  spans: SpanInput[],
+  spans: LocalSpanInput[],
 ): Promise<TypedResult<undefined>> {
   const rows = spans.map(toRow)
-  return insertRows(SPANS_TABLE, rows)
+  return insertRows(TABLE_NAME, rows as SpanRow[])
 }

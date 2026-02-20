@@ -11,17 +11,17 @@ export async function resolveCommitFilterFromUrl({
   commit: Commit
   search: EvaluationResultsV2Search
 }): Promise<EvaluationResultsV2Search> {
-  if (search.filters?.commitIds !== undefined) return search
+  if (search.filters?.commitUuids !== undefined) return search
 
-  const commitIds = commit.mergedAt
-    ? (await commitsRepository.getCommitsHistory({ commit })).map((c) => c.id)
-    : [commit.id]
+  const commitUuids = commit.mergedAt
+    ? (await commitsRepository.getCommitsHistory({ commit })).map((c) => c.uuid)
+    : [commit.uuid]
 
   return {
     ...search,
     filters: {
       ...search.filters,
-      commitIds,
+      commitUuids,
     },
   }
 }

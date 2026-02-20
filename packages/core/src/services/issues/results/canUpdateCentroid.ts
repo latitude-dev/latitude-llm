@@ -9,17 +9,33 @@ import { Commit } from '../../../schema/models/types/Commit'
 import { database } from '../../../client'
 import { evaluationResultsV2 } from '../../../schema/models/evaluationResultsV2'
 import { issueEvaluationResults } from '../../../schema/models/issueEvaluationResults'
+import { isClickHouseEvaluationResultsReadEnabled } from '../../workspaceFeatures/isClickHouseEvaluationResultsReadEnabled'
+import { hasEvaluationResultsFromOtherCommits } from '../../../queries/clickhouse/evaluationResultsV2/hasEvaluationResultsFromOtherCommits'
 
 async function containsResultsFromOtherCommits(
   {
     issue,
-    commitId,
+    commit,
   }: {
     issue: Issue
-    commitId: number
+    commit: Commit
   },
   db = database,
 ) {
+  const useClickHouse = await isClickHouseEvaluationResultsReadEnabled(
+    issue.workspaceId,
+    db,
+  )
+
+  if (useClickHouse) {
+    return hasEvaluationResultsFromOtherCommits({
+      workspaceId: issue.workspaceId,
+      projectId: commit.projectId,
+      issueId: issue.id,
+      excludeCommitUuid: commit.uuid,
+    })
+  }
+
   const commitIds = await db
     .selectDistinct({ commitId: evaluationResultsV2.commitId })
     .from(issueEvaluationResults)
@@ -31,7 +47,7 @@ async function containsResultsFromOtherCommits(
       and(
         eq(issueEvaluationResults.workspaceId, issue.workspaceId),
         eq(issueEvaluationResults.issueId, issue.id),
-        ne(evaluationResultsV2.commitId, commitId),
+        ne(evaluationResultsV2.commitId, commit.id),
       ),
     )
     .limit(1)
@@ -73,7 +89,7 @@ export async function canUpdateCentroid<
 
   const resultsFromOtherCommits = await containsResultsFromOtherCommits({
     issue,
-    commitId: result.commitId,
+    commit,
   })
 
   return !resultsFromOtherCommits

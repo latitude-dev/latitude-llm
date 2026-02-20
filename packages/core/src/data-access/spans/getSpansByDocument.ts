@@ -96,6 +96,7 @@ export async function getSpansByDocument(
     return Result.ok(
       await chGetSpansByDocument({
         workspaceId: workspace.id,
+        projectId: commit.projectId,
         documentUuid: document.documentUuid,
         spanTypes,
         commitUuids,

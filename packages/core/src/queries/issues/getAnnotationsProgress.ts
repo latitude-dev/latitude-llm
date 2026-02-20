@@ -16,7 +16,9 @@ import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
 import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
+import { isClickHouseEvaluationResultsReadEnabled } from '../../services/workspaceFeatures/isClickHouseEvaluationResultsReadEnabled'
 import { countSpansForAnnotations as chCountSpansForAnnotations } from '../../queries/clickhouse/spans/getAnnotationsProgress'
+import { getAnnotationsProgressCount as chGetAnnotationsProgressCount } from '../../queries/clickhouse/evaluationResultsV2/getAnnotationsProgressCount'
 
 // These are the log sources we consider for annotations progress by default
 // We don't consider Experiment logs as they don't move the centroid
@@ -139,6 +141,7 @@ export async function getAnnotationsProgress(
   if (shouldUseClickHouse) {
     totalRuns = await chCountSpansForAnnotations({
       workspaceId: workspace.id,
+      projectId,
       commitUuids,
       logSources,
       fromDate,
@@ -159,11 +162,37 @@ export async function getAnnotationsProgress(
       .then((r) => r[0]['count'])
   }
 
-  const currentAnnotations = await getAnnotationsProgressCount({
-    workspace,
-    commitIds,
-    fromDate,
-  })
+  const shouldUseClickHouseEvals =
+    await isClickHouseEvaluationResultsReadEnabled(workspace.id, db)
+
+  const hitlEvaluationUuids = await db
+    .select({ evaluationUuid: evaluationVersions.evaluationUuid })
+    .from(evaluationVersions)
+    .where(
+      and(
+        eq(evaluationVersions.workspaceId, workspace.id),
+        eq(evaluationVersions.type, EvaluationType.Human),
+      ),
+    )
+    .then((r) => r.map((row) => row.evaluationUuid))
+
+  let currentAnnotations: number
+
+  if (shouldUseClickHouseEvals && hitlEvaluationUuids.length > 0) {
+    currentAnnotations = await chGetAnnotationsProgressCount({
+      workspaceId: workspace.id,
+      projectId,
+      evaluationUuids: hitlEvaluationUuids,
+      commitUuids: commitUuids,
+      fromDate: fromDate.toISOString(),
+    })
+  } else {
+    currentAnnotations = await getAnnotationsProgressCount({
+      workspace,
+      commitIds,
+      fromDate,
+    })
+  }
 
   return Result.ok({ totalRuns, currentAnnotations })
 }

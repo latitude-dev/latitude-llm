@@ -35,6 +35,7 @@ export const downloadSpansAction = withDocument
 
     return downloadSpans({
       workspace: ctx.workspace,
+      projectId: ctx.project.id,
       userId: ctx.user.id,
       documentUuid: ctx.document.documentUuid,
       selectionMode: parsedInput.selectionMode,

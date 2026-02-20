@@ -5,7 +5,7 @@ import {
   SpanStatus,
 } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
+import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { scopedQuery } from '../../scope'
 import { buildExperimentExclusionCondition } from './buildExperimentExclusionCondition'
@@ -14,6 +14,7 @@ import { paginateSpanRows } from './paginateSpanRows'
 export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
   {
     workspaceId,
+    projectId,
     documentUuid,
     spanTypes,
     commitUuids,
@@ -22,6 +23,7 @@ export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
     limit,
   }: {
     workspaceId: number
+    projectId: number
     documentUuid: string
     spanTypes: MainSpanType[]
     commitUuids: string[]
@@ -29,7 +31,6 @@ export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
     cursor: { value: Date; id: string } | null
     limit: number
   },
-  _db,
 ) {
   if (commitUuids.length === 0) {
     return { spans: [] as Span<MainSpanType>[], next: null }
@@ -37,6 +38,7 @@ export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
 
   const params: Record<string, unknown> = {
     workspaceId,
+    projectId,
     documentUuid,
     spanTypes,
     commitUuids,
@@ -48,6 +50,9 @@ export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
+    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+    `project_id = {projectId: UInt64}`,
+    `project_id_key = {projectId: UInt64}`,
     // TODO(clickhouse): remove non-_key predicate after key-column rollout.
     `document_uuid = {documentUuid: UUID}`,
     `document_uuid_key = {documentUuid: UUID}`,
@@ -71,7 +76,7 @@ export const getSpansByDocument = scopedQuery(async function getSpansByDocument(
   const result = await clickhouseClient().query({
     query: `
       SELECT *
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE ${conditions.join(' AND ')}
       ORDER BY started_at DESC, span_id DESC
       LIMIT {fetchLimit: UInt32}

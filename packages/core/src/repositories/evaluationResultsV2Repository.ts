@@ -31,7 +31,6 @@ import {
   Span,
 } from '../constants'
 import { EvaluationResultsV2Search } from '../helpers'
-import { NotFoundError } from '../lib/errors'
 import { calculateOffset } from '../lib/pagination/index'
 import { Result } from '../lib/Result'
 import { commits } from '../schema/models/commits'
@@ -53,10 +52,64 @@ import { findLastActiveAssignedIssue } from '../queries/issueEvaluationResults/f
 import Repository from './repositoryV2'
 import { SpansRepository } from './spansRepository'
 import { spans } from '../schema/models/spans'
+import { Database, database } from '../client'
+import { isClickHouseEvaluationResultsReadEnabled } from '../services/workspaceFeatures/isClickHouseEvaluationResultsReadEnabled'
+import { captureException } from '../utils/datadogCapture'
+import { listEvaluationResultsByEvaluation } from '../queries/clickhouse/evaluationResultsV2/listByEvaluation'
+import { countEvaluationResultsByEvaluation } from '../queries/clickhouse/evaluationResultsV2/countByEvaluation'
+import { listEvaluationResultsBySessionId } from '../queries/clickhouse/evaluationResultsV2/listBySessionId'
+import { listEvaluationResultsBySpanAndEvaluations } from '../queries/clickhouse/evaluationResultsV2/listBySpanAndEvaluations'
+import { findEvaluationResultBySpanAndEvaluation } from '../queries/clickhouse/evaluationResultsV2/findBySpanAndEvaluation'
+import { listEvaluationResultsBySpans } from '../queries/clickhouse/evaluationResultsV2/listBySpans'
+import { listEvaluationResultsByIssueIds } from '../queries/clickhouse/evaluationResultsV2/listByIssueIds'
+import { countEvaluationResultsSinceDate } from '../queries/clickhouse/evaluationResultsV2/countSinceDate'
+import { selectEvaluationResultsForIssueGeneration } from '../queries/clickhouse/evaluationResultsV2/selectForIssueGeneration'
+import {
+  getEvaluationStatsByEvaluation,
+  EvaluationDailyStatsRow,
+  EvaluationVersionStatsRow,
+} from '../queries/clickhouse/evaluationResultsV2/getStatsByEvaluation'
+import { findEvaluationResultListPosition } from '../queries/clickhouse/evaluationResultsV2/findListByEvaluationPosition'
+import { listEvaluationResultsBySpanAndTraceIds } from '../queries/clickhouse/evaluationResultsV2/listBySpanAndTraceIds'
+import {
+  listPaginatedHITLResultsByIssue,
+  HITLResultRow,
+} from '../queries/clickhouse/evaluationResultsV2/listPaginatedHITLResultsByIssue'
+import {
+  listPaginatedHITLResultsByDocument,
+  HITLResultWithEvaluationRow,
+} from '../queries/clickhouse/evaluationResultsV2/listPaginatedHITLResultsByDocument'
 
 const tt = getTableColumns(evaluationResultsV2)
 
 export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2> {
+  private clickHouseOverride: boolean | undefined
+
+  constructor(
+    workspaceId: number,
+    db: Database = database,
+    options?: { useClickHouse?: boolean },
+  ) {
+    super(workspaceId, db)
+    this.clickHouseOverride = options?.useClickHouse
+  }
+
+  private async shouldUseClickHouse(): Promise<boolean> {
+    if (this.clickHouseOverride !== undefined) return this.clickHouseOverride
+
+    try {
+      this.clickHouseOverride = await isClickHouseEvaluationResultsReadEnabled(
+        this.workspaceId,
+        this.db,
+      )
+    } catch (error) {
+      captureException(error as Error)
+      this.clickHouseOverride = false
+    }
+
+    return this.clickHouseOverride
+  }
+
   get scopeFilter() {
     return eq(evaluationResultsV2.workspaceId, this.workspaceId)
   }
@@ -73,54 +126,40 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .$dynamic()
   }
 
-  async findByUuid(uuid: string) {
-    const result = await this.scope
-      .where(and(this.scopeFilter, eq(evaluationResultsV2.uuid, uuid)))
-      .limit(1)
-      .then((r) => r[0])
+  async listBySpanAndEvaluations({
+    projectId,
+    spans,
+    evaluationUuids,
+    commitHistoryUuids,
+  }: {
+    projectId: number
+    spans: { id: string; traceId: string }[]
+    evaluationUuids: string[]
+    commitHistoryUuids: string[]
+  }) {
+    if (!spans.length || !evaluationUuids.length) return []
 
-    if (!result) {
-      return Result.error(
-        new NotFoundError(
-          `Record with uuid ${uuid} not found in ${this.scope._.tableName}`,
-        ),
+    const useClickHouse = await this.shouldUseClickHouse()
+    if (useClickHouse) {
+      return await listEvaluationResultsBySpanAndEvaluations(
+        {
+          workspaceId: this.workspaceId,
+          projectId,
+          spans,
+          evaluationUuids,
+        },
+        this.db,
       )
     }
 
-    return Result.ok<EvaluationResultV2>(result as EvaluationResultV2)
-  }
-
-  async findManyByUuid(uuids: string[]) {
-    const results = await this.scope
-      .where(and(this.scopeFilter, inArray(evaluationResultsV2.uuid, uuids)))
-      .limit(uuids.length)
-
-    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
-  }
-
-  async findByIds(ids: number[]): Promise<EvaluationResultV2[]> {
-    if (!ids.length) return []
-
-    const results = await this.scope
-      .where(and(this.scopeFilter, inArray(evaluationResultsV2.id, ids)))
-      .limit(ids.length)
-
-    return results as EvaluationResultV2[]
-  }
-
-  async listBySpanAndEvaluations({
-    spans,
-    evaluationUuids,
-    commitHistoryIds,
-  }: {
-    spans: { id: string; traceId: string }[]
-    evaluationUuids: string[]
-    commitHistoryIds: number[]
-  }): Promise<EvaluationResultV2[]> {
-    if (!spans.length || !evaluationUuids.length) return []
-
     const spanIds = spans.map((s) => s.id)
     const traceIds = spans.map((s) => s.traceId)
+
+    const commitHistoryIds = await this.db
+      .select({ id: commits.id })
+      .from(commits)
+      .where(inArray(commits.uuid, commitHistoryUuids))
+      .then((rows) => rows.map((r) => r.id))
 
     const results = await this.db
       .select(tt)
@@ -135,18 +174,36 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         ),
       )
 
-    return results as EvaluationResultV2[]
+    // TODO(clickhouse): fix
+    return results
   }
 
   async findByEvaluatedSpanAndEvaluation({
+    projectId,
     evaluatedSpanId,
     evaluatedTraceId,
     evaluationUuid,
   }: {
+    projectId: number
     evaluatedSpanId: string
     evaluatedTraceId: string
     evaluationUuid: string
   }) {
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      return await findEvaluationResultBySpanAndEvaluation(
+        {
+          workspaceId: this.workspaceId,
+          projectId,
+          evaluatedSpanId,
+          evaluatedTraceId,
+          evaluationUuid,
+        },
+        this.db,
+      )
+    }
+
     return (await this.scope
       .where(
         and(
@@ -173,9 +230,17 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       eq(evaluationResultsV2.evaluationUuid, evaluationUuid),
     ]
 
-    if (filters?.commitIds !== undefined) {
-      if (filters.commitIds.length > 0) {
-        filter.push(inArray(evaluationResultsV2.commitId, filters.commitIds))
+    if (filters?.commitUuids !== undefined) {
+      if (filters.commitUuids.length > 0) {
+        filter.push(
+          inArray(
+            evaluationResultsV2.commitId,
+            this.db
+              .select({ id: commits.id })
+              .from(commits)
+              .where(inArray(commits.uuid, filters.commitUuids)),
+          ),
+        )
       } else filter.push(eq(sql`TRUE`, sql`FALSE`))
     }
 
@@ -204,12 +269,39 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   }
 
   async listByEvaluation({
+    projectId,
     evaluationUuid,
     params,
   }: {
+    projectId: number
     evaluationUuid: string
     params: EvaluationResultsV2Search
   }) {
+    const useClickHouse = await this.shouldUseClickHouse()
+    if (useClickHouse) {
+      const chResults = await listEvaluationResultsByEvaluation(
+        {
+          workspaceId: this.workspaceId,
+          projectId,
+          evaluationUuid,
+          commitUuids: params.filters?.commitUuids,
+          experimentIds: params.filters?.experimentIds,
+          errored: params.filters?.errored,
+          createdAtFrom: params.filters?.createdAt?.from,
+          createdAtTo: params.filters?.createdAt?.to,
+          limit: params.pagination.pageSize,
+          offset: calculateOffset(
+            params.pagination.page,
+            params.pagination.pageSize,
+          ),
+          orderBy: params.orders?.recency === 'asc' ? 'asc' : 'desc',
+        },
+        this.db,
+      )
+
+      return Result.ok(chResults)
+    }
+
     const filter = this.listByEvaluationFilter({ evaluationUuid, params })
 
     let query = this.db
@@ -249,18 +341,37 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         calculateOffset(params.pagination.page, params.pagination.pageSize),
       )
 
-    return Result.ok<EvaluationResultV2WithDetails[]>(
-      (await query) as EvaluationResultV2WithDetails[],
-    )
+    return Result.ok(await query)
   }
 
   async countListByEvaluation({
+    projectId,
     evaluationUuid,
     params,
   }: {
+    projectId: number
     evaluationUuid: string
     params: EvaluationResultsV2Search
   }) {
+    const useClickHouse = await this.shouldUseClickHouse()
+    if (useClickHouse) {
+      const count = await countEvaluationResultsByEvaluation(
+        {
+          workspaceId: this.workspaceId,
+          projectId,
+          evaluationUuid,
+          commitUuids: params.filters?.commitUuids,
+          experimentIds: params.filters?.experimentIds,
+          errored: params.filters?.errored,
+          createdAtFrom: params.filters?.createdAt?.from,
+          createdAtTo: params.filters?.createdAt?.to,
+        },
+        this.db,
+      )
+
+      return Result.ok(count)
+    }
+
     const filter = this.listByEvaluationFilter({ evaluationUuid, params })
 
     const count = await this.db
@@ -276,12 +387,48 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   }
 
   async findListByEvaluationPosition({
+    projectId,
     evaluationUuid,
     params,
   }: {
+    projectId: number
     evaluationUuid: string
     params: EvaluationResultsV2Search
   }) {
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const resultId = params.pagination.resultId
+      if (!resultId) return Result.ok(undefined)
+
+      const pgTargetResult = await this.db
+        .select({ id: evaluationResultsV2.id })
+        .from(evaluationResultsV2)
+        .where(and(this.scopeFilter, eq(evaluationResultsV2.id, resultId)))
+        .limit(1)
+        .then((r) => r[0])
+      if (!pgTargetResult) return Result.ok(undefined)
+
+      const page = await findEvaluationResultListPosition(
+        {
+          workspaceId: this.workspaceId,
+          projectId,
+          evaluationUuid,
+          resultId: pgTargetResult.id,
+          orderBy: params.orders?.recency === 'asc' ? 'asc' : 'desc',
+          pageSize: params.pagination.pageSize,
+          commitUuids: params.filters?.commitUuids,
+          experimentIds: params.filters?.experimentIds,
+          errored: params.filters?.errored,
+          createdAtFrom: params.filters?.createdAt?.from,
+          createdAtTo: params.filters?.createdAt?.to,
+        },
+        this.db,
+      )
+
+      return Result.ok(page)
+    }
+
     const result = await this.db
       .select({
         id: evaluationResultsV2.id,
@@ -291,7 +438,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       .where(
         and(
           this.scopeFilter,
-          eq(evaluationResultsV2.uuid, params.pagination.resultUuid!),
+          eq(evaluationResultsV2.id, params.pagination.resultId!),
         ),
       )
       .then((r) => r[0])
@@ -339,6 +486,8 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     evaluationUuid: string
     params: EvaluationResultsV2Search
   }) {
+    const useClickHouse = await this.shouldUseClickHouse()
+
     const evaluationsRepository = new EvaluationsV2Repository(
       this.workspaceId,
       this.db,
@@ -351,6 +500,101 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         evaluationUuid: evaluationUuid,
       })
       .then((r) => r.unwrap())
+
+    if (useClickHouse) {
+      const now = new Date()
+
+      const {
+        totalStats,
+        dailyStats: rawDailyStats,
+        versionStats: rawVersionStats,
+      } = await getEvaluationStatsByEvaluation(
+        {
+          workspaceId: this.workspaceId,
+          evaluationUuid,
+          isLlmEvaluation: evaluation.type === EvaluationType.Llm,
+          commitUuids: params.filters?.commitUuids,
+          experimentIds: params.filters?.experimentIds,
+          errored: params.filters?.errored,
+          createdAtFrom: params.filters?.createdAt?.from,
+          createdAtTo: params.filters?.createdAt?.to,
+        },
+        this.db,
+      )
+
+      if (!totalStats || totalStats.total_results === 0) return Result.nil()
+
+      const dailyStats = rawDailyStats.map((row: EvaluationDailyStatsRow) => ({
+        date: new Date(row.date),
+        totalResults: row.total_results,
+        averageScore: row.average_score,
+        totalTokens: row.total_tokens ?? 0,
+        totalCost: row.total_cost ?? 0,
+      }))
+
+      let runningResults = 0
+      let runningScore = 0
+      for (let i = 0; i < dailyStats.length; i++) {
+        runningResults += dailyStats[i]!.totalResults
+        runningScore +=
+          dailyStats[i]!.averageScore * dailyStats[i]!.totalResults
+        dailyStats[i]!.averageScore = runningScore / runningResults
+      }
+
+      if (
+        runningResults > 0 &&
+        (!dailyStats.at(-1)?.date || !isToday(dailyStats.at(-1)!.date)) &&
+        (!params.filters?.createdAt?.from ||
+          isBefore(params.filters.createdAt.from, now)) &&
+        (!params.filters?.createdAt?.to ||
+          isAfter(params.filters.createdAt.to, now))
+      ) {
+        dailyStats.push({
+          date: startOfDay(now),
+          totalResults: 0,
+          averageScore: runningScore / runningResults,
+          totalTokens: 0,
+          totalCost: 0,
+        })
+      }
+
+      const commitUuids = [
+        ...new Set(
+          rawVersionStats.map((r: EvaluationVersionStatsRow) => r.commit_uuid),
+        ),
+      ]
+      const commitsData = commitUuids.length
+        ? await this.db
+            .select()
+            .from(commits)
+            .where(inArray(commits.uuid, commitUuids))
+        : []
+
+      const commitMap = new Map(commitsData.map((c) => [c.uuid, c]))
+
+      const versionStats: EvaluationV2Stats['versionOverview'] = []
+      for (const row of rawVersionStats) {
+        const version = commitMap.get(row.commit_uuid)
+        if (!version) continue
+
+        versionStats.push({
+          version,
+          totalResults: row.total_results,
+          averageScore: row.average_score ?? 0,
+          totalTokens: row.total_tokens ?? 0,
+          totalCost: row.total_cost ?? 0,
+        })
+      }
+
+      return Result.ok<EvaluationV2Stats>({
+        totalResults: totalStats.total_results,
+        averageScore: totalStats.average_score ?? 0,
+        totalTokens: totalStats.total_tokens ?? 0,
+        totalCost: totalStats.total_cost ?? 0,
+        dailyOverview: dailyStats,
+        versionOverview: versionStats,
+      })
+    }
 
     const now = new Date()
 
@@ -457,6 +701,18 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   }
 
   async listBySpans(spans: Span[]) {
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const results = await listEvaluationResultsBySpans(
+        { workspaceId: this.workspaceId, spans },
+        this.db,
+      )
+      return Result.ok(
+        results as (EvaluationResultV2 & { commitUuid: string })[],
+      )
+    }
+
     const results = await this.db
       .select({
         ...tt,
@@ -525,11 +781,55 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     return Result.ok(resultsWithCommit)
   }
 
+  async listBySessionId(sessionId: string) {
+    if (!sessionId) return Result.ok([])
+
+    const chResults = await listEvaluationResultsBySessionId(
+      { workspaceId: this.workspaceId, sessionId },
+      this.db,
+    )
+
+    return Result.ok(chResults)
+  }
+
   // Be careful using this with merged issues, as there will be multiple evaluation results for the same issue
   async listByIssueIds(issueIds: number[], commitHistoryIds: number[]) {
     const uniqueIssueIds = [...new Set(issueIds)].filter(Boolean)
     if (!uniqueIssueIds.length) {
       return []
+    }
+
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const commitUuids = commitHistoryIds.length
+        ? await this.db
+            .select({ uuid: commits.uuid })
+            .from(commits)
+            .where(inArray(commits.id, commitHistoryIds))
+            .then((rows) => rows.map((r) => r.uuid))
+        : []
+
+      if (!commitUuids.length) return []
+
+      const rows = await listEvaluationResultsByIssueIds(
+        {
+          workspaceId: this.workspaceId,
+          commitUuids,
+          issueIds: uniqueIssueIds,
+        },
+        this.db,
+      )
+
+      return rows.map((row) => {
+        const joinedIssueId = row.issueIds.find((id) =>
+          uniqueIssueIds.includes(id),
+        )
+        return {
+          ...row,
+          joinedIssueId: joinedIssueId ?? uniqueIssueIds[0]!,
+        }
+      }) as (EvaluationResultV2 & { joinedIssueId: number })[]
     }
 
     const results = await this.db
@@ -557,75 +857,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.id),
       )
 
-    return results as (EvaluationResultV2 & { joinedIssueId: number })[]
-  }
-
-  async listBySpanTrace({
-    projectId,
-    documentUuid,
-    spanId,
-    traceId,
-  }: {
-    projectId?: number
-    documentUuid: string
-    spanId: string
-    traceId: string
-  }) {
-    const results = await this.db
-      .select({
-        ...tt,
-        commitUuid: commits.uuid,
-      })
-      .from(evaluationResultsV2)
-      .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-      .where(
-        and(
-          this.scopeFilter,
-          isNull(commits.deletedAt),
-          eq(evaluationResultsV2.evaluatedSpanId, spanId),
-          eq(evaluationResultsV2.evaluatedTraceId, traceId),
-        ),
-      )
-      .orderBy(
-        desc(evaluationResultsV2.createdAt),
-        desc(evaluationResultsV2.id),
-      )
-
-    const evaluationsByCommit = await this.getEvaluationsByCommit({
-      projectId: projectId!,
-      documentUuid,
-      results: results as (Omit<EvaluationResultV2, 'score'> & {
-        commitUuid: string
-      })[],
-    })
-
-    const resultsWithEvaluations: ResultWithEvaluationV2[] = []
-    for (const result of results) {
-      const evaluation = evaluationsByCommit[result.commitUuid]!.find(
-        (e) => e.uuid === result.evaluationUuid,
-      )
-      if (!evaluation) continue
-
-      const activeAssignment = await findLastActiveAssignedIssue(
-        {
-          workspaceId: this.workspaceId,
-          resultId: (result as EvaluationResultV2).id,
-        },
-        this.db,
-      )
-
-      const resultWithIssue = {
-        ...result,
-        issueId: activeAssignment?.issueId ?? null,
-      } as EvaluationResultV2
-
-      resultsWithEvaluations.push({
-        result: resultWithIssue,
-        evaluation,
-      } as ResultWithEvaluationV2)
-    }
-
-    return Result.ok<ResultWithEvaluationV2[]>(resultsWithEvaluations)
+    return results
   }
 
   async listBySpanAndDocumentLogUuid({
@@ -647,7 +879,50 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       return Result.ok<ResultWithEvaluationV2[]>([])
     }
 
-    const results = await this.db
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const results = (await listEvaluationResultsBySpanAndTraceIds(
+        { workspaceId: this.workspaceId, spanId, traceIds },
+        this.db,
+      )) as (EvaluationResultV2 & { commitUuid: string })[]
+
+      const evaluationsByCommit = await this.getEvaluationsByCommit({
+        projectId: projectId!,
+        documentUuid,
+        results,
+      })
+
+      const resultsWithEvaluations: ResultWithEvaluationV2[] = []
+      for (const result of results) {
+        const evaluation = evaluationsByCommit[result.commitUuid]!.find(
+          (e) => e.uuid === result.evaluationUuid,
+        )
+        if (!evaluation) continue
+
+        const activeAssignment = await findLastActiveAssignedIssue(
+          {
+            workspaceId: this.workspaceId,
+            resultId: (result as EvaluationResultV2).id,
+          },
+          this.db,
+        )
+
+        const resultWithIssue = {
+          ...result,
+          issueId: activeAssignment?.issueId ?? null,
+        }
+
+        resultsWithEvaluations.push({
+          result: resultWithIssue,
+          evaluation,
+        } as ResultWithEvaluationV2)
+      }
+
+      return Result.ok<ResultWithEvaluationV2[]>(resultsWithEvaluations)
+    }
+
+    let results = await this.db
       .select({
         ...tt,
         commitUuid: commits.uuid,
@@ -667,12 +942,14 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
         desc(evaluationResultsV2.id),
       )
 
+    results = results.map((r) => ({
+      ...r,
+      documentUuid,
+    })) as EvaluationResultV2[]
     const evaluationsByCommit = await this.getEvaluationsByCommit({
       projectId: projectId!,
       documentUuid,
-      results: results as (Omit<EvaluationResultV2, 'score'> & {
-        commitUuid: string
-      })[],
+      results,
     })
 
     const resultsWithEvaluations: ResultWithEvaluationV2[] = []
@@ -685,7 +962,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       const activeAssignment = await findLastActiveAssignedIssue(
         {
           workspaceId: this.workspaceId,
-          resultId: (result as EvaluationResultV2).id,
+          resultId: result.id,
         },
         this.db,
       )
@@ -693,7 +970,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
       const resultWithIssue = {
         ...result,
         issueId: activeAssignment?.issueId ?? null,
-      } as EvaluationResultV2
+      }
 
       resultsWithEvaluations.push({
         result: resultWithIssue,
@@ -705,6 +982,16 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   }
 
   async countSinceDate(since: Date) {
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const count = await countEvaluationResultsSinceDate(
+        { workspaceId: this.workspaceId, since },
+        this.db,
+      )
+      return Result.ok<number>(count)
+    }
+
     const result = await this.db
       .select({ count: count() })
       .from(evaluationResultsV2)
@@ -721,6 +1008,43 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
   }
 
   async selectForIssueGeneration({ issueId }: { issueId: number }) {
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const mergedCommitUuids = await this.db
+        .select({ uuid: commits.uuid })
+        .from(commits)
+        .where(isNotNull(commits.mergedAt))
+        .then((rows) => rows.map((r) => r.uuid))
+
+      if (!mergedCommitUuids.length) {
+        return Result.ok<EvaluationResultV2[]>([])
+      }
+
+      const newerLimit = Math.ceil(
+        ISSUE_GENERATION_MAX_RESULTS * ISSUE_GENERATION_RECENCY_RATIO,
+      )
+
+      const results = await selectEvaluationResultsForIssueGeneration(
+        {
+          workspaceId: this.workspaceId,
+          issueId,
+          mergedCommitUuids,
+          recentDate: subDays(
+            new Date(),
+            ISSUE_GENERATION_RECENCY_DAYS,
+          ).toISOString(),
+          newerLimit,
+          olderLimit: ISSUE_GENERATION_MAX_RESULTS - newerLimit,
+        },
+        this.db,
+      )
+
+      return Result.ok<EvaluationResultV2[]>(
+        results.slice(0, ISSUE_GENERATION_MAX_RESULTS) as EvaluationResultV2[],
+      )
+    }
+
     const conditions = [
       this.scopeFilter,
       eq(issueEvaluationResults.issueId, issueId),
@@ -781,7 +1105,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     }
     results = results.slice(0, ISSUE_GENERATION_MAX_RESULTS)
 
-    return Result.ok<EvaluationResultV2[]>(results as EvaluationResultV2[])
+    return Result.ok<EvaluationResultV2[]>(results)
   }
 
   async fetchPaginatedHITLResultsByIssue({
@@ -804,8 +1128,60 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const commitsRepo = new CommitsRepository(workspace.id, this.db)
     const commitHistory = await commitsRepo.getCommitsHistory({ commit })
     const commitIds = commitHistory.map((c) => c.id)
+    const commitUuids = commitHistory.map((c) => c.uuid)
     const limit = pageSize + 1
     const offset = calculateOffset(page, pageSize)
+
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const fetchLimit = limit * 2
+
+      const allEvalResults = await listPaginatedHITLResultsByIssue(
+        {
+          workspaceId: workspace.id,
+          issueId: issue.id,
+          commitUuids,
+          afterDate,
+          orderDirection,
+          fetchLimit,
+          offset,
+        },
+        this.db,
+      )
+
+      const seenSpans = new Set<string>()
+      const deduplicatedResults = allEvalResults.filter(
+        (result: HITLResultRow) => {
+          const spanKey = `${result.evaluated_span_id}:${result.evaluated_trace_id}`
+          if (seenSpans.has(spanKey)) return false
+          seenSpans.add(spanKey)
+          return true
+        },
+      )
+
+      const commitMap = new Map(commitHistory.map((c) => [c.uuid, c.id]))
+      const mapped = deduplicatedResults
+        .slice(0, pageSize + 1)
+        .map((row: HITLResultRow) => ({
+          id: row.id,
+          evaluatedSpanId: row.evaluated_span_id,
+          evaluatedTraceId: row.evaluated_trace_id,
+          createdAt: new Date(row.created_at),
+          commitId: commitMap.get(row.commit_uuid),
+          type: EvaluationType.Human,
+        }))
+        .filter((r) => r.commitId !== undefined)
+
+      const paginatedResults = mapped.slice(0, pageSize)
+      const hasNextPage = mapped.length > pageSize
+      const results = hasNextPage ? paginatedResults : mapped
+
+      return {
+        results: results as EvaluationResultV2[],
+        hasNextPage,
+      }
+    }
 
     const whereConditions = [
       eq(issueEvaluationResults.workspaceId, workspace.id),
@@ -888,6 +1264,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     const commitsRepo = new CommitsRepository(workspace.id, this.db)
     const commitHistory = await commitsRepo.getCommitsHistory({ commit })
     const commitIds = commitHistory.map((c) => c.id)
+    const commitUuids = commitHistory.map((c) => c.uuid)
     const limit = pageSize + 1
     const offset = calculateOffset(page, pageSize)
 
@@ -903,6 +1280,55 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
 
     if (evaluationUuids.length === 0) {
       return { results: [], hasNextPage: false }
+    }
+
+    const useClickHouse = await this.shouldUseClickHouse()
+
+    if (useClickHouse) {
+      const fetchLimit = limit * 2
+
+      const allEvalResults = await listPaginatedHITLResultsByDocument(
+        {
+          workspaceId: workspace.id,
+          evaluationUuids,
+          excludeIssueId,
+          commitUuids,
+          afterDate,
+          orderDirection,
+          fetchLimit,
+          offset,
+        },
+        this.db,
+      )
+
+      const seenSpans = new Set<string>()
+      const deduplicatedResults = allEvalResults.filter(
+        (result: HITLResultWithEvaluationRow) => {
+          const spanKey = `${result.evaluated_span_id}:${result.evaluated_trace_id}`
+          if (seenSpans.has(spanKey)) return false
+          seenSpans.add(spanKey)
+          return true
+        },
+      )
+
+      const commitMap = new Map(commitHistory.map((c) => [c.uuid, c.id]))
+      const mapped = deduplicatedResults
+        .slice(0, pageSize + 1)
+        .map((row: HITLResultWithEvaluationRow) => ({
+          id: row.id,
+          evaluatedSpanId: row.evaluated_span_id,
+          evaluatedTraceId: row.evaluated_trace_id,
+          createdAt: new Date(row.created_at),
+          commitId: commitMap.get(row.commit_uuid),
+          evaluationUuid: row.evaluation_uuid,
+          type: EvaluationType.Human,
+        }))
+        .filter((r) => r.commitId !== undefined)
+
+      const paginatedResults = mapped.slice(0, pageSize)
+      const hasNextPage = mapped.length > pageSize
+      const results = hasNextPage ? paginatedResults : mapped
+      return { results: results as EvaluationResultV2[], hasNextPage }
     }
 
     const whereConditions = [
@@ -970,11 +1396,7 @@ export class EvaluationResultsV2Repository extends Repository<EvaluationResultV2
     results,
   }: {
     documentUuid: string
-    results: Array<
-      Omit<EvaluationResultV2, 'score'> & {
-        commitUuid: string
-      }
-    >
+    results: EvaluationResultV2[]
     projectId?: number
   }) {
     const evaluationsRepository = new EvaluationsV2Repository(

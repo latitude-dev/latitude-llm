@@ -1,25 +1,3 @@
-import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { AnnotationsProgressIcon } from '$/components/AnnotationProgressPanel/AnntationsProgressIcon'
-import { ROUTES } from '$/services/routes'
-import {
-  EvaluationMetric,
-  EvaluationResultV2,
-  EvaluationType,
-  EvaluationV2,
-  MainSpanType,
-  SpanWithDetails,
-} from '@latitude-data/constants'
-import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { Button } from '@latitude-data/web-ui/atoms/Button'
-import { Icon } from '@latitude-data/web-ui/atoms/Icons'
-import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { TextArea as TextAreaAtom } from '@latitude-data/web-ui/atoms/TextArea'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
-import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { font } from '@latitude-data/web-ui/tokens'
-import { cn } from '@latitude-data/web-ui/utils'
-import Link from 'next/link'
 import {
   ChangeEvent,
   createContext,
@@ -29,12 +7,29 @@ import {
   useCallback,
   useState,
 } from 'react'
+import Link from 'next/link'
+import { Text } from '@latitude-data/web-ui/atoms/Text'
+import { TextArea as TextAreaAtom } from '@latitude-data/web-ui/atoms/TextArea'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
+import { font } from '@latitude-data/web-ui/tokens'
+import { cn } from '@latitude-data/web-ui/utils'
+import {
+  EvaluationType,
+  EvaluationMetric,
+  EvaluationResultV2,
+  EvaluationV2,
+  SpanWithDetails,
+  SpanType,
+} from '@latitude-data/constants'
+import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { OnSubmitProps } from '../useAnnotationForm'
-
-type EvaluationResultV2WithIssue<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
-> = EvaluationResultV2<T, M> & { issueId?: number | null }
+import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
+import { Icon } from '@latitude-data/web-ui/atoms/Icons'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { AnnotationsProgressIcon } from '$/components/AnnotationProgressPanel/AnntationsProgressIcon'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { ROUTES } from '$/services/routes'
 
 type IAnnotationForm<
   T extends EvaluationType,
@@ -45,9 +40,9 @@ type IAnnotationForm<
   disabled: boolean
   documentUuid: string
   commit: Commit
-  result: EvaluationResultV2WithIssue<T, M> | undefined
+  result: EvaluationResultV2<T, M> | undefined
   evaluation: EvaluationV2<T, M>
-  span: SpanWithDetails<MainSpanType>
+  span: SpanWithDetails<SpanType.Prompt>
   setDisabled: ReactStateDispatch<boolean>
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>
@@ -91,9 +86,9 @@ export const AnnotationProvider = <
   isSubmitting: boolean
   onSubmit: IAnnotationForm<T, M>['onSubmit']
   commit: Commit
-  span: SpanWithDetails<MainSpanType>
+  span: SpanWithDetails<SpanType.Prompt>
   evaluation: EvaluationV2<T, M>
-  result: EvaluationResultV2WithIssue<T, M> | undefined
+  result: EvaluationResultV2<T, M> | undefined
   documentUuid: string
   isExpanded: boolean
   setIsExpanded: ReactStateDispatch<boolean>
@@ -184,10 +179,8 @@ AnnotationFormWrapper.Footer = function Footer({
 
 AnnotationFormWrapper.SaveButton = function SaveButton({
   onClick,
-  disabled: externallyDisabled = false,
 }: {
   onClick: () => void
-  disabled?: boolean
 }) {
   const { isSubmitting, hasChanges } = use(AnnotationContext)
 
@@ -200,7 +193,7 @@ AnnotationFormWrapper.SaveButton = function SaveButton({
       variant='default'
       {...(isSubmitting ? { iconProps: { name: 'loader', spin: true } } : {})}
       onClick={onClick}
-      disabled={isSubmitting || externallyDisabled}
+      disabled={isSubmitting}
     >
       {isSubmitting ? 'Saving...' : 'Save annotation'}
     </Button>
@@ -234,7 +227,7 @@ AnnotationFormWrapper.TextArea = function TextArea({
   name,
   value,
   onChange,
-  placeholder = 'You can select text to include it in the annotation',
+  placeholder = 'Write your feedback here...',
   disabled = false,
 }: {
   name: string
@@ -285,9 +278,9 @@ AnnotationFormWrapper.FailedWithoutReasonWarning =
         <div className='px-3 py-2 bg-background rounded-md flex items-center gap-x-2'>
           <AnnotationsProgressIcon isCompleted />
           <Text.H6 color='foregroundMuted'>
-            Please write what went wrong with this AI interaction. Your feedback
-            helps Latitude identify patterns and create actionable issues,
-            making it easier to improve your prompts over time. Check the{' '}
+            Please write feedback on why this annotation did not pass. This is
+            important for improving your prompt and ensuring Latitude can create
+            better issues. Check the{' '}
             <Link href={issuesDashboardLink} target='_blank'>
               <Text.H6M underline color='foregroundMuted'>
                 issues section

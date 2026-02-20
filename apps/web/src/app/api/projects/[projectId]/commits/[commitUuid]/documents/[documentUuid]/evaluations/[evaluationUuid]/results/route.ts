@@ -46,7 +46,11 @@ export const GET = errorHandler(
 
       const repository = new EvaluationResultsV2Repository(workspace.id)
       const results = await repository
-        .listByEvaluation({ evaluationUuid, params: resolvedSearch })
+        .listByEvaluation({
+          projectId: Number(projectId),
+          evaluationUuid,
+          params: resolvedSearch,
+        })
         .then((r) => r.unwrap())
 
       return NextResponse.json(results, { status: 200 })

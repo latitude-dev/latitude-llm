@@ -1,6 +1,6 @@
 import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
 
 export type ExperimentRunMetadataResult = {
@@ -19,13 +19,12 @@ export const getExperimentRunMetadata = scopedQuery(
       workspaceId: number
       experimentUuid: string
     },
-    _db,
   ): Promise<ExperimentRunMetadataResult> {
     const result = await clickhouseClient().query({
       query: `
       WITH experiment_trace_ids AS (
         SELECT DISTINCT trace_id
-        FROM ${SPANS_TABLE}
+        FROM ${TABLE_NAME}
         WHERE workspace_id = {workspaceId: UInt64}
           AND experiment_uuid = {experimentUuid: UUID}
       )
@@ -43,7 +42,7 @@ export const getExperimentRunMetadata = scopedQuery(
           ),
           0
         ) AS total_tokens
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND trace_id IN (SELECT trace_id FROM experiment_trace_ids)
     `,

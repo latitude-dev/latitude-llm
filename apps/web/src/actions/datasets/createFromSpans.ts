@@ -64,6 +64,7 @@ export const createDatasetFromSpansAction = withDocument
       name: parsedInput.name,
       userId: ctx.user.id,
       workspaceId: ctx.workspace.id,
+      projectId: ctx.project.id,
       documentVersionId: ctx.document.id,
       selectionMode: parsedInput.selectionMode,
       selectedSpanIdentifiers,

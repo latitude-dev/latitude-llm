@@ -63,8 +63,10 @@ export const GET = errorHandler(
         })
 
       const spansRepository = new SpansRepository(workspace.id)
-      const traceId =
-        await spansRepository.getLastTraceByLogUuid(documentLogUuid)
+      const traceId = await spansRepository.getLastTraceByLogUuid(
+        documentLogUuid,
+        { commitUuid, documentUuid },
+      )
 
       if (!traceId) {
         return NextResponse.json(

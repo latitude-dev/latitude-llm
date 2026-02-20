@@ -286,11 +286,15 @@ export class SpansRepository extends Repository<Span> {
     return Result.ok<Span[]>(result as Span[])
   }
 
-  async getLastTraceByLogUuid(logUuid: string) {
+  async getLastTraceByLogUuid(
+    logUuid: string,
+    pkFilters?: { projectId?: number; commitUuid?: string; documentUuid?: string },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chGetLastTraceByLogUuid({
         workspaceId: this.workspaceId,
         logUuid,
+        ...pkFilters,
       })
     }
 
@@ -303,11 +307,15 @@ export class SpansRepository extends Repository<Span> {
       .then((r) => r[0]?.traceId)
   }
 
-  async listTraceIdsByLogUuid(logUuid: string) {
+  async listTraceIdsByLogUuid(
+    logUuid: string,
+    pkFilters?: { projectId?: number; commitUuid?: string; documentUuid?: string },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chListTraceIdsByLogUuid({
         workspaceId: this.workspaceId,
         logUuid,
+        ...pkFilters,
       })
     }
 
@@ -355,11 +363,15 @@ export class SpansRepository extends Repository<Span> {
       )
   }
 
-  async findByDocumentLogUuid(documentLogUuid: string) {
+  async findByDocumentLogUuid(
+    documentLogUuid: string,
+    pkFilters?: { projectId?: number; commitUuid?: string; documentUuid?: string },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chFindByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
+        ...pkFilters,
       })
     }
 
@@ -372,11 +384,15 @@ export class SpansRepository extends Repository<Span> {
     return result as Span | undefined
   }
 
-  async listByDocumentLogUuid(documentLogUuid: string) {
+  async listByDocumentLogUuid(
+    documentLogUuid: string,
+    pkFilters?: { projectId?: number; commitUuid?: string; documentUuid?: string },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chListByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
+        ...pkFilters,
       })
     }
 
@@ -388,11 +404,15 @@ export class SpansRepository extends Repository<Span> {
       .then((r) => r as Span[])
   }
 
-  async findLastMainSpanByDocumentLogUuid(documentLogUuid: string) {
+  async findLastMainSpanByDocumentLogUuid(
+    documentLogUuid: string,
+    pkFilters?: { projectId?: number; commitUuid?: string; documentUuid?: string },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chFindLastMainSpanByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
+        ...pkFilters,
       })
     }
 
@@ -417,11 +437,15 @@ export class SpansRepository extends Repository<Span> {
     return result as Span | undefined
   }
 
-  async findFirstMainSpanByDocumentLogUuid(documentLogUuid: string) {
+  async findFirstMainSpanByDocumentLogUuid(
+    documentLogUuid: string,
+    pkFilters?: { projectId?: number; commitUuid?: string; documentUuid?: string },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chFindFirstMainSpanByDocumentLogUuid({
         workspaceId: this.workspaceId,
         documentLogUuid,
+        ...pkFilters,
       })
     }
 
@@ -450,13 +474,17 @@ export class SpansRepository extends Repository<Span> {
     documentLogUuid: string,
     spanId: string,
     traceId: string,
+    pkFilters?: { projectId?: number; commitUuid?: string; documentUuid?: string },
   ): Promise<boolean> {
-    const firstSpan =
-      await this.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
+    const firstSpan = await this.findFirstMainSpanByDocumentLogUuid(
+      documentLogUuid,
+      pkFilters,
+    )
     return firstSpan?.id === spanId && firstSpan?.traceId === traceId
   }
 
   async findByDocumentAndCommitLimited({
+    projectId,
     documentUuid,
     types,
     from,
@@ -467,6 +495,7 @@ export class SpansRepository extends Repository<Span> {
     testDeploymentIds,
     createdAt,
   }: {
+    projectId: number
     documentUuid: string
     types?: SpanType[]
     from?: { startedAt: string; id: string }
@@ -480,6 +509,7 @@ export class SpansRepository extends Repository<Span> {
     if (await this.shouldUseClickHouse()) {
       const result = await chFindByDocumentAndCommitLimited({
         workspaceId: this.workspaceId,
+        projectId,
         documentUuid,
         types,
         from,

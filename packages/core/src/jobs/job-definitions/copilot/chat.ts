@@ -105,7 +105,10 @@ export const runLatteJob = async (job: Job<RunLatteJobData>) => {
     } = copilotResult.unwrap()
 
     const spansRepo = new SpansRepository(copilotWorkspace.id)
-    const existingSpan = await spansRepo.findByDocumentLogUuid(threadUuid)
+    const existingSpan = await spansRepo.findByDocumentLogUuid(threadUuid, {
+      commitUuid: copilotCommit.uuid,
+      documentUuid: copilotDocument.documentUuid,
+    })
     if (!existingSpan) {
       const runResult = await runNewLatte({
         copilotWorkspace,

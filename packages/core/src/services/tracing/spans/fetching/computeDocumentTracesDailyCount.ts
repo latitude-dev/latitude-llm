@@ -15,11 +15,13 @@ export type DailyCount = {
 export async function computeDocumentTracesDailyCount(
   {
     workspaceId,
+    projectId,
     documentUuid,
     commitUuid,
     days = 30,
   }: {
     workspaceId: number
+    projectId: number
     documentUuid: string
     commitUuid?: string
     days?: number
@@ -34,6 +36,7 @@ export async function computeDocumentTracesDailyCount(
   if (shouldUseClickHouse) {
     const result = await chComputeDocumentTracesDailyCount({
       workspaceId,
+      projectId,
       documentUuid,
       commitUuid,
       days,

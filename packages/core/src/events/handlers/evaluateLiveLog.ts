@@ -137,6 +137,10 @@ export const evaluateLiveLogJob = async ({
         span.documentLogUuid,
         span.id,
         span.traceId,
+        {
+          commitUuid: span.commitUuid,
+          documentUuid: span.documentUuid,
+        },
       )
       if (!isFirst) continue
     }
