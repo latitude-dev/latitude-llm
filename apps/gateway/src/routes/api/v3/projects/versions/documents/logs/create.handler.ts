@@ -1,27 +1,27 @@
-import { randomBytes } from 'crypto'
+import { getData } from '$/common/documents/getData'
+import { AppRouteHandler } from '$/openApi/types'
+import { cache as redis } from '@latitude-data/core/cache'
 import { database } from '@latitude-data/core/client'
 import {
+  ATTRIBUTES,
+  CompletionSpanMetadata,
   LogSources,
   PromptSpanMetadata,
-  CompletionSpanMetadata,
   SPAN_METADATA_STORAGE_KEY,
   SpanKind,
   SpanStatus,
   SpanType,
-  ATTRIBUTES,
 } from '@latitude-data/core/constants'
-import { cache as redis } from '@latitude-data/core/cache'
 import { diskFactory } from '@latitude-data/core/lib/disk'
 import { compressString } from '@latitude-data/core/lib/disk/compression'
-import { publishSpanCreated } from '@latitude-data/core/services/tracing/publishSpanCreated'
-import { AppRouteHandler } from '$/openApi/types'
-import { CreateLogRoute } from './create.route'
-import { getData } from '$/common/documents/getData'
 import { spans } from '@latitude-data/core/schema/models/spans'
-import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import type { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
-import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import type { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { publishSpanCreated } from '@latitude-data/core/services/tracing/publishSpanCreated'
+import { randomBytes } from 'crypto'
+import { CreateLogRoute } from './create.route'
 
 // @ts-expect-error: broken types
 export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {
@@ -93,59 +93,74 @@ async function createSpansFromLogData({
   const now = new Date()
   const startedAt = new Date(now.getTime() - 1000) // 1 second ago
   const endedAt = now
-  const duration = endedAt.getTime() - startedAt.getTime()
 
   // Create prompt span
   await database
     .insert(spans)
     .values({
       id: promptSpanId,
-      traceId,
+      traceId: traceId,
+      documentLogUuid: documentLogUuid,
       workspaceId: workspace.id,
+      projectId: commit.projectId,
       apiKeyId: apiKey.id,
-      name: 'prompt',
-      kind: SpanKind.Client,
-      type: SpanType.Prompt,
-      status: SpanStatus.Ok,
-      duration,
-      startedAt,
-      endedAt: new Date(startedAt.getTime() + 500), // Midpoint
-      documentLogUuid,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
-      projectId: commit.projectId,
+      name: document.path.split('/').pop() ?? 'prompt',
+      kind: SpanKind.Client,
+      type: SpanType.Prompt,
       source: LogSources.API,
+      status: SpanStatus.Ok,
+      duration: endedAt.getTime() - startedAt.getTime(),
+      startedAt: startedAt,
+      endedAt: endedAt,
+      createdAt: now,
+      updatedAt: now,
     })
     .returning()
+
+  const tokens = {
+    prompt: 0,
+    cached: 0,
+    reasoning: 0,
+    completion: 0,
+  }
 
   // Create completion span
   await database
     .insert(spans)
     .values({
       id: completionSpanId,
-      traceId,
+      traceId: traceId,
+      documentLogUuid: documentLogUuid,
       parentId: promptSpanId,
       workspaceId: workspace.id,
+      projectId: commit.projectId,
       apiKeyId: apiKey.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
       name: 'completion',
       kind: SpanKind.Client,
       type: SpanType.Completion,
+      source: LogSources.API,
       status: SpanStatus.Ok,
-      duration,
-      startedAt: new Date(startedAt.getTime() + 500), // After prompt
-      endedAt,
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
+      duration: endedAt.getTime() - startedAt.getTime(),
+      startedAt: startedAt,
+      endedAt: endedAt,
+      createdAt: now,
+      updatedAt: now,
+      tokensPrompt: null, // TODO: Add tokens prompt
+      tokensCompletion: null, // TODO: Add tokens completion
     })
     .returning()
 
   // Create metadata for prompt span
   const promptMetadata: PromptSpanMetadata = {
-    traceId,
+    traceId: traceId,
     spanId: promptSpanId,
     type: SpanType.Prompt,
-    documentLogUuid,
     attributes: {
+      // TODO: CHECK IF THIS IS RIGHT
       [ATTRIBUTES.LATITUDE.type]: SpanType.Prompt,
       [ATTRIBUTES.LATITUDE.request.template]: document.content,
       [ATTRIBUTES.LATITUDE.request.parameters]: JSON.stringify({}),
@@ -156,38 +171,21 @@ async function createSpansFromLogData({
     },
     events: [],
     links: [],
-    template: document.content,
-    parameters: {},
-    promptUuid: document.documentUuid,
-    projectId: commit.projectId,
-    versionUuid: commit.uuid,
     source: LogSources.API,
-    experimentUuid: '',
-    externalId: '',
+    documentLogUuid: documentLogUuid,
+    projectId: commit.projectId,
+    promptUuid: document.documentUuid,
+    versionUuid: commit.uuid,
+    parameters: {},
+    template: document.content,
   }
 
-  // Create metadata for completion span
-  let responseText: string = response || ''
-  if (!responseText && content) {
-    if (typeof content === 'string') {
-      responseText = content
-    } else if (Array.isArray(content)) {
-      const textContent = content.find((c: any) => c.type === 'text')
-      responseText =
-        textContent && 'text' in textContent ? textContent.text : ''
-    } else if (
-      typeof content === 'object' &&
-      content !== null &&
-      'text' in content
-    ) {
-      responseText = (content as { text: string }).text
-    }
-  }
   const completionMetadata: CompletionSpanMetadata = {
-    traceId,
+    traceId: traceId,
     spanId: completionSpanId,
     type: SpanType.Completion,
     attributes: {
+      // TODO: CHECK IF THIS IS RIGHT
       [ATTRIBUTES.LATITUDE.type]: SpanType.Completion,
       [ATTRIBUTES.LATITUDE.request.messages]: JSON.stringify(messages),
       [ATTRIBUTES.LATITUDE.response.messages]: JSON.stringify([
@@ -204,24 +202,22 @@ async function createSpansFromLogData({
     },
     events: [],
     links: [],
+    source: LogSources.API,
+    documentLogUuid: documentLogUuid,
+    projectId: commit.projectId,
+    promptUuid: document.documentUuid,
+    versionUuid: commit.uuid,
     provider: 'unknown',
     model: 'unknown',
-    configuration: {},
-    input: messages as any,
-    output: [
-      {
-        role: 'assistant',
-        content: [
-          {
-            type: 'text',
-            text:
-              typeof responseText === 'string'
-                ? responseText
-                : JSON.stringify(responseText),
-          },
-        ],
-      },
-    ] as any,
+    configuration: {
+      provider: 'unknown',
+      model: 'unknown',
+    },
+    input: [], // TODO: Add input
+    output: [], // TODO: Add output
+    tokens: tokens,
+    cost: 0,
+    finishReason: 'stop',
   }
 
   // Save metadata to disk
