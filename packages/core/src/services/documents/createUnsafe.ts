@@ -1,5 +1,5 @@
 import { env } from '@latitude-data/env'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
 import { DOCUMENT_PATH_REGEXP } from '@latitude-data/constants'
 import { findFirstModelForProvider } from '../ai/providers/models'
@@ -90,6 +90,9 @@ export async function defaultDocumentContent(
  * the commit state check (e.g., force updating live commits).
  *
  * For normal use cases, use `createNewDocument` instead.
+ *
+ * @param onConflictDoNothing - When true, returns existing document if one
+ *   already exists at the same path, making the operation idempotent.
  */
 export async function createNewDocumentUnsafe(
   {
@@ -102,6 +105,7 @@ export async function createNewDocumentUnsafe(
     promptlVersion = 1,
     createDemoEvaluation: demoEvaluation = false,
     includeDefaultContent = true,
+    onConflictDoNothing = false,
   }: {
     workspace: Workspace
     user?: User
@@ -112,6 +116,7 @@ export async function createNewDocumentUnsafe(
     promptlVersion?: number
     createDemoEvaluation?: boolean
     includeDefaultContent?: boolean
+    onConflictDoNothing?: boolean
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
@@ -137,17 +142,43 @@ export async function createNewDocumentUnsafe(
 
     let document: DocumentVersion
     try {
-      const [inserted] = await tx
-        .insert(documentVersions)
-        .values({
-          commitId: commit.id,
-          path,
-          content: docContent,
-          promptlVersion,
-          documentType,
-        })
-        .returning()
-      document = inserted
+      const insertQuery = tx.insert(documentVersions).values({
+        commitId: commit.id,
+        path,
+        content: docContent,
+        promptlVersion,
+        documentType,
+      })
+      const [inserted] = onConflictDoNothing
+        ? await insertQuery
+            .onConflictDoNothing({
+              target: [
+                documentVersions.path,
+                documentVersions.commitId,
+                documentVersions.deletedAt,
+              ],
+            })
+            .returning()
+        : await insertQuery.returning()
+
+      if (inserted) {
+        document = inserted
+      } else {
+        const [existing] = await tx
+          .select()
+          .from(documentVersions)
+          .where(
+            and(
+              eq(documentVersions.path, path),
+              eq(documentVersions.commitId, commit.id),
+              isNull(documentVersions.deletedAt),
+            ),
+          )
+          .limit(1)
+        if (!existing)
+          throw new Error('Expected existing document after conflict')
+        document = existing
+      }
     } catch (e) {
       // If it's a conflicting error path we want to return a user-friendly
       // message instead of a generic DB error.

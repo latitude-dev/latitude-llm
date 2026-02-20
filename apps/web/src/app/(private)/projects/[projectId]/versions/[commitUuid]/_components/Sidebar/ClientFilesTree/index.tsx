@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -10,6 +10,7 @@ import { FilesTree } from '$/components/Sidebar/Files'
 import { SidebarDocument } from '$/components/Sidebar/Files/useTree'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import { useRunningDocuments } from '$/stores/runs/runningDocuments'
+import { filterMainDocument } from '$/lib/dualScope/filterMainDocument'
 
 export default function ClientFilesTree({
   promptManagement,
@@ -32,6 +33,12 @@ export default function ClientFilesTree({
       fallbackData: serverDocuments,
     },
   )
+
+  const documentsFiltered = useMemo(
+    () => filterMainDocument({ documents: data }),
+    [data],
+  )
+
   const { data: liveDocuments } = useDocumentVersions(
     {
       commitUuid: commit.mergedAt ? undefined : HEAD_COMMIT,
@@ -50,7 +57,7 @@ export default function ClientFilesTree({
     <>
       <FilesTree
         promptManagement={promptManagement}
-        documents={data}
+        documents={documentsFiltered}
         currentUuid={documentUuid}
         liveDocuments={commit.mergedAt ? undefined : liveDocuments}
       />

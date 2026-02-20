@@ -117,6 +117,11 @@ export default function ProjectSection({
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid }).issues.root,
         },
+        !promptManagement && {
+          label: 'Evaluations',
+          iconName: 'listCheck',
+          route: ROUTES.projects.detail({ id: project.id }).evaluations.root,
+        },
         promptManagement && {
           label: 'History',
           route: ROUTES.projects

@@ -20,6 +20,7 @@
     "./tracing": "./src/tracing/index.ts",
     "./actions": "./src/actions.ts",
     "./grants": "./src/grants.ts",
+    "./dualScope": "./src/dualScope/index.ts",
     "./runs": "./src/runs.ts",
     "./latitudePromptSchema": "./src/latitudePromptSchema/index.ts",
     "./latte": "./src/latte/index.ts",

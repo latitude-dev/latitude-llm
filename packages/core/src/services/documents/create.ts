@@ -20,6 +20,7 @@ export async function createNewDocument(
     promptlVersion = 1,
     createDemoEvaluation: demoEvaluation = false,
     includeDefaultContent = true,
+    onConflictDoNothing = false,
   }: {
     workspace: Workspace
     user?: User
@@ -30,6 +31,7 @@ export async function createNewDocument(
     promptlVersion?: number
     createDemoEvaluation?: boolean
     includeDefaultContent?: boolean
+    onConflictDoNothing?: boolean
   },
   transaction = new Transaction(),
 ): Promise<TypedResult<DocumentVersion, Error>> {
@@ -49,6 +51,7 @@ export async function createNewDocument(
         promptlVersion,
         createDemoEvaluation: demoEvaluation,
         includeDefaultContent,
+        onConflictDoNothing,
       },
       transaction,
     )

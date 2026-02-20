@@ -8,6 +8,7 @@ import { isEqual } from 'lodash-es'
 import { ComponentProps, useMemo } from 'react'
 import { CommitFilter } from './CommitFilter'
 import { EvaluationResultsV2Search } from '@latitude-data/core/helpers'
+import { useProductAccess } from '$/components/Providers/SessionProvider'
 
 export function EvaluationFilters({
   search,
@@ -20,6 +21,7 @@ export function EvaluationFilters({
   isLoading?: boolean
   currentCommitId: number
 }) {
+  const { promptManagement } = useProductAccess()
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
   const defaultSelectedCommits = useMemo(
     () =>
@@ -31,34 +33,37 @@ export function EvaluationFilters({
 
   return (
     <div className='flex items-center gap-4'>
-      <Tooltip
-        asChild
-        trigger={
-          <div className='flex flex-row gap-2 items-center'>
-            <Text.H6M>Include experiments</Text.H6M>
-            <SwitchToggle
-              checked={search.filters?.experimentIds?.length !== 0}
-              onCheckedChange={(checked) =>
-                setSearch({
-                  ...search,
-                  filters: {
-                    ...(search.filters ?? {}),
-                    experimentIds: checked ? undefined : [],
-                  },
-                })
-              }
-            />
-          </div>
-        }
-        align='center'
-        side='top'
-      >
-        {search.filters?.experimentIds?.length !== 0
-          ? 'Filter results from experiments'
-          : 'Include results from experiments'}
-      </Tooltip>
+      {promptManagement ? (
+        <Tooltip
+          asChild
+          trigger={
+            <div className='flex flex-row gap-2 items-center'>
+              <Text.H6M>Include experiments</Text.H6M>
+              <SwitchToggle
+                checked={search.filters?.experimentIds?.length !== 0}
+                onCheckedChange={(checked) =>
+                  setSearch({
+                    ...search,
+                    filters: {
+                      ...(search.filters ?? {}),
+                      experimentIds: checked ? undefined : [],
+                    },
+                  })
+                }
+              />
+            </div>
+          }
+          align='center'
+          side='top'
+        >
+          {search.filters?.experimentIds?.length !== 0
+            ? 'Filter results from experiments'
+            : 'Include results from experiments'}
+        </Tooltip>
+      ) : null}
       <DatePickerRange
         showPresets
+        align='end'
         initialRange={
           search.filters?.createdAt as ComponentProps<
             typeof DatePickerRange
@@ -77,32 +82,36 @@ export function EvaluationFilters({
         }}
         disabled={isLoading}
       />
-      <CommitFilter
-        selectedCommitsIds={search.filters?.commitIds ?? defaultSelectedCommits}
-        onSelectCommits={(value) =>
-          setSearch({
-            ...search,
-            filters: {
-              ...(search.filters ?? {}),
-              commitIds: value,
-            },
-          })
-        }
-        isDefault={
-          !search.filters?.commitIds ||
-          isEqual(search.filters?.commitIds, defaultSelectedCommits)
-        }
-        reset={() =>
-          setSearch({
-            ...search,
-            filters: {
-              ...(search.filters ?? {}),
-              commitIds: defaultSelectedCommits,
-            },
-          })
-        }
-        disabled={isLoading || isLoadingCommits}
-      />
+      {promptManagement ? (
+        <CommitFilter
+          selectedCommitsIds={
+            search.filters?.commitIds ?? defaultSelectedCommits
+          }
+          onSelectCommits={(value) =>
+            setSearch({
+              ...search,
+              filters: {
+                ...(search.filters ?? {}),
+                commitIds: value,
+              },
+            })
+          }
+          isDefault={
+            !search.filters?.commitIds ||
+            isEqual(search.filters?.commitIds, defaultSelectedCommits)
+          }
+          reset={() =>
+            setSearch({
+              ...search,
+              filters: {
+                ...(search.filters ?? {}),
+                commitIds: defaultSelectedCommits,
+              },
+            })
+          }
+          disabled={isLoading || isLoadingCommits}
+        />
+      ) : null}
     </div>
   )
 }

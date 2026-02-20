@@ -28,7 +28,10 @@ export function FilesTree({
   return (
     <ClientOnly>
       <div className='flex flex-col gap-2'>
-        <TreeToolbar promptManagement={promptManagement} />
+        <TreeToolbar
+          promptManagement={promptManagement}
+          documents={documents}
+        />
         <ul className={cn('flex flex-col pt-1 pb-8')}>
           <TempFolderChildren parentPath='' />
           {topLevelNodeIds.map((nodeId) => (

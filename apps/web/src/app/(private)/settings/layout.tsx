@@ -16,6 +16,7 @@ import Webhooks from './_components/Webhooks'
 import Promocodes from './_components/Promocodes'
 import ProductFeatures from './_components/ProductFeatures'
 import { CustomerPortalButton } from './_components/CustomerPortalButton'
+import { isFeatureEnabledCached } from '../_data-access'
 
 export const metadata: Promise<Metadata> = buildMetatags({
   title: 'Settings',
@@ -28,6 +29,9 @@ export default async function SettingsLayout({
   children: ReactNode
 }>) {
   const productAccess = await getProductAccess()
+  const isProductAccessEnabled = await isFeatureEnabledCached(
+    'productAccessSettings',
+  )
 
   return (
     <Container>
@@ -35,9 +39,11 @@ export default async function SettingsLayout({
       {children}
       <TitleWithActions title='Workspace' actions={<CustomerPortalButton />} />
       <WorkspaceName />
-      <div id='product-features'>
-        <ProductFeatures />
-      </div>
+      {isProductAccessEnabled && (
+        <div id='product-features'>
+          <ProductFeatures />
+        </div>
+      )}
       <Memberships />
       <WorkspaceApiKeys />
       <ProviderApiKeys />
