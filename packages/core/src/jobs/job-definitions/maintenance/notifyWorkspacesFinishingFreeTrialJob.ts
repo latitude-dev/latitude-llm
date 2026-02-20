@@ -15,7 +15,7 @@ export type NotifyWorkspacesFinishingFreeTrialJobData = Record<string, never>
 
 /**
  * Job that runs daily at 2 AM to find workspaces whose free trial ends exactly 10 days from today.
- * Creates an Instantly lead for every such workspace. Publishes workspaceFinishingFreeTrial only for ICPs
+ * Creates an Instantly lead for every such workspace. Publishes workspaceFinishingFreeTrial for those who implemented the telemetry
  */
 export const notifyWorkspacesFinishingFreeTrialJob = async (
   _: Job<NotifyWorkspacesFinishingFreeTrialJobData>,
@@ -59,8 +59,8 @@ export const notifyWorkspacesFinishingFreeTrialJob = async (
       goalForCampaign: userGoal,
     })
 
-    const isIcp = await hasAtLeastOneExternalSpan(row.workspace.id)
-    if (isIcp) {
+    const hasExternalSpan = await hasAtLeastOneExternalSpan(row.workspace.id)
+    if (hasExternalSpan) {
       await publisher.publishLater({
         type: 'workspaceFinishingFreeTrial',
         data: {
