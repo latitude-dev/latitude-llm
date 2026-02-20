@@ -4,7 +4,6 @@ import { database } from '../../../../client'
 import {
   ATTRIBUTES,
   BaseSpanMetadata,
-  CompletionSpanMetadata,
   Otlp,
   Span,
   SPAN_METADATA_STORAGE_KEY,
@@ -23,7 +22,6 @@ import { LatitudeError, UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
 import Transaction from '../../../../lib/Transaction'
 import { SpansRepository } from '../../../../repositories'
-import { spans } from '../../../../schema/models/spans'
 import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { convertTimestamp } from '../shared'
@@ -43,6 +41,7 @@ import {
   convertSpanStatus,
   extractSpanType,
 } from './process'
+import { bulkCreate as bulkCreatePostgresSpans } from '../postgres/bulkCreate'
 import { bulkCreate as bulkCreateClickHouseSpans } from '../clickhouse/bulkCreate'
 
 export async function processSpansBulk(
@@ -297,82 +296,18 @@ export async function processSpansBulk(
   // Bulk insert spans and save metadata
   return await transaction.call(
     async (tx) => {
-      // Prepare bulk insert data
-      const insertData = processedSpans.map((processed) => {
-        let metadata: CompletionSpanMetadata | undefined
-        if (processed.type === SpanType.Completion) {
-          metadata = processed.metadata as CompletionSpanMetadata
-        }
-
-        return {
-          id: processed.id,
-          traceId: processed.traceId,
-          parentId: processed.parentId,
+      const pgResult = await bulkCreatePostgresSpans(
+        processedSpans.map((s) => ({
+          ...s,
           workspaceId: workspace.id,
           apiKeyId: apiKey.id,
-          name: processed.name,
-          kind: processed.kind,
-          type: processed.type,
-          status: processed.status,
-          message: processed.message,
-          duration: processed.duration,
-          startedAt: processed.startedAt,
-          endedAt: processed.endedAt,
-          source:
-            'source' in processed.metadata
-              ? processed.metadata.source
-              : undefined,
+        })),
+        tx,
+      )
+      if (pgResult.error) return pgResult
 
-          // Tokens
-          tokensPrompt: metadata?.tokens?.prompt,
-          tokensCompletion: metadata?.tokens?.completion,
-          tokensCached: metadata?.tokens?.cached,
-          tokensReasoning: metadata?.tokens?.reasoning,
+      const insertedSpans = pgResult.value
 
-          // Cost
-          model: metadata?.model,
-          cost: metadata?.cost,
-
-          // References
-          documentLogUuid:
-            'documentLogUuid' in processed.metadata
-              ? (processed.metadata.documentLogUuid as string)
-              : undefined,
-          documentUuid:
-            'promptUuid' in processed.metadata
-              ? (processed.metadata.promptUuid as string)
-              : undefined,
-          commitUuid:
-            'versionUuid' in processed.metadata
-              ? (processed.metadata.versionUuid as string)
-              : undefined,
-          experimentUuid:
-            'experimentUuid' in processed.metadata
-              ? (processed.metadata.experimentUuid as string)
-              : undefined,
-          testDeploymentId:
-            'testDeploymentId' in processed.metadata
-              ? (processed.metadata.testDeploymentId as number)
-              : undefined,
-          projectId:
-            'projectId' in processed.metadata
-              ? (processed.metadata.projectId as number)
-              : undefined,
-          previousSpanId:
-            'previousSpanId' in processed.metadata
-              ? (processed.metadata.previousSpanId as string)
-              : undefined,
-        }
-      })
-
-      // Bulk insert spans
-      const insertedSpans = await tx
-        .insert(spans)
-        .values(insertData)
-        .returning()
-        .then((r) => r as Span[])
-
-      // Bulk save metadata using batch operations
       await saveMetadataBatch(
         {
           metadatas: processedSpans.map((p) => p.metadata),
@@ -400,9 +335,7 @@ export async function processSpansBulk(
 
       if (chEnabled.ok && chEnabled.value) {
         const subscriptionResult = await findWorkspaceSubscription(
-          {
-            workspace,
-          },
+          { workspace },
           tx,
         )
         if (subscriptionResult.error) {
@@ -423,25 +356,23 @@ export async function processSpansBulk(
           subscriptionResult.ok && subscriptionResult.value
             ? SubscriptionPlans[subscriptionResult.value.plan].retention_period
             : DEFAULT_RETENTION_PERIOD_DAYS
-        const now = new Date()
-        const retentionExpiresAt = addDays(now, retentionDays)
+        const retentionExpiresAt = addDays(new Date(), retentionDays)
 
-        const spansForClickHouse = processedSpans.map((s) => ({
-          ...s,
-          workspaceId: workspace.id,
-          apiKeyId: apiKey.id,
-          retentionExpiresAt,
-        }))
-
-        const clickhouseResult =
-          await bulkCreateClickHouseSpans(spansForClickHouse)
+        const clickhouseResult = await bulkCreateClickHouseSpans(
+          processedSpans.map((s) => ({
+            ...s,
+            workspaceId: workspace.id,
+            apiKeyId: apiKey.id,
+            retentionExpiresAt,
+          })),
+        )
         if (clickhouseResult.error) {
           captureException(
             new LatitudeError('ClickHouse bulk span insertion failed'),
             {
               workspaceId: workspace.id,
               apiKeyId: apiKey.id,
-              spansCount: spansForClickHouse.length,
+              spansCount: processedSpans.length,
               error: String(clickhouseResult.error),
             },
           )
@@ -449,7 +380,7 @@ export async function processSpansBulk(
           captureMessage('ClickHouse bulk span insertion succeeded', 'info', {
             workspaceId: workspace.id,
             apiKeyId: apiKey.id,
-            spansCount: spansForClickHouse.length,
+            spansCount: processedSpans.length,
           })
         }
       }
