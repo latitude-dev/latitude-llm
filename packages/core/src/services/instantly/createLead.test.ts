@@ -3,6 +3,7 @@ import { LatitudeGoal } from '@latitude-data/constants/users'
 import {
   createInstantlyLead,
   getCampaignIdForGoal,
+  getCampaignIdForTrialFinishingGoal,
   parseName,
 } from './createLead'
 
@@ -55,6 +56,70 @@ describe('getCampaignIdForGoal', () => {
 
   it('returns fallback campaign ID for Other', () => {
     expect(getCampaignIdForGoal(LatitudeGoal.Other)).toBe(FALLBACK_CAMPAIGN_ID)
+  })
+})
+
+const FALLBACK_TRIAL_CAMPAIGN_ID = '3484a5e3-8ea6-4332-812d-e7a60d227da8'
+
+describe('getCampaignIdForTrialFinishingGoal', () => {
+  it('returns mapped campaign ID for JustExploring', () => {
+    expect(getCampaignIdForTrialFinishingGoal(LatitudeGoal.JustExploring)).toBe(
+      FALLBACK_TRIAL_CAMPAIGN_ID,
+    )
+  })
+
+  it('returns mapped campaign ID for ManagingPromptVersions', () => {
+    expect(
+      getCampaignIdForTrialFinishingGoal(LatitudeGoal.ManagingPromptVersions),
+    ).toBe('1045b488-e74c-4d09-a560-a474ae7f339d')
+  })
+
+  it('returns mapped campaign ID for ObservingTraces', () => {
+    expect(
+      getCampaignIdForTrialFinishingGoal(LatitudeGoal.ObservingTraces),
+    ).toBe('072effca-26b2-4039-a87b-a62f406053a6')
+  })
+
+  it('returns mapped campaign ID for ImprovingAccuracy', () => {
+    expect(
+      getCampaignIdForTrialFinishingGoal(LatitudeGoal.ImprovingAccuracy),
+    ).toBe('ecea8072-0c56-4846-84d6-2d75bfd5e1d6')
+  })
+
+  it('returns mapped campaign ID for SettingUpEvaluations', () => {
+    expect(
+      getCampaignIdForTrialFinishingGoal(LatitudeGoal.SettingUpEvaluations),
+    ).toBe('6c584c30-f494-4fcc-b479-b04dc82f3019')
+  })
+
+  it('returns fallback campaign ID for null', () => {
+    expect(getCampaignIdForTrialFinishingGoal(null)).toBe(
+      FALLBACK_TRIAL_CAMPAIGN_ID,
+    )
+  })
+
+  it('returns fallback campaign ID for undefined', () => {
+    expect(getCampaignIdForTrialFinishingGoal(undefined)).toBe(
+      FALLBACK_TRIAL_CAMPAIGN_ID,
+    )
+  })
+
+  it('returns fallback campaign ID for Other', () => {
+    expect(getCampaignIdForTrialFinishingGoal(LatitudeGoal.Other)).toBe(
+      FALLBACK_TRIAL_CAMPAIGN_ID,
+    )
+  })
+
+  it('returns fallback campaign ID for ImprovingLatency', () => {
+    expect(
+      getCampaignIdForTrialFinishingGoal(LatitudeGoal.ImprovingLatency),
+    ).toBe(FALLBACK_TRIAL_CAMPAIGN_ID)
+  })
+
+  it('returns fallback campaign ID for unknown string', () => {
+    expect(getCampaignIdForTrialFinishingGoal('unknown_goal')).toBe(
+      FALLBACK_TRIAL_CAMPAIGN_ID,
+    )
   })
 })
 
@@ -150,6 +215,35 @@ describe('createInstantlyLead', () => {
 
     const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
     expect(body.campaign).toBe(FALLBACK_CAMPAIGN_ID)
+  })
+
+  it('uses trial-finishing campaign ID when campaignContext is trial_finishing', async () => {
+    await createInstantlyLead(
+      { email: 'trial@test.com' },
+      'api-key',
+      {
+        campaignContext: 'trial_finishing',
+        goalForCampaign: LatitudeGoal.ImprovingAccuracy,
+      },
+    )
+
+    const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
+    expect(body.campaign).toBe('ecea8072-0c56-4846-84d6-2d75bfd5e1d6')
+    expect(body.email).toBe('trial@test.com')
+  })
+
+  it('uses trial-finishing fallback when goalForCampaign is unknown', async () => {
+    await createInstantlyLead(
+      { email: 'trial-other@test.com' },
+      'api-key',
+      {
+        campaignContext: 'trial_finishing',
+        goalForCampaign: LatitudeGoal.Other,
+      },
+    )
+
+    const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
+    expect(body.campaign).toBe(FALLBACK_TRIAL_CAMPAIGN_ID)
   })
 
   it('sends single-word name as first_name only', async () => {

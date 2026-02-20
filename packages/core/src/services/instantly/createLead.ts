@@ -14,6 +14,19 @@ const LATITUDE_GOAL_TO_CAMPAIGN_ID: Partial<Record<LatitudeGoal, string>> = {
 const FALLBACK_CAMPAIGN_ID =
   LATITUDE_GOAL_TO_CAMPAIGN_ID[LatitudeGoal.JustExploring]!
 
+const LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID: Partial<
+  Record<LatitudeGoal, string>
+> = {
+  [LatitudeGoal.JustExploring]: '3484a5e3-8ea6-4332-812d-e7a60d227da8',
+  [LatitudeGoal.ManagingPromptVersions]: '1045b488-e74c-4d09-a560-a474ae7f339d',
+  [LatitudeGoal.ObservingTraces]: '072effca-26b2-4039-a87b-a62f406053a6',
+  [LatitudeGoal.ImprovingAccuracy]: 'ecea8072-0c56-4846-84d6-2d75bfd5e1d6',
+  [LatitudeGoal.SettingUpEvaluations]: '6c584c30-f494-4fcc-b479-b04dc82f3019',
+}
+
+const FALLBACK_TRIAL_FINISHING_CAMPAIGN_ID =
+  '3484a5e3-8ea6-4332-812d-e7a60d227da8'
+
 export function getCampaignIdForGoal(
   goal: LatitudeGoal | null | undefined,
 ): string {
@@ -23,6 +36,20 @@ export function getCampaignIdForGoal(
     ]!
   }
   return FALLBACK_CAMPAIGN_ID
+}
+
+export function getCampaignIdForTrialFinishingGoal(
+  goal: string | LatitudeGoal | null | undefined,
+): string {
+  if (
+    goal &&
+    goal in LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID
+  ) {
+    return LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID[
+      goal as keyof typeof LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID
+    ]!
+  }
+  return FALLBACK_TRIAL_FINISHING_CAMPAIGN_ID
 }
 
 export function parseName(name: string | null | undefined): {
@@ -44,14 +71,23 @@ export type CreateInstantlyLeadUser = {
   latitudeGoal?: LatitudeGoal | null
 }
 
+export type CreateInstantlyLeadOptions = {
+  campaignContext: 'trial_finishing'
+  goalForCampaign?: string | null
+}
+
 export async function createInstantlyLead(
   user: CreateInstantlyLeadUser,
   apiKey: string,
+  options?: CreateInstantlyLeadOptions,
 ): Promise<void> {
   const email = user.email?.trim()
   if (!email) return
 
-  const campaignId = getCampaignIdForGoal(user.latitudeGoal ?? undefined)
+  const campaignId =
+    options?.campaignContext === 'trial_finishing'
+      ? getCampaignIdForTrialFinishingGoal(options?.goalForCampaign)
+      : getCampaignIdForGoal(user.latitudeGoal ?? undefined)
   const { first_name } = parseName(user.name)
 
   const body = {
