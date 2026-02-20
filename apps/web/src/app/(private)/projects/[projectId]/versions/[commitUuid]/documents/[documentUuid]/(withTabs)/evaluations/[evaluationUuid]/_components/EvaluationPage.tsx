@@ -202,7 +202,7 @@ export function EvaluationPage<
           <EvaluationFilters
             search={search}
             setSearch={setSearch}
-            currentCommitId={commit.id}
+            currentCommitUuid={commit.uuid}
           />
           <RealtimeToggle
             enabled={realtimeEnabled}

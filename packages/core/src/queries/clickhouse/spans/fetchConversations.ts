@@ -1,6 +1,6 @@
 import { LogSources, SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { CreatedAtRange } from '../../../services/spans/defaultCreatedAtWindow'
 import { scopedQuery } from '../../scope'
@@ -20,6 +20,7 @@ export type ConversationFilters = {
 
 export type FetchConversationsParams = {
   workspaceId: number
+  projectId: number
   documentUuid: string
   filters: ConversationFilters
   from?: { startedAt: string; documentLogUuid: string }
@@ -51,17 +52,18 @@ export type FetchConversationsResult = {
 export const fetchConversations = scopedQuery(async function fetchConversations(
   {
     workspaceId,
+    projectId,
     documentUuid,
     filters,
     from,
     limit = 25,
     createdAt,
   }: FetchConversationsParams,
-  _db,
 ): Promise<FetchConversationsResult> {
   const effectiveCreatedAt = createdAt ?? filters.createdAt
   const params: Record<string, unknown> = {
     workspaceId,
+    projectId,
     documentUuid,
     commitUuids: filters.commitUuids,
     mainSpanTypes: MAIN_SPAN_TYPE_VALUES,
@@ -70,6 +72,9 @@ export const fetchConversations = scopedQuery(async function fetchConversations(
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
+    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+    `project_id = {projectId: UInt64}`,
+    `project_id_key = {projectId: UInt64}`,
     // TODO(clickhouse): remove non-_key predicate after key-column rollout.
     `document_uuid = {documentUuid: UUID}`,
     `document_uuid_key = {documentUuid: UUID}`,
@@ -133,7 +138,7 @@ export const fetchConversations = scopedQuery(async function fetchConversations(
         anyLast(source) AS latest_source,
         anyLast(commit_uuid) AS latest_commit_uuid,
         anyLast(experiment_uuid) AS latest_experiment_uuid
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE ${conditions.join(' AND ')}
       GROUP BY document_log_uuid
       ORDER BY latest_started_at DESC, document_log_uuid DESC

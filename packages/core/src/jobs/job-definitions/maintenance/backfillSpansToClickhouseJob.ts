@@ -4,7 +4,7 @@ import { addDays, subDays } from 'date-fns'
 import { database } from '../../../client'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { toClickHouseDateTime, insertRows } from '../../../clickhouse/insert'
-import { SpanRow, SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { SpanInput, TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { spans } from '../../../schema/models/spans'
 import { SpanType } from '../../../constants'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
@@ -105,7 +105,7 @@ export async function backfillSpansToClickhouseJob(
     const existingResult = await clickhouseClient().query({
       query: `
         SELECT span_id
-        FROM ${SPANS_TABLE} FINAL
+        FROM ${TABLE_NAME} FINAL
         WHERE workspace_id = {workspaceId: UInt64}
           AND span_id IN ({spanIds: Array(String)})
       `,
@@ -123,7 +123,7 @@ export async function backfillSpansToClickhouseJob(
       )
     }
 
-    const rows: SpanRow[] = newSpans.map((span) => {
+    const rows: SpanInput[] = newSpans.map((span) => {
       const isCompletion = span.type === SpanType.Completion
       return {
         workspace_id: span.workspaceId,
@@ -162,7 +162,7 @@ export async function backfillSpansToClickhouseJob(
     })
 
     if (rows.length > 0) {
-      const result = await insertRows(SPANS_TABLE, rows)
+      const result = await insertRows(TABLE_NAME, rows)
       if (result.error) {
         await logger.error(`ClickHouse insertion failed`, {
           workspaceId,

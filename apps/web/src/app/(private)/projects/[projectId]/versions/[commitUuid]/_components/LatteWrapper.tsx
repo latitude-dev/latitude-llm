@@ -17,6 +17,7 @@ export async function LatteWrapper({ children, projectId, workspace }: Props) {
   const conversationResult = lastThreadUuid
     ? await fetchConversationWithMessages({
         workspace,
+        projectId,
         documentLogUuid: lastThreadUuid,
       })
     : undefined

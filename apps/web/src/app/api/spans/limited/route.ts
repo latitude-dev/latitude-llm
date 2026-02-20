@@ -64,6 +64,7 @@ export const GET = errorHandler(
         const spansRepository = new SpansRepository(workspace.id)
         const span = await spansRepository.findLastMainSpanByDocumentLogUuid(
           filters.documentLogUuid,
+          { commitUuid, documentUuid },
         )
         spansResult = {
           items: span ? [span] : span,
@@ -90,6 +91,7 @@ export const GET = errorHandler(
           })
           result = await spansRepository
             .findByDocumentAndCommitLimited({
+              projectId: Number(projectId),
               documentUuid,
               types,
               from: fromCursor

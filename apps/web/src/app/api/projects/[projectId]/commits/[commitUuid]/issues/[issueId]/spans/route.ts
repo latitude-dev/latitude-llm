@@ -54,12 +54,10 @@ export const GET = errorHandler(
         limit: request.nextUrl.searchParams.get('limit') ?? undefined,
       })
 
-      // Parse cursor from JSON string if provided (same pattern as spans/limited route)
-      // Cursor format: { value: ISO date string, id: number }
       const parsedCursor = query.cursor ? JSON.parse(query.cursor) : null
-      const cursor: Cursor<Date, number> | null = parsedCursor
+      const cursor: Cursor<string, string> | null = parsedCursor
         ? {
-            value: new Date(parsedCursor.value),
+            value: parsedCursor.value,
             id: parsedCursor.id,
           }
         : null
@@ -101,12 +99,7 @@ export const GET = errorHandler(
       return NextResponse.json(
         {
           spans: data.spans,
-          next: data.next
-            ? JSON.stringify({
-                value: data.next.value.toISOString(),
-                id: data.next.id,
-              })
-            : null,
+          next: data.next ? JSON.stringify(data.next) : null,
         },
         { status: 200 },
       )

@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const GET = errorHandler(
   authHandler(
     async (
-      _: NextRequest,
+      request: NextRequest,
       {
         params,
         workspace,
@@ -19,8 +19,15 @@ export const GET = errorHandler(
       },
     ) => {
       const { conversationId } = params
+      const commitUuid =
+        request.nextUrl.searchParams.get('commitUuid') ?? undefined
+      const documentUuid =
+        request.nextUrl.searchParams.get('documentUuid') ?? undefined
       const repository = new SpansRepository(workspace.id)
-      const traceIds = await repository.listTraceIdsByLogUuid(conversationId)
+      const traceIds = await repository.listTraceIdsByLogUuid(conversationId, {
+        commitUuid,
+        documentUuid,
+      })
 
       return NextResponse.json(traceIds, { status: 200 })
     },

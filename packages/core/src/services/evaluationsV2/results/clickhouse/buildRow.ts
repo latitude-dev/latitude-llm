@@ -46,7 +46,7 @@ export function buildEvaluationResultRow({
     experiment_id: result.experimentId ?? null,
     dataset_id: result.datasetId ?? null,
     evaluated_row_id: result.evaluatedRowId ?? null,
-    evaluated_log_uuid: existingRow?.evaluated_log_uuid ?? null,
+    session_id: existingRow?.session_id ?? null,
     evaluated_span_id: result.evaluatedSpanId ?? null,
     evaluated_trace_id: result.evaluatedTraceId ?? null,
     score: result.score ?? null,
@@ -56,6 +56,7 @@ export function buildEvaluationResultRow({
     cost,
     metadata,
     error,
+    issue_ids: existingRow?.issue_ids ?? [],
     created_at:
       existingRow?.created_at ?? toClickHouseDateTime(result.createdAt),
     updated_at: toClickHouseDateTime(result.updatedAt),

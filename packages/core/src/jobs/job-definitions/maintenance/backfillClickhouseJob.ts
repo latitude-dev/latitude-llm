@@ -34,6 +34,11 @@ export async function backfillClickhouseJob(
         { workspaceId },
         { attempts: 1 },
       )
+      await maintenanceQueue.add(
+        'backfillEvaluationResultsIssueIds',
+        { workspaceId },
+        { attempts: 1 },
+      )
       await logger.info(`Enqueued backfill jobs for workspace ${workspaceId}`)
     }
 

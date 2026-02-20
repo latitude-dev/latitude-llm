@@ -1,6 +1,6 @@
 import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { scopedQuery } from '../../scope'
 
@@ -14,7 +14,6 @@ export const getGlobalLogsStats = scopedQuery(async function getGlobalLogsStats(
     from: Date
     to: Date
   },
-  _db,
 ) {
   const result = await clickhouseClient().query({
     query: `
@@ -31,7 +30,7 @@ export const getGlobalLogsStats = scopedQuery(async function getGlobalLogsStats(
           0
         ) AS total_tokens,
         coalesce(sumIf(cost, type = {completionType: String}), 0) AS total_cost
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND started_at >= {from: DateTime64(6, 'UTC')}
         AND started_at <= {to: DateTime64(6, 'UTC')}
@@ -71,7 +70,6 @@ export const getTopProjectsLogsStats = scopedQuery(
       to: Date
       projectsLimit: number
     },
-    _db,
   ) {
     const result = await clickhouseClient().query({
       query: `
@@ -89,7 +87,7 @@ export const getTopProjectsLogsStats = scopedQuery(
           0
         ) AS total_tokens,
         coalesce(sumIf(cost, type = {completionType: String}), 0) AS total_cost
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND project_id IS NOT NULL
         AND started_at >= {from: DateTime64(6, 'UTC')}

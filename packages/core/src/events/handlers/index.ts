@@ -13,6 +13,10 @@ import {
   writeEvaluationResultV2CreatedToClickhouse,
   writeEvaluationResultV2UpdatedToClickhouse,
 } from './writeEvaluationResultV2ToClickhouse'
+import {
+  writeIssueEvaluationResultLinkedToClickhouse,
+  writeIssueEvaluationResultUnlinkedToClickhouse,
+} from './writeIssueEvaluationResultToClickhouse'
 import { notifyClientOfDocumentTriggerCreated } from './notifyClientOfDocumentTriggerCreated'
 import { notifyClientOfDocumentTriggerDeleted } from './notifyClientOfDocumentTriggerDeleted'
 import { notifyClientOfDocumentTriggerEventCreated } from './notifyClientOfDocumentTriggerEventCreated'
@@ -120,6 +124,10 @@ export const EventHandlers: IEventsHandlers = {
   issueUnresolved: [],
   issueIgnored: [],
   issueUnignored: [],
+  issueEvaluationResultLinked: [writeIssueEvaluationResultLinkedToClickhouse],
+  issueEvaluationResultUnlinked: [
+    writeIssueEvaluationResultUnlinkedToClickhouse,
+  ],
   evaluationQueued: [notifyClientOfEvaluationStatus],
   evaluationStarted: [notifyClientOfEvaluationStatus],
   evaluationProgress: [notifyClientOfEvaluationStatus],

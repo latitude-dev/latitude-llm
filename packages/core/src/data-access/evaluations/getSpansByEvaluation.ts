@@ -13,6 +13,7 @@ import {
   sql,
 } from 'drizzle-orm'
 import { database } from '../../client'
+import { clickhouseClient } from '../../client/clickhouse'
 import {
   LogSources,
   MAIN_SPAN_TYPES,
@@ -22,7 +23,9 @@ import {
 } from '../../constants'
 import { Result } from '../../lib/Result'
 import { CommitsRepository } from '../../repositories'
+import { SpansRepository } from '../../repositories/spansRepository'
 import { commits } from '../../schema/models/commits'
+import { TABLE_NAME as CH_EVALUATION_RESULTS_TABLE } from '../../schema/models/clickhouse/evaluationResults'
 import { evaluationResultsV2 } from '../../schema/models/evaluationResultsV2'
 import { experiments } from '../../schema/models/experiments'
 import { optimizations } from '../../schema/models/optimizations'
@@ -31,6 +34,8 @@ import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Cursor } from '../../schema/types'
+import { isClickHouseEvaluationResultsReadEnabled } from '../../services/workspaceFeatures/isClickHouseEvaluationResultsReadEnabled'
+import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 
 /**
  * Fetches spans that have evaluation results from a specific evaluation,
@@ -76,6 +81,162 @@ export async function getSpansByEvaluation(
     return Result.ok({
       spans: [] as Span<MainSpanType>[],
       next: null,
+    })
+  }
+
+  const [useClickHouseEvals, useClickHouseSpans] = await Promise.all([
+    isClickHouseEvaluationResultsReadEnabled(workspace.id, db),
+    isClickHouseSpansReadEnabled(workspace.id, db),
+  ])
+
+  if (useClickHouseEvals && useClickHouseSpans) {
+    const spansRepository = new SpansRepository(workspace.id, db)
+    const commitUuids = commitHistory.map((c) => c.uuid)
+    const optimizationExperimentUuids = await db
+      .select({ uuid: experiments.uuid })
+      .from(experiments)
+      .innerJoin(
+        optimizations,
+        or(
+          eq(experiments.id, optimizations.baselineExperimentId),
+          eq(experiments.id, optimizations.optimizedExperimentId),
+        ),
+      )
+      .then((rows) => rows.map((r) => r.uuid))
+
+    const allowedTypes = new Set(spanTypes)
+    const optimizationExperiments = new Set(optimizationExperimentUuids)
+    const rankedRows: Array<{
+      span_id: string
+      trace_id: string
+      latest_evaluated_at: string
+      latest_eval_id: number
+    }> = []
+
+    let nextCursor = cursor
+    const fetchLimit = Math.max(limit * 3, 50)
+
+    while (rankedRows.length < limit + 1) {
+      const queryParams: Record<string, unknown> = {
+        workspaceId: workspace.id,
+        evaluationUuid,
+        commitUuids,
+        fetchLimit,
+      }
+
+      const passedCondition = passed
+        ? 'has_passed = 1'
+        : '(has_passed = 0 OR has_passed IS NULL)'
+
+      const cursorCondition = nextCursor
+        ? 'AND (latest_evaluated_at, latest_eval_id) < ({cursorDate: DateTime64(3)}, {cursorId: UInt64})'
+        : ''
+
+      if (nextCursor) {
+        queryParams.cursorDate = nextCursor.value.toISOString()
+        queryParams.cursorId = nextCursor.id
+      }
+
+      const query = await clickhouseClient().query({
+        query: `
+          SELECT *
+          FROM (
+            SELECT
+              evaluated_span_id as span_id,
+              evaluated_trace_id as trace_id,
+              max(created_at) as latest_evaluated_at,
+              max(id) as latest_eval_id
+            FROM ${CH_EVALUATION_RESULTS_TABLE}
+            WHERE workspace_id = {workspaceId: UInt64}
+              AND evaluation_uuid = {evaluationUuid: UUID}
+              AND ${passedCondition}
+              AND evaluated_span_id IS NOT NULL
+              AND evaluated_trace_id IS NOT NULL
+              AND commit_uuid IN ({commitUuids: Array(UUID)})
+            GROUP BY evaluated_span_id, evaluated_trace_id
+          )
+          WHERE 1 = 1
+            ${cursorCondition}
+          ORDER BY latest_evaluated_at DESC, latest_eval_id DESC
+          LIMIT {fetchLimit: UInt64}
+        `,
+        format: 'JSONEachRow',
+        query_params: queryParams,
+      })
+
+      const batch = await query.json<{
+        span_id: string
+        trace_id: string
+        latest_evaluated_at: string
+        latest_eval_id: number
+      }>()
+
+      if (!batch.length) break
+
+      const orderedSpans = await spansRepository.findByEvaluationResults(
+        batch.map((row) => ({
+          evaluatedSpanId: row.span_id,
+          evaluatedTraceId: row.trace_id,
+        })),
+      )
+
+      const spanMap = new Map(
+        orderedSpans.map((span) => [`${span.id}:${span.traceId}`, span]),
+      )
+
+      for (const row of batch) {
+        const span = spanMap.get(`${row.span_id}:${row.trace_id}`)
+        if (!span) continue
+        if (span.workspaceId !== workspace.id) continue
+        if (span.documentUuid !== document.documentUuid) continue
+        if (span.status !== SpanStatus.Ok) continue
+        if (!allowedTypes.has(span.type as MainSpanType)) continue
+        if (span.source === LogSources.Optimization) continue
+        if (
+          span.source === LogSources.Experiment &&
+          span.experimentUuid &&
+          optimizationExperiments.has(span.experimentUuid)
+        ) {
+          continue
+        }
+
+        rankedRows.push(row)
+        if (rankedRows.length >= limit + 1) break
+      }
+
+      if (batch.length < fetchLimit || rankedRows.length >= limit + 1) {
+        break
+      }
+
+      const last = batch[batch.length - 1]!
+      nextCursor = {
+        value: new Date(last.latest_evaluated_at),
+        id: last.latest_eval_id,
+      }
+    }
+
+    const hasMore = rankedRows.length > limit
+    const paginatedRows = hasMore ? rankedRows.slice(0, limit) : rankedRows
+
+    const spans = await spansRepository.findByEvaluationResults(
+      paginatedRows.map((row) => ({
+        evaluatedSpanId: row.span_id,
+        evaluatedTraceId: row.trace_id,
+      })),
+    )
+
+    const lastItem = paginatedRows.at(-1)
+    const finalNext: Cursor<Date, number> | null =
+      hasMore && lastItem
+        ? {
+            value: new Date(lastItem.latest_evaluated_at),
+            id: lastItem.latest_eval_id,
+          }
+        : null
+
+    return Result.ok({
+      spans: spans as Span<MainSpanType>[],
+      next: finalNext,
     })
   }
 

@@ -39,6 +39,7 @@ export const GET = errorHandler(
 
       const result = await computeDocumentTracesDailyCount({
         workspaceId: workspace.id,
+        projectId: Number(projectId),
         documentUuid: document.documentUuid,
         commitUuid: headCommit?.uuid === commitUuid ? undefined : commitUuid,
         days,

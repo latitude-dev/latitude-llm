@@ -150,11 +150,6 @@ async function retrieveData({
   workspace: WorkspaceDto
   documentLogUuid: string
 }) {
-  const spansRepo = new SpansRepository(workspace.id)
-  const previousSpan = documentLogUuid
-    ? await spansRepo.findLastMainSpanByDocumentLogUuid(documentLogUuid)
-    : undefined
-
   const cacheResult = await readConversationCache({
     workspaceId: workspace.id,
     documentLogUuid,
@@ -162,6 +157,14 @@ async function retrieveData({
   if (cacheResult.error) return cacheResult
 
   const cachedConversation = cacheResult.value
+
+  const spansRepo = new SpansRepository(workspace.id)
+  const previousSpan = documentLogUuid
+    ? await spansRepo.findLastMainSpanByDocumentLogUuid(documentLogUuid, {
+        commitUuid: cachedConversation?.commitUuid ?? undefined,
+        documentUuid: cachedConversation?.documentUuid ?? undefined,
+      })
+    : undefined
 
   const commitUuid = cachedConversation?.commitUuid ?? previousSpan?.commitUuid
   const documentUuid =

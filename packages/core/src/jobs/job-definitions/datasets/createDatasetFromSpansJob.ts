@@ -18,6 +18,7 @@ export type CreateDatasetFromSpansJobData = {
   name: string
   userId: string
   workspaceId: number
+  projectId: number
   documentVersionId: number
   selectionMode: 'ALL' | 'ALL_EXCEPT' | 'PARTIAL'
   selectedSpanIdentifiers: Array<{ traceId: string; spanId: string }>
@@ -47,12 +48,14 @@ const PROCESS_BATCH_SIZE = 100
 
 async function* iterateSpanBatches({
   repo,
+  projectId,
   documentUuid,
   excludedIds,
   selectionMode,
   selectedSpanIds,
 }: {
   repo: SpansRepository
+  projectId: number
   documentUuid: string
   excludedIds: Set<string>
   selectionMode: 'ALL' | 'ALL_EXCEPT' | 'PARTIAL'
@@ -63,6 +66,7 @@ async function* iterateSpanBatches({
 
   while (true) {
     const result = await repo.findByDocumentAndCommitLimited({
+      projectId,
       documentUuid,
       types: [SpanType.Prompt],
       limit: FETCH_BATCH_SIZE,
@@ -115,6 +119,7 @@ export const createDatasetFromSpansJob = async (
       name,
       userId,
       workspaceId,
+      projectId,
       documentVersionId,
       selectionMode,
       selectedSpanIdentifiers,
@@ -161,6 +166,7 @@ export const createDatasetFromSpansJob = async (
 
     for await (const spanIdentifiers of iterateSpanBatches({
       repo,
+      projectId,
       documentUuid: document.documentUuid,
       excludedIds,
       selectionMode,

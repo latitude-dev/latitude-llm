@@ -230,7 +230,12 @@ export type EvaluationResultV2<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
 > = {
   id: number
-  uuid: string
+  commitUuid: string
+  documentUuid: string
+  model?: string | null
+  provider?: string | null
+  tokens?: number | null
+  cost?: number | null
   workspaceId: number
   commitId: number
   evaluationUuid: string
@@ -243,11 +248,11 @@ export type EvaluationResultV2<
   evaluatedTraceId?: string | null
   createdAt: Date
   updatedAt: Date
+  error: EvaluationResultError | null
 } & EvaluationResultValue<T, M>
 
 export type PublicManualEvaluationResultV2 = Pick<
   EvaluationResultV2<EvaluationType.Human, HumanEvaluationMetric>,
-  | 'uuid'
   | 'score'
   | 'normalizedScore'
   | 'metadata'

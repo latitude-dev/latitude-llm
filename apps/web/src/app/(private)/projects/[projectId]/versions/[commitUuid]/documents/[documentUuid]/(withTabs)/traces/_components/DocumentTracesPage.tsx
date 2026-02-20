@@ -168,6 +168,7 @@ export function DocumentTracesPage({
                               selection.conversation.documentLogUuid
                             }
                             documentUuid={document.documentUuid}
+                            commitUuid={selection.conversation.commitUuid}
                           />
                         ) : selection.trace ? (
                           <TraceInfoPanel

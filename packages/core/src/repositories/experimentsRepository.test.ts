@@ -172,6 +172,7 @@ describe('ExperimentsRepository', () => {
       })
 
       const results = await repo.findByDocumentUuid({
+        projectId: commit.projectId,
         documentUuid: document.documentUuid,
         page: 1,
         pageSize: 10,
@@ -204,6 +205,7 @@ describe('ExperimentsRepository', () => {
 
     it('returns an empty array if no experiments are found', async () => {
       const results = await repo.findByDocumentUuid({
+        projectId: commit.projectId,
         documentUuid: document.documentUuid,
         page: 1,
         pageSize: 10,
@@ -392,6 +394,7 @@ describe('ExperimentsRepository', () => {
       const otherRepo = new ExperimentsRepository(otherWorkspace.id)
 
       const resultsFromOwner = await repo.findByDocumentUuid({
+        projectId: commit.projectId,
         documentUuid: document.documentUuid,
         page: 1,
         pageSize: 10,
@@ -400,6 +403,7 @@ describe('ExperimentsRepository', () => {
       expect(resultsFromOwner[0]!.id).toBe(experiment.id)
 
       const resultsFromOther = await otherRepo.findByDocumentUuid({
+        projectId: commit.projectId,
         documentUuid: document.documentUuid,
         page: 1,
         pageSize: 10,

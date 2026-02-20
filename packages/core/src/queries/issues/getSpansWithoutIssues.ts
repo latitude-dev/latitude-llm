@@ -193,6 +193,7 @@ export async function getSpansWithoutIssues(
     // Query ClickHouse for the actual spans
     const result = await chGetSpansWithoutIssues({
       workspaceId: workspace.id,
+      projectId: commit.projectId,
       documentUuid: document.documentUuid,
       commitUuids,
       spanTypes,

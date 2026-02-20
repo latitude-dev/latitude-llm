@@ -23,6 +23,7 @@ export type DownloadSpansFilters = {
 
 export type DownloadSpansParams = {
   workspace: Workspace
+  projectId: number
   userId: string
   documentUuid: string
   selectionMode: 'ALL' | 'ALL_EXCEPT' | 'PARTIAL'
@@ -50,6 +51,7 @@ export type DownloadSpansResult = SyncDownloadResult | AsyncDownloadResult
  */
 export async function downloadSpans({
   workspace,
+  projectId,
   userId,
   documentUuid,
   selectionMode,
@@ -91,6 +93,7 @@ export async function downloadSpans({
   await enqueueExportSpansJob({
     exportUuid,
     workspaceId: workspace.id,
+    projectId,
     userId,
     documentUuid,
     selectionMode,

@@ -9,6 +9,12 @@ import { Workspace } from '../../../schema/models/types/Workspace'
 import { getDateRangeOrLastWeekRange } from '../utils'
 import { AnnotationStats } from '@latitude-data/emails/WeeklyEmailMailTypes'
 import { findFirstProject } from '../../../queries/projects/findFirst'
+import { isClickHouseEvaluationResultsReadEnabled } from '../../../services/workspaceFeatures/isClickHouseEvaluationResultsReadEnabled'
+import {
+  getAnnotationsStats,
+  getAllTimesAnnotationsCount as chGetAllTimesAnnotationsCount,
+  getTopProjectsAnnotations,
+} from '../../../queries/clickhouse/evaluationResultsV2/getAnnotationsStats'
 
 async function getAllTimesAnnotationsCount(
   { workspace }: { workspace: Workspace },
@@ -126,10 +132,25 @@ export async function getAnnotationsData(
   },
   db = database,
 ): Promise<AnnotationStats> {
-  const allTimesAnnotationsCount = await getAllTimesAnnotationsCount(
-    { workspace },
+  const shouldUseClickHouse = await isClickHouseEvaluationResultsReadEnabled(
+    workspace.id,
     db,
   )
+
+  let allTimesAnnotationsCount: number
+
+  if (shouldUseClickHouse) {
+    allTimesAnnotationsCount = await chGetAllTimesAnnotationsCount(
+      { workspaceId: workspace.id },
+      db,
+    )
+  } else {
+    allTimesAnnotationsCount = await getAllTimesAnnotationsCount(
+      { workspace },
+      db,
+    )
+  }
+
   const hasAnnotations = allTimesAnnotationsCount > 0
 
   if (!hasAnnotations) {
@@ -151,11 +172,87 @@ export async function getAnnotationsData(
   }
 
   const range = getDateRangeOrLastWeekRange(dateRange)
-  const all = await getAllAnnotationsCount({ workspace, range }, db)
-  const topProjects = await getTopProjectsAnnotationsData(
-    { workspace, range },
-    db,
-  )
+
+  let all: {
+    totalCount: number
+    passedCount: number
+    failedCount: number
+    passedPercentage: number
+    failedPercentage: number
+  }
+  let topProjectsData: {
+    projectId: number
+    projectName: string
+    annotationsCount: number
+    passedCount: number
+    failedCount: number
+    passedPercentage: number
+    failedPercentage: number
+  }[]
+
+  if (shouldUseClickHouse) {
+    const statsResult = await getAnnotationsStats(
+      {
+        workspaceId: workspace.id,
+        dateFrom: range.from.toISOString(),
+        dateTo: range.to.toISOString(),
+      },
+      db,
+    )
+    const stats = Array.isArray(statsResult) ? statsResult[0] : statsResult
+
+    all = {
+      totalCount: stats?.total_count ?? 0,
+      passedCount: stats?.passed_count ?? 0,
+      failedCount: stats?.failed_count ?? 0,
+      passedPercentage:
+        stats?.total_count && stats.total_count > 0
+          ? (stats.passed_count / stats.total_count) * 100
+          : 0,
+      failedPercentage:
+        stats?.total_count && stats.total_count > 0
+          ? (stats.failed_count / stats.total_count) * 100
+          : 0,
+    }
+
+    const topProjectsRaw = await getTopProjectsAnnotations(
+      {
+        workspaceId: workspace.id,
+        dateFrom: range.from.toISOString(),
+        dateTo: range.to.toISOString(),
+        limit: 10,
+      },
+      db,
+    )
+
+    topProjectsData = (
+      topProjectsRaw as unknown as Array<{
+        project_id: number
+        total_count: number
+        passed_count: number
+        failed_count: number
+      }>
+    ).map((row) => {
+      const total = row.total_count
+      const passed = row.passed_count
+      const failed = row.failed_count
+      return {
+        projectId: row.project_id,
+        projectName: `Project ${row.project_id}`,
+        annotationsCount: total,
+        passedCount: passed,
+        failedCount: failed,
+        passedPercentage: total > 0 ? (passed / total) * 100 : 0,
+        failedPercentage: total > 0 ? (failed / total) * 100 : 0,
+      }
+    })
+  } else {
+    all = await getAllAnnotationsCount({ workspace, range }, db)
+    topProjectsData = await getTopProjectsAnnotationsData(
+      { workspace, range },
+      db,
+    )
+  }
 
   return {
     hasAnnotations: true,
@@ -164,7 +261,8 @@ export async function getAnnotationsData(
     failedCount: all.failedCount,
     passedPercentage: all.passedPercentage,
     failedPercentage: all.failedPercentage,
-    topProjects,
-    firstProjectId: topProjects.length > 0 ? topProjects[0].projectId : null,
+    topProjects: topProjectsData,
+    firstProjectId:
+      topProjectsData.length > 0 ? topProjectsData[0]!.projectId : null,
   }
 }

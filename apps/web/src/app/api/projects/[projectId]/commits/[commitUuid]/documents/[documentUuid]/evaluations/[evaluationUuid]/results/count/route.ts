@@ -47,6 +47,7 @@ export const GET = errorHandler(
       const repository = new EvaluationResultsV2Repository(workspace.id)
       const count = await repository
         .countListByEvaluation({
+          projectId: Number(projectId),
           evaluationUuid,
           params: resolvedSearch,
         })

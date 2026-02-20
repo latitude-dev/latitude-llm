@@ -33,6 +33,7 @@ export type ConversationFilters = {
 
 export type FetchConversationsParams = {
   workspace: Workspace
+  projectId: number
   documentUuid: string
   filters: ConversationFilters
   from?: { startedAt: string; documentLogUuid: string }
@@ -181,6 +182,7 @@ async function fetchConversationsQuery(
 export async function fetchConversations(
   {
     workspace,
+    projectId,
     documentUuid,
     filters,
     from,
@@ -202,6 +204,7 @@ export async function fetchConversations(
 
     const queryParams = {
       workspaceId: workspace.id,
+      projectId,
       documentUuid,
       filters,
       from,

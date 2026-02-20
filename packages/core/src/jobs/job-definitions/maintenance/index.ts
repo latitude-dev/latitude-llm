@@ -1,4 +1,5 @@
 export * from './backfillClickhouseJob'
+export * from './backfillEvaluationResultsIssueIdsJob'
 export * from './backfillEvaluationResultsToClickhouseJob'
 export * from './backfillSpanReferencesJob'
 export * from './backfillSpansToClickhouseJob'

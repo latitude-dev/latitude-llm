@@ -22,6 +22,7 @@ export type ConversationsResponse = {
 
 export async function getConversationsForDocument({
   workspace,
+  projectId,
   documentUuid,
   commit,
   commitsRepo,
@@ -30,6 +31,7 @@ export async function getConversationsForDocument({
   limit,
 }: {
   workspace: Workspace
+  projectId: number
   documentUuid: string
   commit: Commit
   commitsRepo: CommitsRepository
@@ -40,6 +42,7 @@ export async function getConversationsForDocument({
   if (filters.documentLogUuid) {
     const conversationResult = await fetchConversation({
       workspace,
+      projectId,
       documentLogUuid: filters.documentLogUuid,
       documentUuid,
     })
@@ -59,6 +62,7 @@ export async function getConversationsForDocument({
 
   const { items, next, didFallbackToAllTime } = await fetchConversations({
     workspace,
+    projectId,
     documentUuid,
     filters: {
       commitUuids,
@@ -127,6 +131,7 @@ export const GET = errorHandler(
 
       const response = await getConversationsForDocument({
         workspace,
+        projectId,
         documentUuid,
         commit,
         commitsRepo,

@@ -48,6 +48,7 @@ export default async function TracesPage({
 
   const conversationsResponse = await getConversationsForDocument({
     workspace,
+    projectId: Number(projectId),
     documentUuid,
     commit,
     commitsRepo,
