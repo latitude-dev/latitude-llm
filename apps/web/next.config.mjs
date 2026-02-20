@@ -14,6 +14,7 @@ const nextConfig = {
     '@latitude-data/telemetry',
     '@napi-rs/canvas',
     'bullmq',
+    'dd-trace',
     'openid-client',
     'pdfjs-dist',
     'promptl-ai',
