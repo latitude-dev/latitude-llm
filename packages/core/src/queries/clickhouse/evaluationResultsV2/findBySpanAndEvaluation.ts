@@ -6,28 +6,40 @@ import {
 import { scopedQuery } from '../../scope'
 import { mapRow } from './mapRow'
 
-/**
- * Finds the latest evaluation result row by ID in ClickHouse.
- */
-export const findEvaluationResultById = scopedQuery(
-  async function findEvaluationResultV2RowById({
+export const findEvaluationResultBySpanAndEvaluation = scopedQuery(
+  async function findEvaluationResultBySpanAndEvaluation({
     workspaceId,
-    id,
+    projectId,
+    evaluatedSpanId,
+    evaluatedTraceId,
+    evaluationUuid,
   }: {
     workspaceId: number
-    id: number
+    projectId: number
+    evaluatedSpanId: string
+    evaluatedTraceId: string
+    evaluationUuid: string
   }) {
     const result = await clickhouseClient().query({
       query: `
         SELECT *
         FROM ${TABLE_NAME}
         WHERE workspace_id = {workspaceId: UInt64}
-          AND id = {id: UInt64}
+          AND project_id = {projectId: UInt64}
+          AND evaluation_uuid = {evaluationUuid: UUID}
+          AND evaluated_span_id = {evaluatedSpanId: String}
+          AND evaluated_trace_id = {evaluatedTraceId: String}
         ORDER BY updated_at DESC
         LIMIT 1
       `,
       format: 'JSONEachRow',
-      query_params: { workspaceId, id },
+      query_params: {
+        workspaceId,
+        projectId,
+        evaluatedSpanId,
+        evaluatedTraceId,
+        evaluationUuid,
+      },
     })
 
     const rows = await result
