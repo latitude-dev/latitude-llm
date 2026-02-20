@@ -1,20 +1,21 @@
 import { env } from '@latitude-data/env'
-import { unsafelyFindWorkspace } from '../../data-access/workspaces'
+import { unsafelyFindWorkspacesFromUser } from '../../data-access/workspaces'
 import { FREE_PLANS } from '../../plans'
 import { createInstantlyLead as createInstantlyLeadService } from '../../services/instantly/createLead'
-import { type UserCreatedEvent } from '../events'
+import { UserOnboardingInfoUpdatedEvent } from '../events'
 
 export async function createInstantlyLead({
   data: event,
 }: {
-  data: UserCreatedEvent
+  data: UserOnboardingInfoUpdatedEvent
 }) {
   if (!env.LATITUDE_CLOUD || env.LATITUDE_ENTERPRISE_MODE) return
 
   const apiKey = env.INSTANTLY_API_KEY
   if (!apiKey?.trim()) return
 
-  const workspace = await unsafelyFindWorkspace(event.data.workspaceId)
+  // Finding the new workspace created by the user
+  const workspace = (await unsafelyFindWorkspacesFromUser(event.data.id))[0]
   if (
     !workspace?.currentSubscription ||
     !FREE_PLANS.includes(workspace.currentSubscription.plan)

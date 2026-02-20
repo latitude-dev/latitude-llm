@@ -41,10 +41,7 @@ export function getCampaignIdForGoal(
 export function getCampaignIdForTrialFinishingGoal(
   goal: string | LatitudeGoal | null | undefined,
 ): string {
-  if (
-    goal &&
-    goal in LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID
-  ) {
+  if (goal && goal in LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID) {
     return LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID[
       goal as keyof typeof LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID
     ]!

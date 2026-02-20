@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LatitudeGoal } from '@latitude-data/constants/users'
 import { SubscriptionPlan } from '../../plans'
 import { createInstantlyLead } from './createInstantlyLead'
-import { type UserCreatedEvent } from '../events'
+import { type UserOnboardingInfoUpdatedEvent } from '../events'
 
 const mockFetch = vi.fn()
-const mockUnsafeFindWorkspace = vi.fn()
+const mockUnsafeFindWorkspacesFromUser = vi.fn()
 
 vi.mock('@latitude-data/env', () => ({
   env: {
@@ -16,17 +16,19 @@ vi.mock('@latitude-data/env', () => ({
 }))
 
 vi.mock('../../data-access/workspaces', () => ({
-  unsafelyFindWorkspace: (...args: unknown[]) =>
-    mockUnsafeFindWorkspace(...args),
+  unsafelyFindWorkspacesFromUser: (...args: unknown[]) =>
+    mockUnsafeFindWorkspacesFromUser(...args),
 }))
 
 vi.mock('../../utils/datadogCapture', () => ({
   captureException: vi.fn(),
 }))
 
-function makeUserCreatedEvent(overrides: Partial<UserCreatedEvent['data']> = {}) {
+function makeUserOnboardingInfoUpdatedEvent(
+  overrides: Partial<UserOnboardingInfoUpdatedEvent['data']> = {},
+) {
   return {
-    type: 'userCreated' as const,
+    type: 'userOnboardingInfoUpdated' as const,
     data: {
       id: 'user-id',
       email: 'user@example.com',
@@ -41,11 +43,10 @@ function makeUserCreatedEvent(overrides: Partial<UserCreatedEvent['data']> = {})
       latitudeGoalOther: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      workspaceId: 1,
       userEmail: 'user@example.com',
       ...overrides,
     },
-  } satisfies UserCreatedEvent
+  } satisfies UserOnboardingInfoUpdatedEvent
 }
 
 describe('createInstantlyLead', () => {
@@ -55,14 +56,16 @@ describe('createInstantlyLead', () => {
     mockFetch.mockResolvedValue({ ok: true })
   })
 
-  describe('userCreated with free-plan workspace', () => {
+  describe('userOnboardingInfoUpdated with free-plan workspace', () => {
     it('POSTs to Instantly with correct campaign, email, first_name and skip_if_in_campaign', async () => {
-      mockUnsafeFindWorkspace.mockResolvedValue({
-        id: 1,
-        currentSubscription: { plan: SubscriptionPlan.HobbyV3 },
-      })
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([
+        {
+          id: 1,
+          currentSubscription: { plan: SubscriptionPlan.HobbyV3 },
+        },
+      ])
 
-      const event = makeUserCreatedEvent({
+      const event = makeUserOnboardingInfoUpdatedEvent({
         userEmail: 'free@test.com',
         name: 'Free First',
       })
@@ -89,12 +92,14 @@ describe('createInstantlyLead', () => {
     })
 
     it('sends single-word name (surname only) as first_name', async () => {
-      mockUnsafeFindWorkspace.mockResolvedValue({
-        id: 1,
-        currentSubscription: { plan: SubscriptionPlan.HobbyV2 },
-      })
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([
+        {
+          id: 1,
+          currentSubscription: { plan: SubscriptionPlan.HobbyV2 },
+        },
+      ])
 
-      const event = makeUserCreatedEvent({
+      const event = makeUserOnboardingInfoUpdatedEvent({
         userEmail: 'surname-only@test.com',
         name: 'McGregor',
       })
@@ -108,12 +113,14 @@ describe('createInstantlyLead', () => {
     })
 
     it('sends campaign id from latitude goal when mapped', async () => {
-      mockUnsafeFindWorkspace.mockResolvedValue({
-        id: 1,
-        currentSubscription: { plan: SubscriptionPlan.HobbyV3 },
-      })
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([
+        {
+          id: 1,
+          currentSubscription: { plan: SubscriptionPlan.HobbyV3 },
+        },
+      ])
 
-      const event = makeUserCreatedEvent({
+      const event = makeUserOnboardingInfoUpdatedEvent({
         userEmail: 'goal@test.com',
         name: 'Goal User',
         latitudeGoal: LatitudeGoal.ImprovingAccuracy,
@@ -129,12 +136,16 @@ describe('createInstantlyLead', () => {
 
   describe('does not call Instantly when conditions are not met', () => {
     it('does not call fetch when workspace has paid plan', async () => {
-      mockUnsafeFindWorkspace.mockResolvedValue({
-        id: 1,
-        currentSubscription: { plan: SubscriptionPlan.TeamV4 },
-      })
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([
+        {
+          id: 1,
+          currentSubscription: { plan: SubscriptionPlan.TeamV4 },
+        },
+      ])
 
-      const event = makeUserCreatedEvent({ userEmail: 'paid@test.com' })
+      const event = makeUserOnboardingInfoUpdatedEvent({
+        userEmail: 'paid@test.com',
+      })
 
       await createInstantlyLead({ data: event })
 
@@ -142,12 +153,16 @@ describe('createInstantlyLead', () => {
     })
 
     it('does not call fetch when workspace has no currentSubscription', async () => {
-      mockUnsafeFindWorkspace.mockResolvedValue({
-        id: 1,
-        currentSubscription: null,
-      })
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([
+        {
+          id: 1,
+          currentSubscription: null,
+        },
+      ])
 
-      const event = makeUserCreatedEvent({ userEmail: 'no-sub@test.com' })
+      const event = makeUserOnboardingInfoUpdatedEvent({
+        userEmail: 'no-sub@test.com',
+      })
 
       await createInstantlyLead({ data: event })
 
@@ -155,9 +170,11 @@ describe('createInstantlyLead', () => {
     })
 
     it('does not call fetch when workspace is not found', async () => {
-      mockUnsafeFindWorkspace.mockResolvedValue(undefined)
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([])
 
-      const event = makeUserCreatedEvent({ userEmail: 'missing@test.com' })
+      const event = makeUserOnboardingInfoUpdatedEvent({
+        userEmail: 'missing@test.com',
+      })
 
       await createInstantlyLead({ data: event })
 
@@ -165,12 +182,14 @@ describe('createInstantlyLead', () => {
     })
 
     it('does not call fetch when email is empty after trim', async () => {
-      mockUnsafeFindWorkspace.mockResolvedValue({
-        id: 1,
-        currentSubscription: { plan: SubscriptionPlan.HobbyV3 },
-      })
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([
+        {
+          id: 1,
+          currentSubscription: { plan: SubscriptionPlan.HobbyV3 },
+        },
+      ])
 
-      const event = makeUserCreatedEvent({ userEmail: '   ' })
+      const event = makeUserOnboardingInfoUpdatedEvent({ userEmail: '   ' })
 
       await createInstantlyLead({ data: event })
 
