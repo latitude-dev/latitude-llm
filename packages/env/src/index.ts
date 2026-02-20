@@ -83,6 +83,10 @@ export const env = createEnv({
     CACHE_HOST: z.string(),
     CACHE_PORT: z.coerce.number().optional().default(6379),
     CACHE_PASSWORD: z.string().optional(),
+    SPAN_METADATA_CACHE_TTL_SECONDS: z.coerce
+      .number()
+      .optional()
+      .default(86400),
 
     // Postgres
     DATABASE_URL: z.url(),

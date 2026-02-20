@@ -14,6 +14,7 @@ import {
   sql,
   SQL,
 } from 'drizzle-orm'
+import { env } from '@latitude-data/env'
 import { cache as redis } from '../cache'
 import {
   DEFAULT_PAGINATION_SIZE,
@@ -803,7 +804,8 @@ export class SpanMetadatasRepository {
 
       const metadata = JSON.parse(payload)
 
-      await cache.set(key, payload, 'EX', SPAN_METADATA_CACHE_TTL)
+      const ttl = env.SPAN_METADATA_CACHE_TTL_SECONDS ?? SPAN_METADATA_CACHE_TTL
+      await cache.set(key, payload, 'EX', ttl)
 
       return Result.ok<SpanMetadata<T>>(metadata)
     } catch {
