@@ -174,7 +174,7 @@ async function createSpansFromLogData({
     projectId: commit.projectId,
     versionUuid: commit.uuid,
     source: LogSources.API,
-    experimentUuid: '',
+    experimentUuid: undefined,
     externalId: '',
   }
 
