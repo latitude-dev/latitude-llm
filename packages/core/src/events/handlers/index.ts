@@ -3,6 +3,7 @@ import { assignIssueToEvaluationResultV2Job } from './assignIssueToEvaluationRes
 import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
+import { createInstantlyLead } from './createInstantlyLead'
 import { createLoopsContact } from './createLoopsContact'
 import { updateLoopsContact } from './updateLoopsContact'
 import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenger'
@@ -52,7 +53,7 @@ export const EventHandlers: IEventsHandlers = {
   providerApiKeyDestroyed: [clearProviderApiKeysCache],
   providerApiKeyUpdated: [clearProviderApiKeysCache],
   sendReferralInvitation: [sendReferralInvitationJob],
-  userCreated: [createLoopsContact],
+  userCreated: [createLoopsContact, createInstantlyLead],
   userOnboardingInfoUpdated: [updateLoopsContact],
   userInvited: [],
   workspaceCreated: [],

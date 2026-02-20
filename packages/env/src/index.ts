@@ -218,6 +218,7 @@ export const env = createEnv({
     HANDINGER_API_KEY: z.string().optional(),
     OPENAI_API_KEY: z.string().optional(),
     VOYAGE_API_KEY: z.string().optional(),
+    INSTANTLY_API_KEY: z.string().optional(),
 
     // Mail settings
     FROM_MAILER_EMAIL: z.string(),
@@ -323,6 +324,7 @@ export const env = createEnv({
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
     LOOPS_API_KEY: process.env.LOOPS_API_KEY ?? '',
+    INSTANTLY_API_KEY: process.env.INSTANTLY_API_KEY ?? '',
     LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
     LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
     OPT_OUT_ANALYTICS: process.env.OPT_OUT_ANALYTICS === 'true',
