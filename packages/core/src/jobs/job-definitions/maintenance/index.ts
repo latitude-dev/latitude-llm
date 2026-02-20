@@ -1,7 +1,5 @@
 export * from './backfillClickhouseJob'
-export * from './backfillEvaluationResultsToClickhouseJob'
 export * from './backfillSpanReferencesJob'
-export * from './backfillSpansToClickhouseJob'
 export * from './cleanupWorkspaceOldLogsJob'
 export * from './clearConversationCacheJob'
 export * from './dailyAlignmentMetricUpdateJob'

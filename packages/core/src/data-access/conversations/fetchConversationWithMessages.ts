@@ -39,15 +39,21 @@ function findFirstPromptSpan(
 export async function fetchConversationWithMessages(
   {
     workspace,
+    projectId,
     documentLogUuid,
+    commitUuid,
+    documentUuid,
   }: {
     workspace: Workspace
+    projectId: number
     documentLogUuid: string
+    commitUuid?: string
+    documentUuid?: string
   },
   db = database,
 ) {
   const conversationResult = await fetchConversation(
-    { workspace, documentLogUuid },
+    { workspace, projectId, documentLogUuid, commitUuid, documentUuid },
     db,
   )
 
@@ -58,7 +64,11 @@ export async function fetchConversationWithMessages(
   const conversation = conversationResult.value
 
   const repository = new SpansRepository(workspace.id, db)
-  const traceIds = await repository.listTraceIdsByLogUuid(documentLogUuid)
+  const traceIds = await repository.listTraceIdsByLogUuid(documentLogUuid, {
+    commitUuid,
+    documentUuid,
+    projectId,
+  })
 
   if (traceIds.length === 0) {
     return Result.ok<ConversationWithMessages>({

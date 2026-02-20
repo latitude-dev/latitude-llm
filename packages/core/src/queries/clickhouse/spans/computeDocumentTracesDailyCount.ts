@@ -1,6 +1,6 @@
 import { subDays } from 'date-fns'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { scopedQuery } from '../../scope'
 
@@ -13,28 +13,33 @@ export const computeDocumentTracesDailyCount = scopedQuery(
   async function computeDocumentTracesDailyCount(
     {
       workspaceId,
+      projectId,
       documentUuid,
       commitUuid,
       days = 30,
     }: {
       workspaceId: number
+      projectId: number
       documentUuid: string
       commitUuid?: string
       days?: number
     },
-    _db,
   ): Promise<DailyCount[]> {
     const now = new Date()
     const startDate = subDays(now, days)
 
     const params: Record<string, unknown> = {
       workspaceId,
+      projectId,
       documentUuid,
       startDate: toClickHouseDateTime(startDate),
     }
 
     const conditions = [
       `workspace_id = {workspaceId: UInt64}`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+      `project_id = {projectId: UInt64}`,
+      `project_id_key = {projectId: UInt64}`,
       // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `document_uuid = {documentUuid: UUID}`,
       `document_uuid_key = {documentUuid: UUID}`,
@@ -53,7 +58,7 @@ export const computeDocumentTracesDailyCount = scopedQuery(
       SELECT
         toDate(started_at) AS date,
         count(DISTINCT trace_id) AS count
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE ${conditions.join(' AND ')}
       GROUP BY date
       ORDER BY date

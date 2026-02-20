@@ -256,6 +256,7 @@ async function createSpansFromLogData({
 
   await publishSpanCreated({
     spanId: promptSpanId,
+    commitUuid: commit.uuid,
     traceId,
     apiKeyId: apiKey.id,
     workspaceId: workspace.id,

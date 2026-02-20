@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 import { and, eq, gt, inArray, isNull, or } from 'drizzle-orm'
 import { addDays } from 'date-fns'
 import { toClickHouseDateTime, insertRows } from '../../../clickhouse/insert'
-import { SpanRow, SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { SpanInput, TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { SpanType } from '../../../constants'
 import { unsafelyFindWorkspace } from '../../../data-access/workspaces'
 import { LatitudeError } from '../../../lib/errors'
@@ -172,7 +172,7 @@ export async function backfillSpanReferencesJob(
           ),
         )
 
-      const rows: SpanRow[] = updatedSpans.map((span) => {
+      const rows: SpanInput[] = updatedSpans.map((span) => {
         const isCompletion = span.type === SpanType.Completion
 
         return {
@@ -214,7 +214,7 @@ export async function backfillSpanReferencesJob(
       })
 
       if (rows.length > 0) {
-        const clickhouseInsert = await insertRows(SPANS_TABLE, rows)
+        const clickhouseInsert = await insertRows(TABLE_NAME, rows)
         if (clickhouseInsert.error) {
           captureException(
             new LatitudeError(

@@ -324,6 +324,7 @@ describe('processIndividualWebhookJob', () => {
       type: 'spanCreated',
       data: {
         workspaceId: workspace.id,
+        commitUuid: commit.uuid,
         apiKeyId: apiKey.id,
         spanId: span.id,
         traceId: span.traceId,

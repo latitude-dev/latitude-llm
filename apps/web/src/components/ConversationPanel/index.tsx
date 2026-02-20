@@ -13,6 +13,7 @@ import {
   useConversation,
   useConversationEvaluations,
 } from '$/stores/conversations'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { format } from 'date-fns'
 import { ConversationEvaluations } from './ConversationEvaluations'
@@ -27,10 +28,15 @@ const CONVERSATION_TABS = [
 type Props = {
   documentLogUuid: string
   documentUuid: string
+  commitUuid: string
 }
 
 export const ConversationPanel = forwardRef<HTMLDivElement, Props>(
-  function ConversationPanel({ documentLogUuid }, ref) {
+  function ConversationPanel(
+    { documentLogUuid, commitUuid, documentUuid },
+    ref,
+  ) {
+    const { project } = useCurrentProject()
     const {
       messages,
       totalTokens,
@@ -38,12 +44,16 @@ export const ConversationPanel = forwardRef<HTMLDivElement, Props>(
       totalCost,
       traceCount,
       documentLogUuid: conversationId,
-      commitUuid,
       promptName,
       parameters,
       startedAt,
       isLoading,
-    } = useConversation({ conversationId: documentLogUuid })
+    } = useConversation({
+      conversationId: documentLogUuid,
+      projectId: project.id,
+      commitUuid,
+      documentUuid,
+    })
 
     return (
       <MetadataInfoTabs ref={ref} tabs={CONVERSATION_TABS}>

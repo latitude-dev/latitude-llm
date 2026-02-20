@@ -1,6 +1,6 @@
 import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { TracesAggregations } from '../../../schema/models/types/Span'
 import { scopedQuery } from '../../scope'
 
@@ -8,23 +8,28 @@ export const computeDocumentTracesAggregations = scopedQuery(
   async function computeDocumentTracesAggregations(
     {
       workspaceId,
+      projectId,
       documentUuid,
       commitUuid,
     }: {
       workspaceId: number
+      projectId: number
       documentUuid: string
       commitUuid?: string
     },
-    _db,
   ): Promise<TracesAggregations> {
     const params: Record<string, unknown> = {
       workspaceId,
+      projectId,
       documentUuid,
       completionType: SpanType.Completion,
     }
 
     const conditions = [
       `workspace_id = {workspaceId: UInt64}`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+      `project_id = {projectId: UInt64}`,
+      `project_id_key = {projectId: UInt64}`,
       // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `document_uuid = {documentUuid: UUID}`,
       `document_uuid_key = {documentUuid: UUID}`,
@@ -95,7 +100,7 @@ export const computeDocumentTracesAggregations = scopedQuery(
           0,
           quantileIf(0.5)(duration_ms, type = {completionType: String})
         ) AS median_duration
-      FROM ${SPANS_TABLE}
+      FROM ${TABLE_NAME}
       WHERE ${conditions.join(' AND ')}
     `,
       format: 'JSONEachRow',

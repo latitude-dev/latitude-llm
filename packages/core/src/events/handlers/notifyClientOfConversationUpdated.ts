@@ -25,8 +25,12 @@ export const notifyClientOfConversationUpdated = async ({
   if (!span || !isMainSpan(span)) return
   if (!span.documentLogUuid) return
 
+  // TODO(clickhouse): some spans won't have commit / document uuids
   const conversationResult = await fetchConversation({
     workspace,
+    projectId: span.projectId,
+    documentUuid: span.documentUuid,
+    commitUuid: span.commitUuid,
     documentLogUuid: span.documentLogUuid,
   })
 

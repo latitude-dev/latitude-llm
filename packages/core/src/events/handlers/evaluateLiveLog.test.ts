@@ -269,7 +269,10 @@ describe('evaluateLiveLogJob', () => {
 
       expect(
         mockSpansRepositoryIsFirstMainSpanInConversation,
-      ).toHaveBeenCalledWith('log-uuid', 'span-1', 'trace-1')
+      ).toHaveBeenCalledWith('log-uuid', 'span-1', 'trace-1', {
+        commitUuid: 'commit-uuid',
+        documentUuid: 'doc-uuid',
+      })
       expect(mockEvaluationsQueue.add).toHaveBeenCalledWith(
         'runEvaluationV2Job',
         expect.objectContaining({
@@ -301,7 +304,10 @@ describe('evaluateLiveLogJob', () => {
 
       expect(
         mockSpansRepositoryIsFirstMainSpanInConversation,
-      ).toHaveBeenCalledWith('log-uuid', 'span-1', 'trace-1')
+      ).toHaveBeenCalledWith('log-uuid', 'span-1', 'trace-1', {
+        commitUuid: 'commit-uuid',
+        documentUuid: 'doc-uuid',
+      })
       expect(mockEvaluationsQueue.add).not.toHaveBeenCalled()
     })
   })

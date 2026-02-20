@@ -463,6 +463,7 @@ export async function processSpansBulk(
           traceId: span.traceId,
           apiKeyId: apiKey.id,
           workspaceId: workspace.id,
+          commitUuid: span.commitUuid,
           documentUuid: span.documentUuid,
           spanType: span.type,
           parentId: span.parentId,

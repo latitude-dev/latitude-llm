@@ -280,7 +280,85 @@ ORDER BY day ASC;
 - Data older than 90 days moves to S3 (cold volume). Queries against cold data
   may be slower but remain supported.
 
-## 10. Risks & Mitigations
+## 10. Issue-Evaluation Results Denormalization
+
+The `issue_evaluation_results` junction table (linking issues to evaluation results) is not migrated to ClickHouse as a separate table. Instead, we denormalize by adding an `issue_ids` array column to the `evaluation_results` ClickHouse table.
+
+### Rationale
+
+- **Simple table structure**: The junction table only contains `(issue_id, evaluation_result_id, timestamps)` - a simple many-to-many relationship.
+- **Query patterns**: Most reads check "does this result have issues?" rather than "what are the issue details?" The array column answers the former efficiently without joins.
+- **ClickHouse arrays**: Native array support with functions like `hasAny()`, `arrayFilter()` makes this pattern efficient.
+- **Single source**: All evaluation data in one table simplifies query architecture.
+
+### Schema Change
+
+Add to `evaluation_results` table:
+
+```sql
+ALTER TABLE evaluation_results ADD COLUMN issue_ids Array(UInt64) DEFAULT [];
+```
+
+Add bloom filter index for efficient lookups:
+
+```sql
+ALTER TABLE evaluation_results ADD INDEX idx_issue_ids issue_ids TYPE bloom_filter(0.01) GRANULARITY 1;
+```
+
+### Write Path Updates
+
+When linking/unlinking evaluation results to issues:
+
+```sql
+-- On add link
+ALTER TABLE evaluation_results
+UPDATE issue_ids = arrayPushBack(issue_ids, {newIssueId})
+WHERE id = {evaluationResultId};
+
+-- On remove link
+ALTER TABLE evaluation_results
+UPDATE issue_ids = arrayFilter(x -> x != {removeIssueId}, issue_ids)
+WHERE id = {evaluationResultId};
+```
+
+### Backfill
+
+One-time sync of existing junction table data:
+
+```sql
+INSERT INTO evaluation_results (id, issue_ids)
+SELECT
+  er.id,
+  groupArray(ier.issue_id)
+FROM evaluation_results er
+INNER JOIN issue_evaluation_results ier ON ier.evaluation_result_id = er.id
+GROUP BY er.id;
+```
+
+### Query Patterns
+
+Checking if a result has any issues:
+
+```sql
+SELECT *
+FROM evaluation_results
+WHERE hasAny(issue_ids, [1, 2, 3])
+  AND workspace_id = ?;
+```
+
+Count results by issue:
+
+```sql
+SELECT
+  issue_id,
+  count() as results_count
+FROM evaluation_results
+ARRAY JOIN issue_ids as issue_id
+WHERE workspace_id = ?
+GROUP BY issue_id;
+```
+
+## 11. Risks & Mitigations
 
 | Risk                           | Mitigation                                                                       |
 | ------------------------------ | -------------------------------------------------------------------------------- |
@@ -290,13 +368,13 @@ ORDER BY day ASC;
 | Plan downgrade retention       | Background delete job can enforce shorter retention if required.                 |
 | Increased infra complexity     | Document ClickHouse operations and add monitoring.                               |
 
-## 11. Open Questions
+## 12. Open Questions
 
 1. Confirm storage policy volume names (hot/cold) and S3 configuration.
 2. Confirm the exact cost unit/scale (keep current integer scale unless changed).
 3. Validate the 90-day move-to-S3 threshold for production.
 
-## 12. Next Actions
+## 13. Next Actions
 
 1. Gather feedback from platform/data teams.
 2. Finalize ClickHouse sizing and hosting decision.

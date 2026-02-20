@@ -65,6 +65,7 @@ export const GET = errorHandler(
       const repo = new SpansRepository(workspace.id)
       const result = await repo
         .findByDocumentAndCommitLimited({
+          projectId: parsedParams.projectId,
           documentUuid: parsedParams.documentUuid,
           commitUuids,
           types: LIVE_EVALUABLE_SPAN_TYPES,

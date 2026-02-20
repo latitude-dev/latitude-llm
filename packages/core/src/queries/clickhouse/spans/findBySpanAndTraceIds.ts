@@ -1,20 +1,17 @@
 import { Span, SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE, SpanRow } from '../../../clickhouse/models/spans'
+import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
-import { spanRowToSpan } from './toSpan'
+import { mapRow } from './toSpan'
 
 export const findBySpanAndTraceIdPairs = scopedQuery(
-  async function findBySpanAndTraceIdPairs(
-    {
-      workspaceId,
-      pairs,
-    }: {
-      workspaceId: number
-      pairs: Array<{ spanId: string; traceId: string }>
-    },
-    _db,
-  ): Promise<Span[]> {
+  async function findBySpanAndTraceIdPairs({
+    workspaceId,
+    pairs,
+  }: {
+    workspaceId: number
+    pairs: Array<{ spanId: string; traceId: string }>
+  }): Promise<Span[]> {
     if (pairs.length === 0) return []
 
     const tuples = pairs
@@ -30,7 +27,7 @@ export const findBySpanAndTraceIdPairs = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${SPANS_TABLE} FINAL
+      FROM ${TABLE_NAME} FINAL
       WHERE workspace_id = {workspaceId: UInt64}
         AND (span_id, trace_id) IN (${tuples})
       ORDER BY started_at ASC, span_id ASC
@@ -40,27 +37,24 @@ export const findBySpanAndTraceIdPairs = scopedQuery(
     })
 
     const rows = await result.json<SpanRow>()
-    return rows.map(spanRowToSpan)
+    return rows.map(mapRow)
   },
 )
 
 export const findByParentAndType = scopedQuery(
-  async function findByParentAndType(
-    {
-      workspaceId,
-      parentId,
-      type,
-    }: {
-      workspaceId: number
-      parentId: string
-      type: SpanType
-    },
-    _db,
-  ): Promise<Span[]> {
+  async function findByParentAndType({
+    workspaceId,
+    parentId,
+    type,
+  }: {
+    workspaceId: number
+    parentId: string
+    type: SpanType
+  }): Promise<Span[]> {
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${SPANS_TABLE} FINAL
+      FROM ${TABLE_NAME} FINAL
       WHERE workspace_id = {workspaceId: UInt64}
         AND parent_id = {parentId: String}
         AND type = {type: String}
@@ -70,21 +64,18 @@ export const findByParentAndType = scopedQuery(
     })
 
     const rows = await result.json<SpanRow>()
-    return rows.map(spanRowToSpan)
+    return rows.map(mapRow)
   },
 )
 
 export const findCompletionsByParentIds = scopedQuery(
-  async function findCompletionsByParentIds(
-    {
-      workspaceId,
-      parentIds,
-    }: {
-      workspaceId: number
-      parentIds: Array<{ traceId: string; spanId: string }>
-    },
-    _db,
-  ): Promise<Map<string, Span<SpanType.Completion>>> {
+  async function findCompletionsByParentIds({
+    workspaceId,
+    parentIds,
+  }: {
+    workspaceId: number
+    parentIds: Array<{ traceId: string; spanId: string }>
+  }): Promise<Map<string, Span<SpanType.Completion>>> {
     if (parentIds.length === 0) return new Map()
 
     const spanIds = parentIds.map((p) => p.spanId)
@@ -92,7 +83,7 @@ export const findCompletionsByParentIds = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${SPANS_TABLE} FINAL
+      FROM ${TABLE_NAME} FINAL
       WHERE workspace_id = {workspaceId: UInt64}
         AND type = {type: String}
         AND parent_id IN ({spanIds: Array(String)})
@@ -114,7 +105,7 @@ export const findCompletionsByParentIds = scopedQuery(
         if (!completionsByParent.has(parentKey)) {
           completionsByParent.set(
             parentKey,
-            spanRowToSpan(row) as Span<SpanType.Completion>,
+            mapRow(row) as Span<SpanType.Completion>,
           )
         }
       }

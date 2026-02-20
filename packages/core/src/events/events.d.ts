@@ -478,6 +478,7 @@ export type SpanCreatedEvent = LatitudeEventGeneric<
     spanId: string
     traceId: string
     documentUuid: string | undefined
+    commitUuid: string | undefined
     spanType: SpanType
     isConversationRoot: boolean
     projectId?: number | null
