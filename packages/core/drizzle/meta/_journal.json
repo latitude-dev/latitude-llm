@@ -1898,6 +1898,13 @@
       "when": 1771255243925,
       "tag": "0271_add_product_access_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 272,
+      "version": "7",
+      "when": 1771422937290,
+      "tag": "0272_annotation_queues_and_remove_published_documents",
+      "breakpoints": true
     }
   ]
 }
