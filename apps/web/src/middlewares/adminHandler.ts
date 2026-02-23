@@ -1,5 +1,5 @@
 import { getCurrentUserOrRedirect } from '$/services/auth/getCurrentUser'
-import { notFound } from 'next/navigation'
+import { ForbiddenError, NotFoundError } from '@latitude-data/constants/errors'
 import { NextRequest } from 'next/server'
 
 export function adminHandler(handler: any) {
@@ -14,12 +14,10 @@ export function adminHandler(handler: any) {
       user = uzer
       workspace = workzpace
     } catch (_error) {
-      return notFound()
+      throw new NotFoundError('User not found')
     }
 
-    if (!user.admin) {
-      return notFound()
-    }
+    if (!user.admin) throw new ForbiddenError('Not an admin')
 
     const resolvedParams = params ? await params : {}
 
