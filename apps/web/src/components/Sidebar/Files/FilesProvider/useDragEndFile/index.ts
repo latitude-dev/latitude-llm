@@ -1,5 +1,4 @@
 import { useCallback } from 'react'
-import { useTempNodes } from '../../useTempNodes'
 import { DragEndEvent } from '@latitude-data/web-ui/hooks/useDnD'
 import { DraggableAndDroppableData } from '../DragOverlayNode'
 import { useSidebarDocumentVersions } from '../../useSidebarDocumentVersions'
@@ -10,9 +9,6 @@ export function useDragEndFile({
   promptManagement: boolean
 }) {
   const { renamePaths } = useSidebarDocumentVersions()
-  const { deleteTmpFolder } = useTempNodes((state) => ({
-    deleteTmpFolder: state.deleteTmpFolder,
-  }))
   const onDragEnd = useCallback(
     async (event: DragEndEvent) => {
       if (!promptManagement) return
@@ -36,9 +32,8 @@ export function useDragEndFile({
 
       if (oldPath === newPath) return
       await renamePaths({ oldPath, newPath })
-      deleteTmpFolder({ id: draggedFolderData.nodeId })
     },
-    [promptManagement, renamePaths, deleteTmpFolder],
+    [promptManagement, renamePaths],
   )
 
   return { onDragEnd }

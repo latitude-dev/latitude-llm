@@ -49,8 +49,12 @@ export default function useDocumentVersion(
 
           mutate(document)
           mutateDocumentVersions(
-            (documents) =>
-              documents?.map((d) => (d.id === document.id ? document : d)),
+            (documents) => {
+              return documents?.map((d) => {
+                if (d.documentUuid !== document.documentUuid) return d
+                return { ...d, ...document }
+              })
+            },
             { revalidate: false },
           )
         },

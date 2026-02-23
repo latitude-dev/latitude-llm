@@ -27,9 +27,9 @@ export function EmptyProjectPage() {
         <Button
           fancy
           variant='outline'
-          onClick={() => createNewFile(EntityType.Prompt)}
+          onClick={() => createNewFile(EntityType.File)}
         >
-          Create prompt from scratch
+          Create file from scratch
         </Button>
       </div>
     </div>

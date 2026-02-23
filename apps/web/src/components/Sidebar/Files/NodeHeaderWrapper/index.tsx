@@ -1,5 +1,4 @@
 'use client'
-import { IndentationBar } from '$/components/Sidebar/Files/IndentationBar'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { ModifiedDocumentType } from '@latitude-data/constants'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -9,15 +8,20 @@ import { Input } from '@latitude-data/web-ui/atoms/Input'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { useHover } from '@latitude-data/web-ui/browser'
-import { useDraggable } from '@latitude-data/web-ui/hooks/useDnD'
 import { MODIFICATION_ICONS } from '@latitude-data/web-ui/molecules/DocumentChange'
 import { colors } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import Link from 'next/link'
-import { ReactNode, RefObject, useEffect, useRef, useState } from 'react'
+import {
+  ReactNode,
+  RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useNodeValidator } from './useNodeValidator'
 import { MainPromptIcon } from './MainPromptIcon'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 
 export type IndentType = { isLast: boolean; invisible?: boolean }
 
@@ -27,12 +31,10 @@ const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.UpdatedPath]: 'Renamed',
   [ModifiedDocumentType.Deleted]: 'Deleted',
 }
-type DraggableProps = ReturnType<typeof useDraggable>
 export type NodeHeaderWrapperProps = {
+  depth: number
   open: boolean
   name: string | undefined
-  canDrag: boolean
-  draggble: DraggableProps | undefined
   hasChildren?: boolean
   isFile?: boolean
   isAgent?: boolean
@@ -47,19 +49,15 @@ export type NodeHeaderWrapperProps = {
   icons: IconName[]
   url?: string | undefined
   onClick?: () => void
-  indentation: IndentType[]
   onSaveValue: (args: { path: string }) => void
   onSaveValueAndTab?: (args: { path: string }) => void
   onLeaveWithoutSave?: () => void
   children?: ReactNode
-  isRunning?: boolean
-  runningCount?: number
 }
 
 function NodeHeaderWrapper({
+  depth,
   name,
-  open,
-  hasChildren = false,
   isFile = false,
   isAgent = false,
   isEditing,
@@ -71,17 +69,12 @@ function NodeHeaderWrapper({
   onLeaveWithoutSave,
   selected = false,
   icons,
-  indentation,
   actions,
   changeType,
-  canDrag,
-  draggble,
   url,
   onClick,
   children,
   childrenSelected,
-  isRunning = false,
-  runningCount = 0,
 }: NodeHeaderWrapperProps) {
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -118,6 +111,10 @@ function NodeHeaderWrapper({
   const changeIcon = changeType ? MODIFICATION_ICONS[changeType] : undefined
   const ItemComponent = url ? Link : 'div'
   const itemSelected = selected && !childrenSelected
+  const indentationStyle = useMemo(
+    () => ({ width: `${Math.max(0, depth) * 8}px` }),
+    [depth],
+  )
   return (
     <div
       tabIndex={0}
@@ -141,26 +138,10 @@ function NodeHeaderWrapper({
           onClick={onClick}
           className={cn(
             'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
-            {
-              'cursor-pointer': !draggble?.isDragging,
-              'cursor-grab': canDrag && draggble?.isDragging,
-            },
           )}
-          ref={draggble?.setNodeRef}
-          {...(draggble ? draggble.listeners : {})}
-          {...(draggble ? draggble.attributes : {})}
         >
           <div className='flex flex-row items-center gap-x-1 mr-2'>
-            {canDrag ? (
-              <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>
-                <Icon name='gridVertical' color='foregroundMuted' />
-              </div>
-            ) : null}
-
-            <IndentationBar
-              indentation={indentation}
-              hasChildren={open && hasChildren}
-            />
+            <div className='h-6 shrink-0' style={indentationStyle} />
 
             <MainPromptIcon
               isHovered={isHovered}
@@ -214,22 +195,6 @@ function NodeHeaderWrapper({
             )}
           </div>
         </ItemComponent>
-        {isRunning && runningCount > 0 && (
-          <Tooltip
-            trigger={
-              <Badge
-                iconProps={{ name: 'loader', spin: true, placement: 'start' }}
-                variant='noBorderMuted'
-                ellipsis
-                noWrap
-              >
-                {runningCount.toString()}
-              </Badge>
-            }
-          >
-            {runningCount === 1 ? '1 run' : `${runningCount} runs`}
-          </Tooltip>
-        )}
         {showActions && isHovered ? (
           <div className={cn('flex items-center gap-x-2')}>
             {actions.map((action, index) =>

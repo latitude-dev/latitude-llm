@@ -12,6 +12,7 @@ import { pingProjectUpdate } from '../projects'
 import { canInheritDocumentRelations } from './inheritRelations'
 import { updateListOfIntegrations } from './updateListOfIntegrations'
 import { getDocumentType } from './update'
+import { hashContent } from '../../lib/hashContent'
 
 /**
  * Updates a document without checking if the commit is merged.
@@ -83,6 +84,10 @@ export async function updateDocumentUnsafe(
       commitId: commit.id,
       documentType,
     } as DocumentVersion
+
+    if (content) {
+      newVersion.contentHash = hashContent(content)
+    }
 
     const updatedDocs = await tx
       .insert(documentVersions)
