@@ -3,28 +3,51 @@
 import { memo, use } from 'react'
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { timeAgo } from '$/lib/relativeTime'
-import { Span } from '@latitude-data/constants'
+import { useCommits } from '$/stores/commitsStore'
+import { useConversationEvaluations } from '$/stores/conversations/useConversation'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
-import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
+import { CommitVersionCell } from '$/components/CommitVersionCell'
+import { Badge } from '@latitude-data/web-ui/atoms/Badge'
+import { Span } from '@latitude-data/constants'
+import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { ConversationTimeline } from '$/components/traces/ConversationTimeline'
 import { TraceSpanSelectionActionsContext } from '$/components/traces/TraceSpanSelectionContext'
-import { useCommits } from '$/stores/commitsStore'
-import { CommitVersionCell } from '$/components/CommitVersionCell'
-import { EvaluationsColumn } from './EvaluationsColumn'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 
-export const TraceRow = memo(function TraceRow({
+function EvaluationsColumn({ conversationId }: { conversationId: string }) {
+  const { results, isLoading } = useConversationEvaluations({
+    conversationId,
+    enabled: true,
+  })
+
+  if (isLoading) {
+    return <Skeleton className='w-full h-4' />
+  }
+
+  if (!results.length) {
+    return <Text.H5>-</Text.H5>
+  }
+
+  const passedResults = results.filter((result) => !!result.result.hasPassed)
+
+  return (
+    <Badge variant='muted'>
+      <Text.H6>
+        {passedResults.length}/{results.length}
+      </Text.H6>
+    </Badge>
+  )
+}
+
+export const ProjectConversationRow = memo(function ProjectConversationRow({
   span,
-  isExpanded,
-  toggleRow,
-  isRowSelected,
+  documentLabel,
+  isSelected,
 }: {
   span: Span
-  isExpanded: boolean
-  toggleRow: SelectableRowsHook['toggleRow']
-  isRowSelected: boolean
+  documentLabel: string
+  isSelected: boolean
 }) {
   const { onClickTraceRow } = use(TraceSpanSelectionActionsContext)
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
@@ -35,33 +58,24 @@ export const TraceRow = memo(function TraceRow({
       <TableRow
         onClick={
           span.documentLogUuid
-            ? onClickTraceRow({
-                documentLogUuid: span.documentLogUuid,
-                spanId: span.id,
-              })
+            ? onClickTraceRow({ documentLogUuid: span.documentLogUuid })
             : undefined
         }
         className={cn(
           'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
           {
-            'bg-secondary': isExpanded,
+            'bg-secondary': isSelected,
           },
         )}
       >
-        <TableCell
-          preventDefault
-          align='left'
-          onClick={() => {
-            if (span.documentLogUuid) {
-              toggleRow(span.documentLogUuid, !isRowSelected)
-            }
-          }}
-        >
-          <Checkbox fullWidth={false} checked={isRowSelected} />
-        </TableCell>
         <TableCell>
           <Text.H5 noWrap suppressHydrationWarning>
             {timeAgo({ input: span.startedAt })}
+          </Text.H5>
+        </TableCell>
+        <TableCell className='max-w-64'>
+          <Text.H5 noWrap ellipsis>
+            {documentLabel}
           </Text.H5>
         </TableCell>
         <TableCell>
@@ -74,13 +88,14 @@ export const TraceRow = memo(function TraceRow({
           <Text.H5 noWrap>{formatDuration(span.duration)}</Text.H5>
         </TableCell>
         <TableCell>
-          <EvaluationsColumn
-            spanId={span.id}
-            documentLogUuid={span.documentLogUuid}
-          />
+          {span.documentLogUuid ? (
+            <EvaluationsColumn conversationId={span.documentLogUuid} />
+          ) : (
+            <Text.H5>-</Text.H5>
+          )}
         </TableCell>
       </TableRow>
-      {isExpanded && span.documentLogUuid && (
+      {isSelected && span.documentLogUuid && (
         <TableRow hoverable={false}>
           <TableCell
             colSpan={999}
@@ -90,6 +105,7 @@ export const TraceRow = memo(function TraceRow({
             <ConversationTimeline
               documentLogUuid={span.documentLogUuid}
               commitUuid={span.commitUuid ?? ''}
+              documentUuid={span.documentUuid}
             />
           </TableCell>
         </TableRow>

@@ -4,9 +4,12 @@ import { database } from '../../client'
 import { OkType, Result } from '../../lib/Result'
 import { spans } from '../../schema/models/spans'
 import { Workspace } from '../../schema/models/types/Workspace'
-import { conversationAggregateFields } from './shared'
+import {
+  traceAggregateFields,
+  buildConversationAggregateFields,
+} from './shared'
 import { isClickHouseSpansReadEnabled } from '../../services/workspaceFeatures/isClickHouseSpansReadEnabled'
-import { fetchConversation as chFetchConversation } from '../../queries/clickhouse/spans/fetchConversation'
+import { fetchConversation as chFetchConversation } from '../clickhouse/spans/fetchConversation'
 
 export type Conversation = OkType<typeof fetchConversation>
 
@@ -61,8 +64,8 @@ export async function fetchConversation(
     .from(spans)
     .where(and(...conditions))
 
-  const result = await db
-    .select(conversationAggregateFields)
+  const tracesSubquery = db
+    .select(traceAggregateFields)
     .from(spans)
     .where(
       and(
@@ -70,7 +73,16 @@ export async function fetchConversation(
         inArray(spans.traceId, traceIdsSubquery),
       ),
     )
-    .groupBy(spans.documentLogUuid)
+    .groupBy(spans.documentLogUuid, spans.traceId)
+    .as('traces')
+
+  const conversationFields = buildConversationAggregateFields(tracesSubquery)
+
+  const result = await db
+    .select(conversationFields)
+    .from(tracesSubquery)
+    .where(eq(tracesSubquery.documentLogUuid, documentLogUuid))
+    .groupBy(tracesSubquery.documentLogUuid)
 
   if (result.length === 0) {
     return Result.error(new NotFoundError('Conversation not found'))

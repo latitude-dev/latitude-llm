@@ -6,10 +6,10 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { AssembledSpan, AssembledTrace } from '@latitude-data/core/constants'
 import { useConversation } from '$/stores/conversations/useConversation'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentDocumentMaybe } from '$/app/providers/DocumentProvider'
 import { use, useCallback, useMemo, useState } from 'react'
-import { TimelineScale } from '$/components/tracing/traces/TimelineScale'
-import { useTickMarks } from '$/components/tracing/traces/TimelineScale/useTickMarks'
+import { TimelineScale } from '$/components/traces/TimelineScale'
+import { useTickMarks } from '$/components/traces/TimelineScale/useTickMarks'
 import {
   TraceSpanSelectionActionsContext,
   TraceSpanSelectionStateContext,
@@ -23,17 +23,21 @@ const GRAPH_MIN_WIDTH = 750
 export function ConversationTimeline({
   documentLogUuid,
   commitUuid,
+  documentUuid: documentUuidProp,
 }: {
   documentLogUuid: string
   commitUuid: string
+  documentUuid?: string
 }) {
   const { project } = useCurrentProject()
-  const { document } = useCurrentDocument()
+  const documentContext = useCurrentDocumentMaybe()
+  const documentUuid =
+    documentUuidProp ?? documentContext?.document?.documentUuid ?? ''
   const { traces, isLoading } = useConversation({
     conversationId: documentLogUuid,
     commitUuid,
     projectId: project.id,
-    documentUuid: document.documentUuid,
+    documentUuid,
   })
 
   if (isLoading) {

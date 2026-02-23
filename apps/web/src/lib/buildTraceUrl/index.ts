@@ -3,7 +3,6 @@ import { ROUTES } from '$/services/routes'
 
 export const TRACE_SPAN_SELECTION_PARAM_KEYS = {
   documentLogUuid: 'documentLogUuid',
-  traceId: 'traceId',
   spanId: 'spanId',
 } as const
 
@@ -11,7 +10,7 @@ export const TRACE_SPAN_SELECTION_PARAMS = Object.values(
   TRACE_SPAN_SELECTION_PARAM_KEYS,
 )
 
-export type SpanForUrl = Pick<Span, 'id' | 'documentLogUuid' | 'traceId'>
+export type SpanForUrl = Pick<Span, 'id' | 'documentLogUuid'>
 
 export function buildTraceUrlWithParams({
   routePath,
@@ -22,7 +21,6 @@ export function buildTraceUrlWithParams({
 }): string {
   const params = new URLSearchParams()
   params.set(TRACE_SPAN_SELECTION_PARAM_KEYS.spanId, span.id)
-  params.set(TRACE_SPAN_SELECTION_PARAM_KEYS.traceId, span.traceId)
   if (span.documentLogUuid) {
     params.set(
       TRACE_SPAN_SELECTION_PARAM_KEYS.documentLogUuid,

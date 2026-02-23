@@ -1,6 +1,6 @@
 'use client'
 
-import { Ref, use } from 'react'
+import { use, useMemo } from 'react'
 import {
   Table,
   TableBody,
@@ -8,27 +8,39 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
-import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
-import { TraceSpanSelectionStateContext } from '$/components/traces/TraceSpanSelectionContext'
-import { TraceRow } from './ConversationRow'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import useDocumentVersions from '$/stores/documentVersions'
 import { UseSpansKeysetPaginationReturn } from '$/stores/spansKeysetPagination/types'
-import { SelectableRowsHook } from '$/hooks/useSelectableRows'
+import { ProjectConversationRow } from './ProjectConversationRow'
+import { TraceSpanSelectionStateContext } from '$/components/traces/TraceSpanSelectionContext'
 
-export function DocumentTraces({
-  ref,
+export function ProjectTraces({
   traces,
-  selectableState,
 }: {
   traces: UseSpansKeysetPaginationReturn
-  selectableState: SelectableRowsHook
-  ref?: Ref<HTMLTableElement>
 }) {
   const { selection } = use(TraceSpanSelectionStateContext)
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { data: documents } = useDocumentVersions({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
+
+  const documentLabels = useMemo(
+    () =>
+      new Map(
+        documents.map(
+          (document) => [document.documentUuid, document.path] as const,
+        ),
+      ),
+    [documents],
+  )
 
   return (
     <Table
-      ref={ref}
       className='table-auto'
       externalFooter={
         <SimpleKeysetTablePaginationFooter
@@ -42,14 +54,8 @@ export function DocumentTraces({
     >
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
-          <TableHead>
-            <Checkbox
-              fullWidth={false}
-              checked={selectableState.headerState}
-              onCheckedChange={selectableState.toggleAll}
-            />
-          </TableHead>
           <TableHead>Time</TableHead>
+          <TableHead>Document</TableHead>
           <TableHead>Version</TableHead>
           <TableHead>Source</TableHead>
           <TableHead>Duration</TableHead>
@@ -58,17 +64,17 @@ export function DocumentTraces({
       </TableHeader>
       <TableBody>
         {traces.items.map((span) => (
-          <TraceRow
+          <ProjectConversationRow
             key={span.documentLogUuid ?? span.id}
             span={span}
-            isExpanded={
-              !!span.documentLogUuid &&
-              selection.documentLogUuid === span.documentLogUuid
+            documentLabel={
+              (span.documentUuid
+                ? documentLabels.get(span.documentUuid)
+                : undefined) ??
+              span.documentUuid ??
+              '-'
             }
-            toggleRow={selectableState.toggleRow}
-            isRowSelected={selectableState.isSelected(
-              span.documentLogUuid ?? '',
-            )}
+            isSelected={selection.documentLogUuid === span.documentLogUuid}
           />
         ))}
       </TableBody>

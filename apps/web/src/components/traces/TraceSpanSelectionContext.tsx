@@ -14,7 +14,7 @@ import { TRACE_SPAN_SELECTION_PARAM_KEYS } from '$/lib/buildTraceUrl'
 import { AssembledSpan } from '@latitude-data/constants'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useCurrentDocumentMaybe } from '$/app/providers/DocumentProvider'
 import { executeFetch } from '$/hooks/useFetcher'
 import { getConversationKey } from '$/stores/conversations/useConversation'
 import { getSpanKey } from '$/stores/spans'
@@ -73,21 +73,14 @@ function preloadTraceData({
 
 function syncUrlWithSelection(selection: SelectionState) {
   const params = new URLSearchParams(window.location.search)
-  const {
-    documentLogUuid: documentLogUuidParam,
-    traceId: traceIdParam,
-    spanId: spanIdParam,
-  } = TRACE_SPAN_SELECTION_PARAM_KEYS
+  const { documentLogUuid: documentLogUuidParam, spanId: spanIdParam } =
+    TRACE_SPAN_SELECTION_PARAM_KEYS
 
   params.delete(documentLogUuidParam)
-  params.delete(traceIdParam)
   params.delete(spanIdParam)
 
   if (selection.documentLogUuid) {
     params.set(documentLogUuidParam, selection.documentLogUuid)
-  }
-  if (selection.traceId) {
-    params.set(traceIdParam, selection.traceId)
   }
   if (selection.spanId) {
     params.set(spanIdParam, selection.spanId)
@@ -99,14 +92,12 @@ function syncUrlWithSelection(selection: SelectionState) {
 
 type SelectionState = {
   documentLogUuid: string | null
-  traceId: string | null
   spanId: string | null
 }
 
 type OnClickTraceRowFunction = (params: {
   documentLogUuid: string
-  spanId: string
-  traceId: string
+  spanId?: string
 }) => () => void
 
 type TraceSpanSelectionActionsContextType = {
@@ -130,7 +121,6 @@ export const TraceSpanSelectionStateContext =
   createContext<TraceSpanSelectionStateContextType>({
     selection: {
       documentLogUuid: null,
-      traceId: null,
       spanId: null,
     },
   })
@@ -139,16 +129,11 @@ function initialSelectionState(): SelectionState {
   const params = new URLSearchParams(
     typeof window !== 'undefined' ? window.location.search : '',
   )
-  const {
-    documentLogUuid: documentLogUuidParam,
-    traceId: traceIdParam,
-    spanId: spanIdParam,
-  } = TRACE_SPAN_SELECTION_PARAM_KEYS
+  const { documentLogUuid: documentLogUuidParam, spanId: spanIdParam } =
+    TRACE_SPAN_SELECTION_PARAM_KEYS
   const directDocumentLogUuid = params.get(documentLogUuidParam)
-  const directTraceId = params.get(traceIdParam)
   const directSpanId = params.get(spanIdParam)
   let initialDocumentLogUuid = directDocumentLogUuid
-  const initialTraceId = directTraceId
   let initialSpanId = directSpanId
 
   if (!initialDocumentLogUuid || !initialSpanId) {
@@ -162,7 +147,6 @@ function initialSelectionState(): SelectionState {
   }
   return {
     documentLogUuid: initialDocumentLogUuid,
-    traceId: initialTraceId,
     spanId: initialSpanId,
   }
 }
@@ -174,7 +158,8 @@ export function TraceSpanSelectionProvider({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { document } = useCurrentDocument()
+  const documentContext = useCurrentDocumentMaybe()
+  const documentUuid = documentContext?.document?.documentUuid
 
   const [selection, setSelection] = useState<SelectionState>(
     initialSelectionState,
@@ -186,7 +171,6 @@ export function TraceSpanSelectionProvider({
   const clearSelection = useCallback(() => {
     const newSelection: SelectionState = {
       documentLogUuid: null,
-      traceId: null,
       spanId: null,
     }
     setSelection(newSelection)
@@ -197,41 +181,41 @@ export function TraceSpanSelectionProvider({
     ({
       documentLogUuid,
       spanId,
-      traceId,
     }: {
       documentLogUuid: string
-      spanId: string
-      traceId: string
+      spanId?: string
     }) =>
       () => {
         const currentSelection = selectionRef.current
+        const resolvedSpanId = spanId ?? null
+
         const isSelected =
           documentLogUuid === currentSelection.documentLogUuid &&
-          spanId === currentSelection.spanId &&
-          traceId === currentSelection.traceId
+          resolvedSpanId === currentSelection.spanId
         if (isSelected) {
           clearSelection()
           return
         }
 
-        preloadTraceData({
-          documentLogUuid,
-          spanId,
-          projectId: project.id,
-          commitUuid: commit.uuid,
-          commitId: commit.id,
-          documentUuid: document.documentUuid,
-        })
+        if (spanId && documentUuid) {
+          preloadTraceData({
+            documentLogUuid,
+            spanId,
+            projectId: project.id,
+            commitUuid: commit.uuid,
+            commitId: commit.id,
+            documentUuid,
+          })
+        }
 
         const newSelection: SelectionState = {
           documentLogUuid,
-          traceId,
-          spanId,
+          spanId: resolvedSpanId,
         }
         setSelection(newSelection)
         syncUrlWithSelection(newSelection)
       },
-    [clearSelection, commit.id, commit.uuid, document.documentUuid, project.id],
+    [clearSelection, commit.id, commit.uuid, documentUuid, project.id],
   )
 
   const selectSpan = useCallback((span?: AssembledSpan) => {
@@ -245,7 +229,6 @@ export function TraceSpanSelectionProvider({
 
       const newSelection: SelectionState = {
         documentLogUuid: currentDocumentLogUuid,
-        traceId: currentSelection.traceId,
         spanId: null,
       }
       setSelection(newSelection)
@@ -257,7 +240,6 @@ export function TraceSpanSelectionProvider({
 
     const newSelection: SelectionState = {
       documentLogUuid: currentDocumentLogUuid,
-      traceId: span.traceId,
       spanId,
     }
 

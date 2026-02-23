@@ -4,15 +4,15 @@ import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { colors } from '@latitude-data/web-ui/tokens'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
-import { SPAN_COLORS } from '$/components/tracing/spans/shared'
-import { SPAN_SPECIFICATIONS } from '$/components/tracing/spans/specifications'
+import { SPAN_COLORS } from '$/components/traces/spans/shared'
+import { SPAN_SPECIFICATIONS } from '$/components/traces/spans/specifications'
 import {
   AssembledSpan,
   SpanStatus,
   SpanType,
 } from '@latitude-data/core/constants'
 import { TraceSection } from './ConversationTimeline'
-import { TickMark } from '$/components/tracing/traces/TimelineScale/useTickMarks'
+import { TickMark } from '$/components/traces/TimelineScale/useTickMarks'
 
 const BAR_MIN_WIDTH = 0.5
 

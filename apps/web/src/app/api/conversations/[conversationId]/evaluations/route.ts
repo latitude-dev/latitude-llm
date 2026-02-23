@@ -3,7 +3,7 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { NextRequest, NextResponse } from 'next/server'
 import { ResultWithEvaluationV2 } from '@latitude-data/core/schema/types'
-import { getResultsForConversation } from '@latitude-data/core/data-access/conversations/getResultsForConversation'
+import { getResultsForConversation } from '@latitude-data/core/queries/conversations/getResultsForConversation'
 
 export type ConversationEvaluationsResponse = {
   results: ResultWithEvaluationV2[]

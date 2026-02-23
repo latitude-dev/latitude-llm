@@ -101,6 +101,7 @@ const executeLimitedQuery = scopedQuery(async function executeLimitedQuery({
         FROM ${TABLE_NAME}
         ${where}
         ORDER BY started_at DESC, span_id DESC
+        LIMIT 1 BY document_log_uuid
         LIMIT {fetchLimit: UInt32}
       `,
     format: 'JSONEachRow',

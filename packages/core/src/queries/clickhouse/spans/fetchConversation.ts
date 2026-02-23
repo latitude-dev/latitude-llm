@@ -5,6 +5,7 @@ import { scopedQuery } from '../../scope'
 
 export type ConversationItem = {
   documentLogUuid: string | null
+  documentUuid: string | null
   traceIds: string[]
   traceCount: number
   totalTokens: number
@@ -53,28 +54,46 @@ export const fetchConversation = scopedQuery(async function fetchConversation({
     params.commitUuid = commitUuid
   }
 
+  const whereClause = conditions.join(' AND ')
+
   const result = await clickhouseClient().query({
     query: `
       SELECT
         document_log_uuid,
-        groupArrayDistinct(trace_id) AS trace_ids,
-        countDistinct(trace_id) AS trace_count,
-        sum(
-          coalesce(tokens_prompt, 0) +
-          coalesce(tokens_cached, 0) +
-          coalesce(tokens_reasoning, 0) +
-          coalesce(tokens_completion, 0)
-        ) AS total_tokens,
-        sum(duration_ms) FILTER (WHERE type IN ('prompt', 'chat', 'external')) AS total_duration,
-        sum(cost) AS total_cost,
-        min(started_at) AS conversation_started_at,
-        max(ended_at) AS conversation_ended_at,
-        max(started_at) AS latest_started_at,
-        anyLast(source) AS latest_source,
-        anyLast(commit_uuid) AS latest_commit_uuid,
-        anyLast(experiment_uuid) AS latest_experiment_uuid
-      FROM ${TABLE_NAME}
-      WHERE ${conditions.join(' AND ')}
+        groupArray(trace_id) AS trace_ids,
+        count() AS trace_count,
+        sum(trace_tokens) AS total_tokens,
+        sum(trace_duration) AS total_duration,
+        sum(trace_cost) AS total_cost,
+        min(trace_started_at) AS conversation_started_at,
+        max(trace_ended_at) AS conversation_ended_at,
+        max(trace_started_at) AS latest_started_at,
+        anyLast(latest_document_uuid) AS latest_document_uuid,
+        anyLast(latest_source) AS latest_source,
+        anyLast(latest_commit_uuid) AS latest_commit_uuid,
+        anyLast(latest_experiment_uuid) AS latest_experiment_uuid
+      FROM (
+        SELECT
+          document_log_uuid,
+          trace_id,
+          sum(
+            coalesce(tokens_prompt, 0) +
+            coalesce(tokens_cached, 0) +
+            coalesce(tokens_reasoning, 0) +
+            coalesce(tokens_completion, 0)
+          ) AS trace_tokens,
+          dateDiff('millisecond', min(started_at), max(ended_at)) AS trace_duration,
+          sum(cost) AS trace_cost,
+          min(started_at) AS trace_started_at,
+          max(ended_at) AS trace_ended_at,
+          anyLast(document_uuid) AS latest_document_uuid,
+          anyLast(source) AS latest_source,
+          anyLast(commit_uuid) AS latest_commit_uuid,
+          anyLast(experiment_uuid) AS latest_experiment_uuid
+        FROM ${TABLE_NAME}
+        WHERE ${whereClause}
+        GROUP BY document_log_uuid, trace_id
+      ) AS traces
       GROUP BY document_log_uuid
       LIMIT 1
     `,
@@ -84,6 +103,7 @@ export const fetchConversation = scopedQuery(async function fetchConversation({
 
   const rows = await result.json<{
     document_log_uuid: string
+    latest_document_uuid: string | null
     trace_ids: string[]
     trace_count: string
     total_tokens: string
@@ -105,6 +125,7 @@ export const fetchConversation = scopedQuery(async function fetchConversation({
 
   return {
     documentLogUuid: row.document_log_uuid,
+    documentUuid: row.latest_document_uuid,
     traceIds: row.trace_ids,
     traceCount: Number(row.trace_count),
     totalTokens: Number(row.total_tokens),

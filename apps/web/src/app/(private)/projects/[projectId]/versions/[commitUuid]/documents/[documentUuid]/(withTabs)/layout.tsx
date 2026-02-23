@@ -1,7 +1,7 @@
 import { getDocumentByUuidCached } from '$/app/(private)/_data-access'
 import { ReactNode } from 'react'
 import DocumentTabs from '../_components/DocumentTabs'
-import { TraceSpanSelectionProvider } from './traces/_components/TraceSpanSelectionContext'
+import { TraceSpanSelectionProvider } from '$/components/traces/TraceSpanSelectionContext'
 
 export default async function WithTabsLayout({
   children,
