@@ -2,6 +2,7 @@ import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
+import { PkFilters, buildPkConditions } from './pkFilters'
 
 export type ExperimentRunMetadataResult = {
   count: number
@@ -14,10 +15,19 @@ export const getExperimentRunMetadata = scopedQuery(
   async function getExperimentRunMetadata({
     workspaceId,
     experimentUuid,
+    ...pkFilters
   }: {
     workspaceId: number
     experimentUuid: string
-  }): Promise<ExperimentRunMetadataResult> {
+  } & PkFilters): Promise<ExperimentRunMetadataResult> {
+    const { conditions: pkConditions, params: pkParams } =
+      buildPkConditions(pkFilters)
+
+    const pkWhere =
+      pkConditions.length > 0
+        ? pkConditions.map((c) => `AND ${c}`).join('\n          ')
+        : ''
+
     const result = await clickhouseClient().query({
       query: `
       WITH experiment_trace_ids AS (
@@ -25,6 +35,7 @@ export const getExperimentRunMetadata = scopedQuery(
         FROM ${TABLE_NAME}
         WHERE workspace_id = {workspaceId: UInt64}
           AND experiment_uuid = {experimentUuid: UUID}
+          ${pkWhere}
       )
       SELECT
         countDistinctIf(trace_id, type IN ({runTypes: Array(String)})) AS trace_count,
@@ -43,6 +54,7 @@ export const getExperimentRunMetadata = scopedQuery(
       FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND trace_id IN (SELECT trace_id FROM experiment_trace_ids)
+        ${pkWhere}
     `,
       format: 'JSONEachRow',
       query_params: {
@@ -50,6 +62,7 @@ export const getExperimentRunMetadata = scopedQuery(
         experimentUuid,
         runTypes: [SpanType.Prompt, SpanType.Chat],
         completionType: SpanType.Completion,
+        ...pkParams,
       },
     })
 

@@ -22,10 +22,16 @@ export const createDatasetFromSpansAction = withDocument
   .action(async ({ parsedInput, ctx }) => {
     const spansRepo = new SpansRepository(ctx.workspace.id)
 
+    const pkFilters = {
+      projectId: ctx.project.id,
+      documentUuid: ctx.document.documentUuid,
+    }
+
     const selectedSpanIdentifiers =
       parsedInput.selectedDocumentLogUuids.length > 0
         ? await spansRepo.getSpanIdentifiersByDocumentLogUuids(
             parsedInput.selectedDocumentLogUuids,
+            pkFilters,
           )
         : []
 
@@ -33,6 +39,7 @@ export const createDatasetFromSpansAction = withDocument
       parsedInput.excludedDocumentLogUuids.length > 0
         ? await spansRepo.getSpanIdentifiersByDocumentLogUuids(
             parsedInput.excludedDocumentLogUuids,
+            pkFilters,
           )
         : []
 

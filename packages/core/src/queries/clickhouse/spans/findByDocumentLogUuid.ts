@@ -2,37 +2,8 @@ import { MAIN_SPAN_TYPES, Span } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
+import { PkFilters, buildPkConditions } from './pkFilters'
 import { mapRow } from './toSpan'
-
-type PkFilters = {
-  projectId?: number
-  commitUuid?: string
-  documentUuid?: string
-}
-
-function buildPkConditions({ projectId, commitUuid, documentUuid }: PkFilters) {
-  const conditions: string[] = []
-  const params: Record<string, unknown> = {}
-
-  if (projectId !== undefined) {
-    conditions.push('project_id_key = {projectId: UInt64}')
-    params.projectId = projectId
-  }
-  if (commitUuid) {
-    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-    conditions.push('commit_uuid = {commitUuid: UUID}')
-    conditions.push('commit_uuid_key = {commitUuid: UUID}')
-    params.commitUuid = commitUuid
-  }
-  if (documentUuid) {
-    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-    conditions.push('document_uuid = {documentUuid: UUID}')
-    conditions.push('document_uuid_key = {documentUuid: UUID}')
-    params.documentUuid = documentUuid
-  }
-
-  return { conditions, params }
-}
 
 export const getLastTraceByLogUuid = scopedQuery(
   async function getLastTraceByLogUuid({
@@ -99,11 +70,15 @@ export const findByDocumentLogUuids = scopedQuery(
   async function findByDocumentLogUuids({
     workspaceId,
     documentLogUuids,
+    ...pkFilters
   }: {
     workspaceId: number
     documentLogUuids: string[]
-  }): Promise<Span[]> {
+  } & PkFilters): Promise<Span[]> {
     if (documentLogUuids.length === 0) return []
+
+    const { conditions: pkConditions, params: pkParams } =
+      buildPkConditions(pkFilters)
 
     const result = await clickhouseClient().query({
       query: `
@@ -111,9 +86,10 @@ export const findByDocumentLogUuids = scopedQuery(
       FROM ${TABLE_NAME} FINAL
       WHERE workspace_id = {workspaceId: UInt64}
         AND document_log_uuid IN ({documentLogUuids: Array(UUID)})
+        ${pkConditions.map((c) => `AND ${c}`).join('\n        ')}
     `,
       format: 'JSONEachRow',
-      query_params: { workspaceId, documentLogUuids },
+      query_params: { workspaceId, documentLogUuids, ...pkParams },
     })
 
     const rows = await result.json<SpanRow>()
@@ -255,11 +231,15 @@ export const getSpanIdentifiersByDocumentLogUuids = scopedQuery(
   async function getSpanIdentifiersByDocumentLogUuids({
     workspaceId,
     documentLogUuids,
+    ...pkFilters
   }: {
     workspaceId: number
     documentLogUuids: string[]
-  }): Promise<Array<{ traceId: string; spanId: string }>> {
+  } & PkFilters): Promise<Array<{ traceId: string; spanId: string }>> {
     if (documentLogUuids.length === 0) return []
+
+    const { conditions: pkConditions, params: pkParams } =
+      buildPkConditions(pkFilters)
 
     const result = await clickhouseClient().query({
       query: `
@@ -267,9 +247,10 @@ export const getSpanIdentifiersByDocumentLogUuids = scopedQuery(
       FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND document_log_uuid IN ({documentLogUuids: Array(UUID)})
+        ${pkConditions.map((c) => `AND ${c}`).join('\n        ')}
     `,
       format: 'JSONEachRow',
-      query_params: { workspaceId, documentLogUuids },
+      query_params: { workspaceId, documentLogUuids, ...pkParams },
     })
 
     const rows = await result.json<{ trace_id: string; span_id: string }>()

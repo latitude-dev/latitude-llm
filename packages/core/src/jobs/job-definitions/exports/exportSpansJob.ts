@@ -168,14 +168,22 @@ async function buildRowsForBatch({
   repo,
   metadataRepo,
   fixedColumnsByName,
+  pkFilters,
 }: {
   spans: Span[]
   repo: SpansRepository
   metadataRepo: SpanMetadatasRepository
   fixedColumnsByName: FixedColumnsByName
+  pkFilters?: {
+    projectId?: number
+    documentUuid?: string
+  }
 }): Promise<DatasetRowData[]> {
   const parentIds = spans.map((s) => ({ traceId: s.traceId, spanId: s.id }))
-  const completionsResult = await repo.findCompletionsByParentIds(parentIds)
+  const completionsResult = await repo.findCompletionsByParentIds(
+    parentIds,
+    pkFilters,
+  )
 
   if (completionsResult.error) {
     throw completionsResult.error
@@ -384,6 +392,7 @@ export const exportSpansJob = async (job: Job<ExportSpansJobData>) => {
           repo,
           metadataRepo,
           fixedColumnsByName,
+          pkFilters: { projectId, documentUuid },
         })
 
         for (const row of rows) {

@@ -222,9 +222,26 @@ export class SpansRepository extends Repository<Span> {
     return { ...allTime, didFallbackToAllTime: true }
   }
 
-  async get({ spanId, traceId }: { spanId: string; traceId: string }) {
+  async get({
+    spanId,
+    traceId,
+    pkFilters,
+  }: {
+    spanId: string
+    traceId: string
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    }
+  }) {
     if (await this.shouldUseClickHouse()) {
-      return chFindSpan({ workspaceId: this.workspaceId, spanId, traceId })
+      return chFindSpan({
+        workspaceId: this.workspaceId,
+        spanId,
+        traceId,
+        ...pkFilters,
+      })
     }
 
     const result = await this.scope
@@ -241,19 +258,29 @@ export class SpansRepository extends Repository<Span> {
   async getByDocumentLogUuidAndSpanId({
     documentLogUuid,
     spanId,
+    pkFilters,
   }: {
     documentLogUuid: string
     spanId: string
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    }
   }) {
     if (await this.shouldUseClickHouse()) {
       return chGetByDocumentLogUuidAndSpanId({
         workspaceId: this.workspaceId,
         documentLogUuid,
         spanId,
+        ...pkFilters,
       })
     }
 
-    const traceIds = await this.listTraceIdsByLogUuid(documentLogUuid)
+    const traceIds = await this.listTraceIdsByLogUuid(
+      documentLogUuid,
+      pkFilters,
+    )
     if (traceIds.length === 0) return Result.nil()
 
     const result = await this.scope
@@ -271,9 +298,23 @@ export class SpansRepository extends Repository<Span> {
     return Result.ok<Span>(result as Span)
   }
 
-  async list({ traceId }: { traceId: string }) {
+  async list({
+    traceId,
+    pkFilters,
+  }: {
+    traceId: string
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    }
+  }) {
     if (await this.shouldUseClickHouse()) {
-      return chFindSpans({ workspaceId: this.workspaceId, traceId })
+      return chFindSpans({
+        workspaceId: this.workspaceId,
+        traceId,
+        ...pkFilters,
+      })
     }
 
     const result = await this.db
@@ -334,11 +375,19 @@ export class SpansRepository extends Repository<Span> {
       .then((r) => r.map((r) => r.traceId))
   }
 
-  async findByDocumentLogUuids(documentLogUuids: string[]) {
+  async findByDocumentLogUuids(
+    documentLogUuids: string[],
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chFindByDocumentLogUuids({
         workspaceId: this.workspaceId,
         documentLogUuids,
+        ...pkFilters,
       })
     }
 
@@ -349,11 +398,19 @@ export class SpansRepository extends Repository<Span> {
       .then((r) => r as Span[])
   }
 
-  async getSpanIdentifiersByDocumentLogUuids(documentLogUuids: string[]) {
+  async getSpanIdentifiersByDocumentLogUuids(
+    documentLogUuids: string[],
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    },
+  ) {
     if (await this.shouldUseClickHouse()) {
       return chGetSpanIdentifiersByDocumentLogUuids({
         workspaceId: this.workspaceId,
         documentLogUuids,
+        ...pkFilters,
       })
     }
 
@@ -632,15 +689,22 @@ export class SpansRepository extends Repository<Span> {
   async findByParentAndType({
     parentId,
     type,
+    pkFilters,
   }: {
     parentId: string
     type: SpanType
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    }
   }) {
     if (await this.shouldUseClickHouse()) {
       return chFindByParentAndType({
         workspaceId: this.workspaceId,
         parentId,
         type,
+        ...pkFilters,
       })
     }
 
@@ -652,12 +716,18 @@ export class SpansRepository extends Repository<Span> {
 
   async findBySpanAndTraceIds(
     spanTraceIdPairs: Array<{ spanId: string; traceId: string }>,
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    },
   ) {
     if (await this.shouldUseClickHouse()) {
       return Result.ok<Span[]>(
         await chFindBySpanAndTraceIdPairs({
           workspaceId: this.workspaceId,
           pairs: spanTraceIdPairs,
+          ...pkFilters,
         }),
       )
     }
@@ -778,11 +848,17 @@ export class SpansRepository extends Repository<Span> {
 
   async findCompletionsByParentIds(
     parentIds: Array<{ traceId: string; spanId: string }>,
+    pkFilters?: {
+      projectId?: number
+      commitUuid?: string
+      documentUuid?: string
+    },
   ) {
     if (await this.shouldUseClickHouse()) {
       const result = await chFindCompletionsByParentIds({
         workspaceId: this.workspaceId,
         parentIds,
+        ...pkFilters,
       })
       return Result.ok(result)
     }

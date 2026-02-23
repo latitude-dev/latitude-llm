@@ -34,7 +34,15 @@ export async function spanToRun({
   const spansRepo = new SpansRepository(workspaceId)
   const spanMetadataRepo = new SpanMetadatasRepository(workspaceId)
   const completionSpan = await spansRepo
-    .findByParentAndType({ parentId: span.id, type: SpanType.Completion })
+    .findByParentAndType({
+      parentId: span.id,
+      type: SpanType.Completion,
+      pkFilters: {
+        projectId: span.projectId ?? undefined,
+        commitUuid: span.commitUuid ?? undefined,
+        documentUuid: span.documentUuid ?? undefined,
+      },
+    })
     .then((r) => r[0])
   if (completionSpan) {
     const completionSpanMetadata = (await spanMetadataRepo

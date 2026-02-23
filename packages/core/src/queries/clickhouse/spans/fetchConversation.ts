@@ -45,14 +45,10 @@ export const fetchConversation = scopedQuery(async function fetchConversation({
 
   if (documentUuid) {
     params.documentUuid = documentUuid
-    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-    conditions.push(`document_uuid = {documentUuid: UUID}`)
     conditions.push(`document_uuid_key = {documentUuid: UUID}`)
   }
 
   if (commitUuid) {
-    // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-    conditions.push(`commit_uuid = {commitUuid: UUID}`)
     conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
     params.commitUuid = commitUuid
   }

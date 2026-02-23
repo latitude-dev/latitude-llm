@@ -3,20 +3,25 @@ import { EvaluationResultV2 } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
 import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
+import { PkFilters, buildPkConditions } from './pkFilters'
 import { mapRow } from './toSpan'
 
 export const findByEvaluationResults = scopedQuery(
   async function findByEvaluationResults({
     workspaceId,
     evaluationResults,
+    ...pkFilters
   }: {
     workspaceId: number
     evaluationResults: Pick<
       EvaluationResultV2,
       'evaluatedSpanId' | 'evaluatedTraceId'
     >[]
-  }): Promise<Span[]> {
+  } & PkFilters): Promise<Span[]> {
     if (evaluationResults.length === 0) return []
+
+    const { conditions: pkConditions, params: pkParams } =
+      buildPkConditions(pkFilters)
 
     const mainTypes = Array.from(MAIN_SPAN_TYPES)
 
@@ -24,7 +29,11 @@ export const findByEvaluationResults = scopedQuery(
       .map((_, i) => `({spanId_${i}: String}, {traceId_${i}: String})`)
       .join(', ')
 
-    const params: Record<string, unknown> = { workspaceId, mainTypes }
+    const params: Record<string, unknown> = {
+      workspaceId,
+      mainTypes,
+      ...pkParams,
+    }
     for (let i = 0; i < evaluationResults.length; i++) {
       params[`spanId_${i}`] = evaluationResults[i]!.evaluatedSpanId
       params[`traceId_${i}`] = evaluationResults[i]!.evaluatedTraceId
@@ -37,6 +46,7 @@ export const findByEvaluationResults = scopedQuery(
       WHERE workspace_id = {workspaceId: UInt64}
         AND (span_id, trace_id) IN (${tuples})
         AND type IN ({mainTypes: Array(String)})
+        ${pkConditions.map((c) => `AND ${c}`).join('\n        ')}
     `,
       format: 'JSONEachRow',
       query_params: params,

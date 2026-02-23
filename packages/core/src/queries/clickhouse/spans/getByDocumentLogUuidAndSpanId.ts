@@ -3,6 +3,7 @@ import { clickhouseClient } from '../../../client/clickhouse'
 import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { Result, TypedResult } from '../../../lib/Result'
 import { scopedQuery } from '../../scope'
+import { PkFilters, buildPkConditions } from './pkFilters'
 import { mapRow } from './toSpan'
 
 export const getByDocumentLogUuidAndSpanId = scopedQuery(
@@ -10,20 +11,27 @@ export const getByDocumentLogUuidAndSpanId = scopedQuery(
     workspaceId,
     documentLogUuid,
     spanId,
+    ...pkFilters
   }: {
     workspaceId: number
     documentLogUuid: string
     spanId: string
-  }): Promise<TypedResult<Span | undefined>> {
-    // Transitional resilience: some historical non-main spans were ingested with
-    // NULL document_log_uuid. Prefer direct document_log_uuid matching, but also
-    // allow spans whose trace belongs to the conversation until backfill is complete.
+  } & PkFilters): Promise<TypedResult<Span | undefined>> {
+    const { conditions: pkConditions, params: pkParams } =
+      buildPkConditions(pkFilters)
+
+    const pkWhere =
+      pkConditions.length > 0
+        ? pkConditions.map((c) => `AND ${c}`).join('\n              ')
+        : ''
+
     const result = await clickhouseClient().query({
       query: `
       SELECT *
       FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND span_id = {spanId: String}
+        ${pkConditions.map((c) => `AND ${c}`).join('\n        ')}
         AND (
           document_log_uuid = {documentLogUuid: UUID}
           OR trace_id IN (
@@ -31,13 +39,14 @@ export const getByDocumentLogUuidAndSpanId = scopedQuery(
             FROM ${TABLE_NAME}
             WHERE workspace_id = {workspaceId: UInt64}
               AND document_log_uuid = {documentLogUuid: UUID}
+              ${pkWhere}
           )
         )
       ORDER BY ingested_at DESC
       LIMIT 1
     `,
       format: 'JSONEachRow',
-      query_params: { workspaceId, documentLogUuid, spanId },
+      query_params: { workspaceId, documentLogUuid, spanId, ...pkParams },
     })
 
     const rows = await result.json<SpanRow>()

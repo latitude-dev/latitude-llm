@@ -79,10 +79,14 @@ async function findCompletionSpans({
   const completionSpans = new Map<string, Span<SpanType.Completion>>()
 
   for (const span of spans) {
-    // Find completion span that is a child of this prompt span
     const children = await repo.findByParentAndType({
       parentId: span.id,
       type: SpanType.Completion,
+      pkFilters: {
+        projectId: span.projectId ?? undefined,
+        commitUuid: span.commitUuid ?? undefined,
+        documentUuid: span.documentUuid ?? undefined,
+      },
     })
 
     if (children.length > 0) {

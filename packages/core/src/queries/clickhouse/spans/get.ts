@@ -3,17 +3,22 @@ import { clickhouseClient } from '../../../client/clickhouse'
 import { TABLE_NAME, SpanRow } from '../../../schema/models/clickhouse/spans'
 import { Result, TypedResult } from '../../../lib/Result'
 import { scopedQuery } from '../../scope'
+import { PkFilters, buildPkConditions } from './pkFilters'
 import { mapRow } from './toSpan'
 
 export const findSpan = scopedQuery(async function findSpan({
   workspaceId,
   spanId,
   traceId,
+  ...pkFilters
 }: {
   workspaceId: number
   spanId: string
   traceId: string
-}): Promise<TypedResult<Span | undefined>> {
+} & PkFilters): Promise<TypedResult<Span | undefined>> {
+  const { conditions: pkConditions, params: pkParams } =
+    buildPkConditions(pkFilters)
+
   const result = await clickhouseClient().query({
     query: `
       SELECT *
@@ -21,11 +26,12 @@ export const findSpan = scopedQuery(async function findSpan({
       WHERE workspace_id = {workspaceId: UInt64}
         AND trace_id = {traceId: String}
         AND span_id = {spanId: String}
+        ${pkConditions.map((c) => `AND ${c}`).join('\n        ')}
       ORDER BY ingested_at DESC
       LIMIT 1
     `,
     format: 'JSONEachRow',
-    query_params: { workspaceId, traceId, spanId },
+    query_params: { workspaceId, traceId, spanId, ...pkParams },
   })
 
   const rows = await result.json<SpanRow>()
