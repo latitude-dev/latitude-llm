@@ -172,7 +172,7 @@ export type ToolSpanMetadata = BaseSpanMetadata<SpanType.Tool> &
 export type PromptSpanMetadata = BaseSpanMetadata<SpanType.Prompt> &
   SpanReferenceMetadata & {
     documentLogUuid: string
-    experimentUuid: string
+    experimentUuid?: string
     externalId: string
     parameters: Record<string, unknown>
     projectId: number
