@@ -5,7 +5,6 @@ import httpx
 from latitude_sdk import DeletePromptOptions, DeletePromptResult
 from tests.utils import TestCase, fixtures
 
-
 DELETE_RESPONSE = {
     "documentUuid": "e01a1035-6ed3-4edc-88e6-c0748ea300c7",
     "path": "prompt-path",
