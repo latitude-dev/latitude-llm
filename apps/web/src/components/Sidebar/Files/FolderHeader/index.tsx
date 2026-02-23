@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import NodeHeaderWrapper, {
@@ -9,6 +9,8 @@ import { useFileTreeContext } from '../FilesProvider'
 import { useOpenPaths } from '../useOpenPaths'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useSidebarDocumentVersions } from '../useSidebarDocumentVersions'
 
 export default function FolderHeader({
   node,
@@ -30,14 +32,11 @@ export default function FolderHeader({
   runningCount?: number
 }) {
   const {
-    promptManagement,
-    isLoading,
-    isMerged,
     onMergeCommitClick,
-    onUploadFile,
-    onDeleteFolder,
-    onRenameFile,
   } = useFileTreeContext()
+  const { commit } = useCurrentCommit()
+  const { renamePaths, destroyFolder, isLoading } = useSidebarDocumentVersions()
+  const isMerged = !!commit.mergedAt
   const { togglePath } = useOpenPaths((state) => ({
     togglePath: state.togglePath,
     openPaths: state.openPaths,
@@ -88,8 +87,6 @@ export default function FolderHeader({
 
   const onSaveValue = useCallback(
     ({ path }: { path: string }) => {
-      if (!promptManagement) return
-
       if (isMerged) {
         onMergeCommitClick()
         return
@@ -98,46 +95,25 @@ export default function FolderHeader({
       if (node.isPersisted) {
         const pathParts = node.path.split('/').slice(0, -1)
         const newPath = [...pathParts, path].join('/')
-        onRenameFile({ node, path: newPath })
+        const oldPath = node.path + (node.isFile ? '' : '/')
+        const pathWithTypeSuffix = newPath + (node.isFile ? '' : '/')
+        renamePaths({ oldPath, newPath: pathWithTypeSuffix })
       } else {
         updateFolder({ id: node.id, path })
       }
     },
     [
-      promptManagement,
       node,
       updateFolder,
       isMerged,
       onMergeCommitClick,
-      onRenameFile,
+      renamePaths,
     ],
   )
 
-  const fileUploadInputRef = useRef<HTMLInputElement>(null)
-  const onClickFileUploadInput = useCallback(() => {
-    if (isMerged) onMergeCommitClick()
-    else fileUploadInputRef.current?.click()
-  }, [isMerged, onMergeCommitClick])
-  const onFileUploadChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      if (!file) return
-
-      if (!node.isPersisted) deleteTmpFolder({ id: node.id })
-
-      const filename = file.name.replace(/\.promptl$/, '').replace(/\s+/g, '_')
-      onUploadFile({ path: `${node.path}/${filename}`, file })
-
-      event.target.value = ''
-    },
-    [node, deleteTmpFolder, onUploadFile],
-  )
-
   const [isEditingState, setIsEditing] = useState(node.name === ' ')
-  const isEditing = promptManagement && isEditingState
+  const isEditing = isEditingState
   const actions = useMemo<MenuOption[]>(() => {
-    if (!promptManagement) return []
-
     return [
       {
         label: 'Rename folder',
@@ -168,13 +144,6 @@ export default function FolderHeader({
         onClick: onAddNode({ isFile: true }),
       },
       {
-        label: 'Upload document',
-        lookDisabled: isMerged,
-        disabled: isLoading,
-        iconProps: { name: 'paperclip' },
-        onClick: onClickFileUploadInput,
-      },
-      {
         label: 'Delete folder',
         type: 'destructive',
         lookDisabled: isMerged,
@@ -187,7 +156,7 @@ export default function FolderHeader({
           }
 
           if (node.isPersisted) {
-            onDeleteFolder({ node, path: node.path })
+            destroyFolder(node.path)
           } else {
             deleteTmpFolder({ id: node.id })
           }
@@ -195,13 +164,11 @@ export default function FolderHeader({
       },
     ]
   }, [
-    promptManagement,
     node,
     isLoading,
     isMerged,
     onMergeCommitClick,
-    onClickFileUploadInput,
-    onDeleteFolder,
+    destroyFolder,
     deleteTmpFolder,
     setIsEditing,
     onAddNode,
@@ -209,13 +176,6 @@ export default function FolderHeader({
 
   return (
     <>
-      <input
-        ref={fileUploadInputRef}
-        type='file'
-        multiple={false}
-        className='hidden'
-        onChange={onFileUploadChange}
-      />
       <NodeHeaderWrapper
         name={node.name}
         canDrag={canDrag}

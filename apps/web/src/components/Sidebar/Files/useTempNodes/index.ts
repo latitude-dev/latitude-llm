@@ -130,7 +130,6 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
     set((state) => {
       const allNodes = allTmpNodes(state.tmpFolders)
       const parentNode = allNodes.find((node) => node.id === parentId)
-
       const node = createEmptyNode({
         parentPath: parentNode ? parentNode.path : parentPath,
         parent: parentNode,

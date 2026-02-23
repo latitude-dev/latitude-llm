@@ -10,6 +10,8 @@ import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { ModifiedDocumentType } from '@latitude-data/core/constants'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useSidebarDocumentVersions } from '../useSidebarDocumentVersions'
 
 export enum EntityType {
   Prompt = 'prompt',
@@ -28,17 +30,14 @@ export const useNodeInput = create<NodeInputState>((set) => ({
   setNodeInput: (type) => set({ nodeInput: type }),
 }))
 
-export function TreeToolbar() {
+export function TreeToolbar({ promptManagement }: { promptManagement: boolean }) {
   const { addToRootFolder } = useTempNodes((s) => ({
     addToRootFolder: s.addToRootFolder,
   }))
-  const {
-    promptManagement,
-    isLoading,
-    isMerged,
-    onMergeCommitClick,
-    onCreateAgent,
-  } = useFileTreeContext()
+  const { onMergeCommitClick } = useFileTreeContext()
+  const { commit } = useCurrentCommit()
+  const { createFile, isLoading } = useSidebarDocumentVersions()
+  const isMerged = !!commit.mergedAt
   const { nodeInput, setNodeInput } = useNodeInput()
   const isFile = nodeInput ? FILE_TYPES.includes(nodeInput) : false
   const icons: IconName[] = nodeInput
@@ -114,7 +113,7 @@ export function TreeToolbar() {
           indentation={[{ isLast: true }]}
           onSaveValue={async ({ path }) => {
             if (isFile) {
-              onCreateAgent(path)
+              await createFile({ path, agent: nodeInput === EntityType.Agent })
             } else {
               addToRootFolder({ path })
             }

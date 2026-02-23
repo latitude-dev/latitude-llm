@@ -14,6 +14,11 @@ import NodeHeaderWrapper, {
 } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
+import { useSidebarDocumentVersions } from '../useSidebarDocumentVersions'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCommits } from '$/stores/commitsStore'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
 
 /**
  * Detects the current document page type from the pathname.
@@ -52,43 +57,52 @@ export default function DocumentHeader({
   isRunning?: boolean
   runningCount?: number
 }) {
-  const {
-    promptManagement,
-    isLoading,
-    isMerged,
-    onMergeCommitClick,
-    onDeleteFile,
-    onCreateFile,
-    onRenameFile,
-    sidebarLinkContext,
-    mainDocumentUuid,
-    setMainDocumentUuid,
-  } = useFileTreeContext()
+  const { onMergeCommitClick } = useFileTreeContext()
+  const { commit, isHead } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { setCommitMainDocument } = useCommits()
+  const { createFile, renamePaths, destroyFile, isLoading } =
+    useSidebarDocumentVersions()
+  const isMerged = !!commit.mergedAt
+  const mainDocumentUuid = commit.mainDocumentUuid ?? undefined
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
     deleteTmpFolder: state.deleteTmpFolder,
   }))
   const onSaveValue = useCallback(
     async ({ path }: { path: string }) => {
-      if (!promptManagement) return
-
       const parentPathParts = node.path.split('/').slice(0, -1)
       const newPathParts = path.split('/')
       const newPath = [...parentPathParts, ...newPathParts].join('/')
       if (node.isPersisted) {
-        onRenameFile({ node, path: newPath })
+        const oldPath = node.path + (node.isFile ? '' : '/')
+        const pathWithTypeSuffix = newPath + (node.isFile ? '' : '/')
+        await renamePaths({ oldPath, newPath: pathWithTypeSuffix })
       } else {
-        onCreateFile(newPath)
+        await createFile({ path: newPath, agent: false })
       }
       reset()
     },
-    [promptManagement, reset, onCreateFile, onRenameFile, node],
+    [createFile, renamePaths, reset, node],
   )
   const setMainDocument = useCallback(
     (asMainDocument: boolean) => {
-      setMainDocumentUuid(asMainDocument ? node.doc!.documentUuid : undefined)
+      if (isMerged) return onMergeCommitClick()
+
+      setCommitMainDocument({
+        projectId: project.id,
+        commitId: commit.id,
+        documentUuid: asMainDocument ? node.doc!.documentUuid : undefined,
+      })
     },
-    [setMainDocumentUuid, node.doc],
+    [
+      setCommitMainDocument,
+      project.id,
+      commit.id,
+      node.doc,
+      isMerged,
+      onMergeCommitClick,
+    ],
   )
   const documentUuid = node.doc!.documentUuid
   const pathname = usePathname()
@@ -108,8 +122,8 @@ export default function DocumentHeader({
     }
 
     const documentDetails = ROUTES.projects
-      .detail({ id: sidebarLinkContext.projectId })
-      .commits.detail({ uuid: sidebarLinkContext.commitUuid })
+      .detail({ id: project.id })
+      .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
       .documents.detail({ uuid: documentUuid })
 
     if (isRunning) {
@@ -132,16 +146,16 @@ export default function DocumentHeader({
     documentUuid,
     selected,
     node.isPersisted,
-    sidebarLinkContext,
     currentEvaluationUuid,
     currentPageType,
     isRunning,
+    project.id,
+    isHead,
+    commit.uuid,
   ])
   const [isEditingState, setIsEditing] = useState(node.name === ' ')
-  const isEditing = promptManagement && isEditingState
+  const isEditing = isEditingState
   const actions = useMemo<MenuOption[]>(() => {
-    if (!promptManagement) return []
-
     return [
       {
         label: 'Rename file',
@@ -167,16 +181,15 @@ export default function DocumentHeader({
           if (isMerged) {
             onMergeCommitClick()
           } else {
-            onDeleteFile({ node, documentUuid })
+            destroyFile(documentUuid)
           }
         },
       },
     ]
   }, [
-    promptManagement,
     node,
     documentUuid,
-    onDeleteFile,
+    destroyFile,
     isLoading,
     isMerged,
     onMergeCommitClick,
@@ -200,9 +213,9 @@ export default function DocumentHeader({
       isEditing={isEditing}
       setIsEditing={setIsEditing}
       isMainDocument={
-        promptManagement ? mainDocumentUuid === documentUuid : undefined
+        mainDocumentUuid === documentUuid
       }
-      setMainDocument={promptManagement ? setMainDocument : undefined}
+      setMainDocument={setMainDocument}
       hasChildren={false}
       actions={actions}
       selected={selected}

@@ -2,14 +2,14 @@ import { useCallback } from 'react'
 import { useTempNodes } from '../../useTempNodes'
 import { DragEndEvent } from '@latitude-data/web-ui/hooks/useDnD'
 import { DraggableAndDroppableData } from '../DragOverlayNode'
+import { useSidebarDocumentVersions } from '../../useSidebarDocumentVersions'
 
 export function useDragEndFile({
   promptManagement,
-  renamePaths,
 }: {
   promptManagement: boolean
-  renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
 }) {
+  const { renamePaths } = useSidebarDocumentVersions()
   const { deleteTmpFolder } = useTempNodes((state) => ({
     deleteTmpFolder: state.deleteTmpFolder,
   }))

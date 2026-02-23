@@ -2,11 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@latitude-data/web-ui/utils'
 import { useDraggable, useDroppable } from '@latitude-data/web-ui/hooks/useDnD'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
-import { ConfirmModal } from '@latitude-data/web-ui/atoms/Modal'
 
 import { type IndentType } from './NodeHeaderWrapper'
 import DocumentHeader from './DocumentHeader'
-import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
+import { FileTreeProvider } from './FilesProvider'
 import FolderHeader from './FolderHeader'
 import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
@@ -14,6 +13,7 @@ import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
 import { useParams } from 'next/navigation'
 import { type ParamValue } from 'next/dist/server/request/params'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 
 function NodeHeader({
   selected,
@@ -77,20 +77,18 @@ function NodeHeader({
 }
 
 export type FileNodeProps = {
-  isMerged: boolean
   node: Node
   indentation?: IndentType[]
-  onRenameFile: (args: { node: Node; path: string }) => Promise<void>
+  currentUuid: string | undefined
   currentEvaluationUuid: ParamValue
 }
 
 const EMPTY_TMP_NODES: Node[] = []
 
 function FileNode({
-  isMerged,
   node,
   indentation = [],
-  onRenameFile,
+  currentUuid,
   currentEvaluationUuid,
 }: FileNodeProps) {
   const droppable = useDroppable({
@@ -106,7 +104,6 @@ function FileNode({
   })
   const allTmpFolders = useTempNodes((state) => state.tmpFolders)
   const tmpNodes = allTmpFolders[node.path] ?? EMPTY_TMP_NODES
-  const { currentUuid } = useFileTreeContext()
   const documentUuid = node.doc?.documentUuid
   const [selected, setSelected] = useState(
     !!currentUuid && currentUuid === documentUuid,
@@ -116,6 +113,11 @@ function FileNode({
     [tmpNodes, node.children],
   )
   const lastIdx = allNodes.length - 1
+  const childIndentations = useMemo(
+    () =>
+      allNodes.map((_, idx) => [...indentation, { isLast: idx === lastIdx }]),
+    [allNodes, indentation, lastIdx],
+  )
   const { togglePath, openPaths } = useOpenPaths((state) => ({
     openPaths: state.openPaths,
     togglePath: state.togglePath,
@@ -133,10 +135,11 @@ function FileNode({
     setSelected(!!currentUuid && currentUuid === documentUuid)
   }, [currentUuid, documentUuid])
 
+  const { commit } = useCurrentCommit()
   const overMyself =
     droppable.over && droppable.over.id === droppable.active?.id
   const someoneIsOverMe = droppable.isOver && !overMyself
-  const canDrag = !isMerged && !node.isRoot
+  const canDrag = !commit.mergedAt && !node.isRoot
   return (
     <div
       ref={droppable.setNodeRef}
@@ -167,10 +170,9 @@ function FileNode({
             return (
               <li key={node.id} className='cursor-pointer'>
                 <FileNode
-                  indentation={[...indentation, { isLast: idx === lastIdx }]}
+                  indentation={childIndentations[idx]}
                   node={node}
-                  onRenameFile={onRenameFile}
-                  isMerged={isMerged}
+                  currentUuid={currentUuid}
                   currentEvaluationUuid={currentEvaluationUuid}
                 />
               </li>
@@ -182,22 +184,6 @@ function FileNode({
   )
 }
 
-enum DeletableType {
-  File = 'file',
-  Folder = 'folder',
-}
-type DeletableElement<T extends DeletableType> = T extends DeletableType.File
-  ? {
-      type: T
-      documentUuid: string
-      name: string
-    }
-  : {
-      type: T
-      path: string
-      name: string
-    }
-
 function thereisOnlyOneFolder(rootNode: Node) {
   const onlyOne = rootNode.children.length === 1
   const node = rootNode.children[0]
@@ -205,47 +191,20 @@ function thereisOnlyOneFolder(rootNode: Node) {
   return onlyOne && node && !node.isFile ? node : undefined
 }
 
-export type SidebarLinkContext = {
-  projectId: number
-  commitUuid: string
-}
-
 export function FilesTree({
   promptManagement,
-  sidebarLinkContext,
-  isLoading,
-  isMerged,
   currentUuid,
   documents,
   liveDocuments,
   runningDocumentsMap,
-  mainDocumentUuid,
   onMergeCommitClick,
-  createFile,
-  uploadFile,
-  renamePaths,
-  destroyFile,
-  destroyFolder,
-  setMainDocumentUuid,
-  isDestroying,
 }: {
   promptManagement: boolean
-  sidebarLinkContext: SidebarLinkContext
-  isLoading: boolean
-  isMerged: boolean
-  createFile: (args: { path: string; agent: boolean }) => Promise<void>
-  uploadFile: (args: { path: string; file: File }) => Promise<void>
-  renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
-  destroyFile: (documentUuid: string) => Promise<void>
   onMergeCommitClick: () => void
-  destroyFolder: (path: string) => Promise<void>
   documents: SidebarDocument[]
   liveDocuments?: SidebarDocument[]
   runningDocumentsMap?: Map<string, number>
   currentUuid: string | undefined
-  isDestroying: boolean
-  mainDocumentUuid: string | undefined
-  setMainDocumentUuid: (documentUuid: string | undefined) => void
 }) {
   const { evaluationUuid: currentEvaluationUuid } = useParams()
   const isMount = useRef(false)
@@ -258,8 +217,6 @@ export function FilesTree({
     liveDocuments,
     runningDocumentsMap,
   })
-  const [deletableNode, setDeletable] =
-    useState<DeletableElement<DeletableType> | null>(null)
 
   const currentPath = useMemo(() => {
     if (!currentUuid) return undefined
@@ -286,100 +243,21 @@ export function FilesTree({
     }
   }, [currentPath, togglePath, isOpenThisPath, rootNode])
 
-  const onConfirmDelete = useCallback(
-    async <T extends DeletableType>(deletable: DeletableElement<T>) => {
-      if (deletable.type === DeletableType.File) {
-        await destroyFile(deletable.documentUuid)
-      } else if (deletable.type === DeletableType.Folder) {
-        await destroyFolder(deletable.path)
-      }
-
-      setDeletable(null)
-    },
-    [destroyFile, destroyFolder, setDeletable],
-  )
-
-  const deletingFolder = deletableNode?.type === 'folder'
-  const onRenameFile = useCallback(
-    async ({ node, path }: { node: Node; path: string }) => {
-      await renamePaths({ oldPath: node.path, newPath: path })
-    },
-    [renamePaths],
-  )
   return (
     <ClientOnly>
       <FileTreeProvider
         promptManagement={promptManagement}
-        sidebarLinkContext={sidebarLinkContext}
-        isLoading={isLoading}
-        isMerged={isMerged}
         onMergeCommitClick={onMergeCommitClick}
-        currentUuid={currentUuid}
-        renamePaths={renamePaths}
-        mainDocumentUuid={mainDocumentUuid}
-        setMainDocumentUuid={setMainDocumentUuid}
-        onCreateFile={(path) => {
-          createFile({ path, agent: false })
-        }}
-        onCreateAgent={(path) => {
-          createFile({ path, agent: true })
-        }}
-        onUploadFile={({ path, file }) => {
-          uploadFile({ path, file })
-        }}
-        onRenameFile={({ node, path }) => {
-          const oldPath = node.path + (node.isFile ? '' : '/')
-          const newPath = path + (node.isFile ? '' : '/')
-          renamePaths({ oldPath, newPath })
-        }}
-        onDeleteFile={({ node, documentUuid }) => {
-          setDeletable({
-            type: DeletableType.File,
-            documentUuid,
-            name: node.name,
-          })
-        }}
-        onDeleteFolder={async ({ node, path }) => {
-          setDeletable({ type: DeletableType.Folder, path, name: node.name })
-        }}
       >
         <div className='flex flex-col gap-2'>
-          <TreeToolbar />
+          <TreeToolbar promptManagement={promptManagement} />
           <FileNode
             node={rootNode}
-            onRenameFile={onRenameFile}
-            isMerged={isMerged}
+            currentUuid={currentUuid}
             currentEvaluationUuid={currentEvaluationUuid}
           />
         </div>
       </FileTreeProvider>
-
-      {deletableNode ? (
-        <ConfirmModal
-          dismissible={!isDestroying}
-          type='destructive'
-          open={!!deletableNode}
-          onConfirm={() => onConfirmDelete(deletableNode)}
-          onOpenChange={(open) => {
-            if (!open) {
-              setDeletable(null)
-            }
-          }}
-          title='Are you sure?'
-          description={
-            deletingFolder
-              ? `You're deleting ${deletableNode?.name} folder`
-              : `You're deleting ${deletableNode?.name} prompt`
-          }
-          confirm={{
-            isConfirming: isDestroying,
-            label: deletingFolder ? 'Delete folder' : 'Delete prompt',
-            description: deletingFolder
-              ? 'Deleting this folder will also delete all the prompts it contains. This action cannot be undone.'
-              : 'Deleting this prompt might affect your production app and other prompts referencing it. This action cannot be undone.',
-          }}
-        />
-      ) : null}
     </ClientOnly>
   )
 }

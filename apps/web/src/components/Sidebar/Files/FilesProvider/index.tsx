@@ -11,55 +11,27 @@ import {
 
 import { createContext, ReactNode, useCallback, useContext } from 'react'
 
-import { Node } from '../useTree'
 import {
   DraggableAndDroppableData,
   DraggableOverlayNode,
 } from './DragOverlayNode'
 import { useOpenPaths } from '../useOpenPaths'
 import { useDragEndFile } from './useDragEndFile'
-import { type SidebarLinkContext } from '../index'
 import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
 
 type IFilesContext = {
-  promptManagement: boolean
-  isLoading: boolean
-  isMerged: boolean
-  mainDocumentUuid: string | undefined
-  setMainDocumentUuid: (documentUuid: string | undefined) => void
-  onCreateFile: (path: string) => void
-  onCreateAgent: (path: string) => void
-  onUploadFile: (args: { path: string; file: File }) => void
-  onRenameFile: (args: { node: Node; path: string }) => void
-  onDeleteFile: (args: { node: Node; documentUuid: string }) => void
   onMergeCommitClick: () => void
-  currentUuid?: string
-  onDeleteFolder: (args: { node: Node; path: string }) => void
-  sidebarLinkContext: SidebarLinkContext
 }
 
 const FileTreeContext = createContext({} as IFilesContext)
 
 const FileTreeProvider = ({
   promptManagement,
-  isLoading,
-  isMerged,
   onMergeCommitClick,
-  mainDocumentUuid,
-  setMainDocumentUuid,
   children,
-  currentUuid,
-  onCreateFile,
-  onCreateAgent,
-  onUploadFile,
-  onRenameFile,
-  renamePaths,
-  onDeleteFile,
-  onDeleteFolder,
-  sidebarLinkContext,
 }: IFilesContext & {
+  promptManagement: boolean
   children: ReactNode
-  renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
 }) => {
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
@@ -71,7 +43,7 @@ const FileTreeProvider = ({
     openPaths: state.openPaths,
     togglePath: state.togglePath,
   }))
-  const { onDragEnd } = useDragEndFile({ promptManagement, renamePaths })
+  const { onDragEnd } = useDragEndFile({ promptManagement })
   const onDragOver = useCallback(
     (event: DragOverEvent) => {
       const { over } = event
@@ -99,20 +71,7 @@ const FileTreeProvider = ({
     >
       <FileTreeContext.Provider
         value={{
-          promptManagement,
-          isLoading,
-          isMerged,
           onMergeCommitClick,
-          currentUuid,
-          mainDocumentUuid,
-          setMainDocumentUuid,
-          onCreateFile,
-          onCreateAgent,
-          onUploadFile,
-          onRenameFile,
-          onDeleteFile,
-          onDeleteFolder,
-          sidebarLinkContext,
         }}
       >
         {children}
