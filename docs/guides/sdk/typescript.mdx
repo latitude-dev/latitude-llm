@@ -87,6 +87,16 @@ const prompt = await latitude.prompts.getOrCreate('prompt-path', {
 })
 ```
 
+### Delete a Prompt
+
+To delete a prompt from a draft version:
+
+```typescript
+const result = await latitude.prompts.delete('prompt-path')
+```
+
+This soft-deletes the document. The deletion only works on draft (non-merged) commits.
+
 ## Version Management
 
 ### Get All Versions
@@ -494,6 +504,15 @@ latitude.prompts.getOrCreate(
     prompt?: string
   }
 ): Promise<Prompt>
+
+// Delete a prompt
+latitude.prompts.delete(
+  path: string,
+  options?: {
+    projectId?: number,
+    versionUuid?: string
+  }
+): Promise<{ documentUuid: string, path: string }>
 
 // Run a prompt
 latitude.prompts.run<S extends AssertedStreamType = 'text', Tools extends ToolSpec = {}, Background extends boolean = false>(

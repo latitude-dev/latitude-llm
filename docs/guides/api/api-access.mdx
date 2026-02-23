@@ -251,7 +251,52 @@ curl -X POST "https://gateway.latitude.so/api/v3/projects/123/versions/live/docu
   }'
 ```
 
-#### 4. Create a Version (Commit)
+#### 4. Delete a Prompt
+
+Delete a prompt from a draft version. This performs a soft-delete — the document is marked as deleted but can be restored by reverting the draft.
+
+**Endpoint:** `DELETE /projects/{projectId}/versions/{versionUuid}/documents/{path}`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required)
+- `versionUuid`: Version UUID of a draft commit (required)
+- `path`: Path to the document (required)
+
+**Response:**
+
+The response confirms the deletion with the document's UUID and path.
+
+**Response Body:**
+
+```json
+{
+  "documentUuid": "document-uuid",
+  "path": "path/to/document"
+}
+```
+
+**Error Handling:**
+
+If you try to delete a document from a merged (live) commit, the API returns a 400 status code:
+
+```json
+{
+  "name": "BadRequestError",
+  "message": "Cannot modify a merged commit.",
+  "errorCode": "BadRequestError",
+  "details": {}
+}
+```
+
+**Example:**
+
+```bash
+curl -X DELETE "https://gateway.latitude.so/api/v3/projects/123/versions/draft-uuid/documents/path/to/prompt" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+#### 5. Create a Version (Commit)
 
 Create a new draft version (commit) for a project. Versions allow you to manage changes to your prompts before publishing them to production.
 
@@ -310,7 +355,7 @@ curl -X POST "https://gateway.latitude.so/api/v3/projects/123/versions" \
   }'
 ```
 
-#### 5. Publish a Version (Commit)
+#### 6. Publish a Version (Commit)
 
 Publish a draft version (commit) to make it the live/production version. This merges the draft changes and assigns it a version number.
 
@@ -392,7 +437,7 @@ If you try to publish a version that is already published or doesn't exist, the 
 }
 ```
 
-#### 6. Run a Prompt
+#### 7. Run a Prompt
 
 Execute a prompt with optional parameters. This endpoint processes your prompt template, sends it to the configured AI provider, and returns the generated response. Supports both streaming and non-streaming modes, as well as background processing for long-running operations.
 
@@ -481,7 +526,7 @@ type ToolCall = {
 
 </Note>
 
-#### 7. Chat
+#### 8. Chat
 
 Continue a multi-turn conversation by sending additional messages to an existing conversation thread. This endpoint allows you to maintain context across multiple exchanges with the AI model by building upon messages from a previous run. The conversation history is automatically managed, and each new message is appended to the existing message chain.
 
@@ -523,7 +568,7 @@ The response is a stream of Server-Sent Events (SSE) or a single JSON response c
 
 Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
-#### 8. Get a Conversation
+#### 9. Get a Conversation
 
 Retrieve the conversation history by its UUID. Use this endpoint to fetch the complete message history from a completed conversation, including all user messages, assistant responses, and tool calls.
 
@@ -573,7 +618,7 @@ If the conversation is not found, the API returns a 404 status code with an erro
 }
 ```
 
-#### 9. Stop a Conversation
+#### 10. Stop a Conversation
 
 Stop an active run that is currently processing. This is useful when you need to cancel a long-running prompt execution, such as when the output is no longer needed or when you want to prevent further token consumption.
 
@@ -591,7 +636,7 @@ No request body is required for this endpoint.
 
 This endpoint returns a 200 status code when the conversation is successfully stopped.
 
-#### 10. Attach to a Conversation
+#### 11. Attach to a Conversation
 
 Attach to an active run to receive its output events. This endpoint is particularly useful when you've started a prompt execution with `background: true` and want to stream the results. You can attach at any point during the run's execution to receive the remaining events.
 
@@ -658,7 +703,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 }
 ```
 
-#### 11. Annotate a Log
+#### 12. Annotate a Log
 
 Add a manual evaluation score to a conversation log. Use this endpoint to provide human feedback or manual assessments of prompt outputs, which can be used for quality tracking and model improvement.
 
@@ -697,7 +742,7 @@ Add a manual evaluation score to a conversation log. Use this endpoint to provid
 }
 ```
 
-#### 12. Create Log Entry
+#### 13. Create Log Entry
 
 Create a log entry for a prompt without executing it. This endpoint allows you to record prompt executions that happened outside of Latitude (e.g., direct LLM API calls) for tracking, analytics, and evaluation purposes.
 

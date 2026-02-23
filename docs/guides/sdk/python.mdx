@@ -105,6 +105,16 @@ prompt = await latitude.prompts.get_or_create('prompt-path', GetOrCreatePromptOp
 ))
 ```
 
+### Delete a Prompt
+
+To delete a prompt from a draft version:
+
+```python
+result = await latitude.prompts.delete('prompt-path')
+```
+
+This soft-deletes the document. The deletion only works on draft (non-merged) commits.
+
 ## Version Management
 
 ### Get All Versions
@@ -490,6 +500,20 @@ latitude.prompts.get_or_create(
     path: str,
     options: Optional[GetOrCreatePromptOptions]
 ) -> GetOrCreatePromptResult
+
+# Delete a prompt
+class DeletePromptOptions:
+    project_id: Optional[int]
+    version_uuid: Optional[str]
+
+class DeletePromptResult:
+    document_uuid: str
+    path: str
+
+latitude.prompts.delete(
+    path: str,
+    options: Optional[DeletePromptOptions]
+) -> DeletePromptResult
 
 # Run a prompt
 class RunPromptOptions:
