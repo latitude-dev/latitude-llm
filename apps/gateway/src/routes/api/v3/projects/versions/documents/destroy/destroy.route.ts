@@ -7,19 +7,13 @@ export const destroyDocumentRouteConfig = defineRouteConfig({
   operationId: 'deleteDocument',
   method: http.Methods.DELETE,
   description:
-    'Delete a prompt/document from a project version. By default, this endpoint only works with draft commits. Use force=true to allow deletions on the live commit.',
+    'Delete a prompt/document from a project version. This endpoint only works with draft (non-merged) commits.',
   tags: ['Documents'],
   request: {
     params: z.object({
       projectId: z.string(),
       versionUuid: z.string().optional(),
       documentPath: z.string(),
-    }),
-    query: z.object({
-      force: z
-        .string()
-        .optional()
-        .transform((v) => v === 'true'),
     }),
   },
   responses: {

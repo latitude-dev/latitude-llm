@@ -293,7 +293,6 @@ export type GetPromptOptions = {
 export type DeletePromptOptions = {
   projectId?: number
   versionUuid?: string
-  force?: boolean
 }
 
 export type DeletePromptResponse = {

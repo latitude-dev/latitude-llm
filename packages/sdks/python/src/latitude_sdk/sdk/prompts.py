@@ -67,7 +67,7 @@ class GetAllPromptsOptions(PromptOptions, Model):
 
 
 class DeletePromptOptions(PromptOptions, Model):
-    force: Optional[bool] = None
+    pass
 
 
 class DeletePromptResult(Model):
@@ -200,8 +200,6 @@ class Prompts:
         self._ensure_prompt_options(options)
         assert options.project_id is not None
 
-        query = {"force": "true"} if options.force else None
-
         async with self._client.request(
             handler=RequestHandler.DeletePrompt,
             params=DeletePromptRequestParams(
@@ -209,7 +207,6 @@ class Prompts:
                 version_uuid=options.version_uuid,
                 path=path,
             ),
-            query=query,
         ) as response:
             return DeletePromptResult.model_validate_json(response.content)
 

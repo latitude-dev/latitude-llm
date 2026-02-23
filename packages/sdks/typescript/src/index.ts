@@ -132,10 +132,7 @@ class Latitude {
       path: string,
       args?: GetOrCreatePromptOptions,
     ) => Promise<Prompt>
-    delete: (
-      path: string,
-      args?: DeletePromptOptions,
-    ) => Promise<DeletePromptResponse>
+    delete: (path: string, args?: DeletePromptOptions) => Promise<DeletePromptResponse>
     run: <
       S extends AssertedStreamType = 'text',
       Tools extends ToolSpec = {},
@@ -408,7 +405,7 @@ class Latitude {
 
   private async deletePrompt(
     path: string,
-    { projectId, versionUuid, force }: DeletePromptOptions = {},
+    { projectId, versionUuid }: DeletePromptOptions = {},
   ) {
     projectId = projectId ?? this.options.projectId
     if (!projectId) throw new Error('Project ID is required')
@@ -419,7 +416,6 @@ class Latitude {
       method: 'DELETE',
       handler: HandlerType.DeleteDocument,
       params: { projectId, versionUuid, path },
-      query: force ? { force: 'true' } : undefined,
       options: this.options,
     })
 
