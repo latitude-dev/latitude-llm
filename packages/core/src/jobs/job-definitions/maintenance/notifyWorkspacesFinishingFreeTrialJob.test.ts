@@ -12,10 +12,29 @@ import type { NotifyWorkspacesFinishingFreeTrialJobData } from './notifyWorkspac
 import { notifyWorkspacesFinishingFreeTrialJob } from './notifyWorkspacesFinishingFreeTrialJob'
 import { LatitudeGoal } from '@latitude-data/constants/users'
 
+vi.mock('@latitude-data/env', () => ({
+  env: {
+    LATITUDE_CLOUD: true,
+    LATITUDE_ENTERPRISE_MODE: false,
+    INSTANTLY_API_KEY: 'test-instantly-key',
+  },
+}))
+
 vi.mock('../../../events/publisher', () => ({
   publisher: {
     publishLater: vi.fn(),
   },
+}))
+
+const mockHasAtLeastOneExternalSpan = vi.fn()
+vi.mock('../../../queries/clickhouse/spans/hasAtLeastOneExternalSpan', () => ({
+  hasAtLeastOneExternalSpan: (...args: unknown[]) =>
+    mockHasAtLeastOneExternalSpan(...args),
+}))
+
+const mockCreateInstantlyLead = vi.fn()
+vi.mock('../../../services/instantly/createLead', () => ({
+  createInstantlyLead: (...args: unknown[]) => mockCreateInstantlyLead(...args),
 }))
 
 function createMockJob(): Job<NotifyWorkspacesFinishingFreeTrialJobData> {
@@ -38,6 +57,8 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
     vi.mocked(publisher.publishLater).mockImplementation(() =>
       Promise.resolve(),
     )
+    mockHasAtLeastOneExternalSpan.mockResolvedValue(true)
+    mockCreateInstantlyLead.mockResolvedValue(undefined)
   })
 
   describe('publishes workspaceFinishingFreeTrial for workspaces in 10-day window', () => {
@@ -124,6 +145,101 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
           userGoal: 'My custom goal',
         },
       })
+    })
+  })
+
+  describe('publishes event only for ICPs (≥1 external span)', () => {
+    it('does not publish event when workspace has no external span', async () => {
+      mockHasAtLeastOneExternalSpan.mockResolvedValue(false)
+      const creator = await createUser({
+        email: 'no-span@test.com',
+        latitudeGoal: LatitudeGoal.JustExploring,
+      })
+      const { workspace, userData } = await createWorkspace({
+        subscriptionPlan: SubscriptionPlan.HobbyV3,
+        creator,
+      })
+      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+
+      await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
+
+      expect(publisher.publishLater).not.toHaveBeenCalled()
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
+        { email: userData.email },
+        'test-instantly-key',
+        {
+          campaignContext: 'trial_finishing',
+          goalForCampaign: LatitudeGoal.JustExploring,
+        },
+      )
+    })
+
+    it('publishes event when workspace has at least one external span', async () => {
+      mockHasAtLeastOneExternalSpan.mockResolvedValue(true)
+      const creator = await createUser({
+        email: 'icp@test.com',
+        latitudeGoal: LatitudeGoal.ObservingTraces,
+      })
+      const { workspace, userData } = await createWorkspace({
+        subscriptionPlan: SubscriptionPlan.HobbyV3,
+        creator,
+      })
+      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+
+      await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
+
+      expect(publisher.publishLater).toHaveBeenCalledTimes(1)
+      expect(publisher.publishLater).toHaveBeenCalledWith({
+        type: 'workspaceFinishingFreeTrial',
+        data: {
+          userEmail: userData.email,
+          userGoal: LatitudeGoal.ObservingTraces,
+        },
+      })
+    })
+  })
+
+  describe('creates Instantly lead for every workspace in 10-day window', () => {
+    it('calls createInstantlyLead for each workspace in window', async () => {
+      mockHasAtLeastOneExternalSpan.mockResolvedValue(false)
+      const { workspace: workspace1, userData: userData1 } =
+        await createWorkspace({
+          subscriptionPlan: SubscriptionPlan.HobbyV3,
+          name: 'Workspace One',
+        })
+      const { workspace: workspace2, userData: userData2 } =
+        await createWorkspace({
+          subscriptionPlan: SubscriptionPlan.HobbyV3,
+          name: 'Workspace Two',
+        })
+      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
+      await setTrialEndsAt(workspace1.currentSubscriptionId!, trialEndInTenDays)
+      await setTrialEndsAt(workspace2.currentSubscriptionId!, trialEndInTenDays)
+
+      await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
+
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(2)
+      expect(mockCreateInstantlyLead).toHaveBeenNthCalledWith(
+        1,
+        { email: userData1.email },
+        'test-instantly-key',
+        {
+          campaignContext: 'trial_finishing',
+          goalForCampaign: null,
+        },
+      )
+      expect(mockCreateInstantlyLead).toHaveBeenNthCalledWith(
+        2,
+        { email: userData2.email },
+        'test-instantly-key',
+        {
+          campaignContext: 'trial_finishing',
+          goalForCampaign: null,
+        },
+      )
     })
   })
 
