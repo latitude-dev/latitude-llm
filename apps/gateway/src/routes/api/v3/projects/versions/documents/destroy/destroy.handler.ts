@@ -57,13 +57,13 @@ export const destroyDocumentHandler: AppRouteHandler<
   const document = docResult.unwrap()
 
   if (Result.isOk(canEditCommit)) {
-    await destroyDocument(
-      { document, commit, workspace },
-    ).then((r) => r.unwrap())
+    await destroyDocument({ document, commit, workspace }).then((r) =>
+      r.unwrap(),
+    )
   } else {
-    await destroyDocumentUnsafe(
-      { document, commit, workspace },
-    ).then((r) => r.unwrap())
+    await destroyDocumentUnsafe({ document, commit, workspace }).then((r) =>
+      r.unwrap(),
+    )
   }
 
   return c.json(

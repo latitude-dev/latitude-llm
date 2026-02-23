@@ -56,10 +56,7 @@ export const documentsRouter = createRouter()
     getOrCreateHandler,
   )
   .openapi(
-    route(
-      destroyDocumentRouteConfig,
-      API_ROUTES.v4.projects.documents.destroy,
-    ),
+    route(destroyDocumentRouteConfig, API_ROUTES.v4.projects.documents.destroy),
     destroyDocumentHandler,
   )
   .openapi(
