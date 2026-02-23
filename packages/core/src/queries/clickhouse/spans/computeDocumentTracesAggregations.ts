@@ -31,6 +31,7 @@ export const computeDocumentTracesAggregations = scopedQuery(
 
     if (commitUuid) {
       conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
+      params.commitUuid = commitUuid
     }
 
     // Query all metrics in a single pass
