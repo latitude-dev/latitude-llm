@@ -14,6 +14,23 @@ import { Node, SidebarDocument, useTree } from './useTree'
 import { useParams } from 'next/navigation'
 import { type ParamValue } from 'next/dist/server/request/params'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import {
+  runningDocumentsScope,
+  useRunningDocumentsCounts,
+} from '$/stores/runs/runningDocuments'
+
+function getNodeRunningCount(node: Node, runningCounts: Map<string, number>): number {
+  if (node.isFile) {
+    const documentUuid = node.doc?.documentUuid
+    return documentUuid ? runningCounts.get(documentUuid) || 0 : 0
+  }
+
+  return node.children.reduce(
+    (acc, child) => acc + getNodeRunningCount(child, runningCounts),
+    0,
+  )
+}
 
 function NodeHeader({
   selected,
@@ -32,6 +49,22 @@ function NodeHeader({
   canDrag: boolean
   currentEvaluationUuid: ParamValue
 }) {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const scope = runningDocumentsScope({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
+  const runningCounts = useRunningDocumentsCounts(scope)
+  const runningCount = useMemo(
+    () => getNodeRunningCount(node, runningCounts),
+    [node, runningCounts],
+  )
+  const isTopLevelFolder = !node.isFile && !node.path.includes('/')
+  const isRunning = node.isFile
+    ? runningCount > 0
+    : isTopLevelFolder && !open && runningCount > 0
+
   const draggable = useDraggable({
     id: node.id,
     disabled: !canDrag,
@@ -56,8 +89,8 @@ function NodeHeader({
         canDrag={canDrag}
         draggble={draggable}
         currentEvaluationUuid={currentEvaluationUuid}
-        isRunning={node.isRunning}
-        runningCount={node.runningCount}
+        isRunning={isRunning}
+        runningCount={runningCount}
       />
     )
   }
@@ -70,8 +103,8 @@ function NodeHeader({
       onToggleOpen={onToggleOpen}
       canDrag={canDrag}
       draggble={draggable}
-      isRunning={node.isRunning && !open}
-      runningCount={node.runningCount}
+      isRunning={isRunning}
+      runningCount={runningCount}
     />
   )
 }
@@ -196,14 +229,12 @@ export function FilesTree({
   currentUuid,
   documents,
   liveDocuments,
-  runningDocumentsMap,
   onMergeCommitClick,
 }: {
   promptManagement: boolean
   onMergeCommitClick: () => void
   documents: SidebarDocument[]
   liveDocuments?: SidebarDocument[]
-  runningDocumentsMap?: Map<string, number>
   currentUuid: string | undefined
 }) {
   const { evaluationUuid: currentEvaluationUuid } = useParams()
@@ -215,7 +246,6 @@ export function FilesTree({
   const rootNode = useTree({
     documents,
     liveDocuments,
-    runningDocumentsMap,
   })
 
   const currentPath = useMemo(() => {

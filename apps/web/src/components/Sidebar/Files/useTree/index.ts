@@ -23,8 +23,6 @@ export class Node {
   public parent?: Node
   public doc?: SidebarDocument
   public changeType?: ModifiedDocumentType
-  public isRunning: boolean = false
-  public runningCount: number = 0
 
   constructor({
     id,
@@ -37,8 +35,6 @@ export class Node {
     path,
     name = '',
     changeType,
-    isRunning = false,
-    runningCount = 0,
   }: {
     id: string
     path: string
@@ -50,8 +46,6 @@ export class Node {
     isRoot?: boolean
     name?: string
     changeType?: ModifiedDocumentType
-    isRunning?: boolean
-    runningCount?: number
   }) {
     this.id = id
     this.path = path
@@ -63,8 +57,6 @@ export class Node {
     this.children = children
     this.doc = doc
     this.changeType = changeType
-    this.isRunning = isRunning
-    this.runningCount = runningCount
   }
 }
 
@@ -129,37 +121,6 @@ function getFolderChangeType(node: Node) {
 
   if (!hasUneditedDocs && hasNewDocs) return ModifiedDocumentType.Created
   return undefined
-}
-
-/**
- * Marks nodes as running based on the map of running document UUIDs to counts.
- * Only marks:
- * - Files that are actually running (with their count)
- * - Top-level folders (direct children of root) that contain running documents (with total count)
- */
-function markRunningNodes(
-  node: Node,
-  runningDocumentsMap: Map<string, number>,
-  isTopLevel: boolean = false,
-): number {
-  if (node.isFile) {
-    const documentUuid = node.doc?.documentUuid
-    const count = documentUuid ? runningDocumentsMap.get(documentUuid) || 0 : 0
-    node.isRunning = count > 0
-    node.runningCount = count
-    return count
-  }
-
-  // For folders, sum up all running descendants
-  let totalRunningCount = 0
-  for (const child of node.children) {
-    totalRunningCount += markRunningNodes(child, runningDocumentsMap, false)
-  }
-
-  // Only mark top-level folders as running, not nested folders
-  node.isRunning = isTopLevel && totalRunningCount > 0
-  node.runningCount = totalRunningCount
-  return totalRunningCount
 }
 
 function buildTree({
@@ -234,25 +195,12 @@ function buildTree({
 export function useTree({
   documents,
   liveDocuments,
-  runningDocumentsMap,
   generateNodeId = defaultGenerateNodeUuid,
 }: {
   documents: SidebarDocument[]
   liveDocuments?: SidebarDocument[]
-  runningDocumentsMap?: Map<string, number>
   generateNodeId?: typeof defaultGenerateNodeUuid
 }) {
-  // Convert Map to sorted array of entries for stable dependency
-  const runningDocumentsEntries = useMemo(
-    () =>
-      runningDocumentsMap
-        ? Array.from(runningDocumentsMap.entries()).sort((a, b) =>
-            a[0].localeCompare(b[0]),
-          )
-        : [],
-    [runningDocumentsMap],
-  )
-
   return useMemo(() => {
     const root = new Node({
       id: generateNodeId(),
@@ -264,9 +212,7 @@ export function useTree({
     })
     const nodeMap = new Map<string, Node>()
     nodeMap.set('', root)
-
     const sorted = documents.slice().sort(sortByPathDepth)
-
     const tree = buildTree({
       root,
       nodeMap,
@@ -275,15 +221,6 @@ export function useTree({
       generateNodeId,
     })
 
-    // Mark running nodes after building the tree
-    // Pass isTopLevel=true for root's direct children
-    if (runningDocumentsEntries.length > 0) {
-      const runningMap = new Map(runningDocumentsEntries)
-      for (const child of tree.children) {
-        markRunningNodes(child, runningMap, true)
-      }
-    }
-
     return tree
-  }, [documents, liveDocuments, runningDocumentsEntries, generateNodeId])
+  }, [documents, liveDocuments, generateNodeId])
 }

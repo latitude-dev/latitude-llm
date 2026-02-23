@@ -44,7 +44,7 @@ export default function ClientFilesTree({
       fallbackData: serverLiveDocuments,
     },
   )
-  const runningDocumentsMap = useRunningDocuments({
+  useRunningDocuments({
     project,
     commit,
   })
@@ -60,7 +60,6 @@ export default function ClientFilesTree({
         currentUuid={documentUuid}
         onMergeCommitClick={onMergeCommitClick}
         liveDocuments={commit.mergedAt ? undefined : liveDocuments}
-        runningDocumentsMap={runningDocumentsMap}
       />
       <CreateDraftCommitModal
         open={createDraftCommitModalOpen}
