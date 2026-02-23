@@ -10,7 +10,6 @@ import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
 import { renameDocumentPathsAction } from '$/actions/documents/renamePathsAction'
-import { updateDocumentContentAction } from '$/actions/documents/updateContent'
 import { uploadDocumentAction } from '$/actions/documents/upload'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
@@ -109,20 +108,16 @@ export default function useDocumentVersions(
           variant: 'destructive',
         })
       } else if (document) {
-        const prevDocuments = data || []
-
-        if (document) {
-          mutate([...prevDocuments, document])
-          router.push(
-            ROUTES.projects
-              .detail({ id: projectId! })
-              .commits.detail({ uuid: commitUuid })
-              .documents.detail({ uuid: document.documentUuid }).root,
-          )
-        }
+        mutate((prev) => [...(prev || []), document])
+        router.push(
+          ROUTES.projects
+            .detail({ id: projectId! })
+            .commits.detail({ uuid: commitUuid })
+            .documents.detail({ uuid: document.documentUuid }).root,
+        )
       }
     },
-    [executeCreateDocument, mutate, data, commitUuid, projectId, toast, router],
+    [executeCreateDocument, mutate, commitUuid, projectId, toast, router],
   )
 
   const uploadFile = useCallback(
@@ -156,8 +151,7 @@ export default function useDocumentVersions(
 
       if (!document) return
 
-      const prevDocuments = data || []
-      mutate([...prevDocuments, document])
+      mutate((prev) => [...(prev || []), document])
       router.push(
         ROUTES.projects
           .detail({ id: projectId! })
@@ -165,7 +159,7 @@ export default function useDocumentVersions(
           .documents.detail({ uuid: document.documentUuid }).root,
       )
     },
-    [executeUploadDocument, mutate, data, commitUuid, projectId, toast, router],
+    [executeUploadDocument, mutate, commitUuid, projectId, toast, router],
   )
 
   const renamePaths = useCallback(
@@ -180,8 +174,8 @@ export default function useDocumentVersions(
       })
 
       if (updatedDocuments) {
-        mutate(
-          data.map((d) => {
+        mutate((prev) =>
+          (prev || []).map((d) => {
             const updatedDocument = updatedDocuments.find(
               (ud) => ud.documentUuid === d.documentUuid,
             )
@@ -198,7 +192,7 @@ export default function useDocumentVersions(
         })
       }
     },
-    [executeRenamePaths, mutate, data, commitUuid, projectId, toast],
+    [executeRenamePaths, mutate, commitUuid, projectId, toast],
   )
 
   const destroyFile = useCallback(
@@ -217,8 +211,7 @@ export default function useDocumentVersions(
           variant: 'destructive',
         })
       } else {
-        const prevDocuments = data || []
-        mutate(prevDocuments.filter((d) => d.documentUuid !== documentUuid))
+        mutate((prev) => (prev || []).filter((d) => d.documentUuid !== documentUuid))
         toast({
           title: 'Success',
           description: 'Document deleted',
@@ -230,15 +223,7 @@ export default function useDocumentVersions(
         )
       }
     },
-    [
-      executeDestroyDocument,
-      mutate,
-      data,
-      commitUuid,
-      projectId,
-      router,
-      toast,
-    ],
+    [executeDestroyDocument, mutate, commitUuid, projectId, router, toast],
   )
 
   const destroyFolder = useCallback(
@@ -274,45 +259,14 @@ export default function useDocumentVersions(
     [executeDestroyFolder, mutate, commitUuid, projectId, router, toast],
   )
 
-  const { execute: updateContent, isPending: isUpdatingContent } =
-    useLatitudeAction(updateDocumentContentAction, {
-      onSuccess: useCallback(
-        ({ data: document }: { data: DocumentVersion }) => {
-          if (!document) return
-
-          const prevDocuments = data || []
-
-          mutate(
-            prevDocuments.map((d) =>
-              d.documentUuid === document.documentUuid ? document : d,
-            ),
-          )
-        },
-        [data, mutate],
-      ),
-    })
-
-  const mutateDocumentUpdated = useCallback(
-    (newDoc: DocumentVersion) => {
-      const prevDocuments = data || []
-
-      mutate(
-        prevDocuments.map((d) =>
-          d.documentUuid === newDoc.documentUuid ? newDoc : d,
-        ),
-      )
-    },
-    [data, mutate],
-  )
-
   const { execute: assignDataset, isPending: isAssigningDataset } =
     useLatitudeAction(assignDatasetAction, {
       onSuccess: useCallback(
         ({ data: document }: { data: DocumentVersion }) => {
           if (!document) return
-          mutateDocumentUpdated(document)
+          mutate()
         },
-        [mutateDocumentUpdated],
+        [mutate],
       ),
     })
 
@@ -322,16 +276,25 @@ export default function useDocumentVersions(
         ({ data: document }: { data: DocumentVersion }) => {
           if (!document) return
 
-          const prevDocuments = data || []
-          mutate(
-            prevDocuments.map((d) =>
+          mutate((prev) =>
+            (prev || []).map((d) =>
               d.documentUuid === document.documentUuid ? document : d,
             ),
           )
         },
-        [data, mutate],
+        [mutate],
       ),
     })
+
+  const mutateDocumentUpdated = useCallback(
+    (document: DocumentVersion) => {
+      mutate(
+        (prev) => (prev || []).map((d) => (d.id === document.id ? document : d)),
+        { revalidate: false },
+      )
+    },
+    [mutate],
+  )
 
   return useMemo(
     () => ({
@@ -344,12 +307,10 @@ export default function useDocumentVersions(
       renamePaths,
       destroyFile,
       destroyFolder,
-      updateContent,
-      mutateDocumentUpdated,
-      isUpdatingContent,
       assignDataset,
       saveLinkedDataset,
       mutate,
+      mutateDocumentUpdated,
       isAssigning: isAssigningDataset || isLinkingDataset,
       isDestroying: isDestroyingFile || isDestroyingFolder,
     }),
@@ -363,12 +324,10 @@ export default function useDocumentVersions(
       renamePaths,
       destroyFile,
       destroyFolder,
-      updateContent,
-      mutateDocumentUpdated,
-      isUpdatingContent,
       assignDataset,
       saveLinkedDataset,
       mutate,
+      mutateDocumentUpdated,
       isAssigningDataset,
       isLinkingDataset,
       isDestroyingFile,

@@ -26,6 +26,7 @@ import { Project } from '@latitude-data/core/schema/models/types/Project'
 import { useEvents } from '$/lib/events'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { DiffOptions } from '@latitude-data/web-ui/molecules/DocumentTextEditor/types'
+import useDocumentVersion from '$/stores/useDocumentVersion'
 
 const UPDATE_DOCUMENT_CONTENT_DEBOUNCE_TIME = 500
 
@@ -66,17 +67,14 @@ export function DocumentValueProvider({
   const { toast } = useToast()
   const [origin, setOrigin] = useState<string>()
   const {
-    data: documents,
+    data: document,
     updateContent,
     isUpdatingContent,
-  } = useDocumentVersions({
-    commitUuid: commit.uuid,
+  } = useDocumentVersion({
+    documentUuid: _document.documentUuid,
     projectId: project.id,
+    commitUuid: commit.uuid,
   })
-  const document = useMemo(
-    () => documents.find((d) => d.documentUuid === _document.documentUuid),
-    [documents, _document.documentUuid],
-  )
   const [value, setValue] = useState(document?.content ?? _document.content)
   const setContentValue = useCallback(
     (content: string, opts?: Parameters<updateContentFn>[1]) => {

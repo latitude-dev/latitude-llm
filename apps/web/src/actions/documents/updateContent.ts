@@ -9,6 +9,7 @@ import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'
 
 import { withProject, withProjectSchema } from '../procedures'
+import { DocumentVersionDto } from '@latitude-data/core/constants'
 
 export const updateDocumentContentAction = withProject
   .inputSchema(
@@ -49,5 +50,5 @@ export const updateDocumentContentAction = withProject
       )
     }
 
-    return updatedDocument
+    return updatedDocument as DocumentVersionDto
   })
