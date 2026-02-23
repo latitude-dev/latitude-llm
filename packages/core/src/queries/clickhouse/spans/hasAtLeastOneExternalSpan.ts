@@ -1,5 +1,5 @@
 import { clickhouseClient } from '../../../client/clickhouse'
-import { SPANS_TABLE } from '../../../clickhouse/models/spans'
+import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 
 /**
  * Returns true if the workspace has at least one span of type External (ICP check).
@@ -11,7 +11,7 @@ export async function hasAtLeastOneExternalSpan(
   const result = await clickhouseClient().query({
     query: `
     SELECT count() AS cnt
-    FROM ${SPANS_TABLE}
+    FROM ${TABLE_NAME}
     WHERE workspace_id = {workspaceId: UInt64}
       AND type = 'external'
   `,
