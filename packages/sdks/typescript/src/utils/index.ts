@@ -3,6 +3,7 @@ import {
   AttachRunUrlParams,
   ChatUrlParams,
   CreateVersionUrlParams,
+  DeleteDocumentUrlParams,
   GetAllDocumentsParams,
   GetAllVersionsUrlParams,
   GetDocumentUrlParams,
@@ -49,6 +50,13 @@ export class RouteResolver {
     switch (handler) {
       case HandlerType.GetDocument: {
         const p = params as GetDocumentUrlParams
+        return this.projects
+          .project(p.projectId)
+          .versions.version(p.versionUuid ?? 'live')
+          .documents.document(p.path)
+      }
+      case HandlerType.DeleteDocument: {
+        const p = params as DeleteDocumentUrlParams
         return this.projects
           .project(p.projectId)
           .versions.version(p.versionUuid ?? 'live')

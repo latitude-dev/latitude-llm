@@ -44,6 +44,12 @@ export type GetDocumentUrlParams = GetAllDocumentsParams & {
   path: string
 }
 
+export type DeleteDocumentUrlParams = {
+  projectId: number
+  versionUuid?: string
+  path: string
+}
+
 export type GetOrCreateDocumentUrlParams = {
   projectId: number
   versionUuid?: string
@@ -168,6 +174,7 @@ export enum HandlerType {
   CreateDocument = 'create-document',
   CreateProject = 'create-project',
   CreateVersion = 'create-version',
+  DeleteDocument = 'delete-document',
   GetAllDocuments = 'get-all-documents',
   GetAllProjects = 'get-all-projects',
   GetDocument = 'get-document',
@@ -194,6 +201,7 @@ export type HandlerConfigs = {
     CreateVersionUrlParams,
     CreateVersionBodyParams
   >
+  [HandlerType.DeleteDocument]: HandlerConfig<DeleteDocumentUrlParams, never>
   [HandlerType.GetAllDocuments]: HandlerConfig<GetAllDocumentsParams, never>
   [HandlerType.GetAllProjects]: HandlerConfig<never, never>
   [HandlerType.GetDocument]: HandlerConfig<GetDocumentUrlParams, never>
@@ -280,6 +288,16 @@ export type {
 export type GetPromptOptions = {
   projectId?: number
   versionUuid?: string
+}
+
+export type DeletePromptOptions = {
+  projectId?: number
+  versionUuid?: string
+}
+
+export type DeletePromptResponse = {
+  documentUuid: string
+  path: string
 }
 
 export type GetOrCreatePromptOptions = {

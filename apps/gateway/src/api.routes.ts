@@ -18,6 +18,7 @@ const API_VERSIONED_ROUTES = (version: string) => ({
       create: `/api/${version}/projects/:projectId/versions/:versionUuid/documents`,
       createOrUpdate: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/create-or-update`,
       getOrCreate: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/get-or-create`,
+      destroy: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/:documentPath{.+}`,
       logs: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/logs`,
       run: `/api/${version}/projects/:projectId/versions/:versionUuid/documents/run`,
     },

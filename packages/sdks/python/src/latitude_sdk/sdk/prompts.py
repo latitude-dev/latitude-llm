@@ -7,6 +7,7 @@ from latitude_sdk.client import (
     ChatPromptRequestBody,
     ChatPromptRequestParams,
     Client,
+    DeletePromptRequestParams,
     GetAllPromptsRequestParams,
     GetOrCreatePromptRequestBody,
     GetOrCreatePromptRequestParams,
@@ -28,7 +29,7 @@ from latitude_sdk.sdk.types import (
     StreamCallbacks,
 )
 from latitude_sdk.util import Adapter as AdapterUtil
-from latitude_sdk.util import Model
+from latitude_sdk.util import Field, Model
 
 _PROVIDER_TO_ADAPTER = {
     Providers.OpenAI: Adapter.OpenAI,
@@ -63,6 +64,15 @@ _GetAllPromptsResult = AdapterUtil[List[GetPromptResult]](List[GetPromptResult])
 
 class GetAllPromptsOptions(PromptOptions, Model):
     pass
+
+
+class DeletePromptOptions(PromptOptions, Model):
+    pass
+
+
+class DeletePromptResult(Model):
+    document_uuid: str = Field(alias=str("documentUuid"))
+    path: str
 
 
 class GetOrCreatePromptOptions(PromptOptions, Model):
@@ -184,6 +194,21 @@ class Prompts:
             ),
         ) as response:
             return GetOrCreatePromptResult.model_validate_json(response.content)
+
+    async def delete(self, path: str, options: Optional[DeletePromptOptions] = None) -> DeletePromptResult:
+        options = DeletePromptOptions(**{**dict(self._options), **dict(options or {})})
+        self._ensure_prompt_options(options)
+        assert options.project_id is not None
+
+        async with self._client.request(
+            handler=RequestHandler.DeletePrompt,
+            params=DeletePromptRequestParams(
+                project_id=options.project_id,
+                version_uuid=options.version_uuid,
+                path=path,
+            ),
+        ) as response:
+            return DeletePromptResult.model_validate_json(response.content)
 
     async def run(self, path: str, options: Optional[RunPromptOptions] = None) -> Optional[RunPromptResult]:
         options = RunPromptOptions(**{**dict(self._options), **dict(options or {})})

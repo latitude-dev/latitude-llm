@@ -24,6 +24,7 @@ from latitude_sdk import (
     ChainEventStepCompleted,
     ChainEventStepStarted,
     ChainTextResponse,
+    DeletePromptResult,
     EvaluationResult,
     FinishedResult,
     FinishReason,
@@ -1392,3 +1393,13 @@ CONVERSATION_TOOL_RESULTS = [
         is_error=True,
     ),
 ]
+
+DELETE_PROMPT_RESPONSE: dict[str, Any] = {
+    "documentUuid": "e01a1035-6ed3-4edc-88e6-c0748ea300c7",
+    "path": "prompt-path",
+}
+
+DELETE_PROMPT_RESULT = DeletePromptResult(
+    document_uuid="e01a1035-6ed3-4edc-88e6-c0748ea300c7",
+    path="prompt-path",
+)
