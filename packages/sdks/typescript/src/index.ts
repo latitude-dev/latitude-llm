@@ -33,6 +33,8 @@ import {
   ChatOptions,
   GenerationJob,
   GenerationResponse,
+  DeletePromptOptions,
+  DeletePromptResponse,
   GetOrCreatePromptOptions,
   GetPromptOptions,
   HandlerType,
@@ -130,6 +132,10 @@ class Latitude {
       path: string,
       args?: GetOrCreatePromptOptions,
     ) => Promise<Prompt>
+    delete: (
+      path: string,
+      args?: DeletePromptOptions,
+    ) => Promise<DeletePromptResponse>
     run: <
       S extends AssertedStreamType = 'text',
       Tools extends ToolSpec = {},
@@ -227,6 +233,7 @@ class Latitude {
       getAll: this.getAllPrompts.bind(this),
       getOrCreate: this.getOrCreatePrompt.bind(this),
       create: this.createPrompt.bind(this),
+      delete: this.deletePrompt.bind(this),
       run: this.runPrompt.bind(this),
       chat: this.chat.bind(this),
       render: this.renderPrompt.bind(this),
@@ -397,6 +404,38 @@ class Latitude {
     }
 
     return (await response.json()) as Prompt
+  }
+
+  private async deletePrompt(
+    path: string,
+    { projectId, versionUuid, force }: DeletePromptOptions = {},
+  ) {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) throw new Error('Project ID is required')
+
+    versionUuid = versionUuid ?? this.options.versionUuid
+
+    const response = await makeRequest({
+      method: 'DELETE',
+      handler: HandlerType.DeleteDocument,
+      params: { projectId, versionUuid, path },
+      query: force ? { force: 'true' } : undefined,
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as DeletePromptResponse
   }
 
   private async runPrompt<

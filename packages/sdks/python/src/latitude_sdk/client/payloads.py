@@ -31,6 +31,10 @@ class GetOrCreatePromptRequestParams(PromptRequestParams, Model):
     pass
 
 
+class DeletePromptRequestParams(PromptRequestParams, Model):
+    path: str
+
+
 class GetOrCreatePromptRequestBody(Model):
     path: str
     prompt: Optional[str] = None
@@ -123,6 +127,7 @@ RequestParams = Union[
     GetPromptRequestParams,
     GetAllPromptsRequestParams,
     GetOrCreatePromptRequestParams,
+    DeletePromptRequestParams,
     RunPromptRequestParams,
     ChatPromptRequestParams,
     AttachRunRequestParams,
@@ -149,6 +154,7 @@ class RequestHandler(StrEnum):
     GetPrompt = "GET_PROMPT"
     GetAllPrompts = "GET_ALL_PROMPTS"
     GetOrCreatePrompt = "GET_OR_CREATE_PROMPT"
+    DeletePrompt = "DELETE_PROMPT"
     RunPrompt = "RUN_PROMPT"
     ChatPrompt = "CHAT_PROMPT"
     AttachRun = "ATTACH_RUN"

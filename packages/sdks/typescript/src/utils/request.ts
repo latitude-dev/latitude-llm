@@ -25,6 +25,7 @@ export async function makeRequest<H extends HandlerType>({
   handler,
   params,
   body,
+  query,
   retries = 0,
   options,
 }: {
@@ -32,11 +33,17 @@ export async function makeRequest<H extends HandlerType>({
   body?: BodyParams<H>
   handler: H
   params?: UrlParams<H>
+  query?: Record<string, string>
   retries?: number
   options: SDKOptions
 }): Promise<Response> {
   const { routeResolver, apiKey, source, retryMs } = options
-  const url = routeResolver.resolve({ handler, params })
+  let url = routeResolver.resolve({ handler, params })
+
+  if (query) {
+    const searchParams = new URLSearchParams(query)
+    url = `${url}?${searchParams.toString()}`
+  }
 
   const response = await fetch(url, {
     method,
@@ -59,6 +66,7 @@ export async function makeRequest<H extends HandlerType>({
       params,
       method,
       body,
+      query,
       options,
       retries: retries + 1,
     })

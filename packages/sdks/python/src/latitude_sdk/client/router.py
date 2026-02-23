@@ -5,6 +5,7 @@ from latitude_sdk.client.payloads import (
     AttachRunRequestParams,
     ChatPromptRequestParams,
     CreateLogRequestParams,
+    DeletePromptRequestParams,
     GetAllPromptsRequestParams,
     GetAllVersionsRequestParams,
     GetOrCreatePromptRequestParams,
@@ -59,6 +60,17 @@ class Router:
                     project_id=params.project_id,
                     version_uuid=params.version_uuid,
                 ).get_or_create,
+            )
+
+        elif handler == RequestHandler.DeletePrompt:
+            assert isinstance(params, DeletePromptRequestParams)
+
+            return (
+                "DELETE",
+                self.prompts(
+                    project_id=params.project_id,
+                    version_uuid=params.version_uuid,
+                ).prompt(params.path),
             )
 
         elif handler == RequestHandler.RunPrompt:

@@ -53,6 +53,7 @@ class Client:
         params: Optional[RequestParams] = None,
         body: Optional[RequestBody] = None,
         stream: Optional[bool] = None,
+        query: Optional[dict[str, str]] = None,
     ) -> AsyncGenerator[ClientResponse, Any]:
         client = httpx.AsyncClient(
             headers={
@@ -70,6 +71,11 @@ class Client:
 
         try:
             method, url = self.router.resolve(handler, params)
+
+            if query:
+                query_string = "&".join(f"{k}={v}" for k, v in query.items())
+                url = f"{url}?{query_string}"
+
             content = None
             if body:
                 content = json.dumps(

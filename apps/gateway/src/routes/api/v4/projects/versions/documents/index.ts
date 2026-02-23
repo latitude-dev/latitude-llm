@@ -9,6 +9,10 @@ import {
   createOrUpdateDocumentRouteConfig,
 } from '$/routes/api/v3/projects/versions/documents/createOrUpdate'
 import {
+  destroyDocumentHandler,
+  destroyDocumentRouteConfig,
+} from '$/routes/api/v3/projects/versions/documents/destroy'
+import {
   getHandler,
   getRouteConfig,
 } from '$/routes/api/v3/projects/versions/documents/get'
@@ -50,6 +54,13 @@ export const documentsRouter = createRouter()
   .openapi(
     route(getOrCreateRouteConfig, API_ROUTES.v4.projects.documents.getOrCreate),
     getOrCreateHandler,
+  )
+  .openapi(
+    route(
+      destroyDocumentRouteConfig,
+      API_ROUTES.v4.projects.documents.destroy,
+    ),
+    destroyDocumentHandler,
   )
   .openapi(
     route(runRouteConfig, API_ROUTES.v4.projects.documents.run),
