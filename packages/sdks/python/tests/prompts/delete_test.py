@@ -20,9 +20,7 @@ class TestDeletePrompt(TestCase):
     async def test_success_global_options(self):
         path = "prompt-path"
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/{path}"
-        endpoint_mock = self.gateway_mock.delete(endpoint).mock(
-            return_value=httpx.Response(200, json=DELETE_RESPONSE)
-        )
+        endpoint_mock = self.gateway_mock.delete(endpoint).mock(return_value=httpx.Response(200, json=DELETE_RESPONSE))
 
         result = await self.sdk.prompts.delete(path)
         request, _ = endpoint_mock.calls.last
@@ -35,9 +33,7 @@ class TestDeletePrompt(TestCase):
         path = "prompt-path"
         options = DeletePromptOptions(project_id=21, version_uuid="version-uuid")
         endpoint = f"/projects/{options.project_id}/versions/{options.version_uuid}/documents/{path}"
-        endpoint_mock = self.gateway_mock.delete(endpoint).mock(
-            return_value=httpx.Response(200, json=DELETE_RESPONSE)
-        )
+        endpoint_mock = self.gateway_mock.delete(endpoint).mock(return_value=httpx.Response(200, json=DELETE_RESPONSE))
 
         result = await self.sdk.prompts.delete(path, options)
         request, _ = endpoint_mock.calls.last
@@ -50,9 +46,7 @@ class TestDeletePrompt(TestCase):
         self.sdk._options.version_uuid = None  # pyright: ignore [reportPrivateUsage]
         path = "prompt-path"
         endpoint = f"/projects/{self.project_id}/versions/live/documents/{path}"
-        endpoint_mock = self.gateway_mock.delete(endpoint).mock(
-            return_value=httpx.Response(200, json=DELETE_RESPONSE)
-        )
+        endpoint_mock = self.gateway_mock.delete(endpoint).mock(return_value=httpx.Response(200, json=DELETE_RESPONSE))
 
         result = await self.sdk.prompts.delete(path)
         request, _ = endpoint_mock.calls.last
