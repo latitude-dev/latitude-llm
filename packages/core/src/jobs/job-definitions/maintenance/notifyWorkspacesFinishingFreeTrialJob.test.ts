@@ -222,8 +222,7 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
       expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(2)
-      expect(mockCreateInstantlyLead).toHaveBeenNthCalledWith(
-        1,
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
         { email: userData1.email },
         'test-instantly-key',
         {
@@ -231,8 +230,7 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
           goalForCampaign: null,
         },
       )
-      expect(mockCreateInstantlyLead).toHaveBeenNthCalledWith(
-        2,
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
         { email: userData2.email },
         'test-instantly-key',
         {

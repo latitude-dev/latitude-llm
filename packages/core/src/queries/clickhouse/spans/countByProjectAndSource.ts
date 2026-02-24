@@ -4,17 +4,15 @@ import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
 
 export const countByProjectAndSource = scopedQuery(
-  async function countByProjectAndSource(
-    {
-      workspaceId,
-      projectId,
-      source,
-    }: {
-      workspaceId: number
-      projectId: number
-      source?: LogSources[]
-    },
-  ): Promise<Record<LogSources, number>> {
+  async function countByProjectAndSource({
+    workspaceId,
+    projectId,
+    source,
+  }: {
+    workspaceId: number
+    projectId: number
+    source?: LogSources[]
+  }): Promise<Record<LogSources, number>> {
     const sourcesToCount = source ?? Object.values(LogSources)
     const countsBySource: Record<LogSources, number> = {} as Record<
       LogSources,

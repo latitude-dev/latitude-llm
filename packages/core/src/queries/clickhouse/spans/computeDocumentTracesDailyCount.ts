@@ -10,21 +10,19 @@ export type DailyCount = {
 }
 
 export const computeDocumentTracesDailyCount = scopedQuery(
-  async function computeDocumentTracesDailyCount(
-    {
-      workspaceId,
-      projectId,
-      documentUuid,
-      commitUuid,
-      days = 30,
-    }: {
-      workspaceId: number
-      projectId: number
-      documentUuid: string
-      commitUuid?: string
-      days?: number
-    },
-  ): Promise<DailyCount[]> {
+  async function computeDocumentTracesDailyCount({
+    workspaceId,
+    projectId,
+    documentUuid,
+    commitUuid,
+    days = 30,
+  }: {
+    workspaceId: number
+    projectId: number
+    documentUuid: string
+    commitUuid?: string
+    days?: number
+  }): Promise<DailyCount[]> {
     const now = new Date()
     const startDate = subDays(now, days)
 

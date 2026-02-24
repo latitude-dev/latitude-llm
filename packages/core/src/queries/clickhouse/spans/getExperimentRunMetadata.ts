@@ -11,15 +11,13 @@ export type ExperimentRunMetadataResult = {
 }
 
 export const getExperimentRunMetadata = scopedQuery(
-  async function getExperimentRunMetadata(
-    {
-      workspaceId,
-      experimentUuid,
-    }: {
-      workspaceId: number
-      experimentUuid: string
-    },
-  ): Promise<ExperimentRunMetadataResult> {
+  async function getExperimentRunMetadata({
+    workspaceId,
+    experimentUuid,
+  }: {
+    workspaceId: number
+    experimentUuid: string
+  }): Promise<ExperimentRunMetadataResult> {
     const result = await clickhouseClient().query({
       query: `
       WITH experiment_trace_ids AS (

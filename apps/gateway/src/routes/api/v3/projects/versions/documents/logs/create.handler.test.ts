@@ -99,7 +99,6 @@ vi.mock(
   },
 )
 
-
 describe('POST /projects/:projectId/versions/:versionUuid/documents/logs', () => {
   describe('when unauthorized', () => {
     it('fails', async () => {

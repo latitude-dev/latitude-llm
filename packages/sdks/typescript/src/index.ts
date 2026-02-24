@@ -132,7 +132,10 @@ class Latitude {
       path: string,
       args?: GetOrCreatePromptOptions,
     ) => Promise<Prompt>
-    delete: (path: string, args?: DeletePromptOptions) => Promise<DeletePromptResponse>
+    delete: (
+      path: string,
+      args?: DeletePromptOptions,
+    ) => Promise<DeletePromptResponse>
     run: <
       S extends AssertedStreamType = 'text',
       Tools extends ToolSpec = {},

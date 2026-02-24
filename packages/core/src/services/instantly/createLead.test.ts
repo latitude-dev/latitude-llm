@@ -218,14 +218,10 @@ describe('createInstantlyLead', () => {
   })
 
   it('uses trial-finishing campaign ID when campaignContext is trial_finishing', async () => {
-    await createInstantlyLead(
-      { email: 'trial@test.com' },
-      'api-key',
-      {
-        campaignContext: 'trial_finishing',
-        goalForCampaign: LatitudeGoal.ImprovingAccuracy,
-      },
-    )
+    await createInstantlyLead({ email: 'trial@test.com' }, 'api-key', {
+      campaignContext: 'trial_finishing',
+      goalForCampaign: LatitudeGoal.ImprovingAccuracy,
+    })
 
     const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
     expect(body.campaign).toBe('ecea8072-0c56-4846-84d6-2d75bfd5e1d6')
@@ -233,14 +229,10 @@ describe('createInstantlyLead', () => {
   })
 
   it('uses trial-finishing fallback when goalForCampaign is unknown', async () => {
-    await createInstantlyLead(
-      { email: 'trial-other@test.com' },
-      'api-key',
-      {
-        campaignContext: 'trial_finishing',
-        goalForCampaign: LatitudeGoal.Other,
-      },
-    )
+    await createInstantlyLead({ email: 'trial-other@test.com' }, 'api-key', {
+      campaignContext: 'trial_finishing',
+      goalForCampaign: LatitudeGoal.Other,
+    })
 
     const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
     expect(body.campaign).toBe(FALLBACK_TRIAL_CAMPAIGN_ID)

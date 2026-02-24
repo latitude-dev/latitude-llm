@@ -44,9 +44,7 @@ export const destroyDocumentHandler: AppRouteHandler<
   }
   const document = docResult.unwrap()
 
-  await destroyDocument({ document, commit, workspace }).then((r) =>
-    r.unwrap(),
-  )
+  await destroyDocument({ document, commit, workspace }).then((r) => r.unwrap())
 
   return c.json(
     {

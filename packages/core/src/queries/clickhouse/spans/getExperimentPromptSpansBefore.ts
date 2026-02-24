@@ -5,21 +5,19 @@ import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { scopedQuery } from '../../scope'
 
 export const getExperimentPromptSpansBefore = scopedQuery(
-  async function getExperimentPromptSpansBefore(
-    {
-      workspaceId,
-      projectId,
-      documentUuid,
-      before,
-      limit,
-    }: {
-      workspaceId: number
-      projectId: number
-      documentUuid: string
-      before: Date
-      limit: number
-    },
-  ) {
+  async function getExperimentPromptSpansBefore({
+    workspaceId,
+    projectId,
+    documentUuid,
+    before,
+    limit,
+  }: {
+    workspaceId: number
+    projectId: number
+    documentUuid: string
+    before: Date
+    limit: number
+  }) {
     const result = await clickhouseClient().query({
       query: `
       SELECT span_id, trace_id

@@ -45,3 +45,6 @@ jobs:
 
       - name: Node.js Lint
         run: pnpm lint
+
+      - name: Prettier Check
+        run: pnpm prettier:check

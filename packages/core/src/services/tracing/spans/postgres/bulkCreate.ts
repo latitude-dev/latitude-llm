@@ -51,8 +51,7 @@ export async function bulkCreate(
       duration: span.duration,
       startedAt: span.startedAt,
       endedAt: span.endedAt,
-      source:
-        'source' in span.metadata ? span.metadata.source : undefined,
+      source: 'source' in span.metadata ? span.metadata.source : undefined,
       tokensPrompt: completionMetadata?.tokens?.prompt,
       tokensCompletion: completionMetadata?.tokens?.completion,
       tokensCached: completionMetadata?.tokens?.cached,

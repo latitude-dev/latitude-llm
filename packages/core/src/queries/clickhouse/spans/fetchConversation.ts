@@ -18,21 +18,19 @@ export type ConversationItem = {
   experimentUuid: string | null
 }
 
-export const fetchConversation = scopedQuery(async function fetchConversation(
-  {
-    workspaceId,
-    projectId,
-    documentLogUuid,
-    documentUuid,
-    commitUuid,
-  }: {
-    workspaceId: number
-    projectId: number
-    documentLogUuid: string
-    documentUuid?: string
-    commitUuid?: string
-  },
-): Promise<ConversationItem | null> {
+export const fetchConversation = scopedQuery(async function fetchConversation({
+  workspaceId,
+  projectId,
+  documentLogUuid,
+  documentUuid,
+  commitUuid,
+}: {
+  workspaceId: number
+  projectId: number
+  documentLogUuid: string
+  documentUuid?: string
+  commitUuid?: string
+}): Promise<ConversationItem | null> {
   const params: Record<string, unknown> = {
     workspaceId,
     projectId,
