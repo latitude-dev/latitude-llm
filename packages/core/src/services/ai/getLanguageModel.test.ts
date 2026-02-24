@@ -1,12 +1,12 @@
 import { Providers } from '@latitude-data/constants'
+import { TelemetryContext } from '@latitude-data/telemetry'
 import { LanguageModel } from 'ai'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import * as factories from '../../tests/factories'
 import { getLanguageModel } from './getLanguageModel'
 import { LlmProvider } from './helpers'
-import { VercelConfigWithProviderRules } from './providers/rules'
-import { TelemetryContext } from '@latitude-data/telemetry'
+import { VercelConfigWithProviderRules } from './providers/rules/all'
 
 const createMockLanguageModel = () => ({
   provider: 'test-provider',

@@ -2,7 +2,7 @@ import { type Message } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
-import { applyProviderRules } from './index'
+import { applyProviderRules } from './provider'
 import { AppliedRules, ProviderRules } from './types'
 
 const providerType = Providers.AnthropicVertex

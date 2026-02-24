@@ -22,7 +22,7 @@ import { buildTools } from './buildTools'
 import { getLanguageModel } from './getLanguageModel'
 import { handleAICallAPIError } from './handleError'
 import { createProvider } from './helpers'
-import { applyAllRules } from './providers/rules'
+import { applyAllRules } from './providers/rules/all'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
