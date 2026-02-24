@@ -16,7 +16,9 @@ export function useOpenCurrentDocumentPath({
 
   useEffect(() => {
     if (!currentUuid) return
-    const currentDocument = documents.find((d) => d.documentUuid === currentUuid)
+    const currentDocument = documents.find(
+      (d) => d.documentUuid === currentUuid,
+    )
     if (!currentDocument?.path) return
     togglePath(currentDocument.path)
   }, [currentUuid, documents, togglePath])

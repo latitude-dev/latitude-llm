@@ -59,7 +59,9 @@ describe('useDragEndFile', () => {
   })
 
   it('does nothing if promptManagement is disabled', async () => {
-    const { result } = renderHook(() => useDragEndFile({ promptManagement: false }))
+    const { result } = renderHook(() =>
+      useDragEndFile({ promptManagement: false }),
+    )
     const dragNode: DraggableAndDroppableData = {
       nodeId: 'drag-1',
       name: 'file.txt',
@@ -85,7 +87,9 @@ describe('useDragEndFile', () => {
   })
 
   it('does nothing if active drag data is missing', async () => {
-    const { result } = renderHook(() => useDragEndFile({ promptManagement: true }))
+    const { result } = renderHook(() =>
+      useDragEndFile({ promptManagement: true }),
+    )
     const event = createDragEndEvent(undefined, {
       nodeId: 'dest-1',
       name: 'Folder',
@@ -103,7 +107,9 @@ describe('useDragEndFile', () => {
   })
 
   it('does nothing if destination folder data is missing', async () => {
-    const { result } = renderHook(() => useDragEndFile({ promptManagement: true }))
+    const { result } = renderHook(() =>
+      useDragEndFile({ promptManagement: true }),
+    )
     const event = createDragEndEvent(
       {
         nodeId: 'drag-1',
@@ -124,7 +130,9 @@ describe('useDragEndFile', () => {
   })
 
   it('does nothing if the computed paths are equal (for folders)', async () => {
-    const { result } = renderHook(() => useDragEndFile({ promptManagement: true }))
+    const { result } = renderHook(() =>
+      useDragEndFile({ promptManagement: true }),
+    )
 
     const dragNode: DraggableAndDroppableData = {
       nodeId: 'drag-1',
@@ -152,7 +160,9 @@ describe('useDragEndFile', () => {
   })
 
   it('calls renamePaths and deleteTmpFolder for a valid file move', async () => {
-    const { result } = renderHook(() => useDragEndFile({ promptManagement: true }))
+    const { result } = renderHook(() =>
+      useDragEndFile({ promptManagement: true }),
+    )
     const dragNode: DraggableAndDroppableData = {
       nodeId: 'drag-1',
       name: 'file.txt',
@@ -182,7 +192,9 @@ describe('useDragEndFile', () => {
   })
 
   it('calls renamePaths and deleteTmpFolder for a valid folder move', async () => {
-    const { result } = renderHook(() => useDragEndFile({ promptManagement: true }))
+    const { result } = renderHook(() =>
+      useDragEndFile({ promptManagement: true }),
+    )
     const dragNode: DraggableAndDroppableData = {
       nodeId: 'drag-2',
       name: 'myFolder',

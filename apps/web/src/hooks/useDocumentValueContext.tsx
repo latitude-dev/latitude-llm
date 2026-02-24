@@ -64,10 +64,7 @@ export function DocumentValueProvider({
   const { project } = useCurrentProject()
   const { devMode } = useDevMode()
   const [origin, setOrigin] = useState<string>()
-  const {
-    data: document,
-    mutate: mutateDocument,
-  } = useDocumentVersion({
+  const { data: document, mutate: mutateDocument } = useDocumentVersion({
     documentUuid: _document.documentUuid,
     projectId: project.id,
     commitUuid: commit.uuid,

@@ -1,5 +1,10 @@
 import { EMPTY_NAME, createTempFileNode, createTempFolderNode } from './nodes'
-import { nodeContainsId, removeNodeById, updateDescendantPaths, updateNodeById } from './tree-ops'
+import {
+  nodeContainsId,
+  removeNodeById,
+  updateDescendantPaths,
+  updateNodeById,
+} from './tree-ops'
 import { TempNode, TmpFoldersMap } from './types'
 
 /**
@@ -35,7 +40,9 @@ export function addNode(
     isFile: boolean
   },
 ): TmpFoldersMap {
-  const placeholderPath = parentPath ? `${parentPath}/${EMPTY_NAME}` : EMPTY_NAME
+  const placeholderPath = parentPath
+    ? `${parentPath}/${EMPTY_NAME}`
+    : EMPTY_NAME
   const node = isFile
     ? createTempFileNode({
         name: EMPTY_NAME,

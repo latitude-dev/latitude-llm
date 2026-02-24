@@ -61,7 +61,9 @@ export default function useDocumentVersions(
     isLoading,
     error: swrError,
   } = useSWR<DocumentVersion[]>(
-    enabled ? getDocumentVersionsCacheKey({ projectId, commitUuid }) : undefined,
+    enabled
+      ? getDocumentVersionsCacheKey({ projectId, commitUuid })
+      : undefined,
     fetcher,
     opts,
   )
@@ -221,7 +223,9 @@ export default function useDocumentVersions(
           variant: 'destructive',
         })
       } else {
-        mutate((prev) => (prev || []).filter((d) => d.documentUuid !== documentUuid))
+        mutate((prev) =>
+          (prev || []).filter((d) => d.documentUuid !== documentUuid),
+        )
         toast({
           title: 'Success',
           description: 'Document deleted',
@@ -299,7 +303,8 @@ export default function useDocumentVersions(
   const mutateDocumentUpdated = useCallback(
     (document: DocumentVersion) => {
       mutate(
-        (prev) => (prev || []).map((d) => (d.id === document.id ? document : d)),
+        (prev) =>
+          (prev || []).map((d) => (d.id === document.id ? document : d)),
         { revalidate: false },
       )
     },

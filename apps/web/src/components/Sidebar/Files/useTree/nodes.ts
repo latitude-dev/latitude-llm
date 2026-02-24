@@ -1,4 +1,7 @@
-import { DocumentType, ModifiedDocumentType } from '@latitude-data/core/constants'
+import {
+  DocumentType,
+  ModifiedDocumentType,
+} from '@latitude-data/core/constants'
 import { Node } from './types'
 
 /**

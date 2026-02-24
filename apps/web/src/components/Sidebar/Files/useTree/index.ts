@@ -22,15 +22,12 @@ export function useTree({
 }) {
   useEffect(() => {
     const nodesById = treeNodesStore.getState()
-    const {
-      hasNodeStateChanges,
-      removedNodeIds,
-      updatedNodesById,
-    } = buildNextState({
-      prevNodesById: nodesById,
-      documents,
-      liveDocuments,
-    })
+    const { hasNodeStateChanges, removedNodeIds, updatedNodesById } =
+      buildNextState({
+        prevNodesById: nodesById,
+        documents,
+        liveDocuments,
+      })
     if (!hasNodeStateChanges) return
 
     treeNodesStore.setState((currentNodesById) => {

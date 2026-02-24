@@ -147,11 +147,9 @@ export default function DocumentHeader({
                 if (currentDocument?.documentUuid !== documentUuid) return
 
                 router.push(
-                  ROUTES.projects
-                    .detail({ id: project.id })
-                    .commits.detail({
-                      uuid: isHead ? HEAD_COMMIT : commit.uuid,
-                    }).documents.root,
+                  ROUTES.projects.detail({ id: project.id }).commits.detail({
+                    uuid: isHead ? HEAD_COMMIT : commit.uuid,
+                  }).documents.root,
                 )
               },
             })

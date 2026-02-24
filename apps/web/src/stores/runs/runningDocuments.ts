@@ -31,25 +31,29 @@ export function runningDocumentsScope({
   return `${projectId}:${commitUuid}`
 }
 
-export const useRunningDocumentsStore = create<RunningDocumentsStore>((set) => ({
-  countsByScope: {},
-  setCounts: (scope, counts) =>
-    set((state) => ({
-      countsByScope: {
-        ...state.countsByScope,
-        [scope]: counts,
-      },
-    })),
-  clearCounts: (scope) =>
-    set((state) => {
-      const next = { ...state.countsByScope }
-      delete next[scope]
-      return { countsByScope: next }
-    }),
-}))
+export const useRunningDocumentsStore = create<RunningDocumentsStore>(
+  (set) => ({
+    countsByScope: {},
+    setCounts: (scope, counts) =>
+      set((state) => ({
+        countsByScope: {
+          ...state.countsByScope,
+          [scope]: counts,
+        },
+      })),
+    clearCounts: (scope) =>
+      set((state) => {
+        const next = { ...state.countsByScope }
+        delete next[scope]
+        return { countsByScope: next }
+      }),
+  }),
+)
 
 export function useRunningDocumentsCounts(scope: string) {
-  return useRunningDocumentsStore((state) => state.countsByScope[scope] || EMPTY_COUNTS)
+  return useRunningDocumentsStore(
+    (state) => state.countsByScope[scope] || EMPTY_COUNTS,
+  )
 }
 
 /**
@@ -116,7 +120,8 @@ export function useRunningDocuments({
   useSockets({ event: 'documentRunStatus', onMessage })
 
   const scope = useMemo(
-    () => runningDocumentsScope({ projectId: project.id, commitUuid: commit.uuid }),
+    () =>
+      runningDocumentsScope({ projectId: project.id, commitUuid: commit.uuid }),
     [project.id, commit.uuid],
   )
   const setCounts = useRunningDocumentsStore((state) => state.setCounts)
