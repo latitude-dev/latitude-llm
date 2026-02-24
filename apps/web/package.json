@@ -38,7 +38,7 @@
     "@latitude-data/env": "workspace:^",
     "@latitude-data/sdk": "workspace:^",
     "@latitude-data/socket.io-react-hook": "2.4.5",
-    "@latitude-data/telemetry": "workspace:*",
+    "@latitude-data/telemetry": "catalog:",
     "@latitude-data/web-ui": "workspace:*",
     "@lexical/code": "0.33.0",
     "@lexical/react": "0.33.0",

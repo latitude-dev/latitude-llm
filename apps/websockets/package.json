@@ -15,7 +15,7 @@
   "dependencies": {
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/telemetry": "workspace:*",
+    "@latitude-data/telemetry": "catalog:",
     "cookie-parser": "1.4.6",
     "express": "4.21.0",
     "ioredis": "catalog:",

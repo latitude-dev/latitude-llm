@@ -495,7 +495,7 @@ export const MANUAL_PROMPT_WITH_TOOLS_SPANS = {
             {
               "traceId": "ID_0",
               "spanId": "ID_3",
-              "name": "prompt",
+              "name": "prompt-fake-prompt-uuid",
               "kind": 3,
               "startTimeUnixNano": "TIME",
               "endTimeUnixNano": "TIME",
@@ -519,15 +519,21 @@ export const MANUAL_PROMPT_WITH_TOOLS_SPANS = {
                   }
                 },
                 {
-                  "key": "latitude.documentLogUuid",
+                  "key": "latitude.commit_uuid",
                   "value": {
-                    "stringValue": "fake-doc-log-uuid"
+                    "stringValue": "live"
                   }
                 },
                 {
-                  "key": "latitude.documentUuid",
+                  "key": "latitude.document_uuid",
                   "value": {
                     "stringValue": "fake-prompt-uuid"
+                  }
+                },
+                {
+                  "key": "latitude.document_log_uuid",
+                  "value": {
+                    "stringValue": "DOC_LOG_UUID"
                   }
                 }
               ],

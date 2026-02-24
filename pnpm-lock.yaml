@@ -9,6 +9,9 @@ catalogs:
     '@datadog/datadog-ci':
       specifier: ^3.0.0
       version: 3.21.4
+    '@latitude-data/telemetry':
+      specifier: 3.0.0-beta.0
+      version: 3.0.0-beta.0
     '@opentelemetry/api':
       specifier: 1.9.0
       version: 1.9.0
@@ -177,8 +180,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/sdks/typescript
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@opentelemetry/otlp-transformer':
         specifier: 'catalog:'
         version: 0.57.2(@opentelemetry/api@1.9.0)
@@ -274,8 +277,8 @@ importers:
         specifier: 2.4.5
         version: 2.4.5(bufferutil@4.0.9)(react@19.2.4)(utf-8-validate@6.0.5)
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@latitude-data/web-ui':
         specifier: workspace:*
         version: link:../../packages/web-ui
@@ -554,8 +557,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       cookie-parser:
         specifier: 1.4.6
         version: 1.4.6
@@ -606,8 +609,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@t3-oss/env-core':
         specifier: '*'
         version: 0.13.8(typescript@5.9.3)(zod@4.3.6)
@@ -808,8 +811,8 @@ importers:
         specifier: workspace:*
         version: link:../../tools/eslint
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@latitude-data/typescript-config':
         specifier: workspace:*
         version: link:../../tools/typescript
@@ -3596,6 +3599,11 @@ packages:
     resolution: {integrity: sha512-otajd00jgJw6+wHM7LRjUuE+wg6vb0U8aQxyDdEFBTCf7BXIxvv94piXGZW2YivR0b41Gmh4qWgjodI/8TcE9g==}
     peerDependencies:
       react: '*'
+
+  '@latitude-data/telemetry@3.0.0-beta.0':
+    resolution: {integrity: sha512-pA4DeOG8aUEZBkzYF95BjlPw0/v+GhHTi2QGRWugJkgBghWFtLHULIWHlMmEiGHPLROyVuIpE6J14GuKmCcGHQ==}
+    peerDependencies:
+      typescript: ^5.5.4
 
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
@@ -17754,6 +17762,38 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@latitude-data/telemetry@3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/baggage-span-processor': 0.3.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/context-async-hooks': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-trace-otlp-http': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/otlp-transformer': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-node': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/semantic-conventions': 1.34.0
+      '@traceloop/instrumentation-anthropic': 0.22.2
+      '@traceloop/instrumentation-bedrock': 0.22.2
+      '@traceloop/instrumentation-cohere': 0.22.2
+      '@traceloop/instrumentation-langchain': 0.22.2(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(openai@6.17.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@4.1.8))
+      '@traceloop/instrumentation-llamaindex': 0.22.2
+      '@traceloop/instrumentation-openai': 0.22.2
+      '@traceloop/instrumentation-together': 0.22.2
+      '@traceloop/instrumentation-vertexai': 0.22.2
+      date-fns: 4.1.0
+      rosetta-ai: 1.6.2
+      typescript: 5.9.3
+      uuid: 13.0.0
+      zod: 4.1.8
+    transitivePeerDependencies:
+      - '@opentelemetry/exporter-trace-otlp-proto'
+      - '@opentelemetry/sdk-trace-base'
+      - encoding
+      - openai
+      - supports-color
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
