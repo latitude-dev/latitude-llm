@@ -17,6 +17,7 @@ import type {
 } from '@ai-sdk/provider'
 import { Message } from '@latitude-data/constants/messages'
 import { Provider, Translator } from 'rosetta-ai'
+import { captureException } from '../../utils/datadogCapture'
 
 const translator = new Translator({
   filterEmptyMessages: true,
@@ -117,7 +118,7 @@ export function createStreamConsumer(
       if (toolCalls.length > 0) content.push(...toolCalls)
       if (toolResults.length > 0) content.push(...toolResults)
 
-      const translated = translator.translate(
+      const translating = translator.safeTranslate(
         [{ role: 'assistant', content }],
         {
           from: Provider.VercelAI,
@@ -125,9 +126,11 @@ export function createStreamConsumer(
           direction: 'output',
         },
       )
+      if (translating.error) captureException(translating.error)
+      const translated = (translating.messages ?? []) as Message[]
 
       onConsumed({
-        output: translated.messages as Message[],
+        output: translated,
         finishReason: finishReason ?? 'unknown',
         tokens: {
           prompt: usage?.inputTokens,
@@ -147,7 +150,7 @@ export function createStreamConsumer(
 export function extractGenerateResultContent(
   result: Awaited<ReturnType<LanguageModelV2['doGenerate']>>,
 ): CapturedStreamResult {
-  const translated = translator.translate(
+  const translating = translator.safeTranslate(
     [{ role: 'assistant', content: result.content }],
     {
       from: Provider.VercelAI,
@@ -155,9 +158,11 @@ export function extractGenerateResultContent(
       direction: 'output',
     },
   )
+  if (translating.error) captureException(translating.error)
+  const translated = (translating.messages ?? []) as Message[]
 
   return {
-    output: translated.messages as Message[],
+    output: translated,
     finishReason: result.finishReason ?? 'unknown',
     tokens: {
       prompt: result.usage?.inputTokens,

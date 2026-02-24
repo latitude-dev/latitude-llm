@@ -4,6 +4,7 @@ import { context as otelContext } from '@opentelemetry/api'
 import type { LanguageModelMiddleware } from 'ai'
 import { Provider, Translator } from 'rosetta-ai'
 import { telemetry, TelemetryContext } from '../../telemetry'
+import { captureException } from '../../utils/datadogCapture'
 import { unwrapProviderMetadata } from './metadata'
 import {
   createStreamConsumer,
@@ -30,11 +31,13 @@ export function createTelemetryMiddleware({
     wrapGenerate: async ({ doGenerate, params }) => {
       const unwrappedPrompt = unwrapProviderMetadata(params.prompt)
 
-      const translated = translator.translate(unwrappedPrompt, {
+      const translating = translator.safeTranslate(unwrappedPrompt, {
         from: Provider.VercelAI,
         to: Provider.Promptl,
         direction: 'input',
-      }).messages as Message[]
+      })
+      if (translating.error) captureException(translating.error)
+      const translated = (translating.messages ?? []) as Message[]
       const inputMessages = addToolSourceData(translated, resolvedTools)
 
       const $completion = telemetry.span.completion(
@@ -75,11 +78,13 @@ export function createTelemetryMiddleware({
     wrapStream: async ({ doStream, params }) => {
       const unwrappedPrompt = unwrapProviderMetadata(params.prompt)
 
-      const translated = translator.translate(unwrappedPrompt, {
+      const translating = translator.safeTranslate(unwrappedPrompt, {
         from: Provider.VercelAI,
         to: Provider.Promptl,
         direction: 'input',
-      }).messages as Message[]
+      })
+      if (translating.error) captureException(translating.error)
+      const translated = (translating.messages ?? []) as Message[]
       const inputMessages = addToolSourceData(translated, resolvedTools)
 
       const $completion = telemetry.span.completion(

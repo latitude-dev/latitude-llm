@@ -3,56 +3,14 @@ import type { Message } from '@latitude-data/constants/messages'
 import { JSONValue, ModelMessage } from 'ai'
 import { Provider, Translator } from 'rosetta-ai'
 import { toCamelCaseDeep } from '../../../../lib/camelCaseRecursive'
+import { captureException } from '../../../../utils/datadogCapture'
 import { wrapProviderMetadata } from '../../metadata'
-import { applyAnthropicRules } from './anthropic'
-import { applyCustomRules } from './custom'
-import { applyGoogleRules } from './google'
-import { applyOpenAiRules } from './openai'
-import { applyPerplexityRules } from './perplexity'
+import { applyProviderRules, Props } from './provider'
 import {
   extractMessageMetadata,
   getProviderMetadataKey,
 } from './providerMetadata'
 import { AppliedRules } from './types'
-import { applyVertexAnthropicRules } from './vertexAnthropic'
-import { applyVertexGoogleRules } from './vertexGoogle'
-
-type Props = {
-  providerType: Providers
-  messages: Message[]
-  config: AppliedRules['config']
-}
-
-const RULES: Partial<Record<Providers, (props: AppliedRules) => AppliedRules>> =
-  {
-    [Providers.AnthropicVertex]: applyVertexAnthropicRules,
-    [Providers.Anthropic]: applyAnthropicRules,
-    [Providers.GoogleVertex]: applyVertexGoogleRules,
-    [Providers.Google]: applyGoogleRules,
-    [Providers.OpenAI]: applyOpenAiRules,
-    [Providers.Perplexity]: applyPerplexityRules,
-  }
-
-export function applyProviderRules({
-  providerType,
-  messages,
-  config,
-}: Props): AppliedRules {
-  let rules: AppliedRules = {
-    rules: [],
-    messages,
-    config,
-  }
-
-  const ruleFn = RULES[providerType]
-  if (ruleFn) {
-    rules = ruleFn(rules)
-  }
-
-  rules = applyCustomRules(rules)
-
-  return rules
-}
 
 export type VercelConfigWithProviderRules = VercelConfig & {
   providerOptions: {
@@ -76,11 +34,13 @@ function convertLatitudeMessagesToVercelFormat({
     extractMessageMetadata({ message, provider }),
   )
 
-  const translated = translator.translate(metadated, {
+  const translating = translator.safeTranslate(metadated, {
     from: Provider.Promptl,
     to: Provider.VercelAI,
     direction: 'input',
-  }).messages as ModelMessage[]
+  })
+  if (translating.error) captureException(translating.error)
+  const translated = (translating.messages ?? []) as ModelMessage[]
 
   const wrapped = wrapProviderMetadata(translated)
 

@@ -5,11 +5,11 @@ import {
   ImageContent,
   Message,
   TextContent,
-  ToolResultContent,
   ToolRequestContent,
+  ToolResultContent,
 } from '@latitude-data/constants/messages'
 import { describe, expect, it } from 'vitest'
-import { applyAllRules } from './index'
+import { applyAllRules } from './all'
 
 describe('rules', () => {
   it('add providerOptions to rules config', () => {

@@ -18,6 +18,7 @@ import { NotFoundError, UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
 import { findProviderApiKeyByName } from '../../../../queries/providerApiKeys/findByName'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
+import { captureException } from '../../../../utils/datadogCapture'
 import { estimateCost } from '../../../ai/estimateCost'
 import {
   setField,
@@ -502,12 +503,14 @@ export function extractInput(
   })
   if (system) {
     try {
-      const translated = translator.translate([], {
+      const translating = translator.safeTranslate([], {
         from: Provider.GenAI,
         to: Provider.Promptl,
         direction: 'input',
         system: JSON.parse(system),
-      }).messages as Message[]
+      })
+      if (translating.error) captureException(translating.error)
+      const translated = (translating.messages ?? []) as Message[]
 
       messages.push(...translated)
     } catch {
@@ -545,12 +548,14 @@ export function extractInput(
 
       // Note: we translate GenAI system and messages at the same time
       // to have chance of reordering the system messages correctly
-      const translated = translator.translate(payload, {
+      const translating = translator.safeTranslate(payload, {
         from: provider,
         to: Provider.Promptl,
         direction: 'input',
         system: (provider === Provider.GenAI && system) ? JSON.parse(system) : undefined, // prettier-ignore
-      }).messages as Message[]
+      })
+      if (translating.error) captureException(translating.error)
+      const translated = (translating.messages ?? []) as Message[]
 
       if (provider === Provider.GenAI) return Result.ok(translated)
       return Result.ok([...messages, ...translated])
@@ -592,11 +597,13 @@ export function extractOutput(
 
       if (payload.length < 1) continue
 
-      const translated = translator.translate(payload, {
+      const translating = translator.safeTranslate(payload, {
         from: provider,
         to: Provider.Promptl,
         direction: 'output',
-      }).messages as Message[]
+      })
+      if (translating.error) captureException(translating.error)
+      const translated = (translating.messages ?? []) as Message[]
 
       return Result.ok(translated)
     } catch {
@@ -650,11 +657,13 @@ export function extractOutput(
 
     if (message.content.length > 0) {
       try {
-        const translated = translator.translate([message], {
+        const translating = translator.safeTranslate([message], {
           from: Provider.VercelAI,
           to: Provider.Promptl,
           direction: 'output',
-        }).messages as Message[]
+        })
+        if (translating.error) captureException(translating.error)
+        const translated = (translating.messages ?? []) as Message[]
 
         return Result.ok(translated)
       } catch {

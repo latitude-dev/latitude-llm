@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import useProviderApiKeys from '$/stores/providerApiKeys'
+import { ResolvedMetadata } from '$/workers/readMetadata'
 import {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/constants/messages'
-import { Adapters, Chain as PromptlChain } from 'promptl-ai'
-import { ResolvedMetadata } from '$/workers/readMetadata'
-import useProviderApiKeys from '$/stores/providerApiKeys'
+import { applyProviderRules } from '@latitude-data/core/services/ai/providers/rules/provider'
 import { AppliedRules } from '@latitude-data/core/services/ai/providers/rules/types'
-import { applyProviderRules } from '@latitude-data/core/services/ai/providers/rules/index'
+import { Adapters, Chain as PromptlChain } from 'promptl-ai'
+import { useEffect, useMemo, useState } from 'react'
 
 export function usePreviewConversation({
   documentUuid,

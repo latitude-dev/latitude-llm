@@ -108,17 +108,22 @@ async function createSpansFromLogData({
   const startedAt = new Date(now.getTime() - 1000) // 1 second ago
   const endedAt = now
 
-  const input = translator.translate(messages, {
+  const inputting = translator.safeTranslate(messages, {
     to: Provider.Promptl,
     direction: 'input',
-  }).messages as Message[]
+  })
+  if (inputting.error) captureException(inputting.error)
+  const input = (inputting.messages ?? []) as Message[]
 
-  const output = response
-    ? (translator.translate(response, {
-        to: Provider.Promptl,
-        direction: 'output',
-      }).messages as Message[])
-    : undefined
+  let output
+  if (response) {
+    const outputting = translator.safeTranslate(response, {
+      to: Provider.Promptl,
+      direction: 'output',
+    })
+    if (outputting.error) captureException(outputting.error)
+    output = (outputting.messages ?? []) as Message[]
+  }
 
   // Create prompt span
   await database

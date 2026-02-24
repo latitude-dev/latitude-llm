@@ -7,6 +7,7 @@ import {
 import { ResolvedToolsDict } from '@latitude-data/constants/tools'
 import { Provider, Translator } from 'rosetta-ai'
 import { AIReturn } from '../../services/ai'
+import { captureException } from '../../utils/datadogCapture'
 
 const translator = new Translator({
   filterEmptyMessages: true,
@@ -33,13 +34,15 @@ export function convertResponseMessages({
     }
   }
 
-  const translated = translator.translate(messages, {
+  const translating = translator.safeTranslate(messages, {
     from: Provider.VercelAI,
     to: Provider.Promptl,
     direction: 'output',
   })
+  if (translating.error) captureException(translating.error)
+  const translated = translating.messages ?? []
 
-  return translated.messages.map((message) => {
+  return translated.map((message) => {
     if (message.role !== 'assistant') return message
     if (!Array.isArray(message.content)) return message
 

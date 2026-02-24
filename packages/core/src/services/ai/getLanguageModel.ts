@@ -7,7 +7,7 @@ import { ProviderConfiguration } from '../../schema/models/providerApiKeys'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { TelemetryContext } from '../../telemetry'
 import { LlmProvider } from './helpers'
-import { VercelConfigWithProviderRules } from './providers/rules'
+import { VercelConfigWithProviderRules } from './providers/rules/all'
 import { createTelemetryMiddleware } from './telemetryMiddleware'
 
 // FIXME: Is this doing anything? There are no options available here.

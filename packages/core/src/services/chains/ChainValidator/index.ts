@@ -1,26 +1,29 @@
+import { DocumentType } from '@latitude-data/constants'
 import {
   ChainError,
   PaymentRequiredError,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import type { Message } from '@latitude-data/constants/messages'
-import { JSONSchema7 } from 'json-schema'
-import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
-import { z } from 'zod'
 import {
   azureConfig,
   LatitudePromptConfig,
 } from '@latitude-data/constants/latitudePromptSchema'
-import { CompileError as PromptlCompileError } from 'promptl-ai'
-import { applyProviderRules } from '../../ai/providers/rules'
-import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
-import { type WorkspaceDto } from '../../../schema/models/types/Workspace'
+import type { Message } from '@latitude-data/constants/messages'
+import { JSONSchema7 } from 'json-schema'
+import {
+  Chain as PromptlChain,
+  CompileError as PromptlCompileError,
+  Message as PromptlMessage,
+} from 'promptl-ai'
+import { z } from 'zod'
+import { checkPayingOrTrial } from '../../../lib/checkPayingOrTrial'
 import { Result, TypedResult } from '../../../lib/Result'
 import { Output } from '../../../lib/streamManager/step/streamAIResponse'
+import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
+import { type WorkspaceDto } from '../../../schema/models/types/Workspace'
+import { applyProviderRules } from '../../ai/providers/rules/provider'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
-import { DocumentType } from '@latitude-data/constants'
-import { checkPayingOrTrial } from '../../../lib/checkPayingOrTrial'
 
 const DEFAULT_AGENT_MAX_STEPS = 20
 

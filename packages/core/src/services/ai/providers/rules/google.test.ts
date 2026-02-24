@@ -1,7 +1,7 @@
 import type { Message } from '@latitude-data/constants/messages'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { applyProviderRules } from '.'
+import { applyProviderRules } from './provider'
 import { Providers } from '@latitude-data/constants'
 import { AppliedRules, ProviderRules } from './types'
 

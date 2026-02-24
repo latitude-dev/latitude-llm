@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { Providers } from '@latitude-data/constants'
 import { PartialConfig } from '../../helpers'
-import { applyProviderRules } from './index'
+import { applyProviderRules } from './provider'
 import { ProviderRules } from './types'
 
 const providerType = Providers.GoogleVertex
