@@ -118,7 +118,9 @@ export async function writeConversationCache(
 
   const cacheClient = await cache()
   await cacheClient.set(lookupKey, key, 'PX', ttlMs)
+
   await upsertConversationCacheBucketIndex(key, expiresAt)
+
   return Result.nil()
 }
 
@@ -177,29 +179,35 @@ async function readConversationCacheFromDisk({
   key: string
   compressed: boolean
 }): Promise<TypedResult<ConversationCacheEntry | undefined>> {
-  const exists = await disk.exists(key)
-  if (!exists) return Result.nil()
+  try {
+    const exists = await disk.exists(key)
+    if (!exists) return Result.nil()
 
-  const payload = await disk.get(key)
-  const decoded = compressed
-    ? await gunzipAsync(Buffer.from(payload, 'base64')).then((buffer) =>
-        buffer.toString(),
+    const payload = await disk.get(key)
+    const decoded = compressed
+      ? await gunzipAsync(Buffer.from(payload, 'base64')).then((buffer) =>
+          buffer.toString(),
+        )
+      : payload
+    const envelope = JSON.parse(decoded) as CacheEnvelope
+
+    if (Date.now() > envelope.expiresAt) {
+      await disk.delete(key)
+      captureException(
+        new BadRequestError(`Cache entry expired for key: ${key}`),
+        {
+          context: 'conversation-cache',
+        },
       )
-    : payload
-  const envelope = JSON.parse(decoded) as CacheEnvelope
+      return Result.nil()
+    }
 
-  if (Date.now() > envelope.expiresAt) {
-    await disk.delete(key)
-    captureException(
-      new BadRequestError(`Cache entry expired for key: ${key}`),
-      {
-        context: 'conversation-cache',
-      },
-    )
+    return Result.ok(envelope.data)
+  } catch (error) {
+    captureException(error as Error)
+
     return Result.nil()
   }
-
-  return Result.ok(envelope.data)
 }
 
 async function upsertConversationCacheBucketIndex(

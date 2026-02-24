@@ -54,8 +54,9 @@ export async function addMessages(
   }: AddMessagesArgs,
   telemetry: LatitudeTelemetry = realTelemetry,
 ) {
-  if (!documentLogUuid)
+  if (!documentLogUuid) {
     return Result.error(new Error('documentLogUuid is required'))
+  }
 
   const dataResult = await retrieveData({
     workspace,
