@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   findModelsDevModel,
+  findModelsDevModelWithFallback,
   getModelsDevPricing,
   getBundledModelsDevData,
   getModelsDevForProvider,
@@ -11,6 +12,15 @@ const mockModels: ModelsDevModel[] = [
   {
     id: 'gpt-4o',
     name: 'GPT-4 Omni',
+    provider: 'openai',
+    pricing: {
+      input: 2.5,
+      output: 10.0,
+    },
+  },
+  {
+    id: 'gpt-4.1',
+    name: 'GPT-4.1',
     provider: 'openai',
     pricing: {
       input: 2.5,
@@ -51,6 +61,53 @@ describe('modelsDev', () => {
     })
   })
 
+  describe('findModelsDevModelWithFallback', () => {
+    it('finds model by exact ID first', () => {
+      const found = findModelsDevModelWithFallback(mockModels, 'gpt-4.1')
+      expect(found?.id).toBe('gpt-4.1')
+    })
+
+    it('falls back to longest prefix match (e.g. gpt-4.1-2025-04-14 or my-model-preview)', () => {
+      expect(
+        findModelsDevModelWithFallback(mockModels, 'gpt-4.1-2025-04-14')?.id,
+      ).toBe('gpt-4.1')
+      expect(
+        findModelsDevModelWithFallback(mockModels, 'gpt-4o-mini-preview')?.id,
+      ).toBe('gpt-4o')
+    })
+
+    it('does not match when requested is shorter than DB ids (e.g. "gpt" must not match "gpt-4" or "gpt-4.1")', () => {
+      const modelsWithGpt: ModelsDevModel[] = [
+        { id: 'gpt-4', name: 'GPT-4', provider: 'openai' },
+        { id: 'gpt-5', name: 'GPT-5', provider: 'openai' },
+      ]
+      expect(
+        findModelsDevModelWithFallback(modelsWithGpt, 'gpt'),
+      ).toBeUndefined()
+      expect(findModelsDevModelWithFallback(mockModels, 'gpt')).toBeUndefined()
+    })
+
+    it('picks longest matching prefix when several match', () => {
+      const modelsWithPrefix: ModelsDevModel[] = [
+        { id: 'gpt-4.1', name: 'GPT-4.1', provider: 'openai' },
+        { id: 'gpt-4.1-mini', name: 'GPT-4.1 Mini', provider: 'openai' },
+      ]
+      const found = findModelsDevModelWithFallback(
+        modelsWithPrefix,
+        'gpt-4.1-mini-preview',
+      )
+      expect(found?.id).toBe('gpt-4.1-mini')
+    })
+
+    it('returns undefined when no exact nor prefix match', () => {
+      const found = findModelsDevModelWithFallback(
+        mockModels,
+        'gpt-5-2026-01-01',
+      )
+      expect(found).toBeUndefined()
+    })
+  })
+
   describe('getModelsDevPricing', () => {
     it('returns pricing if available', () => {
       const pricing = getModelsDevPricing(mockModels[0]!)
@@ -61,7 +118,10 @@ describe('modelsDev', () => {
     })
 
     it('returns null if pricing is missing', () => {
-      const pricing = getModelsDevPricing(mockModels[2]!)
+      const modelWithoutPricing = mockModels.find(
+        (m) => m.id === 'model-without-pricing',
+      )!
+      const pricing = getModelsDevPricing(modelWithoutPricing)
       expect(pricing).toBeNull()
     })
 

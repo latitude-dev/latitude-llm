@@ -1,11 +1,8 @@
-import {
-  Providers,
-  LegacyVercelSDKVersion4Usage as LanguageModelUsage,
-} from '@latitude-data/constants'
+import { LegacyVercelSDKVersion4Usage as LanguageModelUsage } from '@latitude-data/constants'
 import { CostBreakdown, costBreakdownKey } from '@latitude-data/constants/costs'
 import {
   getBundledModelsDevData,
-  findModelsDevModel,
+  findModelsDevModelWithFallback,
   getModelsDevPricing,
 } from './modelsDev'
 
@@ -21,47 +18,36 @@ export type ModelCostPer1M = {
   costImplemented: boolean
 }
 
-/**
- * Maps Latitude providers to models.dev provider names
- * models.dev uses standardized provider identifiers
- */
-function getModelsDevProviderName(provider: Providers): string {
-  const providerMap: Record<Providers, string> = {
-    [Providers.OpenAI]: 'openai',
-    [Providers.Anthropic]: 'anthropic',
-    [Providers.Groq]: 'groq',
-    [Providers.Mistral]: 'mistral',
-    [Providers.Google]: 'google',
-    [Providers.GoogleVertex]: 'google-vertex',
-    [Providers.AnthropicVertex]: 'anthropic-vertex',
-    [Providers.XAI]: 'xai',
-    [Providers.AmazonBedrock]: 'bedrock',
-    [Providers.DeepSeek]: 'deepseek',
-    [Providers.Perplexity]: 'perplexity',
-    [Providers.Azure]: 'azure',
-    [Providers.Custom]: 'custom',
-  }
-  return providerMap[provider] || provider
+const PROVIDER_TO_MODELS_DEV_ID: Record<string, string> = {
+  amazon_bedrock: 'bedrock',
+  google_vertex: 'google-vertex',
+  anthropic_vertex: 'anthropic-vertex',
 }
 
 /**
- * Gets cost from bundled models.dev data
- * Uses the bundled JSON file for synchronous cost estimation
+ * Resolves a provider string (from span attributes, DB, or Providers enum value)
+ * to the provider identifier used in the models.dev bundled data.
+ * Supports any provider id present in models.dev, not only the Providers enum subset.
  */
-function getCostFromModelsDev(
-  provider: Providers,
-  model: string,
-): ModelCostPer1M {
+function getModelsDevProviderId(provider: string): string {
+  const normalized = provider?.toLowerCase().trim() ?? ''
+  return PROVIDER_TO_MODELS_DEV_ID[normalized] ?? normalized
+}
+
+export function getCostPer1M({
+  provider,
+  model,
+}: {
+  provider: string
+  model: string
+}): ModelCostPer1M {
   try {
     const modelsData = getBundledModelsDevData()
-
-    const providerName = getModelsDevProviderName(provider)
-    const modelData = findModelsDevModel(
-      modelsData.filter(
-        (m) => m.provider.toLowerCase() === providerName.toLowerCase(),
-      ),
-      model,
+    const providerId = getModelsDevProviderId(provider)
+    const providerModels = modelsData.filter(
+      (m) => m.provider.toLowerCase() === providerId.toLowerCase(),
     )
+    const modelData = findModelsDevModelWithFallback(providerModels, model)
 
     if (!modelData) {
       return {
@@ -94,16 +80,6 @@ function getCostFromModelsDev(
       costImplemented: false,
     }
   }
-}
-
-export function getCostPer1M({
-  provider,
-  model,
-}: {
-  provider: Providers
-  model: string
-}): ModelCostPer1M {
-  return getCostFromModelsDev(provider, model)
 }
 
 function getCostPerToken({
@@ -179,7 +155,7 @@ export function estimateCost({
   model,
 }: {
   usage: LanguageModelUsage
-  provider: Providers
+  provider: string
   model: string
 }): number {
   const { cachedInputTokens, promptTokens, reasoningTokens, completionTokens } =
@@ -217,7 +193,7 @@ export function estimateCostBreakdown({
   model,
 }: {
   usage: LanguageModelUsage
-  provider: Providers
+  provider: string
   model: string
 }): CostBreakdown {
   const costPer1M = getCostPer1M({ provider, model })
