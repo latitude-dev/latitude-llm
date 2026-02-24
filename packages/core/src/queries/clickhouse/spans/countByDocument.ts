@@ -4,21 +4,19 @@ import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
 
 export const countDistinctTracesByDocument = scopedQuery(
-  async function countDistinctTracesByDocument(
-    {
-      workspaceId,
-      projectId,
-      documentUuid,
-      commitUuids,
-      logSources,
-    }: {
-      workspaceId: number
-      projectId: number
-      documentUuid: string
-      commitUuids: string[]
-      logSources?: LogSources[]
-    },
-  ) {
+  async function countDistinctTracesByDocument({
+    workspaceId,
+    projectId,
+    documentUuid,
+    commitUuids,
+    logSources,
+  }: {
+    workspaceId: number
+    projectId: number
+    documentUuid: string
+    commitUuids: string[]
+    logSources?: LogSources[]
+  }) {
     if (commitUuids.length === 0) return 0
 
     const queryParams: Record<string, unknown> = {

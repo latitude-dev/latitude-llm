@@ -196,5 +196,4 @@ describe('createInstantlyLead', () => {
       expect(mockFetch).not.toHaveBeenCalled()
     })
   })
-
 })

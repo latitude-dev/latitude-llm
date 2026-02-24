@@ -4,15 +4,13 @@ import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { scopedQuery } from '../../scope'
 
 export const countDistinctTracesSince = scopedQuery(
-  async function countDistinctTracesSince(
-    {
-      workspaceId,
-      since,
-    }: {
-      workspaceId: number
-      since: Date
-    },
-  ) {
+  async function countDistinctTracesSince({
+    workspaceId,
+    since,
+  }: {
+    workspaceId: number
+    since: Date
+  }) {
     const result = await clickhouseClient().query({
       query: `
       SELECT countDistinct(trace_id) AS cnt

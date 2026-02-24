@@ -4,8 +4,8 @@ import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { toClickHouseDateTime } from '../../../clickhouse/insert'
 import { scopedQuery } from '../../scope'
 
-export const getGlobalLogsStats = scopedQuery(async function getGlobalLogsStats(
-  {
+export const getGlobalLogsStats = scopedQuery(
+  async function getGlobalLogsStats({
     workspaceId,
     from,
     to,
@@ -13,10 +13,9 @@ export const getGlobalLogsStats = scopedQuery(async function getGlobalLogsStats(
     workspaceId: number
     from: Date
     to: Date
-  },
-) {
-  const result = await clickhouseClient().query({
-    query: `
+  }) {
+    const result = await clickhouseClient().query({
+      query: `
       SELECT
         countDistinct(trace_id) AS logs_count,
         coalesce(
@@ -35,42 +34,41 @@ export const getGlobalLogsStats = scopedQuery(async function getGlobalLogsStats(
         AND started_at >= {from: DateTime64(6, 'UTC')}
         AND started_at <= {to: DateTime64(6, 'UTC')}
     `,
-    format: 'JSONEachRow',
-    query_params: {
-      workspaceId,
-      from: toClickHouseDateTime(from),
-      to: toClickHouseDateTime(to),
-      completionType: SpanType.Completion,
-    },
-  })
+      format: 'JSONEachRow',
+      query_params: {
+        workspaceId,
+        from: toClickHouseDateTime(from),
+        to: toClickHouseDateTime(to),
+        completionType: SpanType.Completion,
+      },
+    })
 
-  const rows = await result.json<{
-    logs_count: string
-    total_tokens: string
-    total_cost: string
-  }>()
+    const rows = await result.json<{
+      logs_count: string
+      total_tokens: string
+      total_cost: string
+    }>()
 
-  return {
-    logsCount: Number(rows[0]?.logs_count ?? 0),
-    tokensSpent: Number(rows[0]?.total_tokens ?? 0),
-    totalCostInMillicents: Number(rows[0]?.total_cost ?? 0),
-  }
-})
+    return {
+      logsCount: Number(rows[0]?.logs_count ?? 0),
+      tokensSpent: Number(rows[0]?.total_tokens ?? 0),
+      totalCostInMillicents: Number(rows[0]?.total_cost ?? 0),
+    }
+  },
+)
 
 export const getTopProjectsLogsStats = scopedQuery(
-  async function getTopProjectsLogsStats(
-    {
-      workspaceId,
-      from,
-      to,
-      projectsLimit,
-    }: {
-      workspaceId: number
-      from: Date
-      to: Date
-      projectsLimit: number
-    },
-  ) {
+  async function getTopProjectsLogsStats({
+    workspaceId,
+    from,
+    to,
+    projectsLimit,
+  }: {
+    workspaceId: number
+    from: Date
+    to: Date
+    projectsLimit: number
+  }) {
     const result = await clickhouseClient().query({
       query: `
       SELECT

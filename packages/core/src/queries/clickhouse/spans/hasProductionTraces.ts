@@ -4,15 +4,13 @@ import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { scopedQuery } from '../../scope'
 
 export const hasProductionTraces = scopedQuery(
-  async function hasProductionTraces(
-    {
-      workspaceId,
-      projectId,
-    }: {
-      workspaceId: number
-      projectId?: number
-    },
-  ) {
+  async function hasProductionTraces({
+    workspaceId,
+    projectId,
+  }: {
+    workspaceId: number
+    projectId?: number
+  }) {
     const productionSource = RUN_SOURCES[RunSourceGroup.Production][0]! // Production has only one source
     const queryParams: Record<string, unknown> = {
       workspaceId,

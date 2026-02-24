@@ -13,31 +13,29 @@ import { buildExperimentExclusionCondition } from './buildExperimentExclusionCon
 import { paginateSpanRows } from './paginateSpanRows'
 
 export const getSpansWithoutIssues = scopedQuery(
-  async function getSpansWithoutIssues(
-    {
-      workspaceId,
-      projectId,
-      documentUuid,
-      commitUuids,
-      spanTypes,
-      excludedSpanIds,
-      excludedTraceIds,
-      optimizationExperimentUuids,
-      cursor,
-      limit,
-    }: {
-      workspaceId: number
-      projectId: number
-      documentUuid: string
-      commitUuids: string[]
-      spanTypes: MainSpanType[]
-      excludedSpanIds?: string[]
-      excludedTraceIds?: string[]
-      optimizationExperimentUuids: string[]
-      cursor: Cursor<Date, string> | null
-      limit: number
-    },
-  ): Promise<{
+  async function getSpansWithoutIssues({
+    workspaceId,
+    projectId,
+    documentUuid,
+    commitUuids,
+    spanTypes,
+    excludedSpanIds,
+    excludedTraceIds,
+    optimizationExperimentUuids,
+    cursor,
+    limit,
+  }: {
+    workspaceId: number
+    projectId: number
+    documentUuid: string
+    commitUuids: string[]
+    spanTypes: MainSpanType[]
+    excludedSpanIds?: string[]
+    excludedTraceIds?: string[]
+    optimizationExperimentUuids: string[]
+    cursor: Cursor<Date, string> | null
+    limit: number
+  }): Promise<{
     spans: Span<MainSpanType>[]
     next: Cursor<Date, string> | null
   }> {
@@ -113,15 +111,13 @@ export const getSpansWithoutIssues = scopedQuery(
 )
 
 export const getSpansWithActiveIssues = scopedQuery(
-  async function getSpansWithActiveIssues(
-    {
-      workspaceId,
-      evaluationResultIds,
-    }: {
-      workspaceId: number
-      evaluationResultIds: number[]
-    },
-  ): Promise<{ spanIds: string[]; traceIds: string[] }> {
+  async function getSpansWithActiveIssues({
+    workspaceId,
+    evaluationResultIds,
+  }: {
+    workspaceId: number
+    evaluationResultIds: number[]
+  }): Promise<{ spanIds: string[]; traceIds: string[] }> {
     if (evaluationResultIds.length === 0) {
       return { spanIds: [], traceIds: [] }
     }
@@ -157,17 +153,15 @@ export const getSpansWithActiveIssues = scopedQuery(
 )
 
 export const getSpansWithFailedResults = scopedQuery(
-  async function getSpansWithFailedResults(
-    {
-      workspaceId,
-      documentUuid,
-      commitUuids,
-    }: {
-      workspaceId: number
-      documentUuid: string
-      commitUuids: string[]
-    },
-  ): Promise<{ spanIds: string[]; traceIds: string[] }> {
+  async function getSpansWithFailedResults({
+    workspaceId,
+    documentUuid,
+    commitUuids,
+  }: {
+    workspaceId: number
+    documentUuid: string
+    commitUuids: string[]
+  }): Promise<{ spanIds: string[]; traceIds: string[] }> {
     if (commitUuids.length === 0) {
       return { spanIds: [], traceIds: [] }
     }
@@ -205,19 +199,17 @@ export const getSpansWithFailedResults = scopedQuery(
 )
 
 export const getSpansWithPassedResults = scopedQuery(
-  async function getSpansWithPassedResults(
-    {
-      workspaceId,
-      documentUuid,
-      commitUuids,
-      requireHumanEvaluation,
-    }: {
-      workspaceId: number
-      documentUuid: string
-      commitUuids: string[]
-      requireHumanEvaluation: boolean
-    },
-  ): Promise<{ spanIds: string[]; traceIds: string[] }> {
+  async function getSpansWithPassedResults({
+    workspaceId,
+    documentUuid,
+    commitUuids,
+    requireHumanEvaluation,
+  }: {
+    workspaceId: number
+    documentUuid: string
+    commitUuids: string[]
+    requireHumanEvaluation: boolean
+  }): Promise<{ spanIds: string[]; traceIds: string[] }> {
     if (commitUuids.length === 0) {
       return { spanIds: [], traceIds: [] }
     }
