@@ -3,8 +3,9 @@ import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { type ParamValue } from 'next/dist/server/request/params'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { Node } from '../useTree'
 import { useSidebarDocumentVersions } from '../useSidebarDocumentVersions'
@@ -42,7 +43,9 @@ export default function DocumentHeader({
   currentEvaluationUuid: ParamValue
 }) {
   const { commit, isHead } = useCurrentCommit()
+  const { document: currentDocument } = useCurrentDocument()
   const { project } = useCurrentProject()
+  const router = useRouter()
   const { setCommitMainDocument } = useCommits()
   const { renamePaths, destroyFile, isLoading } = useSidebarDocumentVersions()
   const isMerged = !!commit.mergedAt
@@ -76,7 +79,6 @@ export default function DocumentHeader({
   )
   const url = useMemo(() => {
     if (!documentUuid) return undefined
-    // TODO: Restore draft-node URL behavior if temp nodes are reintroduced.
     if (
       selected &&
       !currentEvaluationUuid &&
@@ -140,12 +142,34 @@ export default function DocumentHeader({
           if (isMerged) {
             // do nothing
           } else {
-            destroyFile(documentUuid)
+            destroyFile(documentUuid, {
+              onSuccess: () => {
+                if (currentDocument?.documentUuid !== documentUuid) return
+
+                router.push(
+                  ROUTES.projects
+                    .detail({ id: project.id })
+                    .commits.detail({
+                      uuid: isHead ? HEAD_COMMIT : commit.uuid,
+                    }).documents.root,
+                )
+              },
+            })
           }
         },
       },
     ]
-  }, [documentUuid, destroyFile, isLoading, isMerged])
+  }, [
+    documentUuid,
+    destroyFile,
+    isLoading,
+    isMerged,
+    currentDocument?.documentUuid,
+    router,
+    project.id,
+    isHead,
+    commit.uuid,
+  ])
   const icon = useMemo<IconName>(() => {
     const docName = node.name
     if (docName === 'README') return 'info'

@@ -4,9 +4,9 @@ import { useDevMode } from '$/hooks/useDevMode'
 import { useMetadata } from '$/hooks/useMetadata'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import useDocumentVersions from '$/stores/documentVersions'
+import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
-import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import {
@@ -63,14 +63,16 @@ export function DocumentValueProvider({
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { devMode } = useDevMode()
-  const { toast } = useToast()
   const [origin, setOrigin] = useState<string>()
   const {
     data: document,
-    updateContent,
-    isUpdatingContent,
+    mutate: mutateDocument,
   } = useDocumentVersion({
     documentUuid: _document.documentUuid,
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
+  const { updateContent, isUpdatingContent } = useDocumentVersionActions({
     projectId: project.id,
     commitUuid: commit.uuid,
   })
@@ -88,32 +90,24 @@ export function DocumentValueProvider({
 
       setContentValue(content, opts)
 
-      const [_, error] = await updateContent({
-        commitUuid: commit.uuid,
-        projectId: project.id,
+      const updatedDocument = await updateContent({
         documentUuid: _document.documentUuid,
         content,
       })
 
-      if (error) {
-        toast({
-          title: 'Error saving document',
-          description:
-            error.message ?? 'There was an error saving the document.',
-          variant: 'destructive',
-        })
-
+      if (!updatedDocument) {
         setContentValue(prevContent)
+        return
       }
+
+      mutateDocument(updatedDocument, { revalidate: false })
     },
     [
       setContentValue,
       updateContent,
+      mutateDocument,
       document,
       _document.documentUuid,
-      commit.uuid,
-      project.id,
-      toast,
     ],
   )
   const updateDocumentContent = useDebouncedCallback(

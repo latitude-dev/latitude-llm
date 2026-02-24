@@ -3,10 +3,19 @@ import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { DocumentVersionDto } from '@latitude-data/core/constants'
-import { updateDocumentContentAction } from '$/actions/documents/updateContent'
-import { useCallback, useMemo } from 'react'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import useDocumentVersions from './documentVersions'
+import { useMemo } from 'react'
+
+export function getDocumentVersionCacheKey({
+  projectId,
+  commitUuid,
+  documentUuid,
+}: {
+  projectId: number
+  commitUuid: string
+  documentUuid: string
+}) {
+  return ['commits', projectId, commitUuid, 'documents', documentUuid] as const
+}
 
 export default function useDocumentVersion(
   {
@@ -20,12 +29,9 @@ export default function useDocumentVersion(
   },
   opts?: SWRConfiguration,
 ) {
-  const { mutate: mutateDocumentVersions } = useDocumentVersions({
-    projectId,
-    commitUuid,
-  })
+  const enabled = !!documentUuid
   const fetcher = useFetcher<DocumentVersionDto>(
-    documentUuid ? ROUTES.api.documents.detail(documentUuid).root : undefined,
+    enabled ? ROUTES.api.documents.detail(documentUuid).root : undefined,
     {
       searchParams: {
         projectId: projectId.toString(),
@@ -36,39 +42,18 @@ export default function useDocumentVersion(
   )
 
   const { data, mutate } = useSWR<DocumentVersionDto>(
-    ['commits', projectId, commitUuid, 'documents', documentUuid],
+    enabled
+      ? getDocumentVersionCacheKey({ projectId, commitUuid, documentUuid })
+      : undefined,
     fetcher,
     opts,
   )
 
-  const { execute: updateContent, isPending: isUpdatingContent } =
-    useLatitudeAction(updateDocumentContentAction, {
-      onSuccess: useCallback(
-        ({ data: document }: { data: DocumentVersionDto }) => {
-          if (!document) return
-
-          mutate(document)
-          mutateDocumentVersions(
-            (documents) => {
-              return documents?.map((d) => {
-                if (d.documentUuid !== document.documentUuid) return d
-                return { ...d, ...document }
-              })
-            },
-            { revalidate: false },
-          )
-        },
-        [mutate, mutateDocumentVersions],
-      ),
-    })
-
   return useMemo(
     () => ({
       data,
-      isUpdatingContent,
-      updateContent,
       mutate,
     }),
-    [data, isUpdatingContent, updateContent, mutate],
+    [data, mutate],
   )
 }

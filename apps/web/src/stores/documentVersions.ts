@@ -24,6 +24,16 @@ import {
 
 const EMPTY_DATA = [] as DocumentVersion[]
 
+export function getDocumentVersionsCacheKey({
+  projectId,
+  commitUuid,
+}: {
+  projectId: number
+  commitUuid: string
+}) {
+  return ['documentVersions', projectId, commitUuid] as const
+}
+
 export default function useDocumentVersions(
   {
     commitUuid = HEAD_COMMIT,
@@ -51,7 +61,7 @@ export default function useDocumentVersions(
     isLoading,
     error: swrError,
   } = useSWR<DocumentVersion[]>(
-    enabled ? ['documentVersions', projectId, commitUuid] : undefined,
+    enabled ? getDocumentVersionsCacheKey({ projectId, commitUuid }) : undefined,
     fetcher,
     opts,
   )
