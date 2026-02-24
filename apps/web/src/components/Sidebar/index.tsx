@@ -15,7 +15,12 @@ export default function DocumentSidebar({
         {banner}
         {header}
       </div>
-      <div className='flex-1 custom-scrollbar'>{tree}</div>
+      <div
+        data-sidebar-scroll-container='files'
+        className='flex-1 custom-scrollbar'
+      >
+        {tree}
+      </div>
     </aside>
   )
 }

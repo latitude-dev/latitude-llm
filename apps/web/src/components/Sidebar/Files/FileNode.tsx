@@ -10,6 +10,7 @@ import { Node, useTreeNode } from './useTree'
 import { type ParamValue } from 'next/dist/server/request/params'
 import { useSidebarDocumentVersions } from './useSidebarDocumentVersions'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useScrollSelectedFileNodeIntoView as useScrollIntoView } from './useScrollSelectedFileNodeIntoView'
 
 export type FileNodeProps = {
   nodeId: string
@@ -32,11 +33,16 @@ export const FileNode = memo(function FileNode({
   const documentUuid = node?.documentUuid
   const selected = !!currentUuid && currentUuid === documentUuid
   const hasChildren = (node?.children.length ?? 0) > 0
+  const nodeRef = useScrollIntoView({
+    selected,
+    isFile: !!node?.isFile,
+    nodeId,
+  })
 
   if (!node) return null
 
   return (
-    <div className='flex-1 w-full'>
+    <div ref={nodeRef} className='flex-1 w-full'>
       <NodeHeader
         open={open}
         node={node}
