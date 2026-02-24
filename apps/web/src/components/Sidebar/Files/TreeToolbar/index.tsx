@@ -1,4 +1,5 @@
 'use client'
+
 import { memo, useCallback } from 'react'
 import { create } from 'zustand'
 import { Button } from '@latitude-data/web-ui/atoms/Button'
@@ -10,13 +11,13 @@ import { useTempNodes } from '../useTempNodes'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { ModifiedDocumentType } from '@latitude-data/core/constants'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useSidebarDocumentVersions } from '../useSidebarDocumentVersions'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
 
 export enum EntityType {
-  File = 'file',
+  Prompt = 'prompt',
   Folder = 'folder',
 }
-const FILE_TYPES = [EntityType.File]
 
 interface NodeInputState {
   nodeInput: EntityType | undefined
@@ -35,14 +36,18 @@ export const TreeToolbar = memo(function TreeToolbar({
 }) {
   const addToRootFolder = useTempNodes((state) => state.addToRootFolder)
   const { commit } = useCurrentCommit()
-  const { createFile, isLoading } = useSidebarDocumentVersions()
+  const { project } = useCurrentProject()
+  const { createFile, isLoading } = useDocumentVersionActions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
   const isMerged = !!commit.mergedAt
   const { nodeInput, setNodeInput } = useNodeInput()
-  const isFile = nodeInput ? FILE_TYPES.includes(nodeInput) : false
+  const isFile = nodeInput ? nodeInput === EntityType.Prompt : false
   const icons: IconName[] =
     nodeInput === EntityType.Folder
       ? ['folderClose']
-      : nodeInput === EntityType.File
+      : nodeInput === EntityType.Prompt
         ? ['file']
         : []
 
@@ -87,7 +92,7 @@ export const TreeToolbar = memo(function TreeToolbar({
                   lookDisabled={isMerged}
                   disabled={isLoading}
                   iconProps={{ name: 'filePlus' }}
-                  onClick={onClick(EntityType.File)}
+                  onClick={onClick(EntityType.Prompt)}
                 />
               }
             >

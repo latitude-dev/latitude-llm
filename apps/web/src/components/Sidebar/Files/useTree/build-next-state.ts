@@ -1,4 +1,3 @@
-import { ROOT_PATH } from './constants'
 import { getDocumentChangeType, getFolderChangeType } from './change-types'
 import { areNodesEqual, compareNodes, createNode } from './nodes'
 import { BuildNextStateResult, Node, SidebarDocument } from './types'
@@ -22,7 +21,7 @@ export function buildNextState({
 
   const nodesDraft = new Map<string, Node>()
   const childrenDraft = new Map<string, string[]>()
-  const folderDepthByPath = new Map<string, number>([[ROOT_PATH, 0]])
+  const folderDepthByPath = new Map<string, number>([['', 0]])
 
   const ensureFolder = (path: string): string | undefined => {
     if (!path) return undefined

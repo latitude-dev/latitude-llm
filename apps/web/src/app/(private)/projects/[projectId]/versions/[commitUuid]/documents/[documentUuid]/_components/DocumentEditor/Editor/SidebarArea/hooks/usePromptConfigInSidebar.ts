@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
 import { SidebarEditorState, useSidebarStore } from './useSidebarStore'
 import { useCurrentUrl } from '$/hooks/useCurrentUrl'
@@ -65,7 +65,7 @@ export function useUpdateDocumentContent() {
       currentUrl,
       project,
       commit,
-      document,
+      document.documentUuid,
       mutateDocumentUpdated,
     ],
   )
@@ -74,6 +74,14 @@ export function useUpdateDocumentContent() {
 export function usePromptConfigInSidebar() {
   const updateController = useRef<AbortController | null>(null)
   const { document } = useCurrentDocument()
+  const documentContentRef = useRef(document.content)
+  // To avoid callbacks triggering rerenders downstream
+  // on every change of document
+  // content
+  useEffect(() => {
+    documentContentRef.current = document.content
+  }, [document.content])
+
   const {
     addIntegration,
     addTool,
@@ -90,7 +98,6 @@ export function usePromptConfigInSidebar() {
     toggleAgent: state.toggleAgent,
   }))
   const updateContent = useUpdateDocumentContent()
-
   const updateDocumentContent = useCallback(
     async ({
       state,
@@ -122,12 +129,12 @@ export function usePromptConfigInSidebar() {
       }
 
       await updateContent({
-        prompt: document.content,
+        prompt: documentContentRef.current,
         updates,
         abortSignal: updateController.current.signal,
       })
     },
-    [updateContent, document.content],
+    [updateContent],
   )
 
   // Integration (Tools) methods

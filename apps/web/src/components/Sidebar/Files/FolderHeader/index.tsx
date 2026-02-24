@@ -5,8 +5,9 @@ import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useOpenPaths } from '../useOpenPaths'
 import { Node } from '../useTree'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
-import { useSidebarDocumentVersions } from '../useSidebarDocumentVersions'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { TempNode, useTempNodes } from '../useTempNodes'
+import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
 
 export default function FolderHeader({
   node,
@@ -20,7 +21,11 @@ export default function FolderHeader({
   onToggleOpen?: () => void
 }) {
   const { commit } = useCurrentCommit()
-  const { renamePaths, destroyFolder, isLoading } = useSidebarDocumentVersions()
+  const { project } = useCurrentProject()
+  const { renamePaths, destroyFolder, isLoading } = useDocumentVersionActions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
   const { addFolder, updateFolder, updateFolderAndAddOther, deleteTmpFolder } =
     useTempNodes((state) => ({
       addFolder: state.addFolder,

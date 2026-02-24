@@ -9,11 +9,11 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { DocumentRoutes } from '$/services/routes'
 import { useDeployPrompt } from '../../DocumentationModal'
 import { DocumentEditorContentArea } from './ContentArea'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleStates } from './ContentArea/hooks/usePlaygroundLogic'
 import { DocumentEditorSidebarArea } from './SidebarArea'
 import { DocumentParametersProvider } from './V2Playground/DocumentParams/DocumentParametersContext'
 import { useProductAccess } from '$/components/Providers/SessionProvider'
+import { useCurrentDocumentUuid } from './useCurrentDocumentUuid'
 
 export default function DocumentEditor(props: {
   freeRunsCount?: number
@@ -21,7 +21,7 @@ export default function DocumentEditor(props: {
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { document } = useCurrentDocument()
+  const documentUuid = useCurrentDocumentUuid()
   const { promptManagement } = useProductAccess()
   const [selectedTab, setSelectedTab] = useState<TabValue>(
     props.showPreview ? 'preview' : DocumentRoutes.editor,
@@ -43,6 +43,9 @@ export default function DocumentEditor(props: {
     },
     [isPlaygroundOpen, togglePlaygroundOpen, setSelectedTab],
   )
+
+  if (!documentUuid) return null
+
   return (
     <div className='pt-6 px-6 gap-y-6 flex flex-col h-full w-full'>
       <div className='w-full flex flex-row items-center justify-between gap-4'>
@@ -51,7 +54,7 @@ export default function DocumentEditor(props: {
           onSelectTab={setSelectedTab}
           projectId={String(project.id)}
           commitUuid={commit.uuid}
-          documentUuid={document.documentUuid}
+          documentUuid={documentUuid}
           onPreviewToggle={onPreviewToggle}
         />
         {promptManagement && (
@@ -70,7 +73,7 @@ export default function DocumentEditor(props: {
       </div>
       <div className='flex flex-1 gap-x-8 min-h-0'>
         <div className='flex flex-1 h-full'>
-          <DocumentParametersProvider documentUuid={document.documentUuid}>
+          <DocumentParametersProvider documentUuid={documentUuid}>
             <DocumentEditorContentArea
               setSelectedTab={setSelectedTab}
               isPlaygroundOpen={isPlaygroundOpen}

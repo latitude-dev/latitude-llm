@@ -3,17 +3,16 @@ import { DocumentRoutes, ROUTES } from '$/services/routes'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { type ParamValue } from 'next/dist/server/request/params'
-import { usePathname, useRouter } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 import { Node } from '../useTree'
-import { useSidebarDocumentVersions } from '../useSidebarDocumentVersions'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCommits } from '$/stores/commitsStore'
 import { HEAD_COMMIT } from '@latitude-data/core/constants'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
+import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
 
 /**
  * Detects the current document page type from the pathname.
@@ -43,11 +42,14 @@ export default function DocumentHeader({
   currentEvaluationUuid: ParamValue
 }) {
   const { commit, isHead } = useCurrentCommit()
-  const { document: currentDocument } = useCurrentDocument()
   const { project } = useCurrentProject()
+  const { documentUuid: currentDocumentUuid } = useParams()
   const router = useRouter()
   const { setCommitMainDocument } = useCommits()
-  const { renamePaths, destroyFile, isLoading } = useSidebarDocumentVersions()
+  const { renamePaths, destroyFile, isLoading } = useDocumentVersionActions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
   const isMerged = !!commit.mergedAt
   const mainDocumentUuid = commit.mainDocumentUuid ?? undefined
   const onSaveValue = useCallback(
@@ -72,6 +74,13 @@ export default function DocumentHeader({
     [setCommitMainDocument, project.id, commit.id, node.documentUuid],
   )
   const documentUuid = node.documentUuid!
+  const isCurrentDocument = useMemo(() => {
+    if (Array.isArray(currentDocumentUuid)) {
+      return currentDocumentUuid.includes(documentUuid)
+    }
+
+    return currentDocumentUuid === documentUuid
+  }, [currentDocumentUuid, documentUuid])
   const pathname = usePathname()
   const currentPageType = useMemo(
     () => getDocumentPageType(pathname),
@@ -144,7 +153,7 @@ export default function DocumentHeader({
           } else {
             destroyFile(documentUuid, {
               onSuccess: () => {
-                if (currentDocument?.documentUuid !== documentUuid) return
+                if (!isCurrentDocument) return
 
                 router.push(
                   ROUTES.projects.detail({ id: project.id }).commits.detail({
@@ -162,7 +171,7 @@ export default function DocumentHeader({
     destroyFile,
     isLoading,
     isMerged,
-    currentDocument?.documentUuid,
+    isCurrentDocument,
     router,
     project.id,
     isHead,

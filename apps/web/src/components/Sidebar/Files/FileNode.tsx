@@ -8,9 +8,10 @@ import { useOpenPaths } from './useOpenPaths'
 import { TempNode, useTempNodes } from './useTempNodes'
 import { Node, useTreeNode } from './useTree'
 import { type ParamValue } from 'next/dist/server/request/params'
-import { useSidebarDocumentVersions } from './useSidebarDocumentVersions'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useScrollSelectedFileNodeIntoView as useScrollIntoView } from './useScrollSelectedFileNodeIntoView'
+import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
 
 export type FileNodeProps = {
   nodeId: string
@@ -166,8 +167,12 @@ const TempFolderTreeNode = memo(function TempFolderTreeNode({
 
 const TempFileNode = memo(function TempFileNode({ node }: { node: TempNode }) {
   const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
   const { onMergeCommitClick } = useFileTreeContext()
-  const { createFile } = useSidebarDocumentVersions()
+  const { createFile } = useDocumentVersionActions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
   const { deleteTmpFolder, deleteTmpBranch } = useTempNodes((state) => ({
     deleteTmpFolder: state.deleteTmpFolder,
     deleteTmpBranch: state.deleteTmpBranch,
