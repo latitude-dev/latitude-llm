@@ -16,6 +16,7 @@ import { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { User } from '@latitude-data/core/schema/models/types/User'
 import { ProviderApiKey } from '@latitude-data/core/schema/models/types/ProviderApiKey'
+import { hashContent } from '@latitude-data/core/lib/hashContent'
 
 const mocks = vi.hoisted(() => ({
   queues: {
@@ -109,7 +110,7 @@ describe('POST /get-or-create', () => {
         uuid: document.documentUuid,
         path: document.path,
         content: document.content,
-        contentHash: undefined,
+        contentHash: hashContent(document.content),
         config: {
           provider: providers[0]!.name,
           model: 'fake-model',
