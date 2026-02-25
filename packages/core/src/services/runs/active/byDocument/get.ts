@@ -21,6 +21,7 @@ export async function getRunByDocument({
   workspaceId,
   projectId,
   documentUuid,
+  commitUuid,
   runUuid,
   cache,
 }: {
@@ -28,13 +29,16 @@ export async function getRunByDocument({
   projectId: number
   documentUuid: string
   runUuid: string
+  commitUuid?: string
   cache?: Cache
 }): PromisedResult<Run, Error> {
   // First check database for completed runs
   const spansRepo = new SpansRepository(workspaceId)
   const traceId = await spansRepo.getLastTraceByLogUuid(runUuid)
   if (traceId) {
-    const spans = await spansRepo.list({ traceId }).then((r) => r.value)
+    const spans = await spansRepo
+      .list({ traceId, pkFilters: { projectId, documentUuid, commitUuid } })
+      .then((r) => r.value)
     if (spans) {
       const mainSpan = spans.find(isMainSpan)
       if (mainSpan) {

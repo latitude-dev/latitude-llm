@@ -25,15 +25,24 @@ type WorkspaceRef = Pick<Workspace, 'id'>
 export async function assembleTraceStructure(
   {
     traceId,
+    projectId,
+    documentUuid,
+    commitUuid,
     workspace,
   }: {
     traceId: string
+    projectId?: number
+    documentUuid?: string
+    commitUuid?: string
     workspace: WorkspaceRef
   },
   db = database,
 ) {
   const repository = new SpansRepository(workspace.id, db)
-  const listing = await repository.list({ traceId })
+  const listing = await repository.list({
+    traceId,
+    pkFilters: { projectId, documentUuid, commitUuid },
+  })
   if (listing.error) return Result.error(listing.error)
 
   const spans = listing.value
@@ -94,12 +103,18 @@ export async function assembleTraceStructure(
 export async function assembleTraceWithMessages(
   {
     traceId,
-    workspace,
+    projectId,
+    documentUuid,
+    commitUuid,
     spanId,
+    workspace,
   }: {
     traceId: string
-    workspace: WorkspaceRef
+    documentUuid?: string
+    commitUuid?: string
+    projectId?: number
     spanId?: string
+    workspace: WorkspaceRef
   },
   db = database,
 ): PromisedResult<{
@@ -107,7 +122,7 @@ export async function assembleTraceWithMessages(
   completionSpan?: AssembledSpan<SpanType.Completion>
 }> {
   const structureResult = await assembleTraceStructure(
-    { traceId, workspace },
+    { traceId, workspace, projectId, documentUuid, commitUuid },
     db,
   )
   if (!Result.isOk(structureResult)) return structureResult

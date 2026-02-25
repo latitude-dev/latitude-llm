@@ -13,13 +13,14 @@ export async function unsafelyFindActiveRun(runUuid: string) {
     )
   }
 
-  const { workspaceId, projectId, documentUuid } =
+  const { workspaceId, projectId, commitUuid, documentUuid } =
     job.data as BackgroundRunJobData
 
   const getting = await getRunByDocument({
     workspaceId,
     projectId,
     documentUuid,
+    commitUuid,
     runUuid,
   })
   if (getting.error) return Result.error(getting.error)

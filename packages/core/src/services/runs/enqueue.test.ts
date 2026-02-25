@@ -147,6 +147,7 @@ describe('enqueueRun', () => {
         workspaceId: mockWorkspace.id,
         projectId: mockProject.id,
         documentUuid: mockDocument.documentUuid,
+        commitUuid: mockCommit.uuid,
         runUuid: run.uuid,
         cache: redis,
       })

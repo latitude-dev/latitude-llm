@@ -62,7 +62,16 @@ export function useConversationUpdatedListener(
 
       mutate({ items: newItems, next }, { revalidate: false })
     },
-    [project.id, commit.uuid, document.documentUuid, currentCursor, items, next, mutate, globalMutate],
+    [
+      project.id,
+      commit.uuid,
+      document.documentUuid,
+      currentCursor,
+      items,
+      next,
+      mutate,
+      globalMutate,
+    ],
   )
 
   useSockets({

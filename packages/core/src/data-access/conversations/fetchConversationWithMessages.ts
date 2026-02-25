@@ -71,7 +71,10 @@ export async function fetchConversationWithMessages(
 
   const traces: AssembledTrace[] = []
   for (const traceId of conversation.traceIds) {
-    const result = await assembleTraceWithMessages({ traceId, workspace }, db)
+    const result = await assembleTraceWithMessages(
+      { traceId, projectId, documentUuid, commitUuid, workspace },
+      db,
+    )
     if (result.ok && result.value) {
       traces.push(result.value.trace)
     }
