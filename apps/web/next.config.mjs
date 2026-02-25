@@ -27,6 +27,7 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '25mb',
     },
+    preloadEntriesOnStart: false,
   },
   images: {
     remotePatterns: [new URL('https://assets.pipedream.net/**')],
