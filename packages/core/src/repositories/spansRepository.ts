@@ -730,6 +730,8 @@ export class SpansRepository extends Repository<Span> {
       'evaluatedSpanId' | 'evaluatedTraceId'
     >[],
   ) {
+    if (evaluationResults.length === 0) return []
+
     const spanTraceIdPairs = evaluationResults.map(
       (result) => sql`(${result.evaluatedSpanId}, ${result.evaluatedTraceId})`,
     )
