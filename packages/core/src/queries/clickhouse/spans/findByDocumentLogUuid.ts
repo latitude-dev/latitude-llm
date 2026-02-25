@@ -108,7 +108,7 @@ export const findByDocumentLogUuids = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${TABLE_NAME} FINAL
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND document_log_uuid IN ({documentLogUuids: Array(UUID)})
     `,
@@ -168,7 +168,7 @@ export const listByDocumentLogUuid = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${TABLE_NAME} FINAL
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND document_log_uuid = {documentLogUuid: UUID}
         ${pkConditions.map((c) => `AND ${c}`).join('\n        ')}

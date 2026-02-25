@@ -27,7 +27,7 @@ export const findBySpanAndTraceIdPairs = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${TABLE_NAME} FINAL
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND (span_id, trace_id) IN (${tuples})
       ORDER BY started_at ASC, span_id ASC
@@ -54,7 +54,7 @@ export const findByParentAndType = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${TABLE_NAME} FINAL
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND parent_id = {parentId: String}
         AND type = {type: String}
@@ -83,7 +83,7 @@ export const findCompletionsByParentIds = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${TABLE_NAME} FINAL
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND type = {type: String}
         AND parent_id IN ({spanIds: Array(String)})

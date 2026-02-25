@@ -15,7 +15,7 @@ export const findSpans = scopedQuery(async function findSpans({
   const result = await clickhouseClient().query({
     query: `
       SELECT *
-      FROM ${TABLE_NAME} FINAL
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND trace_id = {traceId: String}
       ORDER BY started_at ASC, span_id ASC

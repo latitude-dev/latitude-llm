@@ -33,7 +33,7 @@ export const findByEvaluationResults = scopedQuery(
     const result = await clickhouseClient().query({
       query: `
       SELECT *
-      FROM ${TABLE_NAME} FINAL
+      FROM ${TABLE_NAME}
       WHERE workspace_id = {workspaceId: UInt64}
         AND (span_id, trace_id) IN (${tuples})
         AND type IN ({mainTypes: Array(String)})
