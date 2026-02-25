@@ -13,7 +13,6 @@ import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useCommits } from '$/stores/commitsStore'
 import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { CommitVersionCell } from '$/components/CommitVersionCell'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { EvaluationsColumn } from './EvaluationsColumn'
 
 export const ConversationRow = memo(function ConversationRow({
@@ -69,11 +68,6 @@ export const ConversationRow = memo(function ConversationRow({
         </TableCell>
         <TableCell>
           <EvaluationsColumn conversationId={conversation.documentLogUuid} />
-        </TableCell>
-        <TableCell>
-          <Badge variant='muted'>
-            <Text.H6>{conversation.traceCount} traces</Text.H6>
-          </Badge>
         </TableCell>
       </TableRow>
       {isExpanded && (

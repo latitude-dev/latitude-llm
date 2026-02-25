@@ -41,9 +41,7 @@ export const ConversationPanel = forwardRef<HTMLDivElement, Props>(
     const {
       messages,
       outputMessages,
-      totalTokens,
       totalDuration,
-      totalCost,
       traceCount,
       documentLogUuid: conversationId,
       promptName,
@@ -65,9 +63,7 @@ export const ConversationPanel = forwardRef<HTMLDivElement, Props>(
               <ConversationMetadata
                 isLoading={isLoading}
                 traceCount={traceCount}
-                totalTokens={totalTokens}
                 totalDuration={totalDuration}
-                totalCost={totalCost}
                 conversationId={conversationId}
                 commitUuid={commitUuid}
                 promptName={promptName}
@@ -108,18 +104,10 @@ function ConversationEvaluationsTab({
   )
 }
 
-function formatCost(costInMillicents: number): string {
-  if (costInMillicents === 0) return '-'
-  const dollars = costInMillicents / 100_000
-  return `$${dollars.toFixed(4)}`
-}
-
 function ConversationMetadata({
   isLoading,
   traceCount,
-  totalTokens,
   totalDuration,
-  totalCost,
   conversationId,
   commitUuid,
   promptName,
@@ -129,9 +117,7 @@ function ConversationMetadata({
 }: {
   isLoading: boolean
   traceCount: number
-  totalTokens: number
   totalDuration: number
-  totalCost: number
   conversationId: string | null
   commitUuid: string | null
   promptName: string | null
@@ -193,8 +179,6 @@ function ConversationMetadata({
         )}
         <MetadataItem label='Traces' value={String(traceCount)} />
         <MetadataItem label='Duration' value={formatDuration(totalDuration)} />
-        <MetadataItem label='Tokens' value={String(totalTokens)} />
-        <MetadataItem label='Cost' value={formatCost(totalCost)} />
         <Text.H6 color='foregroundMuted'>
           Metrics are aggregated across all traces in this conversation.
         </Text.H6>

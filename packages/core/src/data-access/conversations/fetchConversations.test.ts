@@ -172,7 +172,104 @@ describe('fetchConversations', () => {
       expect(result.ok).toBe(true)
       const { items } = result.unwrap()
       expect(items).toHaveLength(1)
-      expect(items[0]!.traceCount).toBe(1)
+      expect(items[0]!.totalDuration).toBeDefined()
+    })
+
+    it('only returns Prompt and External span types', async () => {
+      const documentLogUuid = generateUUIDIdentifier()
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-1',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-2',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.External,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-3',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Chat,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-4',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Tool,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-5',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Completion,
+      })
+
+      const filters: ConversationFilters = { commitUuids: [commit.uuid] }
+      const result = await fetchConversations({
+        workspace,
+        projectId: commit.projectId,
+        documentUuid: document.documentUuid,
+        filters,
+      })
+
+      expect(result.ok).toBe(true)
+      const { items } = result.unwrap()
+      expect(items).toHaveLength(2)
+    })
+
+    it('only returns spans without parent_id', async () => {
+      const documentLogUuid = generateUUIDIdentifier()
+
+      const rootSpan = await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-1',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-1',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        parentId: rootSpan.id,
+      })
+
+      const filters: ConversationFilters = { commitUuids: [commit.uuid] }
+      const result = await fetchConversations({
+        workspace,
+        projectId: commit.projectId,
+        documentUuid: document.documentUuid,
+        filters,
+      })
+
+      expect(result.ok).toBe(true)
+      const { items } = result.unwrap()
+      expect(items).toHaveLength(1)
+      expect(items[0]!.documentLogUuid).toBe(documentLogUuid)
     })
   })
 
@@ -539,94 +636,8 @@ describe('fetchConversations', () => {
     })
   })
 
-  describe('aggregations', () => {
-    it('correctly calculates totalTokens from all token fields', async () => {
-      const documentLogUuid = generateUUIDIdentifier()
-
-      await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-1',
-        documentLogUuid: documentLogUuid,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-        tokensPrompt: 100,
-        tokensCached: 50,
-        tokensReasoning: 25,
-        tokensCompletion: 200,
-      })
-
-      await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-2',
-        documentLogUuid: documentLogUuid,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-        tokensPrompt: 50,
-        tokensCached: 0,
-        tokensReasoning: 0,
-        tokensCompletion: 100,
-      })
-
-      const filters: ConversationFilters = {
-        commitUuids: [commit.uuid],
-      }
-
-      const result = await fetchConversations({
-        workspace,
-        projectId: commit.projectId,
-        documentUuid: document.documentUuid,
-        filters,
-      })
-
-      expect(result.ok).toBe(true)
-      const { items } = result.unwrap()
-      expect(items).toHaveLength(1)
-      expect(items[0]!.totalTokens).toBe(525)
-    })
-
-    it('correctly calculates totalCost', async () => {
-      const documentLogUuid = generateUUIDIdentifier()
-
-      await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-1',
-        documentLogUuid: documentLogUuid,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-        cost: 500,
-      })
-
-      await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-2',
-        documentLogUuid: documentLogUuid,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Prompt,
-        cost: 300,
-      })
-
-      const filters: ConversationFilters = {
-        commitUuids: [commit.uuid],
-      }
-
-      const result = await fetchConversations({
-        workspace,
-        projectId: commit.projectId,
-        documentUuid: document.documentUuid,
-        filters,
-      })
-
-      expect(result.ok).toBe(true)
-      const { items } = result.unwrap()
-      expect(items).toHaveLength(1)
-      expect(items[0]!.totalCost).toBe(800)
-    })
-
-    it('correctly calculates totalDuration for main span types only', async () => {
+  describe('initiator span list', () => {
+    it('returns one row per initiator span with totalDuration', async () => {
       const documentLogUuid = generateUUIDIdentifier()
 
       await createSpan({
@@ -663,10 +674,10 @@ describe('fetchConversations', () => {
       expect(result.ok).toBe(true)
       const { items } = result.unwrap()
       expect(items).toHaveLength(1)
-      expect(items[0]!.totalDuration).toBe(1500)
+      expect(Number(items[0]!.totalDuration)).toBe(1000)
     })
 
-    it('correctly counts unique traceIds', async () => {
+    it('returns multiple rows for multiple initiator spans', async () => {
       const documentLogUuid = generateUUIDIdentifier()
 
       await createSpan({
@@ -709,14 +720,10 @@ describe('fetchConversations', () => {
 
       expect(result.ok).toBe(true)
       const { items } = result.unwrap()
-      expect(items).toHaveLength(1)
-      expect(items[0]!.traceCount).toBe(2)
-      expect(items[0]!.traceIds).toHaveLength(2)
-      expect(items[0]!.traceIds).toContain('trace-1')
-      expect(items[0]!.traceIds).toContain('trace-2')
+      expect(items).toHaveLength(3)
     })
 
-    it('correctly picks the latest source and commitUuid', async () => {
+    it('returns rows ordered by latest startedAt first', async () => {
       const documentLogUuid = generateUUIDIdentifier()
       const commit2Uuid = generateUUIDIdentifier()
 
@@ -758,12 +765,12 @@ describe('fetchConversations', () => {
 
       expect(result.ok).toBe(true)
       const { items } = result.unwrap()
-      expect(items).toHaveLength(1)
+      expect(items).toHaveLength(2)
       expect(items[0]!.source).toBe(LogSources.Playground)
       expect(items[0]!.commitUuid).toBe(commit2Uuid)
     })
 
-    it('correctly calculates startedAt and endedAt', async () => {
+    it('returns each row with its span startedAt and endedAt', async () => {
       const documentLogUuid = generateUUIDIdentifier()
 
       const now = Date.now()
@@ -807,14 +814,26 @@ describe('fetchConversations', () => {
 
       expect(result.ok).toBe(true)
       const { items } = result.unwrap()
-      expect(items).toHaveLength(1)
-      const resultStartedAt = new Date(items[0]!.startedAt).getTime()
-      const resultEndedAt = new Date(items[0]!.endedAt).getTime()
-      expect(resultStartedAt).toBeLessThan(new Date(start1).getTime())
-      expect(resultEndedAt).toBeGreaterThan(new Date(end2).getTime())
+      expect(items).toHaveLength(2)
+      const byStarted = items.sort(
+        (a, b) =>
+          new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+      )
+      expect(new Date(byStarted[0]!.startedAt).getTime()).toBe(
+        new Date(start1).getTime(),
+      )
+      expect(new Date(byStarted[0]!.endedAt).getTime()).toBe(
+        new Date(end1).getTime(),
+      )
+      expect(new Date(byStarted[1]!.startedAt).getTime()).toBe(
+        new Date(start2).getTime(),
+      )
+      expect(new Date(byStarted[1]!.endedAt).getTime()).toBe(
+        new Date(end2).getTime(),
+      )
     })
 
-    it('handles null token values gracefully', async () => {
+    it('returns row with zero totalDuration when span has null duration', async () => {
       const documentLogUuid = generateUUIDIdentifier()
 
       await createSpan({
@@ -824,6 +843,7 @@ describe('fetchConversations', () => {
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
+        duration: 0,
         tokensPrompt: undefined,
         tokensCached: undefined,
         tokensReasoning: undefined,
@@ -844,7 +864,7 @@ describe('fetchConversations', () => {
       expect(result.ok).toBe(true)
       const { items } = result.unwrap()
       expect(items).toHaveLength(1)
-      expect(items[0]!.totalTokens).toBe(0)
+      expect(Number(items[0]!.totalDuration)).toBe(0)
     })
   })
 

@@ -57,7 +57,6 @@ export function DocumentTraces({
           <TableHead>Source</TableHead>
           <TableHead>Duration</TableHead>
           <TableHead>Evaluations</TableHead>
-          <TableHead>Traces</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

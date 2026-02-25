@@ -6,16 +6,16 @@ import { CommitsRepository } from '@latitude-data/core/repositories'
 import { DEFAULT_PAGINATION_SIZE } from '@latitude-data/core/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { Commit } from '@latitude-data/core/schema/models/types/Commit'
-import { fetchConversations } from '@latitude-data/core/data-access/conversations/fetchConversations'
 import {
-  Conversation,
-  fetchConversation,
-} from '@latitude-data/core/data-access/conversations/fetchConversation'
+  fetchConversations,
+  type ConversationListItem,
+} from '@latitude-data/core/data-access/conversations/fetchConversations'
+import { fetchConversation } from '@latitude-data/core/data-access/conversations/fetchConversation'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 export type ConversationsResponse = {
-  items: Conversation[]
+  items: ConversationListItem[]
   next: string | null
   didFallbackToAllTime?: boolean
 }
@@ -51,7 +51,17 @@ export async function getConversationsForDocument({
       return { items: [], next: null }
     }
 
-    return { items: [conversationResult.value], next: null }
+    const c = conversationResult.value
+    const listItem: ConversationListItem = {
+      documentLogUuid: c.documentLogUuid,
+      startedAt: c.startedAt,
+      endedAt: c.endedAt,
+      totalDuration: c.totalDuration ?? 0,
+      source: c.source,
+      commitUuid: c.commitUuid ?? '',
+      experimentUuid: c.experimentUuid,
+    }
+    return { items: [listItem], next: null }
   }
 
   const commitUuids = await buildCommitFilter({

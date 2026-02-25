@@ -7,16 +7,12 @@ import { API_ROUTES } from '$/services/routes/api'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useCursorPagination } from '$/stores/useCursorPagination'
 import { ConversationsResponse } from '$/app/api/conversations/route'
-import { Conversation as DbConversation } from '@latitude-data/core/data-access/conversations/fetchConversation'
+import { type ConversationListItem } from '@latitude-data/core/data-access/conversations/fetchConversations'
 import { SpansFilters } from '$/lib/schemas/filters'
 
-type Conversation = Omit<
-  DbConversation,
-  'startedAt' | 'endedAt' | 'latestStartedAt'
-> & {
+type Conversation = Omit<ConversationListItem, 'startedAt' | 'endedAt'> & {
   startedAt: Date
   endedAt: Date
-  latestStartedAt: Date
 }
 
 function parseUtcDate(dateStr: string): Date {
@@ -25,13 +21,12 @@ function parseUtcDate(dateStr: string): Date {
 }
 
 function deserializeConversation(
-  item: ConversationsResponse['items'][0],
+  item: ConversationListItem,
 ): Conversation {
   return {
     ...item,
     startedAt: parseUtcDate(item.startedAt),
     endedAt: parseUtcDate(item.endedAt),
-    latestStartedAt: parseUtcDate(item.latestStartedAt),
   }
 }
 
