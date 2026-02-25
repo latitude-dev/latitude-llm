@@ -55,8 +55,8 @@ catalogs:
       specifier: 8.16.0
       version: 8.16.0
     promptl-ai:
-      specifier: 0.10.0
-      version: 0.10.0
+      specifier: 0.11.0
+      version: 0.11.0
     react:
       specifier: 19.2.4
       version: 19.2.4
@@ -202,7 +202,7 @@ importers:
         version: 4.17.21
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -407,7 +407,7 @@ importers:
         version: 1.298.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -727,7 +727,7 @@ importers:
         version: 0.4.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       zod:
         specifier: 'catalog:'
         version: 4.1.8
@@ -950,7 +950,7 @@ importers:
         version: 5.14.0
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rate-limiter-flexible:
         specifier: 5.0.3
         version: 5.0.3
@@ -1157,7 +1157,7 @@ importers:
         version: 2.0.1
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       typescript:
         specifier: ^5.5.4
         version: 5.9.3
@@ -1315,7 +1315,7 @@ importers:
         version: 6.17.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@4.1.8)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       rollup:
         specifier: ^4.53.3
         version: 4.53.3
@@ -1541,7 +1541,7 @@ importers:
         version: 16.1.1(postcss@8.5.6)
       promptl-ai:
         specifier: 'catalog:'
-        version: 0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
+        version: 0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))
       recast:
         specifier: ^0.23.4
         version: 0.23.11
@@ -11954,8 +11954,8 @@ packages:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
 
-  promptl-ai@0.10.0:
-    resolution: {integrity: sha512-ZuD0CJ4NjHWqvs3POvcoER8ifAZH3ivRBO5YGGPci/qNVRh5+u2kgkzSIQcbzMH1bSvnY2LuENxTX0uHC6lE/A==}
+  promptl-ai@0.11.0:
+    resolution: {integrity: sha512-Ek6/doPCDJF7j83O7Id5rqobejR9Jungtir17Jn1YY5LmAnBzgleimnmvvgPa8kx+zaCMj/91oDDRAGNQag+zA==}
 
   promptl-ai@0.7.5:
     resolution: {integrity: sha512-qDJggAR34qqxc5/X6xqagMCVNVQK8U3ycohtKJNG1/1Ap5VJ/UzF4ERphWAmLrspl4KYcT2ITKQhq28TAcw3Qg==}
@@ -27665,7 +27665,7 @@ snapshots:
 
   progress@2.0.3: {}
 
-  promptl-ai@0.10.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)):
+  promptl-ai@0.11.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)):
     dependencies:
       acorn: 8.15.0
       code-red: 1.0.4
