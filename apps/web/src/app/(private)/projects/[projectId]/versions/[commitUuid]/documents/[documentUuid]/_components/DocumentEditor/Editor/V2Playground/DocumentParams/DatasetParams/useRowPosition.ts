@@ -4,7 +4,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { useToast } from '@latitude-data/web-ui/atoms/Toast'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Dataset } from '@latitude-data/core/schema/models/types/Dataset'
 
 export type WithPositionData = {
@@ -49,7 +49,10 @@ export function useDatasetRowPosition() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const currentUrl = useCurrentUrl()
-  const fetchPosition = buildFetcher({ toast, navigate, currentUrl })
+  const fetchPosition = useMemo(
+    () => buildFetcher({ toast, navigate, currentUrl }),
+    [toast, navigate, currentUrl],
+  )
   const [position, setPosition] = useState<number | undefined>(undefined)
   const [isLoadingPosition, setIsLoadingPosition] = useState(false)
   const getPosition = useCallback(

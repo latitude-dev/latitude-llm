@@ -12,7 +12,7 @@ import { Select, SelectOption } from '@latitude-data/web-ui/atoms/Select'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDocumentParameterValues } from '../DocumentParametersContext'
 import { NoInputsMessage } from '../NoInputsMessage'
 import { useDatasetRowPosition } from './useRowPosition'
@@ -40,6 +40,8 @@ export function DatasetParams({
   const { setParameterValues } = useDocumentParameterValues()
   const { getPosition, position, setPosition, isLoadingPosition } =
     useDatasetRowPosition()
+  const getPositionRef = useRef(getPosition)
+  getPositionRef.current = getPosition
 
   // Column mapping
   const [mappedValues, setMappedValues] = useState<Record<string, string>>({})
@@ -158,21 +160,15 @@ export function DatasetParams({
     }
   }
 
-  // Initialize position when document loads with a dataset
   useEffect(() => {
     if (selectedDataset && document.datasetV2Id === selectedDataset.id) {
-      getPosition({
+      getPositionRef.current({
         dataset: selectedDataset,
         datasetRowId:
           document.linkedDatasetAndRow?.[selectedDataset.id]?.datasetRowId,
       })
     }
-  }, [
-    document.datasetV2Id,
-    selectedDataset,
-    document.linkedDatasetAndRow,
-    getPosition,
-  ])
+  }, [document.datasetV2Id, selectedDataset, document.linkedDatasetAndRow])
 
   const selectedId = selectedDataset?.id
   const isLoading = isLoadingDatasets || isLoadingPosition
