@@ -177,8 +177,6 @@ describe('createInstantlyLead', () => {
       )
     })
   })
-<<<<<<< Updated upstream
-=======
 
   describe('paid plan filtering', () => {
     it('skips without exception when workspace has a paid plan', async () => {
@@ -217,5 +215,4 @@ describe('createInstantlyLead', () => {
       expect(mockFetch).toHaveBeenCalledTimes(1)
     })
   })
->>>>>>> Stashed changes
 })
