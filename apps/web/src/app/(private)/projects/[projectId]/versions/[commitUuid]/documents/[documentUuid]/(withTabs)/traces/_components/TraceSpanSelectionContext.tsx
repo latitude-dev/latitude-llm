@@ -5,6 +5,7 @@ import {
   ReactNode,
   useState,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
 } from 'react'
@@ -145,10 +146,15 @@ export const TraceSpanSelectionStateContext =
     },
   })
 
-function initialSelectionState(): SelectionState {
-  const params = new URLSearchParams(
-    typeof window !== 'undefined' ? window.location.search : '',
-  )
+const EMPTY_SELECTION: SelectionState = {
+  documentLogUuid: null,
+  spanId: null,
+  activeRunUuid: null,
+  expandedDocumentLogUuid: null,
+}
+
+function selectionStateFromUrl(): SelectionState {
+  const params = new URLSearchParams(window.location.search)
   const {
     documentLogUuid: documentLogUuidParam,
     spanId: spanIdParam,
@@ -174,6 +180,16 @@ function initialSelectionState(): SelectionState {
         initialExpandedDocumentLogUuid || filters.documentLogUuid || null
     }
   }
+
+  if (
+    !initialDocumentLogUuid &&
+    !initialSpanId &&
+    !directActiveRunUuid &&
+    !initialExpandedDocumentLogUuid
+  ) {
+    return EMPTY_SELECTION
+  }
+
   return {
     documentLogUuid: initialDocumentLogUuid,
     spanId: initialSpanId,
@@ -191,12 +207,28 @@ export function TraceSpanSelectionProvider({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const [selection, setSelection] = useState<SelectionState>(
-    initialSelectionState,
-  )
+  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION)
 
   const selectionRef = useRef(selection)
   selectionRef.current = selection
+
+  useEffect(() => {
+    const fromUrl = selectionStateFromUrl()
+    if (fromUrl !== EMPTY_SELECTION) {
+      setSelection(fromUrl)
+
+      if (fromUrl.documentLogUuid && fromUrl.spanId) {
+        preloadTraceData({
+          documentLogUuid: fromUrl.documentLogUuid,
+          spanId: fromUrl.spanId,
+          projectId: project.id,
+          commitUuid: commit.uuid,
+          commitId: commit.id,
+          documentUuid: document.documentUuid,
+        })
+      }
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearSelection = useCallback(() => {
     const newSelection: SelectionState = {
