@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
@@ -7,8 +7,13 @@ import { useDevMode } from '$/hooks/useDevMode'
 
 import { useMetadata } from '$/hooks/useMetadata'
 import { useMetadataParameters } from '$/hooks/useMetadataParameters'
-import { useFormattedParameters } from '../V2Playground/DocumentParams/DocumentParametersContext'
+import {
+  useDocumentParameterValues,
+  useFormattedParameters,
+} from '../V2Playground/DocumentParams/DocumentParametersContext'
 import { useInputSource } from '$/hooks/useInputSource'
+import { INPUT_SOURCE } from '@latitude-data/core/lib/documentPersistedInputs'
+import useDocumentVersions from '$/stores/documentVersions'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { useAutoScroll } from '@latitude-data/web-ui/hooks/useAutoScroll'
 import { cn } from '@latitude-data/web-ui/utils'
@@ -48,6 +53,11 @@ export function DocumentEditorContentArea({
 
   const { source, setSource } = useInputSource()
   const parameters = useFormattedParameters()
+  const { selectedDatasetId } = useDocumentParameterValues()
+  const { assignDataset } = useDocumentVersions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
   const hasParameters = useMemo(
     () => metadataParameters && metadataParameters.length > 0,
     [metadataParameters],
@@ -72,6 +82,28 @@ export function DocumentEditorContentArea({
       setSelectedTab,
     },
   )
+  const onRun = useCallback(() => {
+    if (
+      source === INPUT_SOURCE.dataset &&
+      selectedDatasetId != null &&
+      selectedDatasetId !== document.datasetV2Id
+    ) {
+      assignDataset({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        datasetId: selectedDatasetId,
+      })
+    }
+  }, [
+    source,
+    selectedDatasetId,
+    document,
+    project.id,
+    commit.uuid,
+    assignDataset,
+  ])
+
   const { runPromptButtonHandler } = useEditorCallbacks({
     isPlaygroundOpen,
     togglePlaygroundOpen,
@@ -80,6 +112,7 @@ export function DocumentEditorContentArea({
     playground,
     setSelectedTab,
     setUserMessage,
+    onRun,
   })
   useAutoScroll(containerRef, { startAtBottom: playground.mode === 'chat' })
   const showPlayground =

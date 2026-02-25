@@ -45,6 +45,8 @@ interface DocumentParametersContextType {
   getParameterType: (source: InputSource, param: string) => ParameterType
   currentSource: InputSource | undefined
   setCurrentSource: (source: InputSource) => void
+  selectedDatasetId: number | undefined
+  setSelectedDatasetId: (id: number | undefined) => void
   getStoredManualValue: (param: string) => string | undefined
   getStoredManualType: (param: string) => ParameterType | undefined
   isStorageLoaded: boolean
@@ -76,6 +78,9 @@ export function DocumentParametersProvider({
   const [currentSource, setCurrentSource] = useState<InputSource | undefined>(
     undefined,
   )
+  const [selectedDatasetId, setSelectedDatasetId] = useState<
+    number | undefined
+  >(undefined)
 
   const {
     storedParams,
@@ -171,6 +176,8 @@ export function DocumentParametersProvider({
       getParameterType,
       currentSource,
       setCurrentSource,
+      selectedDatasetId,
+      setSelectedDatasetId,
       getStoredManualValue,
       getStoredManualType,
       isStorageLoaded,
@@ -183,6 +190,7 @@ export function DocumentParametersProvider({
       getSourceValues,
       getParameterType,
       currentSource,
+      selectedDatasetId,
       getStoredManualValue,
       getStoredManualType,
       isStorageLoaded,

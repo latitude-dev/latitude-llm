@@ -37,7 +37,8 @@ export function DatasetParams({
   document: DocumentVersion
   metadataParameters: string[]
 }) {
-  const { setParameterValues } = useDocumentParameterValues()
+  const { setParameterValues, setSelectedDatasetId } =
+    useDocumentParameterValues()
   const { getPosition, position, setPosition, isLoadingPosition } =
     useDatasetRowPosition()
   const getPositionRef = useRef(getPosition)
@@ -69,6 +70,7 @@ export function DatasetParams({
       const selectedDs = data.find((ds) => ds.id === document.datasetV2Id)
       if (selectedDs) {
         setSelectedDataset(selectedDs)
+        setSelectedDatasetId(selectedDs.id)
         autoMapParameters(selectedDs)
       }
     },
@@ -152,6 +154,7 @@ export function DatasetParams({
     const ds = datasets.find((ds) => ds.id === Number(value))
     if (ds) {
       setSelectedDataset(ds)
+      setSelectedDatasetId(ds.id)
       autoMapParameters(ds)
       await getPosition({
         dataset: ds,
