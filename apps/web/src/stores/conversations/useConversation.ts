@@ -6,7 +6,7 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { ConversationTracesResponse } from '$/app/api/conversations/[conversationId]/route'
 
-export function getConversationKey(
+export function buildConversationUrl(
   conversationId?: string,
   projectId?: number,
   commitUuid?: string,
@@ -36,7 +36,7 @@ export function useConversation(
   },
   opts?: SWRConfiguration,
 ) {
-  const route = getConversationKey(
+  const route = buildConversationUrl(
     conversationId,
     projectId,
     commitUuid,

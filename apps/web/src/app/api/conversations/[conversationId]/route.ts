@@ -48,7 +48,6 @@ export const GET = errorHandler(
         commitUuid,
         documentUuid,
       })
-
       if (!result.ok || !result.value) {
         return NextResponse.json(
           {

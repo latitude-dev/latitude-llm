@@ -39,7 +39,7 @@ export const fetchConversation = scopedQuery(async function fetchConversation({
 
   const conditions = [
     `workspace_id = {workspaceId: UInt64}`,
-    `project_id_key = {projectId: UInt64}`,
+    `(project_id_key = {projectId: UInt64} OR project_id = 0)`,
     `document_log_uuid = {documentLogUuid: UUID}`,
   ]
 

@@ -103,6 +103,7 @@ function UnifiedTimeline({
   const { selection } = use(TraceSpanSelectionStateContext)
   const { selectSpan } = use(TraceSpanSelectionActionsContext)
 
+  console.log('selection: ', selection, traces.length)
   const isConversationSelected = !selection.spanId && traces.length > 1
   const onSelectConversation = useCallback(() => {
     if (traces.length === 1 && traces[0]?.children[0]) {

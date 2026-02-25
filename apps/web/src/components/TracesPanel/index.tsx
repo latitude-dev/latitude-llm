@@ -26,7 +26,7 @@ const TRACE_TABS = [
   { label: 'Evaluations', value: 'evaluations' },
 ]
 
-export function TraceInfoPanel({
+export function SpanInfoPanel({
   ref,
   spanId,
   documentLogUuid,

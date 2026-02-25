@@ -16,7 +16,7 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { executeFetch } from '$/hooks/useFetcher'
-import { Conversation, getConversationKey } from '$/stores/conversations'
+import { Conversation, buildConversationUrl } from '$/stores/conversations'
 import { getSpanKey } from '$/stores/spans'
 import { getEvaluationResultsV2BySpansKey } from '$/stores/evaluationResultsV2/bySpans'
 
@@ -35,7 +35,12 @@ function preloadTraceData({
   commitId: number
   documentUuid: string
 }) {
-  const conversationKey = getConversationKey(documentLogUuid)
+  const conversationKey = buildConversationUrl(
+    documentLogUuid,
+    projectId,
+    commitUuid,
+    documentUuid,
+  )
   const { route: spanRoute, key: spanKey } = getSpanKey(documentLogUuid, spanId)
   const {
     route: evaluationsRoute,
@@ -271,9 +276,19 @@ export function TraceSpanSelectionProvider({
         return
       }
 
-      const conversationKey = getConversationKey(documentLogUuid!)
-
+      const conversationKey = buildConversationUrl(
+        documentLogUuid!,
+        project.id,
+        commit.uuid,
+        document.documentUuid,
+      )
       if (traceCount === 1 && conversationKey) {
+        setSelection({
+          documentLogUuid,
+          spanId: null,
+          activeRunUuid: null,
+          expandedDocumentLogUuid: documentLogUuid,
+        })
         const data = await executeFetch<{
           traces: { children: { id: string }[] }[]
         }>({

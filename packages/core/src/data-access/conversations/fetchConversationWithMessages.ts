@@ -1,13 +1,10 @@
 import { Message } from '@latitude-data/constants/messages'
 import { database } from '../../client'
 import { Result } from '../../lib/Result'
-import { SpanMetadatasRepository, SpansRepository } from '../../repositories'
+import { SpanMetadatasRepository } from '../../repositories'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { assembleTraceWithMessages } from '../../services/tracing/traces/assemble'
-import {
-  adaptCompletionSpanMessagesToLegacy,
-  findCompletionSpanFromTrace,
-} from '../../services/tracing/spans/fetching/findCompletionSpanFromTrace'
+import { findCompletionSpanFromTrace } from '../../services/tracing/spans/fetching/findCompletionSpanFromTrace'
 import { Conversation, fetchConversation } from './fetchConversation'
 import {
   AssembledSpan,
@@ -62,15 +59,7 @@ export async function fetchConversationWithMessages(
   }
 
   const conversation = conversationResult.value
-
-  const repository = new SpansRepository(workspace.id, db)
-  const traceIds = await repository.listTraceIdsByLogUuid(documentLogUuid, {
-    commitUuid,
-    documentUuid,
-    projectId,
-  })
-
-  if (traceIds.length === 0) {
+  if (conversation.traceIds.length === 0) {
     return Result.ok<ConversationWithMessages>({
       ...conversation,
       messages: [],
@@ -81,8 +70,7 @@ export async function fetchConversationWithMessages(
   }
 
   const traces: AssembledTrace[] = []
-
-  for (const traceId of traceIds) {
+  for (const traceId of conversation.traceIds) {
     const result = await assembleTraceWithMessages({ traceId, workspace }, db)
     if (result.ok && result.value) {
       traces.push(result.value.trace)
@@ -93,8 +81,11 @@ export async function fetchConversationWithMessages(
 
   const lastTrace = traces[traces.length - 1]
   const completionSpan = findCompletionSpanFromTrace(lastTrace)
-  const allMessages = completionSpan
-    ? adaptCompletionSpanMessagesToLegacy(completionSpan)
+  const allMessages = completionSpan?.metadata
+    ? [
+        ...completionSpan.metadata.input,
+        ...(completionSpan.metadata.output || []),
+      ]
     : []
 
   const firstPromptSpan = findFirstPromptSpan(traces)

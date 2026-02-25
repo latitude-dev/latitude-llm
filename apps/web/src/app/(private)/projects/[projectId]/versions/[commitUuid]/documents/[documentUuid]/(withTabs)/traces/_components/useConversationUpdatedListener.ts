@@ -4,11 +4,13 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   Conversation,
   deserializeConversation,
-  getConversationKey,
+  buildConversationUrl,
   UseConversationsReturn,
 } from '$/stores/conversations'
 
@@ -17,6 +19,8 @@ type ConversationUpdatedArgs = EventArgs<'conversationUpdated'>
 export function useConversationUpdatedListener(
   conversations: UseConversationsReturn,
 ) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { currentCursor, items, next, mutate } = conversations
   const { mutate: globalMutate } = useSWRConfig()
@@ -30,7 +34,12 @@ export function useConversationUpdatedListener(
       const incomingConversation = deserializeConversation(args.conversation)
       const documentLogUuid = incomingConversation.documentLogUuid
 
-      const conversationDetailKey = getConversationKey(documentLogUuid!)
+      const conversationDetailKey = buildConversationUrl(
+        documentLogUuid!,
+        project.id,
+        commit.uuid,
+        document.documentUuid,
+      )
       if (conversationDetailKey) {
         globalMutate(conversationDetailKey)
       }
@@ -53,7 +62,7 @@ export function useConversationUpdatedListener(
 
       mutate({ items: newItems, next }, { revalidate: false })
     },
-    [document.documentUuid, currentCursor, items, next, mutate, globalMutate],
+    [project.id, commit.uuid, document.documentUuid, currentCursor, items, next, mutate, globalMutate],
   )
 
   useSockets({

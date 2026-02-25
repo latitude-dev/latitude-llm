@@ -71,14 +71,8 @@ export const fetchConversations = scopedQuery(
 
     const conditions = [
       `workspace_id = {workspaceId: UInt64}`,
-      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-      `project_id = {projectId: UInt64}`,
       `project_id_key = {projectId: UInt64}`,
-      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-      `document_uuid = {documentUuid: UUID}`,
       `document_uuid_key = {documentUuid: UUID}`,
-      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-      `commit_uuid IN ({commitUuids: Array(UUID)})`,
       `commit_uuid_key IN ({commitUuids: Array(UUID)})`,
       `type IN ({mainSpanTypes: Array(String)})`,
       `document_log_uuid IS NOT NULL`,

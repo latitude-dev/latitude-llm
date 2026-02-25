@@ -186,5 +186,5 @@ export function useConversationsStore(
 
 export type { Conversation }
 export { deserializeConversation }
-export { getConversationKey, useConversation } from './useConversation'
+export { buildConversationUrl, useConversation } from './useConversation'
 export { useConversationEvaluations } from './useConversationEvaluations'

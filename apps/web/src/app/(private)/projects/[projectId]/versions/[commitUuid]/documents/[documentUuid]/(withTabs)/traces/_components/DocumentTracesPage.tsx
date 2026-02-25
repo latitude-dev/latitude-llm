@@ -4,7 +4,7 @@ import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { TableResizableLayout } from '$/components/TableResizableLayout'
-import { TraceInfoPanel } from '$/components/TracesPanel'
+import { SpanInfoPanel } from '$/components/TracesPanel'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { SpansFilters, parseSpansFilters } from '$/lib/schemas/filters'
 import useDocumentTracesAggregations from '$/stores/documentTracesAggregations'
@@ -171,7 +171,7 @@ export function DocumentTracesPage({
                             commitUuid={commit.uuid}
                           />
                         ) : selection.trace ? (
-                          <TraceInfoPanel
+                          <SpanInfoPanel
                             ref={ref}
                             documentLogUuid={selection.trace.documentLogUuid}
                             spanId={selection.trace.spanId}

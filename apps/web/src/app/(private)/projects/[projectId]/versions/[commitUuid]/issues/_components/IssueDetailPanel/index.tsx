@@ -11,7 +11,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { IssueEvaluation } from './Evaluation'
 import { Separator } from '@latitude-data/web-ui/atoms/Separator'
 import { Span } from '@latitude-data/constants'
-import { TraceInfoPanel } from '$/components/TracesPanel'
+import { SpanInfoPanel } from '$/components/TracesPanel'
 import { ReactStateDispatch } from '@latitude-data/web-ui/commonTypes'
 import { IssueItemActions } from '../IssueItemActions'
 import { IssueDetails } from './IssueDetails'
@@ -137,7 +137,7 @@ export function IssuesDetailPanel({
               </DetailsPanel.Header>
               <DetailsPanel.Body>
                 {selectedSpan ? (
-                  <TraceInfoPanel
+                  <SpanInfoPanel
                     insideOtherPanel
                     spanId={selectedSpan.id}
                     documentLogUuid={selectedSpan.documentLogUuid!}
