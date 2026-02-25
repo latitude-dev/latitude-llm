@@ -1,0 +1,30 @@
+ALTER TABLE "latitude"."published_documents" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+DROP TABLE "latitude"."published_documents" CASCADE;--> statement-breakpoint
+
+-- Step 1: Fix duplicate documents by renaming them
+-- For each set of duplicates (same path, commit_id, deleted_at IS NULL),
+-- keep the first one (by id) with original path, rename others with _1, _2, etc.
+WITH duplicates AS (
+  SELECT
+    id,
+    path,
+    commit_id,
+    ROW_NUMBER() OVER (PARTITION BY path, commit_id ORDER BY id) as rn
+  FROM latitude.document_versions
+  WHERE deleted_at IS NULL
+),
+to_rename AS (
+  SELECT id, path, rn
+  FROM duplicates
+  WHERE rn > 1
+)
+UPDATE latitude.document_versions dv
+SET path = tr.path || '_' || (tr.rn - 1)::text
+FROM to_rename tr
+WHERE dv.id = tr.id;--> statement-breakpoint
+
+-- Step 2: Drop the old index
+DROP INDEX IF EXISTS latitude.document_versions_unique_path_commit_id_deleted_at;--> statement-breakpoint
+
+-- Step 3: Create the new constraint with NULLS NOT DISTINCT
+ALTER TABLE "latitude"."document_versions" ADD CONSTRAINT "document_versions_unique_path_commit_id_deleted_at" UNIQUE NULLS NOT DISTINCT("path","commit_id","deleted_at");

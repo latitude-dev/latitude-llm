@@ -7,6 +7,7 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  unique,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -48,11 +49,15 @@ export const documentVersions = latitudeSchema.table(
       .default(DocumentType.Agent),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
       () => datasetsV1.id,
-      { onDelete: 'set null' },
+      {
+        onDelete: 'set null',
+      },
     ),
     datasetV2Id: bigint('dataset_v2_id', { mode: 'number' }).references(
       () => datasets.id,
-      { onDelete: 'set null' },
+      {
+        onDelete: 'set null',
+      },
     ),
     linkedDataset: json('linked_dataset_by_dataset_id')
       .$type<LinkedDatasetByDatasetId>()
@@ -68,9 +73,11 @@ export const documentVersions = latitudeSchema.table(
     uniqueDocumentUuidCommitId: uniqueIndex(
       'document_versions_unique_document_uuid_commit_id',
     ).on(table.documentUuid, table.commitId),
-    uniquePathCommitIdDeletedAt: uniqueIndex(
+    uniquePathCommitIdDeletedAt: unique(
       'document_versions_unique_path_commit_id_deleted_at',
-    ).on(table.path, table.commitId, table.deletedAt),
+    )
+      .on(table.path, table.commitId, table.deletedAt)
+      .nullsNotDistinct(),
     commitIdIdx: index('document_versions_commit_id_idx').on(table.commitId),
     deletedAtIdx: index('document_versions_deleted_at_idx').on(table.deletedAt),
     pathIdx: index('document_versions_path_idx').on(table.path),

@@ -1898,6 +1898,13 @@
       "when": 1771255243925,
       "tag": "0271_add_product_access_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 272,
+      "version": "7",
+      "when": 1771858810057,
+      "tag": "0272_fix_duplicated_documents_in_commit",
+      "breakpoints": true
     }
   ]
 }
