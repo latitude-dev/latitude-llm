@@ -8,10 +8,9 @@ import { type Workspace } from '../../schema/models/types/Workspace'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { publisher } from '../../events/publisher'
-import { BadRequestError } from '../../lib/errors'
+import { BadRequestError, ConflictError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema/models/documentVersions'
 import { createDemoEvaluation } from '../evaluationsV2/createDemoEvaluation'
 import { pingProjectUpdate } from '../projects'
@@ -125,17 +124,6 @@ export async function createNewDocumentUnsafe(
       )
     }
 
-    const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
-    const currentDocs = await docsScope
-      .getDocumentsAtCommit(commit)
-      .then((r) => r.unwrap())
-
-    if (currentDocs.find((d) => d.path === path)) {
-      return Result.error(
-        new BadRequestError('A document with the same path already exists'),
-      )
-    }
-
     let docContent = content ?? ''
     if (includeDefaultContent) {
       const defaultContent = await defaultDocumentContent(
@@ -146,19 +134,31 @@ export async function createNewDocumentUnsafe(
     }
 
     const documentType = await getDocumentType({ content: docContent })
-    const [document] = await tx
-      .insert(documentVersions)
-      .values({
-        commitId: commit.id,
-        path,
-        content: docContent,
-        promptlVersion,
-        documentType,
-      })
-      .returning()
 
-    if (!document) {
-      return Result.error(new BadRequestError('Failed to create document'))
+    let document: DocumentVersion
+    try {
+      const [inserted] = await tx
+        .insert(documentVersions)
+        .values({
+          commitId: commit.id,
+          path,
+          content: docContent,
+          promptlVersion,
+          documentType,
+        })
+        .returning()
+      document = inserted
+    } catch (e) {
+      // If it's a conflicting error path we want to return a user-friendly
+      // message instead of a generic DB error.
+      const result = Transaction.toResultError(e, {
+        customConflictMessage: 'A document with the same path already exists',
+      })
+
+      const isConflict = result.error instanceof ConflictError
+      if (isConflict) return result
+
+      throw e
     }
 
     // Invalidate all resolvedContent for this commit

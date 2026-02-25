@@ -109,13 +109,20 @@ export default class Transaction {
    * Refer to the errors list at
    * https://github.com/rails/rails/blob/main/activerecord/lib/active_record/connection_adapters/postgresql_adapter.rb#L769.
    */
-  static toResultError(e: unknown): ErrorResult<Error> {
+  static toResultError(
+    e: unknown,
+    options?: { customConflictMessage?: string },
+  ): ErrorResult<Error> {
     const error = 'cause' in (e as Error) ? (e as Error).cause : undefined
     const code = (error as DatabaseError)?.code
 
     switch (code) {
       case DB_ERROR_CODES.UNIQUE_VIOLATION:
-        return Result.error(new ConflictError((error as DatabaseError).message))
+        return Result.error(
+          new ConflictError(
+            options?.customConflictMessage ?? (error as DatabaseError).message,
+          ),
+        )
       case DB_ERROR_CODES.INPUT_SYNTAX_ERROR:
         return Result.error(
           new UnprocessableEntityError((error as DatabaseError).message, {
