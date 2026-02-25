@@ -22,15 +22,13 @@ export function EvaluationsColumn({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { data: evaluationResults, isLoading } = useEvaluationResultsV2BySpans(
-    {
-      project,
-      commit,
-      document,
-      spanId,
-      documentLogUuid,
-    },
-  )
+  const { data: evaluationResults, isLoading } = useEvaluationResultsV2BySpans({
+    project,
+    commit,
+    document,
+    spanId,
+    documentLogUuid,
+  })
 
   const { data: evaluations } = useEvaluationsV2({
     project,
@@ -39,7 +37,8 @@ export function EvaluationsColumn({
   })
 
   const passedResults = useMemo(
-    () => evaluationResults.filter((result) => !!result.result.hasPassed).length,
+    () =>
+      evaluationResults.filter((result) => !!result.result.hasPassed).length,
     [evaluationResults],
   )
 

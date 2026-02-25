@@ -44,7 +44,10 @@ export const EventHandlers: IEventsHandlers = {
   datasetCreated: [],
   datasetUploaded: [createDatasetRowsJob],
   documentCreated: [clearDocumentGetDataCache],
-  documentsDeleted: [unassignIssuesOnDocumentsDeleted, clearDocumentGetDataCache],
+  documentsDeleted: [
+    unassignIssuesOnDocumentsDeleted,
+    clearDocumentGetDataCache,
+  ],
   experimentVariantsCreated: [],
   exportReady: [notifyClientOfExportReady],
   magicLinkTokenCreated: [sendMagicLinkJob],
