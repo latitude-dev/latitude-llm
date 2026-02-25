@@ -8,6 +8,9 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useConversation } from '$/stores/conversations'
 import useProviders from '$/stores/providerApiKeys'
 import { useTraceWithMessages } from '$/stores/traces'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { Providers } from '@latitude-data/constants'
 import {
   EvaluationResultV2,
@@ -356,8 +359,15 @@ function ResultPanelMessages<M extends LlmEvaluationMetric>({
 }: {
   result: EvaluationResultV2<EvaluationType.Llm, M>
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
   const { traces, isLoading: isLoadingTraces } = useConversation({
     conversationId: result.uuid,
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
   })
 
   const { traceId, spanId } = useMemo(() => {

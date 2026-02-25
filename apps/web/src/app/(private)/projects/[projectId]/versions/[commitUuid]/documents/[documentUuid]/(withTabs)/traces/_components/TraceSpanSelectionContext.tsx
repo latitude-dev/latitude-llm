@@ -35,7 +35,12 @@ function preloadTraceData({
   commitId: number
   documentUuid: string
 }) {
-  const conversationKey = getConversationKey(documentLogUuid)
+  const conversationKey = getConversationKey({
+    conversationId: documentLogUuid,
+    projectId,
+    commitUuid,
+    documentUuid,
+  })
   const { route: spanRoute, key: spanKey } = getSpanKey(documentLogUuid, spanId)
   const {
     route: evaluationsRoute,
@@ -262,6 +267,7 @@ export function TraceSpanSelectionProvider({
   const onClickConversationRow = useCallback(
     (conversation: Conversation) => async () => {
       const { documentLogUuid, traceCount } = conversation
+      if (!documentLogUuid) return
       const currentSelection = selectionRef.current
 
       const isExpanded =
@@ -271,9 +277,14 @@ export function TraceSpanSelectionProvider({
         return
       }
 
-      const conversationKey = getConversationKey(documentLogUuid!)
+      const conversationKey = getConversationKey({
+        conversationId: documentLogUuid,
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+      })
 
-      if (traceCount === 1 && conversationKey) {
+      if (traceCount === 1) {
         const data = await executeFetch<{
           traces: { children: { id: string }[] }[]
         }>({
@@ -282,7 +293,7 @@ export function TraceSpanSelectionProvider({
         const firstSpanId = data?.traces?.[0]?.children?.[0]?.id
         if (firstSpanId) {
           preloadTraceData({
-            documentLogUuid: documentLogUuid!,
+            documentLogUuid,
             spanId: firstSpanId,
             projectId: project.id,
             commitUuid: commit.uuid,
@@ -301,9 +312,7 @@ export function TraceSpanSelectionProvider({
         }
       }
 
-      if (conversationKey) {
-        preload(conversationKey, () => executeFetch({ route: conversationKey }))
-      }
+      preload(conversationKey, () => executeFetch({ route: conversationKey }))
 
       const newSelection: SelectionState = {
         documentLogUuid,

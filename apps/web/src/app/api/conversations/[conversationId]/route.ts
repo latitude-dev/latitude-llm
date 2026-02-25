@@ -44,9 +44,9 @@ export const GET = errorHandler(
       const result = await fetchConversationWithMessages({
         workspace,
         projectId,
-        documentLogUuid: conversationId,
         commitUuid,
         documentUuid,
+        documentLogUuid: conversationId,
       })
 
       if (!result.ok || !result.value) {

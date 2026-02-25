@@ -6,18 +6,24 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { ConversationTracesResponse } from '$/app/api/conversations/[conversationId]/route'
 
-export function getConversationKey(
-  conversationId?: string,
-  projectId?: number,
-  commitUuid?: string,
-  documentUuid?: string,
-) {
-  if (!conversationId) return undefined
+type ConversationRouteParams = {
+  conversationId: string
+  projectId: number
+  commitUuid: string
+  documentUuid: string
+}
+
+export function getConversationKey({
+  conversationId,
+  projectId,
+  commitUuid,
+  documentUuid,
+}: ConversationRouteParams) {
   const base = ROUTES.api.conversations.detail(conversationId).root
   const params = new URLSearchParams()
-  if (projectId) params.set('projectId', String(projectId))
-  if (commitUuid) params.set('commitUuid', commitUuid)
-  if (documentUuid) params.set('documentUuid', documentUuid)
+  params.set('projectId', String(projectId))
+  params.set('commitUuid', commitUuid)
+  params.set('documentUuid', documentUuid)
   const qs = params.toString()
   return qs ? `${base}?${qs}` : base
 }
@@ -28,20 +34,15 @@ export function useConversation(
     projectId,
     commitUuid,
     documentUuid,
-  }: {
-    conversationId?: string
-    projectId?: number
-    commitUuid?: string
-    documentUuid?: string
-  },
+  }: ConversationRouteParams,
   opts?: SWRConfiguration,
 ) {
-  const route = getConversationKey(
+  const route = getConversationKey({
     conversationId,
     projectId,
     commitUuid,
     documentUuid,
-  )
+  })
   const fetcher = useFetcher<ConversationTracesResponse>(route, {
     fallback: undefined,
   })
