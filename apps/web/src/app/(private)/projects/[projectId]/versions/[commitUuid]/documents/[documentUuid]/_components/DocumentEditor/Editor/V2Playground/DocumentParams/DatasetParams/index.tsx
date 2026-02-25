@@ -250,7 +250,7 @@ export function DatasetParams({
                 >
                   <div className='flex flex-row items-center gap-x-2 min-h-8'>
                     <Badge variant={isMapped ? 'accent' : 'muted'}>
-                      &#123;&#123;{param}&#125;&#125;
+                      {param}
                     </Badge>
                   </div>
                   <div className='flex flex-grow min-w-0 items-start w-full'>
