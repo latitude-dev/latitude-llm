@@ -1,21 +1,10 @@
-import { ResolvedToolsDict } from '@latitude-data/constants'
 import type { Message } from '@latitude-data/constants/messages'
 import type { SimulationSettings } from '@latitude-data/constants/simulation'
 import { Chain } from 'promptl-ai'
 import { StreamManager, StreamManagerProps } from '.'
-import { DocumentVersionsRepository } from '../../repositories'
-import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
-import {
-  validateChain,
-  ValidatedChainStep,
-} from '../../services/chains/ChainValidator'
+import { validateChain } from '../../services/chains/ChainValidator'
 import { CachedApiKeys } from '../../services/chains/run'
-import { lookupTools } from '../../services/documents/tools/lookup'
-import { resolveTools } from '../../services/documents/tools/resolve'
-import { LatitudeError } from '../errors'
 import { isAbortError } from '../isAbortError'
-import { Result } from '../Result'
-import { PromisedResult } from '../Transaction'
 import { streamAIResponse } from './step/streamAIResponse'
 
 /**
@@ -80,8 +69,8 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
         config: chain.config,
       })
 
-      const toolsBySource = await this.getToolsBySource(chain).then((r) =>
-        r.unwrap(),
+      const toolsBySource = await this.getToolsBySource(chain.config).then(
+        (r) => r.unwrap(),
       )
       const config = this.transformPromptlToVercelToolDeclarations(
         chain.config,
@@ -134,38 +123,5 @@ export class ChainStreamManager extends StreamManager implements StreamManager {
       this.endWithError(e as Error)
       return
     }
-  }
-
-  protected async getToolsBySource(
-    step: ValidatedChainStep,
-  ): PromisedResult<ResolvedToolsDict, LatitudeError> {
-    let documents: DocumentVersion[] = []
-    let documentUuid: string = ''
-
-    if ('commit' in this.promptSource) {
-      const documentScope = new DocumentVersionsRepository(this.workspace.id)
-      const documentsResult = await documentScope.getDocumentsAtCommit(
-        this.promptSource.commit,
-      )
-      if (!Result.isOk(documentsResult)) return documentsResult
-
-      documents = documentsResult.unwrap()
-      documentUuid = this.promptSource.document.documentUuid
-    }
-
-    const toolsManifestResult = await lookupTools({
-      config: step.config,
-      documentUuid,
-      documents,
-      workspace: this.workspace,
-    })
-
-    if (toolsManifestResult.error) return toolsManifestResult
-    const toolManifestDict = toolsManifestResult.unwrap()
-
-    return resolveTools({
-      toolManifestDict,
-      streamManager: this,
-    })
   }
 }

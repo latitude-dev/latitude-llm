@@ -21,19 +21,27 @@ import {
   mergeCostBreakdown,
 } from '@latitude-data/constants/costs'
 import { LogSources, PromptSource } from '../../constants'
+import { DocumentVersionsRepository } from '../../repositories'
+import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { IntegrationDto } from '../../schema/models/types/Integration'
 import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { estimateCostBreakdown } from '../../services/ai/estimateCost'
-import { ValidatedChainStep } from '../../services/chains/ChainValidator'
+import {
+  ValidatedChainStep,
+} from '../../services/chains/ChainValidator'
 import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
+import { lookupTools } from '../../services/documents/tools/lookup'
+import { resolveTools } from '../../services/documents/tools/resolve'
 import {
   createMcpClientManager,
   McpClientManager,
 } from '../../services/integrations/McpClient/McpClientManager'
 import { TelemetryContext } from '../../telemetry'
-import { ChainError, RunErrorCodes } from '../errors'
+import { ChainError, LatitudeError, RunErrorCodes } from '../errors'
 import { generateUUIDIdentifier } from '../generateUUID'
+import { Result } from '../Result'
+import { PromisedResult } from '../Transaction'
 import { createPromiseWithResolver } from './utils/createPromiseResolver'
 
 const addTokens = ({
@@ -204,19 +212,15 @@ export abstract class StreamManager {
 
     const e = error as ChainError<RunErrorCodes>
 
-    try {
-      this.sendEvent({
-        type: ChainEventTypes.ChainError,
-        error: {
-          name: e.name,
-          message: e.message,
-          details: e.details,
-          stack: e.stack,
-        },
-      })
-    } catch (_) {
-      // Controller may already be closed
-    }
+    this.sendEvent({
+      type: ChainEventTypes.ChainError,
+      error: {
+        name: e.name,
+        message: e.message,
+        details: e.details,
+        stack: e.stack,
+      },
+    })
 
     this.error = e
 
@@ -297,23 +301,15 @@ export abstract class StreamManager {
     const logCost = this.logCost
     const runCost = this.runCost
 
-    try {
-      this.sendEvent({
-        type: ChainEventTypes.ChainCompleted,
-        response: this.response,
-        toolCalls,
-        finishReason,
-        tokenUsage,
-      })
-    } catch (_) {
-      // Controller may already be closed
-    }
+    this.sendEvent({
+      type: ChainEventTypes.ChainCompleted,
+      response: this.response,
+      toolCalls,
+      finishReason,
+      tokenUsage,
+    })
 
-    try {
-      this.controller?.close()
-    } catch (_) {
-      // Controller may already be closed
-    }
+    this.closeController()
 
     this.resolveMessages?.(this.messages)
     this.resolveResponse?.(this.response)
@@ -397,29 +393,72 @@ export abstract class StreamManager {
   }
 
   protected sendEvent(event: OmittedLatitudeEventDataWithoutProviderLog) {
-    if (!this.controller) throw new Error('Stream not started')
+    try {
+      this.controller?.enqueue({
+        event: StreamEventTypes.Latitude,
+        data: {
+          ...event,
+          timestamp: Date.now(),
+          messages: this.messages,
+          uuid: this.uuid,
+          providerLogUuid: '',
+          source: {
+            documentUuid:
+              'document' in this.promptSource
+                ? this.promptSource.document.documentUuid
+                : undefined,
+            commitUuid:
+              'commit' in this.promptSource
+                ? this.promptSource.commit.uuid
+                : undefined,
+            evaluationUuid:
+              'uuid' in this.promptSource ? this.promptSource.uuid : undefined,
+          },
+        } as LatitudeEventData,
+      })
+    } catch (_) {
+      // Controller may already be closed
+    }
+  }
 
-    this.controller.enqueue({
-      event: StreamEventTypes.Latitude,
-      data: {
-        ...event,
-        timestamp: Date.now(),
-        messages: this.messages,
-        uuid: this.uuid,
-        providerLogUuid: '',
-        source: {
-          documentUuid:
-            'document' in this.promptSource
-              ? this.promptSource.document.documentUuid
-              : undefined,
-          commitUuid:
-            'commit' in this.promptSource
-              ? this.promptSource.commit.uuid
-              : undefined,
-          evaluationUuid:
-            'uuid' in this.promptSource ? this.promptSource.uuid : undefined,
-        },
-      } as LatitudeEventData,
+  private closeController() {
+    try {
+      this.controller?.close()
+    } catch (_) {
+      // Controller may already be closed
+    }
+  }
+
+  protected async getToolsBySource(
+    config: ValidatedChainStep['config'],
+  ): PromisedResult<ResolvedToolsDict, LatitudeError> {
+    let documents: DocumentVersion[] = []
+    let documentUuid: string = ''
+
+    if ('commit' in this.promptSource) {
+      const documentScope = new DocumentVersionsRepository(this.workspace.id)
+      const documentsResult = await documentScope.getDocumentsAtCommit(
+        this.promptSource.commit,
+      )
+      if (!Result.isOk(documentsResult)) return documentsResult
+
+      documents = documentsResult.unwrap()
+      documentUuid = this.promptSource.document.documentUuid
+    }
+
+    const toolsManifestResult = await lookupTools({
+      config,
+      documentUuid,
+      documents,
+      workspace: this.workspace,
+    })
+
+    if (toolsManifestResult.error) return toolsManifestResult
+    const toolManifestDict = toolsManifestResult.unwrap()
+
+    return resolveTools({
+      toolManifestDict,
+      streamManager: this,
     })
   }
 
