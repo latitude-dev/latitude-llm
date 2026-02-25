@@ -301,6 +301,8 @@ export type DocumentCreatedEvent = LatitudeEventGeneric<
   {
     document: DocumentVersion
     workspaceId: number
+    projectId: number
+    commitUuid: string
     userEmail?: string
   }
 >
@@ -312,6 +314,7 @@ export type DocumentsDeletedEvent = LatitudeEventGeneric<
     projectId: number
     commitUuid: string
     documentUuids: string[]
+    documentPaths: string[]
     softDeletedDocumentUuids: string[]
     hardDeletedDocumentUuids: string[]
   }

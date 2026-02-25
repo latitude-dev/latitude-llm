@@ -1,5 +1,7 @@
 import { BadRequestError, NotFoundError } from '@latitude-data/constants/errors'
+import { cache } from '@latitude-data/core/cache'
 import { Result } from '@latitude-data/core/lib/Result'
+import { getDataCacheKey } from '@latitude-data/core/services/documents/getDataCacheKey'
 import { validate as isValidUuid } from 'uuid'
 import {
   CommitsRepository,
@@ -129,6 +131,23 @@ export const getData = async ({
   commitUuid: string
   documentPath: string
 }) => {
+  const cacheKey = getDataCacheKey({
+    workspaceId: workspace.id,
+    projectId,
+    commitUuid,
+    documentPath,
+  })
+
+  try {
+    const cacheClient = await cache()
+    const cached = await cacheClient.get(cacheKey)
+    if (cached !== null && cached !== undefined) {
+      return Result.ok(JSON.parse(cached))
+    }
+  } catch (_error) {
+    // Ignore cache read errors
+  }
+
   const projectResult = await getProjectByVersionData({
     workspace,
     projectId,
@@ -146,5 +165,14 @@ export const getData = async ({
   if (documentResult.error) return documentResult
   const document = documentResult.value
 
-  return Result.ok({ project, commit, document })
+  const result = { project, commit, document }
+
+  try {
+    const cacheClient = await cache()
+    await cacheClient.set(cacheKey, JSON.stringify(result), 'EX', 3600)
+  } catch (_error) {
+    // Ignore cache write errors
+  }
+
+  return Result.ok(result)
 }

@@ -199,6 +199,8 @@ export async function createNewDocumentUnsafe(
       data: {
         document: document,
         workspaceId: workspace.id,
+        projectId: commit.projectId,
+        commitUuid: commit.uuid,
         userEmail: user?.email,
       },
     })

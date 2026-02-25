@@ -1,7 +1,9 @@
+import { cache } from '../../../cache'
 import { Result, TypedResult } from '../../../lib/Result'
 import { type Commit } from '../../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../../schema/models/types/DocumentVersion'
 import { type Workspace } from '../../../schema/models/types/Workspace'
+import { getDataCacheKey } from '../getDataCacheKey'
 import { updateDocument } from '../update'
 import { validateDocumentMetadata } from './validateDocumentMetadata'
 
@@ -35,6 +37,20 @@ export async function updateDocumentContent({
     content: prompt,
   })
   if (result.error) return result
+
+  try {
+    const cacheClient = await cache()
+    await cacheClient.del(
+      getDataCacheKey({
+        workspaceId: workspace.id,
+        projectId: commit.projectId,
+        commitUuid: commit.uuid,
+        documentPath: document.path,
+      }),
+    )
+  } catch (_error) {
+    // Ignore cache errors
+  }
 
   return Result.ok({
     document: result.value,

@@ -238,6 +238,7 @@ export async function destroyOrSoftDeleteDocuments(
           projectId: commit.projectId,
           commitUuid: commit.uuid,
           documentUuids: documents.map((d) => d.documentUuid),
+          documentPaths: documents.map((d) => d.path),
           softDeletedDocumentUuids,
           hardDeletedDocumentUuids,
         },

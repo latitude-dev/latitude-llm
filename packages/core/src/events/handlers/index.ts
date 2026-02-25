@@ -1,5 +1,6 @@
 import { IEventsHandlers } from '../events'
 import { assignIssueToEvaluationResultV2Job } from './assignIssueToEvaluationResultV2Job'
+import { clearDocumentGetDataCache } from './clearDocumentGetDataCache'
 import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
@@ -42,8 +43,8 @@ export const EventHandlers: IEventsHandlers = {
   commitPublished: [],
   datasetCreated: [],
   datasetUploaded: [createDatasetRowsJob],
-  documentCreated: [],
-  documentsDeleted: [unassignIssuesOnDocumentsDeleted],
+  documentCreated: [clearDocumentGetDataCache],
+  documentsDeleted: [unassignIssuesOnDocumentsDeleted, clearDocumentGetDataCache],
   experimentVariantsCreated: [],
   exportReady: [notifyClientOfExportReady],
   magicLinkTokenCreated: [sendMagicLinkJob],

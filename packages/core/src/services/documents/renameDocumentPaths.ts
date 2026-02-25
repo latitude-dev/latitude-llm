@@ -1,3 +1,4 @@
+import { cache } from '../../cache'
 import { findWorkspaceFromCommit } from '../../data-access/workspaces'
 import { BadRequestError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
@@ -6,6 +7,7 @@ import { assertCanEditCommit } from '../../lib/assertCanEditCommit'
 import { DocumentVersionsRepository } from '../../repositories'
 import { Commit } from '../../schema/models/types/Commit'
 import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
+import { getDataCacheKey } from './getDataCacheKey'
 import { updateDocument } from './update'
 
 export async function renameDocumentPaths(
@@ -59,6 +61,21 @@ export async function renameDocumentPaths(
         return updatedDoc.unwrap()
       }),
     )
+
+    try {
+      const cacheClient = await cache()
+      const keys = docsToUpdate.map((document) =>
+        getDataCacheKey({
+          workspaceId: workspace!.id,
+          projectId: commit.projectId,
+          commitUuid: commit.uuid,
+          documentPath: document.path,
+        }),
+      )
+      if (keys.length > 0) await cacheClient.del(...keys)
+    } catch (_error) {
+      // Ignore cache errors
+    }
 
     return Result.ok(updatedDocs)
   })
