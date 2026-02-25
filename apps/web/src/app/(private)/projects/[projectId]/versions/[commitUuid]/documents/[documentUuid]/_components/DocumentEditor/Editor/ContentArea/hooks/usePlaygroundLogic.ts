@@ -100,6 +100,7 @@ export function useEditorCallbacks({
   togglePlaygroundOpen,
   setSelectedTab,
   setUserMessage,
+  onRun,
 }: {
   playground: ReturnType<typeof usePlaygroundChat>
   isPlaygroundOpen: boolean
@@ -108,6 +109,7 @@ export function useEditorCallbacks({
   source: (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
   setSelectedTab: ReactStateDispatch<TabValue>
   setUserMessage: ReactStateDispatch<string>
+  onRun?: () => void
 }) {
   const runPromptButtonHandler = useCallback(() => {
     if (!isPlaygroundOpen) {
@@ -115,6 +117,7 @@ export function useEditorCallbacks({
       togglePlaygroundOpen()
     } else {
       playground.start()
+      onRun?.()
     }
     setUserMessage('')
   }, [
@@ -123,6 +126,7 @@ export function useEditorCallbacks({
     isPlaygroundOpen,
     setSelectedTab,
     setUserMessage,
+    onRun,
   ])
 
   return useMemo(
