@@ -170,7 +170,7 @@ describe('conversationCache', () => {
       expect(mockDisk.delete).toHaveBeenCalledWith(resolvedKey)
     })
 
-    it('returns error when disk.get throws', async () => {
+    it('returns undefined when disk.get throws (readConversationCacheFromDisk catches and returns nil)', async () => {
       const resolvedKey = `${CONVERSATION_CACHE_PREFIX}/12345/doc-log-uuid-123.json.gz`
       mockCache.get.mockResolvedValueOnce(resolvedKey)
       mockDisk.exists.mockResolvedValueOnce(true)
@@ -181,8 +181,8 @@ describe('conversationCache', () => {
         documentLogUuid: 'doc-log-uuid-123',
       })
 
-      expect(result.ok).toBe(false)
-      expect(result.error?.message).toBe('Disk read error')
+      expect(result.ok).toBe(true)
+      expect(result.value).toBeUndefined()
     })
   })
 
