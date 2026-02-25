@@ -18,6 +18,7 @@ import {
 
 export type ConversationWithMessages = Conversation & {
   messages: Message[]
+  outputMessages: Message[]
   traces: AssembledTrace[]
   promptName: string | null
   parameters: Record<string, unknown> | null
@@ -74,6 +75,7 @@ export async function fetchConversationWithMessages(
     return Result.ok<ConversationWithMessages>({
       ...conversation,
       messages: [],
+      outputMessages: [],
       traces: [],
       promptName: null,
       parameters: null,
@@ -96,6 +98,7 @@ export async function fetchConversationWithMessages(
   const allMessages = completionSpan
     ? adaptCompletionSpanMessagesToLegacy(completionSpan)
     : []
+  const outputMessages = completionSpan?.metadata?.output ?? []
 
   const firstPromptSpan = findFirstPromptSpan(traces)
   let promptName: string | null = null
@@ -119,6 +122,7 @@ export async function fetchConversationWithMessages(
   return Result.ok<ConversationWithMessages>({
     ...conversation,
     messages: allMessages,
+    outputMessages,
     traces,
     promptName,
     parameters,

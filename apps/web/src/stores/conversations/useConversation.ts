@@ -55,6 +55,7 @@ export function useConversation(
     () => ({
       traces: data?.traces ?? [],
       messages: data?.messages ?? [],
+      outputMessages: data?.outputMessages ?? [],
       totalTokens: data?.totalTokens ?? 0,
       totalDuration: data?.totalDuration ?? 0,
       totalCost: data?.totalCost ?? 0,

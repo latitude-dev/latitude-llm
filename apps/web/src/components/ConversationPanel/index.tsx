@@ -1,3 +1,4 @@
+import { Message } from '@latitude-data/constants/messages'
 import { forwardRef, useMemo, useState } from 'react'
 import DebugToggle from '$/components/DebugToggle'
 import { MetadataInfoTabs } from '../MetadataInfoTabs'
@@ -39,6 +40,7 @@ export const ConversationPanel = forwardRef<HTMLDivElement, Props>(
     const { project } = useCurrentProject()
     const {
       messages,
+      outputMessages,
       totalTokens,
       totalDuration,
       totalCost,
@@ -71,6 +73,7 @@ export const ConversationPanel = forwardRef<HTMLDivElement, Props>(
                 promptName={promptName}
                 parameters={parameters}
                 startedAt={startedAt}
+                outputMessages={outputMessages}
               />
             )}
             {selectedTab === 'messages' && (
@@ -122,6 +125,7 @@ function ConversationMetadata({
   promptName,
   parameters,
   startedAt,
+  outputMessages,
 }: {
   isLoading: boolean
   traceCount: number
@@ -133,6 +137,7 @@ function ConversationMetadata({
   promptName: string | null
   parameters: Record<string, unknown> | null
   startedAt: string | null
+  outputMessages: Message[]
 }) {
   const formattedTimestamp = useMemo(() => {
     if (!startedAt) return null
@@ -225,6 +230,12 @@ function ConversationMetadata({
               )
             })}
           </div>
+        </div>
+      )}
+      {outputMessages.length > 0 && (
+        <div className='flex flex-col gap-y-1'>
+          <Text.H5M color='foreground'>Last output</Text.H5M>
+          <MessageList debugMode messages={outputMessages} />
         </div>
       )}
     </div>

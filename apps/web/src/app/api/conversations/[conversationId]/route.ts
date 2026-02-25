@@ -1,14 +1,15 @@
+import { Message } from '@latitude-data/constants/messages'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { AssembledTrace } from '@latitude-data/core/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { fetchConversationWithMessages } from '@latitude-data/core/data-access/conversations/fetchConversationWithMessages'
 import { NextRequest, NextResponse } from 'next/server'
-import { Message } from 'promptl-ai'
 
 export type ConversationTracesResponse = {
   traces: AssembledTrace[]
   messages: Message[]
+  outputMessages: Message[]
   totalTokens: number
   totalDuration: number
   totalCost: number
@@ -54,6 +55,7 @@ export const GET = errorHandler(
           {
             traces: [],
             messages: [],
+            outputMessages: [],
             totalTokens: 0,
             totalDuration: 0,
             totalCost: 0,
@@ -74,6 +76,7 @@ export const GET = errorHandler(
         {
           traces: conversation.traces,
           messages: conversation.messages,
+          outputMessages: conversation.outputMessages,
           totalTokens: conversation.totalTokens,
           totalDuration: conversation.totalDuration,
           totalCost: conversation.totalCost,

@@ -67,6 +67,7 @@ describe('fetchConversationWithMessages', () => {
       expect(result.ok).toBe(true)
       const conversation = result.value!
       expect(conversation.documentLogUuid).toBe(documentLogUuid)
+      expect(conversation.outputMessages).toEqual([])
     })
 
     it('returns conversation with messages from completion span', async () => {
@@ -98,6 +99,12 @@ describe('fetchConversationWithMessages', () => {
       expect(conversation.messages).toHaveLength(2)
       expect(conversation.messages[0]!.role).toBe('user')
       expect(conversation.messages[1]!.role).toBe('assistant')
+      expect(conversation.outputMessages).toEqual(output)
+      expect(conversation.outputMessages).toHaveLength(1)
+      expect(conversation.outputMessages[0]!.role).toBe('assistant')
+      expect(conversation.outputMessages[0]!.content).toEqual([
+        { type: 'text', text: 'I am doing well!' },
+      ])
     })
   })
 
@@ -258,6 +265,11 @@ describe('fetchConversationWithMessages', () => {
         { type: 'text', text: 'Last user message' },
       ])
       expect(assistantMessage?.content).toEqual([
+        { type: 'text', text: 'Last assistant response' },
+      ])
+      expect(conversation.outputMessages).toHaveLength(1)
+      expect(conversation.outputMessages[0]!.role).toBe('assistant')
+      expect(conversation.outputMessages[0]!.content).toEqual([
         { type: 'text', text: 'Last assistant response' },
       ])
     })
@@ -448,6 +460,7 @@ describe('fetchConversationWithMessages', () => {
       expect(result.ok).toBe(true)
       const conversation = result.value!
       expect(conversation.messages).toHaveLength(0)
+      expect(conversation.outputMessages).toEqual([])
       expect(conversation.promptName).toBe('prompt-without-completion')
     })
 
@@ -507,6 +520,82 @@ describe('fetchConversationWithMessages', () => {
       expect(result.ok).toBe(true)
       const conversation = result.value!
       expect(conversation.messages).toHaveLength(0)
+      expect(conversation.outputMessages).toEqual([])
+    })
+  })
+
+  describe('outputMessages', () => {
+    it('returns empty outputMessages when no completion span has output', async () => {
+      const documentLogUuid = generateUUIDIdentifier()
+
+      await createPromptWithCompletion({
+        workspaceId: workspace.id,
+        traceId: 'trace-1',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        input: [{ role: 'user', content: [{ type: 'text', text: 'Hi' }] }],
+        output: [],
+      })
+
+      const result = await fetchConversationWithMessages({
+        workspace,
+        projectId: project.id,
+        documentLogUuid,
+      })
+
+      expect(result.ok).toBe(true)
+      const conversation = result.value!
+      expect(conversation.outputMessages).toEqual([])
+    })
+
+    it('returns only output messages from last trace completion span', async () => {
+      const documentLogUuid = generateUUIDIdentifier()
+      const now = Date.now()
+
+      await createPromptWithCompletion({
+        workspaceId: workspace.id,
+        traceId: 'trace-first',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        startedAt: new Date(now),
+        ...createTestMessages({
+          userText: 'First',
+          assistantText: 'First response',
+        }),
+      })
+
+      const { input: lastInput, output: lastOutput } = createTestMessages({
+        userText: 'Last',
+        assistantText: 'Last response',
+      })
+
+      await createPromptWithCompletion({
+        workspaceId: workspace.id,
+        traceId: 'trace-last',
+        documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        startedAt: new Date(now + 10000),
+        input: lastInput,
+        output: lastOutput,
+      })
+
+      const result = await fetchConversationWithMessages({
+        workspace,
+        projectId: project.id,
+        documentLogUuid,
+      })
+
+      expect(result.ok).toBe(true)
+      const conversation = result.value!
+      expect(conversation.outputMessages).toEqual(lastOutput)
+      expect(conversation.outputMessages).not.toEqual(conversation.messages)
+      expect(conversation.messages).toHaveLength(2)
     })
   })
 
