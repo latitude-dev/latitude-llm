@@ -3,7 +3,7 @@ import { assignIssueToEvaluationResultV2Job } from './assignIssueToEvaluationRes
 import { clearProviderApiKeysCache } from './clearProviderApiKeysCache'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createDatasetRowsJob } from './createDatasetRowsJobs'
-import { createInstantlyLeadHandler } from './createInstantlyLead'
+import { createInstantlyLeadHandler } from './createInstantlyLeadHandler'
 import { createLoopsContact } from './createLoopsContact'
 import { updateLoopsContact } from './updateLoopsContact'
 import { enqueueShadowTestChallengerHandler } from './enqueueShadowTestChallenger'

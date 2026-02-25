@@ -5,7 +5,7 @@ import {
   UserTitle,
 } from '@latitude-data/constants/users'
 import { SubscriptionPlan } from '../../plans'
-import { createInstantlyLeadHandler } from './createInstantlyLead'
+import { createInstantlyLeadHandler } from './createInstantlyLeadHandler'
 import { type UserOnboardingInfoUpdatedEvent } from '../events'
 
 const mockFetch = vi.fn()
