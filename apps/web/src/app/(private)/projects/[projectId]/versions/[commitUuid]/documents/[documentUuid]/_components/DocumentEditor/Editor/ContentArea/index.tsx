@@ -95,7 +95,14 @@ export function DocumentEditorContentArea({
         datasetId: selectedDatasetId,
       })
     }
-  }, [source, selectedDatasetId, document, project.id, commit.uuid, assignDataset])
+  }, [
+    source,
+    selectedDatasetId,
+    document,
+    project.id,
+    commit.uuid,
+    assignDataset,
+  ])
 
   const { runPromptButtonHandler } = useEditorCallbacks({
     isPlaygroundOpen,
