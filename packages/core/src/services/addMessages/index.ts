@@ -152,6 +152,9 @@ async function retrieveData({
   documentLogUuid: string
 }) {
   const spansRepo = new SpansRepository(workspace.id)
+  // TODO(clickhouse): remove this fallback to first main span when migration
+  // to clickhouse has been completed (i.e Assume removing this after April
+  // 2026 is safe)
   const firstSpan = documentLogUuid
     ? await spansRepo.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
     : undefined
