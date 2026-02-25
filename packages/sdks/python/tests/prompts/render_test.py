@@ -123,6 +123,53 @@ class TestRenderPrompt(TestCase):
             ),
         )
 
+    async def test_success_with_references(self):
+        references = {
+            "instructions": "<system>\nYou are an expert assistant. Always be concise.\n</system>",
+        }
+        prompt = '<prompt path="instructions" />\n<user>{{ question }}</user>'
+        options = RenderPromptOptions(
+            parameters={"question": "What is PromptL"},
+            adapter=Adapter.Default,
+            references=references,
+        )
+
+        result = await self.sdk.prompts.render(prompt, options)
+
+        self.assertEqual(
+            result,
+            RenderPromptResult(
+                messages=[
+                    SystemMessage(content=[TextContent(text="You are an expert assistant. Always be concise.")]),
+                    UserMessage(content=[TextContent(text="What is PromptL")]),
+                ],
+                config={},
+            ),
+        )
+
+    async def test_success_with_relative_references(self):
+        references = {
+            "folder/child": "child content",
+        }
+        prompt = '<prompt path="child" />'
+        options = RenderPromptOptions(
+            adapter=Adapter.Default,
+            full_path="folder/parent",
+            references=references,
+        )
+
+        result = await self.sdk.prompts.render(prompt, options)
+
+        self.assertEqual(
+            result,
+            RenderPromptResult(
+                messages=[
+                    SystemMessage(content=[TextContent(text="child content")]),
+                ],
+                config={},
+            ),
+        )
+
     async def test_fails(self):
         parts = fixtures.PROMPT.content.split("---")
         prompt = f"""

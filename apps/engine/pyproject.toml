@@ -7,7 +7,7 @@ dependencies = [
     "gepa>=0.0.24",
     "pydantic>=2.11.9",
     "typing-extensions>=4.15.0",
-    "promptl-ai>=1.4.0",
+    "promptl-ai>=1.5.0",
 ]
 
 [dependency-groups]
