@@ -41,29 +41,29 @@ export async function readConversationCache({
   workspaceId: number
   documentLogUuid: string
 }): Promise<TypedResult<ConversationCacheEntry | undefined>> {
-  const lookupKey = buildConversationCacheLookupKey(documentLogUuid)
-  const disk = diskFactory('private')
-
-  const cacheClient = await cache()
-  const resolvedKey = await cacheClient.get(lookupKey)
-  if (!resolvedKey) {
-    const legacyKey = buildLegacyConversationCacheKey({
-      workspaceId,
-      documentLogUuid,
-    })
-    const legacyResult = await readConversationCacheFromDisk({
-      disk,
-      key: legacyKey,
-      compressed: false,
-    })
-    if (legacyResult.error) return legacyResult
-
-    const legacyEntry = legacyResult.value
-    if (!legacyEntry) return Result.nil()
-    return Result.ok(legacyEntry)
-  }
-
   try {
+    const lookupKey = buildConversationCacheLookupKey(documentLogUuid)
+    const disk = diskFactory('private')
+
+    const cacheClient = await cache()
+    const resolvedKey = await cacheClient.get(lookupKey)
+    if (!resolvedKey) {
+      const legacyKey = buildLegacyConversationCacheKey({
+        workspaceId,
+        documentLogUuid,
+      })
+      const legacyResult = await readConversationCacheFromDisk({
+        disk,
+        key: legacyKey,
+        compressed: false,
+      })
+      if (legacyResult.error) return legacyResult
+
+      const legacyEntry = legacyResult.value
+      if (!legacyEntry) return Result.nil()
+      return Result.ok(legacyEntry)
+    }
+
     const entryResult = await readConversationCacheFromDisk({
       disk,
       key: resolvedKey,
