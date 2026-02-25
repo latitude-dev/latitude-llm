@@ -53,8 +53,6 @@ export function DocumentTraces({
           <TableHead>Version</TableHead>
           <TableHead>Source</TableHead>
           <TableHead>Duration</TableHead>
-          <TableHead>Model</TableHead>
-          <TableHead>Tokens</TableHead>
           <TableHead>Evaluations</TableHead>
         </TableRow>
       </TableHeader>

@@ -78,14 +78,6 @@ export const TraceRow = memo(function TraceRow({
           <Text.H5 noWrap>{formatDuration(span.duration)}</Text.H5>
         </TableCell>
         <TableCell>
-          <Text.H5 noWrap>{span.model ?? '-'}</Text.H5>
-        </TableCell>
-        <TableCell>
-          <Text.H5 noWrap>
-            {totalTokens !== null ? String(totalTokens) : '-'}
-          </Text.H5>
-        </TableCell>
-        <TableCell>
           <EvaluationsColumn
             spanId={span.id}
             documentLogUuid={span.documentLogUuid}
