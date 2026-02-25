@@ -109,6 +109,8 @@ class ChatPromptResult(FinishedResult, Model):
 class RenderPromptOptions(Model):
     parameters: Optional[dict[str, Any]] = None
     adapter: Optional[Adapter] = None
+    full_path: Optional[str] = None
+    references: Optional[dict[str, str]] = None
 
 
 class RenderPromptResult(Model):
@@ -119,6 +121,8 @@ class RenderPromptResult(Model):
 class RenderChainOptions(Model):
     parameters: Optional[dict[str, Any]] = None
     adapter: Optional[Adapter] = None
+    full_path: Optional[str] = None
+    references: Optional[dict[str, str]] = None
 
 
 class RenderChainResult(RenderPromptResult, Model):
@@ -329,6 +333,8 @@ class Prompts:
             prompt=prompt,
             parameters=options.parameters,
             adapter=adapter,
+            full_path=options.full_path,
+            references=options.references,
         )
 
         return RenderPromptResult(
@@ -346,6 +352,8 @@ class Prompts:
             prompt=prompt.content,
             parameters=options.parameters,
             adapter=adapter,
+            full_path=options.full_path or prompt.path,
+            references=options.references,
         )
 
         step = None

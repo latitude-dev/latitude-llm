@@ -27,6 +27,18 @@ Before writing any code, load the `coding-standards` skill (`/coding-standards`)
 
 To run tests for a specific package, `cd` into the package directory and run `pnpm test` (optionally with a path or pattern to limit scope). Do NOT use `pnpm --filter` for running tests, as it fails due to permission issues. Do NOT use `pnpm exec vitest` or `npx vitest`. If `pnpm test` fails, stop and report; do not fall back to other test runners.
 
+### Running Python SDK Tests
+
+The Python SDK (`packages/sdks/python`) uses `uv` instead of `pnpm`. To run tests, `cd` into `packages/sdks/python` and run:
+
+- `uv run scripts/test.py` - Run all tests
+- `uv run scripts/test.py <test_path>` - Run a specific test file
+- `uv run scripts/test.py <test_path>::<TestCase>::<test_name>` - Run a specific test
+- `uv run scripts/lint.py` - Run linter
+- `uv run scripts/format.py` - Run formatter
+
+Do NOT use `pnpm test` for the Python SDK.
+
 ## Code Style
 
 - Use TypeScript for all code, prefer types over interfaces

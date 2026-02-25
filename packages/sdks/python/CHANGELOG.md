@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.10.0] - 2026-02-25
+
+### Added
+
+- Added `references` and `full_path` parameters to `prompts.render()` and `prompts.render_chain()` methods, enabling prompt composition from reusable fragments via PromptL's `<prompt path="..." />` syntax
+- Bumped PromptL to 1.5.0
+
 ## [5.9.0] - 2026-02-25
 
 ### Added

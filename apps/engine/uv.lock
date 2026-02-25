@@ -140,7 +140,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "gepa", specifier = ">=0.0.24" },
-    { name = "promptl-ai", specifier = ">=1.4.0" },
+    { name = "promptl-ai", specifier = ">=1.5.0" },
     { name = "pydantic", specifier = ">=2.11.9" },
     { name = "typing-extensions", specifier = ">=4.15.0" },
 ]
@@ -186,16 +186,16 @@ wheels = [
 
 [[package]]
 name = "promptl-ai"
-version = "1.4.0"
+version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
     { name = "wasmtime" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c8/28/b9e99dc75e74e69dc15ee846d7912ac80caccd6e3f3a9e81cd5fa6ac946e/promptl_ai-1.4.0.tar.gz", hash = "sha256:cae093a8aad98ff69f1fb366f34ef3b43d7958794e5a3802bbe514ff5c655c2d", size = 949570, upload-time = "2026-02-25T14:23:12.988Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/07/a3/d292235ce07cec8bb6ef8f4e3ff219d729c203196b62e2c3db717fb46b5e/promptl_ai-1.5.0.tar.gz", hash = "sha256:2505ccdfea70eb03df3c29edb7e57e0823a4ae016bcaeb944624240c6b118699", size = 952518, upload-time = "2026-02-25T16:20:17.804Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/71/3a41bcd50c8c76dfa7ff73f649c0176c598e74a27986fc543188b23150e5/promptl_ai-1.4.0-py3-none-any.whl", hash = "sha256:ecc6083816e58ce5e029d8f240a97ca30b0246a48c9d5e616e2cbb4c589f06e9", size = 928583, upload-time = "2026-02-25T14:23:14.447Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/2b/6c8b3f081ac3b244651e59722e11a0ab86ce5861947750c91e8cb15ff7cf/promptl_ai-1.5.0-py3-none-any.whl", hash = "sha256:1a98badc272289caec23a73004fffdc83a396485f3febe90eaccd5487f32b85f", size = 929651, upload-time = "2026-02-25T16:20:15.85Z" },
 ]
 
 [[package]]

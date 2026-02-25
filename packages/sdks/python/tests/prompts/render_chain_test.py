@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 from unittest import mock
 from unittest.mock import AsyncMock
 
@@ -15,7 +15,7 @@ from promptl_ai import (
     openai,
 )
 
-from latitude_sdk import Prompt, RenderChainOptions, RenderChainResult
+from latitude_sdk import ParameterType, Prompt, PromptParameter, Providers, RenderChainOptions, RenderChainResult
 from tests.utils import TestCase, fixtures
 
 
@@ -125,6 +125,87 @@ class TestRenderChain(TestCase):
             ),
         )
         self.assertEqual(on_step_mock.await_count, 2)
+
+    async def test_success_with_references(self):
+        on_step_mock = AsyncMock(
+            side_effect=[
+                "The definitive answer is 42.",
+            ]
+        )
+        references = {
+            "instructions": "You are a helpful assistant.",
+        }
+        prompt = Prompt(
+            uuid="e01a1035-6ed3-4edc-88e6-c0748ea300c7",
+            path="prompt",
+            content='<step>\n<prompt path="instructions" />\n<user>{{ question }}</user>\n</step>',
+            config={},
+            parameters={"question": PromptParameter(type=ParameterType.Text)},
+            provider=Providers.OpenAI,
+        )
+        options = RenderChainOptions(
+            parameters={"question": "What is PromptL"},
+            adapter=Adapter.Default,
+            references=references,
+        )
+
+        result = await self.sdk.prompts.render_chain(prompt, on_step_mock, options)
+
+        expected_messages: List[MessageLike] = [
+            SystemMessage(content=[TextContent(text="You are a helpful assistant.")]),
+            UserMessage(content=[TextContent(text="What is PromptL")]),
+            AssistantMessage(content=[TextContent(text="The definitive answer is 42.")]),
+        ]
+        expected_config: dict[str, Any] = {}
+
+        self.assertEqual(
+            result,
+            RenderChainResult(
+                messages=expected_messages,
+                config=expected_config,
+            ),
+        )
+        self.assertEqual(on_step_mock.await_count, 1)
+
+    async def test_success_with_relative_references(self):
+        on_step_mock = AsyncMock(
+            side_effect=[
+                "Done!",
+            ]
+        )
+        references = {
+            "folder/child": "Child system prompt.",
+        }
+        prompt = Prompt(
+            uuid="e01a1035-6ed3-4edc-88e6-c0748ea300c7",
+            path="folder/parent",
+            content='<step>\n<prompt path="child" />\n<user>Ask me anything.</user>\n</step>',
+            config={},
+            parameters={},
+            provider=Providers.OpenAI,
+        )
+        options = RenderChainOptions(
+            adapter=Adapter.Default,
+            references=references,
+        )
+
+        result = await self.sdk.prompts.render_chain(prompt, on_step_mock, options)
+
+        expected_messages: List[MessageLike] = [
+            SystemMessage(content=[TextContent(text="Child system prompt.")]),
+            UserMessage(content=[TextContent(text="Ask me anything.")]),
+            AssistantMessage(content=[TextContent(text="Done!")]),
+        ]
+        expected_config: dict[str, Any] = {}
+
+        self.assertEqual(
+            result,
+            RenderChainResult(
+                messages=expected_messages,
+                config=expected_config,
+            ),
+        )
+        self.assertEqual(on_step_mock.await_count, 1)
 
     async def test_fails(self):
         on_step_mock = AsyncMock(
