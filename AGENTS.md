@@ -14,8 +14,8 @@ Before writing any code, load the `coding-standards` skill (`/coding-standards`)
 
 ## Build/Test Commands
 
-- `pnpm --filter @[REDACTED]-data/core db:generate` - Generate database migrations
-- `pnpm --filter @[REDACTED]-data/core db:migrate` - Run database migrations
+- `pnpm --filter @latitude-data/core db:generate` - Generate database migrations
+- `pnpm --filter @latitude-data/core db:migrate` - Run database migrations
 - `pnpm build` - Build all packages
 - `pnpm lint` - Lint all packages
 - `pnpm prettier` - Format code
@@ -148,14 +148,14 @@ Before writing tests, load the `testing` skill (`/testing`) for detailed pattern
 #### Schema Definition (`packages/core/src/schema/models/`)
 
 - Use Drizzle ORM with PostgreSQL schema
-- All tables use `[REDACTED]Schema.table()` from `../db-schema`
+- All tables use `latitudeSchema.table()` from `../db-schema`
 - Include timestamps with `...timestamps()` helper
 - Use `bigserial` for primary keys with `{ mode: 'number' }`
 - Foreign keys use `references()` with cascade delete where appropriate
 - Example pattern:
 
   ```typescript
-  export const tableName = [REDACTED]Schema.table('table_name', {
+  export const tableName = latitudeSchema.table('table_name', {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     name: varchar('name', { length: 256 }).notNull(),
     workspaceId: bigint('workspace_id', { mode: 'number' })
@@ -178,9 +178,9 @@ Destructive database migrations (dropping tables, columns, or other schema eleme
 
 **PR 2 - Database Migration (deploy after PR 1 is live):**
 
-1. Generate the Drizzle migration: `pnpm --filter @[REDACTED]-data/core db:generate --name drop_unused_tables`
+1. Generate the Drizzle migration: `pnpm --filter @latitude-data/core db:generate --name drop_unused_tables`
 2. This creates a migration file to drop the unused columns/tables
-3. Run the migration: `pnpm --filter @[REDACTED]-data/core db:migrate`
+3. Run the migration: `pnpm --filter @latitude-data/core db:migrate`
 
 **Why this approach?**
 
@@ -198,9 +198,9 @@ Destructive database migrations (dropping tables, columns, or other schema eleme
 - Remove from constants and configuration
 
 # PR 2: Database cleanup (after PR 1 is deployed)
-- pnpm --filter @[REDACTED]-data/core db:generate
+- pnpm --filter @latitude-data/core db:generate
 - Review the generated migration
-- pnpm --filter @[REDACTED]-data/core db:migrate
+- pnpm --filter @latitude-data/core db:migrate
 ```
 
 ### SCOPED QUERIES
@@ -236,21 +236,21 @@ NOTE: THIS PATTERN IS DEPRECATED AND YOU SHOULD NOT USE IT. USE SCOPED QUERIES I
 
 ClickHouse is used for analytics and high-performance data storage. Migrations use [golang-migrate](https://github.com/golang-migrate/migrate).
 
-**Always manage ClickHouse migrations through the `@[REDACTED]-data/core` package.json scripts** (`ch:create`, `ch:up`, `ch:down`, `ch:status`, etc.). **Do not create, rename, or register ClickHouse migration files manually.**
+**Always manage ClickHouse migrations through the `@latitude-data/core` package.json scripts** (`ch:create`, `ch:up`, `ch:down`, `ch:status`, etc.). **Do not create, rename, or register ClickHouse migration files manually.**
 
 #### Migration Commands
 
-- `pnpm --filter @[REDACTED]-data/core ch:connect` - Open interactive ClickHouse client
-- `pnpm --filter @[REDACTED]-data/core ch:status` - Show migration status
-- `pnpm --filter @[REDACTED]-data/core ch:create <name>` - Create new migration files
-- `pnpm --filter @[REDACTED]-data/core ch:up` - Apply pending migrations
-- `pnpm --filter @[REDACTED]-data/core ch:down [N|all]` - Rollback N migrations (default: 1) or all
-- `pnpm --filter @[REDACTED]-data/core ch:drop` - Drop all tables
-- `pnpm --filter @[REDACTED]-data/core ch:reset` - Reset database (down + up)
-- `pnpm --filter @[REDACTED]-data/core ch:status:test` - Show test database migration status
-- `pnpm --filter @[REDACTED]-data/core ch:up:test` - Apply migrations to test database
-- `pnpm --filter @[REDACTED]-data/core ch:down:test [N|all]` - Rollback test database
-- `pnpm --filter @[REDACTED]-data/core ch:reset:test` - Reset test database
+- `pnpm --filter @latitude-data/core ch:connect` - Open interactive ClickHouse client
+- `pnpm --filter @latitude-data/core ch:status` - Show migration status
+- `pnpm --filter @latitude-data/core ch:create <name>` - Create new migration files
+- `pnpm --filter @latitude-data/core ch:up` - Apply pending migrations
+- `pnpm --filter @latitude-data/core ch:down [N|all]` - Rollback N migrations (default: 1) or all
+- `pnpm --filter @latitude-data/core ch:drop` - Drop all tables
+- `pnpm --filter @latitude-data/core ch:reset` - Reset database (down + up)
+- `pnpm --filter @latitude-data/core ch:status:test` - Show test database migration status
+- `pnpm --filter @latitude-data/core ch:up:test` - Apply migrations to test database
+- `pnpm --filter @latitude-data/core ch:down:test [N|all]` - Rollback test database
+- `pnpm --filter @latitude-data/core ch:reset:test` - Reset test database
 
 #### Two Migration Folders
 
@@ -376,7 +376,7 @@ BullMQ jobs handle background processing tasks like exports, evaluations, and do
 
 ### Component Patterns
 
-- Import UI components from `@[REDACTED]-data/web-ui/atoms/` (not molecules)
+- Import UI components from `@latitude-data/web-ui/atoms/` (not molecules)
 - Use `Modal` from atoms, not molecules
 - Use `TextArea` not `Textarea`
 - Button sizes: `size='small'` not `size='sm'`
@@ -749,60 +749,3 @@ Tools are resolved from multiple sources:
 4. **Agent tools**: Sub-prompts that can be called as tools
 
 Tool resolution happens in `lookupTools()` and `resolveTools()` within the stream manager
-
-## Cursor Cloud specific instructions
-
-### Infrastructure
-
-Docker Compose manages the required infrastructure services. Start them before running dev servers:
-
-```bash
-sudo dockerd &>/tmp/dockerd.log &  # if Docker daemon is not running
-docker compose up -d db redis clickhouse mailpit
-```
-
-Required services: **PostgreSQL** (5432), **Redis** (6379), **ClickHouse** (8123/9000), **Mailpit** (8025/1025, optional but convenient for email testing).
-
-### Environment variable gotcha
-
-The Cloud VM injects secrets that use Docker Compose service names as hostnames (e.g., `CACHE_HOST=redis`, `QUEUE_HOST=redis`, `DATABASE_URL=...@db:5432/...`, `GATEWAY_HOSTNAME=gateway`). These must be overridden to point to `localhost` for local development. Key overrides needed:
-
-- `DATABASE_URL` — change host from `db` to `localhost`, database to the development one
-- `CACHE_HOST`, `QUEUE_HOST` — change from `redis` to `localhost`
-- `CACHE_PASSWORD` — clear if not set on local Redis
-- `GATEWAY_HOSTNAME`, `GATEWAY_BIND_ADDRESS` — change from `gateway` to `localhost`
-- `GATEWAY_PORT`, `GATEWAY_BIND_PORT` — set to `8787`
-- `APP_URL` — set to the local web dev server URL (port 3000)
-- `WEBSOCKETS_SERVER` — set to the local websockets dev URL (port 4002)
-- `CLICKHOUSE_URL` — HTTP URL pointing to localhost:8123
-- `CLICKHOUSE_MIGRATION_URL` — native protocol URL pointing to localhost:9000
-- `CLICKHOUSE_DB`, `CLICKHOUSE_USER`, `CLICKHOUSE_PASSWORD` — match the docker-compose dev defaults
-
-See `.env.example` and `packages/env/src/index.ts` for the full list of expected variables and their dev defaults. The `packages/env` module uses `dotenv.populate` which does **not** override existing env vars, so shell exports take precedence.
-
-### Running services
-
-See `.tmuxinator.yml` for the canonical dev setup. The key commands are:
-
-1. **Infrastructure**: `docker compose up db redis mailpit clickhouse --menu=false`
-2. **Apps**: `pnpm catchup && NODE_OPTIONS=--max_old_space_size=4096 pnpm dev --filter='./apps/*'`
-3. **Drizzle Studio** (DB GUI, port 3003): `cd packages/core && pnpm db:studio`
-
-The `NODE_OPTIONS=--max_old_space_size=4096` flag is important to avoid OOM on the dev servers. The `--filter='./apps/*'` flag starts all four app services (web, gateway, workers, websockets) via Turborepo.
-
-### ClickHouse migrations
-
-Requires `golang-migrate` (install via `curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | sudo tar xvz -C /usr/local/bin`). Run with:
-
-```bash
-pnpm --filter @[REDACTED]-data/core ch:up       # dev database
-pnpm --filter @[REDACTED]-data/core ch:up:test   # test database
-```
-
-### Running tests
-
-Per AGENTS.md guidelines: `cd` into the package directory and run `pnpm test`. Never use `--filter` for tests. The test database migrations run automatically via the `db:migrate:test` script in `packages/core`. ClickHouse test migrations must be applied separately with `ch:up:test`.
-
-### Auth in development
-
-The app uses passwordless (magic link) authentication. In dev mode with `MAIL_TRANSPORT=mailpit`, confirmation emails are sent to Mailpit at `http://localhost:8025`.
