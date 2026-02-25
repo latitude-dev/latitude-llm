@@ -109,6 +109,7 @@ export abstract class StreamManager {
 
   protected messages: Message[]
   protected error: ChainError<RunErrorCodes> | undefined
+  private isStreamEnded: boolean = false
 
   private startTime: number | undefined
   private endTime: number | undefined
@@ -203,15 +204,19 @@ export abstract class StreamManager {
 
     const e = error as ChainError<RunErrorCodes>
 
-    this.sendEvent({
-      type: ChainEventTypes.ChainError,
-      error: {
-        name: e.name,
-        message: e.message,
-        details: e.details,
-        stack: e.stack,
-      },
-    })
+    try {
+      this.sendEvent({
+        type: ChainEventTypes.ChainError,
+        error: {
+          name: e.name,
+          message: e.message,
+          details: e.details,
+          stack: e.stack,
+        },
+      })
+    } catch (_) {
+      // Controller may already be closed
+    }
 
     this.error = e
 
@@ -275,6 +280,9 @@ export abstract class StreamManager {
   }
 
   protected endStream() {
+    if (this.isStreamEnded) return
+    this.isStreamEnded = true
+
     this.endTime = Date.now()
 
     const toolCalls =
@@ -289,19 +297,24 @@ export abstract class StreamManager {
     const logCost = this.logCost
     const runCost = this.runCost
 
-    // Send final stream event
-    this.sendEvent({
-      type: ChainEventTypes.ChainCompleted,
-      response: this.response,
-      toolCalls,
-      finishReason,
-      tokenUsage,
-    })
+    try {
+      this.sendEvent({
+        type: ChainEventTypes.ChainCompleted,
+        response: this.response,
+        toolCalls,
+        finishReason,
+        tokenUsage,
+      })
+    } catch (_) {
+      // Controller may already be closed
+    }
 
-    // Close the stream
-    this.controller?.close()
+    try {
+      this.controller?.close()
+    } catch (_) {
+      // Controller may already be closed
+    }
 
-    // Resolve the promised values
     this.resolveMessages?.(this.messages)
     this.resolveResponse?.(this.response)
     this.resolveError?.(this.error)

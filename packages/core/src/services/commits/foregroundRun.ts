@@ -1,5 +1,5 @@
 import { LogSources, Message } from '@latitude-data/constants'
-import { LatitudeError } from '../../lib/errors'
+import { ChainError, LatitudeError, RunErrorCodes } from '../../lib/errors'
 import { BACKGROUND } from '../../telemetry'
 import { buildClientToolHandlersMap } from '../documents/tools/clientTools/handlers'
 import { runDocumentAtCommit } from './runDocumentAtCommit'
@@ -103,8 +103,17 @@ export async function runForegroundDocument(
       if (runError) throw runError
 
       const response = await result.lastResponse
-      if (!response)
-        throw new LatitudeError('Stream ended with no error and no content')
+      if (!response) {
+        const lateError = await result.error
+        if (lateError) throw lateError
+
+        throw new ChainError({
+          code: RunErrorCodes.Unknown,
+          message:
+            'Stream completed without generating a response. ' +
+            'This may indicate the prompt produced no AI interaction.',
+        })
+      }
 
       const provider = await result.provider
       if (!provider) {

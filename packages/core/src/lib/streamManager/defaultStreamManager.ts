@@ -109,8 +109,10 @@ export class DefaultStreamManager
 
       return
     } catch (e) {
-      // Handle abort errors gracefully - just end without treating as error (stream ended in listener)
-      if (isAbortError(e)) return
+      if (isAbortError(e)) {
+        this.endStream()
+        return
+      }
 
       this.endWithError(e as Error)
       return
