@@ -782,14 +782,13 @@ See `.env.example` and `packages/env/src/index.ts` for the full list of expected
 
 ### Running services
 
-Standard dev commands per `package.json` scripts. Start all four app services:
+See `.tmuxinator.yml` for the canonical dev setup. The key commands are:
 
-- **Web** (Next.js, port 3000): `cd apps/web && pnpm dev`
-- **Gateway** (Hono, port 8787): `cd apps/gateway && pnpm dev`
-- **Workers** (BullMQ): `cd apps/workers && pnpm dev`
-- **WebSockets** (Socket.io, port 4002): `cd apps/websockets && pnpm dev`
+1. **Infrastructure**: `docker compose up db redis mailpit clickhouse --menu=false`
+2. **Apps**: `pnpm catchup && NODE_OPTIONS=--max_old_space_size=4096 pnpm dev --filter='./apps/*'`
+3. **Drizzle Studio** (DB GUI, port 3003): `cd packages/core && pnpm db:studio`
 
-Or start all at once from root: `pnpm dev` (runs via Turborepo, but keeps all output in one terminal).
+The `NODE_OPTIONS=--max_old_space_size=4096` flag is important to avoid OOM on the dev servers. The `--filter='./apps/*'` flag starts all four app services (web, gateway, workers, websockets) via Turborepo.
 
 ### ClickHouse migrations
 
