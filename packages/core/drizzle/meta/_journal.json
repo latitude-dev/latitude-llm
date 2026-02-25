@@ -1905,6 +1905,27 @@
       "when": 1771858810057,
       "tag": "0272_fix_duplicated_documents_in_commit",
       "breakpoints": true
+    },
+    {
+      "idx": 273,
+      "version": "7",
+      "when": 1772018130173,
+      "tag": "0273_drop-legacy-published-document-table",
+      "breakpoints": true
+    },
+    {
+      "idx": 274,
+      "version": "7",
+      "when": 1772018366057,
+      "tag": "0274_fix_document_in_same_commit_with_same_path",
+      "breakpoints": true
+    },
+    {
+      "idx": 275,
+      "version": "7",
+      "when": 1772018456148,
+      "tag": "0275_fix_document_unique_index_commit_path_deleted_at",
+      "breakpoints": true
     }
   ]
 }

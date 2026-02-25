@@ -1,4 +1,5 @@
 -- NOTE: commented out because it's broken and fixed in a future migration
+-- This migration WAS split in 3 different migrations. This should remain commened.
 -- ALTER TABLE "latitude"."published_documents" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 -- DROP TABLE "latitude"."published_documents" CASCADE;--> statement-breakpoint
 --
