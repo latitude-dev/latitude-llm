@@ -53,7 +53,7 @@ const eventHandlersJobMappings = {
     jobs.notifyClientOfEvaluationV2AlignmentUpdated,
   notifyClientOfOptimizationStatus: jobs.notifyClientOfOptimizationStatus,
   unassignIssuesOnDocumentsDeleted: jobs.unassignIssuesOnDocumentsDeleted,
-  createInstantlyLead: jobs.createInstantlyLead,
+  createInstantlyLeadHandler: jobs.createInstantlyLeadHandler,
 }
 
 export function startEventsWorker() {

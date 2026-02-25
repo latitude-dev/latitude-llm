@@ -5,7 +5,7 @@ import { createInstantlyLead as createInstantlyLeadService } from '../../service
 import { captureException } from '../../utils/datadogCapture'
 import { UserOnboardingInfoUpdatedEvent } from '../events'
 
-export async function createInstantlyLead({
+export async function createInstantlyLeadHandler({
   data: event,
 }: {
   data: UserOnboardingInfoUpdatedEvent

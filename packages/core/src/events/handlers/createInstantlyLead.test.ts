@@ -5,7 +5,7 @@ import {
   UserTitle,
 } from '@latitude-data/constants/users'
 import { SubscriptionPlan } from '../../plans'
-import { createInstantlyLead } from './createInstantlyLead'
+import { createInstantlyLeadHandler } from './createInstantlyLead'
 import { type UserOnboardingInfoUpdatedEvent } from '../events'
 
 const mockFetch = vi.fn()
@@ -62,7 +62,7 @@ function paidWorkspace(id = 2, plan = SubscriptionPlan.TeamV4) {
   return { id, currentSubscription: { plan } }
 }
 
-describe('createInstantlyLead', () => {
+describe('createInstantlyLeadHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal('fetch', mockFetch)
@@ -78,7 +78,7 @@ describe('createInstantlyLead', () => {
         name: 'Free First',
       })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
       expect(mockFetch).toHaveBeenCalledWith(
@@ -109,7 +109,7 @@ describe('createInstantlyLead', () => {
         latitudeGoal: LatitudeGoal.ImprovingAccuracy,
       })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
       const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
@@ -124,7 +124,7 @@ describe('createInstantlyLead', () => {
         name: 'McGregor',
       })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
       const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
@@ -138,7 +138,7 @@ describe('createInstantlyLead', () => {
 
       const event = makeEvent({ userEmail: 'missing@test.com' })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).not.toHaveBeenCalled()
       expect(mockCaptureException).toHaveBeenCalledOnce()
@@ -154,7 +154,7 @@ describe('createInstantlyLead', () => {
 
       const event = makeEvent({ userEmail: 'no-sub@test.com' })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).not.toHaveBeenCalled()
       expect(mockCaptureException).toHaveBeenCalledOnce()
@@ -168,7 +168,7 @@ describe('createInstantlyLead', () => {
 
       const event = makeEvent({ userEmail: '   ' })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).not.toHaveBeenCalled()
       expect(mockCaptureException).toHaveBeenCalledOnce()
@@ -184,7 +184,7 @@ describe('createInstantlyLead', () => {
 
       const event = makeEvent({ userEmail: 'paid@test.com' })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).not.toHaveBeenCalled()
     })
@@ -197,7 +197,7 @@ describe('createInstantlyLead', () => {
 
       const event = makeEvent({ userEmail: 'mixed@test.com' })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).not.toHaveBeenCalled()
     })
@@ -210,7 +210,7 @@ describe('createInstantlyLead', () => {
 
       const event = makeEvent({ userEmail: 'all-free@test.com' })
 
-      await createInstantlyLead({ data: event })
+      await createInstantlyLeadHandler({ data: event })
 
       expect(mockFetch).toHaveBeenCalledTimes(1)
     })
