@@ -83,7 +83,6 @@ export default async function DocumentPage({
   })
   const documents = await getDocumentsAtCommitCached({ commit })
   const freeRunsCount = await getFreeRuns(workspace.id)
-
   const experimentDiff = await getDiffFromExperimentId({
     workspaceId: workspace.id,
     experimentId: applyExperimentId,

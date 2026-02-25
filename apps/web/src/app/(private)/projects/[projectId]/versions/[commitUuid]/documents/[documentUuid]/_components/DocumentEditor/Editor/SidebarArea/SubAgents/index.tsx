@@ -84,6 +84,18 @@ export function SubAgentsSidebarSection() {
       .map((relativePath) => resolveRelativePath(relativePath, document.path))
   }, [selectedAgents, document.path])
 
+  const TriggerButton = useMemo(
+    () => (
+      <Button
+        variant='ghost'
+        size='none'
+        iconProps={{ name: 'plus' }}
+        className='min-w-7'
+        disabled={isLive}
+      />
+    ),
+    [isLive],
+  )
   const agentOptions = useMemo(() => {
     const options = availableAgents.map((agentPath) => {
       const fileName = agentPath.split('/').pop() || agentPath
@@ -127,26 +139,24 @@ export function SubAgentsSidebarSection() {
         disabled: isLive,
         customComponent: (
           <MultiSelect
+            modalPopover
+            deferChangesUntilClose
+            disabled={isLive}
+            trigger={TriggerButton}
             options={agentOptions}
             value={selectedAgentsFullPaths}
             onChange={handleAgentsChange}
-            deferChangesUntilClose={true}
-            disabled={isLive}
-            modalPopover
-            trigger={
-              <Button
-                variant='ghost'
-                size='none'
-                iconProps={{ name: 'plus' }}
-                className='min-w-7'
-                disabled={isLive}
-              />
-            }
           />
         ),
       },
     ],
-    [agentOptions, selectedAgentsFullPaths, handleAgentsChange, isLive],
+    [
+      agentOptions,
+      selectedAgentsFullPaths,
+      handleAgentsChange,
+      isLive,
+      TriggerButton,
+    ],
   )
 
   // Sort selected agents using the same logic as the files sidebar

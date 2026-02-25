@@ -1,19 +1,18 @@
 import { EvaluationList } from '$/components/Sidebar/Files/EvaluationList'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import { DocumentType } from '@latitude-data/core/constants'
 import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
 import { IconName } from '@latitude-data/web-ui/atoms/Icons'
 import { type ParamValue } from 'next/dist/server/request/params'
-import { usePathname } from 'next/navigation'
+import { useParams, usePathname, useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
-import { useFileTreeContext } from '../FilesProvider'
-import NodeHeaderWrapper, {
-  IndentType,
-  NodeHeaderWrapperProps,
-} from '../NodeHeaderWrapper'
-import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCommits } from '$/stores/commitsStore'
+import { HEAD_COMMIT } from '@latitude-data/core/constants'
+import NodeHeaderWrapper from '../NodeHeaderWrapper'
+import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
 
 /**
  * Detects the current document page type from the pathname.
@@ -35,62 +34,53 @@ export default function DocumentHeader({
   open,
   selected,
   node,
-  indentation,
-  draggble,
-  canDrag,
   currentEvaluationUuid,
-  isRunning,
-  runningCount,
 }: {
   open: boolean
   selected: boolean
   node: Node
-  indentation: IndentType[]
-  draggble: NodeHeaderWrapperProps['draggble']
   currentEvaluationUuid: ParamValue
-  canDrag: boolean
-  isRunning?: boolean
-  runningCount?: number
 }) {
-  const {
-    promptManagement,
-    isLoading,
-    isMerged,
-    onMergeCommitClick,
-    onDeleteFile,
-    onCreateFile,
-    onRenameFile,
-    sidebarLinkContext,
-    mainDocumentUuid,
-    setMainDocumentUuid,
-  } = useFileTreeContext()
-  const { deleteTmpFolder, reset } = useTempNodes((state) => ({
-    reset: state.reset,
-    deleteTmpFolder: state.deleteTmpFolder,
-  }))
+  const { commit, isHead } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { documentUuid: currentDocumentUuid } = useParams()
+  const router = useRouter()
+  const { setCommitMainDocument } = useCommits()
+  const { renamePaths, destroyFile, isLoading } = useDocumentVersionActions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
+  const isMerged = !!commit.mergedAt
+  const mainDocumentUuid = commit.mainDocumentUuid ?? undefined
   const onSaveValue = useCallback(
     async ({ path }: { path: string }) => {
-      if (!promptManagement) return
-
       const parentPathParts = node.path.split('/').slice(0, -1)
       const newPathParts = path.split('/')
       const newPath = [...parentPathParts, ...newPathParts].join('/')
-      if (node.isPersisted) {
-        onRenameFile({ node, path: newPath })
-      } else {
-        onCreateFile(newPath)
-      }
-      reset()
+      const oldPath = node.path + (node.isFile ? '' : '/')
+      const pathWithTypeSuffix = newPath + (node.isFile ? '' : '/')
+      await renamePaths({ oldPath, newPath: pathWithTypeSuffix })
     },
-    [promptManagement, reset, onCreateFile, onRenameFile, node],
+    [renamePaths, node],
   )
   const setMainDocument = useCallback(
     (asMainDocument: boolean) => {
-      setMainDocumentUuid(asMainDocument ? node.doc!.documentUuid : undefined)
+      setCommitMainDocument({
+        projectId: project.id,
+        commitId: commit.id,
+        documentUuid: asMainDocument ? node.documentUuid : undefined,
+      })
     },
-    [setMainDocumentUuid, node.doc],
+    [setCommitMainDocument, project.id, commit.id, node.documentUuid],
   )
-  const documentUuid = node.doc!.documentUuid
+  const documentUuid = node.documentUuid!
+  const isCurrentDocument = useMemo(() => {
+    if (Array.isArray(currentDocumentUuid)) {
+      return currentDocumentUuid.includes(documentUuid)
+    }
+
+    return currentDocumentUuid === documentUuid
+  }, [currentDocumentUuid, documentUuid])
   const pathname = usePathname()
   const currentPageType = useMemo(
     () => getDocumentPageType(pathname),
@@ -98,7 +88,6 @@ export default function DocumentHeader({
   )
   const url = useMemo(() => {
     if (!documentUuid) return undefined
-    if (!node.isPersisted) return undefined
     if (
       selected &&
       !currentEvaluationUuid &&
@@ -108,13 +97,9 @@ export default function DocumentHeader({
     }
 
     const documentDetails = ROUTES.projects
-      .detail({ id: sidebarLinkContext.projectId })
-      .commits.detail({ uuid: sidebarLinkContext.commitUuid })
+      .detail({ id: project.id })
+      .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
       .documents.detail({ uuid: documentUuid })
-
-    if (isRunning) {
-      return documentDetails.traces.root
-    }
 
     // Preserve the current page type when navigating to another document
     // But always go to the list page, not specific items (evaluationUuid, etc.)
@@ -131,17 +116,19 @@ export default function DocumentHeader({
   }, [
     documentUuid,
     selected,
-    node.isPersisted,
-    sidebarLinkContext,
     currentEvaluationUuid,
     currentPageType,
-    isRunning,
+    project.id,
+    isHead,
+    commit.uuid,
   ])
-  const [isEditingState, setIsEditing] = useState(node.name === ' ')
-  const isEditing = promptManagement && isEditingState
+  const [isEditingState, setIsEditing] = useState(false)
+  const isEditing = isEditingState
+  const evaluationDocument = useMemo(
+    () => ({ documentUuid, commitId: commit.id }) as DocumentVersion,
+    [documentUuid, commit.id],
+  )
   const actions = useMemo<MenuOption[]>(() => {
-    if (!promptManagement) return []
-
     return [
       {
         label: 'Rename file',
@@ -149,10 +136,7 @@ export default function DocumentHeader({
         disabled: isLoading,
         iconProps: { name: 'pencil' },
         onClick: () => {
-          if (isMerged) {
-            onMergeCommitClick()
-            return
-          }
+          if (isMerged) return
 
           setIsEditing(true)
         },
@@ -165,61 +149,65 @@ export default function DocumentHeader({
         iconProps: { name: 'trash' },
         onClick: () => {
           if (isMerged) {
-            onMergeCommitClick()
+            // do nothing
           } else {
-            onDeleteFile({ node, documentUuid })
+            destroyFile(documentUuid, {
+              onSuccess: () => {
+                if (!isCurrentDocument) return
+
+                router.push(
+                  ROUTES.projects.detail({ id: project.id }).commits.detail({
+                    uuid: isHead ? HEAD_COMMIT : commit.uuid,
+                  }).documents.root,
+                )
+              },
+            })
           }
         },
       },
     ]
   }, [
-    promptManagement,
-    node,
     documentUuid,
-    onDeleteFile,
+    destroyFile,
     isLoading,
     isMerged,
-    onMergeCommitClick,
+    isCurrentDocument,
+    router,
+    project.id,
+    isHead,
+    commit.uuid,
   ])
   const icon = useMemo<IconName>(() => {
     const docName = node.name
-    const docType = node.doc?.documentType
-    if (docType === DocumentType.Agent) return 'bot'
     if (docName === 'README') return 'info'
     return 'file'
-  }, [node.doc?.documentType, node.name])
+  }, [node.name])
+  const icons = useMemo(() => [icon], [icon])
 
   return (
     <NodeHeaderWrapper
       isFile
+      depth={node.depth}
       url={url}
       open={open}
       name={node.name}
-      canDrag={canDrag}
-      draggble={draggble}
       isEditing={isEditing}
       setIsEditing={setIsEditing}
-      isMainDocument={
-        promptManagement ? mainDocumentUuid === documentUuid : undefined
-      }
-      setMainDocument={promptManagement ? setMainDocument : undefined}
+      isMainDocument={mainDocumentUuid === documentUuid}
+      setMainDocument={setMainDocument}
       hasChildren={false}
       actions={actions}
       selected={selected}
       changeType={node.changeType}
-      indentation={indentation}
       onSaveValue={onSaveValue}
-      onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
-      icons={[icon]}
+      icons={icons}
       childrenSelected={!!currentEvaluationUuid}
-      isRunning={isRunning}
-      runningCount={runningCount}
     >
       {selected && (
         <EvaluationList
           changeType={node.changeType}
-          indentation={indentation}
-          document={node.doc! as DocumentVersion}
+          depth={node.depth + 2}
+          document={evaluationDocument}
           currentEvaluationUuid={currentEvaluationUuid}
         />
       )}

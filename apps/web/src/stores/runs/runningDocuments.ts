@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import useSWR from 'swr'
 import {
   EventArgs,
@@ -7,11 +7,54 @@ import {
 import type { Commit } from '@latitude-data/core/schema/models/types/Commit'
 import type { Project } from '@latitude-data/core/schema/models/types/Project'
 import { LogSources } from '@latitude-data/constants'
+import { create } from 'zustand'
 
 const SIDEBAR_VISIBLE_SOURCES = new Set<LogSources>([
   LogSources.Playground,
   LogSources.Experiment,
 ])
+const EMPTY_COUNTS = new Map<string, number>()
+
+type RunningDocumentsStore = {
+  countsByScope: Record<string, Map<string, number>>
+  setCounts: (scope: string, counts: Map<string, number>) => void
+  clearCounts: (scope: string) => void
+}
+
+export function runningDocumentsScope({
+  projectId,
+  commitUuid,
+}: {
+  projectId: number
+  commitUuid: string
+}) {
+  return `${projectId}:${commitUuid}`
+}
+
+export const useRunningDocumentsStore = create<RunningDocumentsStore>(
+  (set) => ({
+    countsByScope: {},
+    setCounts: (scope, counts) =>
+      set((state) => ({
+        countsByScope: {
+          ...state.countsByScope,
+          [scope]: counts,
+        },
+      })),
+    clearCounts: (scope) =>
+      set((state) => {
+        const next = { ...state.countsByScope }
+        delete next[scope]
+        return { countsByScope: next }
+      }),
+  }),
+)
+
+export function useRunningDocumentsCounts(scope: string) {
+  return useRunningDocumentsStore(
+    (state) => state.countsByScope[scope] || EMPTY_COUNTS,
+  )
+}
 
 /**
  * Hook to track which documents are currently running in a project.
@@ -76,12 +119,31 @@ export function useRunningDocuments({
 
   useSockets({ event: 'documentRunStatus', onMessage })
 
-  // Convert to a map of document UUID to count for easier consumption
-  return useMemo(() => {
+  const scope = useMemo(
+    () =>
+      runningDocumentsScope({ projectId: project.id, commitUuid: commit.uuid }),
+    [project.id, commit.uuid],
+  )
+  const setCounts = useRunningDocumentsStore((state) => state.setCounts)
+  const clearCounts = useRunningDocumentsStore((state) => state.clearCounts)
+
+  const counts = useMemo(() => {
     const countMap = new Map<string, number>()
     runningDocumentsMap.forEach((runUuids, documentUuid) => {
       countMap.set(documentUuid, runUuids.size)
     })
     return countMap
   }, [runningDocumentsMap])
+
+  useEffect(() => {
+    setCounts(scope, counts)
+  }, [scope, counts, setCounts])
+
+  useEffect(() => {
+    return () => {
+      clearCounts(scope)
+    }
+  }, [scope, clearCounts])
+
+  return counts
 }

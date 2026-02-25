@@ -31,6 +31,7 @@ function useSidebarData({
 }) {
   const triggersData = useDocumentTriggersData()
   const isLoadingPromptConfig = usePromptConfigData()
+
   return useMemo(() => {
     const isLoading =
       triggersData.isLoading || !metadata || isLoadingPromptConfig

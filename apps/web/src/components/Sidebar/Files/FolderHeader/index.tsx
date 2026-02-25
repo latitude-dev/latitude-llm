@@ -1,47 +1,31 @@
-import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { MenuOption } from '@latitude-data/web-ui/atoms/DropdownMenu'
-import NodeHeaderWrapper, {
-  IndentType,
-  NodeHeaderWrapperProps,
-} from '../NodeHeaderWrapper'
-import { useFileTreeContext } from '../FilesProvider'
+import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useOpenPaths } from '../useOpenPaths'
-import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { TempNode, useTempNodes } from '../useTempNodes'
+import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
 
 export default function FolderHeader({
   node,
   open,
-  indentation,
+  hasChildren,
   onToggleOpen,
-  canDrag,
-  draggble,
-  isRunning,
-  runningCount,
 }: {
-  node: Node
+  node: Node | TempNode
   open: boolean
-  indentation: IndentType[]
-  onToggleOpen: () => void
-  canDrag: boolean
-  draggble: NodeHeaderWrapperProps['draggble']
-  isRunning?: boolean
-  runningCount?: number
+  hasChildren: boolean
+  onToggleOpen?: () => void
 }) {
-  const {
-    promptManagement,
-    isLoading,
-    isMerged,
-    onMergeCommitClick,
-    onUploadFile,
-    onDeleteFolder,
-    onRenameFile,
-  } = useFileTreeContext()
-  const { togglePath } = useOpenPaths((state) => ({
-    togglePath: state.togglePath,
-    openPaths: state.openPaths,
-  }))
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { renamePaths, destroyFolder, isLoading } = useDocumentVersionActions({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
   const { addFolder, updateFolder, updateFolderAndAddOther, deleteTmpFolder } =
     useTempNodes((state) => ({
       addFolder: state.addFolder,
@@ -49,95 +33,79 @@ export default function FolderHeader({
       updateFolderAndAddOther: state.updateFolderAndAddOther,
       deleteTmpFolder: state.deleteTmpFolder,
     }))
-  const onUpdateFolderAndAddOther = useCallback(
-    ({ path, id }: { path: string; id: string }) => {
-      updateFolderAndAddOther({
-        id,
-        path,
-        onNodeUpdated: (updatedPath) => {
-          togglePath(updatedPath)
-        },
-      })
-    },
-    [updateFolderAndAddOther, togglePath],
-  )
-
+  const isMerged = !!commit.mergedAt
+  const isTemporary = node.id.startsWith('tmp:')
+  const togglePath = useOpenPaths((state) => state.togglePath)
   const onAddNode = useCallback(
     ({ isFile }: { isFile: boolean }) =>
-      () => {
+      async () => {
         if (isMerged) {
-          onMergeCommitClick()
           return
         }
 
         if (!open) {
           togglePath(node.path)
         }
-        addFolder({ parentPath: node.path, parentId: node.id, isFile })
+
+        if (!isFile) {
+          addFolder({
+            parentPath: node.path,
+            parentId: node.id,
+            parentDepth: node.depth,
+            isFile: false,
+          })
+          return
+        }
+
+        addFolder({
+          parentPath: node.path,
+          parentId: node.id,
+          parentDepth: node.depth,
+          isFile: true,
+        })
       },
-    [
-      node.path,
-      node.id,
-      togglePath,
-      open,
-      isMerged,
-      onMergeCommitClick,
-      addFolder,
-    ],
+    [node.path, node.id, node.depth, togglePath, open, isMerged, addFolder],
   )
 
   const onSaveValue = useCallback(
     ({ path }: { path: string }) => {
-      if (!promptManagement) return
-
       if (isMerged) {
-        onMergeCommitClick()
         return
       }
 
-      if (node.isPersisted) {
-        const pathParts = node.path.split('/').slice(0, -1)
-        const newPath = [...pathParts, path].join('/')
-        onRenameFile({ node, path: newPath })
-      } else {
+      if (isTemporary) {
         updateFolder({ id: node.id, path })
+        return
       }
+
+      const pathParts = node.path.split('/').slice(0, -1)
+      const newPath = [...pathParts, path].join('/')
+      const oldPath = node.path + (node.isFile ? '' : '/')
+      const pathWithTypeSuffix = newPath + (node.isFile ? '' : '/')
+      renamePaths({ oldPath, newPath: pathWithTypeSuffix })
     },
-    [
-      promptManagement,
-      node,
-      updateFolder,
-      isMerged,
-      onMergeCommitClick,
-      onRenameFile,
-    ],
+    [node, isMerged, isTemporary, renamePaths, updateFolder],
   )
 
-  const fileUploadInputRef = useRef<HTMLInputElement>(null)
-  const onClickFileUploadInput = useCallback(() => {
-    if (isMerged) onMergeCommitClick()
-    else fileUploadInputRef.current?.click()
-  }, [isMerged, onMergeCommitClick])
-  const onFileUploadChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0]
-      if (!file) return
-
-      if (!node.isPersisted) deleteTmpFolder({ id: node.id })
-
-      const filename = file.name.replace(/\.promptl$/, '').replace(/\s+/g, '_')
-      onUploadFile({ path: `${node.path}/${filename}`, file })
-
-      event.target.value = ''
+  const onSaveValueAndTab = useCallback(
+    ({ path }: { path: string }) => {
+      if (!isTemporary) return
+      updateFolderAndAddOther({
+        id: node.id,
+        path,
+        onNodeUpdated: (updatedPath) => {
+          togglePath(updatedPath)
+        },
+      })
     },
-    [node, deleteTmpFolder, onUploadFile],
+    [isTemporary, node.id, togglePath, updateFolderAndAddOther],
   )
 
-  const [isEditingState, setIsEditing] = useState(node.name === ' ')
-  const isEditing = promptManagement && isEditingState
+  const [isEditingState, setIsEditing] = useState(
+    isTemporary && node.name === ' ',
+  )
+  const isEditing = isEditingState
   const actions = useMemo<MenuOption[]>(() => {
-    if (!promptManagement) return []
-
     return [
       {
         label: 'Rename folder',
@@ -146,7 +114,6 @@ export default function FolderHeader({
         iconProps: { name: 'pencil' },
         onClick: () => {
           if (isMerged) {
-            onMergeCommitClick()
             return
           }
 
@@ -168,13 +135,6 @@ export default function FolderHeader({
         onClick: onAddNode({ isFile: true }),
       },
       {
-        label: 'Upload document',
-        lookDisabled: isMerged,
-        disabled: isLoading,
-        iconProps: { name: 'paperclip' },
-        onClick: onClickFileUploadInput,
-      },
-      {
         label: 'Delete folder',
         type: 'destructive',
         lookDisabled: isMerged,
@@ -182,26 +142,23 @@ export default function FolderHeader({
         iconProps: { name: 'trash' },
         onClick: () => {
           if (isMerged) {
-            onMergeCommitClick()
             return
           }
 
-          if (node.isPersisted) {
-            onDeleteFolder({ node, path: node.path })
-          } else {
+          if (isTemporary) {
             deleteTmpFolder({ id: node.id })
+          } else {
+            destroyFolder(node.path)
           }
         },
       },
     ]
   }, [
-    promptManagement,
     node,
+    isTemporary,
     isLoading,
     isMerged,
-    onMergeCommitClick,
-    onClickFileUploadInput,
-    onDeleteFolder,
+    destroyFolder,
     deleteTmpFolder,
     setIsEditing,
     onAddNode,
@@ -209,35 +166,24 @@ export default function FolderHeader({
 
   return (
     <>
-      <input
-        ref={fileUploadInputRef}
-        type='file'
-        multiple={false}
-        className='hidden'
-        onChange={onFileUploadChange}
-      />
       <NodeHeaderWrapper
+        depth={node.depth}
         name={node.name}
-        canDrag={canDrag}
-        draggble={draggble}
         isEditing={isEditing}
         setIsEditing={setIsEditing}
-        hasChildren={node.children.length > 0}
+        hasChildren={hasChildren}
         onClick={onToggleOpen}
         onSaveValue={({ path }) => onSaveValue({ path })}
-        onSaveValueAndTab={({ path }) =>
-          onUpdateFolderAndAddOther({ id: node.id, path })
+        onSaveValueAndTab={onSaveValueAndTab}
+        onLeaveWithoutSave={
+          isTemporary ? () => deleteTmpFolder({ id: node.id }) : undefined
         }
-        onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
         open={open}
         actions={actions}
-        indentation={indentation}
         icons={
           open ? ['chevronDown', 'folderOpen'] : ['chevronRight', 'folderClose']
         }
         changeType={node.changeType}
-        isRunning={isRunning}
-        runningCount={runningCount}
       />
     </>
   )

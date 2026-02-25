@@ -5,7 +5,6 @@ import {
   getEvaluationTypeSpecification,
 } from '$/components/evaluations'
 import { IndentationLine } from '$/components/Sidebar/Files/IndentationBar'
-import { IndentType } from '$/components/Sidebar/Files/NodeHeaderWrapper'
 import { useModifiedColors } from '$/components/Sidebar/Files/useModifiedColors'
 import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
@@ -22,7 +21,7 @@ import { type ParamValue } from 'next/dist/server/request/params'
 import Link from 'next/link'
 import { useMemo } from 'react'
 
-const INDENTATION_UNIT_PX = 24
+const INDENTATION_UNIT_PX = 8
 function IndentationBar({
   promptIndentationSize,
   isLast,
@@ -36,7 +35,7 @@ function IndentationBar({
         style={{ width: promptIndentationSize * INDENTATION_UNIT_PX }}
         className='h-6'
       />
-      <div className='flex justify-center min-w-6 h-6'>
+      <div className='flex justify-center w-2 h-6'>
         <IndentationLine showCurve={isLast} />
       </div>
     </div>
@@ -46,7 +45,7 @@ function IndentationBar({
 function EvaluationItem({
   isLast,
   color,
-  indentation,
+  promptIndentationSize,
   selectedBackgroundColor,
   selectedBackgroundColorHover,
   commitUuid,
@@ -59,7 +58,7 @@ function EvaluationItem({
   color: TextColor
   selectedBackgroundColor: string
   selectedBackgroundColorHover: string
-  indentation?: IndentType[]
+  promptIndentationSize: number
   evaluation: EvaluationV2
   commitUuid: string
   projectId: number
@@ -86,7 +85,7 @@ function EvaluationItem({
       })}
     >
       <IndentationBar
-        promptIndentationSize={indentation?.length ?? 0}
+        promptIndentationSize={promptIndentationSize}
         isLast={isLast}
       />
       <div className='flex-none relative w-6 h-6 -ml-2'>
@@ -121,12 +120,12 @@ function EvaluationItem({
 
 export function EvaluationList({
   changeType,
-  indentation,
+  depth,
   document,
   currentEvaluationUuid,
 }: {
   changeType?: ModifiedDocumentType | undefined
-  indentation?: IndentType[]
+  depth: number
   document: DocumentVersion
   currentEvaluationUuid: ParamValue
 }) {
@@ -144,24 +143,28 @@ export function EvaluationList({
   const evaluations = useMemo(() => {
     return data.filter((evaluation) => !evaluation.ignoredAt)
   }, [data])
+  const promptIndentationSize = useMemo(() => Math.max(0, depth), [depth])
   return (
-    <ul className='flex flex-col min-w-0'>
-      {evaluations.map((evaluation, index) => (
-        <li key={evaluation.uuid}>
-          <EvaluationItem
-            isLast={index === evaluations.length - 1}
-            indentation={indentation}
-            color={color}
-            selectedBackgroundColor={selectedBackgroundColor}
-            selectedBackgroundColorHover={selectedBackgroundColorHover}
-            projectId={project.id}
-            commitUuid={commit.uuid}
-            documentUuid={document.documentUuid}
-            evaluation={evaluation}
-            currentEvaluationUuid={currentEvaluationUuid}
-          />
-        </li>
-      ))}
-    </ul>
+    <div className='flex min-w-0'>
+      <div className='w-4 shrink-0' />
+      <ul className='flex flex-col min-w-0'>
+        {evaluations.map((evaluation, index) => (
+          <li key={evaluation.uuid}>
+            <EvaluationItem
+              isLast={index === evaluations.length - 1}
+              promptIndentationSize={promptIndentationSize}
+              color={color}
+              selectedBackgroundColor={selectedBackgroundColor}
+              selectedBackgroundColorHover={selectedBackgroundColorHover}
+              projectId={project.id}
+              commitUuid={commit.uuid}
+              documentUuid={document.documentUuid}
+              evaluation={evaluation}
+              currentEvaluationUuid={currentEvaluationUuid}
+            />
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
