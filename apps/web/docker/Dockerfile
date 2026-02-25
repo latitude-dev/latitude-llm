@@ -258,8 +258,11 @@ RUN mkdir -p apps/web/.next/cache
 RUN chown nextjs:nodejs apps/web/.next
 RUN chown nextjs:nodejs apps/web/.next/cache
 
-# Copy the standalone server and node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+# Copy the standalone server (dereference symlinks — Turbopack creates
+# relative symlinks in standalone/node_modules that break in multi-stage
+# Docker builds, see vercel/next.js#89851)
+RUN --mount=from=builder,source=/app/apps/web/.next/standalone,target=/mnt/standalone \
+  cp -a /mnt/standalone/. ./ && chown -R nextjs:nodejs ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/node_modules ./apps/web/node_modules
 # Set permissions for local storage
