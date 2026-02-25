@@ -78,6 +78,7 @@ export async function addMessages(
   const attributes: Record<string, string> = {
     'latitude.documentLogUuid': documentLogUuid,
     'latitude.documentUuid': document.documentUuid,
+    'latitude.projectId': String(commit.projectId),
     'latitude.commitUuid': commit.uuid,
   }
   if (previousSpan?.traceId) {

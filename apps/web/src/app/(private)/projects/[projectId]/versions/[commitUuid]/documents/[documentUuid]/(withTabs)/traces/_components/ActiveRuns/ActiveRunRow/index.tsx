@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, use, useEffect, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { ActiveRun } from '@latitude-data/constants'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
@@ -8,14 +8,12 @@ import { Icon } from '@latitude-data/web-ui/atoms/Icons'
 import { cn } from '@latitude-data/web-ui/utils'
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
-import { TraceSpanSelectionActionsContext } from '../../TraceSpanSelectionContext'
 
 export const ActiveRunRow = memo(function ActiveRunRow({
   run,
 }: {
   run: ActiveRun
 }) {
-  const { onClickTraceRow } = use(TraceSpanSelectionActionsContext)
   const [duration, setDuration] = useState<number>(0)
 
   const message = useMemo(() => {
@@ -34,10 +32,7 @@ export const ActiveRunRow = memo(function ActiveRunRow({
       setDuration(elapsed)
     }
 
-    // Update immediately
     updateDuration()
-
-    // Update every 100ms
     const interval = setInterval(updateDuration, 100)
 
     return () => clearInterval(interval)
@@ -45,23 +40,12 @@ export const ActiveRunRow = memo(function ActiveRunRow({
 
   return (
     <TableRow
-      onClick={onClickTraceRow({
-        type: 'activeRun',
-        data: { runUuid: run.uuid },
-      })}
       className={cn(
-        'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border bg-accent/5',
+        'border-b-[0.5px] h-12 max-h-12 border-border bg-accent/5',
       )}
     >
       <TableCell>
         <Icon name='loader' spin />
-      </TableCell>
-      <TableCell>
-        <div className='flex items-center gap-2'>
-          <Text.H5 noWrap color='foregroundMuted' userSelect={false} animate>
-            {message}
-          </Text.H5>
-        </div>
       </TableCell>
       <TableCell>
         <Skeleton height='h5' className='w-20' />
@@ -76,9 +60,9 @@ export const ActiveRunRow = memo(function ActiveRunRow({
           {formatDuration(duration, false)}
         </Text.H5>
       </TableCell>
-      <TableCell>
-        <Text.H5 noWrap color='foregroundMuted'>
-          -
+      <TableCell colSpan={3}>
+        <Text.H5 noWrap color='foregroundMuted' userSelect={false} animate>
+          {message}
         </Text.H5>
       </TableCell>
     </TableRow>

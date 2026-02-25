@@ -3,9 +3,8 @@ import { ROUTES } from '$/services/routes'
 
 export const TRACE_SPAN_SELECTION_PARAM_KEYS = {
   documentLogUuid: 'documentLogUuid',
+  traceId: 'traceId',
   spanId: 'spanId',
-  activeRunUuid: 'activeRunUuid',
-  expandedDocumentLogUuid: 'expandedDocumentLogUuid',
 } as const
 
 export const TRACE_SPAN_SELECTION_PARAMS = Object.values(
@@ -17,27 +16,19 @@ export function buildTraceUrl({
   commitUuid,
   documentUuid,
   span,
-  expandedDocumentLogUuid,
 }: {
   projectId: number
   commitUuid: string
   documentUuid: string
-  span: Pick<Span, 'id' | 'documentLogUuid'>
-  expandedDocumentLogUuid?: string
+  span: Pick<Span, 'id' | 'documentLogUuid' | 'traceId'>
 }) {
   const params = new URLSearchParams()
   params.set(TRACE_SPAN_SELECTION_PARAM_KEYS.spanId, span.id)
+  params.set(TRACE_SPAN_SELECTION_PARAM_KEYS.traceId, span.traceId)
   if (span.documentLogUuid) {
     params.set(
       TRACE_SPAN_SELECTION_PARAM_KEYS.documentLogUuid,
       span.documentLogUuid,
-    )
-  }
-  const expandedUuid = expandedDocumentLogUuid ?? span.documentLogUuid
-  if (expandedUuid) {
-    params.set(
-      TRACE_SPAN_SELECTION_PARAM_KEYS.expandedDocumentLogUuid,
-      expandedUuid,
     )
   }
   return (

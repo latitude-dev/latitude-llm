@@ -4,7 +4,7 @@ import { useMemo } from 'react'
 import { Skeleton } from '@latitude-data/web-ui/atoms/Skeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { Badge } from '@latitude-data/web-ui/atoms/Badge'
-import { useConversationEvaluations } from '$/stores/conversations'
+import useEvaluationResultsV2BySpans from '$/stores/evaluationResultsV2/bySpans'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
@@ -12,18 +12,25 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { getEvaluationMetricSpecification } from '$/components/evaluations'
 
 export function EvaluationsColumn({
-  conversationId,
+  spanId,
+  documentLogUuid,
 }: {
-  conversationId: string | null
+  spanId: string
+  documentLogUuid: string | null | undefined
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
 
-  const { results: evaluationResults, isLoading } = useConversationEvaluations({
-    conversationId: conversationId ?? undefined,
-    enabled: !!conversationId,
-  })
+  const { data: evaluationResults, isLoading } = useEvaluationResultsV2BySpans(
+    {
+      project,
+      commit,
+      document,
+      spanId,
+      documentLogUuid,
+    },
+  )
 
   const { data: evaluations } = useEvaluationsV2({
     project,
@@ -32,8 +39,7 @@ export function EvaluationsColumn({
   })
 
   const passedResults = useMemo(
-    () =>
-      evaluationResults.filter((result) => !!result.result.hasPassed).length,
+    () => evaluationResults.filter((result) => !!result.result.hasPassed).length,
     [evaluationResults],
   )
 

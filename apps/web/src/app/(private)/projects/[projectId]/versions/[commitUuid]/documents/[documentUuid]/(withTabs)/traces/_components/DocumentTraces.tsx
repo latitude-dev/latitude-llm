@@ -9,23 +9,15 @@ import {
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
 import { TraceSpanSelectionStateContext } from './TraceSpanSelectionContext'
-import { ConversationRow } from './ConversationRow'
-import { ActiveRunRow } from './ActiveRuns/ActiveRunRow'
+import { TraceRow } from './ConversationRow'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
-import { ActiveRun } from '@latitude-data/constants'
-import { type SelectableRowsHook } from '$/hooks/useSelectableRows'
-import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
-import { UseConversationsReturn } from '$/stores/conversations'
+import { UseSpansKeysetPaginationReturn } from '$/stores/spansKeysetPagination/types'
 
 export function DocumentTraces({
   ref,
-  activeRuns,
-  conversations,
-  selectableState,
+  traces,
 }: {
-  activeRuns: ActiveRun[]
-  conversations: UseConversationsReturn
-  selectableState: SelectableRowsHook
+  traces: UseSpansKeysetPaginationReturn
   ref?: Ref<HTMLTableElement>
 }) {
   const { selection } = use(TraceSpanSelectionStateContext)
@@ -36,45 +28,33 @@ export function DocumentTraces({
       className='table-auto'
       externalFooter={
         <SimpleKeysetTablePaginationFooter
-          setNext={conversations.goToNextPage}
-          setPrev={conversations.goToPrevPage}
-          hasNext={conversations.hasNext}
-          hasPrev={conversations.hasPrev}
-          isLoading={conversations.isLoading}
+          setNext={traces.goToNextPage}
+          setPrev={traces.goToPrevPage}
+          hasNext={traces.hasNext}
+          hasPrev={traces.hasPrev}
+          isLoading={traces.isLoading}
         />
       }
     >
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
-          <TableHead>
-            <Checkbox
-              checked={selectableState.headerState}
-              onCheckedChange={selectableState.toggleAll}
-            />
-          </TableHead>
           <TableHead>Time</TableHead>
           <TableHead>Version</TableHead>
           <TableHead>Source</TableHead>
           <TableHead>Duration</TableHead>
+          <TableHead>Model</TableHead>
+          <TableHead>Tokens</TableHead>
           <TableHead>Evaluations</TableHead>
-          <TableHead>Traces</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {activeRuns.map((run) => (
-          <ActiveRunRow key={run.uuid} run={run} />
-        ))}
-
-        {conversations.items.map((conversation) => (
-          <ConversationRow
-            key={conversation.documentLogUuid}
-            conversation={conversation}
-            toggleRow={selectableState.toggleRow}
-            isRowSelected={selectableState.isSelected(
-              conversation.documentLogUuid ?? undefined,
-            )}
+        {traces.items.map((span) => (
+          <TraceRow
+            key={span.traceId}
+            span={span}
             isExpanded={
-              selection.expandedDocumentLogUuid === conversation.documentLogUuid
+              !!span.documentLogUuid &&
+              selection.documentLogUuid === span.documentLogUuid
             }
           />
         ))}

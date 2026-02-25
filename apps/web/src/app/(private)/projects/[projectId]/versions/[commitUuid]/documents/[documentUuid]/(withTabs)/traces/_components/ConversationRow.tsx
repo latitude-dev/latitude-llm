@@ -1,42 +1,44 @@
 'use client'
 
-import { memo, useContext } from 'react'
+import { memo, use } from 'react'
 import { formatDuration } from '$/app/_lib/formatUtils'
 import { timeAgo } from '$/lib/relativeTime'
-import { Conversation } from '$/stores/conversations'
+import { Span } from '@latitude-data/constants'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ConversationTimeline } from './ConversationTimeline'
 import { TraceSpanSelectionActionsContext } from './TraceSpanSelectionContext'
-import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useCommits } from '$/stores/commitsStore'
-import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { CommitVersionCell } from '$/components/CommitVersionCell'
-import { Badge } from '@latitude-data/web-ui/atoms/Badge'
 import { EvaluationsColumn } from './EvaluationsColumn'
 
-export const ConversationRow = memo(function ConversationRow({
-  conversation,
-  toggleRow,
-  isRowSelected,
+export const TraceRow = memo(function TraceRow({
+  span,
   isExpanded,
 }: {
-  conversation: Conversation
-  toggleRow: ReturnType<typeof useSelectableRows>['toggleRow']
-  isRowSelected: boolean
+  span: Span
   isExpanded: boolean
 }) {
-  const { onClickConversationRow } = useContext(
-    TraceSpanSelectionActionsContext,
-  )
+  const { onClickTraceRow } = use(TraceSpanSelectionActionsContext)
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
-  const commit = commits?.find((c) => c.uuid === conversation.commitUuid)
+  const commit = commits?.find((c) => c.uuid === span.commitUuid)
+
+  const totalTokens =
+    (span.tokensPrompt ?? 0) + (span.tokensCompletion ?? 0) || null
 
   return (
     <>
       <TableRow
-        onClick={onClickConversationRow(conversation)}
+        onClick={
+          span.documentLogUuid
+            ? onClickTraceRow({
+                documentLogUuid: span.documentLogUuid,
+                spanId: span.id,
+                traceId: span.traceId,
+              })
+            : undefined
+        }
         className={cn(
           'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
           {
@@ -44,39 +46,36 @@ export const ConversationRow = memo(function ConversationRow({
           },
         )}
       >
-        <TableCell
-          preventDefault
-          align='left'
-          onClick={() => {
-            toggleRow(conversation.documentLogUuid!, !isRowSelected)
-          }}
-        >
-          <Checkbox fullWidth={false} checked={isRowSelected} />
-        </TableCell>
         <TableCell>
           <Text.H5 noWrap suppressHydrationWarning>
-            {timeAgo({ input: conversation.startedAt })}
+            {timeAgo({ input: span.startedAt })}
           </Text.H5>
         </TableCell>
         <TableCell>
           <CommitVersionCell commit={commit} isLoading={isLoadingCommits} />
         </TableCell>
         <TableCell>
-          <Text.H5 noWrap>{conversation.source ?? '-'}</Text.H5>
+          <Text.H5 noWrap>{span.source ?? '-'}</Text.H5>
         </TableCell>
         <TableCell>
-          <Text.H5 noWrap>{formatDuration(conversation.totalDuration)}</Text.H5>
+          <Text.H5 noWrap>{formatDuration(span.duration)}</Text.H5>
         </TableCell>
         <TableCell>
-          <EvaluationsColumn conversationId={conversation.documentLogUuid} />
+          <Text.H5 noWrap>{span.model ?? '-'}</Text.H5>
         </TableCell>
         <TableCell>
-          <Badge variant='muted'>
-            <Text.H6>{conversation.traceCount} traces</Text.H6>
-          </Badge>
+          <Text.H5 noWrap>
+            {totalTokens !== null ? String(totalTokens) : '-'}
+          </Text.H5>
+        </TableCell>
+        <TableCell>
+          <EvaluationsColumn
+            spanId={span.id}
+            documentLogUuid={span.documentLogUuid}
+          />
         </TableCell>
       </TableRow>
-      {isExpanded && (
+      {isExpanded && span.documentLogUuid && (
         <TableRow hoverable={false}>
           <TableCell
             colSpan={999}
@@ -84,8 +83,8 @@ export const ConversationRow = memo(function ConversationRow({
             innerClassName='w-full h-full flex !justify-center !items-center'
           >
             <ConversationTimeline
-              documentLogUuid={conversation.documentLogUuid!}
-              commitUuid={conversation.commitUuid}
+              documentLogUuid={span.documentLogUuid}
+              commitUuid={span.commitUuid ?? ''}
             />
           </TableCell>
         </TableRow>
