@@ -1,7 +1,6 @@
 import { Span, EvaluationResultV2, EvaluationV2 } from '../../constants'
 import type { Message } from '@latitude-data/constants/messages'
 import { Result, TypedResult } from '../../lib/Result'
-import { UnprocessableEntityError } from '../../lib/errors'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { assembleTraceWithMessages } from '../tracing/traces/assemble'
 import { adaptCompletionSpanMessagesToLegacy } from '../tracing/spans/fetching/findCompletionSpanFromTrace'
@@ -52,15 +51,15 @@ export async function buildSpanMessagesWithReasons({
       spanId: span.id,
     })
 
+    // Skip spans with empty traces (e.g., spans were deleted but reference remains)
     if (!Result.isOk(assembledTraceResult)) {
-      return assembledTraceResult
+      continue
     }
 
     const { completionSpan } = assembledTraceResult.unwrap()
+    // Skip spans without a completion span
     if (!completionSpan) {
-      return Result.error(
-        new UnprocessableEntityError('Could not find completion span'),
-      )
+      continue
     }
 
     const evaluationResult = evaluationResults.find(

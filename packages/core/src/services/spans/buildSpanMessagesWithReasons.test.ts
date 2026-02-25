@@ -98,11 +98,30 @@ describe('buildSpanMessagesWithReasons', () => {
     expect(messagesWithReasons[1]?.reason).toBe('')
   })
 
-  it('returns error when assembleTraceWithMessages fails', async () => {
-    const spans = [{ id: 'span-1', traceId: 'trace-1' }]
+  it('skips spans when assembleTraceWithMessages fails', async () => {
+    const spans = [
+      { id: 'span-1', traceId: 'trace-1' },
+      { id: 'span-2', traceId: 'trace-2' },
+    ]
 
-    mockAssembleTraceWithMessages.mockResolvedValueOnce(
-      Result.error(new Error('Failed to assemble trace')),
+    const messages2 = [
+      { role: 'user', content: 'Test' },
+      { role: 'assistant', content: 'Response', toolCalls: [] },
+    ]
+
+    mockAssembleTraceWithMessages
+      .mockResolvedValueOnce(
+        Result.error(new Error('Failed to assemble trace')),
+      )
+      .mockResolvedValueOnce(
+        Result.ok({
+          trace: { messages: [] } as any,
+          completionSpan: { metadata: {} } as any,
+        }),
+      )
+
+    mockAdaptCompletionSpanMessagesToLegacy.mockReturnValueOnce(
+      messages2 as any,
     )
 
     const result = await buildSpanMessagesWithReasons({
@@ -112,15 +131,39 @@ describe('buildSpanMessagesWithReasons', () => {
       evaluations: [],
     })
 
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error?.message).toBe('Failed to assemble trace')
+    expect(Result.isOk(result)).toBe(true)
+    const messagesWithReasons = result.unwrap()
+    expect(messagesWithReasons).toHaveLength(1)
+    expect(messagesWithReasons[0]?.messages).toEqual(messages2)
   })
 
-  it('returns error when completionSpan is not found', async () => {
-    const spans = [{ id: 'span-1', traceId: 'trace-1' }]
+  it('skips spans when completionSpan is not found', async () => {
+    const spans = [
+      { id: 'span-1', traceId: 'trace-1' },
+      { id: 'span-2', traceId: 'trace-2' },
+    ]
 
-    mockAssembleTraceWithMessages.mockResolvedValueOnce(
-      Result.ok({ trace: { messages: [] } as any, completionSpan: undefined }),
+    const messages2 = [
+      { role: 'user', content: 'Test' },
+      { role: 'assistant', content: 'Response', toolCalls: [] },
+    ]
+
+    mockAssembleTraceWithMessages
+      .mockResolvedValueOnce(
+        Result.ok({
+          trace: { messages: [] } as any,
+          completionSpan: undefined,
+        }),
+      )
+      .mockResolvedValueOnce(
+        Result.ok({
+          trace: { messages: [] } as any,
+          completionSpan: { metadata: {} } as any,
+        }),
+      )
+
+    mockAdaptCompletionSpanMessagesToLegacy.mockReturnValueOnce(
+      messages2 as any,
     )
 
     const result = await buildSpanMessagesWithReasons({
@@ -130,8 +173,10 @@ describe('buildSpanMessagesWithReasons', () => {
       evaluations: [],
     })
 
-    expect(Result.isOk(result)).toBe(false)
-    expect(result.error?.message).toBe('Could not find completion span')
+    expect(Result.isOk(result)).toBe(true)
+    const messagesWithReasons = result.unwrap()
+    expect(messagesWithReasons).toHaveLength(1)
+    expect(messagesWithReasons[0]?.messages).toEqual(messages2)
   })
 
   it('matches evaluation results to spans and extracts reasons', async () => {
