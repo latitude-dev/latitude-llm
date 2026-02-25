@@ -19,13 +19,13 @@ import {
   TelemetryContext,
 } from '../../telemetry'
 import { getInputSchema, getOutputType } from '../chains/ChainValidator'
+import { readConversationCache } from '../conversations/cache'
 import { scanDocumentContent } from '../documents'
 import { ToolHandler } from '../documents/tools/clientTools/handlers'
-import { unsafelyFindProviderApiKey } from '../providerApiKeys/data-access/providerApiKeys'
-import { readConversationCache } from '../conversations/cache'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
-import { assembleTraceWithMessages } from '../tracing/traces/assemble'
+import { unsafelyFindProviderApiKey } from '../providerApiKeys/data-access/providerApiKeys'
 import { adaptCompletionSpanMessagesToLegacy } from '../tracing/spans/fetching/findCompletionSpanFromTrace'
+import { assembleTraceWithMessages } from '../tracing/traces/assemble'
 
 type AddMessagesArgs = {
   workspace: WorkspaceDto
@@ -152,6 +152,9 @@ async function retrieveData({
   documentLogUuid: string
 }) {
   const spansRepo = new SpansRepository(workspace.id)
+  const firstSpan = documentLogUuid
+    ? await spansRepo.findFirstMainSpanByDocumentLogUuid(documentLogUuid)
+    : undefined
   const previousSpan = documentLogUuid
     ? await spansRepo.findLastMainSpanByDocumentLogUuid(documentLogUuid)
     : undefined
@@ -164,9 +167,14 @@ async function retrieveData({
 
   const cachedConversation = cacheResult.value
 
-  const commitUuid = cachedConversation?.commitUuid ?? previousSpan?.commitUuid
+  const commitUuid =
+    cachedConversation?.commitUuid ??
+    previousSpan?.commitUuid ??
+    firstSpan?.commitUuid
   const documentUuid =
-    cachedConversation?.documentUuid ?? previousSpan?.documentUuid
+    cachedConversation?.documentUuid ??
+    previousSpan?.documentUuid ??
+    firstSpan?.documentUuid
 
   if (!commitUuid || !documentUuid) {
     return Result.error(
