@@ -284,6 +284,9 @@ async function getMessagesFromSpan({
   const traceResult = await assembleTraceWithMessages({
     traceId: span.traceId,
     workspace,
+    commitUuid: span.commitUuid,
+    documentUuid: span.documentUuid,
+    projectId: span.projectId,
   })
   if (traceResult.error) return []
 

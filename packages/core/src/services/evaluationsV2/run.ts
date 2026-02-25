@@ -120,6 +120,9 @@ export async function runEvaluationV2<
     traceId: span.traceId,
     workspace,
     spanId: span.id,
+    commitUuid: commit.uuid,
+    documentUuid: evaluation.documentUuid,
+    projectId: commit.projectId,
   })
   if (!Result.isOk(assembledTraceResult)) {
     return Result.error(new UnprocessableEntityError('Cannot assemble trace'))

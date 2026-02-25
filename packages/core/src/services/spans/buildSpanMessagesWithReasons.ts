@@ -39,7 +39,13 @@ export async function buildSpanMessagesWithReasons({
   evaluations,
 }: {
   workspace: Workspace
-  spans: Pick<Span, 'id' | 'traceId'>[]
+  spans: Array<{
+    id: Span['id']
+    traceId: Span['traceId']
+    commitUuid?: Span['commitUuid']
+    documentUuid?: Span['documentUuid']
+    projectId?: Span['projectId']
+  }>
   evaluationResults: EvaluationResultV2[]
   evaluations: EvaluationV2[]
 }): Promise<TypedResult<SpanMessagesWithReason[], Error>> {
@@ -50,6 +56,9 @@ export async function buildSpanMessagesWithReasons({
       traceId: span.traceId,
       workspace,
       spanId: span.id,
+      commitUuid: span.commitUuid,
+      documentUuid: span.documentUuid,
+      projectId: span.projectId,
     })
 
     if (!Result.isOk(assembledTraceResult)) {

@@ -86,10 +86,14 @@ export async function getOrSetEnrichedReason<
   }
 
   const workspace = await unsafelyFindWorkspace(result.workspaceId)
+  const commit = await findCommitById(result.commitId)
   const assembledTraceResult = await assembleTraceWithMessages({
     traceId: result.evaluatedTraceId,
     workspace,
     spanId: result.evaluatedSpanId,
+    commitUuid: commit?.uuid,
+    documentUuid: evaluation.documentUuid,
+    projectId: commit?.projectId,
   })
   if (!Result.isOk(assembledTraceResult)) {
     return Result.error(

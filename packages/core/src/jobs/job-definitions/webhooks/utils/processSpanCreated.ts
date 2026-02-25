@@ -59,6 +59,9 @@ export async function processSpanCreated({
     traceId,
     workspace: { id: workspaceId },
     spanId,
+    commitUuid: span.commitUuid,
+    documentUuid: span.documentUuid,
+    projectId: span.projectId,
   })
 
   if (traceResult.ok && traceResult.value) {

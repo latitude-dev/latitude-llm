@@ -8,6 +8,7 @@ import {
   PromptSpanMetadata,
 } from '@latitude-data/core/constants'
 import {
+  CommitsRepository,
   EvaluationsV2Repository,
   SpanMetadatasRepository,
   SpansRepository,
@@ -65,17 +66,23 @@ export const GET = errorHandler(
       const spansRepository = new SpansRepository(workspace.id)
       const traceId =
         await spansRepository.getLastTraceByLogUuid(documentLogUuid)
-
       if (!traceId) {
         return NextResponse.json(
           { ok: false, error: 'No trace found for document log' },
           { status: 200 },
         )
       }
-
+      const commitsRepo = new CommitsRepository(workspace.id)
+      const commit = await commitsRepo
+        .getCommitByUuid({ uuid: commitUuid })
+        .then((r) => r.value)
+      const projectId = commit?.projectId
       const { trace, completionSpan } = await assembleTraceWithMessages({
         traceId,
         workspace,
+        commitUuid,
+        documentUuid,
+        projectId,
       }).then((r) => r.unwrap())
 
       if (!completionSpan || !completionSpan.metadata) {

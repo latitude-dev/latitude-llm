@@ -80,6 +80,9 @@ export async function annotateEvaluationV2<
     traceId: span.traceId,
     workspace,
     spanId: span.id,
+    commitUuid: commit.uuid,
+    documentUuid: evaluation.documentUuid,
+    projectId: commit.projectId,
   })
   if (!Result.isOk(assembledTraceResult)) {
     return Result.error(new BadRequestError('Could not assemble trace'))

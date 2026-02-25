@@ -5,6 +5,7 @@ import {
   AssembledTrace,
   SpanType,
 } from '@latitude-data/core/constants'
+import { SpansRepository } from '@latitude-data/core/repositories'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 import { assembleTraceWithMessages } from '@latitude-data/core/services/tracing/traces/assemble'
 import { NextRequest, NextResponse } from 'next/server'
@@ -30,10 +31,18 @@ export const GET = errorHandler(
       },
     ) => {
       const { traceId, spanId } = params
+      const spansRepository = new SpansRepository(workspace.id)
+      const span = await spansRepository
+        .get({ traceId, spanId })
+        .then((r) => r.value)
+
       const result = await assembleTraceWithMessages({
         traceId,
         workspace,
         spanId,
+        commitUuid: span?.commitUuid,
+        documentUuid: span?.documentUuid,
+        projectId: span?.projectId,
       })
 
       if (!result.ok || !result.value) {

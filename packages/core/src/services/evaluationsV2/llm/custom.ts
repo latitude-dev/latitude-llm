@@ -220,7 +220,14 @@ async function run(
   )
 
   const assembledTraceResult = await assembleTraceWithMessages(
-    { traceId: span.traceId, workspace, spanId: span.id },
+    {
+      traceId: span.traceId,
+      workspace,
+      spanId: span.id,
+      commitUuid: commit.uuid,
+      documentUuid: evaluation.documentUuid,
+      projectId: commit.projectId,
+    },
     db,
   )
   if (!Result.isOk(assembledTraceResult)) {

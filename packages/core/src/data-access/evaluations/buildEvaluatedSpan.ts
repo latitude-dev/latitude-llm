@@ -66,6 +66,9 @@ export async function buildEvaluatedSpan({
     traceId: span.traceId,
     workspace,
     spanId: span.id,
+    commitUuid: span.commitUuid,
+    documentUuid: span.documentUuid,
+    projectId: span.projectId,
   })
 
   if (!Result.isOk(assembledTraceResult)) {
