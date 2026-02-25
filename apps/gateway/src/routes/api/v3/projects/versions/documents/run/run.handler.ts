@@ -285,7 +285,7 @@ async function handleForegroundRun({
   if (pendingError) throw pendingError
 
   if (abortSignal.aborted && !finalResponse.response) {
-    return c.json({ message: 'Client Closed Request' }, 499)
+    return c.json({ message: 'Client Closed Request' }, 499 as any)
   }
 
   const body = runPresenter({
