@@ -145,8 +145,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}:latest
-          cache-to: type=inline
+          cache-from: type=gha,scope=${{ matrix.app }}-public
+          cache-to: type=gha,scope=${{ matrix.app }}-public,mode=max
 
   build-and-push-private:
     needs: [check-changes, acceptance-tests]
@@ -236,8 +236,8 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) }}:latest
-          cache-to: type=inline
+          cache-from: type=gha,scope=${{ matrix.app }}-private
+          cache-to: type=gha,scope=${{ matrix.app }}-private,mode=max
           secrets: |
             NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=${{ secrets.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY }}
             AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
