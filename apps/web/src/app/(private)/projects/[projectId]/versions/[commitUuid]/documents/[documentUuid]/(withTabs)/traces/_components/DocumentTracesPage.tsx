@@ -8,6 +8,7 @@ import { TraceInfoPanel } from '$/components/TracesPanel'
 import { SpansFilters, parseSpansFilters } from '$/lib/schemas/filters'
 import useDocumentTracesAggregations from '$/stores/documentTracesAggregations'
 import useDocumentTracesDailyCount from '$/stores/documentTracesDailyCount'
+import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { TableWithHeader } from '@latitude-data/web-ui/molecules/ListingHeader'
 import { TableBlankSlate } from '@latitude-data/web-ui/molecules/TableBlankSlate'
@@ -21,6 +22,7 @@ import { TracesOverTime } from './TracesOverTime'
 import { TraceSpanSelectionStateContext } from './TraceSpanSelectionContext'
 import { useSpansKeysetPaginationStore } from '$/stores/spansKeysetPagination'
 import { SpanType } from '@latitude-data/constants'
+import { SelectionTracesBanner } from './SelectionTracesBanner'
 
 export function DocumentTracesPage({
   initialSpanFilterOptions,
@@ -65,6 +67,13 @@ export function DocumentTracesPage({
     filters,
   })
 
+  const selectableState = useSelectableRows({
+    rowIds: traces.items
+      .map((s) => s.documentLogUuid)
+      .filter(Boolean) as string[],
+    totalRowCount: traces.items.length,
+  })
+
   const hasSelection = !!selection.documentLogUuid && !!selection.spanId
 
   return (
@@ -101,7 +110,17 @@ export function DocumentTracesPage({
                 showRightPane={hasSelection}
                 rightPaneRef={panelContainerRef}
                 leftPane={
-                  <DocumentTraces ref={panelRef} traces={traces} />
+                  <DocumentTraces
+                    ref={panelRef}
+                    traces={traces}
+                    selectableState={selectableState}
+                  />
+                }
+                floatingPanel={
+                  <SelectionTracesBanner
+                    selectableState={selectableState}
+                    filters={filters}
+                  />
                 }
                 rightPane={
                   hasSelection ? (

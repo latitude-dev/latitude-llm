@@ -5,6 +5,7 @@ import { formatDuration } from '$/app/_lib/formatUtils'
 import { timeAgo } from '$/lib/relativeTime'
 import { Span } from '@latitude-data/constants'
 import { TableCell, TableRow } from '@latitude-data/web-ui/atoms/Table'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
 import { cn } from '@latitude-data/web-ui/utils'
 import { ConversationTimeline } from './ConversationTimeline'
@@ -12,13 +13,18 @@ import { TraceSpanSelectionActionsContext } from './TraceSpanSelectionContext'
 import { useCommits } from '$/stores/commitsStore'
 import { CommitVersionCell } from '$/components/CommitVersionCell'
 import { EvaluationsColumn } from './EvaluationsColumn'
+import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 
 export const TraceRow = memo(function TraceRow({
   span,
   isExpanded,
+  toggleRow,
+  isRowSelected,
 }: {
   span: Span
   isExpanded: boolean
+  toggleRow: SelectableRowsHook['toggleRow']
+  isRowSelected: boolean
 }) {
   const { onClickTraceRow } = use(TraceSpanSelectionActionsContext)
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
@@ -46,6 +52,17 @@ export const TraceRow = memo(function TraceRow({
           },
         )}
       >
+        <TableCell
+          preventDefault
+          align='left'
+          onClick={() => {
+            if (span.documentLogUuid) {
+              toggleRow(span.documentLogUuid, !isRowSelected)
+            }
+          }}
+        >
+          <Checkbox fullWidth={false} checked={isRowSelected} />
+        </TableCell>
         <TableCell>
           <Text.H5 noWrap suppressHydrationWarning>
             {timeAgo({ input: span.startedAt })}

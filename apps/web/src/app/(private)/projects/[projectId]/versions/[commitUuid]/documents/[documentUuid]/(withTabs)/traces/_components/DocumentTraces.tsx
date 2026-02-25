@@ -8,16 +8,20 @@ import {
   TableHeader,
   TableRow,
 } from '@latitude-data/web-ui/atoms/Table'
+import { Checkbox } from '@latitude-data/web-ui/atoms/Checkbox'
 import { TraceSpanSelectionStateContext } from './TraceSpanSelectionContext'
 import { TraceRow } from './ConversationRow'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
 import { UseSpansKeysetPaginationReturn } from '$/stores/spansKeysetPagination/types'
+import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 
 export function DocumentTraces({
   ref,
   traces,
+  selectableState,
 }: {
   traces: UseSpansKeysetPaginationReturn
+  selectableState: SelectableRowsHook
   ref?: Ref<HTMLTableElement>
 }) {
   const { selection } = use(TraceSpanSelectionStateContext)
@@ -38,6 +42,13 @@ export function DocumentTraces({
     >
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
+          <TableHead>
+            <Checkbox
+              fullWidth={false}
+              checked={selectableState.headerState}
+              onCheckedChange={selectableState.toggleAll}
+            />
+          </TableHead>
           <TableHead>Time</TableHead>
           <TableHead>Version</TableHead>
           <TableHead>Source</TableHead>
@@ -56,6 +67,10 @@ export function DocumentTraces({
               !!span.documentLogUuid &&
               selection.documentLogUuid === span.documentLogUuid
             }
+            toggleRow={selectableState.toggleRow}
+            isRowSelected={selectableState.isSelected(
+              span.documentLogUuid ?? '',
+            )}
           />
         ))}
       </TableBody>
