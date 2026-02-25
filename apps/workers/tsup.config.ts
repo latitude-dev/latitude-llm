@@ -10,6 +10,9 @@ export default defineConfig({
   format: ['esm'],
   target: 'node20',
   platform: 'node',
+  esbuildOptions(options) {
+    options.keepNames = true
+  },
   loader: {
     // Tsup complains .html has no loader. But we don't have any .html files
     // So we just tell it to ignore it using 'empty' loader

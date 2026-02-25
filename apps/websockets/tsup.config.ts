@@ -14,6 +14,9 @@ export default defineConfig({
     // So we just tell it to ignore it using 'empty' loader
     '.html': 'empty',
   },
+  esbuildOptions(options) {
+    options.keepNames = true
+  },
   skipNodeModulesBundle: true,
   noExternal: [
     '@latitude-data/env',
