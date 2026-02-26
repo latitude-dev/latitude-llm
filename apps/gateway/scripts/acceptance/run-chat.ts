@@ -1,3 +1,5 @@
+export {}
+
 const baseUrl = process.env.GATEWAY_URL ?? 'http://localhost:8787'
 const apiKey =
   process.env.LATITUDE_API_KEY ?? '5a1ea68f-e9cf-40fd-b9f7-34763c9f8248' // test api key, have a good day scrappers :wave:
@@ -209,7 +211,7 @@ async function main() {
     },
   )
 
-  const runSync = await requestJson<RunResponse>(
+  const runSyncFirst = await requestJson<RunResponse>(
     `/api/v3/projects/${project.id}/versions/${version.uuid}/documents/run`,
     {
       path: promptPath,
@@ -218,8 +220,25 @@ async function main() {
     },
   )
 
-  if (!runSync.uuid || !runSync.response?.text) {
-    throw new Error('Foreground run (non-stream) did not return response text')
+  if (!runSyncFirst.uuid || !runSyncFirst.response?.text) {
+    throw new Error(
+      'Foreground run #1 (non-stream) did not return response text',
+    )
+  }
+
+  const runSyncSecond = await requestJson<RunResponse>(
+    `/api/v3/projects/${project.id}/versions/${version.uuid}/documents/run`,
+    {
+      path: promptPath,
+      stream: false,
+      parameters: { topic: 'Barcelona weather in winter' },
+    },
+  )
+
+  if (!runSyncSecond.uuid || !runSyncSecond.response?.text) {
+    throw new Error(
+      'Foreground run #2 (non-stream, cache path) did not return response text',
+    )
   }
 
   const runStreamEvents = await requestSse(
@@ -258,7 +277,7 @@ async function main() {
   }
 
   const chatSync = await requestJson<RunResponse>(
-    `/api/v3/conversations/${runSync.uuid}/chat`,
+    `/api/v3/conversations/${runSyncFirst.uuid}/chat`,
     {
       stream: false,
       messages: [
@@ -279,12 +298,12 @@ async function main() {
     throw new Error('Chat (non-stream) did not return response text')
   }
 
-  if (chatSync.uuid !== runSync.uuid) {
+  if (chatSync.uuid !== runSyncFirst.uuid) {
     throw new Error('Chat (non-stream) UUID does not match run UUID')
   }
 
   const chatStreamEvents = await requestSse(
-    `/api/v3/conversations/${runSync.uuid}/chat`,
+    `/api/v3/conversations/${runSyncFirst.uuid}/chat`,
     {
       stream: true,
       messages: [
@@ -313,7 +332,11 @@ async function main() {
     throw new Error('Chat (stream) did not return response text')
   }
 
-  console.log('Foreground run (non-stream) OK:', runSync.response.text)
+  console.log('Foreground run #1 (non-stream) OK:', runSyncFirst.response.text)
+  console.log(
+    'Foreground run #2 (non-stream, cache path) OK:',
+    runSyncSecond.response.text,
+  )
   console.log('Foreground run (stream) OK:', runStreamText)
   console.log('Background run OK:', runBackground.uuid)
   console.log('Chat (non-stream) OK:', chatSync.response.text)
