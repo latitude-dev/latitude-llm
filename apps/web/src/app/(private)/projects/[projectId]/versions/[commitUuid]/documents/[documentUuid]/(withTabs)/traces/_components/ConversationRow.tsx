@@ -30,9 +30,6 @@ export const TraceRow = memo(function TraceRow({
   const { data: commits, isLoading: isLoadingCommits } = useCommits()
   const commit = commits?.find((c) => c.uuid === span.commitUuid)
 
-  const totalTokens =
-    (span.tokensPrompt ?? 0) + (span.tokensCompletion ?? 0) || null
-
   return (
     <>
       <TableRow
