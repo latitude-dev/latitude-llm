@@ -3,6 +3,7 @@ import {
   LatitudeError,
   UnprocessableEntityError,
   ChainError,
+  RunErrorCodes,
 } from '@latitude-data/constants/errors'
 import http from '$/common/http'
 import { captureException } from '$/common/tracer'
@@ -36,13 +37,18 @@ const errorHandlerMiddleware = (err: Error) => {
     normalizedError.cause = err
   }
 
+  const isUnexpectedChainError =
+    err instanceof ChainError && err.errorCode === RunErrorCodes.Unknown
+
   const shouldCapture =
     process.env.NODE_ENV !== 'test' &&
-    (err instanceof HTTPException
-      ? err.status >= 500
-      : err instanceof UnprocessableEntityError || err instanceof LatitudeError
-        ? err.statusCode >= 500
-        : true)
+    (isUnexpectedChainError ||
+      (err instanceof HTTPException
+        ? err.status >= 500
+        : err instanceof UnprocessableEntityError ||
+            err instanceof LatitudeError
+          ? err.statusCode >= 500
+          : true))
 
   if (err instanceof HTTPException) {
     if (shouldCapture) {
