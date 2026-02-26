@@ -230,10 +230,6 @@ export async function processSpansBulk(
 
     const captureResolution = await resolveCaptureReferences({
       attributes,
-      type,
-      status,
-      scope,
-      apiKey,
       workspace,
       traceId,
       cache: captureResolutionCache,
@@ -442,19 +438,11 @@ export async function processSpansBulk(
  */
 async function resolveCaptureReferences({
   attributes,
-  type,
-  status,
-  scope,
-  apiKey,
   workspace,
   traceId,
   cache,
 }: {
   attributes: Record<string, SpanAttribute>
-  type: SpanType
-  status: SpanStatus
-  scope: Otlp.Scope
-  apiKey: ApiKey
   workspace: Workspace
   traceId: string
   cache: Map<string, CaptureResolution>

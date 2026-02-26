@@ -447,7 +447,7 @@ export class LatitudeTelemetry {
       propagation.createBaggage(captureBaggageEntries),
     )
 
-    const span = this.manualInstrumentation.captureExternal(
+    const span = this.manualInstrumentation.unresolvedExternal(
       captureContext,
       options,
     )

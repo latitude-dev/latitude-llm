@@ -20,7 +20,7 @@ class TestCaptureDecorator:
             t._manual_instrumentation = MagicMock()
             mock_span = MagicMock()
             mock_span.context = MagicMock()
-            t._manual_instrumentation.capture_external.return_value = mock_span
+            t._manual_instrumentation.unresolved_external.return_value = mock_span
             return t
 
     def test_capture_returns_capture_context(self, telemetry):
@@ -37,7 +37,7 @@ class TestCaptureDecorator:
 
         result = my_function(5)
         assert result == 10
-        telemetry._manual_instrumentation.capture_external.assert_called_once()
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
 
     def test_capture_populates_baggage_for_child_spans(self, telemetry):
         """Test capture sets reference attributes in baggage."""
@@ -75,7 +75,7 @@ class TestCaptureDecorator:
             my_function()
 
         # Span should have fail called
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.fail.assert_called_once()
 
     @pytest.mark.asyncio
@@ -88,7 +88,7 @@ class TestCaptureDecorator:
 
         result = await my_async_function(5)
         assert result == 10
-        telemetry._manual_instrumentation.capture_external.assert_called_once()
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_decorator_async_function_with_exception(self, telemetry):
@@ -102,7 +102,7 @@ class TestCaptureDecorator:
             await my_async_function()
 
         # Span should have fail called
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.fail.assert_called_once()
 
     def test_decorator_preserves_function_metadata(self, telemetry):
@@ -129,7 +129,7 @@ class TestCaptureContextManager:
             t._manual_instrumentation = MagicMock()
             mock_span = MagicMock()
             mock_span.context = MagicMock()
-            t._manual_instrumentation.capture_external.return_value = mock_span
+            t._manual_instrumentation.unresolved_external.return_value = mock_span
             return t
 
     def test_context_manager_sync(self, telemetry):
@@ -139,8 +139,8 @@ class TestCaptureContextManager:
             result = 42
 
         assert result == 42
-        telemetry._manual_instrumentation.capture_external.assert_called_once()
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.end.assert_called_once()
 
     def test_context_manager_sync_with_exception(self, telemetry):
@@ -149,7 +149,7 @@ class TestCaptureContextManager:
             with telemetry.capture(path="test-path", project_id=123):
                 raise ValueError("Test error")
 
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.fail.assert_called_once()
 
     @pytest.mark.asyncio
@@ -160,8 +160,8 @@ class TestCaptureContextManager:
             result = 42
 
         assert result == 42
-        telemetry._manual_instrumentation.capture_external.assert_called_once()
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.end.assert_called_once()
 
     @pytest.mark.asyncio
@@ -171,7 +171,7 @@ class TestCaptureContextManager:
             async with telemetry.capture(path="test-path", project_id=123):
                 raise ValueError("Test error")
 
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.fail.assert_called_once()
 
 
@@ -235,7 +235,7 @@ class TestCaptureGenerators:
             t._manual_instrumentation = MagicMock()
             mock_span = MagicMock()
             mock_span.context = MagicMock()
-            t._manual_instrumentation.capture_external.return_value = mock_span
+            t._manual_instrumentation.unresolved_external.return_value = mock_span
             return t
 
     def test_decorator_sync_generator(self, telemetry):
@@ -250,8 +250,8 @@ class TestCaptureGenerators:
         result = list(my_generator(items))
 
         assert result == items
-        telemetry._manual_instrumentation.capture_external.assert_called_once()
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.end.assert_called_once()
 
     def test_decorator_sync_generator_keeps_span_open_during_iteration(self, telemetry):
@@ -264,7 +264,7 @@ class TestCaptureGenerators:
             yield 3
 
         gen = my_generator()
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
 
         next(gen)
         span.end.assert_not_called()
@@ -294,7 +294,7 @@ class TestCaptureGenerators:
         with pytest.raises(ValueError, match="Generator error"):
             next(gen)
 
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.fail.assert_called_once()
 
     def test_decorator_sync_generator_early_exit(self, telemetry):
@@ -309,7 +309,7 @@ class TestCaptureGenerators:
         gen = my_generator()
         next(gen)
 
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.end.assert_not_called()
 
         gen.close()
@@ -328,8 +328,8 @@ class TestCaptureGenerators:
         result = [item async for item in my_async_generator(items)]
 
         assert result == items
-        telemetry._manual_instrumentation.capture_external.assert_called_once()
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        telemetry._manual_instrumentation.unresolved_external.assert_called_once()
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.end.assert_called_once()
 
     @pytest.mark.asyncio
@@ -343,7 +343,7 @@ class TestCaptureGenerators:
             yield 3
 
         gen = my_async_generator()
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
 
         await gen.__anext__()
         span.end.assert_not_called()
@@ -374,7 +374,7 @@ class TestCaptureGenerators:
         with pytest.raises(ValueError, match="Async generator error"):
             await gen.__anext__()
 
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.fail.assert_called_once()
 
     @pytest.mark.asyncio
@@ -390,7 +390,7 @@ class TestCaptureGenerators:
         gen = my_async_generator()
         await gen.__anext__()
 
-        span = telemetry._manual_instrumentation.capture_external.return_value
+        span = telemetry._manual_instrumentation.unresolved_external.return_value
         span.end.assert_not_called()
 
         await gen.aclose()

@@ -749,6 +749,7 @@ class ManualInstrumentation(BaseInstrumentation):
         name = options.name or f"external-{options.promptUuid}"
         return self._span(ctx, name, SpanType.External, StartSpanOptions(attributes=attributes))
 
+    # TODO(tracing): deprecate
     def unresolved_external(self, ctx: Context, options: CaptureOptions) -> SpanHandle:
         """Create an unresolved external span for capture()."""
         attributes: Dict[str, Any] = {
@@ -764,20 +765,3 @@ class ManualInstrumentation(BaseInstrumentation):
 
         name = options.name or f"capture-{options.path}"
         return self._span(ctx, name, SpanType.UnresolvedExternal, StartSpanOptions(attributes=attributes))
-
-    def capture_external(self, ctx: Context, options: CaptureOptions) -> SpanHandle:
-        """Create an external capture span for capture()."""
-        attributes: Dict[str, Any] = {
-            ATTRIBUTES.LATITUDE.promptPath: options.path,
-            ATTRIBUTES.LATITUDE.projectId: options.projectId,
-            ATTRIBUTES.LATITUDE.source: LogSources.API.value,
-        }
-        if options.versionUuid:
-            attributes[ATTRIBUTES.LATITUDE.commitUuid] = options.versionUuid
-        if options.conversationUuid:
-            attributes[ATTRIBUTES.LATITUDE.documentLogUuid] = options.conversationUuid
-        if options.attributes:
-            attributes.update(options.attributes)
-
-        name = options.name or f"capture-{options.path}"
-        return self._span(ctx, name, SpanType.External, StartSpanOptions(attributes=attributes))

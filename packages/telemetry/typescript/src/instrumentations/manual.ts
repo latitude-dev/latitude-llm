@@ -120,8 +120,6 @@ export type CaptureOptions = StartSpanOptions & {
   conversationUuid?: string // Optional, if provided, will be used as the documentLogUuid
 }
 
-export type CaptureExternalOptions = CaptureOptions
-
 export type ManualInstrumentationOptions = {
   provider?: Provider
 }
@@ -635,6 +633,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     })
   }
 
+  // TODO(tracing): deprecate
   unresolvedExternal(
     ctx: otel.Context,
     {
@@ -662,32 +661,5 @@ export class ManualInstrumentation implements BaseInstrumentation {
       SpanType.UnresolvedExternal,
       { attributes },
     )
-  }
-
-  captureExternal(
-    ctx: otel.Context,
-    {
-      path,
-      projectId,
-      versionUuid,
-      conversationUuid,
-      name,
-      ...rest
-    }: CaptureExternalOptions,
-  ) {
-    const attributes = {
-      [ATTRIBUTES.LATITUDE.promptPath]: path,
-      [ATTRIBUTES.LATITUDE.projectId]: projectId,
-      ...(versionUuid && { [ATTRIBUTES.LATITUDE.commitUuid]: versionUuid }),
-      ...(conversationUuid && {
-        [ATTRIBUTES.LATITUDE.documentLogUuid]: conversationUuid,
-      }),
-      [ATTRIBUTES.LATITUDE.source]: LogSources.API,
-      ...(rest.attributes || {}),
-    }
-
-    return this.span(ctx, name || `capture-${path}`, SpanType.External, {
-      attributes,
-    })
   }
 }
