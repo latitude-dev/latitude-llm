@@ -13,6 +13,7 @@ import { ModifiedDocumentType } from '@latitude-data/core/constants'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useDocumentVersionActions } from '$/stores/actions/documentVersionActions'
+import { SidebarDocument } from '../useTree'
 
 export enum EntityType {
   Prompt = 'prompt',
@@ -31,8 +32,10 @@ export const useNodeInput = create<NodeInputState>((set) => ({
 
 export const TreeToolbar = memo(function TreeToolbar({
   promptManagement,
+  documents,
 }: {
   promptManagement: boolean
+  documents: SidebarDocument[]
 }) {
   const addToRootFolder = useTempNodes((state) => state.addToRootFolder)
   const { commit } = useCurrentCommit()
@@ -61,11 +64,16 @@ export const TreeToolbar = memo(function TreeToolbar({
     },
     [setNodeInput, isMerged],
   )
+  const headerText = promptManagement
+    ? 'Files'
+    : documents.length > 0
+      ? 'Traces paths'
+      : null
 
   return (
     <>
       <div className='bg-background sticky top-0 flex flex-row items-center justify-between pl-4 pr-2 z-10'>
-        <Text.H5M>{promptManagement ? 'Files' : 'Traces paths'}</Text.H5M>
+        {headerText ? <Text.H5M>{headerText}</Text.H5M> : null}
         {promptManagement && (
           <div className='flex flex-row space-x-2'>
             <Tooltip

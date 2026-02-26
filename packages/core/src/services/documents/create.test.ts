@@ -117,6 +117,41 @@ describe('createNewDocument', () => {
     )
   })
 
+  describe('onConflictDoNothing', () => {
+    it('creates on first call, returns existing doc on conflict (one doc in commit)', async () => {
+      const first = await createNewDocument({
+        workspace,
+        user,
+        commit,
+        path: 'main',
+        content: 'original content',
+        includeDefaultContent: false,
+        onConflictDoNothing: true,
+      })
+      const firstDoc = first.unwrap()
+
+      const second = await createNewDocument({
+        workspace,
+        user,
+        commit,
+        path: 'main',
+        content: 'ignored content',
+        includeDefaultContent: false,
+        onConflictDoNothing: true,
+      })
+      const secondDoc = second.unwrap()
+
+      expect(secondDoc.id).toBe(firstDoc.id)
+      expect(secondDoc.documentUuid).toBe(firstDoc.documentUuid)
+      expect(secondDoc.content).toBe('original content')
+
+      const scope = new DocumentVersionsRepository(project.workspaceId)
+      const changes = await scope.listCommitChanges(commit)
+      expect(changes.value.length).toBe(1)
+      expect(changes.value[0]!.documentUuid).toBe(firstDoc.documentUuid)
+    })
+  })
+
   it('fails when trying to create a document in a merged commit', async () => {
     const {
       project: prj,

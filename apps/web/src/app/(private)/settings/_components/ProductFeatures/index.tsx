@@ -75,7 +75,7 @@ export default function ProductFeatures() {
                 feature is always enabled.
               </Text.H6>
             </div>
-            <Tooltip trigger={<SwitchToggle checked disabled />}>
+            <Tooltip asChild trigger={<SwitchToggle checked disabled />}>
               Monitoring is enabled by default and cannot be disabled
             </Tooltip>
           </div>

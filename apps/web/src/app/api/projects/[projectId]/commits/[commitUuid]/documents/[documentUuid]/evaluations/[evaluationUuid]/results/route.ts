@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { evaluationResultsV2SearchFromQueryParams } from '@latitude-data/core/helpers'
 
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { resolveCommitFilterFromUrl } from '../resolveCommitFilterFromUrl'
+import { resolveCommitFilterFromUrl } from '$/lib/resolveCommitFilterFromUrl'
 
 export const GET = errorHandler(
   authHandler(

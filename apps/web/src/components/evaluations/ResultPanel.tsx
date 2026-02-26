@@ -3,11 +3,11 @@
 import { DATASET_TABLE_PAGE_SIZE } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { SpanParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/(withTabs)/traces/_components/SpanParameters'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MetadataInfoTabs } from '$/components/MetadataInfoTabs'
 import { MetadataItem } from '$/components/MetadataItem'
 import { useDatasetRole } from '$/hooks/useDatasetRoles'
 import { useStickyNested } from '$/hooks/useStickyNested'
+import { useBuildTraceUrl } from '$/lib/dualScope/useBuildTraceUrl'
 import { ROUTES } from '$/services/routes'
 import useDatasetRows from '$/stores/datasetRows'
 import useDatasetRowCount from '$/stores/datasetRows/count'
@@ -39,7 +39,6 @@ import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { EVALUATION_SPECIFICATIONS, ResultPanelProps } from './index'
 import ResultBadge from './ResultBadge'
-import { buildTraceUrl } from '$/lib/buildTraceUrl'
 
 const DataGrid = dynamic(
   () =>
@@ -349,8 +348,8 @@ export function ResultPanel<
     offset: { top: 12, bottom: 12 },
   })
 
-  const { project } = useCurrentProject()
   const { document } = useCurrentDocument()
+  const buildTraceUrl = useBuildTraceUrl()
   const { data: evaluatedSpan } = useSpanByTraceId({
     traceId: evaluatedTraceId,
     spanId: evaluatedSpanId,
@@ -403,7 +402,6 @@ export function ResultPanel<
               <div className='w-full flex justify-center pt-4'>
                 <Link
                   href={buildTraceUrl({
-                    projectId: project.id,
                     commitUuid: commit.uuid,
                     documentUuid: document.documentUuid,
                     span: evaluatedSpan,

@@ -13,7 +13,7 @@ import {
   evaluationResultsV2SearchFromQueryParams,
   evaluationResultsV2SearchToQueryParams,
 } from '@latitude-data/core/helpers'
-import { resolveCommitFilterFromUrl } from '../../resolveCommitFilterFromUrl'
+import { resolveCommitFilterFromUrl } from '$/lib/resolveCommitFilterFromUrl'
 
 export const GET = errorHandler(
   authHandler(

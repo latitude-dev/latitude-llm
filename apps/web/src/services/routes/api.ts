@@ -354,16 +354,12 @@ export const API_ROUTES = {
     },
   },
   conversations: {
-    root: '/api/conversations',
     detail: (conversationId: string) => {
       const conversationRoot = `/api/conversations/${conversationId}`
       return {
         root: conversationRoot,
         traceIds: {
           root: `${conversationRoot}/trace-ids`,
-        },
-        evaluations: {
-          root: `${conversationRoot}/evaluations`,
         },
         spans: {
           detail: (spanId: string) => ({

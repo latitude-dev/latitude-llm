@@ -1,16 +1,16 @@
 'use client'
 
 import { useCurrentEvaluationV2 } from '$/app/providers/EvaluationV2Provider'
+import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { MetadataProvider } from '$/components/MetadataProvider'
 import { DevModeProvider } from '$/hooks/useDevMode'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useIsLatitudeProvider } from '$/hooks/useIsLatitudeProvider'
 import { useMetadata } from '$/hooks/useMetadata'
-import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import useIntegrations from '$/stores/integrations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { SplitPane } from '@latitude-data/web-ui/atoms/SplitPane'
-import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
 import { EvaluationTitle } from '../../../../_components/EvaluationTitle'
@@ -142,16 +142,14 @@ function EvaluationEditorContent({
   })
   const isLatitudeProvider = useIsLatitudeProvider({ metadata })
 
+  const { evaluationDetail } = useEvaluationRoutes()
+
   useEffect(() => {
     const metadataProps = buildPromptMetadata({ promptValue: value })
     runReadMetadata(metadataProps)
   }, [value, buildPromptMetadata, runReadMetadata])
 
-  const backHref = ROUTES.projects
-    .detail({ id: project.id })
-    .commits.detail({ uuid: commit.uuid })
-    .documents.detail({ uuid: document.documentUuid })
-    .evaluations.detail({ uuid: evaluation.uuid }).root
+  const backHref = evaluationDetail(evaluation.uuid)
   return (
     <>
       <SplitPane

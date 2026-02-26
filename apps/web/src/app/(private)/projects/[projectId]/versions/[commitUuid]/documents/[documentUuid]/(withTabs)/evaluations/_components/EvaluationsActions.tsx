@@ -3,17 +3,13 @@ import {
   type ICommitContextType,
 } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import {
-  useCurrentProject,
-  type IProjectContextType,
-} from '$/app/providers/ProjectProvider'
 import { useProductAccess } from '$/components/Providers/SessionProvider'
 import EvaluationV2Form, {
   EvaluationV2FormErrors,
 } from '$/components/evaluations/EvaluationV2Form'
 import { EVALUATION_SPECIFICATIONS } from '$/components/evaluations'
+import { useEvaluationRoutes } from '$/lib/dualScope/useEvaluationRoutes'
 import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 import {
   CompositeEvaluationMetric,
@@ -92,7 +88,6 @@ export function EvaluationsActions({
   isCreatingEvaluation: boolean
   isGeneratingEvaluation: boolean
 }) {
-  const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { promptManagement } = useProductAccess()
@@ -100,7 +95,6 @@ export function EvaluationsActions({
   return (
     <div className='flex flex-row items-center gap-4'>
       <CombineEvaluations
-        project={project}
         commit={commit}
         document={document}
         createEvaluation={createEvaluation}
@@ -116,7 +110,6 @@ export function EvaluationsActions({
         />
       )}
       <AddEvaluation
-        project={project}
         commit={commit}
         document={document}
         createEvaluation={createEvaluation}
@@ -164,14 +157,12 @@ function GenerateEvaluation({
 }
 
 function AddEvaluation({
-  project,
   commit,
   document,
   createEvaluation,
   isCreatingEvaluation,
   promptManagement,
 }: {
-  project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
@@ -179,6 +170,7 @@ function AddEvaluation({
   promptManagement: boolean
 }) {
   const navigate = useNavigate()
+  const { evaluationDetail } = useEvaluationRoutes()
 
   const [openCreateModal, setOpenCreateModal] = useState(false)
   const [settings, setSettings] = useState<EvaluationSettings>(
@@ -219,14 +211,7 @@ function AddEvaluation({
       setErrors(undefined)
       setOpenCreateModal(false)
 
-      const { evaluation } = result
-      navigate.push(
-        ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid })
-          .documents.detail({ uuid: document.documentUuid })
-          .evaluations.detail({ uuid: evaluation.uuid }).root,
-      )
+      navigate.push(evaluationDetail(result.evaluation.uuid))
     }
   }, [
     isCreatingEvaluation,
@@ -239,10 +224,9 @@ function AddEvaluation({
     setOptions,
     setErrors,
     setOpenCreateModal,
-    project,
-    commit,
     document,
     navigate,
+    evaluationDetail,
   ])
 
   return (
@@ -287,19 +271,18 @@ function AddEvaluation({
 }
 
 function CombineEvaluations({
-  project,
   commit,
   document,
   createEvaluation,
   isCreatingEvaluation,
 }: {
-  project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
   createEvaluation: ReturnType<typeof useEvaluationsV2>['createEvaluation']
   isCreatingEvaluation: boolean
 }) {
   const navigate = useNavigate()
+  const { evaluationDetail } = useEvaluationRoutes()
 
   const [openCreateModal, setOpenCreateModal] = useState(false)
   const [settings, setSettings] = useState<
@@ -326,14 +309,7 @@ function CombineEvaluations({
       setErrors(undefined)
       setOpenCreateModal(false)
 
-      const { evaluation } = result
-      navigate.push(
-        ROUTES.projects
-          .detail({ id: project.id })
-          .commits.detail({ uuid: commit.uuid })
-          .documents.detail({ uuid: document.documentUuid })
-          .evaluations.detail({ uuid: evaluation.uuid }).root,
-      )
+      navigate.push(evaluationDetail(result.evaluation.uuid))
     }
   }, [
     isCreatingEvaluation,
@@ -344,10 +320,9 @@ function CombineEvaluations({
     setOptions,
     setErrors,
     setOpenCreateModal,
-    project,
-    commit,
     document,
     navigate,
+    evaluationDetail,
   ])
 
   return (

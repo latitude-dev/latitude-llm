@@ -25,7 +25,6 @@ import { notifyClientOfExportReady } from './notifyClientOfExportReady'
 import { notifyClientOfOptimizationStatus } from './notifyClientOfOptimizationStatus'
 import { notifyClientOfRunStatusByDocument } from './notifyClientOfRunStatusByDocument'
 import { notifyClientOfSpanCreated } from './notifyClientOfSpanCreated'
-import { notifyClientOfConversationUpdated } from './notifyClientOfConversationUpdated'
 import { pingProjectUpdateJob } from './pingProjectUpdateJob'
 import { removeMergedIssueVectors } from './removeMergedIssueVectors'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
@@ -82,11 +81,7 @@ export const EventHandlers: IEventsHandlers = {
     writeEvaluationResultV2UpdatedToClickhouse,
   ],
   webhookDeliveryCreated: [updateWebhookLastTriggeredAt],
-  spanCreated: [
-    evaluateLiveLogJob,
-    notifyClientOfSpanCreated,
-    notifyClientOfConversationUpdated,
-  ],
+  spanCreated: [evaluateLiveLogJob, notifyClientOfSpanCreated],
   segmentCreated: [],
   segmentUpdated: [],
   actionExecuted: [],

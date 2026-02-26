@@ -23,6 +23,7 @@ import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
 import ProjectSection from './ProjectSection'
 import ProductionBanner from './ProductionBanner'
+import { filterMainDocument } from '$/lib/dualScope/filterMainDocument'
 
 export default async function Sidebar({
   project,
@@ -35,7 +36,8 @@ export default async function Sidebar({
 }) {
   const { workspace } = await getCurrentUserOrRedirect()
   const productAccess = computeProductAccess(workspace)
-  const documents = await getDocumentsAtCommitCached({ commit })
+  const allDocuments = await getDocumentsAtCommitCached({ commit })
+  const documents = filterMainDocument({ documents: allDocuments })
   const commitsScope = new CommitsRepository(workspace.id)
   const headCommit = await getHeadCommitCached({
     workspace,

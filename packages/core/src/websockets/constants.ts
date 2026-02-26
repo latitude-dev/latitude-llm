@@ -15,7 +15,6 @@ import {
   Span,
 } from '../constants'
 import { CostBreakdown } from '@latitude-data/constants/costs'
-import { Conversation } from '../data-access/conversations/fetchConversation'
 
 import { DocumentRunStatusEvent, EvaluationStatusEvent } from '../events/events'
 import { Commit } from '../schema/models/types/Commit'
@@ -191,12 +190,6 @@ type SpanCreatedArgs = {
   span: Span
 }
 
-type ConversationUpdatedArgs = {
-  workspaceId: number
-  documentUuid: string
-  conversation: Conversation
-}
-
 type EvaluationV2AlignmentMetricUpdatedArgs = {
   evaluationUuid: string
   alignmentMetricMetadata: AlignmentMetricMetadata | undefined
@@ -225,7 +218,6 @@ export type WebServerToClientEvents = {
   latteProjectChanges: (args: LatteProjectChangesArgs) => void
   documentRunStatus: (args: DocumentRunStatusArgs) => void
   spanCreated: (args: SpanCreatedArgs) => void
-  conversationUpdated: (args: ConversationUpdatedArgs) => void
   optimizationStatus: (args: OptimizationStatusArgs) => void
 }
 
@@ -283,10 +275,6 @@ export type WorkersClientToServerEvents = {
     data: DocumentRunStatusArgs
   }) => void
   spanCreated: (args: { workspaceId: number; data: SpanCreatedArgs }) => void
-  conversationUpdated: (args: {
-    workspaceId: number
-    data: ConversationUpdatedArgs
-  }) => void
   optimizationStatus: (args: {
     workspaceId: number
     data: OptimizationStatusArgs
