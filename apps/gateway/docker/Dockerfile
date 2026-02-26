@@ -136,7 +136,6 @@ WORKDIR /app
 
 COPY --from=builder --chown=latitude:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=latitude:nodejs /app/${PROJECT_PATH} ./${PROJECT_PATH}
-COPY --from=builder --chown=latitude:nodejs /app/packages/telemetry/typescript ./packages/telemetry/typescript
 COPY --from=builder --chown=latitude:nodejs /app/packages/sdks/typescript ./packages/sdks/typescript
 COPY --from=builder --chown=latitude:nodejs /app/packages/core/src/assets/eu-central-1-bundle.pem ./packages/core/src/assets/eu-central-1-bundle.pem
 
