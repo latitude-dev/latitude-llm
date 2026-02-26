@@ -1,8 +1,8 @@
-import { SpanType } from '@latitude-data/constants'
 import { clickhouseClient } from '../../../client/clickhouse'
-import { TABLE_NAME } from '../../../schema/models/clickhouse/spans'
 import { TracesAggregations } from '../../../schema/models/types/Span'
 import { scopedQuery } from '../../scope'
+
+const TRACE_AGGREGATIONS_TABLE = 'spans_trace_aggregations'
 
 export const computeDocumentTracesAggregations = scopedQuery(
   async function computeDocumentTracesAggregations({
@@ -20,17 +20,15 @@ export const computeDocumentTracesAggregations = scopedQuery(
       workspaceId,
       projectId,
       documentUuid,
-      completionType: SpanType.Completion,
     }
 
     const conditions = [
-      `workspace_id = {workspaceId: UInt64}`,
-      `(project_id_key = {projectId: UInt64} OR project_id_key = 0)`,
-      `document_uuid_key = {documentUuid: UUID}`,
+      `(trace_project_id_key = {projectId: UInt64} OR trace_project_id_key = 0)`,
+      `trace_document_uuid_key = {documentUuid: UUID}`,
     ]
 
     if (commitUuid) {
-      conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
+      conditions.push(`trace_commit_uuid_key = {commitUuid: UUID}`)
       params.commitUuid = commitUuid
     }
 
@@ -39,61 +37,37 @@ export const computeDocumentTracesAggregations = scopedQuery(
       query: `
       SELECT
         countDistinct(trace_id) AS total_count,
-        coalesce(
-          sumIf(
-            coalesce(tokens_prompt, 0) +
-            coalesce(tokens_cached, 0) +
-            coalesce(tokens_reasoning, 0) +
-            coalesce(tokens_completion, 0),
-            type = {completionType: String}
-          ),
-          0
-        ) AS total_tokens,
-        coalesce(
-          sumIf(cost, type = {completionType: String}),
-          0
-        ) AS total_cost_in_millicents,
+        coalesce(sum(total_tokens), 0) AS total_tokens_sum,
+        coalesce(sum(total_cost_in_millicents), 0) AS total_cost_sum,
         if(
-          isNaN(
-            avgIf(
-              coalesce(tokens_prompt, 0) +
-              coalesce(tokens_cached, 0) +
-              coalesce(tokens_reasoning, 0) +
-              coalesce(tokens_completion, 0),
-              type = {completionType: String}
-            )
-          ),
+          sum(completion_count) = 0,
           0,
-          avgIf(
-            coalesce(tokens_prompt, 0) +
-            coalesce(tokens_cached, 0) +
-            coalesce(tokens_reasoning, 0) +
-            coalesce(tokens_completion, 0),
-            type = {completionType: String}
-          )
+          sum(total_tokens) / toFloat64(sum(completion_count))
         ) AS average_tokens,
         if(
-          isNaN(avgIf(cost, type = {completionType: String})),
+          sum(completion_count) = 0,
           0,
-          avgIf(cost, type = {completionType: String})
+          sum(total_cost_in_millicents) /
+            toFloat64(sum(completion_count))
         ) AS average_cost_in_millicents,
         if(
-          isNaN(quantileIf(0.5)(cost, type = {completionType: String})),
+          isNaN(quantileMerge(0.5)(median_cost_state)),
           0,
-          quantileIf(0.5)(cost, type = {completionType: String})
+          quantileMerge(0.5)(median_cost_state)
         ) AS median_cost_in_millicents,
         if(
-          isNaN(avgIf(duration_ms, type = {completionType: String})),
+          sum(completion_count) = 0,
           0,
-          avgIf(duration_ms, type = {completionType: String})
+          sum(total_duration) / toFloat64(sum(completion_count))
         ) AS average_duration,
         if(
-          isNaN(quantileIf(0.5)(duration_ms, type = {completionType: String})),
+          isNaN(quantileMerge(0.5)(median_duration_state)),
           0,
-          quantileIf(0.5)(duration_ms, type = {completionType: String})
+          quantileMerge(0.5)(median_duration_state)
         ) AS median_duration
-      FROM ${TABLE_NAME}
-      WHERE ${conditions.join(' AND ')}
+      FROM ${TRACE_AGGREGATIONS_TABLE} FINAL
+      WHERE workspace_id = {workspaceId: UInt64}
+        AND ${conditions.join(' AND ')}
     `,
       format: 'JSONEachRow',
       query_params: params,
@@ -101,8 +75,8 @@ export const computeDocumentTracesAggregations = scopedQuery(
 
     const aggRows = await aggregationResult.json<{
       total_count: string
-      total_tokens: string
-      total_cost_in_millicents: string
+      total_tokens_sum: string
+      total_cost_sum: string
       average_tokens: string
       average_cost_in_millicents: string
       median_cost_in_millicents: string
@@ -112,8 +86,8 @@ export const computeDocumentTracesAggregations = scopedQuery(
 
     const row = aggRows[0] ?? {
       total_count: '0',
-      total_tokens: '0',
-      total_cost_in_millicents: '0',
+      total_tokens_sum: '0',
+      total_cost_sum: '0',
       average_tokens: '0',
       average_cost_in_millicents: '0',
       median_cost_in_millicents: '0',
@@ -123,8 +97,8 @@ export const computeDocumentTracesAggregations = scopedQuery(
 
     return {
       totalCount: Number(row.total_count),
-      totalTokens: Number(row.total_tokens),
-      totalCostInMillicents: Number(row.total_cost_in_millicents),
+      totalTokens: Number(row.total_tokens_sum),
+      totalCostInMillicents: Number(row.total_cost_sum),
       averageTokens: Number(row.average_tokens),
       averageCostInMillicents: Number(row.average_cost_in_millicents),
       medianCostInMillicents: Number(row.median_cost_in_millicents),

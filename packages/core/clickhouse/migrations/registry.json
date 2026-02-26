@@ -7,6 +7,7 @@
     "0005": "add_evaluation_results_secondary_indexes",
     "0006": "rebuild_evaluation_results_sort_key",
     "0007": "rebuild_spans_sort_key_by_project",
-    "0008": "drop_backup_tables"
+    "0008": "drop_backup_tables",
+    "0009": "spans_trace_aggregations_projection"
   }
 }
