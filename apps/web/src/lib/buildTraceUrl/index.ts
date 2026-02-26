@@ -11,7 +11,7 @@ export const TRACE_SPAN_SELECTION_PARAMS = Object.values(
   TRACE_SPAN_SELECTION_PARAM_KEYS,
 )
 
-type SpanForUrl = Pick<Span, 'id' | 'documentLogUuid' | 'traceId'>
+export type SpanForUrl = Pick<Span, 'id' | 'documentLogUuid' | 'traceId'>
 
 export function buildTraceUrlWithParams({
   routePath,

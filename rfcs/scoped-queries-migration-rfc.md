@@ -96,7 +96,6 @@ Infrastructure (remove once unused):
 - packages/core/src/data-access/commits.ts
 - packages/core/src/data-access/conversations/fetchConversation.ts
 - packages/core/src/data-access/conversations/fetchConversationWithMessages.ts
-- packages/core/src/data-access/conversations/fetchConversations.ts
 - packages/core/src/data-access/conversations/getResultsForConversation.ts
 - packages/core/src/data-access/conversations/shared.ts
 - packages/core/src/data-access/documentTriggers.ts

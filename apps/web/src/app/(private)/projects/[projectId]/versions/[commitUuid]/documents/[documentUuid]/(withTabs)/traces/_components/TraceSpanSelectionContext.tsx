@@ -16,7 +16,7 @@ import { useCurrentProject } from '$/app/providers/ProjectProvider'
 import { useCurrentCommit } from '$/app/providers/CommitProvider'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { executeFetch } from '$/hooks/useFetcher'
-import { getConversationKey } from '$/stores/conversations'
+import { getConversationKey } from '$/stores/conversations/useConversation'
 import { getSpanKey } from '$/stores/spans'
 import { getEvaluationResultsV2BySpansKey } from '$/stores/evaluationResultsV2/bySpans'
 
