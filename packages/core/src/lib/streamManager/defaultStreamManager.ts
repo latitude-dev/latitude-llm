@@ -1,20 +1,12 @@
 import { isAbortError } from '@ai-sdk/provider-utils'
-import { ResolvedToolsDict } from '@latitude-data/constants'
 import type { Message } from '@latitude-data/constants/messages'
 import { JSONSchema7 } from 'json-schema'
 import { StreamManager, StreamManagerProps } from '.'
-import { DocumentVersionsRepository } from '../../repositories'
-import { DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { type ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import {
   applyAgentRule,
   ValidatedChainStep,
 } from '../../services/chains/ChainValidator'
-import { lookupTools } from '../../services/documents/tools/lookup'
-import { resolveTools } from '../../services/documents/tools/resolve'
-import { LatitudeError } from '../errors'
-import { Result } from '../Result'
-import { PromisedResult } from '../Transaction'
 import { Output, streamAIResponse } from './step/streamAIResponse'
 
 /**
@@ -66,7 +58,7 @@ export class DefaultStreamManager
         provider: this.provider,
       })
 
-      const toolsBySource = await this.getToolsBySource().then((r) =>
+      const toolsBySource = await this.getToolsBySource(this.config).then((r) =>
         r.unwrap(),
       )
       const config = this.transformPromptlToVercelToolDeclarations(
@@ -109,45 +101,13 @@ export class DefaultStreamManager
 
       return
     } catch (e) {
-      // Handle abort errors gracefully - just end without treating as error (stream ended in listener)
-      if (isAbortError(e)) return
+      if (isAbortError(e)) {
+        this.endStream()
+        return
+      }
 
       this.endWithError(e as Error)
       return
     }
-  }
-
-  private async getToolsBySource(): PromisedResult<
-    ResolvedToolsDict,
-    LatitudeError
-  > {
-    let documents: DocumentVersion[] = []
-    let documentUuid: string = ''
-
-    if ('commit' in this.promptSource) {
-      const documentScope = new DocumentVersionsRepository(this.workspace.id)
-      const documentsResult = await documentScope.getDocumentsAtCommit(
-        this.promptSource.commit,
-      )
-      if (!Result.isOk(documentsResult)) return documentsResult
-
-      documents = documentsResult.unwrap()
-      documentUuid = this.promptSource.document.documentUuid
-    }
-
-    const toolsManifestResult = await lookupTools({
-      config: this.config,
-      documentUuid,
-      documents,
-      workspace: this.workspace,
-    })
-
-    if (toolsManifestResult.error) return toolsManifestResult
-    const toolManifestDict = toolsManifestResult.unwrap()
-
-    return resolveTools({
-      toolManifestDict,
-      streamManager: this,
-    })
   }
 }
