@@ -26,7 +26,7 @@ export const computeDocumentTracesAggregations = scopedQuery(
 
     const conditions = [
       `workspace_id = {workspaceId: UInt64}`,
-      `(project_id_key = {projectId: UInt64} OR project_id_key = 0)`,
+      `project_id_key = {projectId: UInt64}`,
       `commit_uuid_key IN ({commitUuids: Array(UUID)})`,
       `document_uuid_key = {documentUuid: UUID}`,
     ]

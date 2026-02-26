@@ -633,6 +633,7 @@ export class ManualInstrumentation implements BaseInstrumentation {
     })
   }
 
+  // TODO(tracing): deprecate
   unresolvedExternal(
     ctx: otel.Context,
     {

@@ -10,7 +10,7 @@ import {
 } from '../../../../constants'
 import { UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
-import { SpanProcessArgs } from '../shared'
+import { extractLatitudeReferences, SpanProcessArgs } from '../shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Tool]
 export const ToolSpanSpecification = {
@@ -36,6 +36,7 @@ async function process(
 
   if (status === SpanStatus.Error) {
     return Result.ok({
+      ...extractLatitudeReferences(attributes),
       name: toolName,
       call: {
         id: toolCallId,
@@ -53,6 +54,7 @@ async function process(
   const toolIsError = toolIsErrorResult.unwrap()
 
   return Result.ok({
+    ...extractLatitudeReferences(attributes),
     name: toolName,
     call: {
       id: toolCallId,

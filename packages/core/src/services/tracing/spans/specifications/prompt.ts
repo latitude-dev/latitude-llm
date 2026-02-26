@@ -6,7 +6,7 @@ import {
   SpanType,
 } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
-import { SpanProcessArgs } from '../shared'
+import { extractLatitudeReferences, SpanProcessArgs } from '../shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Prompt]
 export const PromptSpanSpecification = {
@@ -28,6 +28,7 @@ async function process(
   }
 
   return Result.ok({
+    ...extractLatitudeReferences(attributes),
     parameters,
     template: attributes[ATTRIBUTES.LATITUDE.request.template] as string,
     externalId: attributes[ATTRIBUTES.LATITUDE.externalId] as string,

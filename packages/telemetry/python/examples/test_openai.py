@@ -20,7 +20,7 @@ telemetry = Telemetry(
     os.environ["LATITUDE_API_KEY"],
     TelemetryOptions(
         instrumentors=[Instrumentors.OpenAI],
-        disable_batch=True,  # Flush immediately for testing
+        disable_batch=True,
         internal=InternalOptions(
             gateway=GatewayOptions(base_url="http://localhost:8787"),
         ),
@@ -37,9 +37,7 @@ def test_openai_completion():
 
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[
-            {"role": "user", "content": "Say 'Hello from OpenAI!' in exactly 5 words."}
-        ],
+        messages=[{"role": "user", "content": "Say 'Hello from OpenAI!' in exactly 5 words."}],
         max_tokens=50,
     )
 

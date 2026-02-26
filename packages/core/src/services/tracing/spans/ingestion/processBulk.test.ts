@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ATTRIBUTES, Otlp, SpanStatus, SpanType } from '../../../../constants'
+import {
+  ATTRIBUTES,
+  LogSources,
+  Otlp,
+  SpanStatus,
+  SpanType,
+} from '../../../../constants'
 import {
   GEN_AI_OPERATION_NAME_VALUE_CHAT,
   GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
@@ -8,6 +14,10 @@ import { type ApiKey } from '../../../../schema/models/types/ApiKey'
 import { type Workspace } from '../../../../schema/models/types/Workspace'
 import * as factories from '../../../../tests/factories'
 import { processSpansBulk } from './processBulk'
+import {
+  CommitsRepository,
+  DocumentVersionsRepository,
+} from '../../../../repositories'
 
 vi.mock('../../../lib/disk', () => ({
   diskFactory: vi.fn(() => ({
@@ -246,6 +256,266 @@ describe('processSpansBulk', () => {
       expect(result.value?.spans).toHaveLength(2)
       const child = result.value?.spans.find((s) => s.id === childSpan.spanId)
       expect(child?.parentId).toBe(parentSpan.spanId)
+    })
+
+    it('resolves capture references from baggage attributes on child spans', async () => {
+      const setup = await factories.createProject({
+        documents: {
+          'capture-path': 'Prompt content',
+        },
+      })
+      const testWorkspace = setup.workspace
+      const testCommit = setup.commit
+      const testProject = setup.project
+      const { apiKey: testApiKey } = await factories.createApiKey({
+        workspace: testWorkspace,
+      })
+
+      const span = createOtlpSpan({
+        attributes: [
+          {
+            key: ATTRIBUTES.LATITUDE.type,
+            value: { stringValue: SpanType.Completion },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.promptPath,
+            value: { stringValue: 'capture-path' },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.projectId,
+            value: { stringValue: String(testProject.id) },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.commitUuid,
+            value: { stringValue: testCommit.uuid },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system,
+            value: { stringValue: 'openai' },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model,
+            value: { stringValue: 'gpt-4o' },
+          },
+        ],
+      })
+
+      const result = await processSpansBulk({
+        spans: [createSpanData(span, testApiKey, testWorkspace)],
+        apiKey: testApiKey,
+        workspace: testWorkspace,
+      })
+
+      expect(result.error).toBeUndefined()
+      expect(result.value?.spans[0]?.projectId).toBe(testProject.id)
+      expect(result.value?.spans[0]?.commitUuid).toBe(testCommit.uuid)
+      expect(result.value?.spans[0]?.documentUuid).toBeDefined()
+      expect(result.value?.spans[0]?.documentLogUuid).toBeDefined()
+    })
+
+    it('creates missing prompt document when capture path does not exist', async () => {
+      const setup = await factories.createProject({
+        documents: {
+          'existing-path': 'Prompt content',
+        },
+      })
+      const testWorkspace = setup.workspace
+      const testProject = setup.project
+      const { apiKey: testApiKey } = await factories.createApiKey({
+        workspace: testWorkspace,
+      })
+
+      const missingPath = 'created-from-process-bulk'
+      const span = createOtlpSpan({
+        attributes: [
+          {
+            key: ATTRIBUTES.LATITUDE.type,
+            value: { stringValue: SpanType.Completion },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.promptPath,
+            value: { stringValue: missingPath },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.projectId,
+            value: { stringValue: String(testProject.id) },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system,
+            value: { stringValue: 'openai' },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model,
+            value: { stringValue: 'gpt-4o' },
+          },
+        ],
+      })
+
+      const result = await processSpansBulk({
+        spans: [createSpanData(span, testApiKey, testWorkspace)],
+        apiKey: testApiKey,
+        workspace: testWorkspace,
+      })
+
+      expect(result.error).toBeUndefined()
+      const storedSpan = result.value?.spans[0]
+      expect(storedSpan?.documentUuid).toBeDefined()
+      expect(storedSpan?.commitUuid).toBeDefined()
+
+      const commitsRepo = new CommitsRepository(testWorkspace.id)
+      const commit = await commitsRepo
+        .getCommitByUuid({
+          uuid: storedSpan!.commitUuid!,
+          projectId: testProject.id,
+        })
+        .then((r) => r.unwrap())
+
+      const docsRepo = new DocumentVersionsRepository(testWorkspace.id)
+      const docs = await docsRepo
+        .getDocumentsAtCommit(commit)
+        .then((r) => r.unwrap())
+      const createdDoc = docs.find((d) => d.path === missingPath)
+
+      expect(createdDoc).toBeDefined()
+      expect(createdDoc?.documentUuid).toBe(storedSpan?.documentUuid)
+    })
+
+    it('stores latitude references for all supported span types', async () => {
+      const setup = await factories.createProject({
+        documents: {
+          'reference-path': 'Prompt content',
+        },
+      })
+      const testWorkspace = setup.workspace
+      const testCommit = setup.commit
+      const testProject = setup.project
+      const { apiKey: testApiKey } = await factories.createApiKey({
+        workspace: testWorkspace,
+      })
+
+      const docsRepo = new DocumentVersionsRepository(testWorkspace.id)
+      const existingDoc = await docsRepo
+        .getDocumentsAtCommit(testCommit)
+        .then((r) => r.unwrap())
+        .then((docs) => docs[0]!)
+
+      const documentLogUuid = crypto.randomUUID()
+      const commonRefAttributes = [
+        {
+          key: ATTRIBUTES.LATITUDE.projectId,
+          value: { intValue: testProject.id },
+        },
+        {
+          key: ATTRIBUTES.LATITUDE.documentUuid,
+          value: { stringValue: existingDoc.documentUuid },
+        },
+        {
+          key: ATTRIBUTES.LATITUDE.commitUuid,
+          value: { stringValue: testCommit.uuid },
+        },
+        {
+          key: ATTRIBUTES.LATITUDE.documentLogUuid,
+          value: { stringValue: documentLogUuid },
+        },
+        {
+          key: ATTRIBUTES.LATITUDE.source,
+          value: { stringValue: LogSources.API },
+        },
+      ]
+
+      const spans = [
+        createOtlpSpan({
+          attributes: [
+            {
+              key: ATTRIBUTES.LATITUDE.type,
+              value: { stringValue: SpanType.Completion },
+            },
+            {
+              key: ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system,
+              value: { stringValue: 'openai' },
+            },
+            {
+              key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model,
+              value: { stringValue: 'gpt-4o' },
+            },
+            ...commonRefAttributes,
+          ],
+        }),
+        createOtlpSpan({
+          attributes: [
+            {
+              key: ATTRIBUTES.LATITUDE.type,
+              value: { stringValue: SpanType.Tool },
+            },
+            {
+              key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.name,
+              value: { stringValue: 'search' },
+            },
+            {
+              key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.tool.call.id,
+              value: { stringValue: 'tool-call-1' },
+            },
+            ...commonRefAttributes,
+          ],
+        }),
+        createOtlpSpan({
+          attributes: [
+            {
+              key: ATTRIBUTES.LATITUDE.type,
+              value: { stringValue: SpanType.Http },
+            },
+            {
+              key: ATTRIBUTES.OPENTELEMETRY.HTTP.request.method,
+              value: { stringValue: 'POST' },
+            },
+            {
+              key: ATTRIBUTES.OPENTELEMETRY.HTTP.request.url,
+              value: { stringValue: 'https://example.com' },
+            },
+            {
+              key: ATTRIBUTES.OPENTELEMETRY.HTTP.response.statusCode,
+              value: { intValue: 200 },
+            },
+            ...commonRefAttributes,
+          ],
+        }),
+        createOtlpSpan({
+          attributes: [
+            {
+              key: ATTRIBUTES.LATITUDE.type,
+              value: { stringValue: SpanType.Embedding },
+            },
+            ...commonRefAttributes,
+          ],
+        }),
+        createOtlpSpan({
+          attributes: [
+            {
+              key: ATTRIBUTES.LATITUDE.type,
+              value: { stringValue: SpanType.Unknown },
+            },
+            ...commonRefAttributes,
+          ],
+        }),
+      ]
+
+      const result = await processSpansBulk({
+        spans: spans.map((span) =>
+          createSpanData(span, testApiKey, testWorkspace),
+        ),
+        apiKey: testApiKey,
+        workspace: testWorkspace,
+      })
+
+      expect(result.error).toBeUndefined()
+      expect(result.value?.spans).toHaveLength(spans.length)
+
+      for (const storedSpan of result.value?.spans ?? []) {
+        expect(storedSpan.projectId).toBe(testProject.id)
+        expect(storedSpan.documentUuid).toBe(existingDoc.documentUuid)
+        expect(storedSpan.commitUuid).toBe(testCommit.uuid)
+        expect(storedSpan.documentLogUuid).toBe(documentLogUuid)
+      }
     })
   })
 

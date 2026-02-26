@@ -15,6 +15,7 @@ from contextvars import Token
 from typing import Any, Callable, Dict, List, Sequence, TypeVar
 
 from opentelemetry import context as otel_context
+from opentelemetry.baggage import set_baggage
 from opentelemetry.context import Context
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.threading import ThreadingInstrumentor
@@ -22,7 +23,7 @@ from opentelemetry.sdk import resources as otel
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 
-from latitude_telemetry.constants import DOCUMENT_PATH_REGEXP, InstrumentationScope
+from latitude_telemetry.constants import ATTRIBUTES, DOCUMENT_PATH_REGEXP, InstrumentationScope
 from latitude_telemetry.env import env
 from latitude_telemetry.exporter import ExporterOptions, create_exporter
 from latitude_telemetry.instrumentations import (
@@ -36,6 +37,7 @@ from latitude_telemetry.managers import (
     SpanFactory,
     TracerManager,
 )
+from latitude_telemetry.telemetry.baggage_span_processor import BaggageSpanProcessor
 from latitude_telemetry.telemetry.types import (
     GatewayOptions,
     Instrumentors,
@@ -47,7 +49,7 @@ from latitude_telemetry.util import Model, is_package_installed
 
 TELEMETRY_INSTRUMENTATION_NAME = "opentelemetry.instrumentation.latitude"
 SERVICE_NAME = "latitude-telemetry-python"
-SCOPE_VERSION = "2.0.3"
+SCOPE_VERSION = "2.0.4"
 
 _THREADING_INSTRUMENTOR = "Threading"
 
@@ -130,13 +132,35 @@ class CaptureContext:
     def _start_span(self) -> None:
         """Start the capture span and set it as the active context."""
         self._validate_path()
+        capture_context = otel_context.get_current()
+        capture_context = set_baggage(ATTRIBUTES.LATITUDE.promptPath, self._path, capture_context)
+        capture_context = set_baggage(
+            ATTRIBUTES.LATITUDE.projectId,
+            str(self._project_id),
+            capture_context,
+        )
+
+        if self._version_uuid:
+            capture_context = set_baggage(
+                ATTRIBUTES.LATITUDE.commitUuid,
+                self._version_uuid,
+                capture_context,
+            )
+
+        if self._conversation_uuid:
+            capture_context = set_baggage(
+                ATTRIBUTES.LATITUDE.documentLogUuid,
+                self._conversation_uuid,
+                capture_context,
+            )
+
         options = CaptureOptions(
             path=self._path,
             projectId=self._project_id,
             versionUuid=self._version_uuid,
             conversationUuid=self._conversation_uuid,
         )
-        self._span = self._telemetry._manual_instrumentation.unresolved_external(otel_context.get_current(), options)
+        self._span = self._telemetry._manual_instrumentation.unresolved_external(capture_context, options)
         # Set the span context as active so child spans are properly parented
         self._token = otel_context.attach(self._span.context)
 
@@ -339,6 +363,8 @@ class Telemetry:
         )
 
         # Add span processor
+        self._tracer_provider.add_span_processor(BaggageSpanProcessor())
+
         if self._options.disable_batch:
             self._tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
         else:
