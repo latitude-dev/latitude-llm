@@ -13,6 +13,57 @@ import { Providers } from '@latitude-data/constants'
 import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
 import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
+import { Project } from '@latitude-data/core/schema/models/types/Project'
+import { Commit } from '@latitude-data/core/schema/models/types/Commit'
+import { DocumentVersion } from '@latitude-data/core/schema/models/types/DocumentVersion'
+
+const DATE_FIELD_NAMES = new Set([
+  'createdAt',
+  'updatedAt',
+  'deletedAt',
+  'mergedAt',
+  'lastEditedAt',
+])
+
+function parseDateField(value: unknown) {
+  if (value === null || value === undefined || value instanceof Date) {
+    return value
+  }
+
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    return value
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date
+}
+
+function hydrateDateFields<T extends Record<string, unknown>>(obj: T) {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => {
+      if (!DATE_FIELD_NAMES.has(key)) return [key, value]
+      return [key, parseDateField(value)]
+    }),
+  ) as T
+}
+
+function parseCachedGetDataResult(cached: string) {
+  const parsed = JSON.parse(cached) as {
+    project: Project
+    commit: Commit
+    document: DocumentVersion
+  }
+
+  return {
+    project: hydrateDateFields(parsed.project),
+    commit: hydrateDateFields(parsed.commit),
+    document: hydrateDateFields(parsed.document),
+  }
+}
 
 async function getProjectByVersionData({
   workspace,
@@ -142,7 +193,7 @@ export const getData = async ({
     const cacheClient = await cache()
     const cached = await cacheClient.get(cacheKey)
     if (cached !== null && cached !== undefined) {
-      return Result.ok(JSON.parse(cached))
+      return Result.ok(parseCachedGetDataResult(cached))
     }
   } catch (_error) {
     // Ignore cache read errors
