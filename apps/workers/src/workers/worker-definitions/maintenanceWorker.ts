@@ -6,7 +6,10 @@ import { WORKER_CONNECTION_CONFIG } from '../utils/connectionConfig'
 
 const jobMappings = {
   backfillClickhouseJob: jobs.backfillClickhouseJob,
+  backfillEvaluationResultsToClickhouseJob:
+    jobs.backfillEvaluationResultsToClickhouseJob,
   backfillSpanReferencesJob: jobs.backfillSpanReferencesJob,
+  backfillSpansToClickhouseJob: jobs.backfillSpansToClickhouseJob,
   checkScheduledDocumentTriggersJob: jobs.checkScheduledDocumentTriggersJob,
   clearConversationCacheJob: jobs.clearConversationCacheJob,
   cleanupWorkspaceOldLogsJob: jobs.cleanupWorkspaceOldLogsJob,
