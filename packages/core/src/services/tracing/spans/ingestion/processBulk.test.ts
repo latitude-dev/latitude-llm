@@ -247,6 +247,61 @@ describe('processSpansBulk', () => {
       const child = result.value?.spans.find((s) => s.id === childSpan.spanId)
       expect(child?.parentId).toBe(parentSpan.spanId)
     })
+
+    it('resolves capture references from baggage attributes on child spans', async () => {
+      const setup = await factories.createProject({
+        documents: {
+          'capture-path': 'Prompt content',
+        },
+      })
+      const testWorkspace = setup.workspace
+      const testCommit = setup.commit
+      const testProject = setup.project
+      const { apiKey: testApiKey } = await factories.createApiKey({
+        workspace: testWorkspace,
+      })
+
+      const span = createOtlpSpan({
+        attributes: [
+          {
+            key: ATTRIBUTES.LATITUDE.type,
+            value: { stringValue: SpanType.Completion },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.promptPath,
+            value: { stringValue: 'capture-path' },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.projectId,
+            value: { stringValue: String(testProject.id) },
+          },
+          {
+            key: ATTRIBUTES.LATITUDE.commitUuid,
+            value: { stringValue: testCommit.uuid },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system,
+            value: { stringValue: 'openai' },
+          },
+          {
+            key: ATTRIBUTES.OPENTELEMETRY.GEN_AI.response.model,
+            value: { stringValue: 'gpt-4o' },
+          },
+        ],
+      })
+
+      const result = await processSpansBulk({
+        spans: [createSpanData(span, testApiKey, testWorkspace)],
+        apiKey: testApiKey,
+        workspace: testWorkspace,
+      })
+
+      expect(result.error).toBeUndefined()
+      expect(result.value?.spans[0]?.projectId).toBe(testProject.id)
+      expect(result.value?.spans[0]?.commitUuid).toBe(testCommit.uuid)
+      expect(result.value?.spans[0]?.documentUuid).toBeDefined()
+      expect(result.value?.spans[0]?.documentLogUuid).toBeDefined()
+    })
   })
 
   describe('handling duplicate submissions', () => {

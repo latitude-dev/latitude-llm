@@ -6,7 +6,7 @@ import {
   SpanType,
 } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
-import { SpanProcessArgs } from '../shared'
+import { extractLatitudeReferences, SpanProcessArgs } from '../shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.External]
 export const ExternalSpanSpecification = {
@@ -19,16 +19,13 @@ async function process(
   _ = database,
 ) {
   return Result.ok({
+    ...extractLatitudeReferences(attributes),
     promptUuid: attributes[ATTRIBUTES.LATITUDE.documentUuid] as string,
     documentLogUuid: attributes[ATTRIBUTES.LATITUDE.documentLogUuid] as string,
     source: attributes[ATTRIBUTES.LATITUDE.source] as LogSources,
-    versionUuid: attributes[ATTRIBUTES.LATITUDE.commitUuid] as
-      | string
-      | undefined,
     externalId: attributes[ATTRIBUTES.LATITUDE.externalId] as
       | string
       | undefined,
-    projectId: attributes[ATTRIBUTES.LATITUDE.projectId] as number,
     name: attributes[ATTRIBUTES.LATITUDE.name] as string | undefined,
   })
 }

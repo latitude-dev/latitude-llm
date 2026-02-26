@@ -133,7 +133,10 @@ async function process(
   db = database,
 ): Promise<ExternalMetadataResult> {
   const promptPath = attributes[ATTRIBUTES.LATITUDE.promptPath] as string
-  const projectId = attributes[ATTRIBUTES.LATITUDE.projectId] as number
+  const projectId = Number(attributes[ATTRIBUTES.LATITUDE.projectId])
+  if (!Number.isFinite(projectId)) {
+    return Result.error(new NotFoundError('Project not found'))
+  }
   const versionUuid = attributes[ATTRIBUTES.LATITUDE.commitUuid] as
     | string
     | undefined

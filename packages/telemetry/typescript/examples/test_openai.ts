@@ -13,7 +13,6 @@ import OpenAI from 'openai'
 import { LatitudeTelemetry, Instrumentation } from '../src'
 
 const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, {
-  disableBatch: true,
   instrumentations: {
     [Instrumentation.OpenAI]: OpenAI,
   },
@@ -36,16 +35,20 @@ async function testOpenAICompletion() {
 async function main() {
   console.log('Testing OpenAI instrumentation...')
 
-  const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/openai',
-    },
-    testOpenAICompletion,
-  )
+  try {
+    const result = await telemetry.capture(
+      {
+        projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
+        path: 'test/openai',
+      },
+      testOpenAICompletion,
+    )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/openai')
+    console.log(`Response: ${result}`)
+    console.log('Check Latitude dashboard for trace at path: test/openai')
+  } finally {
+    await telemetry.shutdown()
+  }
 }
 
 main().catch(console.error)

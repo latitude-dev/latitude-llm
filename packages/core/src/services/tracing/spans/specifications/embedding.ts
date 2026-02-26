@@ -1,7 +1,7 @@
 import { database } from '../../../../client'
 import { SPAN_SPECIFICATIONS, SpanType } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
-import { SpanProcessArgs } from '../shared'
+import { extractLatitudeReferences, SpanProcessArgs } from '../shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Embedding]
 export const EmbeddingSpanSpecification = {
@@ -9,6 +9,9 @@ export const EmbeddingSpanSpecification = {
   process: process,
 }
 
-async function process(_: SpanProcessArgs<SpanType.Embedding>, __ = database) {
-  return Result.ok({})
+async function process(
+  { attributes }: SpanProcessArgs<SpanType.Embedding>,
+  _ = database,
+) {
+  return Result.ok(extractLatitudeReferences(attributes))
 }

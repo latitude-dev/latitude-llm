@@ -1,9 +1,11 @@
 import { Database } from '../../../client'
 import {
+  ATTRIBUTES,
   BaseSpanMetadata,
   Otlp,
   SpanAttribute,
   SpanMetadata,
+  SpanReferenceMetadata,
   SpanSpecification,
   SpanStatus,
   SpanType,
@@ -108,4 +110,44 @@ export function validateUndefineds(object: any): boolean {
   }
 
   return true
+}
+
+/**
+ * Extracts Latitude reference attributes from raw span attributes.
+ */
+export function extractLatitudeReferences(
+  attributes: Record<string, SpanAttribute>,
+): SpanReferenceMetadata {
+  const references: SpanReferenceMetadata = {}
+
+  const source = attributes[ATTRIBUTES.LATITUDE.source]
+  if (source)
+    references.source = String(source) as SpanReferenceMetadata['source']
+
+  const documentLogUuid = attributes[ATTRIBUTES.LATITUDE.documentLogUuid]
+  if (documentLogUuid) references.documentLogUuid = String(documentLogUuid)
+
+  const promptUuid = attributes[ATTRIBUTES.LATITUDE.documentUuid]
+  if (promptUuid) references.promptUuid = String(promptUuid)
+
+  const versionUuid = attributes[ATTRIBUTES.LATITUDE.commitUuid]
+  if (versionUuid) references.versionUuid = String(versionUuid)
+
+  const experimentUuid = attributes[ATTRIBUTES.LATITUDE.experimentUuid]
+  if (experimentUuid) references.experimentUuid = String(experimentUuid)
+
+  const projectId = Number(attributes[ATTRIBUTES.LATITUDE.projectId])
+  if (Number.isFinite(projectId)) references.projectId = projectId
+
+  const testDeploymentId = Number(
+    attributes[ATTRIBUTES.LATITUDE.testDeploymentId],
+  )
+  if (Number.isFinite(testDeploymentId)) {
+    references.testDeploymentId = testDeploymentId
+  }
+
+  const previousTraceId = attributes[ATTRIBUTES.LATITUDE.previousTraceId]
+  if (previousTraceId) references.previousTraceId = String(previousTraceId)
+
+  return references
 }

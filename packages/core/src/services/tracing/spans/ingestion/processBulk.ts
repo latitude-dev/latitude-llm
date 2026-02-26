@@ -43,29 +43,41 @@ import {
 } from './process'
 import { bulkCreate as bulkCreatePostgresSpans } from '../postgres/bulkCreate'
 import { bulkCreate as bulkCreateClickHouseSpans } from '../clickhouse/bulkCreate'
+import { UnresolvedExternalSpanSpecification } from '../specifications/unresolvedExternal'
 
+type SpanIngestionInput = {
+  span: Otlp.Span
+  scope: Otlp.Scope
+  resource: Otlp.Resource
+  apiKey: ApiKey
+  workspace: Workspace
+}
+
+type CaptureResolution = Awaited<
+  ReturnType<typeof UnresolvedExternalSpanSpecification.process>
+>
+
+/**
+ * Converts a batch of OTLP spans into Latitude spans and persists them in
+ * Postgres (always) and ClickHouse (feature-flagged).
+ */
 export async function processSpansBulk(
   {
     spans: spansData,
     apiKey,
     workspace,
   }: {
-    spans: Array<{
-      span: Otlp.Span
-      scope: Otlp.Scope
-      resource: Otlp.Resource
-      apiKey: ApiKey
-      workspace: Workspace
-    }>
+    spans: SpanIngestionInput[]
     apiKey: ApiKey
     workspace: Workspace
   },
   transaction = new Transaction(),
   disk: DiskWrapper = diskFactory('private'),
 ) {
+  const captureResolutionCache = new Map<string, CaptureResolution>()
+
   // Pre-process all spans to extract basic information and filter out invalid ones
   const processedSpans: Array<{
-    original: (typeof spansData)[0]
     id: string
     traceId: string
     parentId?: string
@@ -81,7 +93,6 @@ export async function processSpansBulk(
     events: SpanEvent[]
     links: SpanLink[]
     metadata: SpanMetadata
-    documentLogUuid?: string
   }> = []
 
   // Batch check for existing spans to reduce database queries
@@ -113,7 +124,7 @@ export async function processSpansBulk(
       )
       continue
     }
-    const attributes = convertingsa.value
+    let attributes = convertingsa.value
 
     const id = span.spanId
     const traceId = span.traceId
@@ -219,6 +230,26 @@ export async function processSpansBulk(
     }
     const links = convertingsl.value
 
+    const captureResolution = await resolveCaptureReferences({
+      attributes,
+      type,
+      status,
+      scope,
+      apiKey,
+      workspace,
+      traceId,
+      cache: captureResolutionCache,
+    })
+    if (captureResolution.error) {
+      captureException(
+        new UnprocessableEntityError(
+          `Error resolving capture references: ${captureResolution.error}`,
+        ),
+      )
+      continue
+    }
+    attributes = captureResolution.value
+
     // Extract span error
     const extractingse = extractSpanError(attributes, events)
     if (extractingse.error) {
@@ -263,7 +294,10 @@ export async function processSpansBulk(
 
       continue
     }
-    metadata = { ...metadata, ...processing.value }
+    metadata = {
+      ...metadata,
+      ...processing.value,
+    } as SpanMetadata
 
     // Transform UnresolvedExternal to External after resolution
     let finalType = type
@@ -272,7 +306,6 @@ export async function processSpansBulk(
     }
 
     processedSpans.push({
-      original: spanData,
       id,
       traceId,
       parentId,
@@ -403,6 +436,104 @@ export async function processSpansBulk(
       )
     },
   )
+}
+
+/**
+ * Resolves capture references for child spans that only contain
+ * `latitude.prompt_path` + `latitude.project_id` baggage attributes.
+ */
+async function resolveCaptureReferences({
+  attributes,
+  type,
+  status,
+  scope,
+  apiKey,
+  workspace,
+  traceId,
+  cache,
+}: {
+  attributes: Record<string, SpanAttribute>
+  type: SpanType
+  status: SpanStatus
+  scope: Otlp.Scope
+  apiKey: ApiKey
+  workspace: Workspace
+  traceId: string
+  cache: Map<string, CaptureResolution>
+}): Promise<TypedResult<Record<string, SpanAttribute>>> {
+  if (type === SpanType.UnresolvedExternal) return Result.ok(attributes)
+
+  const promptPath = attributes[ATTRIBUTES.LATITUDE.promptPath]
+  const projectId = attributes[ATTRIBUTES.LATITUDE.projectId]
+  if (!promptPath || !projectId) return Result.ok(attributes)
+
+  const hasResolvedReferences =
+    Boolean(attributes[ATTRIBUTES.LATITUDE.documentUuid]) &&
+    Boolean(attributes[ATTRIBUTES.LATITUDE.commitUuid]) &&
+    Boolean(attributes[ATTRIBUTES.LATITUDE.documentLogUuid])
+  if (hasResolvedReferences) return Result.ok(attributes)
+
+  const versionUuid = attributes[ATTRIBUTES.LATITUDE.commitUuid]
+  const documentLogUuid = attributes[ATTRIBUTES.LATITUDE.documentLogUuid]
+  const key = [
+    traceId,
+    String(promptPath),
+    String(projectId),
+    String(versionUuid ?? ''),
+    String(documentLogUuid ?? ''),
+  ].join('::')
+
+  let resolving = cache.get(key)
+  if (!resolving) {
+    resolving = await UnresolvedExternalSpanSpecification.process({
+      attributes: {
+        [ATTRIBUTES.LATITUDE.promptPath]: String(promptPath),
+        [ATTRIBUTES.LATITUDE.projectId]: Number(projectId),
+        ...(versionUuid && {
+          [ATTRIBUTES.LATITUDE.commitUuid]: String(versionUuid),
+        }),
+        ...(documentLogUuid && {
+          [ATTRIBUTES.LATITUDE.documentLogUuid]: String(documentLogUuid),
+        }),
+      },
+      status,
+      scope,
+      apiKey,
+      workspace,
+    })
+
+    cache.set(key, resolving)
+  }
+
+  if (resolving.error) return Result.error(resolving.error)
+
+  const resolvedAttributes: Record<string, SpanAttribute> = {
+    ...attributes,
+    [ATTRIBUTES.LATITUDE.projectId]: resolving.value.projectId,
+  }
+
+  if (resolving.value.promptUuid) {
+    resolvedAttributes[ATTRIBUTES.LATITUDE.documentUuid] =
+      resolving.value.promptUuid
+  }
+
+  if (resolving.value.documentLogUuid) {
+    resolvedAttributes[ATTRIBUTES.LATITUDE.documentLogUuid] =
+      resolving.value.documentLogUuid
+  }
+
+  if (resolving.value.versionUuid) {
+    resolvedAttributes[ATTRIBUTES.LATITUDE.commitUuid] =
+      resolving.value.versionUuid
+  }
+
+  const source =
+    attributes[ATTRIBUTES.LATITUDE.source] ?? resolving.value.source
+  if (source) {
+    resolvedAttributes[ATTRIBUTES.LATITUDE.source] = source
+  }
+
+  return Result.ok(resolvedAttributes)
 }
 
 async function getExistingBatch(
@@ -571,3 +702,9 @@ function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
 
   return Result.ok(result)
 }
+
+/**
+ * Extracts shared reference fields from raw span attributes so all span types
+ * can be queried by project/document/commit even if their specification does
+ * not set those fields directly.
+ */

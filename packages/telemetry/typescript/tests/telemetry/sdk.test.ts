@@ -276,4 +276,82 @@ describe('telemetry', () => {
       expect(processorMock.shutdown).toHaveBeenCalled()
     }),
   )
+
+  it(
+    'propagates capture references through baggage to child spans',
+    gatewayMock.boundary(async () => {
+      const { bodyMock } = mockRequest({
+        server: gatewayMock,
+        method: 'post',
+        endpoint: '/api/v3/traces',
+      })
+
+      const sdk = new LatitudeTelemetry('fake-api-key')
+
+      await sdk.capture(
+        {
+          path: 'my-capture-path',
+          projectId: 123,
+          versionUuid: 'commit-uuid',
+          conversationUuid: 'conversation-uuid',
+        },
+        async () => {
+          const completion = sdk.span.completion({
+            provider: 'openai',
+            model: 'gpt-4o',
+            configuration: { model: 'gpt-4o' },
+            input: [{ role: 'user', content: 'Hello, assistant!' }],
+          })
+          completion.end({
+            output: [{ role: 'assistant', content: 'Hello, user!' }],
+            tokens: { prompt: 20, cached: 0, reasoning: 0, completion: 10 },
+            finishReason: 'stop',
+          })
+        },
+      )
+
+      await sdk.shutdown()
+
+      const body = bodyMock.mock.calls[0]![0] as {
+        resourceSpans: Array<{
+          scopeSpans: Array<{
+            spans: Array<{
+              attributes: Array<{
+                key: string
+                value: { stringValue?: string }
+              }>
+            }>
+          }>
+        }>
+      }
+
+      const spans = body.resourceSpans.flatMap((resourceSpan) =>
+        resourceSpan.scopeSpans.flatMap((scopeSpan) => scopeSpan.spans),
+      )
+
+      const findAttr = (
+        span: (typeof spans)[number],
+        key: string,
+      ): string | undefined => {
+        return span.attributes.find((attribute) => attribute.key === key)?.value
+          ?.stringValue
+      }
+
+      const completionSpan = spans.find(
+        (span) => findAttr(span, 'latitude.type') === 'completion',
+      )
+
+      expect(completionSpan).toBeDefined()
+      expect(findAttr(completionSpan!, 'latitude.prompt_path')).toBe(
+        'my-capture-path',
+      )
+      expect(findAttr(completionSpan!, 'latitude.project_id')).toBe('123')
+      expect(findAttr(completionSpan!, 'latitude.commit_uuid')).toBe(
+        'commit-uuid',
+      )
+      expect(findAttr(completionSpan!, 'latitude.document_log_uuid')).toBe(
+        'conversation-uuid',
+      )
+    }),
+  )
 })

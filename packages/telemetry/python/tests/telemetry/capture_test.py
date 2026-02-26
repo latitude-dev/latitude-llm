@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 from typing import Generator, AsyncGenerator
 
 from latitude_telemetry import Telemetry, TelemetryOptions, BadRequestError, CaptureContext
+from latitude_telemetry.constants import ATTRIBUTES
 
 
 class TestCaptureDecorator:
@@ -37,6 +38,31 @@ class TestCaptureDecorator:
         result = my_function(5)
         assert result == 10
         telemetry._manual_instrumentation.unresolved_external.assert_called_once()
+
+    def test_capture_populates_baggage_for_child_spans(self, telemetry):
+        """Test capture sets reference attributes in baggage."""
+
+        with patch("latitude_telemetry.telemetry.telemetry.set_baggage") as set_baggage_mock:
+            set_baggage_mock.side_effect = lambda key, value, context: context
+
+            @telemetry.capture(
+                path="test-path",
+                project_id=123,
+                version_uuid="commit-uuid",
+                conversation_uuid="conversation-uuid",
+            )
+            def my_function(x: int) -> int:
+                return x * 2
+
+            result = my_function(5)
+
+            assert result == 10
+            assert set_baggage_mock.call_count == 4
+            calls = [call.args[:2] for call in set_baggage_mock.call_args_list]
+            assert (ATTRIBUTES.LATITUDE.promptPath, "test-path") in calls
+            assert (ATTRIBUTES.LATITUDE.projectId, "123") in calls
+            assert (ATTRIBUTES.LATITUDE.commitUuid, "commit-uuid") in calls
+            assert (ATTRIBUTES.LATITUDE.documentLogUuid, "conversation-uuid") in calls
 
     def test_decorator_sync_function_with_exception(self, telemetry):
         """Test decorator handles exceptions in sync functions."""
