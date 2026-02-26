@@ -58,8 +58,8 @@ export class DefaultStreamManager
         provider: this.provider,
       })
 
-      const toolsBySource = await this.getToolsBySource(this.config).then(
-        (r) => r.unwrap(),
+      const toolsBySource = await this.getToolsBySource(this.config).then((r) =>
+        r.unwrap(),
       )
       const config = this.transformPromptlToVercelToolDeclarations(
         applyAgentRule(this.config),

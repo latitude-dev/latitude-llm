@@ -27,9 +27,7 @@ import { IntegrationDto } from '../../schema/models/types/Integration'
 import { ProviderApiKey } from '../../schema/models/types/ProviderApiKey'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { estimateCostBreakdown } from '../../services/ai/estimateCost'
-import {
-  ValidatedChainStep,
-} from '../../services/chains/ChainValidator'
+import { ValidatedChainStep } from '../../services/chains/ChainValidator'
 import { ToolHandler } from '../../services/documents/tools/clientTools/handlers'
 import { lookupTools } from '../../services/documents/tools/lookup'
 import { resolveTools } from '../../services/documents/tools/resolve'
