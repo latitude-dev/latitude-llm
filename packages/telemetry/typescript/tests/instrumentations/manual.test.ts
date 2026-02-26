@@ -45,19 +45,13 @@ describe('manual', () => {
 
       const sdk = new LatitudeTelemetry('fake-api-key')
 
-      const ctx = sdk.context.setAttributes(sdk.context.active(), {
-        'latitude.documentLogUuid': 'fake-doc-log-uuid',
-        'latitude.documentUuid': 'fake-prompt-uuid',
+      const prompt = sdk.span.prompt({
+        documentLogUuid: 'fake-doc-log-uuid',
+        promptUuid: 'fake-prompt-uuid',
+        template:
+          '---\nprovider: openai\nmodel: gpt-4o\ntemperature: 0.5\n---\nYou are helpful.\n<user>{{question}}</user>',
+        parameters: { question: 'What is the weather?' },
       })
-
-      const prompt = sdk.span.prompt(
-        {
-          template:
-            '---\nprovider: openai\nmodel: gpt-4o\ntemperature: 0.5\n---\nYou are helpful.\n<user>{{question}}</user>',
-          parameters: { question: 'What is the weather?' },
-        },
-        ctx,
-      )
 
       const completion1 = sdk.span.completion(
         {
@@ -234,7 +228,7 @@ describe('manual', () => {
 
       const body = bodyMock.mock.calls[0]![0]
       expect(normalizeBody(body)).toEqual(
-        normalizeBody(fixtures.MANUAL_PROMPT_WITH_TOOLS_SPANS as any),
+        fixtures.MANUAL_PROMPT_WITH_TOOLS_SPANS,
       )
     }),
   )
@@ -266,7 +260,7 @@ describe('manual', () => {
 
       const body = bodyMock.mock.calls[0]![0]
       expect(normalizeBody(body)).toEqual(
-        normalizeBody(fixtures.MANUAL_COMPLETION_ERROR_SPANS as any),
+        fixtures.MANUAL_COMPLETION_ERROR_SPANS,
       )
     }),
   )

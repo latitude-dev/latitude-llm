@@ -23,7 +23,7 @@
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/sdk": "workspace:^",
-    "@latitude-data/telemetry": "workspace:*",
+    "@latitude-data/telemetry": "catalog:",
     "@opentelemetry/otlp-transformer": "catalog:",
     "@t3-oss/env-core": "0.13.8",
     "dd-trace": "catalog:",

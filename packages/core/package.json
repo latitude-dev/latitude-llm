@@ -167,7 +167,7 @@
     "@latitude-data/emails": "workspace:*",
     "@latitude-data/env": "workspace:*",
     "@latitude-data/eslint-config": "workspace:*",
-    "@latitude-data/telemetry": "workspace:*",
+    "@latitude-data/telemetry": "catalog:",
     "@latitude-data/typescript-config": "workspace:*",
     "@modelcontextprotocol/sdk": "1.13.1",
     "@napi-rs/canvas": "0.1.65",

@@ -163,6 +163,36 @@ export function findModelsDevModel(
 }
 
 /**
+ * Finds a model by id with best-match fallback: exact match first, then longest
+ * prefix match so that requestedModel.startsWith(candidate.id).
+ * The matched model id must not be longer than the passed model (so e.g. passing
+ * "gpt" does not match "gpt-4" / "gpt-5" in the DB).
+ *
+ * @param models - List of models to search (must already be filtered by provider)
+ */
+export function findModelsDevModelWithFallback(
+  models: ModelsDevModel[],
+  modelId: string,
+): ModelsDevModel | undefined {
+  const requested = modelId.trim().toLowerCase()
+  if (!requested) return undefined
+
+  const exact = findModelsDevModel(models, modelId)
+  if (exact) return exact
+
+  const prefixMatches = models.filter(
+    (m) =>
+      requested.length >= m.id.length &&
+      requested.startsWith(m.id.toLowerCase()),
+  )
+  if (prefixMatches.length === 0) return undefined
+
+  return prefixMatches.reduce((best, m) =>
+    m.id.length > (best?.id.length ?? 0) ? m : best,
+  )
+}
+
+/**
  * Gets pricing from a models.dev model entry
  * Returns null if pricing is not available
  */

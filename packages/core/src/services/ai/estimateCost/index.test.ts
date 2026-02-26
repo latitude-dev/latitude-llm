@@ -11,12 +11,15 @@ import {
 } from './index'
 import * as modelsDev from './modelsDev'
 
-// Mock the modelsDev module
-vi.mock('./modelsDev', () => ({
-  getBundledModelsDevData: vi.fn(),
-  findModelsDevModel: vi.fn(),
-  getModelsDevPricing: vi.fn(),
-}))
+vi.mock('./modelsDev', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./modelsDev')>()
+  return {
+    ...actual,
+    getBundledModelsDevData: vi.fn(actual.getBundledModelsDevData),
+    findModelsDevModel: vi.fn(actual.findModelsDevModel),
+    getModelsDevPricing: vi.fn(actual.getModelsDevPricing),
+  }
+})
 
 const createUsage = (
   overrides?: Partial<LegacyVercelSDKVersion4Usage>,

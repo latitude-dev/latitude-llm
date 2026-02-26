@@ -9,6 +9,9 @@ catalogs:
     '@datadog/datadog-ci':
       specifier: ^3.0.0
       version: 3.21.4
+    '@latitude-data/telemetry':
+      specifier: 3.0.0-beta.0
+      version: 3.0.0-beta.0
     '@opentelemetry/api':
       specifier: 1.9.0
       version: 1.9.0
@@ -177,8 +180,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/sdks/typescript
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@opentelemetry/otlp-transformer':
         specifier: 'catalog:'
         version: 0.57.2(@opentelemetry/api@1.9.0)
@@ -274,8 +277,8 @@ importers:
         specifier: 2.4.5
         version: 2.4.5(bufferutil@4.0.9)(react@19.2.4)(utf-8-validate@6.0.5)
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@latitude-data/web-ui':
         specifier: workspace:*
         version: link:../../packages/web-ui
@@ -554,8 +557,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       cookie-parser:
         specifier: 1.4.6
         version: 1.4.6
@@ -606,8 +609,8 @@ importers:
         specifier: workspace:^
         version: link:../../packages/env
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../packages/telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@t3-oss/env-core':
         specifier: '*'
         version: 0.13.8(typescript@5.9.3)(zod@4.3.6)
@@ -808,8 +811,8 @@ importers:
         specifier: workspace:*
         version: link:../../tools/eslint
       '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../telemetry/typescript
+        specifier: 'catalog:'
+        version: 3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)
       '@latitude-data/typescript-config':
         specifier: workspace:*
         version: link:../../tools/typescript
@@ -3596,6 +3599,11 @@ packages:
     resolution: {integrity: sha512-otajd00jgJw6+wHM7LRjUuE+wg6vb0U8aQxyDdEFBTCf7BXIxvv94piXGZW2YivR0b41Gmh4qWgjodI/8TcE9g==}
     peerDependencies:
       react: '*'
+
+  '@latitude-data/telemetry@3.0.0-beta.0':
+    resolution: {integrity: sha512-pA4DeOG8aUEZBkzYF95BjlPw0/v+GhHTi2QGRWugJkgBghWFtLHULIWHlMmEiGHPLROyVuIpE6J14GuKmCcGHQ==}
+    peerDependencies:
+      typescript: ^5.5.4
 
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
@@ -12485,6 +12493,10 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+  rosetta-ai@1.6.2:
+    resolution: {integrity: sha512-ISlqdb15FFpoRGkK/f/rti0c1eoMywbsZaLNDqhoipXH5UsWSDAwQOCozC7hUv24r3Hd+a0vhfQQaLAig/Jc4w==}
+    engines: {node: '>=20.0.0'}
+
   rosetta-ai@1.6.3:
     resolution: {integrity: sha512-u/7qqD90mvAoH4gGRvSjbL9yQBu4ODabLVsXvzDRQK20gQYeF1Puxe7554ibmgqf4auT+dk6Ea1npIhsnkvbBw==}
     engines: {node: '>=20.0.0'}
@@ -16552,7 +16564,7 @@ snapshots:
       '@azure/arm-appservice': 16.0.0
       '@azure/arm-resources': 6.1.0
       '@azure/identity': 4.12.0
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       chalk: 3.0.0
       fast-deep-equal: 3.1.3
     transitivePeerDependencies:
@@ -16594,7 +16606,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-deployment@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       simple-git: 3.16.0
@@ -16604,7 +16616,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-dora@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       simple-git: 3.16.0
@@ -16614,7 +16626,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-gate@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       '@types/uuid': 9.0.8
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
@@ -16666,7 +16678,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-sarif@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       ajv: 8.17.1
       ajv-formats: 2.1.1(ajv@8.17.1)
       axios: 1.12.2(debug@4.4.3)
@@ -16681,7 +16693,7 @@ snapshots:
 
   '@datadog/datadog-ci-plugin-sbom@3.21.4(@datadog/datadog-ci-base@3.21.4)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       ajv: 8.17.1
       ajv-formats: 2.1.1(ajv@8.17.1)
       axios: 1.12.2(debug@4.4.3)
@@ -16698,14 +16710,14 @@ snapshots:
       '@aws-sdk/client-cloudwatch-logs': 3.901.0
       '@aws-sdk/client-iam': 3.901.0
       '@aws-sdk/client-sfn': 3.901.0
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       deep-object-diff: 1.1.9
     transitivePeerDependencies:
       - aws-crt
 
   '@datadog/datadog-ci-plugin-synthetics@3.21.4(@datadog/datadog-ci-base@3.21.4)(bufferutil@4.0.9)(utf-8-validate@6.0.5)':
     dependencies:
-      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@22.18.8)
+      '@datadog/datadog-ci-base': 3.21.4(@datadog/datadog-ci-plugin-aas@3.21.4)(@datadog/datadog-ci-plugin-cloud-run@3.21.4)(@datadog/datadog-ci-plugin-deployment@3.21.4)(@datadog/datadog-ci-plugin-dora@3.21.4)(@datadog/datadog-ci-plugin-gate@3.21.4)(@datadog/datadog-ci-plugin-lambda@3.21.4)(@datadog/datadog-ci-plugin-sarif@3.21.4)(@datadog/datadog-ci-plugin-sbom@3.21.4)(@datadog/datadog-ci-plugin-stepfunctions@3.21.4)(@datadog/datadog-ci-plugin-synthetics@3.21.4)(@types/node@20.19.19)
       axios: 1.12.2(debug@4.4.3)
       chalk: 3.0.0
       debug: 4.4.3
@@ -17754,6 +17766,38 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@latitude-data/telemetry@3.0.0-beta.0(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(typescript@5.9.3)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/baggage-span-processor': 0.3.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/context-async-hooks': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/core': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/exporter-trace-otlp-http': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/otlp-transformer': 0.57.2(@opentelemetry/api@1.9.0)
+      '@opentelemetry/resources': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-node': 1.30.1(@opentelemetry/api@1.9.0)
+      '@opentelemetry/semantic-conventions': 1.34.0
+      '@traceloop/instrumentation-anthropic': 0.22.2
+      '@traceloop/instrumentation-bedrock': 0.22.2
+      '@traceloop/instrumentation-cohere': 0.22.2
+      '@traceloop/instrumentation-langchain': 0.22.2(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))(openai@6.17.0(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod@4.1.8))
+      '@traceloop/instrumentation-llamaindex': 0.22.2
+      '@traceloop/instrumentation-openai': 0.22.2
+      '@traceloop/instrumentation-together': 0.22.2
+      '@traceloop/instrumentation-vertexai': 0.22.2
+      date-fns: 4.1.0
+      rosetta-ai: 1.6.2
+      typescript: 5.9.3
+      uuid: 13.0.0
+      zod: 4.1.8
+    transitivePeerDependencies:
+      - '@opentelemetry/exporter-trace-otlp-proto'
+      - '@opentelemetry/sdk-trace-base'
+      - encoding
+      - openai
+      - supports-color
 
   '@leichtgewicht/ip-codec@2.0.5': {}
 
@@ -28504,6 +28548,10 @@ snapshots:
       '@rollup/rollup-win32-x64-gnu': 4.53.3
       '@rollup/rollup-win32-x64-msvc': 4.53.3
       fsevents: 2.3.3
+
+  rosetta-ai@1.6.2:
+    dependencies:
+      zod: 4.1.8
 
   rosetta-ai@1.6.3:
     dependencies:
