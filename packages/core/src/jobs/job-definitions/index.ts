@@ -33,6 +33,7 @@ export * from '../../events/handlers/enqueueShadowTestChallenger'
 export * from '../../events/handlers/notifyClientOfOptimizationStatus'
 export * from '../../events/handlers/unassignIssuesOnDocumentsDeleted'
 export * from '../../events/handlers/createInstantlyLeadHandler'
+export * from '../../events/handlers/clearDocumentGetDataCache'
 
 // Jobs
 export * from './datasets/createDatasetFromSpansJob'

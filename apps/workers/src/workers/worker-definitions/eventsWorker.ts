@@ -54,6 +54,7 @@ const eventHandlersJobMappings = {
   notifyClientOfOptimizationStatus: jobs.notifyClientOfOptimizationStatus,
   unassignIssuesOnDocumentsDeleted: jobs.unassignIssuesOnDocumentsDeleted,
   createInstantlyLeadHandler: jobs.createInstantlyLeadHandler,
+  clearDocumentGetDataCache: jobs.clearDocumentGetDataCache,
 }
 
 export function startEventsWorker() {
