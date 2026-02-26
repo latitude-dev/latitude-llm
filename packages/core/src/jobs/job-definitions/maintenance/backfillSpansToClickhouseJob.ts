@@ -152,9 +152,7 @@ export async function backfillSpansToClickhouseJob(
         cost: isCompletion ? (span.cost ?? null) : null,
         tokens_prompt: isCompletion ? (span.tokensPrompt ?? null) : null,
         tokens_cached: isCompletion ? (span.tokensCached ?? null) : null,
-        tokens_reasoning: isCompletion
-          ? (span.tokensReasoning ?? null)
-          : null,
+        tokens_reasoning: isCompletion ? (span.tokensReasoning ?? null) : null,
         tokens_completion: isCompletion
           ? (span.tokensCompletion ?? null)
           : null,
