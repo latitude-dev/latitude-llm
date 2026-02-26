@@ -1,5 +1,6 @@
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
+import { buildCommitFilter } from '$/app/api/spans/limited/route'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -31,7 +32,14 @@ export const GET = errorHandler(
         : undefined
 
       const commitsRepo = new CommitsRepository(workspace.id)
-      const headCommit = await commitsRepo.getHeadCommit(Number(projectId))
+      const currentCommit = await commitsRepo
+        .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
+        .then((r) => r.unwrap())
+      const commitUuids = await buildCommitFilter({
+        currentCommit,
+        commitsRepo,
+      })
+
       const repo = new DocumentVersionsRepository(workspace.id)
       const document = await repo
         .getSomeDocumentByUuid({ projectId: Number(projectId), documentUuid })
@@ -41,7 +49,7 @@ export const GET = errorHandler(
         workspaceId: workspace.id,
         projectId: Number(projectId),
         documentUuid: document.documentUuid,
-        commitUuid: headCommit?.uuid === commitUuid ? undefined : commitUuid,
+        commitUuids,
         days,
       }).then((r) => r.unwrap())
 

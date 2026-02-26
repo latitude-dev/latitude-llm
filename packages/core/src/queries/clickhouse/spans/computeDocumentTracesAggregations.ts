@@ -9,30 +9,27 @@ export const computeDocumentTracesAggregations = scopedQuery(
     workspaceId,
     projectId,
     documentUuid,
-    commitUuid,
+    commitUuids,
   }: {
     workspaceId: number
     projectId: number
     documentUuid: string
-    commitUuid?: string
+    commitUuids: string[]
   }): Promise<TracesAggregations> {
     const params: Record<string, unknown> = {
       workspaceId,
       projectId,
       documentUuid,
+      commitUuids,
       completionType: SpanType.Completion,
     }
 
     const conditions = [
       `workspace_id = {workspaceId: UInt64}`,
       `project_id_key = {projectId: UInt64}`,
+      `commit_uuid_key IN ({commitUuids: Array(UUID)})`,
       `document_uuid_key = {documentUuid: UUID}`,
     ]
-
-    if (commitUuid) {
-      conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
-      params.commitUuid = commitUuid
-    }
 
     // Query all metrics in a single pass
     const aggregationResult = await clickhouseClient().query({
