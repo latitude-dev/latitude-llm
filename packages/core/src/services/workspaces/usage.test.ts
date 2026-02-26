@@ -6,7 +6,7 @@ import { deleteEvaluationV2 } from '../evaluationsV2/delete'
 import { computeWorkspaceUsage } from './usage'
 
 describe('computeWorkspaceUsage', () => {
-  it('calculates usage correctly when there are evaluation results and document logs', async (ctx) => {
+  it('counts only distinct trace runs when there are evaluation results and document logs', async (ctx) => {
     const {
       workspace: wsp,
       commit,
@@ -65,10 +65,11 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(spans.length + evaluationResultsV2.length)
+    expect(result.usage).toBe(spans.length)
+    expect(evaluationResultsV2.length).toBe(NUM_EVAL_LOGS)
   })
 
-  it('calculates usage correctly even if there are multiple workspaces with evaluation results and document logs', async (ctx) => {
+  it('counts only distinct trace runs in the current workspace', async (ctx) => {
     const {
       workspace: wsp1,
       documents: documents1,
@@ -172,7 +173,8 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace1.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(spans1.length + evaluationResultsV21.length)
+    expect(result.usage).toBe(spans1.length)
+    expect(evaluationResultsV21.length).toBe(NUM_EVAL_LOGS)
   })
 
   it('calculates usage correctly when there are no evaluation results or document logs', async (ctx) => {
@@ -204,7 +206,7 @@ describe('computeWorkspaceUsage', () => {
     expect(result.usage).toBe(0)
   })
 
-  it('calculates usage correctly across multiple projects within the workspace', async (ctx) => {
+  it('counts only distinct trace runs across multiple projects within the workspace', async (ctx) => {
     const {
       workspace: wsp,
       commit: commit1,
@@ -310,10 +312,11 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(spans.length + evaluationResultsV2.length)
+    expect(result.usage).toBe(spans.length)
+    expect(evaluationResultsV2.length).toBe(NUM_EVAL_LOGS_PER_PROJECT * 2)
   })
 
-  it('takes logs from removed commits and evaluations into account', async (ctx) => {
+  it('takes trace runs from removed commits into account', async (ctx) => {
     const {
       user,
       workspace: wsp,
@@ -388,7 +391,8 @@ describe('computeWorkspaceUsage', () => {
       plan: workspace.currentSubscription.plan,
     }).then((r) => r.unwrap())
 
-    expect(result.usage).toBe(spans.length + evaluationResultsV2.length)
+    expect(result.usage).toBe(spans.length)
+    expect(evaluationResultsV2.length).toBe(NUM_EVAL_LOGS)
   })
 
   it('only takes into account the runs since the last renewal', async (ctx) => {

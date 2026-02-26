@@ -1,6 +1,6 @@
-import { and, count, eq, gte, inArray } from 'drizzle-orm'
+import { and, countDistinct, eq, gte } from 'drizzle-orm'
 import Redis from 'ioredis'
-import { MAIN_SPAN_TYPES, QuotaType, WorkspaceUsage } from '../../constants'
+import { QuotaType, WorkspaceUsage } from '../../constants'
 import { type Subscription } from '../../schema/models/types/Subscription'
 import {
   WorkspaceDto,
@@ -13,10 +13,7 @@ import { unsafelyFindWorkspace } from '../../data-access/workspaces'
 import { BadRequestError, PaymentRequiredError } from '../../lib/errors'
 import { Result } from '../../lib/Result'
 import { PromisedResult } from '../../lib/Transaction'
-import {
-  EvaluationResultsV2Repository,
-  MembershipsRepository,
-} from '../../repositories'
+import { MembershipsRepository } from '../../repositories'
 import { computeQuota } from '../grants/quota'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 import { spans } from '../../schema/models/spans'
@@ -60,11 +57,6 @@ async function computeUsageFromDatabase(
   const createdAtDate = workspace.currentSubscriptionCreatedAt
   const targetDate = new Date(Date.now())
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
-  const evaluationResultsV2Scope = new EvaluationResultsV2Repository(
-    workspace.id,
-    db,
-  )
-
   const shouldUseClickHouse = await isClickHouseSpansReadEnabled(
     workspace.id,
     db,
@@ -76,22 +68,17 @@ async function computeUsageFromDatabase(
         since: latestRenewalDate,
       })
     : await db
-        .select({ count: count() })
+        .select({ count: countDistinct(spans.traceId) })
         .from(spans)
         .where(
           and(
-            inArray(spans.type, Array.from(MAIN_SPAN_TYPES)),
             eq(spans.workspaceId, workspace.id),
             gte(spans.startedAt, latestRenewalDate),
           ),
         )
         .then((r) => r[0]!.count)
 
-  const evaluationResultsV2Count = await evaluationResultsV2Scope
-    .countSinceDate(latestRenewalDate)
-    .then((r) => r.unwrap())
-
-  return evaluationResultsV2Count + spansCount
+  return spansCount
 }
 
 export async function computeWorkspaceUsage(
