@@ -160,7 +160,7 @@ class CaptureContext:
             versionUuid=self._version_uuid,
             conversationUuid=self._conversation_uuid,
         )
-        self._span = self._telemetry._manual_instrumentation.unresolved_external(capture_context, options)
+        self._span = self._telemetry._manual_instrumentation.capture_external(capture_context, options)
         # Set the span context as active so child spans are properly parented
         self._token = otel_context.attach(self._span.context)
 

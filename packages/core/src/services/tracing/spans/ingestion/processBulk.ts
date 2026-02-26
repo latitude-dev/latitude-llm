@@ -43,7 +43,7 @@ import {
 } from './process'
 import { bulkCreate as bulkCreatePostgresSpans } from '../postgres/bulkCreate'
 import { bulkCreate as bulkCreateClickHouseSpans } from '../clickhouse/bulkCreate'
-import { UnresolvedExternalSpanSpecification } from '../specifications/unresolvedExternal'
+import { resolveCaptureAttributes } from './captureReferences'
 
 type SpanIngestionInput = {
   span: Otlp.Span
@@ -53,9 +53,7 @@ type SpanIngestionInput = {
   workspace: Workspace
 }
 
-type CaptureResolution = Awaited<
-  ReturnType<typeof UnresolvedExternalSpanSpecification.process>
->
+type CaptureResolution = Awaited<ReturnType<typeof resolveCaptureAttributes>>
 
 /**
  * Converts a batch of OTLP spans into Latitude spans and persists them in
@@ -461,8 +459,6 @@ async function resolveCaptureReferences({
   traceId: string
   cache: Map<string, CaptureResolution>
 }): Promise<TypedResult<Record<string, SpanAttribute>>> {
-  if (type === SpanType.UnresolvedExternal) return Result.ok(attributes)
-
   const promptPath = attributes[ATTRIBUTES.LATITUDE.promptPath]
   const projectId = attributes[ATTRIBUTES.LATITUDE.projectId]
   if (!promptPath || !projectId) return Result.ok(attributes)
@@ -485,7 +481,7 @@ async function resolveCaptureReferences({
 
   let resolving = cache.get(key)
   if (!resolving) {
-    resolving = await UnresolvedExternalSpanSpecification.process({
+    resolving = await resolveCaptureAttributes({
       attributes: {
         [ATTRIBUTES.LATITUDE.promptPath]: String(promptPath),
         [ATTRIBUTES.LATITUDE.projectId]: Number(projectId),
@@ -496,9 +492,6 @@ async function resolveCaptureReferences({
           [ATTRIBUTES.LATITUDE.documentLogUuid]: String(documentLogUuid),
         }),
       },
-      status,
-      scope,
-      apiKey,
       workspace,
     })
 
@@ -507,30 +500,14 @@ async function resolveCaptureReferences({
 
   if (resolving.error) return Result.error(resolving.error)
 
-  const resolvedAttributes: Record<string, SpanAttribute> = {
+  const resolvedAttributes = {
     ...attributes,
-    [ATTRIBUTES.LATITUDE.projectId]: resolving.value.projectId,
+    ...resolving.value,
   }
 
-  if (resolving.value.promptUuid) {
-    resolvedAttributes[ATTRIBUTES.LATITUDE.documentUuid] =
-      resolving.value.promptUuid
-  }
-
-  if (resolving.value.documentLogUuid) {
-    resolvedAttributes[ATTRIBUTES.LATITUDE.documentLogUuid] =
-      resolving.value.documentLogUuid
-  }
-
-  if (resolving.value.versionUuid) {
-    resolvedAttributes[ATTRIBUTES.LATITUDE.commitUuid] =
-      resolving.value.versionUuid
-  }
-
-  const source =
-    attributes[ATTRIBUTES.LATITUDE.source] ?? resolving.value.source
-  if (source) {
-    resolvedAttributes[ATTRIBUTES.LATITUDE.source] = source
+  if (attributes[ATTRIBUTES.LATITUDE.source]) {
+    resolvedAttributes[ATTRIBUTES.LATITUDE.source] =
+      attributes[ATTRIBUTES.LATITUDE.source]
   }
 
   return Result.ok(resolvedAttributes)
@@ -702,9 +679,3 @@ function convertSpanLinks(links: Otlp.Link[]): TypedResult<SpanLink[]> {
 
   return Result.ok(result)
 }
-
-/**
- * Extracts shared reference fields from raw span attributes so all span types
- * can be queried by project/document/commit even if their specification does
- * not set those fields directly.
- */
