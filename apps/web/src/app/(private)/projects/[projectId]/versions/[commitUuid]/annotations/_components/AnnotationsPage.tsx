@@ -29,11 +29,9 @@ import { mapSourceGroupToLogSources } from '@latitude-data/core/services/runs/ma
 import { useEvaluationsV2 } from '$/stores/evaluationsV2'
 
 export function AnnotationsPage({
-  issuesEnabled,
   initialSpans,
   defaultSourceGroup,
 }: {
-  issuesEnabled: boolean
   initialSpans: Span[]
   defaultSourceGroup: RunSourceGroup
 }) {
@@ -146,7 +144,6 @@ export function AnnotationsPage({
             hasNext={hasNext}
             hasPrev={hasPrev}
             isLoading={isSpansLoading}
-            issuesEnabled={issuesEnabled}
             realtimeIsEnabled={realtimeIsEnabled}
             selectedSpanId={selectedSpanId}
             setSelectedSpanId={setSelectedSpanId}

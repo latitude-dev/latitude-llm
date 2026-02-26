@@ -5,7 +5,6 @@ import {
   Span,
 } from '@latitude-data/constants'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { AnnotationProgressPanel } from '$/components/AnnotationProgressPanel'
 import { AnnotationsListItem } from './Item'
 import { RunSourceSelector } from './SourceSelector'
 import { RealtimeToggle } from '$/components/RealtimeToggle'
@@ -14,7 +13,6 @@ import { LoadingText } from '@latitude-data/web-ui/molecules/LoadingText'
 
 export function AnnotationsList({
   annotations,
-  issuesEnabled,
   spans,
   goToNextPage,
   goToPrevPage,
@@ -30,7 +28,6 @@ export function AnnotationsList({
   realtimeIsEnabled = false,
 }: {
   annotations: EvaluationResultV2[]
-  issuesEnabled: boolean
   spans: Span[]
   goToNextPage: () => void
   goToPrevPage: () => void
@@ -57,11 +54,6 @@ export function AnnotationsList({
             </Text.H6>
           </div>
         </div>
-        {issuesEnabled ? (
-          <div className='w-full flex-shrink-0'>
-            <AnnotationProgressPanel />
-          </div>
-        ) : null}
       </div>
       <div className='w-full min-h-0 flex flex-1 flex-col justify-start items-start gap-4'>
         <div className='w-full flex justify-between items-center gap-1'>
