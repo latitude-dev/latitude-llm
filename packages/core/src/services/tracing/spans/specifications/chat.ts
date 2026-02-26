@@ -6,7 +6,7 @@ import {
   ATTRIBUTES,
 } from '../../../../constants'
 import { Result } from '../../../../lib/Result'
-import { SpanProcessArgs } from '../shared'
+import { extractLatitudeReferences, SpanProcessArgs } from '../shared'
 
 const specification = SPAN_SPECIFICATIONS[SpanType.Chat]
 export const ChatSpanSpecification = {
@@ -19,11 +19,9 @@ async function process(
   _ = database,
 ) {
   return Result.ok({
+    ...extractLatitudeReferences(attributes),
     documentLogUuid: attributes[ATTRIBUTES.LATITUDE.documentLogUuid] as string,
     previousTraceId: attributes[ATTRIBUTES.LATITUDE.previousTraceId] as string,
     source: attributes[ATTRIBUTES.LATITUDE.source] as LogSources,
-    promptUuid: attributes[ATTRIBUTES.LATITUDE.documentUuid] as string,
-    versionUuid: attributes[ATTRIBUTES.LATITUDE.commitUuid] as string,
-    projectId: Number(attributes[ATTRIBUTES.LATITUDE.projectId]),
   })
 }

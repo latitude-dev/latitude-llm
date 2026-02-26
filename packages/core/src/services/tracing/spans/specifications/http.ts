@@ -9,7 +9,11 @@ import {
 } from '../../../../constants'
 import { UnprocessableEntityError } from '../../../../lib/errors'
 import { Result, TypedResult } from '../../../../lib/Result'
-import { SpanProcessArgs, toCamelCase } from '../shared'
+import {
+  extractLatitudeReferences,
+  SpanProcessArgs,
+  toCamelCase,
+} from '../shared'
 
 const HTTP = ATTRIBUTES.OPENTELEMETRY.HTTP
 
@@ -41,6 +45,7 @@ async function process(
 
   if (status === SpanStatus.Error) {
     return Result.ok({
+      ...extractLatitudeReferences(attributes),
       request: {
         method: requestMethod,
         url: requestUrl,
@@ -63,6 +68,7 @@ async function process(
   const responseBody = extractingsb.value
 
   return Result.ok({
+    ...extractLatitudeReferences(attributes),
     request: {
       method: requestMethod,
       url: requestUrl,

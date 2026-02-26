@@ -43,29 +43,39 @@ import {
 } from './process'
 import { bulkCreate as bulkCreatePostgresSpans } from '../postgres/bulkCreate'
 import { bulkCreate as bulkCreateClickHouseSpans } from '../clickhouse/bulkCreate'
+import { resolveCaptureAttributes } from './captureReferences'
 
+type SpanIngestionInput = {
+  span: Otlp.Span
+  scope: Otlp.Scope
+  resource: Otlp.Resource
+  apiKey: ApiKey
+  workspace: Workspace
+}
+
+type CaptureResolution = Awaited<ReturnType<typeof resolveCaptureAttributes>>
+
+/**
+ * Converts a batch of OTLP spans into Latitude spans and persists them in
+ * Postgres (always) and ClickHouse (feature-flagged).
+ */
 export async function processSpansBulk(
   {
     spans: spansData,
     apiKey,
     workspace,
   }: {
-    spans: Array<{
-      span: Otlp.Span
-      scope: Otlp.Scope
-      resource: Otlp.Resource
-      apiKey: ApiKey
-      workspace: Workspace
-    }>
+    spans: SpanIngestionInput[]
     apiKey: ApiKey
     workspace: Workspace
   },
   transaction = new Transaction(),
   disk: DiskWrapper = diskFactory('private'),
 ) {
+  const captureResolutionCache = new Map<string, CaptureResolution>()
+
   // Pre-process all spans to extract basic information and filter out invalid ones
   const processedSpans: Array<{
-    original: (typeof spansData)[0]
     id: string
     traceId: string
     parentId?: string
@@ -81,7 +91,6 @@ export async function processSpansBulk(
     events: SpanEvent[]
     links: SpanLink[]
     metadata: SpanMetadata
-    documentLogUuid?: string
   }> = []
 
   // Batch check for existing spans to reduce database queries
@@ -113,7 +122,7 @@ export async function processSpansBulk(
       )
       continue
     }
-    const attributes = convertingsa.value
+    let attributes = convertingsa.value
 
     const id = span.spanId
     const traceId = span.traceId
@@ -219,6 +228,22 @@ export async function processSpansBulk(
     }
     const links = convertingsl.value
 
+    const captureResolution = await resolveCaptureReferences({
+      attributes,
+      workspace,
+      traceId,
+      cache: captureResolutionCache,
+    })
+    if (captureResolution.error) {
+      captureException(
+        new UnprocessableEntityError(
+          `Error resolving capture references: ${captureResolution.error}`,
+        ),
+      )
+      continue
+    }
+    attributes = captureResolution.value
+
     // Extract span error
     const extractingse = extractSpanError(attributes, events)
     if (extractingse.error) {
@@ -263,7 +288,10 @@ export async function processSpansBulk(
 
       continue
     }
-    metadata = { ...metadata, ...processing.value }
+    metadata = {
+      ...metadata,
+      ...processing.value,
+    } as SpanMetadata
 
     // Transform UnresolvedExternal to External after resolution
     let finalType = type
@@ -272,7 +300,6 @@ export async function processSpansBulk(
     }
 
     processedSpans.push({
-      original: spanData,
       id,
       traceId,
       parentId,
@@ -403,6 +430,75 @@ export async function processSpansBulk(
       )
     },
   )
+}
+
+/**
+ * Resolves capture references for child spans that only contain
+ * `latitude.prompt_path` + `latitude.project_id` baggage attributes.
+ */
+async function resolveCaptureReferences({
+  attributes,
+  workspace,
+  traceId,
+  cache,
+}: {
+  attributes: Record<string, SpanAttribute>
+  workspace: Workspace
+  traceId: string
+  cache: Map<string, CaptureResolution>
+}): Promise<TypedResult<Record<string, SpanAttribute>>> {
+  const promptPath = attributes[ATTRIBUTES.LATITUDE.promptPath]
+  const projectId = attributes[ATTRIBUTES.LATITUDE.projectId]
+  if (!promptPath || !projectId) return Result.ok(attributes)
+
+  const hasResolvedReferences =
+    Boolean(attributes[ATTRIBUTES.LATITUDE.documentUuid]) &&
+    Boolean(attributes[ATTRIBUTES.LATITUDE.commitUuid]) &&
+    Boolean(attributes[ATTRIBUTES.LATITUDE.documentLogUuid])
+  if (hasResolvedReferences) return Result.ok(attributes)
+
+  const versionUuid = attributes[ATTRIBUTES.LATITUDE.commitUuid]
+  const documentLogUuid = attributes[ATTRIBUTES.LATITUDE.documentLogUuid]
+  const key = [
+    traceId,
+    String(promptPath),
+    String(projectId),
+    String(versionUuid ?? ''),
+    String(documentLogUuid ?? ''),
+  ].join('::')
+
+  let resolving = cache.get(key)
+  if (!resolving) {
+    resolving = await resolveCaptureAttributes({
+      attributes: {
+        [ATTRIBUTES.LATITUDE.promptPath]: String(promptPath),
+        [ATTRIBUTES.LATITUDE.projectId]: Number(projectId),
+        ...(versionUuid && {
+          [ATTRIBUTES.LATITUDE.commitUuid]: String(versionUuid),
+        }),
+        ...(documentLogUuid && {
+          [ATTRIBUTES.LATITUDE.documentLogUuid]: String(documentLogUuid),
+        }),
+      },
+      workspace,
+    })
+
+    cache.set(key, resolving)
+  }
+
+  if (resolving.error) return Result.error(resolving.error)
+
+  const resolvedAttributes = {
+    ...attributes,
+    ...resolving.value,
+  }
+
+  if (attributes[ATTRIBUTES.LATITUDE.source]) {
+    resolvedAttributes[ATTRIBUTES.LATITUDE.source] =
+      attributes[ATTRIBUTES.LATITUDE.source]
+  }
+
+  return Result.ok(resolvedAttributes)
 }
 
 async function getExistingBatch(

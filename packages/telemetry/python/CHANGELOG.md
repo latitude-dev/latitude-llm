@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-02-26
+
+### Changed
+
+- `capture()` now writes prompt reference fields into baggage so child spans inherit `path`, `project`, `commit`, and `conversation` metadata.
+
 ## [2.0.3] - 2026-01-29
 
 ### Fixed

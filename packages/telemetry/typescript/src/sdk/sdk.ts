@@ -16,6 +16,7 @@ import {
 } from '$telemetry/instrumentations'
 import { DEFAULT_REDACT_SPAN_PROCESSOR } from '$telemetry/sdk/redact'
 import {
+  ATTRIBUTES,
   DOCUMENT_PATH_REGEXP,
   InstrumentationScope,
   SCOPE_LATITUDE,
@@ -424,8 +425,30 @@ export class LatitudeTelemetry {
       )
     }
 
-    const span = this.manualInstrumentation.unresolvedExternal(
+    const captureBaggageEntries: Record<string, otel.BaggageEntry> = {
+      [ATTRIBUTES.LATITUDE.promptPath]: { value: options.path },
+      [ATTRIBUTES.LATITUDE.projectId]: { value: String(options.projectId) },
+    }
+
+    if (options.versionUuid) {
+      captureBaggageEntries[ATTRIBUTES.LATITUDE.commitUuid] = {
+        value: options.versionUuid,
+      }
+    }
+
+    if (options.conversationUuid) {
+      captureBaggageEntries[ATTRIBUTES.LATITUDE.documentLogUuid] = {
+        value: options.conversationUuid,
+      }
+    }
+
+    const captureContext = propagation.setBaggage(
       BACKGROUND(),
+      propagation.createBaggage(captureBaggageEntries),
+    )
+
+    const span = this.manualInstrumentation.unresolvedExternal(
+      captureContext,
       options,
     )
 

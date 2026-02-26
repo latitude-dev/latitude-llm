@@ -749,6 +749,7 @@ class ManualInstrumentation(BaseInstrumentation):
         name = options.name or f"external-{options.promptUuid}"
         return self._span(ctx, name, SpanType.External, StartSpanOptions(attributes=attributes))
 
+    # TODO(tracing): deprecate
     def unresolved_external(self, ctx: Context, options: CaptureOptions) -> SpanHandle:
         """Create an unresolved external span for capture()."""
         attributes: Dict[str, Any] = {

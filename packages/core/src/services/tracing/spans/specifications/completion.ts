@@ -21,6 +21,7 @@ import { type Workspace } from '../../../../schema/models/types/Workspace'
 import { captureException } from '../../../../utils/datadogCapture'
 import { estimateCost } from '../../../ai/estimateCost'
 import {
+  extractLatitudeReferences,
   setField,
   SpanProcessArgs,
   toCamelCase,
@@ -60,6 +61,7 @@ async function process(
 
   if (status === SpanStatus.Error) {
     return Result.ok({
+      ...extractLatitudeReferences(attributes),
       provider: provider,
       model: model,
       configuration: configuration,
@@ -115,6 +117,7 @@ async function process(
   }
 
   return Result.ok({
+    ...extractLatitudeReferences(attributes),
     provider: provider,
     model: model,
     configuration: configuration,
@@ -123,11 +126,6 @@ async function process(
     tokens: tokens,
     cost: cost,
     finishReason: finishReason,
-
-    // References
-    promptUuid: attributes[ATTRIBUTES.LATITUDE.documentUuid] as string,
-    versionUuid: attributes[ATTRIBUTES.LATITUDE.commitUuid] as string,
-    experimentUuid: attributes[ATTRIBUTES.LATITUDE.experimentUuid] as string,
   })
 }
 
