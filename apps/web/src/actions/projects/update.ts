@@ -9,7 +9,9 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 
 export const updateProjectAction = authProcedure
-  .inputSchema(z.object({ id: z.number().or(z.string()), name: z.string() }))
+  .inputSchema(
+    z.object({ id: z.number().or(z.string()), name: z.string().max(256) }),
+  )
   .action(async ({ parsedInput, ctx }) => {
     const workspace = ctx.workspace
     const project = await findProjectById({
