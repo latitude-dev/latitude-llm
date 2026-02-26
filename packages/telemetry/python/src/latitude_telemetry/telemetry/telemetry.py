@@ -23,8 +23,7 @@ from opentelemetry.sdk import resources as otel
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 
-from latitude_telemetry.constants import DOCUMENT_PATH_REGEXP, InstrumentationScope
-from latitude_telemetry.constants import ATTRIBUTES
+from latitude_telemetry.constants import ATTRIBUTES, DOCUMENT_PATH_REGEXP, InstrumentationScope
 from latitude_telemetry.env import env
 from latitude_telemetry.exporter import ExporterOptions, create_exporter
 from latitude_telemetry.instrumentations import (
@@ -38,6 +37,7 @@ from latitude_telemetry.managers import (
     SpanFactory,
     TracerManager,
 )
+from latitude_telemetry.telemetry.baggage_span_processor import BaggageSpanProcessor
 from latitude_telemetry.telemetry.types import (
     GatewayOptions,
     Instrumentors,
@@ -45,7 +45,6 @@ from latitude_telemetry.telemetry.types import (
     SpanPrompt,
     TelemetryAttributes,
 )
-from latitude_telemetry.telemetry.baggage_span_processor import BaggageSpanProcessor
 from latitude_telemetry.util import Model, is_package_installed
 
 TELEMETRY_INSTRUMENTATION_NAME = "opentelemetry.instrumentation.latitude"
