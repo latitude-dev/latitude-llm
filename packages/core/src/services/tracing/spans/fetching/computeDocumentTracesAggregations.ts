@@ -1,4 +1,4 @@
-import { and, eq, SQL, sql } from 'drizzle-orm'
+import { and, eq, inArray, SQL, sql } from 'drizzle-orm'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import { spans } from '../../../../schema/models/spans'
@@ -13,12 +13,12 @@ export async function computeDocumentTracesAggregations(
     workspaceId,
     projectId,
     documentUuid,
-    commitUuid,
+    commitUuids,
   }: {
     workspaceId: number
     projectId: number
     documentUuid: string
-    commitUuid?: string
+    commitUuids: string[]
   },
   db = database,
 ) {
@@ -32,19 +32,19 @@ export async function computeDocumentTracesAggregations(
       workspaceId,
       projectId,
       documentUuid,
-      commitUuid,
+      commitUuids,
     })
     return Result.ok(result)
   }
   try {
     const countConditions = [
       eq(spans.documentUuid, documentUuid),
-      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
+      inArray(spans.commitUuid, commitUuids),
     ].filter(Boolean) as SQL<unknown>[]
     const conditions = [
       eq(spans.documentUuid, documentUuid),
       eq(spans.type, SpanType.Completion),
-      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
+      inArray(spans.commitUuid, commitUuids),
     ].filter(Boolean) as SQL<unknown>[]
     const totalCountPromise = db
       .select({

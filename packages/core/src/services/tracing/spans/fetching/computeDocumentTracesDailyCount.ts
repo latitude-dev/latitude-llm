@@ -1,5 +1,5 @@
 import { subDays } from 'date-fns'
-import { and, eq, gte, SQL, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, SQL, sql } from 'drizzle-orm'
 import { database } from '../../../../client'
 import { Result } from '../../../../lib/Result'
 import { spans } from '../../../../schema/models/spans'
@@ -17,13 +17,13 @@ export async function computeDocumentTracesDailyCount(
     workspaceId,
     projectId,
     documentUuid,
-    commitUuid,
+    commitUuids,
     days = 30,
   }: {
     workspaceId: number
     projectId: number
     documentUuid: string
-    commitUuid?: string
+    commitUuids: string[]
     days?: number
   },
   db = database,
@@ -38,7 +38,7 @@ export async function computeDocumentTracesDailyCount(
       workspaceId,
       projectId,
       documentUuid,
-      commitUuid,
+      commitUuids,
       days,
     })
     return Result.ok(result)
@@ -47,12 +47,11 @@ export async function computeDocumentTracesDailyCount(
   const now = new Date()
 
   try {
-    // Count distinct traceIds per day
     const conditions = [
       gte(spans.startedAt, subDays(now, days)),
       eq(spans.documentUuid, documentUuid),
-      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
-    ].filter(Boolean) as SQL<unknown>[]
+      inArray(spans.commitUuid, commitUuids),
+    ] as SQL<unknown>[]
 
     const result = await db
       .select({

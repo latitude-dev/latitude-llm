@@ -14,13 +14,13 @@ export const computeDocumentTracesDailyCount = scopedQuery(
     workspaceId,
     projectId,
     documentUuid,
-    commitUuid,
+    commitUuids,
     days = 30,
   }: {
     workspaceId: number
     projectId: number
     documentUuid: string
-    commitUuid?: string
+    commitUuids: string[]
     days?: number
   }): Promise<DailyCount[]> {
     const now = new Date()
@@ -30,6 +30,7 @@ export const computeDocumentTracesDailyCount = scopedQuery(
       workspaceId,
       projectId,
       documentUuid,
+      commitUuids,
       startDate: toClickHouseDateTime(startDate),
     }
 
@@ -39,17 +40,13 @@ export const computeDocumentTracesDailyCount = scopedQuery(
       `project_id = {projectId: UInt64}`,
       `project_id_key = {projectId: UInt64}`,
       // TODO(clickhouse): remove non-_key predicate after key-column rollout.
+      `commit_uuid IN ({commitUuids: Array(UUID)})`,
+      `commit_uuid_key IN ({commitUuids: Array(UUID)})`,
+      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
       `document_uuid = {documentUuid: UUID}`,
       `document_uuid_key = {documentUuid: UUID}`,
       `started_at >= {startDate: DateTime64(6, 'UTC')}`,
     ]
-
-    if (commitUuid) {
-      params.commitUuid = commitUuid
-      // TODO(clickhouse): remove non-_key predicate after key-column rollout.
-      conditions.push(`commit_uuid = {commitUuid: UUID}`)
-      conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
-    }
 
     const result = await clickhouseClient().query({
       query: `
