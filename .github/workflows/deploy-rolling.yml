@@ -74,9 +74,3 @@ jobs:
             --service ${{ matrix.service }} \
             --task-definition ${{ steps.task-def.outputs.task_def_arn }} \
             --force-new-deployment
-
-      - name: Wait for deployment
-        run: |
-          aws ecs wait services-stable \
-            --cluster ${{ matrix.cluster }} \
-            --services ${{ matrix.service }}
