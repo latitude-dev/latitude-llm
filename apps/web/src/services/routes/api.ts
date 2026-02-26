@@ -125,7 +125,6 @@ export const API_ROUTES = {
               search: `${projectRoot}/commits/${commitUuid}/issues/search`,
               histograms: `${projectRoot}/commits/${commitUuid}/issues/histograms`,
               evaluations: `${projectRoot}/commits/${commitUuid}/issues/evaluations`,
-              annotationsProgress: `${projectRoot}/commits/${commitUuid}/issues/annotationsProgress`,
               detail: (issueId: number) => {
                 return {
                   root: `${projectRoot}/commits/${commitUuid}/issues/${issueId}`,
