@@ -1,6 +1,6 @@
 [project]
 name = "latitude-telemetry"
-version = "2.0.3"
+version = "3.0.0b0"
 description = "Latitude Telemetry for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -90,6 +90,7 @@ indent-style = "space"
 
 [tool.pytest.ini_options]
 addopts = "-p no:warnings -n auto"
+testpaths = ["tests"]
 xfail_strict = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

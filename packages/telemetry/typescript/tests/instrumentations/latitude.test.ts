@@ -70,7 +70,9 @@ describe('latitude', () => {
       await sdk.shutdown()
 
       const body = bodyMock.mock.calls[0]![0]
-      expect(normalizeBody(body)).toEqual(fixtures.LATITUDE_RENDERING_SPANS)
+      expect(normalizeBody(body)).toEqual(
+        normalizeBody(fixtures.LATITUDE_RENDERING_SPANS as any),
+      )
     }),
   )
 })

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0b0] - 2026-02-16
+
+### Changed
+
+- Marked the 3.x line as a beta prerelease so stable users stay on 2.x until 3.x is production-ready.
+- Added `telemetry.context.set_attributes()` to set baggage attributes once and propagate trace metadata to child spans.
+
+### Removed
+
+- Removed manual instrumentation option aliases for prompt/chat/external/completion spans (including `documentLogUuid`, `promptUuid`, `versionUuid`, and related fields). Pass trace metadata with `attributes` or context baggage instead.
+
 ## [2.0.3] - 2026-01-29
 
 ### Fixed
