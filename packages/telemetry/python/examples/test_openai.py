@@ -20,7 +20,7 @@ telemetry = Telemetry(
     os.environ["LATITUDE_API_KEY"],
     TelemetryOptions(
         instrumentors=[Instrumentors.OpenAI],
-        disable_batch=False,
+        disable_batch=True,
         internal=InternalOptions(
             gateway=GatewayOptions(base_url="http://localhost:8787"),
         ),
