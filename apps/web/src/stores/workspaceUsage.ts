@@ -11,10 +11,15 @@ import { useDebouncedCallback } from 'use-debounce'
 /**
  * FIXME: this is broken. We removed `documentLogCreated` but we're not listening for spans created.
  */
-export default function useWorkspaceUsage(opts?: SWRConfiguration) {
+export default function useWorkspaceUsage({
+  disable = false,
+  ...opts
+}: {
+  disable?: boolean
+} & SWRConfiguration = {}) {
   const { data: users } = useUsers()
   const fetcher = useFetcher<WorkspaceUsage | undefined>(
-    ROUTES.api.workspaces.usage,
+    disable ? undefined : ROUTES.api.workspaces.usage,
     { fallback: null },
   )
   const {
@@ -22,7 +27,11 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
     data = undefined,
     isLoading,
     error: swrError,
-  } = useSWR<WorkspaceUsage | undefined>(['workspaceUsage'], fetcher, opts)
+  } = useSWR<WorkspaceUsage | undefined>(
+    disable ? null : ['workspaceUsage'],
+    fetcher,
+    opts,
+  )
 
   const onMessage = useDebouncedCallback(() => {
     mutate(

@@ -7,7 +7,7 @@ import { WorkspaceDto } from '@latitude-data/core/schema/models/types/Workspace'
 export const GET = errorHandler(
   authHandler(
     async (
-      _: NextRequest,
+      _req: NextRequest,
       {
         workspace,
       }: {

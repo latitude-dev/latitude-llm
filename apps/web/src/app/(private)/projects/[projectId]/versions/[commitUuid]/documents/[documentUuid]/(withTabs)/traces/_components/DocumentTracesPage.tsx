@@ -26,8 +26,10 @@ import { SelectionTracesBanner } from './SelectionTracesBanner'
 
 export function DocumentTracesPage({
   initialSpanFilterOptions,
+  canReadSpansFromClickHouse,
 }: {
   initialSpanFilterOptions: SpansFilters
+  canReadSpansFromClickHouse: boolean
 }) {
   const { selection } = use(TraceSpanSelectionStateContext)
   const panelContainerRef = useRef<HTMLDivElement>(null)
@@ -43,6 +45,7 @@ export function DocumentTracesPage({
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       projectId: project.id,
+      disable: !canReadSpansFromClickHouse,
     })
 
   const {
@@ -53,6 +56,7 @@ export function DocumentTracesPage({
     documentUuid: document.documentUuid,
     commitUuid: commit.uuid,
     projectId: project.id,
+    disable: !canReadSpansFromClickHouse,
   })
   const searchParams = useSearchParams()
   const filtersParam = searchParams.get('filters')
@@ -95,17 +99,19 @@ export function DocumentTracesPage({
             <TableBlankSlate description='No traces found for this prompt.' />
           ) : (
             <div className='flex flex-col gap-4 w-full'>
-              <div className='grid xl:grid-cols-2 gap-4'>
-                <TracesOverTime
-                  data={dailyCount}
-                  isLoading={isDailyCountLoading}
-                  error={dailyCountError}
-                />
-                <AggregationPanels
-                  aggregations={aggregations}
-                  isLoading={isAggregationsLoading}
-                />
-              </div>
+              {canReadSpansFromClickHouse ? (
+                <div className='grid xl:grid-cols-2 gap-4'>
+                  <TracesOverTime
+                    data={dailyCount}
+                    isLoading={isDailyCountLoading}
+                    error={dailyCountError}
+                  />
+                  <AggregationPanels
+                    aggregations={aggregations}
+                    isLoading={isAggregationsLoading}
+                  />
+                </div>
+              ) : null}
               <TableResizableLayout
                 showRightPane={hasSelection}
                 rightPaneRef={panelContainerRef}
