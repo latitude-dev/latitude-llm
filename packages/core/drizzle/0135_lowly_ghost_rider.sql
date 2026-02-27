@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."evaluation_versions" RENAME COLUMN "live" TO "evaluate_live_logs";

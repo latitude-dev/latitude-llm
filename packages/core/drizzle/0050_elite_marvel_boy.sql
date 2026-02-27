@@ -1,2 +1,0 @@
-ALTER TABLE "latitude"."document_logs" ALTER COLUMN "parameters" SET DATA TYPE jsonb;--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "commit_id_idx" ON "latitude"."document_logs" USING btree ("commit_id");

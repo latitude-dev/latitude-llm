@@ -1,1 +1,0 @@
-ALTER TYPE "latitude"."log_source" ADD VALUE 'agent_as_tool';

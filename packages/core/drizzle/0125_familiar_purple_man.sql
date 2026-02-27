@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."users" ADD COLUMN "last_suggestion_notified_at" timestamp;

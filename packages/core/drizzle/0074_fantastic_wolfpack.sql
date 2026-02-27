@@ -1,2 +1,0 @@
-ALTER TABLE "latitude"."evaluation_results" ALTER COLUMN "provider_log_id" DROP NOT NULL;--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "provider_idx" ON "latitude"."provider_logs" USING btree ("provider_id");

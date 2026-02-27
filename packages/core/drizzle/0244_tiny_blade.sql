@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."workspaces" ADD COLUMN "issues_unlocked" boolean DEFAULT false NOT NULL;

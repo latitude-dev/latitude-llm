@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."exports" ADD COLUMN "file_key" text NOT NULL;

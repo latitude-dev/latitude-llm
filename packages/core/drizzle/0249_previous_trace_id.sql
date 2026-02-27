@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."spans" ADD COLUMN "previous_trace_id" varchar(32);

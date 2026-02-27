@@ -1,2 +1,0 @@
-ALTER TABLE "latitude"."evaluation_versions" RENAME COLUMN "quality_metric" TO "alignment_metric";--> statement-breakpoint
-ALTER TABLE "latitude"."evaluation_versions" RENAME COLUMN "quality_metric_metadata" TO "alignment_metric_metadata";

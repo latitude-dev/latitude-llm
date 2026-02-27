@@ -1,2 +1,0 @@
-ALTER TABLE "latitude"."memberships" DROP CONSTRAINT "memberships_workspace_id_user_id_pk";--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "memberships_workspace_id_user_id_index" ON "latitude"."memberships" USING btree ("workspace_id","user_id");
