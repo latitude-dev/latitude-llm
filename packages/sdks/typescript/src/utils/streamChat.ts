@@ -55,7 +55,6 @@ export async function streamChat<
     const finalResponse = await handleStream<S>({
       body: response.body!,
       onEvent,
-      onError,
       onToolCall: handleToolCallFactory({
         tools,
         options,

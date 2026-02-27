@@ -4,7 +4,7 @@ import {
   LatitudeApiError,
   RunErrorCodes,
 } from '$sdk/utils/errors'
-import { GenerationResponse, StreamResponseCallbacks } from '$sdk/utils/types'
+import { GenerationResponse } from '$sdk/utils/types'
 import {
   ChainCallResponseDto,
   ProviderData,
@@ -20,11 +20,11 @@ import { EventSourceParserStream } from 'eventsource-parser/stream'
 export async function handleStream<S extends AssertedStreamType = 'text'>({
   body,
   onEvent,
-  onError,
   onToolCall,
   signal,
-}: Omit<StreamResponseCallbacks, 'onFinished'> & {
+}: {
   body: ReadableStream<Uint8Array>
+  onEvent?: (event: { event: StreamEventTypes; data: ChainEvent['data'] }) => void
   onToolCall: (data: ProviderData) => Promise<void>
   signal?: AbortSignal
 }): Promise<GenerationResponse<S> | undefined> {
@@ -61,7 +61,7 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
         const data = parseJSON(parsedEvent.data) as ChainEvent['data']
         if (!data) {
           throw new LatitudeApiError({
-            status: 402,
+            status: 500,
             message: `Invalid JSON in server event:\n${parsedEvent.data}`,
             serverResponse: parsedEvent.data,
             errorCode: ApiErrorCodes.InternalServerError,
@@ -76,7 +76,7 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
 
           if (data.type === ChainEventTypes.ChainError) {
             throw new LatitudeApiError({
-              status: 402,
+              status: 500,
               message: data.error.message,
               serverResponse: data.error.message,
               errorCode: RunErrorCodes.AIRunError,
@@ -104,20 +104,15 @@ export async function handleStream<S extends AssertedStreamType = 'text'>({
 
     return finalResponse
   } catch (e) {
-    let error = e as LatitudeApiError
-    if (!(e instanceof LatitudeApiError)) {
-      const err = e as Error
-      error = new LatitudeApiError({
-        status: 402,
-        message: err.message,
-        serverResponse: err.stack ?? '',
-        errorCode: ApiErrorCodes.InternalServerError,
-      })
-    }
+    if (e instanceof LatitudeApiError) throw e
 
-    onError?.(error)
-
-    throw error
+    const err = e as Error
+    throw new LatitudeApiError({
+      status: 500,
+      message: err.message,
+      serverResponse: err.stack ?? '',
+      errorCode: ApiErrorCodes.InternalServerError,
+    })
   } finally {
     try {
       reader.releaseLock()

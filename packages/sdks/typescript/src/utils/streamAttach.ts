@@ -63,7 +63,6 @@ export async function streamAttach<
     const finalResponse = await handleStream<S>({
       body: response.body!,
       onEvent,
-      onError,
       onToolCall: handleToolCallFactory({ tools, options }),
       signal: options.signal,
     })
