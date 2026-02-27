@@ -24,6 +24,6 @@ jobs:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_TOKEN }}
         with:
           path-to-signatures: 'signatures/version1/cla.json'
-          path-to-document: 'https://github.com/latitude-dev/latitude-llm/blob/main/cla.md'
+          path-to-document: 'https://github.com/latitude-dev/latitude-llm/blob/latitude-v1/cla.md'
           branch: 'signatures'
           allowlist: geclos,cesr,csansoon,andresgutgon,neoxelox,claude,cursoragent
