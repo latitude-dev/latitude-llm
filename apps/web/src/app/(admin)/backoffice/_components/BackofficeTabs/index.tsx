@@ -61,6 +61,11 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               value: BackofficeRoutes.errorTests,
               route: ROUTES.backoffice.errorTests.root,
             },
+            {
+              label: 'Annotation Queues',
+              value: BackofficeRoutes.annotationQueues,
+              route: ROUTES.backoffice['annotation-queues'].root,
+            },
           ]}
           selected={selected}
         />

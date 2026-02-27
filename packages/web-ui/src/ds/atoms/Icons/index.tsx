@@ -175,6 +175,7 @@ import {
   MessageCircle,
   MessageSquareDashedIcon,
   MessagesSquareIcon,
+  Unlink2Icon,
 } from 'lucide-react'
 import { MouseEvent } from 'react'
 
@@ -439,6 +440,7 @@ const Icons = {
   amazonBedrock: AmazonBedrock,
   deepSeek: DeepSeek,
   perplexity: Perplexity,
+  unlink: Unlink2Icon,
   zap: Zap,
   creditCard: CreditCardIcon,
   chartNoAxesGantt: ChartNoAxesGantt,

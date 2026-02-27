@@ -351,6 +351,9 @@ export const API_ROUTES = {
         logs: `/api/admin/maintenance/jobs/${jobId}/logs`,
       }),
     },
+    annotationQueues: {
+      root: '/api/admin/annotation-queues',
+    },
   },
   conversations: {
     detail: (conversationId: string) => {

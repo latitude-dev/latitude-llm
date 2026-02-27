@@ -27,6 +27,7 @@ export enum BackofficeRoutes {
   workers = 'workers',
   maintenance = 'maintenance',
   errorTests = 'errorTests',
+  annotationQueues = 'annotation-queues',
 }
 
 const BACKOFFICE_ROOT = '/backoffice'
@@ -80,6 +81,9 @@ export const ROUTES = {
     [BackofficeRoutes.errorTests]: {
       root: `${BACKOFFICE_ROOT}/error-tests`,
       server: `${BACKOFFICE_ROOT}/error-tests/server`,
+    },
+    [BackofficeRoutes.annotationQueues]: {
+      root: `${BACKOFFICE_ROOT}/annotation-queues`,
     },
   },
   noWorkspace: {

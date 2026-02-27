@@ -690,28 +690,27 @@ This automatically uses existing infrastructure:
 
 ### Phase 1a: Schema
 
-- [ ] Feature flag setup (`annotationQueues`)
-- [ ] PostgreSQL migrations:
-  - [ ] `annotation_queues` table (with `evaluation_uuid` FK)
-  - [ ] `annotation_queue_members` table (join table: queue ↔ membership)
-- [ ] ClickHouse migration (clustered + unclustered): -[ ] `annotation_queue_items` table (`ReplacingMergeTree`, keyed on `workspace_id, annotation_queue_id, trace_id`)
+- [x] Feature flag setup (`annotationQueues`)
+- [x] PostgreSQL migrations:
+  - [x] `annotation_queues` table (with `evaluation_uuid` FK)
+  - [x] `annotation_queue_members` table (join table: queue ↔ membership)
+- [x] ClickHouse migration (clustered + unclustered): -[ ] `annotation_queue_items` table (`ReplacingMergeTree`, keyed on `workspace_id, annotation_queue_id, trace_id`)
 
 ### Phase 1b: Manual Queue Management (Backoffice)
-
-- [ ] Core services (CRUD for queues, members, items). During BETA an easy way
+- [x] Core services (ADD for queues, members, items) in backoffice. During BETA an easy way
       of creating queues in a project and add traces to it.
-- [ ] Backoffice action to manually add traces to queues (by trace_id)
-- [ ] Queue detail page (basic) - list items, show status. Ask developer for an
-      image of it in Figma.
-- [ ] **Goal**: Experience the annotation workflow without filters/traces page
+- [x] Backoffice action to manually create a queue in a project
+- [x] Backoffice action to manually add traces to a queue (by trace_id)
 
 ### Phase 2: Annotation Interface
-
+- [ ] Queue detail page (basic) - list items, show status. Ask developer for an
+      image of it in Figma.
 - [ ] Ask developer for a Figma image of the interface before starting
 - [ ] Queue detail page with conversation display
   - [ ] Assemble conversation from trace spans
   - [ ] If trace has `session_id` (currently called `documentLogUuid`), expand to show full session
 - [ ] Annotation creation (global, message-level, highlight)
+- [ ] Try not to change anything related with existing annotations.
 - [ ] Store annotations using existing `createEvaluationResultV2`
 - [ ] Annotations sidebar UI
 - [ ] Mark as completed functionality
