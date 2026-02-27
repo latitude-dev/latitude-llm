@@ -7,10 +7,18 @@
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "ch:create": "bash clickhouse/scripts/create.sh",
+    "ch:up": "bash clickhouse/scripts/up.sh",
+    "ch:down": "bash clickhouse/scripts/down.sh",
+    "ch:status": "bash clickhouse/scripts/status.sh",
+    "ch:drop": "bash clickhouse/scripts/drop.sh",
     "lint": "biome check src",
     "format": "biome format --write src",
     "format:check": "biome format --check src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@clickhouse/client": "catalog:"
   }
 }

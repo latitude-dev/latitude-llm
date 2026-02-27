@@ -3,8 +3,8 @@ services:
     image: postgres:16
     environment:
       POSTGRES_USER: latitude
-      POSTGRES_PASSWORD: latitude
-      POSTGRES_DB: latitude
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: latitude_development
     ports:
       - "5432:5432"
     volumes:
@@ -12,6 +12,10 @@ services:
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.8
+    environment:
+      CLICKHOUSE_DB: latitude_development
+      CLICKHOUSE_USER: latitude
+      CLICKHOUSE_PASSWORD: secret
     ports:
       - "8123:8123"
       - "9000:9000"

@@ -1,7 +1,8 @@
-export type WorkspaceId = string;
-
-export interface DomainEvent {
-  readonly name: string;
-  readonly workspaceId: WorkspaceId;
-  readonly payload: Record<string, unknown>;
+export interface DomainEvent<
+  TName extends string = string,
+  TPayload extends Record<string, unknown> = Record<string, unknown>,
+> {
+  readonly name: TName;
+  readonly workspaceId: string;
+  readonly payload: TPayload;
 }

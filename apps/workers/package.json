@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "bullmq": "catalog:",
+    "dotenv": "catalog:",
     "effect": "catalog:",
     "ioredis": "catalog:"
   }
