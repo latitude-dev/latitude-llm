@@ -2,6 +2,10 @@
 
 Operational guide for coding agents working in this repository.
 
+## Base rules
+
+- When writing code in this project, always load the project-rules skill first.
+
 ## Repository Snapshot
 
 - Monorepo managed with `pnpm` workspaces + `turbo`.
