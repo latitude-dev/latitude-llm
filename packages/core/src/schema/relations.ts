@@ -1,11 +1,19 @@
 import { relations } from 'drizzle-orm'
 
+import {
+  annotationQueueMembers,
+  annotationQueues,
+} from './models/annotationQueues'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { datasets } from './models/datasets'
 import { documentVersions } from './models/documentVersions'
 import { events } from './models/events'
+import { integrationHeaderPresets } from './models/integrationHeaderPresets'
+import { integrations } from './models/integrations'
 import { magicLinkTokens } from './models/magicLinkTokens'
+import { mcpOAuthCredentials } from './models/mcpOAuthCredentials'
+import { mcpServers } from './models/mcpServers'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
@@ -13,10 +21,6 @@ import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
-import { integrations } from './models/integrations'
-import { integrationHeaderPresets } from './models/integrationHeaderPresets'
-import { mcpServers } from './models/mcpServers'
-import { mcpOAuthCredentials } from './models/mcpOAuthCredentials'
 
 /**
  * NOTE: All relations are declared in this file to
@@ -194,6 +198,35 @@ export const integrationHeaderPresetsRelations = relations(
     author: one(users, {
       fields: [integrationHeaderPresets.authorId],
       references: [users.id],
+    }),
+  }),
+)
+
+export const annotationQueuesRelations = relations(
+  annotationQueues,
+  ({ one, many }) => ({
+    workspace: one(workspaces, {
+      fields: [annotationQueues.workspaceId],
+      references: [workspaces.id],
+    }),
+    project: one(projects, {
+      fields: [annotationQueues.projectId],
+      references: [projects.id],
+    }),
+    members: many(annotationQueueMembers),
+  }),
+)
+
+export const annotationQueueMembersRelations = relations(
+  annotationQueueMembers,
+  ({ one }) => ({
+    annotationQueue: one(annotationQueues, {
+      fields: [annotationQueueMembers.annotationQueueId],
+      references: [annotationQueues.id],
+    }),
+    membership: one(memberships, {
+      fields: [annotationQueueMembers.membershipId],
+      references: [memberships.id],
     }),
   }),
 )

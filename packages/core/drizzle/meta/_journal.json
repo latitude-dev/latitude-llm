@@ -1926,6 +1926,13 @@
       "when": 1772018456148,
       "tag": "0275_fix_document_unique_index_commit_path_deleted_at",
       "breakpoints": true
+    },
+    {
+      "idx": 276,
+      "version": "7",
+      "when": 1772112958995,
+      "tag": "0276_create_annotation_queues",
+      "breakpoints": true
     }
   ]
 }
