@@ -43,7 +43,6 @@ export const GET = errorHandler(
         source: searchParams.get('source') ?? undefined,
       })
       const { projectId, commitUuid, documentUuid } = parsedParams
-
       const types =
         (parsedParams.types?.split(',') as SpanType[]) ??
         Array.from(MAIN_SPAN_TYPES)

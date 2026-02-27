@@ -13,12 +13,12 @@ export async function computeDocumentTracesAggregations(
     workspaceId,
     projectId,
     documentUuid,
-    commitUuid,
+    commitUuids,
   }: {
     workspaceId: number
     projectId: number
     documentUuid: string
-    commitUuid?: string
+    commitUuids?: string[]
   },
   db = database,
 ) {
@@ -32,19 +32,18 @@ export async function computeDocumentTracesAggregations(
       workspaceId,
       projectId,
       documentUuid,
-      commitUuid,
+      commitUuids,
     })
     return Result.ok(result)
   }
   try {
-    const countConditions = [
-      eq(spans.documentUuid, documentUuid),
-      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
-    ].filter(Boolean) as SQL<unknown>[]
+    // NOTE: Pg queries do not filter by commit uuids because it does not perform well enough
+    const countConditions = [eq(spans.documentUuid, documentUuid)].filter(
+      Boolean,
+    ) as SQL<unknown>[]
     const conditions = [
       eq(spans.documentUuid, documentUuid),
       eq(spans.type, SpanType.Completion),
-      commitUuid ? eq(spans.commitUuid, commitUuid) : undefined,
     ].filter(Boolean) as SQL<unknown>[]
     const totalCountPromise = db
       .select({

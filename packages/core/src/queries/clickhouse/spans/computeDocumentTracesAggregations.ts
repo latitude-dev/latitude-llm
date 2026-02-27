@@ -9,12 +9,12 @@ export const computeDocumentTracesAggregations = scopedQuery(
     workspaceId,
     projectId,
     documentUuid,
-    commitUuid,
+    commitUuids,
   }: {
     workspaceId: number
     projectId: number
     documentUuid: string
-    commitUuid?: string
+    commitUuids?: string[]
   }): Promise<TracesAggregations> {
     const params: Record<string, unknown> = {
       workspaceId,
@@ -29,9 +29,9 @@ export const computeDocumentTracesAggregations = scopedQuery(
       `document_uuid_key = {documentUuid: UUID}`,
     ]
 
-    if (commitUuid) {
-      conditions.push(`commit_uuid_key = {commitUuid: UUID}`)
-      params.commitUuid = commitUuid
+    if (commitUuids) {
+      conditions.push(`commit_uuid_key IN ({commitUuids: Array(UUID)})`)
+      params.commitUuids = commitUuids
     }
 
     // Query all metrics in a single pass
