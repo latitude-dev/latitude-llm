@@ -46,14 +46,6 @@ describe('getCampaignIdForGoal', () => {
     )
   })
 
-  it('returns fallback campaign ID for null', () => {
-    expect(getCampaignIdForGoal(null)).toBe(FALLBACK_CAMPAIGN_ID)
-  })
-
-  it('returns fallback campaign ID for undefined', () => {
-    expect(getCampaignIdForGoal(undefined)).toBe(FALLBACK_CAMPAIGN_ID)
-  })
-
   it('returns fallback campaign ID for Other', () => {
     expect(getCampaignIdForGoal(LatitudeGoal.Other)).toBe(FALLBACK_CAMPAIGN_ID)
   })
@@ -90,18 +82,6 @@ describe('getCampaignIdForTrialFinishingGoal', () => {
     expect(
       getCampaignIdForTrialFinishingGoal(LatitudeGoal.SettingUpEvaluations),
     ).toBe('6c584c30-f494-4fcc-b479-b04dc82f3019')
-  })
-
-  it('returns fallback campaign ID for null', () => {
-    expect(getCampaignIdForTrialFinishingGoal(null)).toBe(
-      FALLBACK_TRIAL_CAMPAIGN_ID,
-    )
-  })
-
-  it('returns fallback campaign ID for undefined', () => {
-    expect(getCampaignIdForTrialFinishingGoal(undefined)).toBe(
-      FALLBACK_TRIAL_CAMPAIGN_ID,
-    )
   })
 
   it('returns fallback campaign ID for Other', () => {
@@ -166,7 +146,11 @@ describe('createInstantlyLead', () => {
 
   it('POSTs to Instantly with campaign, email, and skip_if_in_campaign', async () => {
     await createInstantlyLead(
-      { email: 'user@test.com', name: 'Test User' },
+      {
+        email: 'user@test.com',
+        name: 'Test User',
+        latitudeGoal: LatitudeGoal.JustExploring,
+      },
       'api-key',
     )
 
@@ -208,6 +192,7 @@ describe('createInstantlyLead', () => {
     await createInstantlyLead(
       {
         email: 'other@test.com',
+        name: 'Other User',
         latitudeGoal: LatitudeGoal.Other,
       },
       'api-key',
@@ -218,10 +203,15 @@ describe('createInstantlyLead', () => {
   })
 
   it('uses trial-finishing campaign ID when campaignContext is trial_finishing', async () => {
-    await createInstantlyLead({ email: 'trial@test.com' }, 'api-key', {
-      campaignContext: 'trial_finishing',
-      goalForCampaign: LatitudeGoal.ImprovingAccuracy,
-    })
+    await createInstantlyLead(
+      {
+        email: 'trial@test.com',
+        name: 'Trial User',
+        latitudeGoal: LatitudeGoal.ImprovingAccuracy,
+      },
+      'api-key',
+      true,
+    )
 
     const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
     expect(body.campaign).toBe('ecea8072-0c56-4846-84d6-2d75bfd5e1d6')
@@ -229,10 +219,15 @@ describe('createInstantlyLead', () => {
   })
 
   it('uses trial-finishing fallback when goalForCampaign is unknown', async () => {
-    await createInstantlyLead({ email: 'trial-other@test.com' }, 'api-key', {
-      campaignContext: 'trial_finishing',
-      goalForCampaign: LatitudeGoal.Other,
-    })
+    await createInstantlyLead(
+      {
+        email: 'trial-other@test.com',
+        name: 'Trial Other User',
+        latitudeGoal: LatitudeGoal.Other,
+      },
+      'api-key',
+      true,
+    )
 
     const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
     expect(body.campaign).toBe(FALLBACK_TRIAL_CAMPAIGN_ID)
@@ -240,7 +235,11 @@ describe('createInstantlyLead', () => {
 
   it('sends single-word name as first_name only', async () => {
     await createInstantlyLead(
-      { email: 'surname@test.com', name: 'McGregor' },
+      {
+        email: 'surname@test.com',
+        name: 'McGregor',
+        latitudeGoal: LatitudeGoal.JustExploring,
+      },
       'api-key',
     )
 
@@ -250,7 +249,14 @@ describe('createInstantlyLead', () => {
   })
 
   it('does not include first_name when name is empty', async () => {
-    await createInstantlyLead({ email: 'noname@test.com' }, 'api-key')
+    await createInstantlyLead(
+      {
+        email: 'noname@test.com',
+        name: '',
+        latitudeGoal: LatitudeGoal.JustExploring,
+      },
+      'api-key',
+    )
 
     const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
     expect(body).toEqual({
@@ -261,13 +267,19 @@ describe('createInstantlyLead', () => {
   })
 
   it('does not call fetch when email is empty', async () => {
-    await createInstantlyLead({ email: '' }, 'api-key')
+    await createInstantlyLead(
+      { email: '', name: '', latitudeGoal: LatitudeGoal.JustExploring },
+      'api-key',
+    )
 
     expect(mockFetch).not.toHaveBeenCalled()
   })
 
   it('does not call fetch when email is whitespace only', async () => {
-    await createInstantlyLead({ email: '   ' }, 'api-key')
+    await createInstantlyLead(
+      { email: '   ', name: '', latitudeGoal: LatitudeGoal.JustExploring },
+      'api-key',
+    )
 
     expect(mockFetch).not.toHaveBeenCalled()
   })
@@ -281,7 +293,11 @@ describe('createInstantlyLead', () => {
     })
 
     await createInstantlyLead(
-      { email: 'fail@test.com', name: 'Fail' },
+      {
+        email: 'fail@test.com',
+        name: 'Fail',
+        latitudeGoal: LatitudeGoal.JustExploring,
+      },
       'api-key',
     )
 
@@ -298,7 +314,11 @@ describe('createInstantlyLead', () => {
     mockFetch.mockRejectedValue(new Error('Network error'))
 
     await createInstantlyLead(
-      { email: 'throw@test.com', name: 'Throw' },
+      {
+        email: 'throw@test.com',
+        name: 'Throw',
+        latitudeGoal: LatitudeGoal.JustExploring,
+      },
       'api-key',
     )
 

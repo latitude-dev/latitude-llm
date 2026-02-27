@@ -176,6 +176,24 @@ describe('createInstantlyLeadHandler', () => {
         'empty email',
       )
     })
+
+    it('captures exception when latitude goal is missing', async () => {
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([freeWorkspace()])
+
+      const event = makeEvent({
+        userEmail: 'no-goal@test.com',
+        latitudeGoal: null,
+        latitudeGoalOther: null,
+      })
+
+      await createInstantlyLeadHandler({ data: event })
+
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(mockCaptureException).toHaveBeenCalledOnce()
+      expect(mockCaptureException.mock.calls[0]![0].message).toContain(
+        'empty latitude goal',
+      )
+    })
   })
 
   describe('paid plan filtering', () => {
