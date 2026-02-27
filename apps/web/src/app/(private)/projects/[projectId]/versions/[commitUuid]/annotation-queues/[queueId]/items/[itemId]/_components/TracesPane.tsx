@@ -40,13 +40,12 @@ export function TracesPane({
           {traces.length} traces in conversation
         </Text.H6>
       )}
-      <div className='flex flex-col gap-y-2 w-full divide-y divide-border'>
-        {traces.map((trace, index) => (
+      <div className='flex flex-col gap-y-4 w-full divide-y divide-border'>
+        {traces.map((trace) => (
           <div className='pt-2' key={trace.id}>
             <TraceDetailCard
               trace={trace}
               collapsible={isMultiTrace}
-              defaultExpanded={index === 0}
             />
           </div>
         ))}

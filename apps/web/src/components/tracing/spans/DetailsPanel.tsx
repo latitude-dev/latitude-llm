@@ -17,6 +17,7 @@ import {
 } from './shared'
 import { SPAN_SPECIFICATIONS } from './specifications'
 import { SpanKind, SpanStatus, SpanType } from '@latitude-data/core/constants'
+import { Button } from '@latitude-data/web-ui/atoms/Button'
 
 function TypeBadge({ type }: { type: SpanType }) {
   const specification = SPAN_SPECIFICATIONS[type]
@@ -109,20 +110,19 @@ export function DetailsPanel<T extends SpanType>({
           <StatusBadge status={span.status} message={span.message} />
         </div>
         {collapsible && (
-          <button
-            type='button'
-            className='w-full flex items-center gap-1'
-            onClick={() => setIsDetailsExpanded((v) => !v)}
-          >
-            <Icon
-              name={isDetailsExpanded ? 'chevronDown' : 'chevronRight'}
-              size='small'
-              color='primary'
-            />
-            <Text.H6 color='primary'>
+          <div className='w-full flex'>
+            <Button
+              type='button'
+              variant='link'
+              size='none'
+              onClick={() => setIsDetailsExpanded((v) => !v)}
+              iconProps={{
+                name: isDetailsExpanded ? 'chevronDown' : 'chevronRight',
+              }}
+            >
               {isDetailsExpanded ? 'Hide details' : 'Show details'}
-            </Text.H6>
-          </button>
+            </Button>
+          </div>
         )}
       </div>
       {(!collapsible || isDetailsExpanded) && (
