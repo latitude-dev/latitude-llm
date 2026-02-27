@@ -1,0 +1,24 @@
+name: latitude-v2
+root: .
+
+startup_window: editor
+
+windows:
+  - editor:
+      layout: main-vertical
+      panes:
+        - nvim
+        -
+  - infra:
+      panes:
+        - docker compose up
+  - apps:
+      layout: tiled
+      panes:
+        - pnpm --filter @app/api dev
+        - pnpm --filter @app/ingest dev
+        - pnpm --filter @app/web dev
+        - pnpm --filter @app/workers dev
+  - workflows:
+      panes:
+        - pnpm --filter @app/workflows dev
