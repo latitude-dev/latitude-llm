@@ -1,0 +1,20 @@
+{
+  "name": "@app/workers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "lint": "biome check src",
+    "format": "biome format --write src",
+    "format:check": "biome format --check src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "bullmq": "catalog:",
+    "effect": "catalog:",
+    "ioredis": "catalog:"
+  }
+}
