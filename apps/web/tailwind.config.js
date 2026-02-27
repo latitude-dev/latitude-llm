@@ -7,4 +7,5 @@ module.exports = {
     '../../packages/web-ui/src/**/*.{ts,tsx}',
     './src/**/*.{ts,tsx}',
   ],
+  plugins: [require('@tailwindcss/container-queries')],
 }

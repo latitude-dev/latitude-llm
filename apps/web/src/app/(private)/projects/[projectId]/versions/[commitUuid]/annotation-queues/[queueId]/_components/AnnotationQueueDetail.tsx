@@ -1,7 +1,11 @@
 'use client'
 
+import { useCallback } from 'react'
 import { useAnnotationQueueItems } from '$/stores/annotationQueues/annotationQueueItems'
 import { useCurrentProject } from '$/app/providers/ProjectProvider'
+import { useCurrentCommit } from '$/app/providers/CommitProvider'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 import { timeAgo } from '$/lib/relativeTime'
 import { SimpleKeysetTablePaginationFooter } from '$/components/TablePaginationFooter/SimpleKeysetTablePaginationFooter'
 import {
@@ -52,6 +56,8 @@ function ItemRowSkeleton() {
 
 export function AnnotationQueueDetail({ queue }: { queue: AnnotationQueue }) {
   const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const navigate = useNavigate()
   const {
     items,
     count,
@@ -64,6 +70,18 @@ export function AnnotationQueueDetail({ queue }: { queue: AnnotationQueue }) {
     projectId: project.id,
     queueId: queue.id,
   })
+
+  const handleItemClick = useCallback(
+    (itemId: string) => () => {
+      const route = ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid })
+        .annotationQueues.detail({ queueId: queue.id })
+        .items.detail({ itemId }).root
+      navigate.push(route)
+    },
+    [project.id, commit.uuid, queue.id, navigate],
+  )
 
   const noData = !isLoading && items.length === 0
 
@@ -113,7 +131,8 @@ export function AnnotationQueueDetail({ queue }: { queue: AnnotationQueue }) {
                   : items.map((item) => (
                       <TableRow
                         key={item.traceId}
-                        className='border-b-[0.5px] h-12 max-h-12 border-border'
+                        onClick={handleItemClick(item.traceId)}
+                        className='cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border hover:bg-secondary'
                       >
                         <TableCell>
                           <Text.H5 noWrap>{item.traceId}</Text.H5>
