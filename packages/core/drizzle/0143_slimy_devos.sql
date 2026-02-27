@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS "mcp_servers_last_used_at_idx" ON "latitude"."mcp_servers" USING btree ("last_used_at");

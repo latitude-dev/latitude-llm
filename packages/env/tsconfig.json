@@ -1,9 +1,0 @@
-{
-  "extends": "@latitude-data/typescript-config/base.json",
-  "compilerOptions": {
-    "moduleResolution": "Bundler",
-    "rootDir": "./src"
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
-}

@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."memberships" REPLICA IDENTITY DEFAULT;

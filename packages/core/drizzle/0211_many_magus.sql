@@ -1,4 +1,0 @@
-ALTER TABLE "latitude"."document_logs" ADD COLUMN "workspace_id" bigint;--> statement-breakpoint
-ALTER TABLE "latitude"."document_logs" ADD CONSTRAINT "document_logs_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "latitude"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "latitude"."provider_logs" ADD CONSTRAINT "provider_logs_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "latitude"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "document_logs_workspace_idx" ON "latitude"."document_logs" USING btree ("workspace_id");

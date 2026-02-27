@@ -1,2 +1,0 @@
-DROP INDEX IF EXISTS "datasets_v2_workspace_id_name_deleted_at_index";--> statement-breakpoint
-ALTER TABLE "latitude"."datasets_v2" ADD CONSTRAINT "datasets_v2_workspace_id_name_deleted_at_unique" UNIQUE NULLS NOT DISTINCT("workspace_id","name","deleted_at");

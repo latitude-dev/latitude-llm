@@ -1,3 +1,0 @@
-ALTER TABLE "latitude"."provider_api_keys" DROP CONSTRAINT "provider_apikeys_token_provider_unique";--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "provider_apikeys_name_idx" ON "latitude"."provider_api_keys" USING btree ("name","workspace_id");--> statement-breakpoint
-ALTER TABLE "latitude"."provider_api_keys" ADD CONSTRAINT "provider_apikeys_token_provider_unique" UNIQUE("token","provider","workspace_id");

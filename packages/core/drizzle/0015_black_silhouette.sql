@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."api_keys" ALTER COLUMN "token" SET DEFAULT gen_random_uuid();

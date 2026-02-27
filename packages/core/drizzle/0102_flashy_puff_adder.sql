@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."document_versions" ADD COLUMN "promptl_version" integer DEFAULT 0 NOT NULL;

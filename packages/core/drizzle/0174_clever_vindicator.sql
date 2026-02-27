@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."published_documents" ADD COLUMN "display_prompt_only" boolean DEFAULT false NOT NULL;

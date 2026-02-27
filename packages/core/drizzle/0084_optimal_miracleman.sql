@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS "provider_logs_workspace_id_index" ON "latitude"."provider_logs" USING btree ("workspace_id");

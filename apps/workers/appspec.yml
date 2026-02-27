@@ -1,9 +1,0 @@
-version: 0.0
-Resources:
-  - TargetService:
-      Type: AWS::ECS::Service
-      Properties:
-        TaskDefinition: '<PLACEHOLDER_TASK_DEFINITION_ARN>'
-        LoadBalancerInfo:
-          ContainerName: 'LatitudeLLMWorkersContainer'
-          ContainerPort: 8080

@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."provider_logs" ADD COLUMN "output" json;

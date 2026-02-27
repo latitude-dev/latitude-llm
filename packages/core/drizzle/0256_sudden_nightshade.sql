@@ -1,2 +1,0 @@
-DROP INDEX "latitude"."evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx";--> statement-breakpoint
-DROP INDEX "latitude"."evaluation_results_v2_unique_evaluated_span_id_evaluation_uuid_idx";

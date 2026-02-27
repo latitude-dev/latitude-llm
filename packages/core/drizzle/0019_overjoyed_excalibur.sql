@@ -1,1 +1,0 @@
-DROP INDEX IF EXISTS "document_uuid_commit_id_idx";

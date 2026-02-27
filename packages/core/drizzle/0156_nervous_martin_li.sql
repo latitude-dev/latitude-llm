@@ -1,4 +1,0 @@
-CREATE INDEX IF NOT EXISTS "commits_project_deleted_at_idx" ON "latitude"."commits" USING btree ("project_id","deleted_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "document_logs_commit_created_at_idx" ON "latitude"."document_logs" USING btree ("commit_id","created_at");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "provider_logs_document_log_model_idx" ON "latitude"."provider_logs" USING btree ("document_log_uuid","model");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "evaluation_results_v2_commit_evaluation_idx" ON "latitude"."evaluation_results_v2" USING btree ("commit_id","evaluation_uuid");

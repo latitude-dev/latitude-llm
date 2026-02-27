@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."llm_as_judge_evaluation_metadatas" DROP COLUMN IF EXISTS "configuration";

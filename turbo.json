@@ -1,106 +1,29 @@
 {
-  "globalEnv": [
-    "NEXT_RUNTIME",
-    "NODE_ENV",
-    "BUILDING_CONTAINER",
-    "LATITUDE_API_KEY",
-    "DATABASE_URL",
-    "CACHE_HOST",
-    "CACHE_PORT",
-    "CACHE_PASSWORD",
-    "QUEUE_HOST",
-    "QUEUE_PORT",
-    "QUEUE_PASSWORD",
-    "USE_LOCALHOST",
-    "GATEWAY_HOSTNAME",
-    "GATEWAY_PORT",
-    "GATEWAY_SSL",
-    "GATEWAY_BASE_URL",
-    "GATEWAY_WORKERS",
-    "DRIVE_DISK",
-    "FILES_STORAGE_PATH",
-    "PUBLIC_FILES_STORAGE_PATH",
-    "FILE_PUBLIC_PATH",
-    "AWS_REGION",
-    "S3_BUCKET",
-    "PUBLIC_S3_BUCKET",
-    "AWS_ACCESS_KEY",
-    "AWS_ACCESS_SECRET",
-    "WORKERS_PORT",
-    "PORT",
-    "WEBSOCKETS_SERVER",
-    "WEBSOCKETS_SERVER_PORT",
-    "WEBSOCKET_REFRESH_TOKEN_SECRET_KEY",
-    "WEBSOCKET_TOKEN_SECRET_KEY",
-    "NEXT_PUBLIC_POSTHOG_KEY",
-    "OPT_OUT_ANALYTICS",
-    "NEXT_PUBLIC_POSTHOG_HOST",
-    "COPILOT_PROMPT_DATASET_GENERATOR_PATH",
-    "COPILOT_PROMPT_ISSUE_EVALUATION_GENERATOR_PATH",
-    "COPILOT_PROMPT_SIMULATE_TOOL_RESPONSES_PATH",
-    "COPILOT_PROMPT_SIMULATE_USER_RESPONSE_PATH",
-    "CI",
-    "SUPPORT_APP_ID",
-    "SUPPORT_APP_SECRET_KEY",
-    "DEFAULT_PROVIDER_API_KEY",
-    "NEXT_PUBLIC_DEFAULT_PROVIDER_NAME",
-    "KEEP_ALIVE_TIMEOUT",
-    "LOOPS_API_KEY",
-    "LATITUDE_CLOUD",
-    "LATITUDE_CLOUD_PAYMENT_URL",
-    "npm_package_name",
-    "npm_package_version",
-    "DISABLE_EMAIL_AUTHENTICATION",
-    "DD_TRACING_ENABLED",
-    "FILE_STORAGE_ROOT_PATH",
-    "EMAIL_TRIGGER_DOMAIN",
-    "ENABLE_ALL_FLAGS",
-    "DD_APM_ENABLED",
-    "TMPDIR",
-    "TEMP",
-    "GIT_PAGER",
-    "PAGER",
-    "TEST_LATITUDE_API_KEY",
-    "RUN_ACCEPTANCE_TESTS",
-    "TEST_GATEWAY_URL",
-    "GATEWAY_URL",
-    "ECS_AGENT_URI",
-    "RELEASE_VERSION",
-    "LATITUDE_ENTERPRISE_MODE"
-  ],
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local", "eslint.config.mjs"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": [
-        "SENTRY_DSN",
-        "SENTRY_ORG",
-        "SENTRY_PROJECT",
-        "SENTRY_AUTH_TOKEN",
-        "NEXT_PUBLIC_POSTHOG_KEY",
-        "NEXT_PUBLIC_POSTHOG_HOST",
-        "OPT_OUT_ANALYTICS",
-        "NEXT_PUBLIC_SENTRY_WEB_DSN",
-        "EMAIL_TRIGGER_DOMAIN"
-      ]
+      "outputs": ["dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
     },
     "lint": {
       "dependsOn": ["^lint"]
     },
-    "tc": {
-      "dependsOn": ["^tc"]
+    "format": {
+      "cache": false
     },
-    "types:build": {
-      "dependsOn": ["^types:build"],
-      "outputs": ["dist/**", "types/**"]
+    "format:check": {
+      "cache": false
     },
-    "test": {},
-    "dev": {
-      "cache": false,
-      "persistent": true
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
     }
   }
 }

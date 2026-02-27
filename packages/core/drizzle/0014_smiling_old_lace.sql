@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."provider_api_keys" ADD CONSTRAINT "provider_apikeys_token_provider_unique" UNIQUE("token","provider");

@@ -1,2 +1,0 @@
-ALTER TABLE "latitude"."mcp_servers" ADD COLUMN "replicas" integer DEFAULT 1 NOT NULL;--> statement-breakpoint
-ALTER TABLE "latitude"."mcp_servers" ADD COLUMN "last_used_at" timestamp DEFAULT now() NOT NULL;

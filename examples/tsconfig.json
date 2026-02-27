@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "bundler",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  }
-}

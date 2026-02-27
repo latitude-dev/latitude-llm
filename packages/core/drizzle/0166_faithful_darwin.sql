@@ -1,2 +1,0 @@
-DROP INDEX IF EXISTS "datasets_v2_workspace_id_name_index";--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "datasets_v2_workspace_id_name_deleted_at_index" ON "latitude"."datasets_v2" USING btree ("workspace_id","name","deleted_at");

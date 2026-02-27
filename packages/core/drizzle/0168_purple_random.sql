@@ -1,1 +1,0 @@
-DROP INDEX IF EXISTS "document_log_own_uuid_idx";

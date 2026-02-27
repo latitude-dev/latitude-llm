@@ -1,2 +1,0 @@
-CREATE TYPE "latitude"."document_trigger_status" AS ENUM('pending', 'deployed', 'deprecated');--> statement-breakpoint
-ALTER TABLE "latitude"."document_triggers" ADD COLUMN "trigger_status" "latitude"."document_trigger_status" DEFAULT 'pending' NOT NULL;

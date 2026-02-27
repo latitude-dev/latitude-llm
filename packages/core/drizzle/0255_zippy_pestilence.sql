@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."document_versions" ADD COLUMN "main_evaluation_uuid" uuid;
