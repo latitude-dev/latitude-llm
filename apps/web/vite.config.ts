@@ -28,5 +28,6 @@ export default defineConfig({
   server: {
     port: webPortNumber,
     strictPort: true,
+    allowedHosts: nodeEnv === "development" ? true : undefined,
   },
 });
