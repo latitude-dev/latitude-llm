@@ -57,14 +57,9 @@ export async function createInstantlyLeadHandler({
   }
 
   const userGoal = event.data.latitudeGoal ?? event.data.latitudeGoalOther
-  if (!userGoal) {
-    captureException(
-      new Error(
-        `[createInstantlyLead] skipped: empty latitude goal (userId: ${event.data.id})`,
-      ),
-    )
-    return
-  }
+
+  // This can happen for people invited to existing workspaces, we don't want to send emails to them
+  if (!userGoal) return
 
   await createInstantlyLeadService(
     {
