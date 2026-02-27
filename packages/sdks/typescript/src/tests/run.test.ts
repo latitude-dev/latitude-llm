@@ -352,11 +352,10 @@ data: ${JSON.stringify({
           onError: onErrorMock,
         })
 
-        // FIXME: we are reporting errors too many times
-        expect(onErrorMock).toHaveBeenCalledTimes(2)
+        expect(onErrorMock).toHaveBeenCalledTimes(1)
         expect(onErrorMock).toHaveBeenCalledWith(
           new LatitudeApiError({
-            status: 402,
+            status: 500,
             message: 'Something bad happened',
             serverResponse: 'Something bad happened',
             errorCode: RunErrorCodes.AIRunError,

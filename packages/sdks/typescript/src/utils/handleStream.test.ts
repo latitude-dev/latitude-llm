@@ -62,7 +62,6 @@ describe('handleStream', () => {
     const result = await handleStream({
       body: stream,
       onEvent,
-      onError: vi.fn(),
       onToolCall: vi.fn(),
     })
 
@@ -91,7 +90,6 @@ describe('handleStream', () => {
     await handleStream({
       body: stream,
       onEvent: vi.fn(),
-      onError: vi.fn(),
       onToolCall: vi.fn(),
       signal: abortController.signal,
     })
@@ -130,7 +128,6 @@ describe('handleStream', () => {
     const promise = handleStream({
       body: stream,
       onEvent: (event) => eventsReceived.push(event),
-      onError: vi.fn(),
       onToolCall: vi.fn(),
       signal: abortController.signal,
     })

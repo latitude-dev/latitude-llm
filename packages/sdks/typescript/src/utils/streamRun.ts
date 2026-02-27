@@ -86,7 +86,6 @@ export async function streamRun<
     const finalResponse = await handleStream<S>({
       body: response.body!,
       onEvent,
-      onError,
       onToolCall: handleToolCallFactory({
         tools,
         options,
