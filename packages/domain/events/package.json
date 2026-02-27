@@ -12,5 +12,8 @@
     "format:check": "biome format --check src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@domain/shared-kernel": "workspace:*"
   }
 }

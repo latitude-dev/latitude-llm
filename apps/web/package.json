@@ -16,6 +16,7 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
+    "dotenv": "catalog:",
     "vite": "catalog:",
     "vite-plugin-solid": "catalog:"
   }

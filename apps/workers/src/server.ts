@@ -1,8 +1,28 @@
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { Queue, Worker } from "bullmq";
+import { config as loadDotenv } from "dotenv";
+
+const nodeEnv = process.env.NODE_ENV ?? "development";
+const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));
+
+if (existsSync(envFilePath)) {
+  loadDotenv({ path: envFilePath });
+}
+
+const requireEnv = (name: string): string => {
+  const value = process.env[name];
+
+  if (value === undefined) {
+    throw new Error(`${name} must be declared`);
+  }
+
+  return value;
+};
 
 const connection = {
-  host: process.env.REDIS_HOST ?? "localhost",
-  port: Number(process.env.REDIS_PORT ?? 6379),
+  host: requireEnv("REDIS_HOST"),
+  port: Number(requireEnv("REDIS_PORT")),
 };
 
 const queue = new Queue("events", { connection });

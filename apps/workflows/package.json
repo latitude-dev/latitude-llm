@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "dotenv": "catalog:",
     "effect": "catalog:"
   }
 }
