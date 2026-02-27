@@ -25,11 +25,9 @@ const LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID: Partial<
 }
 
 const FALLBACK_TRIAL_FINISHING_CAMPAIGN_ID =
-  '3484a5e3-8ea6-4332-812d-e7a60d227da8'
+  LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID[LatitudeGoal.JustExploring]!
 
-export function getCampaignIdForGoal(
-  goal: LatitudeGoal | null | undefined,
-): string {
+export function getCampaignIdForGoal(goal: string): string {
   if (goal && goal in LATITUDE_GOAL_TO_CAMPAIGN_ID) {
     return LATITUDE_GOAL_TO_CAMPAIGN_ID[
       goal as keyof typeof LATITUDE_GOAL_TO_CAMPAIGN_ID
@@ -38,9 +36,7 @@ export function getCampaignIdForGoal(
   return FALLBACK_CAMPAIGN_ID
 }
 
-export function getCampaignIdForTrialFinishingGoal(
-  goal: string | LatitudeGoal | null | undefined,
-): string {
+export function getCampaignIdForTrialFinishingGoal(goal: string): string {
   if (goal && goal in LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID) {
     return LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID[
       goal as keyof typeof LATITUDE_GOAL_TO_TRIAL_FINISHING_CAMPAIGN_ID
@@ -64,27 +60,21 @@ export function parseName(name: string | null | undefined): {
 
 export type CreateInstantlyLeadUser = {
   email: string
-  name?: string | null
-  latitudeGoal?: LatitudeGoal | null
-}
-
-export type CreateInstantlyLeadOptions = {
-  campaignContext: 'trial_finishing'
-  goalForCampaign?: string | null
+  name: string
+  latitudeGoal: string
 }
 
 export async function createInstantlyLead(
   user: CreateInstantlyLeadUser,
   apiKey: string,
-  options?: CreateInstantlyLeadOptions,
+  isTrialFinishing = false,
 ): Promise<void> {
   const email = user.email?.trim()
   if (!email) return
 
-  const campaignId =
-    options?.campaignContext === 'trial_finishing'
-      ? getCampaignIdForTrialFinishingGoal(options?.goalForCampaign)
-      : getCampaignIdForGoal(user.latitudeGoal ?? undefined)
+  const campaignId = isTrialFinishing
+    ? getCampaignIdForTrialFinishingGoal(user.latitudeGoal)
+    : getCampaignIdForGoal(user.latitudeGoal)
   const { first_name } = parseName(user.name)
 
   const body = {
