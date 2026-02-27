@@ -5,13 +5,18 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "turbo format",
-    "format:check": "turbo format:check",
+    "format": "turbo lint -- --write",
+    "format:check": "pnpm lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test"
   },
   "devDependencies": {
-    "turbo": "^2.5.5"
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "turbo": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "packageManager": "pnpm@9.8.0+sha512.8e4c3550fb500e808dbc30bb0ce4dd1eb614e30b1c55245f211591ec2cdf9c611cabd34e1364b42f564bd54b3945ed0f49d61d1bbf2ec9bd74b866fcdc723276",
   "engines": {
