@@ -3,10 +3,10 @@ name: Validate Publishable Packages Changelog
 on:
   pull_request:
     paths:
-      - 'packages/sdks/typescript/package.json'
-      - 'packages/sdks/python/pyproject.toml'
-      - 'packages/telemetry/typescript/package.json'
-      - 'packages/telemetry/python/pyproject.toml'
+      - "packages/sdks/typescript/package.json"
+      - "packages/sdks/python/pyproject.toml"
+      - "packages/telemetry/typescript/package.json"
+      - "packages/telemetry/python/pyproject.toml"
 
 jobs:
   detect-packages:
@@ -69,12 +69,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "26"
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install toml package
         run: pip install toml

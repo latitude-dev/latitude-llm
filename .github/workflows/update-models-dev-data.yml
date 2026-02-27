@@ -3,7 +3,7 @@ name: Update Models.dev Data
 on:
   schedule:
     # Run weekly on Monday at 2 AM UTC
-    - cron: '0 2 * * 1'
+    - cron: "0 2 * * 1"
   workflow_dispatch:
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "26"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -30,8 +30,8 @@ jobs:
       - name: Setup pnpm cache
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: "26"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,8 +52,8 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
-          commit-message: 'chore: update bundled models.dev data'
-          title: 'chore: update bundled models.dev data'
+          commit-message: "chore: update bundled models.dev data"
+          title: "chore: update bundled models.dev data"
           body: |
             ## Description
 

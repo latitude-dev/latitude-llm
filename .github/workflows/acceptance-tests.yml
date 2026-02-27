@@ -15,16 +15,16 @@ jobs:
   acceptance-tests:
     runs-on: ubuntu-latest
     env:
-      RUN_ACCEPTANCE_TESTS: '1'
+      RUN_ACCEPTANCE_TESTS: "1"
       NODE_ENV: test
       DATABASE_URL: postgres://latitude:secret@localhost:5432/latitude_development
       CACHE_HOST: localhost
-      CACHE_PORT: '6379'
+      CACHE_PORT: "6379"
       QUEUE_HOST: localhost
-      QUEUE_PORT: '6379'
+      QUEUE_PORT: "6379"
       GATEWAY_BIND_ADDRESS: 127.0.0.1
-      GATEWAY_BIND_PORT: '8787'
-      GATEWAY_WORKERS: '1'
+      GATEWAY_BIND_PORT: "8787"
+      GATEWAY_WORKERS: "1"
       TEST_GATEWAY_URL: http://127.0.0.1:8787
       GATEWAY_URL: http://127.0.0.1:8787
       TEST_LATITUDE_API_KEY: 709a3398-ed26-4e77-beef-90ed288cdd0a
@@ -36,7 +36,7 @@ jobs:
       redis:
         image: redis
         ports:
-          - '6379:6379'
+          - "6379:6379"
       postgres:
         image: postgres
         env:
@@ -57,7 +57,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: "26"
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -86,7 +86,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: '0.8.17'
+          version: "0.8.17"
           enable-cache: true
 
       - name: Install Node.js dependencies
