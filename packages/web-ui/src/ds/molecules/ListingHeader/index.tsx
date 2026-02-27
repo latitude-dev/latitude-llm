@@ -42,7 +42,7 @@ export const TableWithHeader = ({
         'flex-grow min-h-0': takeVertialSpace,
       })}
     >
-      <div className='flex flex-col gap-y-4'>
+      <div className='flex flex-col gap-y-2'>
         <TitleWithActions
           title={title}
           actions={actions}

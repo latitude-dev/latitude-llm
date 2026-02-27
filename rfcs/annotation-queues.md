@@ -702,10 +702,9 @@ This automatically uses existing infrastructure:
 - [x] Backoffice action to manually create a queue in a project
 - [x] Backoffice action to manually add traces to a queue (by trace_id)
 
-### Phase 2: Annotation Interface
-- [ ] Queue detail page (basic) - list items, show status. Ask developer for an
+# Phase 2: Annotation Interface
+- [x] Queue detail page (basic) - list items, show status. Ask developer for an
       image of it in Figma.
-- [ ] Ask developer for a Figma image of the interface before starting
 - [ ] Queue detail page with conversation display
   - [ ] Assemble conversation from trace spans
   - [ ] If trace has `session_id` (currently called `documentLogUuid`), expand to show full session

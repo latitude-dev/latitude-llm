@@ -1,5 +1,3 @@
-import type { User } from '@latitude-data/core/schema/models/types/User'
-
 const BG_COLORS = {
   yellow: 'bg-yellow-500 text-yellow-100',
   orange: 'bg-orange-500 text-orange-100',
@@ -29,7 +27,7 @@ function getFallback(name: string | null | undefined) {
   return { initials, bgColorClass }
 }
 
-export function getUserInfoFromSession({ name }: User) {
+export function getUserInfoFromSession({ name }: { name: string | null }) {
   if (!name) {
     return {
       name: 'Unknown',

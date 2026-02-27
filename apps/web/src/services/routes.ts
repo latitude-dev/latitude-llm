@@ -311,6 +311,12 @@ export const ROUTES = {
               issues: {
                 root: `${root}/issues`,
               },
+              annotationQueues: {
+                root: `${root}/annotation-queues`,
+                detail: ({ queueId }: { queueId: number }) => ({
+                  root: `${root}/annotation-queues/${queueId}`,
+                }),
+              },
             }
           },
         },
