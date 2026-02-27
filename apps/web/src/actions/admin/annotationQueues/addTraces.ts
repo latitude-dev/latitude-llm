@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { withAdmin } from '../../procedures'
 import { addTracesToQueue } from '@latitude-data/core/services/annotationQueues/clickhouse/addTraces'
-import { findAnnotationQueueById } from '@latitude-data/core/queries/annotationQueues/find'
+import { unsafelyFindAnnotationQueueById } from '@latitude-data/core/queries/annotationQueues/unsafelyFindById'
 
 export const addTracesToQueueAction = withAdmin
   .inputSchema(
@@ -21,9 +21,9 @@ export const addTracesToQueueAction = withAdmin
     }),
   )
   .action(async ({ parsedInput }) => {
-    const queue = await findAnnotationQueueById(parsedInput.queueId).then(
-      (r) => r.unwrap(),
-    )
+    const queue = await unsafelyFindAnnotationQueueById({
+      id: parsedInput.queueId,
+    })
 
     const result = await addTracesToQueue({
       queue,

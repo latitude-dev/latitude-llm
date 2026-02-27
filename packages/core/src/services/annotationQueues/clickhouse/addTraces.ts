@@ -8,7 +8,7 @@ import { AnnotationQueue } from '../../../schema/models/annotationQueues'
 function toRow({
   queue,
   traceId,
-  createdAt
+  createdAt,
 }: {
   queue: AnnotationQueue
   traceId: string
@@ -23,7 +23,7 @@ function toRow({
     completed_at: null,
     completed_by_user_id: '',
     created_at: createdAt,
-    updated_at: createdAt
+    updated_at: createdAt,
   }
 }
 
@@ -36,11 +36,13 @@ export async function addTracesToQueue({
 }) {
   const now = toClickHouseDateTime(new Date())
 
-  const rows = traceIds.map((traceId) => toRow({
-    queue,
-    traceId,
-    createdAt: now
-  }))
+  const rows = traceIds.map((traceId) =>
+    toRow({
+      queue,
+      traceId,
+      createdAt: now,
+    }),
+  )
 
   return insertRows(ANNOTATION_QUEUE_ITEMS_TABLE, rows)
 }

@@ -1,4 +1,4 @@
-import { findAllAnnotationQueues } from '@latitude-data/core/queries/annotationQueues/find'
+import { findAllAnnotationQueues } from '@latitude-data/core/queries/annotationQueues/findAll'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { adminHandler } from '$/middlewares/adminHandler'
 import { NextRequest, NextResponse } from 'next/server'

@@ -129,9 +129,7 @@ export function AnnotationQueuesManager() {
                   <Button
                     variant='outline'
                     size='small'
-                    onClick={() =>
-                      setAddTracesState({ isOpen: true, queue })
-                    }
+                    onClick={() => setAddTracesState({ isOpen: true, queue })}
                   >
                     Add Traces
                   </Button>

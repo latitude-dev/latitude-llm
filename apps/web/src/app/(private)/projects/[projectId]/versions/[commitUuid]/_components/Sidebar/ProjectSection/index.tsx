@@ -110,6 +110,13 @@ export default function ProjectSection({
             .annotations.root({ sourceGroup: lastRunTab }),
           iconName: 'messageSquareText',
         },
+        !promptManagement && {
+          label: 'Annotation queues',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).annotationQueues.root,
+          iconName: 'unlink',
+        },
         {
           label: 'Issues',
           iconName: 'shieldAlert',

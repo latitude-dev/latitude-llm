@@ -86,6 +86,9 @@ export const API_ROUTES = {
     root: '/api/users',
     current: '/api/users/current',
   },
+  memberships: {
+    root: '/api/memberships',
+  },
   documents: {
     logs: {
       detail: (documentLogUuid: string) => ({
@@ -241,6 +244,18 @@ export const API_ROUTES = {
                 root: `${documentRoot}/optimizations`,
                 count: `${documentRoot}/optimizations/count`,
               },
+            }
+          },
+        },
+        annotationQueues: {
+          root: `${projectRoot}/annotation-queues`,
+          statusCounts: `${projectRoot}/annotation-queues/status-counts`,
+          members: `${projectRoot}/annotation-queues/members`,
+          detail: (queueId: number) => {
+            const queueRoot = `${projectRoot}/annotation-queues/${queueId}`
+            return {
+              root: queueRoot,
+              items: `${queueRoot}/items`,
             }
           },
         },
