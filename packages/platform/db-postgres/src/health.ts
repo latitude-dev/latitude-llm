@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { Pool } from "pg";
 
 export interface PostgresHealth {
@@ -5,10 +6,12 @@ export interface PostgresHealth {
   readonly latencyMs: number;
 }
 
-export const healthcheckPostgres = async (pool: Pool): Promise<PostgresHealth> => {
-  const start = Date.now();
-  await pool.query("select 1");
-  const latencyMs = Date.now() - start;
+export const healthcheckPostgres = (pool: Pool): Effect.Effect<PostgresHealth, unknown> => {
+  return Effect.gen(function* () {
+    const start = Date.now();
+    yield* Effect.tryPromise(() => pool.query("select 1"));
+    const latencyMs = Date.now() - start;
 
-  return { ok: true, latencyMs };
+    return { ok: true, latencyMs };
+  });
 };

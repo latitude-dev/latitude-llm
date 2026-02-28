@@ -18,7 +18,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@platform/env": "workspace:*",
     "drizzle-orm": "catalog:",
+    "effect": "catalog:",
     "pg": "catalog:"
   },
   "devDependencies": {

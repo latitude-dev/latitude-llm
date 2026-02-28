@@ -1,32 +1,25 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { parseEnv } from "@platform/env";
 import { Queue, Worker } from "bullmq";
 import { config as loadDotenv } from "dotenv";
+import { Effect } from "effect";
 
-const nodeEnv = process.env.NODE_ENV ?? "development";
+const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"));
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));
 
 if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath });
 }
 
-const requireEnv = (name: string): string => {
-  const value = process.env[name];
-
-  if (value === undefined) {
-    throw new Error(`${name} must be declared`);
-  }
-
-  return value;
-};
-
-const connection = {
-  host: requireEnv("REDIS_HOST"),
-  port: Number(requireEnv("REDIS_PORT")),
-};
+const connection = Effect.runSync(
+  Effect.all({
+    host: parseEnv(process.env.REDIS_HOST, "string"),
+    port: parseEnv(process.env.REDIS_PORT, "number"),
+  }),
+);
 
 const queue = new Queue("events", { connection });
-
 const worker = new Worker(
   "events",
   async () => {
@@ -36,6 +29,10 @@ const worker = new Worker(
 );
 
 worker.on("ready", async () => {
-  await queue.add("bootstrap", { startedAt: new Date().toISOString() }, { jobId: "bootstrap" });
-  console.log("workers ready");
+  await Effect.runPromise(
+    Effect.tryPromise(() =>
+      queue.add("bootstrap", { startedAt: new Date().toISOString() }, { jobId: "bootstrap" }),
+    ),
+  );
+  Effect.runSync(Effect.logInfo("workers ready"));
 });

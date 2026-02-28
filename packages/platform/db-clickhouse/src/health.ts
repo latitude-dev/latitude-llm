@@ -1,16 +1,19 @@
 import type { ClickHouseClient } from "@clickhouse/client";
+import { Effect } from "effect";
 
 export interface ClickhouseHealth {
   readonly ok: boolean;
   readonly latencyMs: number;
 }
 
-export const healthcheckClickhouse = async (
+export const healthcheckClickhouse = (
   client: ClickHouseClient,
-): Promise<ClickhouseHealth> => {
-  const start = Date.now();
-  await client.ping();
-  const latencyMs = Date.now() - start;
+): Effect.Effect<ClickhouseHealth, unknown> => {
+  return Effect.gen(function* () {
+    const start = Date.now();
+    yield* Effect.tryPromise(() => client.ping());
+    const latencyMs = Date.now() - start;
 
-  return { ok: true, latencyMs };
+    return { ok: true, latencyMs };
+  });
 };

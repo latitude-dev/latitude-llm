@@ -1,16 +1,29 @@
 {
   "compilerOptions": {
+    "incremental": true,
+    "composite": true,
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
+    "moduleDetection": "force",
     "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noImplicitOverride": true,
     "esModuleInterop": true,
+    "verbatimModuleSyntax": true,
+    "rewriteRelativeImportExtensions": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "types": ["node"]
+    "types": ["node"],
+    "plugins": [
+      {
+        "name": "@effect/language-service"
+      }
+    ]
   }
 }

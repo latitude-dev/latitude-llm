@@ -13,9 +13,11 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@effect/language-service": "^0.77.0",
     "@types/node": "catalog:",
     "turbo": "catalog:",
     "tsx": "catalog:",
+    "turbo": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
