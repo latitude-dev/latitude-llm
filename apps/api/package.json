@@ -16,6 +16,7 @@
     "@domain/workspaces": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/db-clickhouse": "workspace:*",
+    "@platform/env": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "dotenv": "catalog:",
     "effect": "catalog:",

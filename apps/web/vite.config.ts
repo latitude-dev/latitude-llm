@@ -1,33 +1,31 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { parseEnv } from "@platform/env";
 import { config as loadDotenv } from "dotenv";
+import { Effect } from "effect";
 import { defineConfig } from "vite";
 import solid from "vite-plugin-solid";
 
-const nodeEnv = process.env.NODE_ENV ?? "development";
+const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"));
 const envFilePath = fileURLToPath(new URL(`../../.env.${nodeEnv}`, import.meta.url));
 
 if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath });
 }
 
-const webPort = process.env.WEB_PORT;
-
-if (webPort === undefined) {
-  throw new Error("WEB_PORT must be declared");
-}
-
-const webPortNumber = Number(webPort);
-
-if (Number.isNaN(webPortNumber)) {
-  throw new Error("WEB_PORT must be a number");
-}
+const webPortNumber = Effect.runSync(parseEnv(process.env.WEB_PORT, "number"));
 
 export default defineConfig({
   plugins: [solid()],
-  server: {
-    port: webPortNumber,
-    strictPort: true,
-    allowedHosts: nodeEnv === "development" ? true : undefined,
-  },
+  server:
+    nodeEnv === "development"
+      ? {
+          port: webPortNumber,
+          strictPort: true,
+          allowedHosts: true,
+        }
+      : {
+          port: webPortNumber,
+          strictPort: true,
+        },
 });

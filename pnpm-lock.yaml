@@ -74,6 +74,9 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 1.9.4
+      '@effect/language-service':
+        specifier: ^0.77.0
+        version: 0.77.0
       '@types/node':
         specifier: 'catalog:'
         version: 22.14.1
@@ -104,6 +107,9 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../../packages/platform/env
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -122,6 +128,9 @@ importers:
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../../packages/platform/env
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -134,6 +143,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../../packages/platform/env
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
       solid-js:
         specifier: 'catalog:'
         version: 1.9.10
@@ -150,6 +165,9 @@ importers:
 
   apps/workers:
     dependencies:
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../../packages/platform/env
       bullmq:
         specifier: 'catalog:'
         version: 5.66.0
@@ -165,6 +183,9 @@ importers:
 
   apps/workflows:
     dependencies:
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../../packages/platform/env
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -213,6 +234,9 @@ importers:
 
   packages/platform/cache-redis:
     dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
       ioredis:
         specifier: 'catalog:'
         version: 5.8.2
@@ -222,12 +246,24 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.17.0
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../env
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
 
   packages/platform/db-postgres:
     dependencies:
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../env
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.16.0)
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
       pg:
         specifier: 'catalog:'
         version: 8.16.0
@@ -242,15 +278,32 @@ importers:
         specifier: 'catalog:'
         version: 0.31.9
 
-  packages/platform/events-outbox: {}
+  packages/platform/env:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
+
+  packages/platform/events-outbox:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
 
   packages/platform/queue-bullmq:
     dependencies:
       bullmq:
         specifier: 'catalog:'
         version: 5.66.0
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
 
-  packages/platform/storage-object: {}
+  packages/platform/storage-object:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 3.17.4
 
   packages/testkit: {}
 
@@ -434,6 +487,10 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@effect/language-service@0.77.0':
+    resolution: {integrity: sha512-QP2bri8DdcK7Eo+SqFS2yNeD0Ch9kKHYxq2jeE9CaPpBknevCNFb3+hT6qSsPt2P6yOkhNP83KMy5Uk7DGBXlg==}
+    hasBin: true
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
@@ -2297,6 +2354,8 @@ snapshots:
     optional: true
 
   '@drizzle-team/brocli@0.10.2': {}
+
+  '@effect/language-service@0.77.0': {}
 
   '@esbuild-kit/core-utils@3.3.2':
     dependencies:

@@ -3,6 +3,8 @@ import {
   type ClickHouseClientConfigOptions,
   createClient,
 } from "@clickhouse/client";
+import { type InvalidEnvValueError, type MissingEnvValueError, parseEnv } from "@platform/env";
+import { Effect } from "effect";
 
 export interface ClickhouseConfig {
   readonly url?: string;
@@ -11,30 +13,40 @@ export interface ClickhouseConfig {
   readonly database?: string;
 }
 
-const requireEnv = (name: string): string => {
-  const value = process.env[name];
+export type CreateClickhouseClientError = MissingEnvValueError | InvalidEnvValueError;
 
-  if (value === undefined) {
-    throw new Error(`${name} must be declared`);
-  }
+export const createClickhouseClientEffect = (
+  config: ClickhouseConfig = {},
+): Effect.Effect<ClickHouseClient, CreateClickhouseClientError> => {
+  return Effect.all({
+    url: config.url
+      ? Effect.succeed(config.url)
+      : parseEnv(process.env.CLICKHOUSE_URL, "string"),
+    username: config.username
+      ? Effect.succeed(config.username)
+      : parseEnv(process.env.CLICKHOUSE_USER, "string"),
+    password: config.password
+      ? Effect.succeed(config.password)
+      : parseEnv(process.env.CLICKHOUSE_PASSWORD, "string"),
+    database: config.database
+      ? Effect.succeed(config.database)
+      : parseEnv(process.env.CLICKHOUSE_DB, "string"),
+  }).pipe(
+    Effect.map((resolvedConfig) => {
+      const options: ClickHouseClientConfigOptions = {
+        url: resolvedConfig.url,
+        username: resolvedConfig.username,
+        password: resolvedConfig.password,
+        database: resolvedConfig.database,
+      };
 
-  return value;
+      return createClient(options);
+    }),
+  );
 };
 
 export const createClickhouseClient = (config: ClickhouseConfig = {}): ClickHouseClient => {
-  const url = config.url ?? requireEnv("CLICKHOUSE_URL");
-  const username = config.username ?? requireEnv("CLICKHOUSE_USER");
-  const password = config.password ?? requireEnv("CLICKHOUSE_PASSWORD");
-  const database = config.database ?? requireEnv("CLICKHOUSE_DB");
-
-  const options: ClickHouseClientConfigOptions = {
-    url,
-    username,
-    password,
-    database,
-  };
-
-  return createClient(options);
+  return Effect.runSync(createClickhouseClientEffect(config));
 };
 
 export const closeClickhouse = async (client: ClickHouseClient): Promise<void> => {

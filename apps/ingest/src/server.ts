@@ -1,11 +1,13 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
-import { createClickhouseClient, healthcheckClickhouse } from "@platform/db-clickhouse";
+import { createClickhouseClientEffect, healthcheckClickhouse } from "@platform/db-clickhouse";
+import { parseEnv } from "@platform/env";
 import { config as loadDotenv } from "dotenv";
+import { Effect } from "effect";
 import { Hono } from "hono";
 
-const nodeEnv = process.env.NODE_ENV ?? "development";
+const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"));
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));
 
 if (existsSync(envFilePath)) {
@@ -13,31 +15,42 @@ if (existsSync(envFilePath)) {
 }
 
 const app = new Hono();
-const clickhouse = createClickhouseClient();
+const clickhouse = Effect.runSync(createClickhouseClientEffect());
+const port = Effect.runSync(parseEnv(process.env.PORT, "number", 3002));
+
+type HealthcheckFailure = {
+  readonly ok: false;
+  readonly error: string;
+};
+
+const withFailure = <TSuccess extends { readonly ok: boolean }>(
+  effect: Effect.Effect<TSuccess, unknown>,
+): Effect.Effect<TSuccess | HealthcheckFailure> => {
+  return Effect.match(effect, {
+    onFailure: (error) => ({ ok: false, error: String(error) }),
+    onSuccess: (value) => value,
+  });
+};
 
 app.get("/health", async (c) => {
-  try {
-    const clickhouseHealth = await healthcheckClickhouse(clickhouse);
+  const clickhouseHealth = await Effect.runPromise(withFailure(healthcheckClickhouse(clickhouse)));
 
-    return c.json({ service: "ingest", status: "ok", clickhouse: clickhouseHealth }, 200);
-  } catch (error) {
-    return c.json(
-      {
-        service: "ingest",
-        status: "degraded",
-        clickhouse: { ok: false, error: String(error) },
-      },
-      503,
-    );
-  }
+  return c.json(
+    {
+      service: "ingest",
+      status: clickhouseHealth.ok ? "ok" : "degraded",
+      clickhouse: clickhouseHealth,
+    },
+    clickhouseHealth.ok ? 200 : 503,
+  );
 });
 
 serve(
   {
     fetch: app.fetch,
-    port: Number(process.env.PORT ?? 3002),
+    port,
   },
   (info) => {
-    console.log(`ingest listening on http://localhost:${info.port}`);
+    Effect.runSync(Effect.logInfo(`ingest listening on http://localhost:${info.port}`));
   },
 );

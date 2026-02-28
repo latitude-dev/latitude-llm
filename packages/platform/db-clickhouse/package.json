@@ -19,6 +19,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@clickhouse/client": "catalog:"
+    "@clickhouse/client": "catalog:",
+    "@platform/env": "workspace:*",
+    "effect": "catalog:"
   }
 }

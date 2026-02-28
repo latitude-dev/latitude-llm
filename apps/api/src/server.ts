@@ -1,12 +1,14 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
-import { createClickhouseClient, healthcheckClickhouse } from "@platform/db-clickhouse";
-import { createPostgresClient, healthcheckPostgres } from "@platform/db-postgres";
+import { createClickhouseClientEffect, healthcheckClickhouse } from "@platform/db-clickhouse";
+import { createPostgresClientEffect, healthcheckPostgres } from "@platform/db-postgres";
+import { parseEnv } from "@platform/env";
 import { config as loadDotenv } from "dotenv";
+import { Effect } from "effect";
 import { Hono } from "hono";
 
-const nodeEnv = process.env.NODE_ENV ?? "development";
+const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"));
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));
 
 if (existsSync(envFilePath)) {
@@ -14,31 +16,40 @@ if (existsSync(envFilePath)) {
 }
 
 const app = new Hono();
-const postgres = createPostgresClient();
-const clickhouse = createClickhouseClient();
+const postgres = Effect.runSync(createPostgresClientEffect());
+const clickhouse = Effect.runSync(createClickhouseClientEffect());
+const port = Effect.runSync(parseEnv(process.env.PORT, "number", 3001));
+
+type HealthcheckFailure = {
+  readonly ok: false;
+  readonly error: string;
+};
+
+const withFailure = <TSuccess extends { readonly ok: boolean }>(
+  effect: Effect.Effect<TSuccess, unknown>,
+): Effect.Effect<TSuccess | HealthcheckFailure> => {
+  return Effect.match(effect, {
+    onFailure: (error) => ({ ok: false, error: String(error) }),
+    onSuccess: (value) => value,
+  });
+};
 
 app.get("/health", async (c) => {
-  const checks = await Promise.allSettled([
-    healthcheckPostgres(postgres.pool),
-    healthcheckClickhouse(clickhouse),
-  ]);
+  const health = await Effect.runPromise(
+    Effect.all({
+      postgres: withFailure(healthcheckPostgres(postgres.pool)),
+      clickhouse: withFailure(healthcheckClickhouse(clickhouse)),
+    }),
+  );
 
-  const postgresHealth = checks[0];
-  const clickhouseHealth = checks[1];
-  const ok = postgresHealth.status === "fulfilled" && clickhouseHealth.status === "fulfilled";
+  const ok = health.postgres.ok && health.clickhouse.ok;
 
   return c.json(
     {
       service: "api",
       status: ok ? "ok" : "degraded",
-      postgres:
-        postgresHealth.status === "fulfilled"
-          ? postgresHealth.value
-          : { ok: false, error: String(postgresHealth.reason) },
-      clickhouse:
-        clickhouseHealth.status === "fulfilled"
-          ? clickhouseHealth.value
-          : { ok: false, error: String(clickhouseHealth.reason) },
+      postgres: health.postgres,
+      clickhouse: health.clickhouse,
     },
     ok ? 200 : 503,
   );
@@ -47,9 +58,9 @@ app.get("/health", async (c) => {
 serve(
   {
     fetch: app.fetch,
-    port: Number(process.env.PORT ?? 3001),
+    port,
   },
   (info) => {
-    console.log(`api listening on http://localhost:${info.port}`);
+    Effect.runSync(Effect.logInfo(`api listening on http://localhost:${info.port}`));
   },
 );

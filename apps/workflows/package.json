@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@platform/env": "workspace:*",
     "dotenv": "catalog:",
     "effect": "catalog:"
   }

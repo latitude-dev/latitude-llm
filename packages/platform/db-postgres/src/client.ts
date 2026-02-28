@@ -1,4 +1,10 @@
+import {
+  type InvalidEnvValueError,
+  type MissingEnvValueError,
+  parseEnv,
+} from "@platform/env";
 import { type NodePgDatabase, drizzle } from "drizzle-orm/node-postgres";
+import { Effect } from "effect";
 import { Pool, type PoolConfig } from "pg";
 
 import * as schema from "./schema/index.js";
@@ -17,53 +23,86 @@ export interface PostgresClient {
   readonly db: PostgresDb;
 }
 
-const readOptionalNumberEnv = (name: string): number | undefined => {
+export type ReadOptionalNumberEnvError =
+  | MissingEnvValueError
+  | InvalidEnvValueError;
+export type ResolveDatabaseUrlError =
+  | MissingEnvValueError
+  | InvalidEnvValueError;
+export type CreatePostgresPoolError =
+  | ReadOptionalNumberEnvError
+  | ResolveDatabaseUrlError;
+export type CreatePostgresClientError = CreatePostgresPoolError;
+
+const readOptionalNumberEnvEffect = (
+  name: string,
+): Effect.Effect<number | undefined, ReadOptionalNumberEnvError> => {
   const value = process.env[name];
 
-  if (!value) {
-    return undefined;
+  if (value === undefined || value.length === 0) {
+    return Effect.succeed(undefined);
   }
 
-  const parsed = Number(value);
+  return parseEnv(value, "number");
+};
 
-  if (Number.isNaN(parsed)) {
-    throw new Error(`${name} must be a number`);
+export const resolveDatabaseUrlEffect = (
+  databaseUrl?: string,
+): Effect.Effect<string, ResolveDatabaseUrlError> => {
+  if (databaseUrl !== undefined && databaseUrl.length > 0) {
+    return parseEnv(databaseUrl, "string");
   }
 
-  return parsed;
+  return parseEnv(process.env.DATABASE_URL, "string");
 };
 
 export const resolveDatabaseUrl = (databaseUrl?: string): string => {
-  if (databaseUrl) {
-    return databaseUrl;
-  }
+  return Effect.runSync(resolveDatabaseUrlEffect(databaseUrl));
+};
 
-  const fromEnv = process.env.DATABASE_URL;
+export const createPostgresPoolEffect = (
+  config: PostgresConfig = {},
+): Effect.Effect<Pool, CreatePostgresPoolError> => {
+  return Effect.all({
+    connectionString: resolveDatabaseUrlEffect(config.databaseUrl),
+    max: config.maxConnections
+      ? Effect.succeed(config.maxConnections)
+      : readOptionalNumberEnvEffect("PG_POOL_MAX"),
+    idleTimeoutMillis: config.idleTimeoutMs
+      ? Effect.succeed(config.idleTimeoutMs)
+      : readOptionalNumberEnvEffect("PG_IDLE_TIMEOUT_MS"),
+    connectionTimeoutMillis: config.connectionTimeoutMs
+      ? Effect.succeed(config.connectionTimeoutMs)
+      : readOptionalNumberEnvEffect("PG_CONNECT_TIMEOUT_MS"),
+  }).pipe(
+    Effect.map((poolConfig) => {
+      const configWithTypes: PoolConfig = poolConfig;
 
-  if (!fromEnv) {
-    throw new Error("DATABASE_URL is required");
-  }
-
-  return fromEnv;
+      return new Pool(configWithTypes);
+    }),
+  );
 };
 
 export const createPostgresPool = (config: PostgresConfig = {}): Pool => {
-  const poolConfig: PoolConfig = {
-    connectionString: resolveDatabaseUrl(config.databaseUrl),
-    max: config.maxConnections ?? readOptionalNumberEnv("PG_POOL_MAX"),
-    idleTimeoutMillis: config.idleTimeoutMs ?? readOptionalNumberEnv("PG_IDLE_TIMEOUT_MS"),
-    connectionTimeoutMillis:
-      config.connectionTimeoutMs ?? readOptionalNumberEnv("PG_CONNECT_TIMEOUT_MS"),
-  };
-
-  return new Pool(poolConfig);
+  return Effect.runSync(createPostgresPoolEffect(config));
 };
 
-export const createPostgresClient = (config: PostgresConfig = {}): PostgresClient => {
-  const pool = createPostgresPool(config);
-  const db = drizzle(pool, { schema });
+export const createPostgresClientEffect = (
+  config: PostgresConfig = {},
+): Effect.Effect<PostgresClient, CreatePostgresClientError> => {
+  return createPostgresPoolEffect(config).pipe(
+    Effect.map((pool) => {
+      const db = drizzle(pool, { schema });
 
-  return { db, pool };
+      return { db, pool };
+    }),
+  );
+};
+
+export const createPostgresClient = (
+  config: PostgresConfig = {},
+): PostgresClient => {
+  return Effect.runSync(createPostgresClientEffect(config));
 };
 
 export const closePostgres = async (pool: Pool): Promise<void> => {

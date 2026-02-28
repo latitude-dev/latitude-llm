@@ -1,11 +1,12 @@
 {
-  "name": "@app/web",
+  "name": "@platform/env",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite dev",
+    "build": "tsc -p tsconfig.json",
     "lint": "biome check src",
     "format": "biome format --write src",
     "format:check": "biome format --check src",
@@ -13,13 +14,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@platform/env": "workspace:*",
-    "effect": "catalog:",
-    "solid-js": "catalog:"
-  },
-  "devDependencies": {
-    "dotenv": "catalog:",
-    "vite": "catalog:",
-    "vite-plugin-solid": "catalog:"
+    "effect": "catalog:"
   }
 }
