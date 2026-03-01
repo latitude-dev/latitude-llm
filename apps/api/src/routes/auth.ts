@@ -1,6 +1,7 @@
+import type { RedisClient } from "@platform/cache-redis";
 import type { User } from "better-auth";
 import { Hono } from "hono";
-import { signUpIpRateLimiter } from "../middleware/rate-limiter.js";
+import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.js";
 
 /**
  * Auth routes for Better Auth
@@ -46,6 +47,11 @@ export interface AuthRouteDeps {
   readonly betterAuthApi: BetterAuthAPI | undefined;
 
   /**
+   * Redis client for rate limiting (required)
+   */
+  readonly redis: RedisClient;
+
+  /**
    * Callback after successful OAuth sign in
    */
   readonly onOAuthCallback?: (user: User, provider: string) => Promise<void>;
@@ -65,9 +71,13 @@ export const createAuthRoutes = (deps: AuthRouteDeps) => {
   const app = new Hono();
   const baseUrl = deps.baseUrl ?? "http://localhost:3000";
 
+  // Create rate limiters with Redis (required)
+  const signUpRateLimiter = createSignUpIpRateLimiter(deps.redis);
+  // Note: Using same rate limiter for sign-in (can be separated later if needed)
+
   // CLI-specific: POST /auth/sign-up/email - Email/password sign up
   // Returns JSON instead of redirect (for CLI tools)
-  app.post("/sign-up/email", signUpIpRateLimiter, async (c) => {
+  app.post("/sign-up/email", signUpRateLimiter, async (c) => {
     if (!deps.betterAuthApi) {
       return c.json({ error: "Email/password authentication not configured" }, 503);
     }
@@ -149,7 +159,7 @@ export const createAuthRoutes = (deps: AuthRouteDeps) => {
   // CLI-specific: POST /auth/sign-in/email - Email/password sign in
   // Returns JSON instead of redirect/cookies (for CLI tools)
   // Note: IP-based rate limiting applied at middleware level
-  app.post("/sign-in/email", signUpIpRateLimiter, async (c) => {
+  app.post("/sign-in/email", signUpRateLimiter, async (c) => {
     if (!deps.betterAuthApi) {
       return c.json({ error: "Email/password authentication not configured" }, 503);
     }

@@ -1,3 +1,4 @@
+import type { RedisClient } from "@platform/cache-redis";
 import type { Repositories } from "@platform/db-postgres";
 import type { PostgresDb } from "@platform/db-postgres";
 import type { Hono } from "hono";
@@ -14,6 +15,7 @@ export interface RoutesContext {
     handler: (req: Request) => Promise<Response>;
     api?: AuthRouteDeps["betterAuthApi"];
   };
+  redis: RedisClient;
 }
 
 /**
@@ -32,6 +34,7 @@ export const registerRoutes = (context: RoutesContext) => {
     createAuthRoutes({
       betterAuthHandler: context.auth.handler,
       betterAuthApi: context.auth.api,
+      redis: context.redis,
     }),
   );
 
