@@ -13,13 +13,16 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/workspaces": "workspace:*",
+    "@clickhouse/client": "catalog:",
     "@hono/node-server": "catalog:",
     "@platform/db-clickhouse": "workspace:*",
-    "@platform/env": "workspace:*",
     "@platform/db-postgres": "workspace:*",
+    "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
+    "@types/pg": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "pg": "catalog:"
   }
 }

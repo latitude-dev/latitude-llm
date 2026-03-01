@@ -14,6 +14,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@platform/env": "workspace:*",
     "effect": "catalog:",
     "ioredis": "catalog:"
   }

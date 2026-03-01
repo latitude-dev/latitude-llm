@@ -17,6 +17,10 @@ export interface DomainOutbox {
   append(event: EventEnvelope): Promise<void>;
 }
 
+export interface EventsPublisher {
+  publish(envelope: EventEnvelope): Promise<void>;
+}
+
 export const createEventEnvelope = <TEvent extends DomainEvent>(params: {
   event: TEvent;
   id: string;

@@ -62,8 +62,6 @@ You are writing code, designing a new feature, reviewing changes, and planning w
 
 # Project Rules and Patterns
 
-This document defines the baseline engineering rules for this monorepo.
-
 ## Product and architecture scope
 
 - Product: multi-tenant LLM observability platform.
@@ -124,6 +122,29 @@ This document defines the baseline engineering rules for this monorepo.
 - ClickHouse adapter stack remains SQL-oriented in `packages/platform/db-clickhouse`.
 - Domain models are independent from table/row shapes.
 - Mapping from DB rows to domain objects belongs in platform adapters.
+- **Apps use pool-based connections**: Use `createPostgresPool()` in `apps/*/clients.ts` for direct pool access.
+
+## Effect patterns
+
+- Core code uses Effect TS primitives consistently.
+- Prefer `Effect.gen` for sequential effect composition.
+- Wrap promise-based APIs with `Effect.tryPromise` and typed errors.
+- Use `Data.TaggedError` for domain-specific error types.
+- Use `Effect.repeat` with `Schedule` for polling/recurring tasks instead of `setTimeout`.
+- Use `Fiber` for lifecycle management of long-running effects.
+
+## Application structure
+
+- **Client initialization**: Centralize in `apps/*/clients.ts`, import where needed.
+- **Routes**: Organize in `apps/*/routes/` with `registerRoutes()` pattern for extensibility.
+- **Logging**: Use `createLogger()` from `@repo/observability` with service name.
+- **Environment**: Use `parseEnv()` for required vars, `parseEnvOptional()` for optional vars.
+
+## Error handling
+
+- Prefer typed errors (`Data.TaggedError`) over raw `Error` or `unknown`.
+- Use `Effect.either` for operations that may fail but shouldn't stop execution.
+- Handle errors at boundaries; propagate through Effect error channel internally.
 
 ## Testing strategy
 

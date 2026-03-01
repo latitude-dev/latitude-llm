@@ -2,6 +2,7 @@ import {
   type InvalidEnvValueError,
   type MissingEnvValueError,
   parseEnv,
+  parseEnvOptional,
 } from "@platform/env";
 import { type NodePgDatabase, drizzle } from "drizzle-orm/node-postgres";
 import { Effect } from "effect";
@@ -23,57 +24,25 @@ export interface PostgresClient {
   readonly db: PostgresDb;
 }
 
-export type ReadOptionalNumberEnvError =
-  | MissingEnvValueError
-  | InvalidEnvValueError;
-export type ResolveDatabaseUrlError =
-  | MissingEnvValueError
-  | InvalidEnvValueError;
-export type CreatePostgresPoolError =
-  | ReadOptionalNumberEnvError
-  | ResolveDatabaseUrlError;
+export type CreatePostgresPoolError = MissingEnvValueError | InvalidEnvValueError;
 export type CreatePostgresClientError = CreatePostgresPoolError;
-
-const readOptionalNumberEnvEffect = (
-  name: string,
-): Effect.Effect<number | undefined, ReadOptionalNumberEnvError> => {
-  const value = process.env[name];
-
-  if (value === undefined || value.length === 0) {
-    return Effect.succeed(undefined);
-  }
-
-  return parseEnv(value, "number");
-};
-
-export const resolveDatabaseUrlEffect = (
-  databaseUrl?: string,
-): Effect.Effect<string, ResolveDatabaseUrlError> => {
-  if (databaseUrl !== undefined && databaseUrl.length > 0) {
-    return parseEnv(databaseUrl, "string");
-  }
-
-  return parseEnv(process.env.DATABASE_URL, "string");
-};
-
-export const resolveDatabaseUrl = (databaseUrl?: string): string => {
-  return Effect.runSync(resolveDatabaseUrlEffect(databaseUrl));
-};
 
 export const createPostgresPoolEffect = (
   config: PostgresConfig = {},
 ): Effect.Effect<Pool, CreatePostgresPoolError> => {
   return Effect.all({
-    connectionString: resolveDatabaseUrlEffect(config.databaseUrl),
+    connectionString: config.databaseUrl
+      ? Effect.succeed(config.databaseUrl)
+      : parseEnv(process.env.DATABASE_URL, "string"),
     max: config.maxConnections
       ? Effect.succeed(config.maxConnections)
-      : readOptionalNumberEnvEffect("PG_POOL_MAX"),
+      : parseEnvOptional(process.env.PG_POOL_MAX, "number"),
     idleTimeoutMillis: config.idleTimeoutMs
       ? Effect.succeed(config.idleTimeoutMs)
-      : readOptionalNumberEnvEffect("PG_IDLE_TIMEOUT_MS"),
+      : parseEnvOptional(process.env.PG_IDLE_TIMEOUT_MS, "number"),
     connectionTimeoutMillis: config.connectionTimeoutMs
       ? Effect.succeed(config.connectionTimeoutMs)
-      : readOptionalNumberEnvEffect("PG_CONNECT_TIMEOUT_MS"),
+      : parseEnvOptional(process.env.PG_CONNECT_TIMEOUT_MS, "number"),
   }).pipe(
     Effect.map((poolConfig) => {
       const configWithTypes: PoolConfig = poolConfig;
@@ -99,9 +68,7 @@ export const createPostgresClientEffect = (
   );
 };
 
-export const createPostgresClient = (
-  config: PostgresConfig = {},
-): PostgresClient => {
+export const createPostgresClient = (config: PostgresConfig = {}): PostgresClient => {
   return Effect.runSync(createPostgresClientEffect(config));
 };
 

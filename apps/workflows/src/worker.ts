@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "@platform/env";
+import { createLogger } from "@repo/observability";
 import { config as loadDotenv } from "dotenv";
 import { Effect } from "effect";
 
@@ -11,4 +12,6 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath });
 }
 
-Effect.runSync(Effect.logInfo("workflows worker bootstrap"));
+const logger = createLogger("workflows");
+
+logger.info("workflows worker bootstrap");

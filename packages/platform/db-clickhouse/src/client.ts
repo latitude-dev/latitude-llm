@@ -19,9 +19,7 @@ export const createClickhouseClientEffect = (
   config: ClickhouseConfig = {},
 ): Effect.Effect<ClickHouseClient, CreateClickhouseClientError> => {
   return Effect.all({
-    url: config.url
-      ? Effect.succeed(config.url)
-      : parseEnv(process.env.CLICKHOUSE_URL, "string"),
+    url: config.url ? Effect.succeed(config.url) : parseEnv(process.env.CLICKHOUSE_URL, "string"),
     username: config.username
       ? Effect.succeed(config.username)
       : parseEnv(process.env.CLICKHOUSE_USER, "string"),

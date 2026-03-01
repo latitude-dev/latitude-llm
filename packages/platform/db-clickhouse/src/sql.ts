@@ -1,42 +1,70 @@
 import type { ClickHouseClient } from "@clickhouse/client";
+import { Data, Effect } from "effect";
 
-export const queryClickhouse = async <TRow extends Record<string, unknown>>(
+export class ClickhouseQueryError extends Data.TaggedError("ClickhouseQueryError")<{
+  readonly cause: unknown;
+  readonly query: string;
+}> {}
+
+export class ClickhouseCommandError extends Data.TaggedError("ClickhouseCommandError")<{
+  readonly cause: unknown;
+  readonly query: string;
+}> {}
+
+export class ClickhouseInsertError extends Data.TaggedError("ClickhouseInsertError")<{
+  readonly cause: unknown;
+  readonly table: string;
+}> {}
+
+export const queryClickhouse = <TRow extends Record<string, unknown>>(
   client: ClickHouseClient,
   query: string,
   queryParams?: Record<string, unknown>,
-): Promise<ReadonlyArray<TRow>> => {
-  const result = await client.query({
-    query,
-    query_params: queryParams,
-    format: "JSONEachRow",
+): Effect.Effect<ReadonlyArray<TRow>, ClickhouseQueryError> =>
+  Effect.tryPromise({
+    try: async () => {
+      const result = await client.query({
+        query,
+        ...(queryParams !== undefined && { query_params: queryParams }),
+        format: "JSONEachRow",
+      });
+
+      return result.json<TRow>();
+    },
+    catch: (error) => new ClickhouseQueryError({ cause: error, query }),
   });
 
-  return result.json<TRow>();
-};
-
-export const commandClickhouse = async (
+export const commandClickhouse = (
   client: ClickHouseClient,
   query: string,
   queryParams?: Record<string, unknown>,
-): Promise<void> => {
-  await client.command({
-    query,
-    query_params: queryParams,
+): Effect.Effect<void, ClickhouseCommandError> =>
+  Effect.tryPromise({
+    try: () =>
+      client.command({
+        query,
+        ...(queryParams !== undefined && { query_params: queryParams }),
+      }),
+    catch: (error) => new ClickhouseCommandError({ cause: error, query }),
   });
-};
 
-export const insertJsonEachRow = async <TRow extends Record<string, unknown>>(
+export const insertJsonEachRow = <TRow extends Record<string, unknown>>(
   client: ClickHouseClient,
   table: string,
   values: ReadonlyArray<TRow>,
-): Promise<void> => {
-  if (values.length === 0) {
-    return;
-  }
+): Effect.Effect<void, ClickhouseInsertError> =>
+  Effect.gen(function* () {
+    if (values.length === 0) {
+      return;
+    }
 
-  await client.insert({
-    table,
-    values,
-    format: "JSONEachRow",
+    yield* Effect.tryPromise({
+      try: () =>
+        client.insert({
+          table,
+          values,
+          format: "JSONEachRow",
+        }),
+      catch: (error) => new ClickhouseInsertError({ cause: error, table }),
+    });
   });
-};

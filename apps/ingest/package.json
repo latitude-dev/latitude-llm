@@ -13,9 +13,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@clickhouse/client": "catalog:",
     "@hono/node-server": "catalog:",
     "@platform/db-clickhouse": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
     "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:"
