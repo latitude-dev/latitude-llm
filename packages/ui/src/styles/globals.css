@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, sans-serif;
+    --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+    --background: 0 0% 100%;
+    --foreground: 224 71.5% 4%;
+    --background-gray: 220 14.3% 95.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.5% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.5% 4%;
+    --primary: 222 47% 31%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 222 30% 70%;
+    --primary-muted-hover: 222 40% 65%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-button: 222 47% 31%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-muted: 0 93% 94%;
+    --destructive-muted-foreground: 0 72% 51%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 222 47% 31%;
+    --radius: 0.5rem;
+    --background-code: 220 14.3% 95.9%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 142 76% 95%;
+    --success-muted-foreground: 142 76% 36%;
+    --warning-muted: 45 93% 95%;
+    --warning-muted-foreground: 35 92% 33%;
+    --purple: 262 83% 58%;
+    --purple-foreground: 0 0% 100%;
+    --yellow: 48 96% 53%;
+    --latte: 48 96% 89%;
+    --latte-border: 43 59% 81%;
+    --latte-background: 48 96% 95%;
+    --latte-input-background: 0 0% 100%;
+    --latte-input-foreground: 0 0% 20%;
+    --latte-output-foreground: 0 0% 30%;
+    --latte-widget-background: 0 0% 98%;
+    --latte-badge-border: 43 59% 81%;
+
+    --chart-1: 222 47% 31%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 262 83% 58%;
+    --chart-4: 35 92% 33%;
+    --chart-5: 0 72% 51%;
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 0 0% 98%;
+    --background-gray: 0 0% 10%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 217 50% 40%;
+    --primary-muted-hover: 217 60% 45%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 15%;
+    --accent-button: 217 91% 60%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-muted: 0 50% 15%;
+    --destructive-muted-foreground: 0 70% 60%;
+    --border: 0 0% 15%;
+    --input: 0 0% 15%;
+    --ring: 217 91% 60%;
+    --background-code: 0 0% 12%;
+    --success: 142 76% 42%;
+    --success-foreground: 0 0% 100%;
+    --success-muted: 142 50% 15%;
+    --success-muted-foreground: 142 76% 60%;
+    --warning-muted: 45 50% 15%;
+    --warning-muted-foreground: 45 93% 47%;
+    --purple: 262 83% 70%;
+    --purple-foreground: 0 0% 100%;
+    --yellow: 48 96% 53%;
+    --latte: 48 30% 20%;
+    --latte-border: 43 30% 25%;
+    --latte-background: 48 30% 15%;
+    --latte-input-background: 0 0% 10%;
+    --latte-input-foreground: 0 0% 90%;
+    --latte-output-foreground: 0 0% 80%;
+    --latte-widget-background: 0 0% 12%;
+    --latte-badge-border: 43 30% 30%;
+
+    --chart-1: 217 91% 60%;
+    --chart-2: 142 76% 42%;
+    --chart-3: 262 83% 70%;
+    --chart-4: 45 93% 47%;
+    --chart-5: 0 70% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}

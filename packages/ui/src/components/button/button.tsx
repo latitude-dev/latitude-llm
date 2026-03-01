@@ -1,0 +1,85 @@
+import { Slot } from "@radix-ui/react-slot";
+import { type VariantProps, cva } from "class-variance-authority";
+import { type ButtonHTMLAttributes, forwardRef } from "react";
+
+import { font } from "../../tokens/index.js";
+import { cn } from "../../utils/cn.js";
+
+const buttonVariants = cva(
+  cn(
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+    font.size.h5,
+  ),
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+        shiny: "bg-accent border border-accent hover:bg-primary/15 overflow-hidden relative",
+        latte:
+          "bg-latte text-latte-input-foreground hover:bg-latte/90 border border-latte-border shadow-sm",
+        primaryMuted: "bg-primary-muted text-primary hover:bg-primary-muted-hover/80",
+        destructiveMuted:
+          "bg-destructive-muted text-destructive-muted-foreground border border-destructive-muted-foreground/10",
+        successMuted:
+          "bg-success-muted text-success-muted-foreground border border-success-muted-foreground/10",
+      },
+      size: {
+        default: "h-9 px-4 py-2",
+        sm: "h-8 rounded-md px-3 text-xs",
+        lg: "h-10 rounded-md px-8",
+        icon: "h-9 w-9",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
+
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+  isLoading?: boolean;
+}
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    { className, variant, size, asChild = false, isLoading = false, children, disabled, ...props },
+    ref,
+  ) => {
+    const Comp = asChild ? Slot : "button";
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        disabled={disabled || isLoading}
+        {...props}
+      >
+        {isLoading && (
+          <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        )}
+        {variant === "shiny" && (
+          <span
+            className={cn(
+              "absolute inset-0",
+              "bg-gradient-to-r from-transparent via-background to-transparent dark:from-transparent",
+              "opacity-50 transform -translate-x-full group-hover:animate-shine animate-shine",
+            )}
+          />
+        )}
+        {children}
+      </Comp>
+    );
+  },
+);
+Button.displayName = "Button";
+
+export { Button, buttonVariants };

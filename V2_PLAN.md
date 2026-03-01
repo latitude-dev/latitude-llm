@@ -23,7 +23,6 @@
    - `platform/storage-object`
    - `platform/events-outbox`
    - `observability`
-   - `testkit`
    - `tsconfig`
    - `vitest-config`
 3. Add tooling baseline:
