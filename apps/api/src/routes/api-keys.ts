@@ -6,29 +6,29 @@ import {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys";
-import { ApiKeyId, NotFoundError, WorkspaceId, generateId } from "@domain/shared-kernel";
+import { ApiKeyId, NotFoundError, OrganizationId, generateId } from "@domain/shared-kernel";
 import { createRepositories } from "@platform/db-postgres";
 import { Hono } from "hono";
-import { getDb } from "../clients.js";
+import { getPostgresClient } from "../clients.js";
 import { extractParam, runUseCase } from "../lib/effect-utils.js";
 import { mapErrorToResponse } from "../lib/error-mapper.js";
 
 /**
  * API Key routes
  *
- * - POST /workspaces/:workspaceId/api-keys - Generate API key
- * - GET /workspaces/:workspaceId/api-keys - List API keys
- * - DELETE /workspaces/:workspaceId/api-keys/:id - Revoke API key
+ * - POST /organizations/:organizationId/api-keys - Generate API key
+ * - GET /organizations/:organizationId/api-keys - List API keys
+ * - DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
  */
 
 export const createApiKeysRoutes = () => {
-  const repos = createRepositories(getDb());
+  const repos = createRepositories(getPostgresClient().db);
   const app = new Hono();
 
-  // POST /workspaces/:workspaceId/api-keys - Generate API key
+  // POST /organizations/:organizationId/api-keys - Generate API key
   app.post("/", async (c) => {
-    const workspaceId = extractParam(c, "workspaceId", WorkspaceId);
-    if (!workspaceId) return c.json({ error: "Workspace ID is required" }, 400);
+    const organizationId = extractParam(c, "organizationId", OrganizationId);
+    if (!organizationId) return c.json({ error: "Organization ID is required" }, 400);
 
     const body = (await c.req.json()) as {
       readonly name: string;
@@ -36,7 +36,7 @@ export const createApiKeysRoutes = () => {
 
     const input: GenerateApiKeyInput = {
       id: ApiKeyId(generateId()),
-      workspaceId,
+      organizationId,
       name: body.name,
     };
 
@@ -53,18 +53,18 @@ export const createApiKeysRoutes = () => {
     return c.json(result.data, 201);
   });
 
-  // GET /workspaces/:workspaceId/api-keys - List API keys
+  // GET /organizations/:organizationId/api-keys - List API keys
   app.get("/", async (c) => {
-    const workspaceId = extractParam(c, "workspaceId", WorkspaceId);
-    if (!workspaceId) return c.json({ error: "Workspace ID is required" }, 400);
+    const organizationId = extractParam(c, "organizationId", OrganizationId);
+    if (!organizationId) return c.json({ error: "Organization ID is required" }, 400);
 
-    const result = await runUseCase(repos.apiKey.findByWorkspaceId(workspaceId));
+    const result = await runUseCase(repos.apiKey.findByOrganizationId(organizationId));
 
     if (!result.success) return mapErrorToResponse(c, result.error);
     return c.json({ apiKeys: result.data }, 200);
   });
 
-  // DELETE /workspaces/:workspaceId/api-keys/:id - Revoke API key
+  // DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
   app.delete("/:id", async (c) => {
     const id = extractParam(c, "id", ApiKeyId);
     if (!id) return c.json({ error: "API Key ID is required" }, 400);

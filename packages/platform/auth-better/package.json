@@ -1,0 +1,25 @@
+{
+  "name": "@platform/auth-better",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "biome check src",
+    "format": "biome format --write src",
+    "format:check": "biome format --check src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@better-auth/stripe": "^1.5.0",
+    "@platform/db-postgres": "workspace:*",
+    "@platform/env": "workspace:*",
+    "better-auth": "catalog:",
+    "effect": "catalog:",
+    "hono": "catalog:",
+    "stripe": "^20.0.0"
+  }
+}

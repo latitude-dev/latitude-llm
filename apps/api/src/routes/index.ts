@@ -4,8 +4,8 @@ import type { Hono } from "hono";
 import { createApiKeysRoutes } from "./api-keys.js";
 import { type AuthRouteDeps, createAuthRoutes } from "./auth.js";
 import { registerHealthRoute } from "./health.js";
+import { createOrganizationsRoutes } from "./organizations.js";
 import { createProjectsRoutes } from "./projects.js";
-import { createOrganizationsRoutes } from "./workspaces.js";
 
 export interface RoutesContext {
   app: Hono;
