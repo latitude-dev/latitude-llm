@@ -1,2 +1,1 @@
-export * from "./outbox-events.js";
-export * from "./workspaces.js";
+export * from "./outbox-events";
