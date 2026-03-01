@@ -126,6 +126,7 @@ export const createAuthRoutes = () => {
       const userName = email.split("@")[0];
       const html = magicLinkTemplate({ userName, magicLinkUrl: url });
 
+      // Send email - errors will propagate to be handled by middleware
       await Effect.runPromise(
         emailSender.send({
           to: email,

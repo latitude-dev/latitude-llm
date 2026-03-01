@@ -116,6 +116,12 @@ importers:
       '@domain/api-keys':
         specifier: workspace:*
         version: link:../../packages/domain/api-keys
+      '@domain/email':
+        specifier: workspace:*
+        version: link:../../packages/domain/email
+      '@domain/onboarding':
+        specifier: workspace:*
+        version: link:../../packages/domain/onboarding
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
@@ -140,6 +146,15 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
+      '@platform/email-mailpit':
+        specifier: workspace:*
+        version: link:../../packages/platform/email-mailpit
+      '@platform/email-sendgrid':
+        specifier: workspace:*
+        version: link:../../packages/platform/email-sendgrid
+      '@platform/email-smtp':
+        specifier: workspace:*
+        version: link:../../packages/platform/email-smtp
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
@@ -313,8 +328,8 @@ importers:
   packages/domain/email:
     dependencies:
       effect:
-        specifier: ^3.12.0
-        version: 3.18.4
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.4
@@ -328,8 +343,8 @@ importers:
   packages/domain/onboarding:
     dependencies:
       effect:
-        specifier: ^3.12.0
-        version: 3.18.4
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
     devDependencies:
       '@biomejs/biome':
         specifier: 1.9.4
@@ -2716,10 +2731,6 @@ packages:
   foreground-child@3.3.1:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
     engines: {node: '>=14'}
-
-  form-data@4.0.4:
-    resolution: {integrity: sha512-KrGhL9Q4zjj0kiUt5OO4Mr/A/jlI2jDYs5eHBpYHPcBEVSiipAvn2Ko2HnPe20rmcuuvMHNdZFp+4IlGTMF0Ow==}
-    engines: {node: '>= 6'}
 
   form-data@4.0.5:
     resolution: {integrity: sha512-8RipRLol37bNs2bhoV67fiTEvdTrbMUYcFTiy3+wuuOnUog2QBHCZWXDRijWQfAkhBj2Uf5UnVaiWwA5vdd82w==}
@@ -5954,15 +5965,6 @@ snapshots:
       signal-exit: 4.1.0
     optional: true
 
-  form-data@4.0.4:
-    dependencies:
-      asynckit: 0.4.0
-      combined-stream: 1.0.8
-      es-set-tostringtag: 2.1.0
-      hasown: 2.0.2
-      mime-types: 2.1.35
-    optional: true
-
   form-data@4.0.5:
     dependencies:
       asynckit: 0.4.0
@@ -6164,7 +6166,7 @@ snapshots:
       cssstyle: 4.6.0
       data-urls: 5.0.0
       decimal.js: 10.6.0
-      form-data: 4.0.4
+      form-data: 4.0.5
       html-encoding-sniffer: 4.0.0
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6

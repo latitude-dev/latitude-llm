@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "^3.12.0"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",

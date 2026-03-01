@@ -26,8 +26,8 @@ export const createSendGridEmailSender = (config: SendGridConfig): EmailSender =
             to: message.to,
             subject: message.subject,
             html: message.html,
-            text: message.text,
-            replyTo: message.replyTo,
+            ...(message.text && { text: message.text }),
+            ...(message.replyTo && { replyTo: message.replyTo }),
           });
         },
         catch: (error) =>

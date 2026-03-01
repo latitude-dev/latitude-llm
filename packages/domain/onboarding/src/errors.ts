@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect";
+import { Data } from "effect";
 
 /**
  * Onboarding errors
