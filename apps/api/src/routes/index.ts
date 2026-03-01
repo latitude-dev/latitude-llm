@@ -5,7 +5,16 @@ import { createApiKeysRoutes } from "./api-keys.js";
 import { type AuthRouteDeps, createAuthRoutes } from "./auth.js";
 import { registerHealthRoute } from "./health.js";
 import { createProjectsRoutes } from "./projects.js";
-import { createWorkspacesRoutes } from "./workspaces.js";
+import { createOrganizationsRoutes } from "./workspaces.js";
+
+export interface RoutesContext {
+  app: Hono;
+  auth: {
+    handler: (req: Request) => Promise<Response>;
+    api?: AuthRouteDeps["betterAuthApi"];
+  };
+  redis: RedisClient;
+}
 
 export interface RoutesContext {
   app: Hono;
@@ -36,14 +45,14 @@ export const registerRoutes = (context: RoutesContext) => {
     }),
   );
 
-  // Workspace routes
-  context.app.route("/workspaces", createWorkspacesRoutes());
+  // Organization routes (using Better Auth organizations as workspaces)
+  context.app.route("/organizations", createOrganizationsRoutes());
 
-  // Project routes (nested under workspaces)
-  context.app.route("/workspaces/:workspaceId/projects", createProjectsRoutes());
+  // Project routes (nested under organizations)
+  context.app.route("/organizations/:organizationId/projects", createProjectsRoutes());
 
-  // API Key routes (nested under workspaces)
-  context.app.route("/workspaces/:workspaceId/api-keys", createApiKeysRoutes());
+  // API Key routes (nested under organizations)
+  context.app.route("/organizations/:organizationId/api-keys", createApiKeysRoutes());
 };
 
 // Re-export types for convenience

@@ -16,7 +16,17 @@ const url = Effect.runSync(parseEnv(process.env.DATABASE_URL, "string"));
 
 export default defineConfig({
   dialect: "postgresql",
-  schema: ["./src/schema/workspaces.ts", "./src/schema/outbox-events.ts"],
+  schema: [
+    // Better Auth tables
+    "./src/schema/better-auth.ts",
+    // Domain tables
+    "./src/schema/workspaces.ts",
+    "./src/schema/projects.ts",
+    "./src/schema/api-keys.ts",
+    "./src/schema/subscriptions.ts",
+    "./src/schema/grants.ts",
+    "./src/schema/outbox-events.ts",
+  ],
   out: "./drizzle",
   dbCredentials: {
     url,

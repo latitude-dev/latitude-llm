@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { config as loadDotenv } from "dotenv";
 import { serve } from "@hono/node-server";
 import { parseEnv } from "@platform/env";
 import { createLogger } from "@repo/observability";
+import { config as loadDotenv } from "dotenv";
 import { Effect } from "effect";
 import { Hono } from "hono";
 import { registerRoutes } from "./routes/index.js";

@@ -1,7 +1,7 @@
 ---
 title: Implement JWT-based Email/Password Authentication for Public API (CLI)
 type: feat
-status: active
+status: completed
 date: 2026-03-01
 ---
 

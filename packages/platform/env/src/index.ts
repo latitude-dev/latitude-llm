@@ -83,7 +83,7 @@ export function parseEnvOptional(
   expectedType: EnvPrimitive,
 ): Effect.Effect<string | number | boolean | undefined, InvalidEnvValueError> {
   if (value === undefined || value.length === 0) {
-    return Effect.succeed(undefined);
+    return Effect.succeed(undefined as undefined);
   }
 
   if (expectedType === "string") {

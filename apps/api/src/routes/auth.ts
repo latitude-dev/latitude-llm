@@ -73,7 +73,6 @@ export const createAuthRoutes = (deps: AuthRouteDeps) => {
 
   // Create rate limiters with Redis (required)
   const signUpRateLimiter = createSignUpIpRateLimiter(deps.redis);
-  // Note: Using same rate limiter for sign-in (can be separated later if needed)
 
   // CLI-specific: POST /auth/sign-up/email - Email/password sign up
   // Returns JSON instead of redirect (for CLI tools)
