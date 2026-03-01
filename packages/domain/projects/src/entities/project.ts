@@ -10,6 +10,7 @@ export interface Project {
   readonly id: ProjectId;
   readonly organizationId: OrganizationId;
   readonly name: string;
+  readonly slug: string;
   readonly description: string | null;
   readonly createdById: UserId | null;
   readonly deletedAt: Date | null;
@@ -24,6 +25,7 @@ export const createProject = (params: {
   id: ProjectId;
   organizationId: OrganizationId;
   name: string;
+  slug: string;
   description?: string;
   createdById?: UserId;
   deletedAt?: Date;
@@ -35,6 +37,7 @@ export const createProject = (params: {
     id: params.id,
     organizationId: params.organizationId,
     name: params.name,
+    slug: params.slug,
     description: params.description ?? null,
     createdById: params.createdById ?? null,
     deletedAt: params.deletedAt ?? null,

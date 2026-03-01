@@ -12,6 +12,7 @@ const toDomainProject = (row: typeof schema.projects.$inferSelect): Project => (
   id: row.id as Project["id"],
   organizationId: row.organizationId as Project["organizationId"],
   name: row.name,
+  slug: row.slug,
   description: null, // Not in schema, default to null
   createdById: null, // Not in schema, default to null
   deletedAt: row.deletedAt,
@@ -26,6 +27,7 @@ const toInsertRow = (project: Project): typeof schema.projects.$inferInsert => (
   id: project.id as string,
   organizationId: project.organizationId as string,
   name: project.name,
+  slug: project.slug,
   deletedAt: project.deletedAt,
   // createdAt and updatedAt are set by defaultNow()
 });
@@ -93,6 +95,7 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
               target: schema.projects.id,
               set: {
                 name: row.name,
+                slug: row.slug,
                 deletedAt: row.deletedAt,
                 updatedAt: new Date(),
               },
@@ -149,6 +152,23 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
             ),
           }),
         catch: (error) => toRepositoryError(error, "existsByName"),
+      });
+
+      return result !== null;
+    }),
+
+  existsBySlug: (slug: string, organizationId: OrganizationId) =>
+    Effect.gen(function* () {
+      const result = yield* Effect.tryPromise({
+        try: () =>
+          db.query.projects.findFirst({
+            where: and(
+              eq(schema.projects.organizationId, organizationId as string),
+              eq(schema.projects.slug, slug),
+              isNull(schema.projects.deletedAt),
+            ),
+          }),
+        catch: (error) => toRepositoryError(error, "existsBySlug"),
       });
 
       return result !== null;

@@ -15,6 +15,13 @@
       "when": 1772403423941,
       "tag": "0001_special_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772406448036,
+      "tag": "0002_tiny_weapon_omega",
+      "breakpoints": true
     }
   ]
 }
