@@ -20,14 +20,6 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        shiny: "bg-accent border border-accent hover:bg-primary/15 overflow-hidden relative",
-        latte:
-          "bg-latte text-latte-input-foreground hover:bg-latte/90 border border-latte-border shadow-sm",
-        primaryMuted: "bg-primary-muted text-primary hover:bg-primary-muted-hover/80",
-        destructiveMuted:
-          "bg-destructive-muted text-destructive-muted-foreground border border-destructive-muted-foreground/10",
-        successMuted:
-          "bg-success-muted text-success-muted-foreground border border-success-muted-foreground/10",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -61,19 +53,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
         disabled={disabled || isLoading}
+        aria-busy={isLoading ? "true" : undefined}
         {...props}
       >
         {isLoading && (
           <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-        )}
-        {variant === "shiny" && (
-          <span
-            className={cn(
-              "absolute inset-0",
-              "bg-gradient-to-r from-transparent via-background to-transparent dark:from-transparent",
-              "opacity-50 transform -translate-x-full group-hover:animate-shine animate-shine",
-            )}
-          />
         )}
         {children}
       </Comp>

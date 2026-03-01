@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 import { cn } from "../../utils/cn.js";
 import { Label } from "../label/label.js";
@@ -11,9 +11,6 @@ export interface FormFieldProps {
   info?: string | undefined;
   inline?: boolean | undefined;
   errors?: string[] | undefined;
-  errorStyle?: "inline" | "tooltip";
-  autoGrow?: boolean;
-  fullWidth?: boolean;
   className?: string | undefined;
 }
 
@@ -27,24 +24,29 @@ function FormField({
   className,
 }: FormFieldProps) {
   const hasError = errors && errors.length > 0;
+  const id = useId();
+  const errorId = `${id}-error`;
+  const descriptionId = `${id}-description`;
 
   return (
     <div className={cn("flex gap-2", inline ? "flex-row items-center" : "flex-col", className)}>
       {label && (
         <div className={cn("flex flex-col gap-1", inline && "shrink-0")}>
           <div className="flex items-center gap-2">
-            <Label>{label}</Label>
+            <Label htmlFor={id}>{label}</Label>
             {info && <Text.H6 className="text-muted-foreground">{info}</Text.H6>}
           </div>
           {description && !inline && (
-            <Text.H6 className="text-muted-foreground">{description}</Text.H6>
+            <Text.H6 id={descriptionId} className="text-muted-foreground">
+              {description}
+            </Text.H6>
           )}
         </div>
       )}
       <div className="flex-1">
         {children}
         {hasError && (
-          <div className="mt-1 flex flex-col gap-1">
+          <div id={errorId} role="alert" className="mt-1 flex flex-col gap-1">
             {errors.map((error) => (
               <Text.H6 key={error} color="destructive">
                 {error}
