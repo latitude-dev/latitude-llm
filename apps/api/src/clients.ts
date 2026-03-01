@@ -1,17 +1,20 @@
 import type { ClickHouseClient } from "@clickhouse/client";
 import { createClickhouseClient } from "@platform/db-clickhouse";
-import { createPostgresPool } from "@platform/db-postgres";
+import { type PostgresDb, createPostgresClient } from "@platform/db-postgres";
 import type { Pool } from "pg";
 
-let postgresPoolInstance: Pool | undefined;
+let postgresClientInstance: { db: PostgresDb; pool: Pool } | undefined;
 let clickhouseInstance: ClickHouseClient | undefined;
 
-export const getPostgresPool = (): Pool => {
-  if (!postgresPoolInstance) {
-    postgresPoolInstance = createPostgresPool();
+export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
+  if (!postgresClientInstance) {
+    postgresClientInstance = createPostgresClient();
   }
-  return postgresPoolInstance;
+  return postgresClientInstance;
 };
+
+// Convenience export for just the db
+export const getDb = (): PostgresDb => getPostgresClient().db;
 
 export const getClickhouseClient = (): ClickHouseClient => {
   if (!clickhouseInstance) {

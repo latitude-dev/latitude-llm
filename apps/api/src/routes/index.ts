@@ -1,6 +1,5 @@
 import type { RedisClient } from "@platform/cache-redis";
 import type { Repositories } from "@platform/db-postgres";
-import type { PostgresDb } from "@platform/db-postgres";
 import type { Hono } from "hono";
 import { createApiKeysRoutes } from "./api-keys.js";
 import { type AuthRouteDeps, createAuthRoutes } from "./auth.js";
@@ -10,7 +9,6 @@ import { createWorkspacesRoutes } from "./workspaces.js";
 
 export interface RoutesContext {
   app: Hono;
-  db: PostgresDb;
   auth: {
     handler: (req: Request) => Promise<Response>;
     api?: AuthRouteDeps["betterAuthApi"];
@@ -39,13 +37,13 @@ export const registerRoutes = (context: RoutesContext) => {
   );
 
   // Workspace routes
-  context.app.route("/workspaces", createWorkspacesRoutes(context.db));
+  context.app.route("/workspaces", createWorkspacesRoutes());
 
   // Project routes (nested under workspaces)
-  context.app.route("/workspaces/:workspaceId/projects", createProjectsRoutes(context.db));
+  context.app.route("/workspaces/:workspaceId/projects", createProjectsRoutes());
 
   // API Key routes (nested under workspaces)
-  context.app.route("/workspaces/:workspaceId/api-keys", createApiKeysRoutes(context.db));
+  context.app.route("/workspaces/:workspaceId/api-keys", createApiKeysRoutes());
 };
 
 // Re-export types for convenience
