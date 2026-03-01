@@ -14,6 +14,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "effect": "catalog:"
+    "@domain/events": "workspace:*",
+    "@types/pg": "catalog:",
+    "effect": "catalog:",
+    "pg": "catalog:"
   }
 }

@@ -5,8 +5,6 @@ export {
   createPostgresClientEffect,
   createPostgresPool,
   createPostgresPoolEffect,
-  resolveDatabaseUrl,
-  resolveDatabaseUrlEffect,
 } from "./client.js";
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env";
 export { healthcheckPostgres } from "./health.js";

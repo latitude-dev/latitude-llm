@@ -95,9 +95,9 @@ importers:
 
   apps/api:
     dependencies:
-      '@domain/workspaces':
-        specifier: workspace:*
-        version: link:../../packages/domain/workspaces
+      '@clickhouse/client':
+        specifier: 'catalog:'
+        version: 1.17.0
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.6(hono@4.9.12)
@@ -110,6 +110,12 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.16.0
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -119,18 +125,30 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.9.12
+      pg:
+        specifier: 'catalog:'
+        version: 8.16.0
 
   apps/ingest:
     dependencies:
+      '@clickhouse/client':
+        specifier: 'catalog:'
+        version: 1.17.0
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.6(hono@4.9.12)
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-postgres
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -165,9 +183,27 @@ importers:
 
   apps/workers:
     dependencies:
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../../packages/platform/cache-redis
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-postgres
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/events-outbox':
+        specifier: workspace:*
+        version: link:../../packages/platform/events-outbox
+      '@platform/queue-bullmq':
+        specifier: workspace:*
+        version: link:../../packages/platform/queue-bullmq
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.16.0
       bullmq:
         specifier: 'catalog:'
         version: 5.66.0
@@ -180,12 +216,18 @@ importers:
       ioredis:
         specifier: 'catalog:'
         version: 5.8.2
+      pg:
+        specifier: 'catalog:'
+        version: 8.16.0
 
   apps/workflows:
     dependencies:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -193,38 +235,7 @@ importers:
         specifier: 'catalog:'
         version: 3.17.4
 
-  packages/contracts: {}
-
-  packages/domain/events:
-    dependencies:
-      '@domain/shared-kernel':
-        specifier: workspace:*
-        version: link:../shared-kernel
-
-  packages/domain/identity:
-    dependencies:
-      effect:
-        specifier: 'catalog:'
-        version: 3.17.4
-
-  packages/domain/projects: {}
-
-  packages/domain/shared-kernel:
-    dependencies:
-      effect:
-        specifier: 'catalog:'
-        version: 3.17.4
-
-  packages/domain/subscriptions: {}
-
-  packages/domain/workspaces:
-    dependencies:
-      '@domain/shared-kernel':
-        specifier: workspace:*
-        version: link:../shared-kernel
-      effect:
-        specifier: 'catalog:'
-        version: 3.17.4
+  packages/domain/events: {}
 
   packages/observability:
     dependencies:
@@ -234,6 +245,9 @@ importers:
 
   packages/platform/cache-redis:
     dependencies:
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../env
       effect:
         specifier: 'catalog:'
         version: 3.17.4
@@ -260,7 +274,7 @@ importers:
         version: link:../env
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.16.0)
+        version: 0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.16.0)(postgres@3.4.5)
       effect:
         specifier: 'catalog:'
         version: 3.17.4
@@ -286,12 +300,24 @@ importers:
 
   packages/platform/events-outbox:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../../domain/events
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.16.0
       effect:
         specifier: 'catalog:'
         version: 3.17.4
+      pg:
+        specifier: 'catalog:'
+        version: 8.16.0
 
   packages/platform/queue-bullmq:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../../domain/events
       bullmq:
         specifier: 'catalog:'
         version: 5.66.0
@@ -304,8 +330,6 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 3.17.4
-
-  packages/testkit: {}
 
   packages/tsconfig: {}
 
@@ -1691,6 +1715,10 @@ packages:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
 
+  postgres@3.4.5:
+    resolution: {integrity: sha512-cDWgoah1Gez9rN3H4165peY9qfpEo+SA61oQv65O3cRUE1pOEoJWwddwcqKE8XZYjbblOJlYDlLV4h67HrEVDg==}
+    engines: {node: '>=12'}
+
   psl@1.15.0:
     resolution: {integrity: sha512-JZd3gMVBAVQkSs6HdNZo9Sdo0LNcQeMNP3CozBJb3JYC/QUYZTnKxP+f8oWRX4rHP5EurWxqAHTSwUCjlNKa1w==}
 
@@ -2946,11 +2974,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.16.0):
+  drizzle-orm@0.44.2(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(pg@8.16.0)(postgres@3.4.5):
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.16.0
       pg: 8.16.0
+      postgres: 3.4.5
 
   dunder-proto@1.0.1:
     dependencies:
@@ -3396,6 +3425,9 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
+
+  postgres@3.4.5:
+    optional: true
 
   psl@1.15.0:
     dependencies:

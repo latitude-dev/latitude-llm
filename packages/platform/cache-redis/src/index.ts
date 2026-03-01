@@ -10,3 +10,9 @@ export class RedisCacheAdapterTag extends Context.Tag("RedisCacheAdapterTag")<
 export const redisCacheAdapter = {
   type: "redis" as const,
 };
+
+export type { RedisConnection } from "./connection.js";
+export {
+  createRedisConnection,
+  createRedisConnectionEffect,
+} from "./connection.js";

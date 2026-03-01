@@ -14,6 +14,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/events": "workspace:*",
     "effect": "catalog:",
     "bullmq": "catalog:"
   }
