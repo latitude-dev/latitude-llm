@@ -22,7 +22,6 @@
    - `platform/queue-bullmq`
    - `platform/storage-object`
    - `platform/events-outbox`
-   - `contracts`
    - `observability`
    - `testkit`
    - `tsconfig`
