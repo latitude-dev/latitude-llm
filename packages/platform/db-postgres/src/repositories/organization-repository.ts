@@ -14,7 +14,6 @@ const toDomainOrganization = (row: typeof schema.organization.$inferSelect): Org
   slug: row.slug,
   logo: row.logo,
   metadata: row.metadata,
-  uuid: row.uuid,
   creatorId: row.creatorId ? (row.creatorId as Organization["creatorId"]) : null,
   currentSubscriptionId: row.currentSubscriptionId
     ? (row.currentSubscriptionId as Organization["currentSubscriptionId"])
@@ -33,7 +32,6 @@ const toInsertRow = (org: Organization): typeof schema.organization.$inferInsert
   slug: org.slug,
   logo: org.logo,
   metadata: org.metadata,
-  uuid: org.uuid ?? crypto.randomUUID(),
   creatorId: org.creatorId,
   currentSubscriptionId: org.currentSubscriptionId,
   stripeCustomerId: org.stripeCustomerId,
