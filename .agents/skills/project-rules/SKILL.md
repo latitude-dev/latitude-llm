@@ -94,6 +94,36 @@ You are writing code, designing a new feature, reviewing changes, and planning w
 - Redis: cache and BullMQ backend.
 - Object storage: durable raw ingest payload buffering.
 
+## Database migrations (Drizzle Kit)
+
+**Always use drizzle-kit for migrations.** Never create manual SQL files in the drizzle folder.
+
+**Schema changes:**
+```bash
+# Generate migration from schema changes
+npx drizzle-kit generate
+
+# Apply migrations
+npx drizzle-kit migrate
+```
+
+**Custom SQL (e.g., RLS policies, seed data):**
+```bash
+# Create custom migration for DDL not supported by Drizzle
+npx drizzle-kit generate --custom --name=enable-rls
+
+# This creates an empty SQL file in drizzle/ folder
+# Edit the file with your custom SQL, then run:
+npx drizzle-kit migrate
+```
+
+**Key points:**
+- Use `drizzle-kit generate` for schema changes (creates timestamped migration)
+- Use `drizzle-kit generate --custom` for custom SQL (RLS, triggers, seed data)
+- Never manually create SQL files in the drizzle folder
+- Use `IF NOT EXISTS` in custom SQL for idempotency
+- Migrations are tracked in `drizzle.__drizzle_migrations` table
+
 ## Domain design (DDD)
 
 - Organize by bounded context (e.g. telemetry, workspaces, identity, alerts).
@@ -145,6 +175,41 @@ You are writing code, designing a new feature, reviewing changes, and planning w
 - Prefer typed errors (`Data.TaggedError`) over raw `Error` or `unknown`.
 - Use `Effect.either` for operations that may fail but shouldn't stop execution.
 - Handle errors at boundaries; propagate through Effect error channel internally.
+
+### HTTP Error Handling Pattern
+
+Domain errors that need specific HTTP responses implement the `HttpError` interface:
+
+```typescript
+interface HttpError {
+  readonly _tag: string;
+  readonly httpStatus: number;
+  readonly httpMessage: string;
+}
+```
+
+**Implementation rules:**
+1. Domain errors carry their own HTTP metadata (`httpStatus`, `httpMessage`)
+2. Repositories return typed errors (e.g., `NotFoundError`) instead of null
+3. Routes fail loudly - no try/catch, let errors propagate
+4. Centralized error handling via `app.onError(honoErrorHandler)` in server.ts
+5. Error middleware converts HttpError instances to appropriate HTTP responses
+
+**Example domain error:**
+```typescript
+export class InvalidWorkspaceNameError extends Data.TaggedError("InvalidWorkspaceNameError")<{
+  readonly name: string;
+  readonly reason: string;
+}> {
+  readonly httpStatus = 400;
+  get httpMessage() { return this.reason; }
+}
+```
+
+**Example repository method:**
+```typescript
+findById(id: WorkspaceId): Effect.Effect<Workspace, NotFoundError | RepositoryError>
+```
 
 ## Testing strategy
 

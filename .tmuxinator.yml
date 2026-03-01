@@ -12,6 +12,9 @@ windows:
   - infra:
       panes:
         - docker compose up
+  - db:
+      panes:
+        - pnpm --filter @platform/db-postgres pg:studio
   - apps:
       layout: tiled
       panes:
