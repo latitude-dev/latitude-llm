@@ -1,12 +1,17 @@
-import type { RedisClient } from "@platform/cache-redis";
+import { createBetterAuth } from "@platform/auth-better";
+import { createRedisClient, createRedisConnection } from "@platform/cache-redis";
+import { parseEnv } from "@platform/env";
 import type { User } from "better-auth";
+import { Effect } from "effect";
 import { Hono } from "hono";
+import { getPostgresClient } from "../clients.js";
+import { BadRequestError } from "../errors.js";
 import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.js";
 
 /**
  * Auth routes for Better Auth
  *
- * Mounts Better Auth handlers and provides CLI-specific endpoints.
+ * Mounts Better Auth handlers and provides JWT-specific endpoints.
  *
  * Better Auth provides the following endpoints:
  * - POST /auth/sign-in/social - Initiate OAuth sign in
@@ -17,7 +22,7 @@ import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.js";
  * - POST /auth/organization/invite-member - Invite member to organization
  * - GET /auth/organization/list - List user's organizations
  *
- * CLI-specific endpoints added:
+ * JWT-specific endpoints added:
  * - POST /auth/sign-up/email - Email/password sign up (returns JSON)
  * - POST /auth/sign-in/email - Email/password sign in (returns JSON)
  */
@@ -35,163 +40,84 @@ interface BetterAuthAPI {
   }) => Promise<{ token: string; user: User } | { token: null; user: User }>;
 }
 
-export interface AuthRouteDeps {
-  /**
-   * Better Auth handlers for mounting
-   */
-  readonly betterAuthHandler: (req: Request) => Promise<Response>;
-
-  /**
-   * Better Auth API for programmatic access
-   */
-  readonly betterAuthApi: BetterAuthAPI | undefined;
-
-  /**
-   * Redis client for rate limiting (required)
-   */
-  readonly redis: RedisClient;
-
-  /**
-   * Callback after successful OAuth sign in
-   */
-  readonly onOAuthCallback?: (user: User, provider: string) => Promise<void>;
-
-  /**
-   * Base URL for redirects
-   */
-  readonly baseUrl?: string;
-}
-
 /**
  * Create auth routes for Better Auth
  *
- * This mounts the Better Auth handlers at /auth/* and adds CLI-specific endpoints.
+ * This mounts the Better Auth handlers at /auth/* and adds JWT-specific endpoints.
  */
-export const createAuthRoutes = (deps: AuthRouteDeps) => {
+export const createAuthRoutes = () => {
   const app = new Hono();
-  const baseUrl = deps.baseUrl ?? "http://localhost:3000";
+  const baseUrl = "http://localhost:3000";
 
-  // Create rate limiters with Redis (required)
-  const signUpRateLimiter = createSignUpIpRateLimiter(deps.redis);
+  // Initialize dependencies where they are used
+  const { db } = getPostgresClient();
+  const redisConn = createRedisConnection();
+  const redis = createRedisClient(redisConn);
 
-  // CLI-specific: POST /auth/sign-up/email - Email/password sign up
-  // Returns JSON instead of redirect (for CLI tools)
-  app.post("/sign-up/email", signUpRateLimiter, async (c) => {
-    if (!deps.betterAuthApi) {
-      return c.json({ error: "Email/password authentication not configured" }, 503);
-    }
+  const betterAuthSecret = Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"));
 
-    try {
-      const body = (await c.req.json()) as {
-        readonly email: string;
-        readonly password: string;
-        readonly name: string;
-      };
-
-      // Validate required fields
-      if (!body.email || typeof body.email !== "string") {
-        return c.json({ error: "Email is required", field: "email" }, 400);
-      }
-      if (!body.password || typeof body.password !== "string") {
-        return c.json({ error: "Password is required", field: "password" }, 400);
-      }
-      if (!body.name || typeof body.name !== "string") {
-        return c.json({ error: "Name is required", field: "name" }, 400);
-      }
-
-      // Validate password length
-      if (body.password.length < 8) {
-        return c.json({ error: "Password must be at least 8 characters", field: "password" }, 400);
-      }
-      if (body.password.length > 128) {
-        return c.json({ error: "Password must not exceed 128 characters", field: "password" }, 400);
-      }
-
-      // Call Better Auth API
-      const result = await deps.betterAuthApi.signUpEmail({
-        body: {
-          email: body.email,
-          password: body.password,
-          name: body.name,
-        },
-        headers: c.req.raw.headers,
-      });
-
-      if (!result.token) {
-        return c.json({ error: "Failed to create account" }, 500);
-      }
-
-      // Return token and user info for CLI storage
-      return c.json(
-        {
-          token: result.token,
-          user: {
-            id: result.user.id,
-            email: result.user.email,
-            name: result.user.name,
-            emailVerified: result.user.emailVerified,
-          },
-        },
-        201,
-      );
-    } catch (error) {
-      // Handle specific Better Auth errors
-      if (error instanceof Error) {
-        const message = error.message.toLowerCase();
-        if (message.includes("email already exists") || message.includes("user already exists")) {
-          return c.json({ error: "Email already registered" }, 409);
-        }
-        if (message.includes("invalid email")) {
-          return c.json({ error: "Invalid email address", field: "email" }, 400);
-        }
-        if (message.includes("password")) {
-          return c.json({ error: error.message, field: "password" }, 400);
-        }
-      }
-
-      // Log unexpected errors for debugging
-      console.error("Sign up error:", error);
-      return c.json({ error: "Internal server error" }, 500);
-    }
+  const auth = createBetterAuth({
+    db,
+    secret: betterAuthSecret,
   });
 
-  // CLI-specific: POST /auth/sign-in/email - Email/password sign in
-  // Returns JSON instead of redirect/cookies (for CLI tools)
-  // Note: IP-based rate limiting applied at middleware level
-  app.post("/sign-in/email", signUpRateLimiter, async (c) => {
-    if (!deps.betterAuthApi) {
-      return c.json({ error: "Email/password authentication not configured" }, 503);
+  const betterAuthHandler = auth.handler;
+  const betterAuthApi = auth.api as unknown as BetterAuthAPI;
+
+  // Create rate limiters with Redis
+  const signUpRateLimiter = createSignUpIpRateLimiter(redis);
+
+  // JWT-specific: POST /auth/sign-up/email - Email/password sign up
+  // Returns JSON instead of redirect (for JWT tools)
+  app.post("/sign-up/email", signUpRateLimiter, async (c) => {
+    const body = (await c.req.json()) as {
+      readonly email: string;
+      readonly password: string;
+      readonly name: string;
+    };
+
+    // Validate required fields
+    if (!body.email || typeof body.email !== "string") {
+      throw new BadRequestError({ httpMessage: "Email is required", field: "email" });
+    }
+    if (!body.password || typeof body.password !== "string") {
+      throw new BadRequestError({ httpMessage: "Password is required", field: "password" });
+    }
+    if (!body.name || typeof body.name !== "string") {
+      throw new BadRequestError({ httpMessage: "Name is required", field: "name" });
     }
 
-    try {
-      const body = (await c.req.json()) as {
-        readonly email: string;
-        readonly password: string;
-      };
-
-      // Validate required fields
-      if (!body.email || typeof body.email !== "string") {
-        return c.json({ error: "Email is required", field: "email" }, 400);
-      }
-      if (!body.password || typeof body.password !== "string") {
-        return c.json({ error: "Password is required", field: "password" }, 400);
-      }
-
-      // Call Better Auth API
-      const result = await deps.betterAuthApi.signInEmail({
-        body: {
-          email: body.email,
-          password: body.password,
-        },
-        headers: c.req.raw.headers,
+    // Validate password length
+    if (body.password.length < 8) {
+      throw new BadRequestError({
+        httpMessage: "Password must be at least 8 characters",
+        field: "password",
       });
+    }
+    if (body.password.length > 128) {
+      throw new BadRequestError({
+        httpMessage: "Password must not exceed 128 characters",
+        field: "password",
+      });
+    }
 
-      if (!result.token) {
-        return c.json({ error: "Invalid credentials" }, 401);
-      }
+    // Call Better Auth API - let errors propagate to middleware
+    const result = await betterAuthApi.signUpEmail({
+      body: {
+        email: body.email,
+        password: body.password,
+        name: body.name,
+      },
+      headers: c.req.raw.headers,
+    });
 
-      // Return token and user info for CLI storage
-      return c.json({
+    if (!result.token) {
+      throw new Error("Failed to create account");
+    }
+
+    // Return token and user info for JWT storage
+    return c.json(
+      {
         token: result.token,
         user: {
           id: result.user.id,
@@ -199,30 +125,51 @@ export const createAuthRoutes = (deps: AuthRouteDeps) => {
           name: result.user.name,
           emailVerified: result.user.emailVerified,
         },
-      });
-    } catch (error) {
-      // Handle authentication failures
-      if (error instanceof Error) {
-        const message = error.message.toLowerCase();
-        if (
-          message.includes("invalid") ||
-          message.includes("credentials") ||
-          message.includes("password")
-        ) {
-          return c.json({ error: "Invalid email or password" }, 401);
-        }
-        if (message.includes("email not verified")) {
-          return c.json({ error: "Email not verified" }, 403);
-        }
-        if (message.includes("account banned") || message.includes("user banned")) {
-          return c.json({ error: "Account has been suspended" }, 403);
-        }
-      }
+      },
+      201,
+    );
+  });
 
-      // Log unexpected errors for debugging
-      console.error("Sign in error:", error);
-      return c.json({ error: "Internal server error" }, 500);
+  // JWT-specific: POST /auth/sign-in/email - Email/password sign in
+  // Returns JSON instead of redirect/cookies (for JWT tools)
+  // Note: IP-based rate limiting applied at middleware level
+  app.post("/sign-in/email", signUpRateLimiter, async (c) => {
+    const body = (await c.req.json()) as {
+      readonly email: string;
+      readonly password: string;
+    };
+
+    // Validate required fields
+    if (!body.email || typeof body.email !== "string") {
+      throw new BadRequestError({ httpMessage: "Email is required", field: "email" });
     }
+    if (!body.password || typeof body.password !== "string") {
+      throw new BadRequestError({ httpMessage: "Password is required", field: "password" });
+    }
+
+    // Call Better Auth API - let errors propagate to middleware
+    const result = await betterAuthApi.signInEmail({
+      body: {
+        email: body.email,
+        password: body.password,
+      },
+      headers: c.req.raw.headers,
+    });
+
+    if (!result.token) {
+      throw new BadRequestError({ httpMessage: "Invalid credentials" });
+    }
+
+    // Return token and user info for JWT storage
+    return c.json({
+      token: result.token,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        name: result.user.name,
+        emailVerified: result.user.emailVerified,
+      },
+    });
   });
 
   // OAuth callback handler - redirects to frontend after auth
@@ -245,7 +192,7 @@ export const createAuthRoutes = (deps: AuthRouteDeps) => {
   // - /auth/organization/*
   // Note: This must come last to not override our custom endpoints above
   app.all("/*", async (c) => {
-    const response = await deps.betterAuthHandler(c.req.raw);
+    const response = await betterAuthHandler(c.req.raw);
     return response;
   });
 

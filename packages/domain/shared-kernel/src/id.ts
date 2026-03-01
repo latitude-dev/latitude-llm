@@ -15,8 +15,6 @@ export type SessionId = Branded<string, "SessionId">;
 
 // Organization/Workspace-related IDs (workspace is now organization)
 export type OrganizationId = Branded<string, "OrganizationId">;
-/** @deprecated Use OrganizationId instead - workspaces have been merged into organizations */
-export type WorkspaceId = OrganizationId;
 export type MembershipId = Branded<string, "MembershipId">;
 
 // Project-related IDs
@@ -34,8 +32,6 @@ export type GrantId = Branded<string, "GrantId">;
 export const UserId = (value: string): UserId => value as UserId;
 export const SessionId = (value: string): SessionId => value as SessionId;
 export const OrganizationId = (value: string): OrganizationId => value as OrganizationId;
-/** @deprecated Use OrganizationId instead */
-export const WorkspaceId = OrganizationId;
 export const MembershipId = (value: string): MembershipId => value as MembershipId;
 export const ProjectId = (value: string): ProjectId => value as ProjectId;
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId;

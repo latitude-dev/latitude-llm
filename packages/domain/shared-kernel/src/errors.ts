@@ -11,13 +11,21 @@ import { Data } from "effect";
 export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   readonly cause: unknown;
   readonly operation: string;
-}> {}
+}> {
+  readonly httpStatus = 500;
+  readonly httpMessage = "Internal server error";
+}
 
 // Validation error
 export class ValidationError extends Data.TaggedError("ValidationError")<{
   readonly field: string;
   readonly message: string;
-}> {}
+}> {
+  readonly httpStatus = 400;
+  get httpMessage() {
+    return this.message;
+  }
+}
 // Not found error
 export class NotFoundError extends Data.TaggedError("NotFoundError")<{
   readonly entity: string;
@@ -34,18 +42,33 @@ export class ConflictError extends Data.TaggedError("ConflictError")<{
   readonly entity: string;
   readonly field: string;
   readonly value: string;
-}> {}
+}> {
+  readonly httpStatus = 409;
+  get httpMessage() {
+    return `${this.entity} with ${this.field} '${this.value}' already exists`;
+  }
+}
 
 // Unauthorized error
 export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   readonly message: string;
-}> {}
+}> {
+  readonly httpStatus = 401;
+  get httpMessage() {
+    return this.message;
+  }
+}
 
 // RLS/Permission error
 export class PermissionError extends Data.TaggedError("PermissionError")<{
   readonly message: string;
   readonly workspaceId: string;
-}> {}
+}> {
+  readonly httpStatus = 403;
+  get httpMessage() {
+    return this.message;
+  }
+}
 
 // Common domain error union type
 export type DomainError =

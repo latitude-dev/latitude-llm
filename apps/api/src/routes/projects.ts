@@ -1,23 +1,16 @@
 import {
   type CreateProjectInput,
-  InvalidProjectNameError,
   type Project,
-  ProjectAlreadyExistsError,
   createProjectUseCase,
   listProjectsUseCase,
 } from "@domain/projects";
-import {
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  UserId,
-  generateId,
-} from "@domain/shared-kernel";
+import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared-kernel";
 import { createRepositories } from "@platform/db-postgres";
+import { Effect } from "effect";
 import { Hono } from "hono";
 import { getPostgresClient } from "../clients.ts";
-import { extractParam, runUseCase } from "../lib/effect-utils.js";
-import { mapErrorToResponse } from "../lib/error-mapper.js";
+import { BadRequestError } from "../errors.js";
+import { extractParam } from "../lib/effect-utils.js";
 
 /**
  * Project routes
@@ -39,7 +32,9 @@ export const createProjectsRoutes = () => {
   // POST /organizations/:organizationId/projects - Create project
   app.post("/", async (c) => {
     const organizationId = extractParam(c, "organizationId", OrganizationId);
-    if (!organizationId) return c.json({ error: "Organization ID is required" }, 400);
+    if (!organizationId) {
+      throw new BadRequestError({ httpMessage: "Organization ID is required" });
+    }
 
     const body = (await c.req.json()) as {
       readonly name: string;
@@ -54,34 +49,21 @@ export const createProjectsRoutes = () => {
       createdById: UserId(getCurrentUserId()),
     };
 
-    const result = await runUseCase(createProjectUseCase(repos.project)(input));
-
-    if (!result.success) {
-      const error = result.error;
-      if (error instanceof InvalidProjectNameError) {
-        return c.json({ error: error.reason, field: "name" }, 400);
-      }
-      if (error instanceof ProjectAlreadyExistsError) {
-        return c.json(
-          { error: `Project '${error.name}' already exists in this organization` },
-          409,
-        );
-      }
-      return mapErrorToResponse(c, error);
-    }
-
-    return c.json(result.data, 201);
+    const project = await Effect.runPromise(createProjectUseCase(repos.project)(input));
+    return c.json(project, 201);
   });
 
   // GET /organizations/:organizationId/projects - List projects
   app.get("/", async (c) => {
     const organizationId = extractParam(c, "organizationId", OrganizationId);
-    if (!organizationId) return c.json({ error: "Organization ID is required" }, 400);
+    if (!organizationId) {
+      throw new BadRequestError({ httpMessage: "Organization ID is required" });
+    }
 
-    const result = await runUseCase(listProjectsUseCase(repos.project)({ organizationId }));
-
-    if (!result.success) return mapErrorToResponse(c, result.error);
-    return c.json({ projects: result.data }, 200);
+    const projects = await Effect.runPromise(
+      listProjectsUseCase(repos.project)({ organizationId }),
+    );
+    return c.json({ projects }, 200);
   });
 
   // GET /organizations/:organizationId/projects/:id - Get project
@@ -89,14 +71,16 @@ export const createProjectsRoutes = () => {
     const organizationId = extractParam(c, "organizationId", OrganizationId);
     const id = extractParam(c, "id", ProjectId);
     if (!organizationId || !id) {
-      return c.json({ error: "Organization ID and Project ID are required" }, 400);
+      throw new BadRequestError({ httpMessage: "Organization ID and Project ID are required" });
     }
 
-    const result = await runUseCase(repos.project.findById(id, organizationId));
+    const project = await Effect.runPromise(repos.project.findById(id, organizationId));
 
-    if (!result.success) return mapErrorToResponse(c, result.error);
-    if (!result.data) return c.json({ error: "Project not found" }, 404);
-    return c.json(result.data, 200);
+    if (!project) {
+      throw new BadRequestError({ httpMessage: "Project not found" });
+    }
+
+    return c.json(project, 200);
   });
 
   // PATCH /organizations/:organizationId/projects/:id - Update project
@@ -104,7 +88,7 @@ export const createProjectsRoutes = () => {
     const organizationId = extractParam(c, "organizationId", OrganizationId);
     const id = extractParam(c, "id", ProjectId);
     if (!organizationId || !id) {
-      return c.json({ error: "Organization ID and Project ID are required" }, 400);
+      throw new BadRequestError({ httpMessage: "Organization ID and Project ID are required" });
     }
 
     const body = (await c.req.json()) as {
@@ -113,22 +97,21 @@ export const createProjectsRoutes = () => {
     };
 
     // First, find the existing project
-    const findResult = await runUseCase(repos.project.findById(id, organizationId));
+    const existingProject = await Effect.runPromise(repos.project.findById(id, organizationId));
 
-    if (!findResult.success) return mapErrorToResponse(c, findResult.error);
-    if (!findResult.data) return c.json({ error: "Project not found" }, 404);
+    if (!existingProject) {
+      throw new BadRequestError({ httpMessage: "Project not found" });
+    }
 
     // Apply updates
     const updatedProject: Project = {
-      ...findResult.data,
-      name: body.name !== undefined ? body.name : findResult.data.name,
-      description: body.description !== undefined ? body.description : findResult.data.description,
+      ...existingProject,
+      name: body.name !== undefined ? body.name : existingProject.name,
+      description: body.description !== undefined ? body.description : existingProject.description,
       updatedAt: new Date(),
     };
 
-    const saveResult = await runUseCase(repos.project.save(updatedProject));
-
-    if (!saveResult.success) return mapErrorToResponse(c, saveResult.error);
+    await Effect.runPromise(repos.project.save(updatedProject));
     return c.json(updatedProject, 200);
   });
 
@@ -137,19 +120,10 @@ export const createProjectsRoutes = () => {
     const organizationId = extractParam(c, "organizationId", OrganizationId);
     const id = extractParam(c, "id", ProjectId);
     if (!organizationId || !id) {
-      return c.json({ error: "Organization ID and Project ID are required" }, 400);
+      throw new BadRequestError({ httpMessage: "Organization ID and Project ID are required" });
     }
 
-    const result = await runUseCase(repos.project.softDelete(id, organizationId));
-
-    if (!result.success) {
-      const error = result.error;
-      if (error instanceof NotFoundError) {
-        return c.json({ error: "Project not found" }, 404);
-      }
-      return mapErrorToResponse(c, error);
-    }
-
+    await Effect.runPromise(repos.project.softDelete(id, organizationId));
     return c.body(null, 204);
   });
 
