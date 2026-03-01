@@ -1,13 +1,13 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events";
 import type { Queue } from "bullmq";
-import { Context, Data, Effect } from "effect";
+import { Data, Effect, ServiceMap } from "effect";
 
-export class BullmqQueueAdapterTag extends Context.Tag("BullmqQueueAdapterTag")<
+export class BullmqQueueAdapterTag extends ServiceMap.Service<
   BullmqQueueAdapterTag,
   {
     readonly type: "bullmq";
   }
->() {}
+>()("BullmqQueueAdapterTag") {}
 
 export const bullmqQueueAdapter = {
   type: "bullmq" as const,

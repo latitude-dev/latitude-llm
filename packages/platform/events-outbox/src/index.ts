@@ -1,13 +1,13 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events";
-import { Context, Effect, Fiber, Runtime, Schedule } from "effect";
+import { Effect, Fiber, Result, Schedule, ServiceMap } from "effect";
 import type { Pool, PoolClient } from "pg";
 
-export class EventsOutboxAdapterTag extends Context.Tag("EventsOutboxAdapterTag")<
+export class EventsOutboxAdapterTag extends ServiceMap.Service<
   EventsOutboxAdapterTag,
   {
     readonly type: "outbox";
   }
->() {}
+>()("EventsOutboxAdapterTag") {}
 
 export const eventsOutboxAdapter = {
   type: "outbox" as const,
@@ -59,7 +59,7 @@ const processBatchEffect = (
   client: PoolClient,
   publisher: EventsPublisher,
   batchSize: number,
-): Effect.Effect<number, unknown> =>
+): Effect.Effect<number, unknown, never> =>
   Effect.gen(function* () {
     const result = yield* Effect.tryPromise(() =>
       client.query<OutboxEventRow>(SELECT_UNPUBLISHED_EVENTS, [batchSize]),
@@ -82,14 +82,14 @@ const processBatchEffect = (
         occurredAt: row.occurred_at,
       };
 
-      const publishResult = yield* Effect.either(
+      const publishResult = yield* Effect.result(
         Effect.tryPromise(() => publisher.publish(envelope)),
       );
 
-      if (publishResult._tag === "Right") {
+      if (Result.isSuccess(publishResult)) {
         processedIds.push(row.id);
       } else {
-        yield* Effect.logError(`Failed to publish event ${row.id}: ${publishResult.left}`);
+        yield* Effect.logError(`Failed to publish event ${row.id}: ${publishResult.failure}`);
       }
     }
 
@@ -103,7 +103,7 @@ const processBatchEffect = (
 const pollEffect = (
   config: PollingOutboxConsumerConfig,
   publisher: EventsPublisher,
-): Effect.Effect<void, unknown> =>
+): Effect.Effect<number, unknown, never> =>
   Effect.gen(function* () {
     const client = yield* Effect.tryPromise(() => config.pool.connect());
 
@@ -125,10 +125,9 @@ const pollEffect = (
 export const createPollingOutboxConsumerEffect = (
   config: PollingOutboxConsumerConfig,
   publisher: EventsPublisher,
-): Effect.Effect<{ start: () => void; stop: () => Promise<void> }> =>
+): Effect.Effect<{ start: () => void; stop: () => Promise<void> }, never, never> =>
   Effect.gen(function* () {
-    const runtime = yield* Effect.runtime<never>();
-    let fiber: Fiber.RuntimeFiber<void, unknown> | null = null;
+    let fiber: Fiber.Fiber<void, unknown> | null = null;
 
     const schedule = Schedule.spaced(config.pollIntervalMs);
 
@@ -140,16 +139,16 @@ export const createPollingOutboxConsumerEffect = (
           Effect.asVoid,
         );
 
-        fiber = Runtime.runSync(runtime, Effect.forkDaemon(pollingEffect));
+        fiber = Effect.runSync(Effect.forkDetach(pollingEffect, { startImmediately: true }));
 
-        Runtime.runSync(runtime, Effect.logInfo("Polling outbox consumer started"));
+        Effect.runSync(Effect.logInfo("Polling outbox consumer started"));
       },
       stop: async (): Promise<void> => {
         if (fiber === null) return;
 
-        await Runtime.runPromise(runtime, Fiber.interrupt(fiber));
+        await Effect.runPromise(Fiber.interrupt(fiber));
         fiber = null;
-        await Runtime.runPromise(runtime, Effect.logInfo("Polling outbox consumer stopped"));
+        await Effect.runPromise(Effect.logInfo("Polling outbox consumer stopped"));
       },
     };
   });

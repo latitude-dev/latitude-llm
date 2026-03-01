@@ -1,10 +1,10 @@
-import { OrganizationId, UserId, WorkspaceId, generateId } from "@domain/shared-kernel";
+import { OrganizationId, UserId, generateId } from "@domain/shared-kernel";
 import {
-  type CreateWorkspaceInput,
-  InvalidWorkspaceNameError,
-  WorkspaceAlreadyExistsError,
-  createWorkspaceUseCase,
-  getWorkspaceMembersUseCase,
+  type CreateOrganizationInput,
+  InvalidOrganizationNameError,
+  OrganizationAlreadyExistsError,
+  createOrganizationUseCase,
+  getOrganizationMembersUseCase,
 } from "@domain/workspaces";
 import { createRepositories } from "@platform/db-postgres";
 import { Hono } from "hono";
@@ -13,47 +13,45 @@ import { extractParam, runUseCase } from "../lib/effect-utils.js";
 import { mapErrorToResponse } from "../lib/error-mapper.js";
 
 /**
- * Workspace routes
+ * Organization routes
  *
- * - POST /workspaces - Create workspace
- * - GET /workspaces - List user's workspaces
- * - GET /workspaces/:id - Get workspace by ID
- * - GET /workspaces/:id/members - List workspace members
- * - DELETE /workspaces/:id - Delete workspace
+ * - POST /organizations - Create organization
+ * - GET /organizations - List user's organizations
+ * - GET /organizations/:id - Get organization by ID
+ * - GET /organizations/:id/members - List organization members
+ * - DELETE /organizations/:id - Delete organization
  */
 
 // Placeholder for getting current user ID - in production, get from auth context
 const getCurrentUserId = () => "user-id-placeholder";
 
-export const createWorkspacesRoutes = () => {
+export const createOrganizationsRoutes = () => {
   const repos = createRepositories(getDb());
   const app = new Hono();
 
-  // POST /workspaces - Create workspace
+  // POST /organizations - Create organization
   app.post("/", async (c) => {
     const body = (await c.req.json()) as {
       readonly name: string;
       readonly slug: string;
-      readonly organizationId: string;
     };
 
-    const input: CreateWorkspaceInput = {
-      id: WorkspaceId(generateId()),
-      organizationId: OrganizationId(body.organizationId),
+    const input: CreateOrganizationInput = {
+      id: OrganizationId(generateId()),
       name: body.name,
       slug: body.slug,
       creatorId: UserId(getCurrentUserId()),
     };
 
-    const result = await runUseCase(createWorkspaceUseCase(repos.workspace)(input));
+    const result = await runUseCase(createOrganizationUseCase(repos.organization)(input));
 
     if (!result.success) {
       const error = result.error;
-      if (error instanceof InvalidWorkspaceNameError) {
+      if (error instanceof InvalidOrganizationNameError) {
         return c.json({ error: error.reason, field: "name" }, 400);
       }
-      if (error instanceof WorkspaceAlreadyExistsError) {
-        return c.json({ error: `Workspace '${error.slug}' already exists` }, 409);
+      if (error instanceof OrganizationAlreadyExistsError) {
+        return c.json({ error: `Organization '${error.slug}' already exists` }, 409);
       }
       return mapErrorToResponse(c, error);
     }
@@ -61,43 +59,45 @@ export const createWorkspacesRoutes = () => {
     return c.json(result.data, 201);
   });
 
-  // GET /workspaces - List user's workspaces
+  // GET /organizations - List user's organizations
   app.get("/", async (c) => {
-    const result = await runUseCase(repos.workspace.findByUserId(getCurrentUserId()));
+    const result = await runUseCase(repos.organization.findAll());
 
     if (!result.success) return mapErrorToResponse(c, result.error);
-    return c.json({ workspaces: result.data }, 200);
+    return c.json({ organizations: result.data }, 200);
   });
 
-  // GET /workspaces/:id - Get workspace by ID
+  // GET /organizations/:id - Get organization by ID
   app.get("/:id", async (c) => {
-    const id = extractParam(c, "id", WorkspaceId);
-    if (!id) return c.json({ error: "Workspace ID required" }, 400);
+    const id = extractParam(c, "id", OrganizationId);
+    if (!id) return c.json({ error: "Organization ID required" }, 400);
 
-    const result = await runUseCase(repos.workspace.findById(id));
+    const result = await runUseCase(repos.organization.findById(id));
 
     if (!result.success) return mapErrorToResponse(c, result.error);
-    if (!result.data) return c.json({ error: "Workspace not found" }, 404);
+    if (!result.data) return c.json({ error: "Organization not found" }, 404);
     return c.json(result.data, 200);
   });
 
-  // GET /workspaces/:id/members - List workspace members
+  // GET /organizations/:id/members - List organization members
   app.get("/:id/members", async (c) => {
-    const workspaceId = extractParam(c, "id", WorkspaceId);
-    if (!workspaceId) return c.json({ error: "Workspace ID required" }, 400);
+    const organizationId = extractParam(c, "id", OrganizationId);
+    if (!organizationId) return c.json({ error: "Organization ID required" }, 400);
 
-    const result = await runUseCase(getWorkspaceMembersUseCase(repos.membership)({ workspaceId }));
+    const result = await runUseCase(
+      getOrganizationMembersUseCase(repos.membership)({ organizationId }),
+    );
 
     if (!result.success) return mapErrorToResponse(c, result.error);
     return c.json({ members: result.data }, 200);
   });
 
-  // DELETE /workspaces/:id - Delete workspace
+  // DELETE /organizations/:id - Delete organization
   app.delete("/:id", async (c) => {
-    const id = extractParam(c, "id", WorkspaceId);
-    if (!id) return c.json({ error: "Workspace ID required" }, 400);
+    const id = extractParam(c, "id", OrganizationId);
+    if (!id) return c.json({ error: "Organization ID required" }, 400);
 
-    const result = await runUseCase(repos.workspace.delete(id));
+    const result = await runUseCase(repos.organization.delete(id));
 
     if (!result.success) return mapErrorToResponse(c, result.error);
     return c.body(null, 204);

@@ -1,9 +1,9 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { config as loadDotenv } from "dotenv";
 import { createPollingOutboxConsumer } from "@platform/events-outbox";
 import { createBullmqEventsPublisher } from "@platform/queue-bullmq";
 import { createLogger } from "@repo/observability";
+import { config as loadDotenv } from "dotenv";
 import { getPostgresPool, getRedisConnection } from "./clients.js";
 import { createEventsWorker } from "./workers/events.js";
 

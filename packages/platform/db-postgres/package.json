@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "pg:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "pg:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
+    "pg:push": "drizzle-kit push --config=drizzle.config.ts",
     "pg:check": "drizzle-kit check --config=drizzle.config.ts",
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
     "lint": "biome check src",
@@ -18,6 +19,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/api-keys": "workspace:^",
+    "@domain/projects": "workspace:*",
+    "@domain/shared-kernel": "workspace:*",
+    "@domain/subscriptions": "workspace:*",
+    "@domain/workspaces": "workspace:*",
     "@platform/env": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
