@@ -20,6 +20,7 @@
     "@domain/workspaces": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/auth-better": "workspace:*",
+    "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",

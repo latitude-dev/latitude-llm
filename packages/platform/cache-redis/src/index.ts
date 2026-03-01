@@ -1,11 +1,11 @@
-import { Context } from "effect";
+import { ServiceMap } from "effect";
 
-export class RedisCacheAdapterTag extends Context.Tag("RedisCacheAdapterTag")<
+export class RedisCacheAdapterTag extends ServiceMap.Service<
   RedisCacheAdapterTag,
   {
     readonly type: "redis";
   }
->() {}
+>()("RedisCacheAdapterTag") {}
 
 export const redisCacheAdapter = {
   type: "redis" as const,
@@ -16,3 +16,6 @@ export {
   createRedisConnection,
   createRedisConnectionEffect,
 } from "./connection.js";
+
+export type { RedisClient } from "./client.js";
+export { createRedisClient } from "./client.js";
