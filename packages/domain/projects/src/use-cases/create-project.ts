@@ -31,12 +31,22 @@ export interface CreateProjectInput {
 export class ProjectAlreadyExistsError extends Data.TaggedError("ProjectAlreadyExistsError")<{
   readonly name: string;
   readonly organizationId: OrganizationId;
-}> {}
+}> {
+  readonly httpStatus = 409;
+  get httpMessage() {
+    return `Project '${this.name}' already exists in this organization`;
+  }
+}
 
 export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
   readonly name: string;
   readonly reason: string;
-}> {}
+}> {
+  readonly httpStatus = 400;
+  get httpMessage() {
+    return this.reason;
+  }
+}
 
 export type CreateProjectError =
   | RepositoryError

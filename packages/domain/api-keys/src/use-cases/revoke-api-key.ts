@@ -18,11 +18,17 @@ export interface RevokeApiKeyInput {
 
 export class ApiKeyNotFoundError extends Data.TaggedError("ApiKeyNotFoundError")<{
   readonly id: ApiKeyId;
-}> {}
+}> {
+  readonly httpStatus = 404;
+  readonly httpMessage = "API key not found";
+}
 
 export class ApiKeyAlreadyRevokedError extends Data.TaggedError("ApiKeyAlreadyRevokedError")<{
   readonly id: ApiKeyId;
-}> {}
+}> {
+  readonly httpStatus = 409;
+  readonly httpMessage = "API key already revoked";
+}
 
 export type RevokeApiKeyError =
   | RepositoryError

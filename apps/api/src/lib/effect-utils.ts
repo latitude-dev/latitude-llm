@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import type { Context } from "hono";
 
 /**
@@ -7,27 +6,6 @@ import type { Context } from "hono";
  * These helpers standardize Effect handling in route handlers,
  * reducing boilerplate while maintaining type safety.
  */
-
-/**
- * Run a use case Effect and return a standardized result.
- *
- * Usage:
- * ```typescript
- * const result = await runUseCase(createProjectUseCase(repo)(input));
- * if (!result.success) return mapErrorToResponse(c, result.error);
- * return c.json(result.data, 201);
- * ```
- */
-export const runUseCase = async <T, E>(
-  effect: Effect.Effect<T, E>,
-): Promise<{ success: true; data: T } | { success: false; error: E }> => {
-  return Effect.runPromise(
-    Effect.match(effect, {
-      onFailure: (error) => ({ success: false as const, error }),
-      onSuccess: (data) => ({ success: true as const, data }),
-    }),
-  );
-};
 
 /**
  * Extract a route parameter and validate it.
@@ -39,8 +17,8 @@ export const runUseCase = async <T, E>(
  *
  * Usage:
  * ```typescript
- * const organizationId = extractParam(c, "organizationId", organizationId);
- * if (!organizationId) return c.json({ error: "Workspace ID required" }, 400);
+ * const organizationId = extractParam(c, "organizationId", OrganizationId);
+ * if (!organizationId) throw new BadRequestError({ httpMessage: "Organization ID required" });
  * ```
  */
 export const extractParam = <T>(

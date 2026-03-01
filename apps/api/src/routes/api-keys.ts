@@ -1,17 +1,15 @@
 import {
-  ApiKeyAlreadyRevokedError,
-  ApiKeyNotFoundError,
   type GenerateApiKeyInput,
-  InvalidApiKeyNameError,
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys";
-import { ApiKeyId, NotFoundError, OrganizationId, generateId } from "@domain/shared-kernel";
+import { ApiKeyId, OrganizationId, generateId } from "@domain/shared-kernel";
 import { createRepositories } from "@platform/db-postgres";
+import { Effect } from "effect";
 import { Hono } from "hono";
 import { getPostgresClient } from "../clients.js";
-import { extractParam, runUseCase } from "../lib/effect-utils.js";
-import { mapErrorToResponse } from "../lib/error-mapper.js";
+import { BadRequestError } from "../errors.js";
+import { extractParam } from "../lib/effect-utils.js";
 
 /**
  * API Key routes
@@ -28,7 +26,9 @@ export const createApiKeysRoutes = () => {
   // POST /organizations/:organizationId/api-keys - Generate API key
   app.post("/", async (c) => {
     const organizationId = extractParam(c, "organizationId", OrganizationId);
-    if (!organizationId) return c.json({ error: "Organization ID is required" }, 400);
+    if (!organizationId) {
+      throw new BadRequestError({ httpMessage: "Organization ID is required" });
+    }
 
     const body = (await c.req.json()) as {
       readonly name: string;
@@ -40,51 +40,29 @@ export const createApiKeysRoutes = () => {
       name: body.name,
     };
 
-    const result = await runUseCase(generateApiKeyUseCase(repos.apiKey)(input));
-
-    if (!result.success) {
-      const error = result.error;
-      if (error instanceof InvalidApiKeyNameError) {
-        return c.json({ error: error.reason, field: "name" }, 400);
-      }
-      return mapErrorToResponse(c, error);
-    }
-
-    return c.json(result.data, 201);
+    const apiKey = await Effect.runPromise(generateApiKeyUseCase(repos.apiKey)(input));
+    return c.json(apiKey, 201);
   });
 
   // GET /organizations/:organizationId/api-keys - List API keys
   app.get("/", async (c) => {
     const organizationId = extractParam(c, "organizationId", OrganizationId);
-    if (!organizationId) return c.json({ error: "Organization ID is required" }, 400);
+    if (!organizationId) {
+      throw new BadRequestError({ httpMessage: "Organization ID is required" });
+    }
 
-    const result = await runUseCase(repos.apiKey.findByOrganizationId(organizationId));
-
-    if (!result.success) return mapErrorToResponse(c, result.error);
-    return c.json({ apiKeys: result.data }, 200);
+    const apiKeys = await Effect.runPromise(repos.apiKey.findByOrganizationId(organizationId));
+    return c.json({ apiKeys }, 200);
   });
 
   // DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
   app.delete("/:id", async (c) => {
     const id = extractParam(c, "id", ApiKeyId);
-    if (!id) return c.json({ error: "API Key ID is required" }, 400);
-
-    const result = await runUseCase(revokeApiKeyUseCase(repos.apiKey)({ id }));
-
-    if (!result.success) {
-      const error = result.error;
-      if (error instanceof ApiKeyNotFoundError) {
-        return c.json({ error: "API key not found" }, 404);
-      }
-      if (error instanceof ApiKeyAlreadyRevokedError) {
-        return c.json({ error: "API key already revoked" }, 409);
-      }
-      if (error instanceof NotFoundError) {
-        return c.json({ error: "API key not found" }, 404);
-      }
-      return mapErrorToResponse(c, error);
+    if (!id) {
+      throw new BadRequestError({ httpMessage: "API Key ID is required" });
     }
 
+    await Effect.runPromise(revokeApiKeyUseCase(repos.apiKey)({ id }));
     return c.body(null, 204);
   });
 

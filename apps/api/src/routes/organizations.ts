@@ -1,16 +1,15 @@
 import {
   type CreateOrganizationInput,
-  InvalidOrganizationNameError,
-  OrganizationAlreadyExistsError,
   createOrganizationUseCase,
   getOrganizationMembersUseCase,
 } from "@domain/organizations";
 import { OrganizationId, UserId, generateId } from "@domain/shared-kernel";
 import { createRepositories } from "@platform/db-postgres";
+import { Effect } from "effect";
 import { Hono } from "hono";
 import { getPostgresClient } from "../clients.ts";
-import { extractParam, runUseCase } from "../lib/effect-utils.js";
-import { mapErrorToResponse } from "../lib/error-mapper.js";
+import { BadRequestError } from "../errors.js";
+import { extractParam } from "../lib/effect-utils.js";
 
 /**
  * Organization routes
@@ -43,63 +42,57 @@ export const createOrganizationsRoutes = () => {
       creatorId: UserId(getCurrentUserId()),
     };
 
-    const result = await runUseCase(createOrganizationUseCase(repos.organization)(input));
+    const organization = await Effect.runPromise(
+      createOrganizationUseCase(repos.organization)(input),
+    );
 
-    if (!result.success) {
-      const error = result.error;
-      if (error instanceof InvalidOrganizationNameError) {
-        return c.json({ error: error.reason, field: "name" }, 400);
-      }
-      if (error instanceof OrganizationAlreadyExistsError) {
-        return c.json({ error: `Organization '${error.slug}' already exists` }, 409);
-      }
-      return mapErrorToResponse(c, error);
-    }
-
-    return c.json(result.data, 201);
+    return c.json(organization, 201);
   });
 
   // GET /organizations - List user's organizations
   app.get("/", async (c) => {
-    const result = await runUseCase(repos.organization.findAll());
-
-    if (!result.success) return mapErrorToResponse(c, result.error);
-    return c.json({ organizations: result.data }, 200);
+    const organizations = await Effect.runPromise(repos.organization.findAll());
+    return c.json({ organizations }, 200);
   });
 
   // GET /organizations/:id - Get organization by ID
   app.get("/:id", async (c) => {
     const id = extractParam(c, "id", OrganizationId);
-    if (!id) return c.json({ error: "Organization ID required" }, 400);
+    if (!id) {
+      throw new BadRequestError({ httpMessage: "Organization ID required" });
+    }
 
-    const result = await runUseCase(repos.organization.findById(id));
+    const organization = await Effect.runPromise(repos.organization.findById(id));
 
-    if (!result.success) return mapErrorToResponse(c, result.error);
-    if (!result.data) return c.json({ error: "Organization not found" }, 404);
-    return c.json(result.data, 200);
+    if (!organization) {
+      throw new BadRequestError({ httpMessage: "Organization not found" });
+    }
+
+    return c.json(organization, 200);
   });
 
   // GET /organizations/:id/members - List organization members
   app.get("/:id/members", async (c) => {
     const organizationId = extractParam(c, "id", OrganizationId);
-    if (!organizationId) return c.json({ error: "Organization ID required" }, 400);
+    if (!organizationId) {
+      throw new BadRequestError({ httpMessage: "Organization ID required" });
+    }
 
-    const result = await runUseCase(
+    const members = await Effect.runPromise(
       getOrganizationMembersUseCase(repos.membership)({ organizationId }),
     );
 
-    if (!result.success) return mapErrorToResponse(c, result.error);
-    return c.json({ members: result.data }, 200);
+    return c.json({ members }, 200);
   });
 
   // DELETE /organizations/:id - Delete organization
   app.delete("/:id", async (c) => {
     const id = extractParam(c, "id", OrganizationId);
-    if (!id) return c.json({ error: "Organization ID required" }, 400);
+    if (!id) {
+      throw new BadRequestError({ httpMessage: "Organization ID required" });
+    }
 
-    const result = await runUseCase(repos.organization.delete(id));
-
-    if (!result.success) return mapErrorToResponse(c, result.error);
+    await Effect.runPromise(repos.organization.delete(id));
     return c.body(null, 204);
   });
 

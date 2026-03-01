@@ -27,7 +27,12 @@ export interface GenerateApiKeyInput {
 export class InvalidApiKeyNameError extends Data.TaggedError("InvalidApiKeyNameError")<{
   readonly name: string;
   readonly reason: string;
-}> {}
+}> {
+  readonly httpStatus = 400;
+  get httpMessage() {
+    return this.reason;
+  }
+}
 
 export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError;
 
