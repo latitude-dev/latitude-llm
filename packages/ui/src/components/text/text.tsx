@@ -1,5 +1,5 @@
 import { Slot } from "@radix-ui/react-slot";
-import { Children, type ForwardRefExoticComponent, type ReactNode, forwardRef, memo } from "react";
+import { type ReactNode, forwardRef, memo } from "react";
 
 import {
   type FontSize,
@@ -19,21 +19,22 @@ import {
 } from "../../tokens/index.js";
 import { cn } from "../../utils/cn.js";
 
+// Define display sizes as const outside component for better performance
+const DISPLAY_SIZES = new Set<FontSize>(["h1", "h2", "h3", "h4"]);
+
 type Display = "inline" | "inline-block" | "block";
 export type Common = {
+  id?: string;
   children: ReactNode;
   className?: string;
   color?: TextColor;
   textOpacity?: TextOpacity;
-  darkColor?: TextColor;
   align?: "left" | "center" | "right";
   capitalize?: boolean;
   uppercase?: boolean;
   wordBreak?: WordBreak;
   whiteSpace?: WhiteSpace;
   ellipsis?: boolean;
-  showNativeTitle?: boolean;
-  lineClamp?: number;
   display?: Display;
   userSelect?: boolean;
   noWrap?: boolean;
@@ -41,11 +42,6 @@ export type Common = {
   lineThrough?: boolean;
   weight?: FontWeight;
   asChild?: boolean;
-  monospace?: boolean;
-  centered?: boolean;
-  animate?: boolean;
-  isItalic?: boolean;
-  suppressHydrationWarning?: boolean;
 };
 
 export type TextProps = {
@@ -63,12 +59,12 @@ type AllTextProps = TextProps & Common;
 const TextAtom = memo(
   forwardRef<HTMLElement, AllTextProps>(function Text(
     {
+      id,
       children,
       className,
       size = "h4",
       color = "foreground",
       textOpacity = 100,
-      darkColor,
       spacing = "normal",
       weight = "normal",
       display = "inline",
@@ -78,22 +74,15 @@ const TextAtom = memo(
       whiteSpace = "normal",
       wordBreak = "normal",
       ellipsis = false,
-      showNativeTitle = true,
-      lineClamp = undefined,
       userSelect = true,
       noWrap = false,
       underline = false,
       lineThrough = false,
       asChild = false,
-      isItalic = false,
-      monospace = false,
-      centered = false,
-      animate = false,
-      suppressHydrationWarning = false,
     },
     ref,
   ) {
-    const colorClass = colors.textColors[(darkColor ? darkColor : color) as TextColor];
+    const colorClass = colors.textColors[color];
     const sizeClass = font.size[size];
     const weightClass = font.weight[weight];
     const spacingClass = font.spacing[spacing];
@@ -101,12 +90,11 @@ const TextAtom = memo(
     const wordBreakClass = wordBreakOptions[wordBreak];
     const whiteSpaceClass = whiteSpaceOptions[whiteSpace];
     const Comp = asChild ? Slot : "span";
-    const isDisplay = ["h1", "h2", "h3", "h4"].includes(size);
+    const isDisplay = DISPLAY_SIZES.has(size);
     return (
       <Comp
+        id={id}
         ref={ref}
-        suppressHydrationWarning={suppressHydrationWarning}
-        title={ellipsis && typeof children === "string" && showNativeTitle ? children : ""}
         className={cn(
           sizeClass,
           weightClass,
@@ -119,116 +107,55 @@ const TextAtom = memo(
           display,
           className,
           {
-            "bg-[length:200%_auto] text-transparent bg-clip-text animate-text-gradient bg-gradient-to-r from-muted via-muted-foreground to-muted":
-              animate,
             capitalize: capitalize,
             uppercase: uppercase,
             truncate: ellipsis,
-            italic: isItalic,
             "select-none": !userSelect,
             "whitespace-nowrap": noWrap,
             underline: underline,
             "line-through": lineThrough,
-            [font.family.mono]: monospace,
-            [font.family.sans]: !monospace && !isDisplay,
-            [font.family.display]: !monospace && isDisplay,
-            "text-center": centered,
-            "line-clamp-1": lineClamp === 1,
-            "line-clamp-3": lineClamp === 3,
-            "leading-5": lineClamp && size === "h6",
+            [font.family.mono]: false,
+            [font.family.sans]: !isDisplay,
+            [font.family.display]: isDisplay,
           },
         )}
       >
-        {Children.count(children) > 1 ? <span>{children}</span> : children}
+        {children}
       </Comp>
     );
   }),
 );
 
 namespace Text {
-  export const H1: ForwardRefExoticComponent<Common> = forwardRef<HTMLSpanElement, Common>(
-    function H1(props, ref) {
-      return <TextAtom ref={ref} size="h1" {...props} />;
-    },
-  );
+  export const H1 = forwardRef<HTMLHeadingElement, Common>(function H1(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h1" {...props} />;
+  });
+  H1.displayName = "Text.H1";
 
-  export const H1B = forwardRef<HTMLSpanElement, Common>(function H1(props, ref) {
-    return <TextAtom ref={ref} size="h1" weight="bold" {...props} />;
+  export const H2 = forwardRef<HTMLHeadingElement, Common>(function H2(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h2" {...props} />;
   });
+  H2.displayName = "Text.H2";
 
-  export const H2 = forwardRef<HTMLSpanElement, Common>(function H2(props, ref) {
-    return <TextAtom ref={ref} size="h2" {...props} />;
+  export const H3 = forwardRef<HTMLHeadingElement, Common>(function H3(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h3" {...props} />;
   });
+  H3.displayName = "Text.H3";
 
-  export const H2M = forwardRef<HTMLSpanElement, Common>(function H2M(props, ref) {
-    return <TextAtom ref={ref} size="h2" weight="medium" {...props} />;
+  export const H4 = forwardRef<HTMLHeadingElement, Common>(function H4(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" {...props} />;
   });
+  H4.displayName = "Text.H4";
 
-  export const H2B = forwardRef<HTMLSpanElement, Common>(function H2B(props, ref) {
-    return <TextAtom ref={ref} size="h2" weight="bold" {...props} />;
+  export const H5 = forwardRef<HTMLHeadingElement, Common>(function H5(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h5" {...props} />;
   });
+  H5.displayName = "Text.H5";
 
-  export const H3 = forwardRef<HTMLSpanElement, Common>(function H3(props, ref) {
-    return <TextAtom ref={ref} size="h3" {...props} />;
+  export const H6 = forwardRef<HTMLHeadingElement, Common>(function H6(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" {...props} />;
   });
-
-  export const H3M = forwardRef<HTMLSpanElement, Common>(function H3M(props, ref) {
-    return <TextAtom ref={ref} size="h3" weight="medium" {...props} />;
-  });
-
-  export const H3B = forwardRef<HTMLSpanElement, Common>(function H3B(props, ref) {
-    return <TextAtom ref={ref} size="h3" weight="bold" {...props} />;
-  });
-
-  export const H4 = forwardRef<HTMLSpanElement, Common>(function H4(props, ref) {
-    return <TextAtom ref={ref} size="h4" {...props} />;
-  });
-
-  export const H4M = forwardRef<HTMLSpanElement, Common>(function H4M(props, ref) {
-    return <TextAtom ref={ref} size="h4" weight="medium" {...props} />;
-  });
-
-  export const H4B = forwardRef<HTMLSpanElement, Common>(function H4B(props, ref) {
-    return <TextAtom ref={ref} size="h4" weight="semibold" {...props} />;
-  });
-
-  export const H5 = forwardRef<HTMLSpanElement, Common>(function H5(props, ref) {
-    return <TextAtom ref={ref} size="h5" {...props} />;
-  });
-
-  export const H5M = forwardRef<HTMLSpanElement, Common>(function H5M(props, ref) {
-    return <TextAtom ref={ref} size="h5" weight="medium" {...props} />;
-  });
-  export const H5B = forwardRef<HTMLSpanElement, Common>(function H5B(props, ref) {
-    return <TextAtom ref={ref} size="h5" weight="semibold" {...props} />;
-  });
-
-  export const H6 = forwardRef<HTMLSpanElement, Common>(function H6(props, ref) {
-    return <TextAtom ref={ref} size="h6" {...props} />;
-  });
-
-  export const H6M = forwardRef<HTMLSpanElement, Common>(function H6M(props, ref) {
-    return <TextAtom ref={ref} size="h6" weight="medium" {...props} />;
-  });
-  export const H6B = forwardRef<HTMLSpanElement, Common>(function H6B(props, ref) {
-    return <TextAtom ref={ref} size="h6" weight="semibold" {...props} />;
-  });
-
-  export const H6C = forwardRef<HTMLSpanElement, Common>(function H6C(props, ref) {
-    return <TextAtom ref={ref} uppercase size="h6" spacing="wide" weight="bold" {...props} />;
-  });
-
-  export const H7 = forwardRef<HTMLSpanElement, Common>(function H7(props, ref) {
-    return <TextAtom ref={ref} size="h7" spacing="wide" weight="bold" {...props} />;
-  });
-
-  export const H7C = forwardRef<HTMLSpanElement, Common>(function H7C(props, ref) {
-    return <TextAtom ref={ref} uppercase size="h7" spacing="wide" weight="bold" {...props} />;
-  });
-
-  export const H8 = forwardRef<HTMLSpanElement, Common>(function H8(props, ref) {
-    return <TextAtom ref={ref} size="h8" spacing="wide" weight="bold" {...props} />;
-  });
+  H6.displayName = "Text.H6";
 
   export type MonoProps = {
     children: ReactNode;
@@ -291,6 +218,7 @@ namespace Text {
       </span>
     );
   });
+  Mono.displayName = "Text.Mono";
 }
 
 export { Text };

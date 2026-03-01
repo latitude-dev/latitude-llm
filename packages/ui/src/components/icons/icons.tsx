@@ -52,7 +52,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { forwardRef } from "react";
+import { forwardRef, memo } from "react";
 
 import { type TextColor, colors } from "../../tokens/index.js";
 import { cn } from "../../utils/cn.js";
@@ -132,19 +132,25 @@ export interface IconProps extends Omit<LucideProps, "size"> {
   className?: string;
 }
 
-const Icon = forwardRef<SVGSVGElement, IconProps>(
-  ({ name, size = "default", color, className, ...props }, ref) => {
-    const LucideIcon = iconMap[name];
+const Icon = memo(
+  forwardRef<SVGSVGElement, IconProps>(
+    ({ name, size = "default", color, className, ...props }, ref) => {
+      const LucideIcon = iconMap[name];
 
-    if (!LucideIcon) {
-      console.warn(`Icon "${name}" not found`);
-      return null;
-    }
+      if (!LucideIcon) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(`Icon "${name}" not found`);
+        }
+        return null;
+      }
 
-    const colorClass = color ? colors.textColors[color] : "";
+      const colorClass = color ? colors.textColors[color] : "";
 
-    return <LucideIcon ref={ref} className={cn(sizeMap[size], colorClass, className)} {...props} />;
-  },
+      return (
+        <LucideIcon ref={ref} className={cn(sizeMap[size], colorClass, className)} {...props} />
+      );
+    },
+  ),
 );
 
 Icon.displayName = "Icon";

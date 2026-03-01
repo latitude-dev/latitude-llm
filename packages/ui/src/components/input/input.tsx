@@ -24,14 +24,16 @@ const inputVariants = cva(
   },
 );
 
+import type { ReactNode } from "react";
+
 export interface InputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "className">,
     VariantProps<typeof inputVariants> {
-  label?: React.ReactNode;
-  description?: React.ReactNode;
-  info?: string;
-  errors?: string[];
-  inline?: boolean;
+  label?: ReactNode;
+  description?: ReactNode;
+  info?: string | undefined;
+  errors?: string[] | undefined;
+  inline?: boolean | undefined;
   className?: string;
 }
 
