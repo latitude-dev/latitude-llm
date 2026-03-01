@@ -57,4 +57,12 @@ export interface ProjectRepository {
     name: string,
     organizationId: OrganizationId,
   ): Effect.Effect<boolean, RepositoryError>;
+
+  /**
+   * Check if a project exists with the given slug in the organization.
+   */
+  existsBySlug(
+    slug: string,
+    organizationId: OrganizationId,
+  ): Effect.Effect<boolean, RepositoryError>;
 }

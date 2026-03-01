@@ -24,17 +24,19 @@ export interface CreateProjectInput {
   readonly id: ProjectId;
   readonly organizationId: OrganizationId;
   readonly name: string;
+  readonly slug: string;
   readonly description?: string;
   readonly createdById?: UserId;
 }
 
 export class ProjectAlreadyExistsError extends Data.TaggedError("ProjectAlreadyExistsError")<{
   readonly name: string;
+  readonly slug: string;
   readonly organizationId: OrganizationId;
 }> {
   readonly httpStatus = 409;
   get httpMessage() {
-    return `Project '${this.name}' already exists in this organization`;
+    return `Project '${this.name}' or slug '${this.slug}' already exists in this organization`;
   }
 }
 
@@ -59,26 +61,55 @@ export const createProjectUseCase =
   (repository: ProjectRepository) =>
   (input: CreateProjectInput): Effect.Effect<Project, CreateProjectError> => {
     return Effect.gen(function* () {
+      const trimmedName = input.name.trim();
+      const trimmedSlug = input.slug.trim().toLowerCase();
+
       // Validate name
-      if (!input.name || input.name.trim().length === 0) {
+      if (!trimmedName || trimmedName.length === 0) {
         return yield* new InvalidProjectNameError({
           name: input.name,
           reason: "Name cannot be empty",
         });
       }
 
-      if (input.name.length > 256) {
+      if (trimmedName.length > 256) {
         return yield* new InvalidProjectNameError({
           name: input.name,
           reason: "Name exceeds 256 characters",
         });
       }
 
+      // Validate slug
+      if (!trimmedSlug || trimmedSlug.length === 0) {
+        return yield* new InvalidProjectNameError({
+          name: trimmedSlug,
+          reason: "Slug cannot be empty",
+        });
+      }
+
+      if (trimmedSlug.length > 256) {
+        return yield* new InvalidProjectNameError({
+          name: trimmedSlug,
+          reason: "Slug exceeds 256 characters",
+        });
+      }
+
       // Check if name already exists in organization
-      const exists = yield* repository.existsByName(input.name.trim(), input.organizationId);
-      if (exists) {
+      const nameExists = yield* repository.existsByName(trimmedName, input.organizationId);
+      if (nameExists) {
         return yield* new ProjectAlreadyExistsError({
-          name: input.name.trim(),
+          name: trimmedName,
+          slug: trimmedSlug,
+          organizationId: input.organizationId,
+        });
+      }
+
+      // Check if slug already exists in organization
+      const slugExists = yield* repository.existsBySlug(trimmedSlug, input.organizationId);
+      if (slugExists) {
+        return yield* new ProjectAlreadyExistsError({
+          name: trimmedName,
+          slug: trimmedSlug,
           organizationId: input.organizationId,
         });
       }
@@ -87,7 +118,8 @@ export const createProjectUseCase =
       const project = createProject({
         id: input.id,
         organizationId: input.organizationId,
-        name: input.name.trim(),
+        name: trimmedName,
+        slug: trimmedSlug,
         ...(input.description !== undefined && { description: input.description }),
         ...(input.createdById !== undefined && { createdById: input.createdById }),
       });

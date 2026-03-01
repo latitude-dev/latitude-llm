@@ -19,6 +19,7 @@ export const projects = latitudeSchema.table(
     id: text("id").primaryKey(), // UUID, consistent with Better Auth
     organizationId: text("organization_id").notNull(),
     name: varchar("name", { length: 256 }).notNull(),
+    slug: varchar("slug", { length: 256 }).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     lastEditedAt: timestamp("last_edited_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

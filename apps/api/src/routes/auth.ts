@@ -1,12 +1,71 @@
 import { createBetterAuth } from "@platform/auth-better";
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis";
-import { parseEnv } from "@platform/env";
+import { parseEnv, parseEnvOptional } from "@platform/env";
 import type { User } from "better-auth";
 import { Effect } from "effect";
 import { Hono } from "hono";
 import { getPostgresClient } from "../clients.js";
 import { BadRequestError } from "../errors.js";
-import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.js";
+import {
+  createMagicLinkEmailRateLimiter,
+  createMagicLinkIpRateLimiter,
+  createSignUpIpRateLimiter,
+} from "../middleware/rate-limiter.js";
+
+// Email adapters
+import { magicLinkTemplate } from "@domain/email";
+import { createMailpitEmailSender } from "@platform/email-mailpit";
+import { createSendGridEmailSender } from "@platform/email-sendgrid";
+import { createSmtpEmailSender } from "@platform/email-smtp";
+
+/**
+ * Create email sender based on environment configuration
+ * Priority: SendGrid > SMTP > Mailpit (fallback)
+ */
+const createEmailSender = () => {
+  // Try SendGrid first
+  const sendgridApiKey = Effect.runSync(parseEnvOptional(process.env.SENDGRID_API_KEY, "string"));
+  const sendgridFrom = Effect.runSync(parseEnvOptional(process.env.SENDGRID_FROM, "string"));
+
+  if (sendgridApiKey && sendgridFrom) {
+    return createSendGridEmailSender({
+      apiKey: sendgridApiKey,
+      from: sendgridFrom,
+    });
+  }
+
+  // Try SMTP
+  const smtpHost = Effect.runSync(parseEnvOptional(process.env.SMTP_HOST, "string"));
+  const smtpPortStr = Effect.runSync(parseEnvOptional(process.env.SMTP_PORT, "string"));
+  const smtpUser = Effect.runSync(parseEnvOptional(process.env.SMTP_USER, "string"));
+  const smtpPass = Effect.runSync(parseEnvOptional(process.env.SMTP_PASS, "string"));
+  const smtpFrom = Effect.runSync(parseEnvOptional(process.env.SMTP_FROM, "string"));
+
+  if (smtpHost && smtpPortStr && smtpUser && smtpPass && smtpFrom) {
+    return createSmtpEmailSender({
+      host: smtpHost,
+      port: Number.parseInt(smtpPortStr, 10),
+      user: smtpUser,
+      pass: smtpPass,
+      from: smtpFrom,
+    });
+  }
+
+  // Fall back to Mailpit for local development
+  const mailpitHost =
+    Effect.runSync(parseEnvOptional(process.env.MAILPIT_HOST, "string")) ?? "localhost";
+  const mailpitPortStr =
+    Effect.runSync(parseEnvOptional(process.env.MAILPIT_PORT, "string")) ?? "1025";
+  const mailpitFrom =
+    Effect.runSync(parseEnvOptional(process.env.MAILPIT_FROM, "string")) ??
+    "noreply@latitude.local";
+
+  return createMailpitEmailSender({
+    host: mailpitHost,
+    port: Number.parseInt(mailpitPortStr, 10),
+    from: mailpitFrom,
+  });
+};
 
 /**
  * Auth routes for Better Auth
@@ -56,9 +115,34 @@ export const createAuthRoutes = () => {
 
   const betterAuthSecret = Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"));
 
+  // Create email sender
+  const emailSender = createEmailSender();
+
   const auth = createBetterAuth({
     db,
     secret: betterAuthSecret,
+    // Magic Link email configuration
+    sendMagicLink: async ({ email, url }) => {
+      const userName = email.split("@")[0];
+      const html = magicLinkTemplate({ userName, magicLinkUrl: url });
+
+      await Effect.runPromise(
+        emailSender.send({
+          to: email,
+          subject: "Log in to Latitude",
+          html,
+        }),
+      );
+    },
+    // User creation hook for auto-onboarding
+    onUserCreated: async (user) => {
+      // Publish UserCreated event to trigger workspace creation
+      // This would integrate with the events queue/worker
+      console.log("User created, triggering onboarding:", {
+        userId: user.id,
+        email: user.email,
+      });
+    },
   });
 
   const betterAuthHandler = auth.handler;
@@ -66,6 +150,8 @@ export const createAuthRoutes = () => {
 
   // Create rate limiters with Redis
   const signUpRateLimiter = createSignUpIpRateLimiter(redis);
+  const magicLinkIpRateLimiter = createMagicLinkIpRateLimiter(redis);
+  const magicLinkEmailRateLimiter = createMagicLinkEmailRateLimiter(redis);
 
   // JWT-specific: POST /auth/sign-up/email - Email/password sign up
   // Returns JSON instead of redirect (for JWT tools)
@@ -181,6 +267,14 @@ export const createAuthRoutes = () => {
 
     // Redirect to the frontend dashboard
     return c.redirect(`${baseUrl}/dashboard`);
+  });
+
+  // Magic Link endpoint with rate limiting
+  // Better Auth handles this at /sign-in/magic-link, but we add rate limiting
+  app.post("/sign-in/magic-link", magicLinkIpRateLimiter, magicLinkEmailRateLimiter, async (c) => {
+    // Let Better Auth handle the actual request
+    const response = await betterAuthHandler(c.req.raw);
+    return response;
   });
 
   // Mount Better Auth handlers at /auth/*
