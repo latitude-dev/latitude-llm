@@ -144,3 +144,101 @@ export const createSignInEmailRateLimiter = (redis: RedisClient) =>
     },
     errorMessage: "Too many sign-in attempts for this account. Please try again later.",
   });
+
+/**
+ * Rate limiter for Magic Link requests by IP address
+ * 10 attempts per hour per IP
+ */
+export const createMagicLinkIpRateLimiter = (redis: RedisClient) =>
+  createRedisRateLimiter(redis, {
+    maxRequests: 10,
+    windowSeconds: 60 * 60, // 1 hour
+    keyPrefix: "ratelimit:magiclink:ip",
+    keyGenerator: (c: Context) => {
+      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown";
+      return ip.split(",")[0].trim();
+    },
+    errorMessage: "Too many magic link requests. Please try again later.",
+  });
+
+/**
+ * Rate limiter for Magic Link requests by email
+ * 3 attempts per hour per email
+ */
+export const createMagicLinkEmailRateLimiter = (redis: RedisClient) => {
+  // Store redis client for use in middleware
+  const redisClient = redis;
+
+  return async (c: Context, next: Next) => {
+    // Only apply to POST requests (magic link requests)
+    if (c.req.method !== "POST") {
+      await next();
+      return;
+    }
+
+    try {
+      // Parse body to get email
+      const body = await c.req.json();
+      const email = body?.email?.toLowerCase()?.trim();
+
+      if (!email) {
+        // No email provided, skip rate limiting
+        await next();
+        return;
+      }
+
+      const key = `ratelimit:magiclink:email:${email}`;
+      const maxRequests = 3;
+      const windowSeconds = 60 * 60; // 1 hour
+
+      // Use Redis multi to atomically increment and set expiry
+      const pipeline = redisClient.pipeline();
+      pipeline.incr(key);
+      pipeline.ttl(key);
+
+      const results = await pipeline.exec();
+
+      if (!results) {
+        console.warn("Magic link email rate limiter: Redis pipeline returned null");
+        await next();
+        return;
+      }
+
+      const [incrResult, ttlResult] = results;
+
+      if (incrResult[0] || ttlResult[0]) {
+        console.error("Magic link email rate limiter Redis error:", incrResult[0] || ttlResult[0]);
+        await next();
+        return;
+      }
+
+      const count = incrResult[1] as number;
+      let ttl = ttlResult[1] as number;
+
+      // Set expiry on first request
+      if (count === 1 || ttl === -1) {
+        await redisClient.expire(key, windowSeconds);
+        ttl = windowSeconds;
+      }
+
+      // Check if limit exceeded
+      if (count > maxRequests) {
+        const retryAfter = ttl;
+        return c.json(
+          {
+            error: "Too many magic link requests for this email. Please try again later.",
+            retryAfter,
+          },
+          429,
+          { "Retry-After": String(retryAfter) },
+        );
+      }
+
+      await next();
+    } catch (error) {
+      // Fail open on errors
+      console.error("Magic link email rate limiter error:", error);
+      await next();
+    }
+  };
+};

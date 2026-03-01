@@ -11,8 +11,7 @@ export interface Organization {
   readonly name: string;
   readonly slug: string;
   readonly logo: string | null;
-  readonly metadata: string | null; // JSON stored as string
-  readonly uuid: string; // Public-facing UUID
+  readonly metadata: string | null; // Better auth needs it
   readonly creatorId: UserId | null;
   readonly currentSubscriptionId: SubscriptionId | null;
   readonly stripeCustomerId: string | null;
@@ -29,7 +28,6 @@ export const createOrganization = (params: {
   slug: string;
   logo?: string | null;
   metadata?: string | null;
-  uuid?: string;
   creatorId?: UserId;
   currentSubscriptionId?: SubscriptionId;
   stripeCustomerId?: string;
@@ -43,7 +41,6 @@ export const createOrganization = (params: {
     slug: params.slug,
     logo: params.logo ?? null,
     metadata: params.metadata ?? null,
-    uuid: params.uuid ?? crypto.randomUUID(),
     creatorId: params.creatorId ?? null,
     currentSubscriptionId: params.currentSubscriptionId ?? null,
     stripeCustomerId: params.stripeCustomerId ?? null,

@@ -4,6 +4,7 @@ import { postgresSchema } from "@platform/db-postgres";
 import { parseEnv, parseEnvOptional } from "@platform/env";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { magicLink } from "better-auth/plugins";
 import { organization } from "better-auth/plugins";
 import type { BetterAuthPlugin } from "better-auth/types";
 import { Effect } from "effect";
@@ -32,6 +33,14 @@ export interface BetterAuthConfig {
   readonly stripeWebhookSecret?: string;
   readonly stripePublishableKey?: string;
   readonly subscriptionPlans?: StripePlanConfig[];
+  // Magic Link email configuration
+  readonly sendMagicLink?: (params: {
+    email: string;
+    url: string;
+    token: string;
+  }) => Promise<void>;
+  // User creation hook for onboarding
+  readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>;
 }
 
 export interface StripePlanConfig {
@@ -86,6 +95,18 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
 
   // Build plugins array
   const plugins: BetterAuthPlugin[] = [orgPlugin];
+
+  // Add Magic Link plugin if email sender is configured
+  if (config.sendMagicLink) {
+    const sendMagicLinkFn = config.sendMagicLink;
+    const magicLinkPlugin = magicLink({
+      sendMagicLink: async ({ email, url, token }) => {
+        await sendMagicLinkFn({ email, url, token });
+      },
+      expiresIn: 3600, // 1 hour
+    }) as unknown as BetterAuthPlugin;
+    plugins.push(magicLinkPlugin);
+  }
 
   // Add Stripe plugin if credentials are available
   if (stripeSecretKey && stripeWebhookSecret) {
@@ -174,6 +195,22 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     },
     // Multi-tenancy via organizations plugin + Stripe for billing
     plugins,
+    // Database hooks for user onboarding
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            if (config.onUserCreated) {
+              await config.onUserCreated({
+                id: user.id,
+                email: user.email,
+                name: user.name ?? undefined,
+              });
+            }
+          },
+        },
+      },
+    },
   });
 };
 

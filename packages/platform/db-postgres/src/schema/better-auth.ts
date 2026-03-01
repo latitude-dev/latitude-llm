@@ -1,4 +1,4 @@
-import { boolean, pgEnum, pgSchema, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, pgEnum, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 /**
  * Better Auth Schema - Drizzle ORM definitions
@@ -110,7 +110,6 @@ export const organization = latitudeSchema.table("organization", {
   logo: text("logo"),
   metadata: text("metadata"), // JSON stored as text
   // Extended fields from former workspaces table
-  uuid: uuid("uuid").defaultRandom().unique().notNull(), // Public-facing UUID
   creatorId: text("creator_id").references(() => user.id),
   currentSubscriptionId: text("current_subscription_id"),
   stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
