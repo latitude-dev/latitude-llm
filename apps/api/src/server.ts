@@ -39,7 +39,7 @@ const auth = createBetterAuth({
 // Register global error handler
 app.onError(honoErrorHandler);
 
-registerRoutes({ app, db, auth: { handler: auth.handler, api: auth.api }, redis: redisClient });
+registerRoutes({ app, auth: { handler: auth.handler, api: auth.api }, redis: redisClient });
 
 serve(
   {
