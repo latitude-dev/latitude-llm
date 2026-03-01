@@ -1,24 +1,21 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { createRedisConnection } from "@platform/cache-redis";
-import { createPostgresPool } from "@platform/db-postgres";
-import { parseEnv } from "@platform/env";
+import { config as loadDotenv } from "dotenv";
 import { createPollingOutboxConsumer } from "@platform/events-outbox";
 import { createBullmqEventsPublisher } from "@platform/queue-bullmq";
 import { createLogger } from "@repo/observability";
-import { config as loadDotenv } from "dotenv";
-import { Effect } from "effect";
+import { getPostgresPool, getRedisConnection } from "./clients.js";
 import { createEventsWorker } from "./workers/events.js";
 
-const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"));
+const nodeEnv = process.env.NODE_ENV || "development";
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));
 
 if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath });
 }
 
-const redisConnection = createRedisConnection();
-const pgPool = createPostgresPool({ maxConnections: 10 });
+const redisConnection = getRedisConnection();
+const pgPool = getPostgresPool(10);
 const { queue: eventsQueue, worker: eventsWorker } = createEventsWorker(redisConnection);
 const eventsPublisher = createBullmqEventsPublisher({ queue: eventsQueue });
 const outboxConsumer = createPollingOutboxConsumer(

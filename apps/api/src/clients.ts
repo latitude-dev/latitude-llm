@@ -1,6 +1,21 @@
-import { createClickhouseClientEffect } from "@platform/db-clickhouse";
+import type { ClickHouseClient } from "@clickhouse/client";
+import { createClickhouseClient } from "@platform/db-clickhouse";
 import { createPostgresPool } from "@platform/db-postgres";
-import { Effect } from "effect";
+import type { Pool } from "pg";
 
-export const postgresPool = createPostgresPool();
-export const clickhouse = Effect.runSync(createClickhouseClientEffect());
+let postgresPoolInstance: Pool | undefined;
+let clickhouseInstance: ClickHouseClient | undefined;
+
+export const getPostgresPool = (): Pool => {
+  if (!postgresPoolInstance) {
+    postgresPoolInstance = createPostgresPool();
+  }
+  return postgresPoolInstance;
+};
+
+export const getClickhouseClient = (): ClickHouseClient => {
+  if (!clickhouseInstance) {
+    clickhouseInstance = createClickhouseClient();
+  }
+  return clickhouseInstance;
+};
