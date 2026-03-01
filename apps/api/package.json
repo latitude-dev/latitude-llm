@@ -17,7 +17,7 @@
     "@domain/api-keys": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared-kernel": "workspace:*",
-    "@domain/workspaces": "workspace:*",
+    "@domain/organizations": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/auth-better": "workspace:*",
     "@platform/cache-redis": "workspace:*",

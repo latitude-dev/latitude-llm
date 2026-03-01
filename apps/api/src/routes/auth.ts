@@ -13,7 +13,7 @@ import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.js";
  * - POST /auth/sign-in/social/callback - OAuth callback
  * - GET /auth/session - Get current session
  * - POST /auth/sign-out - Sign out
- * - POST /auth/organization/create - Create organization (workspace)
+ * - POST /auth/organization/create - Create organization (organization)
  * - POST /auth/organization/invite-member - Invite member to organization
  * - GET /auth/organization/list - List user's organizations
  *

@@ -13,9 +13,6 @@ export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
   return postgresClientInstance;
 };
 
-// Convenience export for just the db
-export const getDb = (): PostgresDb => getPostgresClient().db;
-
 export const getClickhouseClient = (): ClickHouseClient => {
   if (!clickhouseInstance) {
     clickhouseInstance = createClickhouseClient();

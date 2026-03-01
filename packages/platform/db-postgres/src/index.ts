@@ -16,7 +16,6 @@ export {
   setUserContext,
   withOrganizationContext,
 } from "./rls.js";
-export type { RLS_POLICIES_SQL, RLS_INDEXES_SQL, ALL_RLS_SQL } from "./schema/rls-policies.js";
 // Repository exports
 export {
   createApiKeyPostgresRepository,

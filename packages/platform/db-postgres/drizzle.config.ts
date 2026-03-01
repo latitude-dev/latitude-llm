@@ -19,11 +19,10 @@ export default defineConfig({
   schema: [
     // Better Auth tables
     "./src/schema/better-auth.ts",
+    "./src/schema/subscription.ts",
     // Domain tables
-    "./src/schema/workspaces.ts",
     "./src/schema/projects.ts",
     "./src/schema/api-keys.ts",
-    "./src/schema/subscriptions.ts",
     "./src/schema/grants.ts",
     "./src/schema/outbox-events.ts",
   ],

@@ -1,14 +1,14 @@
-import { OrganizationId, UserId, generateId } from "@domain/shared-kernel";
 import {
   type CreateOrganizationInput,
   InvalidOrganizationNameError,
   OrganizationAlreadyExistsError,
   createOrganizationUseCase,
   getOrganizationMembersUseCase,
-} from "@domain/workspaces";
+} from "@domain/organizations";
+import { OrganizationId, UserId, generateId } from "@domain/shared-kernel";
 import { createRepositories } from "@platform/db-postgres";
 import { Hono } from "hono";
-import { getDb } from "../clients.js";
+import { getPostgresClient } from "../clients.ts";
 import { extractParam, runUseCase } from "../lib/effect-utils.js";
 import { mapErrorToResponse } from "../lib/error-mapper.js";
 
@@ -26,7 +26,7 @@ import { mapErrorToResponse } from "../lib/error-mapper.js";
 const getCurrentUserId = () => "user-id-placeholder";
 
 export const createOrganizationsRoutes = () => {
-  const repos = createRepositories(getDb());
+  const repos = createRepositories(getPostgresClient().db);
   const app = new Hono();
 
   // POST /organizations - Create organization

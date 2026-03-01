@@ -23,7 +23,7 @@
     "@domain/projects": "workspace:*",
     "@domain/shared-kernel": "workspace:*",
     "@domain/subscriptions": "workspace:*",
-    "@domain/workspaces": "workspace:*",
+    "@domain/organizations": "workspace:*",
     "@platform/env": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",

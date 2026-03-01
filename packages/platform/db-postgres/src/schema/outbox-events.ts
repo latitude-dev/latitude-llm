@@ -1,6 +1,14 @@
-import { boolean, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export const outboxEvents = pgTable("outbox_events", {
+/**
+ * Outbox events table for reliable event publishing.
+ *
+ * Scoped to the 'latitude' schema.
+ */
+
+const latitudeSchema = pgSchema("latitude");
+
+export const outboxEvents = latitudeSchema.table("outbox_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   eventName: text("event_name").notNull(),
   aggregateId: uuid("aggregate_id").notNull(),

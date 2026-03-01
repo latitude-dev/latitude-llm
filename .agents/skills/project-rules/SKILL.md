@@ -44,7 +44,7 @@ You are writing code, designing a new feature, reviewing changes, and planning w
 - Effect TS primitives for core code.
 - Drizzle ORM for Postgres adapters.
 - Hono for API and ingest boundaries.
-- TanStack Start + Solid for web.
+- TanStack Start + React for web.
 - Biome for lint/format.
 
 ## Output style for this skill
@@ -66,7 +66,7 @@ You are writing code, designing a new feature, reviewing changes, and planning w
 
 - Product: multi-tenant LLM observability platform.
 - Monorepo: `pnpm` workspaces + `turbo`.
-- Frontend: TanStack Start + Solid (`apps/web`).
+- Frontend: TanStack Start + React (`apps/web`).
 - API and ingest boundaries: Hono (`apps/api`, `apps/ingest`).
 
 ## Non-negotiable architecture rules
@@ -99,6 +99,7 @@ You are writing code, designing a new feature, reviewing changes, and planning w
 **Always use drizzle-kit for migrations.** Never create manual SQL files in the drizzle folder.
 
 **Schema changes:**
+
 ```bash
 # Generate migration from schema changes
 npx drizzle-kit generate
@@ -108,6 +109,7 @@ npx drizzle-kit migrate
 ```
 
 **Custom SQL (e.g., RLS policies, seed data):**
+
 ```bash
 # Create custom migration for DDL not supported by Drizzle
 npx drizzle-kit generate --custom --name=enable-rls
@@ -118,6 +120,7 @@ npx drizzle-kit migrate
 ```
 
 **Key points:**
+
 - Use `drizzle-kit generate` for schema changes (creates timestamped migration)
 - Use `drizzle-kit generate --custom` for custom SQL (RLS, triggers, seed data)
 - Never manually create SQL files in the drizzle folder
@@ -189,6 +192,7 @@ interface HttpError {
 ```
 
 **Implementation rules:**
+
 1. Domain errors carry their own HTTP metadata (`httpStatus`, `httpMessage`)
 2. Repositories return typed errors (e.g., `NotFoundError`) instead of null
 3. Routes fail loudly - no try/catch, let errors propagate
@@ -196,17 +200,23 @@ interface HttpError {
 5. Error middleware converts HttpError instances to appropriate HTTP responses
 
 **Example domain error:**
+
 ```typescript
-export class InvalidWorkspaceNameError extends Data.TaggedError("InvalidWorkspaceNameError")<{
+export class InvalidWorkspaceNameError extends Data.TaggedError(
+  "InvalidWorkspaceNameError",
+)<{
   readonly name: string;
   readonly reason: string;
 }> {
   readonly httpStatus = 400;
-  get httpMessage() { return this.reason; }
+  get httpMessage() {
+    return this.reason;
+  }
 }
 ```
 
 **Example repository method:**
+
 ```typescript
 findById(id: WorkspaceId): Effect.Effect<Workspace, NotFoundError | RepositoryError>
 ```
