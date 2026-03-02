@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "node --watch src/server.ts",
+    "dev": "node --watch --localstorage-file=/tmp/node-localstorage src/server.ts",
     "lint": "biome check src",
     "format": "biome format --write src",
     "format:check": "biome format --check src",
