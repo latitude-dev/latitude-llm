@@ -35,6 +35,7 @@
     "pg": "catalog:"
   },
   "devDependencies": {
-    "@platform/testkit": "workspace:*"
+    "@platform/testkit": "workspace:*",
+    "@repo/vitest-config": "workspace:*"
   }
 }

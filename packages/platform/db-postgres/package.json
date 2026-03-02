@@ -13,6 +13,7 @@
     "pg:check": "drizzle-kit check --config=drizzle.config.ts",
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
     "check": "biome check src",
+    "db:test:setup": "node scripts/setup-test-db.mjs",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
