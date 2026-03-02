@@ -1,5 +1,4 @@
 import { createBetterAuth } from "@platform/auth-better"
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createUserPostgresRepository } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import type { User } from "better-auth"
@@ -68,8 +67,6 @@ export const createAuthRoutes = () => {
 
   // Initialize dependencies where they are used
   const { db } = getPostgresClient()
-  const redisConn = createRedisConnection()
-  const redis = createRedisClient(redisConn)
 
   const betterAuthSecret = Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"))
 
@@ -79,7 +76,6 @@ export const createAuthRoutes = () => {
 
   // Create user repository
   const userRepository = createUserPostgresRepository(db)
-
   const auth = createBetterAuth({
     db,
     secret: betterAuthSecret,
@@ -109,7 +105,7 @@ export const createAuthRoutes = () => {
 
   const betterAuthHandler = auth.handler
   const betterAuthApi = auth.api as unknown as BetterAuthAPI
-  const signUpRateLimiter = createSignUpIpRateLimiter(redis)
+  const signUpRateLimiter = createSignUpIpRateLimiter()
 
   // JWT-specific: POST /auth/sign-up/email - Email/password sign up
   // Returns JSON instead of redirect (for JWT tools)

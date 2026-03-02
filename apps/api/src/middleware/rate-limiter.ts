@@ -1,7 +1,7 @@
-import type { RedisClient } from "@platform/cache-redis"
 import { parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import type { Context, Next } from "hono"
+import { getRedisClient } from "../clients.ts"
 
 /**
  * Redis-backed rate limiter for authentication endpoints.
@@ -30,7 +30,9 @@ interface RateLimitConfig {
 /**
  * Create a Redis-backed rate limiting middleware
  */
-const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConfig) => {
+const createRedisRateLimiter = (config: RateLimitConfig) => {
+  const redis = getRedisClient()
+
   return async (c: Context, next: Next) => {
     const key = `${config.keyPrefix}:${config.keyGenerator(c)}`
 
@@ -90,12 +92,12 @@ const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConfig) => 
  * Rate limiter for sign-up attempts by IP address
  * 3 attempts per hour in production, 100 attempts per hour in development (to prevent mass account creation)
  */
-export const createSignUpIpRateLimiter = (redis: RedisClient) => {
+export const createSignUpIpRateLimiter = () => {
   // In development, be more permissive
   const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development"
   const isDevelopment = nodeEnv === "development"
 
-  return createRedisRateLimiter(redis, {
+  return createRedisRateLimiter({
     maxRequests: isDevelopment ? 100 : 3,
     windowSeconds: 60 * 60, // 1 hour
     keyPrefix: "ratelimit:signup:ip",
@@ -112,12 +114,12 @@ export const createSignUpIpRateLimiter = (redis: RedisClient) => {
  * 10 attempts per 15 minutes in production, 100 attempts per 15 minutes in development
  * This protects against brute force attacks on API keys and JWT tokens
  */
-export const createAuthRateLimiter = (redis: RedisClient) => {
+export const createAuthRateLimiter = () => {
   // In development, be more permissive
   const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development"
   const isDevelopment = nodeEnv === "development"
 
-  return createRedisRateLimiter(redis, {
+  return createRedisRateLimiter({
     maxRequests: isDevelopment ? 100 : 10,
     windowSeconds: 15 * 60, // 15 minutes
     keyPrefix: "ratelimit:auth:ip",

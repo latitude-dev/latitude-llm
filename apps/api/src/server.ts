@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { serve } from "@hono/node-server"
-import { parseEnv } from "@platform/env"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
@@ -22,12 +22,30 @@ const logger = createLogger("api")
 // Register global error handler
 app.onError(honoErrorHandler)
 
-// Enable CORS for web frontend with strict whitelist
-const allowedOrigins = [
-  "https://app.latitude.com",
-  "https://admin.latitude.com",
-  nodeEnv === "development" ? "http://localhost:3000" : null,
-].filter((origin): origin is string => origin !== null)
+// Parse CORS allowed origins from environment variable
+// Format: comma-separated list of origins
+// Example: CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+const parseAllowedOrigins = (): string[] => {
+  const originsEnv = Effect.runSync(parseEnvOptional(process.env.CORS_ALLOWED_ORIGINS, "string"))
+
+  if (originsEnv) {
+    return originsEnv
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter((origin) => origin.length > 0)
+  }
+
+  // Fallback defaults for development if env var not set
+  if (nodeEnv === "development") {
+    return ["http://localhost:3000"]
+  }
+
+  // In production, require explicit configuration
+  logger.warn("CORS_ALLOWED_ORIGINS not set, using empty whitelist (will reject all browser requests)")
+  return []
+}
+
+const allowedOrigins = parseAllowedOrigins()
 
 app.use(
   cors({

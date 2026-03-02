@@ -1,7 +1,8 @@
-import type { ApiKeyRepository } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared-kernel"
+import { createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
+import { getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("touch-buffer")
 
@@ -28,7 +29,7 @@ export interface TouchBufferConfig {
  *
  * Usage:
  * ```typescript
- * const touchBuffer = new TouchBuffer(apiKeyRepository, { intervalMs: 30000 })
+ * const touchBuffer = createTouchBuffer() // Uses singleton
  * touchBuffer.touch(apiKey.id) // Fast, in-memory only
  *
  * // On shutdown:
@@ -41,10 +42,7 @@ export class TouchBuffer {
   private readonly intervalMs: number
   private readonly maxBufferSize: number
 
-  constructor(
-    private readonly apiKeyRepository: ApiKeyRepository,
-    config: TouchBufferConfig = {},
-  ) {
+  constructor(config: TouchBufferConfig = {}) {
     this.intervalMs = config.intervalMs ?? 30000
     this.maxBufferSize = config.maxBufferSize ?? 10000
 
@@ -99,8 +97,12 @@ export class TouchBuffer {
 
     const startTime = Date.now()
 
+    // Get repository at flush time (direct import pattern)
+    const { db } = getPostgresClient()
+    const apiKeyRepository = createApiKeyPostgresRepository(db)
+
     try {
-      await Effect.runPromise(this.apiKeyRepository.touchBatch(keyIds))
+      await Effect.runPromise(apiKeyRepository.touchBatch(keyIds))
 
       const duration = Date.now() - startTime
       logger.info(`Flushed ${keyIds.length} touch updates in ${duration}ms`)
@@ -168,9 +170,9 @@ export class TouchBuffer {
  */
 let touchBufferInstance: TouchBuffer | null = null
 
-export const createTouchBuffer = (apiKeyRepository: ApiKeyRepository, config?: TouchBufferConfig): TouchBuffer => {
+export const createTouchBuffer = (config?: TouchBufferConfig): TouchBuffer => {
   if (!touchBufferInstance) {
-    touchBufferInstance = new TouchBuffer(apiKeyRepository, config)
+    touchBufferInstance = new TouchBuffer(config)
   }
   return touchBufferInstance
 }

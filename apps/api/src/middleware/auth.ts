@@ -1,12 +1,10 @@
-import type { ApiKeyRepository } from "@domain/api-keys"
-import type { MembershipRepository } from "@domain/organizations"
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared-kernel"
-import type { RedisClient } from "@platform/cache-redis"
+import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
-import { getBetterAuth } from "../clients.ts"
+import { getBetterAuth, getPostgresClient, getRedisClient } from "../clients.ts"
 import type { AuthContext } from "../types.ts"
-import type { TouchBuffer } from "./touch-buffer.ts"
+import { createTouchBuffer } from "./touch-buffer.ts"
 
 /**
  * Minimum time for API key validation in milliseconds.
@@ -23,13 +21,94 @@ const INVALID_KEY_TTL_SECONDS = 5 // 5 seconds for invalid keys (prevents timing
 const getApiKeyCacheKey = (token: string): string => `apikey:${token}`
 
 /**
- * Dependencies required for authentication.
+ * Get cached API key result from Redis.
  */
-interface AuthDeps {
-  readonly apiKeyRepository: ApiKeyRepository
-  readonly membershipRepository: MembershipRepository
-  readonly redis: RedisClient
-  readonly touchBuffer: TouchBuffer
+const getCachedApiKey = (
+  token: string,
+): Effect.Effect<{ organizationId: string; keyId: string } | null | undefined, never> => {
+  const redis = getRedisClient()
+  const cacheKey = getApiKeyCacheKey(token)
+  return Effect.tryPromise({
+    try: async () => {
+      const cached = await redis.get(cacheKey)
+      if (!cached) return undefined
+      const parsed = JSON.parse(cached)
+      return parsed as { organizationId: string; keyId: string } | null
+    },
+    catch: () => undefined,
+  }).pipe(Effect.orDie)
+}
+
+/**
+ * Cache API key result in Redis.
+ */
+const cacheApiKeyResult = (
+  token: string,
+  result: { organizationId: string; keyId: string } | null,
+  ttl: number,
+): Effect.Effect<void, never> => {
+  const redis = getRedisClient()
+  const cacheKey = getApiKeyCacheKey(token)
+  return Effect.tryPromise({
+    try: () => redis.setex(cacheKey, ttl, JSON.stringify(result)),
+    catch: () => undefined,
+  }).pipe(Effect.orDie)
+}
+
+/**
+ * Validate API key with Redis caching and constant-time execution.
+ *
+ * Security features:
+ * - All code paths take at least MIN_VALIDATION_TIME_MS (~50ms) to prevent timing attacks
+ * - Redis cache provides consistent lookup time for both valid and invalid keys
+ * - Invalid keys are cached briefly to prevent repeated DB hits and timing enumeration
+ * - Graceful degradation: continues without cache if Redis unavailable
+ */
+const validateApiKey = (token: string): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
+  const { db } = getPostgresClient()
+  const apiKeyRepository = createApiKeyPostgresRepository(db)
+  const touchBuffer = createTouchBuffer()
+
+  return Effect.gen(function* () {
+    const startTime = Date.now()
+
+    // Try cache first for consistent lookup time
+    const cached = yield* getCachedApiKey(token)
+
+    if (cached !== undefined) {
+      // Cache hit - enforce minimum time and return
+      yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+      return cached
+    }
+
+    // Cache miss - hit database
+    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByToken(token))
+
+    if (Option.isNone(apiKeyOption) || apiKeyOption.value === null) {
+      // Cache negative result briefly to prevent timing attacks
+      yield* cacheApiKeyResult(token, null, INVALID_KEY_TTL_SECONDS)
+      yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+      return null
+    }
+
+    const apiKey = apiKeyOption.value
+
+    const result = {
+      organizationId: apiKey.organizationId as string,
+      keyId: apiKey.id as string,
+    }
+
+    // Cache successful validation for 5 minutes
+    yield* cacheApiKeyResult(token, result, VALID_KEY_TTL_SECONDS)
+
+    // Use TouchBuffer for batched updates instead of fire-and-forget
+    // This reduces database writes by 90%+ by batching updates
+    touchBuffer.touch(apiKey.id as string)
+
+    // Enforce minimum time before returning
+    yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+    return result
+  }).pipe(Effect.orDie)
 }
 
 /**
@@ -48,105 +127,13 @@ const enforceMinimumTime = (startTime: number, minMs: number): Effect.Effect<voi
 }
 
 /**
- * Get cached API key result from Redis.
- */
-const getCachedApiKey = (
-  redis: RedisClient,
-  token: string,
-): Effect.Effect<{ organizationId: string; keyId: string } | null | undefined, never> => {
-  const cacheKey = getApiKeyCacheKey(token)
-  return Effect.tryPromise({
-    try: async () => {
-      const cached = await redis.get(cacheKey)
-      if (!cached) return undefined
-      const parsed = JSON.parse(cached)
-      return parsed as { organizationId: string; keyId: string } | null
-    },
-    catch: () => undefined,
-  }).pipe(Effect.orDie)
-}
-
-/**
- * Cache API key result in Redis.
- */
-const cacheApiKeyResult = (
-  redis: RedisClient,
-  token: string,
-  result: { organizationId: string; keyId: string } | null,
-  ttl: number,
-): Effect.Effect<void, never> => {
-  const cacheKey = getApiKeyCacheKey(token)
-  return Effect.tryPromise({
-    try: () => redis.setex(cacheKey, ttl, JSON.stringify(result)),
-    catch: () => undefined,
-  }).pipe(Effect.orDie)
-}
-
-/**
- * Validate API key with Redis caching and constant-time execution.
- *
- * Security features:
- * - All code paths take at least MIN_VALIDATION_TIME_MS (~50ms) to prevent timing attacks
- * - Redis cache provides consistent lookup time for both valid and invalid keys
- * - Invalid keys are cached briefly to prevent repeated DB hits and timing enumeration
- * - Graceful degradation: continues without cache if Redis unavailable
- */
-const validateApiKey = (
-  deps: AuthDeps,
-  token: string,
-): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
-  return Effect.gen(function* () {
-    const startTime = Date.now()
-
-    // Try cache first for consistent lookup time
-    const cached = yield* getCachedApiKey(deps.redis, token)
-
-    if (cached !== undefined) {
-      // Cache hit - enforce minimum time and return
-      yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-      return cached
-    }
-
-    // Cache miss - hit database
-    const apiKeyOption = yield* Effect.option(deps.apiKeyRepository.findByToken(token))
-
-    if (Option.isNone(apiKeyOption) || apiKeyOption.value === null) {
-      // Cache negative result briefly to prevent timing attacks
-      yield* cacheApiKeyResult(deps.redis, token, null, INVALID_KEY_TTL_SECONDS)
-      yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-      return null
-    }
-
-    const apiKey = apiKeyOption.value
-
-    const result = {
-      organizationId: apiKey.organizationId as string,
-      keyId: apiKey.id as string,
-    }
-
-    // Cache successful validation for 5 minutes
-    yield* cacheApiKeyResult(deps.redis, token, result, VALID_KEY_TTL_SECONDS)
-
-    // Use TouchBuffer for batched updates instead of fire-and-forget
-    // This reduces database writes by 90%+ by batching updates
-    deps.touchBuffer.touch(apiKey.id as string)
-
-    // Enforce minimum time before returning
-    yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-    return result
-  }).pipe(Effect.orDie)
-}
-
-/**
  * Validate that a user is a member of the specified organization.
  * Returns true if membership is valid, false otherwise.
  */
-const validateOrganizationMembership = (
-  deps: AuthDeps,
-  userId: string,
-  organizationId: string,
-): Effect.Effect<boolean, never> => {
-  return deps.membershipRepository.isMember(OrganizationId(organizationId), userId).pipe(Effect.orDie)
+const validateOrganizationMembership = (userId: string, organizationId: string): Effect.Effect<boolean, never> => {
+  const { db } = getPostgresClient()
+  const membershipRepository = createMembershipPostgresRepository(db)
+  return membershipRepository.isMember(OrganizationId(organizationId), userId).pipe(Effect.orDie)
 }
 
 /**
@@ -169,13 +156,9 @@ const extractApiKeyToken = (c: Context): string | undefined => {
 /**
  * Authenticate via API key.
  */
-const authenticateWithApiKey = (
-  deps: AuthDeps,
-  _c: Context,
-  token: string,
-): Effect.Effect<AuthContext | null, never> => {
+const authenticateWithApiKey = (_c: Context, token: string): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
-    const result = yield* validateApiKey(deps, token)
+    const result = yield* validateApiKey(token)
 
     if (result) {
       return {
@@ -192,7 +175,7 @@ const authenticateWithApiKey = (
 /**
  * Authenticate via Better Auth session (cookie or JWT).
  */
-const authenticateWithSession = (deps: AuthDeps, c: Context): Effect.Effect<AuthContext | null, never> => {
+const authenticateWithSession = (c: Context): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
     const auth = getBetterAuth()
 
@@ -210,7 +193,7 @@ const authenticateWithSession = (deps: AuthDeps, c: Context): Effect.Effect<Auth
       return null
     }
 
-    const isMember = yield* validateOrganizationMembership(deps, session.user.id, orgId)
+    const isMember = yield* validateOrganizationMembership(session.user.id, orgId)
     if (!isMember) {
       return null
     }
@@ -226,16 +209,16 @@ const authenticateWithSession = (deps: AuthDeps, c: Context): Effect.Effect<Auth
 /**
  * Main authentication effect that tries all authentication methods.
  */
-const authenticate = (deps: AuthDeps, c: Context): Effect.Effect<AuthContext, UnauthorizedError> => {
+const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
     const apiKeyToken = extractApiKeyToken(c)
 
     let authContext: AuthContext | null = null
 
     if (apiKeyToken) {
-      authContext = yield* authenticateWithApiKey(deps, c, apiKeyToken)
+      authContext = yield* authenticateWithApiKey(c, apiKeyToken)
     } else {
-      authContext = yield* authenticateWithSession(deps, c)
+      authContext = yield* authenticateWithSession(c)
     }
 
     if (!authContext) {
@@ -257,18 +240,11 @@ const authenticate = (deps: AuthDeps, c: Context): Effect.Effect<AuthContext, Un
  * The middleware sets auth context on the Hono context for downstream handlers.
  * Public routes should be excluded from this middleware.
  */
-export const createAuthMiddleware = (
-  apiKeyRepository: ApiKeyRepository,
-  membershipRepository: MembershipRepository,
-  redis: RedisClient,
-  touchBuffer: TouchBuffer,
-): MiddlewareHandler => {
+export const createAuthMiddleware = (): MiddlewareHandler => {
   return async (c: Context, next: Next) => {
-    const deps: AuthDeps = { apiKeyRepository, membershipRepository, redis, touchBuffer }
-
     // Build and run the authentication program
     // Errors will propagate to the global error handler
-    const authContext = await Effect.runPromise(authenticate(deps, c))
+    const authContext = await Effect.runPromise(authenticate(c))
 
     // Set auth context on Hono context - type-safe via module augmentation
     c.set("auth", authContext)

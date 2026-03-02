@@ -1,5 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { createBetterAuth } from "@platform/auth-better"
+import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
+import type { RedisClient } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { type PostgresDb, createPostgresClient } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
@@ -8,6 +10,7 @@ import type { Pool } from "pg"
 
 let postgresClientInstance: { db: PostgresDb; pool: Pool } | undefined
 let clickhouseInstance: ClickHouseClient | undefined
+let redisInstance: RedisClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 
 export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
@@ -22,6 +25,20 @@ export const getClickhouseClient = (): ClickHouseClient => {
     clickhouseInstance = createClickhouseClient()
   }
   return clickhouseInstance
+}
+
+/**
+ * Get or create the Redis client instance.
+ *
+ * This is a singleton to ensure the same Redis client is used
+ * across routes and middleware.
+ */
+export const getRedisClient = (): RedisClient => {
+  if (!redisInstance) {
+    const redisConn = createRedisConnection()
+    redisInstance = createRedisClient(redisConn)
+  }
+  return redisInstance
 }
 
 /**
