@@ -82,7 +82,7 @@ export const createAuthRoutes = () => {
       // Find user by email using the repository
       const user = await Effect.runPromise(userRepository.findByEmail(email));
       const userName = user?.name ?? email.split("@")[0];
-      const html = magicLinkTemplate({ userName, magicLinkUrl: url });
+      const html = await magicLinkTemplate({ userName, magicLinkUrl: url });
 
       await Effect.runPromise(
         sendEmailUseCase({
@@ -101,8 +101,6 @@ export const createAuthRoutes = () => {
 
   const betterAuthHandler = auth.handler;
   const betterAuthApi = auth.api as unknown as BetterAuthAPI;
-
-  // Create rate limiters with Redis
   const signUpRateLimiter = createSignUpIpRateLimiter(redis);
 
   // JWT-specific: POST /auth/sign-up/email - Email/password sign up
