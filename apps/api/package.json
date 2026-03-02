@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "node --watch src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -32,7 +32,8 @@
     "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
-    "pg": "catalog:"
+    "pg": "catalog:",
+    "tsx": "catalog:"
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
