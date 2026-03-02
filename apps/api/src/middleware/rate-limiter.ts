@@ -106,3 +106,25 @@ export const createSignUpIpRateLimiter = (redis: RedisClient) => {
     errorMessage: "Too many account creation attempts. Please try again later.",
   })
 }
+
+/**
+ * Rate limiter for authentication attempts by IP address
+ * 10 attempts per 15 minutes in production, 100 attempts per 15 minutes in development
+ * This protects against brute force attacks on API keys and JWT tokens
+ */
+export const createAuthRateLimiter = (redis: RedisClient) => {
+  // In development, be more permissive
+  const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development"
+  const isDevelopment = nodeEnv === "development"
+
+  return createRedisRateLimiter(redis, {
+    maxRequests: isDevelopment ? 100 : 10,
+    windowSeconds: 15 * 60, // 15 minutes
+    keyPrefix: "ratelimit:auth:ip",
+    keyGenerator: (c: Context) => {
+      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
+      return ip.split(",")[0].trim()
+    },
+    errorMessage: "Too many authentication attempts. Please try again later.",
+  })
+}

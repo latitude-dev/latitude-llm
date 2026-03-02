@@ -38,4 +38,12 @@ export interface ApiKeyRepository {
    * Update the lastUsedAt timestamp for an API key.
    */
   touch(id: ApiKeyId): Effect.Effect<void, RepositoryError>
+
+  /**
+   * Update the lastUsedAt timestamp for multiple API keys in a batch.
+   *
+   * This is more efficient than calling touch() individually for each key,
+   * as it performs a single database UPDATE query.
+   */
+  touchBatch(ids: readonly ApiKeyId[]): Effect.Effect<void, RepositoryError>
 }
