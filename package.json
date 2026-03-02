@@ -13,7 +13,7 @@
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:fix:files": "knip --fix-type files --allow-remove-files",
-    "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm build"
+    "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate && pnpm build"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",

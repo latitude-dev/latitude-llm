@@ -77,6 +77,11 @@ Infrastructure details live here only. Platform packages implement adapters for 
 - Tests: Vitest 3.x
 - Install deps: `pnpm install`
 
+### Agent Install Safety Rule
+
+- Agents must **never** run `pnpm install` (including `--no-frozen-lockfile`) in this repository.
+- If dependency installation is needed, ask the user to run `pnpm install` locally and continue only after confirmation.
+
 ## Commands
 
 ### Top-Level (run from repo root)
@@ -184,6 +189,7 @@ Base config: `tsconfig.base.json`
 
 - Postgres adapter stack uses Drizzle ORM in `packages/platform/db-postgres`
 - ClickHouse adapter stack remains SQL-oriented in `packages/platform/db-clickhouse`
+- Weaviate adapter stack lives in `packages/platform/db-weaviate`
 - Domain models are independent from table/row shapes
 - Mapping from DB rows to domain objects belongs in platform adapters
 - **Apps use pool-based connections**: Use `createPostgresPool()` in `apps/*/clients.ts` for direct pool access
@@ -219,6 +225,25 @@ npx drizzle-kit migrate
 - Never manually create SQL files in the drizzle folder
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
+
+### Weaviate Collections and Migrations
+
+Use the dedicated Weaviate package for connection and schema bootstrapping:
+
+- **Connection API:** `packages/platform/db-weaviate/src/client.ts`
+  - `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks.
+- **Collection definitions:** `packages/platform/db-weaviate/src/collections.ts`
+  - Define all collections in code via `defineWeaviateCollections([...])`.
+- **Migration logic:** `packages/platform/db-weaviate/src/migrations.ts`
+  - Migrations are idempotent: checks `collections.exists()` before create and tolerates "already exists" race conditions.
+- **Manual migration command:** `pnpm --filter @platform/db-weaviate wv:migrate`
+  - Entrypoint is `packages/platform/db-weaviate/src/migrate.ts`.
+
+Rules:
+
+- Do not define Weaviate collections in app/domain packages.
+- Do not add ad-hoc Weaviate migration scripts outside `packages/platform/db-weaviate`.
+- Keep collection schema changes centralized in `src/collections.ts` and rely on the package migration flow.
 
 ## Effect Patterns
 
