@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "^3.3.0",
     "effect": "catalog:"
   }
 }

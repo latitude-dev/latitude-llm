@@ -6,6 +6,8 @@
  * so these are just strings at runtime with zero overhead.
  */
 
+import { createId, isCuid } from "@paralleldrive/cuid2"
+
 // Base branded type helper
 type Branded<T, B> = T & { readonly __brand: B }
 
@@ -39,7 +41,13 @@ export const SubscriptionId = (value: string): SubscriptionId => value as Subscr
 export const GrantId = (value: string): GrantId => value as GrantId
 
 /**
- * Generate a unique ID using cryptographically secure random UUID.
- * This is the default ID generation strategy for all entities.
+ * Generate a unique ID using CUID2.
+ * CUID2 provides 24-25 character URL-safe unique identifiers.
  */
-export const generateId = (): string => crypto.randomUUID()
+export const generateId = (): string => createId()
+
+/**
+ * Validate if a string is a valid CUID2.
+ * Uses the official isCuid function from @paralleldrive/cuid2.
+ */
+export const isValidId = (value: string): boolean => isCuid(value)
