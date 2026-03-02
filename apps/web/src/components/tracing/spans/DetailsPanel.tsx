@@ -9,7 +9,7 @@ import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { ClickToCopy } from '@latitude-data/web-ui/molecules/ClickToCopy'
 import { CollapsibleBox } from '@latitude-data/web-ui/molecules/CollapsibleBox'
 import { format } from 'date-fns'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   DetailsPanelProps,
   SPAN_KIND_DETAILS,
@@ -92,6 +92,10 @@ export function DetailsPanel<T extends SpanType>({
 }) {
   const [isMetadataExpanded, setIsMetadataExpanded] = useState(false)
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(defaultExpanded)
+
+  useEffect(() => {
+    setIsDetailsExpanded(defaultExpanded)
+  }, [defaultExpanded])
 
   const specification = SPAN_SPECIFICATIONS[span.type]
   if (!specification) return null

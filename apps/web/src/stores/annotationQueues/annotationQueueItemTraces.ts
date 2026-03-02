@@ -29,27 +29,22 @@ export function useAnnotationQueueItemTraces({
   const { data: trace, isLoading: isLoadingTrace } = useTrace({ traceId })
   const params = extractConversationParams(trace)
 
-  const shouldFetchConversation = !!params?.documentLogUuid
-  const conversationParams = {
-    conversationId: params?.documentLogUuid ?? '',
-    projectId,
-    commitUuid: params?.commitUuid ?? '',
-    documentUuid: params?.documentUuid ?? '',
-  }
-
   const {
     traces: conversationTraces,
     isLoading: isLoadingConversation,
     totalTokens,
     totalDuration,
     totalCost,
-  } = useConversation(conversationParams, {
-    isPaused: () => !shouldFetchConversation,
+  } = useConversation({
+    conversationId: params?.documentLogUuid ?? null,
+    projectId,
+    commitUuid: params?.commitUuid ?? '',
+    documentUuid: params?.documentUuid ?? '',
   })
 
   return useMemo(() => {
     const hasConversation =
-      shouldFetchConversation && conversationTraces.length > 0
+      !!params?.documentLogUuid && conversationTraces.length > 0
     const traces = hasConversation
       ? conversationTraces
       : trace
@@ -61,7 +56,7 @@ export function useAnnotationQueueItemTraces({
       isMultiTrace: conversationTraces.length > 1,
       documentLogUuid: params?.documentLogUuid ?? null,
       isLoading:
-        isLoadingTrace || (shouldFetchConversation && isLoadingConversation),
+        isLoadingTrace || (!!params?.documentLogUuid && isLoadingConversation),
       totalTokens,
       totalDuration,
       totalCost,
@@ -70,7 +65,6 @@ export function useAnnotationQueueItemTraces({
     conversationTraces,
     trace,
     params?.documentLogUuid,
-    shouldFetchConversation,
     isLoadingTrace,
     isLoadingConversation,
     totalTokens,
