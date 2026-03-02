@@ -25,5 +25,6 @@ export {
   createProjectPostgresRepository,
   createRepositories,
   createSubscriptionPostgresRepository,
+  createUserPostgresRepository,
 } from "./repositories/index.js";
 export type { Repositories } from "./repositories/index.js";
