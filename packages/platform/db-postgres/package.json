@@ -27,6 +27,7 @@
     "@platform/env": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
+    "@paralleldrive/cuid2": "catalog:",
     "pg": "catalog:"
   },
   "devDependencies": {
