@@ -17,6 +17,7 @@
     "@repo/ui": "workspace:*",
     "@tanstack/react-router": "catalog:",
     "effect": "catalog:",
+    "lucide-react": "^0.481.0",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
