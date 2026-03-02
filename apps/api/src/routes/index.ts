@@ -1,9 +1,9 @@
 import type { Hono } from "hono";
-import { createApiKeysRoutes } from "./api-keys.js";
-import { createAuthRoutes } from "./auth.js";
-import { registerHealthRoute } from "./health.js";
-import { createOrganizationsRoutes } from "./organizations.js";
-import { createProjectsRoutes } from "./projects.js";
+import { createApiKeysRoutes } from "./api-keys.ts";
+import { createAuthRoutes } from "./auth.ts";
+import { registerHealthRoute } from "./health.ts";
+import { createOrganizationsRoutes } from "./organizations.ts";
+import { createProjectsRoutes } from "./projects.ts";
 
 interface RoutesContext {
   app: Hono;

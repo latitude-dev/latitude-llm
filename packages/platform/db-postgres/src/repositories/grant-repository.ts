@@ -7,8 +7,8 @@ import {
 import type { Grant, GrantRepository, GrantType } from "@domain/subscriptions";
 import { and, eq, gt, gte, isNull, or } from "drizzle-orm";
 import { Effect } from "effect";
-import type { PostgresDb } from "../client.js";
-import * as schema from "../schema/index.js";
+import type { PostgresDb } from "../client.ts";
+import * as schema from "../schema/index.ts";
 
 /**
  * Maps database quota type enum value to domain GrantType.

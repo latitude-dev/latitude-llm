@@ -1,6 +1,6 @@
 import type { DomainEvent } from "@domain/events";
 import type { OrganizationId, UserId } from "@domain/shared-kernel";
-import type { MembershipRole } from "../entities/membership.js";
+import type { MembershipRole } from "../entities/membership.ts";
 
 /**
  * MemberJoined event - emitted when a user joins an organization.

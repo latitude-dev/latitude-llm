@@ -1,5 +1,5 @@
 import type { Effect } from "effect";
-import type { MembershipCreationError, WorkspaceCreationError } from "../errors.js";
+import type { MembershipCreationError, WorkspaceCreationError } from "../errors.ts";
 
 /**
  * Workspace repository port

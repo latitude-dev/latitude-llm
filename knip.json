@@ -48,7 +48,6 @@
     "@types/nodemailer",
     "typescript",
     "vitest",
-    "tsx",
     "turbo",
     "@biomejs/biome",
     "@effect/language-service"

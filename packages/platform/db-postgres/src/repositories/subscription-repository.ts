@@ -2,8 +2,8 @@ import { type OrganizationId, type SubscriptionId, toRepositoryError } from "@do
 import type { Plan, Subscription, SubscriptionRepository } from "@domain/subscriptions";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { Effect } from "effect";
-import type { PostgresDb } from "../client.js";
-import * as schema from "../schema/index.js";
+import type { PostgresDb } from "../client.ts";
+import * as schema from "../schema/index.ts";
 
 /**
  * Maps database plan name to domain Plan type.

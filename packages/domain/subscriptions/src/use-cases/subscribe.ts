@@ -1,12 +1,12 @@
 import type { OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared-kernel";
 import type { GrantId } from "@domain/shared-kernel";
 import { Data, Effect } from "effect";
-import { createGrant } from "../entities/grant.js";
-import type { GrantType } from "../entities/grant.js";
-import type { Plan } from "../entities/plan.js";
-import { type Subscription, createSubscription } from "../entities/subscription.js";
-import type { GrantRepository } from "../ports/grant-repository.js";
-import type { SubscriptionRepository } from "../ports/subscription-repository.js";
+import { createGrant } from "../entities/grant.ts";
+import type { GrantType } from "../entities/grant.ts";
+import type { Plan } from "../entities/plan.ts";
+import { type Subscription, createSubscription } from "../entities/subscription.ts";
+import type { GrantRepository } from "../ports/grant-repository.ts";
+import type { SubscriptionRepository } from "../ports/subscription-repository.ts";
 
 /**
  * Input for subscribing to a plan.

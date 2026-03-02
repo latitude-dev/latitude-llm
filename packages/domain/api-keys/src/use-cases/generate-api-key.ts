@@ -5,8 +5,8 @@ import type {
   ValidationError,
 } from "@domain/shared-kernel";
 import { Data, Effect } from "effect";
-import { type ApiKey, createApiKey, generateApiKeyToken } from "../entities/api-key.js";
-import type { ApiKeyRepository } from "../ports/api-key-repository.js";
+import { type ApiKey, createApiKey, generateApiKeyToken } from "../entities/api-key.ts";
+import type { ApiKeyRepository } from "../ports/api-key-repository.ts";
 
 /**
  * Generate a new API key for an organization.

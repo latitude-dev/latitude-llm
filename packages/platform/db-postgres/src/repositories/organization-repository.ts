@@ -2,8 +2,8 @@ import type { Organization, OrganizationRepository } from "@domain/organizations
 import { NotFoundError, type OrganizationId, toRepositoryError } from "@domain/shared-kernel";
 import { eq } from "drizzle-orm";
 import { Effect } from "effect";
-import type { PostgresDb } from "../client.js";
-import * as schema from "../schema/index.js";
+import type { PostgresDb } from "../client.ts";
+import * as schema from "../schema/index.ts";
 
 /**
  * Maps a database organization row to a domain Organization entity.

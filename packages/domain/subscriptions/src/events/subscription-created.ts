@@ -1,6 +1,6 @@
 import type { DomainEvent } from "@domain/events";
 import type { OrganizationId, SubscriptionId } from "@domain/shared-kernel";
-import type { Plan } from "../entities/plan.js";
+import type { Plan } from "../entities/plan.ts";
 
 /**
  * SubscriptionCreated event - emitted when a new subscription is created.

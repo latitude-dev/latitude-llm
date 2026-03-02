@@ -1,9 +1,9 @@
-export type { ClickhouseConfig } from "./client.js";
+export type { ClickhouseConfig } from "./client.ts";
 export {
   closeClickhouse,
   createClickhouseClient,
   createClickhouseClientEffect,
-} from "./client.js";
+} from "./client.ts";
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env";
-export { healthcheckClickhouse } from "./health.js";
-export { commandClickhouse, insertJsonEachRow, queryClickhouse } from "./sql.js";
+export { healthcheckClickhouse } from "./health.ts";
+export { commandClickhouse, insertJsonEachRow, queryClickhouse } from "./sql.ts";

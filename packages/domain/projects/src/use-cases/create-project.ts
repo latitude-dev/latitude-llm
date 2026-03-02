@@ -7,8 +7,8 @@ import type {
   ValidationError,
 } from "@domain/shared-kernel";
 import { Data, Effect } from "effect";
-import { type Project, createProject } from "../entities/project.js";
-import type { ProjectRepository } from "../ports/project-repository.js";
+import { type Project, createProject } from "../entities/project.ts";
+import type { ProjectRepository } from "../ports/project-repository.ts";
 
 /**
  * Create a new project use case.

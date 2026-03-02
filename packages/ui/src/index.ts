@@ -1,19 +1,19 @@
 // Tokens
-export * from "./tokens/index.js";
+export * from "./tokens/index.ts";
 
 // Utils
-export { cn } from "./utils/cn.js";
+export { cn } from "./utils/cn.ts";
 
 // Components
-export * from "./components/brand-icons/index.js";
-export * from "./components/button/index.js";
-export * from "./components/card/index.js";
-export * from "./components/checkbox/index.js";
-export * from "./components/form-field/index.js";
-export * from "./components/icons/index.js";
-export * from "./components/input/index.js";
-export * from "./components/label/index.js";
-export * from "./components/select/index.js";
-export * from "./components/skeleton/index.js";
-export * from "./components/text/index.js";
-export * from "./components/tooltip/index.js";
+export * from "./components/brand-icons/index.tsx";
+export * from "./components/button/index.ts";
+export * from "./components/card/index.ts";
+export * from "./components/checkbox/index.ts";
+export * from "./components/form-field/index.ts";
+export * from "./components/icons/index.ts";
+export * from "./components/input/index.ts";
+export * from "./components/label/index.ts";
+export * from "./components/select/index.ts";
+export * from "./components/skeleton/index.ts";
+export * from "./components/text/index.ts";
+export * from "./components/tooltip/index.ts";

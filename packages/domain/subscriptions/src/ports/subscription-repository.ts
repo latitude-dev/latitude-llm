@@ -1,6 +1,6 @@
 import type { OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared-kernel";
 import type { Effect } from "effect";
-import type { Subscription } from "../entities/subscription.js";
+import type { Subscription } from "../entities/subscription.ts";
 
 /**
  * Repository port for Subscription entities.

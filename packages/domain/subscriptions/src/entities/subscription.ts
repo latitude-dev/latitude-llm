@@ -1,5 +1,5 @@
 import type { OrganizationId, SubscriptionId } from "@domain/shared-kernel";
-import type { Plan } from "./plan.js";
+import type { Plan } from "./plan.ts";
 
 /**
  * Subscription entity - tracks organization billing subscription.

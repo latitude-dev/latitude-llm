@@ -3,8 +3,8 @@ import type { OrganizationId, UserId } from "@domain/shared-kernel";
 import { toRepositoryError } from "@domain/shared-kernel";
 import { and, eq } from "drizzle-orm";
 import { Effect } from "effect";
-import type { PostgresDb } from "../client.js";
-import * as schema from "../schema/index.js";
+import type { PostgresDb } from "../client.ts";
+import * as schema from "../schema/index.ts";
 
 /**
  * Maps a database member row to a domain Membership entity.

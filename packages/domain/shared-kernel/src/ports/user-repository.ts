@@ -1,6 +1,6 @@
 import type { Effect } from "effect";
-import type { RepositoryError } from "../errors.js";
-import type { User } from "../user.js";
+import type { RepositoryError } from "../errors.ts";
+import type { User } from "../user.ts";
 
 /**
  * User repository port - interface for user persistence operations.

@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import type { MembershipCreationError, WorkspaceCreationError } from "../errors.js";
-import type { UserCreated } from "../events/user-created.js";
-import type { MembershipRepository, WorkspaceRepository } from "../ports/repositories.js";
+import type { MembershipCreationError, WorkspaceCreationError } from "../errors.ts";
+import type { UserCreated } from "../events/user-created.ts";
+import type { MembershipRepository, WorkspaceRepository } from "../ports/repositories.ts";
 
 /**
  * Setup new user use case

@@ -2,8 +2,8 @@ import type { ApiKey, ApiKeyRepository } from "@domain/api-keys";
 import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel";
 import { and, eq, isNull } from "drizzle-orm";
 import { Effect } from "effect";
-import type { PostgresDb } from "../client.js";
-import * as schema from "../schema/index.js";
+import type { PostgresDb } from "../client.ts";
+import * as schema from "../schema/index.ts";
 
 /**
  * Maps a database API key row to a domain ApiKey entity.

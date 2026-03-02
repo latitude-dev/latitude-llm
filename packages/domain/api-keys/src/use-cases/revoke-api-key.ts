@@ -1,7 +1,7 @@
 import type { ApiKeyId, NotFoundError, RepositoryError } from "@domain/shared-kernel";
 import { Data, Effect } from "effect";
-import { type ApiKey, revoke } from "../entities/api-key.js";
-import type { ApiKeyRepository } from "../ports/api-key-repository.js";
+import { type ApiKey, revoke } from "../entities/api-key.ts";
+import type { ApiKeyRepository } from "../ports/api-key-repository.ts";
 
 /**
  * Revoke (soft delete) an API key.

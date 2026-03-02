@@ -8,8 +8,8 @@ import { createRepositories } from "@platform/db-postgres";
 import { Effect } from "effect";
 import { Hono } from "hono";
 import { getPostgresClient } from "../clients.ts";
-import { BadRequestError } from "../errors.js";
-import { extractParam } from "../lib/effect-utils.js";
+import { BadRequestError } from "../errors.ts";
+import { extractParam } from "../lib/effect-utils.ts";
 
 /**
  * Organization routes

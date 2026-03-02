@@ -6,8 +6,8 @@ import type {
   ValidationError,
 } from "@domain/shared-kernel";
 import { Data, Effect } from "effect";
-import { type Organization, createOrganization } from "../entities/organization.js";
-import type { OrganizationRepository } from "../ports/organization-repository.js";
+import { type Organization, createOrganization } from "../entities/organization.ts";
+import type { OrganizationRepository } from "../ports/organization-repository.ts";
 
 /**
  * Create a new organization.
