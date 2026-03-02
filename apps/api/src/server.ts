@@ -14,7 +14,7 @@ import { registerRoutes } from "./routes/index.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-if (existsSync(envFilePath)) loadDotenv({ path: envFilePath })
+if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 
 const app = new Hono()
 const port = Effect.runSync(parseEnv(process.env.LAT_API_PORT, "number", 3001))

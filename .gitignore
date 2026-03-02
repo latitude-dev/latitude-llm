@@ -122,3 +122,5 @@ progress.txt
 packages/cli/prompts
 
 **/*/tsconfig.tsbuildinfo
+
+.localstorage*
