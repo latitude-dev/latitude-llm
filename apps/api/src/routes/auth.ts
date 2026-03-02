@@ -1,5 +1,6 @@
 import { createBetterAuth } from "@platform/auth-better";
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis";
+import { createUserPostgresRepository } from "@platform/db-postgres";
 import { parseEnv } from "@platform/env";
 import type { User } from "better-auth";
 import { Effect } from "effect";
@@ -67,6 +68,9 @@ export const createAuthRoutes = () => {
   const emailSender = createNodemailerEmailSender();
   const sendEmailUseCase = sendEmail({ emailSender });
 
+  // Create user repository
+  const userRepository = createUserPostgresRepository(db);
+
   const auth = createBetterAuth({
     db,
     secret: betterAuthSecret,
@@ -75,7 +79,9 @@ export const createAuthRoutes = () => {
     trustedOrigins: [webUrl],
     // Magic Link email configuration
     sendMagicLink: async ({ email, url }: { email: string; url: string; token: string }) => {
-      const userName = email.split("@")[0];
+      // Find user by email using the repository
+      const user = await Effect.runPromise(userRepository.findByEmail(email));
+      const userName = user?.name ?? email.split("@")[0];
       const html = magicLinkTemplate({ userName, magicLinkUrl: url });
 
       await Effect.runPromise(

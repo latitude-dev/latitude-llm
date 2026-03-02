@@ -5,6 +5,7 @@ import { createMembershipPostgresRepository } from "./membership-repository.js";
 import { createOrganizationPostgresRepository } from "./organization-repository.js";
 import { createProjectPostgresRepository } from "./project-repository.js";
 import { createSubscriptionPostgresRepository } from "./subscription-repository.js";
+import { createUserPostgresRepository } from "./user-repository.js";
 
 /**
  * Consolidated repository factory.
@@ -25,6 +26,7 @@ export interface Repositories {
   membership: ReturnType<typeof createMembershipPostgresRepository>;
   subscription: ReturnType<typeof createSubscriptionPostgresRepository>;
   grant: ReturnType<typeof createGrantPostgresRepository>;
+  user: ReturnType<typeof createUserPostgresRepository>;
 }
 
 export const createRepositories = (db: PostgresDb): Repositories => ({
@@ -34,6 +36,7 @@ export const createRepositories = (db: PostgresDb): Repositories => ({
   membership: createMembershipPostgresRepository(db),
   subscription: createSubscriptionPostgresRepository(db),
   grant: createGrantPostgresRepository(db),
+  user: createUserPostgresRepository(db),
 });
 
 export { createApiKeyPostgresRepository } from "./api-key-repository.js";
@@ -42,3 +45,4 @@ export { createMembershipPostgresRepository } from "./membership-repository.js";
 export { createOrganizationPostgresRepository } from "./organization-repository.js";
 export { createProjectPostgresRepository } from "./project-repository.js";
 export { createSubscriptionPostgresRepository } from "./subscription-repository.js";
+export { createUserPostgresRepository } from "./user-repository.js";
