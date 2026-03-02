@@ -108,6 +108,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "@standard-schema/spec": "^1.0.0",
+    "@tailwindcss/container-queries": "^0.1.1",
     "@testing-library/dom": "^10.3.2",
     "@testing-library/react": "^16.0.0",
     "@types/js-cookie": "^3.0.6",

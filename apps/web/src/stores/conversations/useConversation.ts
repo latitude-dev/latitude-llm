@@ -7,7 +7,7 @@ import { ROUTES } from '$/services/routes'
 import { ConversationTracesResponse } from '$/app/api/conversations/[conversationId]/route'
 
 type ConversationRouteParams = {
-  conversationId: string
+  conversationId: string | null | undefined
   projectId: number
   commitUuid: string
   documentUuid: string
@@ -18,7 +18,9 @@ export function getConversationKey({
   projectId,
   commitUuid,
   documentUuid,
-}: ConversationRouteParams) {
+}: ConversationRouteParams): string | null {
+  if (!conversationId) return null
+
   const base = ROUTES.api.conversations.detail(conversationId).root
   const params = new URLSearchParams()
   params.set('projectId', String(projectId))
@@ -43,9 +45,10 @@ export function useConversation(
     commitUuid,
     documentUuid,
   })
-  const fetcher = useFetcher<ConversationTracesResponse>(route, {
-    fallback: undefined,
-  })
+  const fetcher = useFetcher<ConversationTracesResponse>(
+    route ?? undefined,
+    { fallback: undefined },
+  )
   const {
     data = undefined,
     mutate,

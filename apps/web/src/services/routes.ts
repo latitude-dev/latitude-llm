@@ -313,9 +313,17 @@ export const ROUTES = {
               },
               annotationQueues: {
                 root: `${root}/annotation-queues`,
-                detail: ({ queueId }: { queueId: number }) => ({
-                  root: `${root}/annotation-queues/${queueId}`,
-                }),
+                detail: ({ queueId }: { queueId: number }) => {
+                  const queueRoot = `${root}/annotation-queues/${queueId}`
+                  return {
+                    root: queueRoot,
+                    items: {
+                      detail: ({ itemId }: { itemId: string }) => ({
+                        root: `${queueRoot}/items/${itemId}`,
+                      }),
+                    },
+                  }
+                },
               },
             }
           },
