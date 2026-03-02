@@ -11,7 +11,6 @@ import {
   Section,
   Tailwind,
 } from "@react-email/components"
-import React from "react"
 import type { ReactNode } from "react"
 
 const LATITUDE_LOGO_URL = "https://app.latitude.so/latitude-logo.png"
