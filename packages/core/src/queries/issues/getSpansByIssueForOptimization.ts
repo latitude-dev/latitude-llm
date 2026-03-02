@@ -2,6 +2,7 @@ import {
   and,
   desc,
   eq,
+  getTableColumns,
   inArray,
   isNotNull,
   isNull,
@@ -12,6 +13,7 @@ import {
 } from 'drizzle-orm'
 import { database } from '../../client'
 import {
+  EvaluationType,
   LogSources,
   MAIN_SPAN_TYPES,
   MainSpanType,
@@ -31,25 +33,25 @@ import { Issue } from '../../schema/models/types/Issue'
 import { Workspace } from '../../schema/models/types/Workspace'
 import { Cursor } from '../../schema/types'
 
-type OptimizationSpanRef = Pick<Span<MainSpanType>, 'id' | 'traceId'>
-
 /**
- * Fetches optimization-ready span references for issue sampling.
+ * Fetches full spans associated with an issue for optimization sampling.
  */
 export async function getSpansByIssueForOptimization(
   {
     workspace,
     commit,
     issue,
+    requireFailedAnnotations = false,
     spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
-    cursor,
+    cursor = null,
     limit = 25,
   }: {
     workspace: Workspace
     commit: Commit
     issue: Issue
+    requireFailedAnnotations?: boolean
     spanTypes?: MainSpanType[]
-    cursor: Cursor<string, string> | null
+    cursor?: Cursor<Date, string> | null
     limit?: number
   },
   db = database,
@@ -60,7 +62,7 @@ export async function getSpansByIssueForOptimization(
 
   if (commitIds.length === 0) {
     return Result.ok({
-      spans: [] as OptimizationSpanRef[],
+      spans: [] as Span<MainSpanType>[],
       next: null,
     })
   }
@@ -77,9 +79,10 @@ export async function getSpansByIssueForOptimization(
     )
     .then((rows) => rows.map((row) => row.uuid))
 
-  const spanRefs = await getSpanRefsFromPostgres({
+  const rows = await getSpansFromPostgres({
     workspaceId: workspace.id,
     issueId: issue.id,
+    requireFailedAnnotations,
     commitIds,
     cursor,
     limit,
@@ -88,27 +91,28 @@ export async function getSpansByIssueForOptimization(
     db,
   })
 
-  const hasMore = spanRefs.length > limit
-  const paginated = hasMore ? spanRefs.slice(0, limit) : spanRefs
+  const hasMore = rows.length > limit
+  const paginatedSpans = hasMore ? rows.slice(0, limit) : rows
 
-  const lastItem = paginated.at(-1)
-  const next: Cursor<string, string> | null =
+  const lastItem = paginatedSpans.at(-1)
+  const next: Cursor<Date, string> | null =
     hasMore && lastItem
       ? {
-          value: lastItem.traceId,
+          value: lastItem.startedAt,
           id: lastItem.id,
         }
       : null
 
   return Result.ok({
-    spans: paginated,
+    spans: paginatedSpans as Span<MainSpanType>[],
     next,
   })
 }
 
-async function getSpanRefsFromPostgres({
+async function getSpansFromPostgres({
   workspaceId,
   issueId,
+  requireFailedAnnotations,
   commitIds,
   cursor,
   limit,
@@ -118,15 +122,18 @@ async function getSpanRefsFromPostgres({
 }: {
   workspaceId: number
   issueId: number
+  requireFailedAnnotations: boolean
   commitIds: number[]
-  cursor: Cursor<string, string> | null
+  cursor: Cursor<Date, string> | null
   limit: number
   spanTypes: MainSpanType[]
   optimizationExperimentUuids: string[]
   db: typeof database
 }) {
+  const spansColumns = getTableColumns(spans)
+
   const cursorCondition = cursor
-    ? sql`(${evaluationResultsV2.evaluatedTraceId}, ${evaluationResultsV2.evaluatedSpanId}) < (${cursor.value}, ${cursor.id})`
+    ? sql`(${spans.startedAt}, ${spans.id}) < (${cursor.value}, ${cursor.id})`
     : undefined
 
   const experimentSourceFilter = optimizationExperimentUuids.length
@@ -137,9 +144,9 @@ async function getSpanRefsFromPostgres({
       )
     : or(ne(spans.source, LogSources.Experiment), isNull(spans.experimentUuid))
 
-  const rows = await db
+  const issueSpans = db
     .selectDistinct({
-      id: evaluationResultsV2.evaluatedSpanId,
+      spanId: evaluationResultsV2.evaluatedSpanId,
       traceId: evaluationResultsV2.evaluatedTraceId,
     })
     .from(issueEvaluationResults)
@@ -148,13 +155,6 @@ async function getSpanRefsFromPostgres({
       eq(issueEvaluationResults.evaluationResultId, evaluationResultsV2.id),
     )
     .innerJoin(commits, eq(commits.id, evaluationResultsV2.commitId))
-    .innerJoin(
-      spans,
-      and(
-        eq(spans.id, evaluationResultsV2.evaluatedSpanId),
-        eq(spans.traceId, evaluationResultsV2.evaluatedTraceId),
-      ),
-    )
     .where(
       and(
         eq(issueEvaluationResults.workspaceId, workspaceId),
@@ -163,6 +163,28 @@ async function getSpanRefsFromPostgres({
         isNotNull(evaluationResultsV2.evaluatedTraceId),
         isNull(commits.deletedAt),
         inArray(evaluationResultsV2.commitId, commitIds),
+        ...(requireFailedAnnotations
+          ? [
+              sql`${evaluationResultsV2.hasPassed} IS NOT TRUE`,
+              eq(evaluationResultsV2.type, EvaluationType.Human),
+            ]
+          : []),
+      ),
+    )
+    .as('issueSpans')
+
+  return db
+    .select(spansColumns)
+    .from(spans)
+    .innerJoin(
+      issueSpans,
+      and(
+        eq(spans.id, issueSpans.spanId),
+        eq(spans.traceId, issueSpans.traceId),
+      ),
+    )
+    .where(
+      and(
         eq(spans.workspaceId, workspaceId),
         eq(spans.status, SpanStatus.Ok),
         inArray(spans.type, spanTypes),
@@ -171,14 +193,6 @@ async function getSpanRefsFromPostgres({
         cursorCondition,
       ),
     )
-    .orderBy(
-      desc(evaluationResultsV2.evaluatedTraceId),
-      desc(evaluationResultsV2.evaluatedSpanId),
-    )
+    .orderBy(desc(spans.startedAt), desc(spans.id))
     .limit(limit + 1)
-
-  return rows.map((row) => ({
-    id: row.id!,
-    traceId: row.traceId!,
-  }))
 }

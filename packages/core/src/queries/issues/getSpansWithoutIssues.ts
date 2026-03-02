@@ -65,7 +65,7 @@ export async function getSpansWithoutIssues(
     requirePassedResults = false,
     requirePassedAnnotations = false,
     spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
-    cursor,
+    cursor = null,
     limit = 25,
   }: {
     workspace: Workspace
@@ -75,7 +75,7 @@ export async function getSpansWithoutIssues(
     requirePassedResults?: boolean
     requirePassedAnnotations?: boolean
     spanTypes?: MainSpanType[]
-    cursor: Cursor<Date, string> | null
+    cursor?: Cursor<Date, string> | null
     limit?: number
   },
   db = database,

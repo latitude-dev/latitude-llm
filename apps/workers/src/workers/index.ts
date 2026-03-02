@@ -1,3 +1,4 @@
+import { startAlignmentsWorker } from './worker-definitions/alignmentsWorker'
 import { startDefaultWorker } from './worker-definitions/defaultWorker'
 import { startDocumentsWorker } from './worker-definitions/documentsWorker'
 import { startEvaluationsWorker } from './worker-definitions/evaluationsWorker'
@@ -30,6 +31,7 @@ export async function startWorkers() {
   const issuesWorker = startIssuesWorker()
   const generateEvaluationWorker = startGenerateEvaluationWorker()
   const optimizationsWorker = startOptimizationsWorker()
+  const alignmentsWorker = startAlignmentsWorker()
 
   const workers = [
     defaultWorker,
@@ -46,6 +48,7 @@ export async function startWorkers() {
     issuesWorker,
     generateEvaluationWorker,
     optimizationsWorker,
+    alignmentsWorker,
   ]
 
   return Promise.all(workers)

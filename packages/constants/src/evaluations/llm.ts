@@ -4,7 +4,29 @@ import {
   baseEvaluationConfiguration,
   baseEvaluationResultError,
   baseEvaluationResultMetadata,
+  baseResultReason,
+  baseResultUsage,
 } from './shared'
+
+function llmResultReason<
+  M extends LlmEvaluationMetric = LlmEvaluationMetric,
+>(): (
+  result: EvaluationResultSuccessValue<EvaluationType.Llm, M>,
+) => string | undefined {
+  return baseResultReason<EvaluationType.Llm, M>((result) => {
+    return result.metadata.reason
+  })
+}
+
+function llmResultUsage<
+  M extends LlmEvaluationMetric = LlmEvaluationMetric,
+>(): (
+  result: EvaluationResultSuccessValue<EvaluationType.Llm, M>,
+) => number | undefined {
+  return baseResultUsage<EvaluationType.Llm, M>((result) => {
+    return result.metadata.tokens
+  })
+}
 
 const llmEvaluationConfiguration = baseEvaluationConfiguration.extend({
   provider: z.string(),
@@ -39,31 +61,21 @@ export const LlmEvaluationBinarySpecification = {
   configuration: llmEvaluationBinaryConfiguration,
   resultMetadata: llmEvaluationBinaryResultMetadata,
   resultError: llmEvaluationBinaryResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Binary
-    >,
-  ) => result.metadata.reason,
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Binary
-    >,
-  ) => result.metadata.tokens,
+  resultReason: llmResultReason<LlmEvaluationMetric.Binary>(),
+  resultUsage: llmResultUsage<LlmEvaluationMetric.Binary>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type LlmEvaluationBinaryConfiguration = z.infer<
-  typeof LlmEvaluationBinarySpecification.configuration
+  typeof llmEvaluationBinaryConfiguration
 >
 export type LlmEvaluationBinaryResultMetadata = z.infer<
-  typeof LlmEvaluationBinarySpecification.resultMetadata
+  typeof llmEvaluationBinaryResultMetadata
 >
 export type LlmEvaluationBinaryResultError = z.infer<
-  typeof LlmEvaluationBinarySpecification.resultError
+  typeof llmEvaluationBinaryResultError
 >
 
 // RATING
@@ -88,31 +100,21 @@ export const LlmEvaluationRatingSpecification = {
   configuration: llmEvaluationRatingConfiguration,
   resultMetadata: llmEvaluationRatingResultMetadata,
   resultError: llmEvaluationRatingResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Rating
-    >,
-  ) => result.metadata.reason,
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Rating
-    >,
-  ) => result.metadata.tokens,
+  resultReason: llmResultReason<LlmEvaluationMetric.Rating>(),
+  resultUsage: llmResultUsage<LlmEvaluationMetric.Rating>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type LlmEvaluationRatingConfiguration = z.infer<
-  typeof LlmEvaluationRatingSpecification.configuration
+  typeof llmEvaluationRatingConfiguration
 >
 export type LlmEvaluationRatingResultMetadata = z.infer<
-  typeof LlmEvaluationRatingSpecification.resultMetadata
+  typeof llmEvaluationRatingResultMetadata
 >
 export type LlmEvaluationRatingResultError = z.infer<
-  typeof LlmEvaluationRatingSpecification.resultError
+  typeof llmEvaluationRatingResultError
 >
 
 // COMPARISON
@@ -136,31 +138,21 @@ export const LlmEvaluationComparisonSpecification = {
   configuration: llmEvaluationComparisonConfiguration,
   resultMetadata: llmEvaluationComparisonResultMetadata,
   resultError: llmEvaluationComparisonResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Comparison
-    >,
-  ) => result.metadata.reason,
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Comparison
-    >,
-  ) => result.metadata.tokens,
+  resultReason: llmResultReason<LlmEvaluationMetric.Comparison>(),
+  resultUsage: llmResultUsage<LlmEvaluationMetric.Comparison>(),
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type LlmEvaluationComparisonConfiguration = z.infer<
-  typeof LlmEvaluationComparisonSpecification.configuration
+  typeof llmEvaluationComparisonConfiguration
 >
 export type LlmEvaluationComparisonResultMetadata = z.infer<
-  typeof LlmEvaluationComparisonSpecification.resultMetadata
+  typeof llmEvaluationComparisonResultMetadata
 >
 export type LlmEvaluationComparisonResultError = z.infer<
-  typeof LlmEvaluationComparisonSpecification.resultError
+  typeof llmEvaluationComparisonResultError
 >
 
 // CUSTOM
@@ -183,31 +175,21 @@ export const LlmEvaluationCustomSpecification = {
   configuration: llmEvaluationCustomConfiguration,
   resultMetadata: llmEvaluationCustomResultMetadata,
   resultError: llmEvaluationCustomResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Custom
-    >,
-  ) => result.metadata.reason,
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.Custom
-    >,
-  ) => result.metadata.tokens,
+  resultReason: llmResultReason<LlmEvaluationMetric.Custom>(),
+  resultUsage: llmResultUsage<LlmEvaluationMetric.Custom>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type LlmEvaluationCustomConfiguration = z.infer<
-  typeof LlmEvaluationCustomSpecification.configuration
+  typeof llmEvaluationCustomConfiguration
 >
 export type LlmEvaluationCustomResultMetadata = z.infer<
-  typeof LlmEvaluationCustomSpecification.resultMetadata
+  typeof llmEvaluationCustomResultMetadata
 >
 export type LlmEvaluationCustomResultError = z.infer<
-  typeof LlmEvaluationCustomSpecification.resultError
+  typeof llmEvaluationCustomResultError
 >
 
 export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
@@ -233,18 +215,8 @@ export const LLM_EVALUATION_CUSTOM_PROMPT_DOCUMENTATION = `
 export const LlmEvaluationCustomLabeledSpecification = {
   ...LlmEvaluationCustomSpecification,
   name: 'Custom (Labeled)',
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.CustomLabeled
-    >,
-  ) => result.metadata.reason,
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Llm,
-      LlmEvaluationMetric.CustomLabeled
-    >,
-  ) => result.metadata.tokens,
+  resultReason: llmResultReason<LlmEvaluationMetric.CustomLabeled>(),
+  resultUsage: llmResultUsage<LlmEvaluationMetric.CustomLabeled>(),
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,

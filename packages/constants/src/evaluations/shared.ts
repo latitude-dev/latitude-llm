@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import type {
+  EvaluationMetric,
+  EvaluationResultSuccessValue,
+  EvaluationType,
+} from './index'
 
 const actualOutputConfiguration = z.object({
   messageSelection: z.enum(['last', 'all']), // Which assistant messages to select
@@ -60,8 +65,38 @@ export const baseEvaluationResultMetadata = z.object({
   // configuration: Configuration snapshot is defined in every metric specification
   actualOutput: z.string(),
   expectedOutput: z.string().optional(),
+  customReason: z.string().optional(),
   datasetLabel: z.string().optional(),
+  datasetReason: z.string().optional(),
 })
 export const baseEvaluationResultError = z.object({
   message: z.string(),
 })
+
+export function baseResultReason<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>(
+  fn?: (result: EvaluationResultSuccessValue<T, M>) => string | undefined,
+): (result: EvaluationResultSuccessValue<T, M>) => string | undefined {
+  return (result) => {
+    const reason = fn?.(result)?.trim()
+
+    if (result.metadata.customReason?.trim()) {
+      if (!reason) return result.metadata.customReason.trim()
+
+      return `${reason}\n\n${result.metadata.customReason.trim()}`
+    }
+
+    return reason
+  }
+}
+
+export function baseResultUsage<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+>(
+  fn?: (result: EvaluationResultSuccessValue<T, M>) => number | undefined,
+): (result: EvaluationResultSuccessValue<T, M>) => number | undefined {
+  return (result) => fn?.(result)
+}

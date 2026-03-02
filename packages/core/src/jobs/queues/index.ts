@@ -19,6 +19,7 @@ let _queues:
       issuesQueue: Queue
       generateEvaluationsQueue: Queue
       optimizationsQueue: Queue
+      alignmentsQueue: Queue
     }
   | undefined
 
@@ -58,6 +59,7 @@ export async function queues() {
     issuesQueue: new Queue(Queues.issuesQueue, options),
     generateEvaluationsQueue: new Queue(Queues.generateEvaluationsQueue, options), // prettier-ignore
     optimizationsQueue: new Queue(Queues.optimizationsQueue, options),
+    alignmentsQueue: new Queue(Queues.alignmentsQueue, options),
   }
 
   return _queues

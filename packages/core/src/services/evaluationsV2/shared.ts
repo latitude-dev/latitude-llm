@@ -46,14 +46,16 @@ export type EvaluationMetricRunArgs<
 > = {
   resultUuid: string
   evaluation: EvaluationV2<T, M>
-  actualOutput: TypedResult<string>
-  expectedOutput?: TypedResult<string>
+  actualOutput: TypedResult<string> // Note: propagating possible learnable error downstream
+  expectedOutput?: string
+  customReason?: string
   conversation: Message[]
   span: SpanWithDetails<MainSpanType>
   document: DocumentVersion
   experiment?: Experiment
   dataset?: Dataset
   datasetLabel?: string
+  datasetReason?: string
   datasetRow?: DatasetRow
   providers?: Map<string, ProviderApiKey>
   results?: ResultWithEvaluationV2[]

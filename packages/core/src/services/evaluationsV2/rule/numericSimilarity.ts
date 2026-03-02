@@ -115,7 +115,9 @@ async function run(
     evaluation,
     actualOutput,
     expectedOutput,
+    customReason,
     datasetLabel,
+    datasetReason,
   }: EvaluationMetricRunArgs<
     EvaluationType.Rule,
     RuleEvaluationMetric.NumericSimilarity
@@ -125,8 +127,10 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
-    expectedOutput: expectedOutput?.value,
+    expectedOutput: expectedOutput,
+    customReason: customReason,
     datasetLabel: datasetLabel,
+    datasetReason: datasetReason,
   } as RuleEvaluationNumericSimilarityResultMetadata
 
   if (actualOutput.error) {
@@ -134,9 +138,7 @@ async function run(
     return grade({ score: 0, metadata })
   }
 
-  if (expectedOutput?.error) {
-    throw expectedOutput.error
-  } else if (metadata.expectedOutput === undefined) {
+  if (metadata.expectedOutput === undefined) {
     throw new BadRequestError('Expected output is required')
   }
 

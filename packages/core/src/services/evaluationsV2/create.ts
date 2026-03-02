@@ -1,4 +1,5 @@
 import {
+  AlignmentMetricMetadata,
   EVALUATION_SPECIFICATIONS,
   EvaluationMetric,
   EvaluationOptions,
@@ -11,8 +12,8 @@ import { compactObject } from '../../lib/compactObject'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { Result, TypedResult } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
-import { findProjectById } from '../../queries/projects/findById'
 import { findIssueById } from '../../queries/issues/findById'
+import { findProjectById } from '../../queries/projects/findById'
 import { evaluationVersions } from '../../schema/models/evaluationVersions'
 import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
@@ -31,6 +32,7 @@ export async function createEvaluationV2<
     settings,
     options,
     issueId,
+    alignmentMetricMetadata,
     workspace,
   }: {
     document: DocumentVersion
@@ -38,6 +40,7 @@ export async function createEvaluationV2<
     settings: EvaluationSettings<T, M>
     options?: Partial<EvaluationOptions>
     issueId?: number | null
+    alignmentMetricMetadata?: AlignmentMetricMetadata
     workspace: Workspace
   },
   transaction = new Transaction(),
@@ -104,6 +107,7 @@ export async function createEvaluationV2<
         commitId: commit.id,
         documentUuid: document.documentUuid,
         issueId,
+        alignmentMetricMetadata,
         ...settings,
         ...options,
       })

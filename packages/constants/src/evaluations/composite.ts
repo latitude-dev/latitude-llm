@@ -4,7 +4,37 @@ import {
   baseEvaluationConfiguration,
   baseEvaluationResultError,
   baseEvaluationResultMetadata,
+  baseResultReason,
+  baseResultUsage,
 } from './shared'
+
+function compositeResultReason<
+  M extends CompositeEvaluationMetric = CompositeEvaluationMetric,
+>(): (
+  result: EvaluationResultSuccessValue<EvaluationType.Composite, M>,
+) => string | undefined {
+  return baseResultReason<EvaluationType.Composite, M>((result) => {
+    const reasons = Object.entries(result.metadata.results).map(
+      ([_, result]) => `${result.name}: ${result.reason}`,
+    )
+
+    return reasons.join('\n\n')
+  })
+}
+
+function compositeResultUsage<
+  M extends CompositeEvaluationMetric = CompositeEvaluationMetric,
+>(): (
+  result: EvaluationResultSuccessValue<EvaluationType.Composite, M>,
+) => number | undefined {
+  return baseResultUsage<EvaluationType.Composite, M>((result) => {
+    const tokens = Object.entries(result.metadata.results).map(
+      ([_, result]) => result.tokens ?? 0,
+    )
+
+    return tokens.reduce((acc, token) => acc + token, 0)
+  })
+}
 
 const compositeEvaluationConfiguration = baseEvaluationConfiguration.extend({
   evaluationUuids: z.array(z.string()),
@@ -53,45 +83,21 @@ export const CompositeEvaluationAverageSpecification = {
   configuration: compositeEvaluationAverageConfiguration,
   resultMetadata: compositeEvaluationAverageResultMetadata,
   resultError: compositeEvaluationAverageResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Composite,
-      CompositeEvaluationMetric.Average
-    >,
-  ) => {
-    let reason = ''
-
-    const reasons = Object.entries(result.metadata.results).map(
-      ([_, result]) => `${result.name}: ${result.reason}`,
-    )
-
-    reason = reasons.join('\n\n')
-
-    return reason
-  },
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Composite,
-      CompositeEvaluationMetric.Average
-    >,
-  ) => {
-    return Object.values(result.metadata.results).reduce((acc, result) => {
-      return acc + (result.tokens ?? 0)
-    }, 0)
-  },
+  resultReason: compositeResultReason<CompositeEvaluationMetric.Average>(),
+  resultUsage: compositeResultUsage<CompositeEvaluationMetric.Average>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type CompositeEvaluationAverageConfiguration = z.infer<
-  typeof CompositeEvaluationAverageSpecification.configuration
+  typeof compositeEvaluationAverageConfiguration
 >
 export type CompositeEvaluationAverageResultMetadata = z.infer<
-  typeof CompositeEvaluationAverageSpecification.resultMetadata
+  typeof compositeEvaluationAverageResultMetadata
 >
 export type CompositeEvaluationAverageResultError = z.infer<
-  typeof CompositeEvaluationAverageSpecification.resultError
+  typeof compositeEvaluationAverageResultError
 >
 
 // WEIGHTED
@@ -116,45 +122,21 @@ export const CompositeEvaluationWeightedSpecification = {
   configuration: compositeEvaluationWeightedConfiguration,
   resultMetadata: compositeEvaluationWeightedResultMetadata,
   resultError: compositeEvaluationWeightedResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Composite,
-      CompositeEvaluationMetric.Weighted
-    >,
-  ) => {
-    let reason = ''
-
-    const reasons = Object.entries(result.metadata.results).map(
-      ([_, result]) => `${result.name}: ${result.reason}`,
-    )
-
-    reason = reasons.join('\n\n')
-
-    return reason
-  },
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Composite,
-      CompositeEvaluationMetric.Weighted
-    >,
-  ) => {
-    return Object.values(result.metadata.results).reduce((acc, result) => {
-      return acc + (result.tokens ?? 0)
-    }, 0)
-  },
+  resultReason: compositeResultReason<CompositeEvaluationMetric.Weighted>(),
+  resultUsage: compositeResultUsage<CompositeEvaluationMetric.Weighted>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type CompositeEvaluationWeightedConfiguration = z.infer<
-  typeof CompositeEvaluationWeightedSpecification.configuration
+  typeof compositeEvaluationWeightedConfiguration
 >
 export type CompositeEvaluationWeightedResultMetadata = z.infer<
-  typeof CompositeEvaluationWeightedSpecification.resultMetadata
+  typeof compositeEvaluationWeightedResultMetadata
 >
 export type CompositeEvaluationWeightedResultError = z.infer<
-  typeof CompositeEvaluationWeightedSpecification.resultError
+  typeof compositeEvaluationWeightedResultError
 >
 
 // CUSTOM
@@ -176,45 +158,21 @@ export const CompositeEvaluationCustomSpecification = {
   configuration: compositeEvaluationCustomConfiguration,
   resultMetadata: compositeEvaluationCustomResultMetadata,
   resultError: compositeEvaluationCustomResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Composite,
-      CompositeEvaluationMetric.Custom
-    >,
-  ) => {
-    let reason = ''
-
-    const reasons = Object.entries(result.metadata.results).map(
-      ([_, result]) => `${result.name}: ${result.reason}`,
-    )
-
-    reason = reasons.join('\n\n')
-
-    return reason
-  },
-  resultUsage: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Composite,
-      CompositeEvaluationMetric.Custom
-    >,
-  ) => {
-    return Object.values(result.metadata.results).reduce((acc, result) => {
-      return acc + (result.tokens ?? 0)
-    }, 0)
-  },
+  resultReason: compositeResultReason<CompositeEvaluationMetric.Custom>(),
+  resultUsage: compositeResultUsage<CompositeEvaluationMetric.Custom>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type CompositeEvaluationCustomConfiguration = z.infer<
-  typeof CompositeEvaluationCustomSpecification.configuration
+  typeof compositeEvaluationCustomConfiguration
 >
 export type CompositeEvaluationCustomResultMetadata = z.infer<
-  typeof CompositeEvaluationCustomSpecification.resultMetadata
+  typeof compositeEvaluationCustomResultMetadata
 >
 export type CompositeEvaluationCustomResultError = z.infer<
-  typeof CompositeEvaluationCustomSpecification.resultError
+  typeof compositeEvaluationCustomResultError
 >
 
 /* ------------------------------------------------------------------------- */

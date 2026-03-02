@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { scan } from 'promptl-ai'
 import { UnprocessableEntityError } from '../../../lib/errors'
+import { raiseForAborted } from '../../../lib/raiseForAborted'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import {
@@ -15,7 +16,6 @@ import { Optimization } from '../../../schema/models/types/Optimization'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { createExperiment } from '../../experiments/create'
 import { startExperiment } from '../../experiments/start'
-import { raiseForAborted } from '../shared'
 
 export async function startValidateOptimization(
   {

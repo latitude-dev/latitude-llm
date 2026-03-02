@@ -41,9 +41,7 @@ async function run(
   >,
   db = database,
 ) {
-  if (expectedOutput?.error) {
-    throw expectedOutput.error
-  } else if (expectedOutput?.value === undefined) {
+  if (expectedOutput === undefined) {
     throw new BadRequestError('Expected output is required')
   }
 
@@ -60,7 +58,7 @@ async function run(
         ...result,
         metadata: {
           ...result.metadata,
-          expectedOutput: expectedOutput?.value,
+          expectedOutput: expectedOutput,
         },
       }
     : result

@@ -37,6 +37,7 @@ export type RunDocumentAtCommitArgs = {
   abortSignal?: AbortSignal
   simulationSettings?: SimulationSettings
   testDeploymentId?: number
+  dry?: boolean
 }
 
 export async function runDocumentAtCommit(

@@ -203,6 +203,8 @@ async function run(
     resultUuid,
     evaluation,
     actualOutput,
+    customReason,
+    datasetReason,
     conversation,
     span,
     providers,
@@ -214,6 +216,8 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
+    customReason: customReason,
+    datasetReason: datasetReason,
     evaluationLogId: -1,
     reason: '',
     tokens: 0,
@@ -316,6 +320,7 @@ async function clone(
       reverseScale: evaluation.configuration.reverseScale,
       actualOutput: evaluation.configuration.actualOutput,
       expectedOutput: evaluation.configuration.expectedOutput,
+      trigger: evaluation.configuration.trigger,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
       prompt: `

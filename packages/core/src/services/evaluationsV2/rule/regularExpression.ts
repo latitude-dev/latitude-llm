@@ -77,6 +77,8 @@ async function run(
   {
     evaluation,
     actualOutput,
+    customReason,
+    datasetReason,
   }: EvaluationMetricRunArgs<
     EvaluationType.Rule,
     RuleEvaluationMetric.RegularExpression
@@ -86,6 +88,8 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
+    customReason: customReason,
+    datasetReason: datasetReason,
   } as RuleEvaluationRegularExpressionResultMetadata
 
   if (actualOutput.error) {

@@ -1,5 +1,4 @@
 import {
-  CompletionSpanMetadata,
   EVALUATION_SCORE_SCALE,
   EvaluationMetric,
   EvaluationResultValue,
@@ -26,6 +25,7 @@ import { type Experiment } from '../../schema/models/types/Experiment'
 import { WorkspaceDto } from '../../schema/models/types/Workspace'
 import { assembleTraceWithMessages } from '../tracing/traces/assemble'
 import { extractActualOutput, extractExpectedOutput } from './outputs/extract'
+import { extractCustomReason } from './reasons/extract'
 import { createEvaluationResultV2 } from './results/create'
 import { EVALUATION_SPECIFICATIONS } from './specifications'
 
@@ -39,6 +39,7 @@ export async function runEvaluationV2<
     experiment,
     dataset,
     datasetLabel,
+    datasetReason,
     datasetRow,
     commit,
     workspace,
@@ -49,6 +50,7 @@ export async function runEvaluationV2<
     experiment?: Experiment
     dataset?: Dataset
     datasetLabel?: string
+    datasetReason?: string
     datasetRow?: DatasetRow
     commit: Commit
     workspace: WorkspaceDto
@@ -97,8 +99,8 @@ export async function runEvaluationV2<
 
   if (
     dataset &&
-    datasetLabel &&
     datasetRow &&
+    datasetLabel &&
     evaluation.configuration.expectedOutput
   ) {
     if (datasetRow.datasetId !== dataset.id) {
@@ -138,11 +140,9 @@ export async function runEvaluationV2<
     )
   }
 
-  const completionSpanMetadata =
-    completionSpan.metadata as CompletionSpanMetadata
   const conversation = [
-    ...completionSpanMetadata.input,
-    ...(completionSpanMetadata.output ?? []),
+    ...completionSpan.metadata.input,
+    ...(completionSpan.metadata.output ?? []),
   ] as unknown as LegacyMessage[]
 
   let value
@@ -159,22 +159,31 @@ export async function runEvaluationV2<
       throw actualOutput.error
     }
 
-    // Note: all expected output errors are treated as non-learnable errors
+    // Note: all expected output/reason errors are treated as non-learnable errors
     let expectedOutput = undefined
-    if (
-      dataset &&
-      datasetLabel &&
-      datasetRow &&
-      evaluation.configuration.expectedOutput
-    ) {
-      expectedOutput = await extractExpectedOutput({
-        dataset: dataset,
-        row: datasetRow,
-        column: datasetLabel,
-        configuration: evaluation.configuration.expectedOutput,
-      })
-      if (expectedOutput.error) {
-        throw expectedOutput.error
+    let customReason = undefined
+    if (dataset && datasetRow) {
+      if (datasetLabel && evaluation.configuration.expectedOutput) {
+        expectedOutput = await extractExpectedOutput({
+          dataset: dataset,
+          row: datasetRow,
+          column: datasetLabel,
+          configuration: evaluation.configuration.expectedOutput,
+        })
+        if (expectedOutput.error) {
+          throw expectedOutput.error
+        }
+      }
+
+      if (datasetReason) {
+        customReason = await extractCustomReason({
+          dataset: dataset,
+          row: datasetRow,
+          column: datasetReason,
+        })
+        if (customReason.error) {
+          throw customReason.error
+        }
       }
     }
 
@@ -183,13 +192,15 @@ export async function runEvaluationV2<
       resultUuid: resultUuid,
       evaluation: evaluation,
       actualOutput: actualOutput,
-      expectedOutput: expectedOutput,
+      expectedOutput: expectedOutput?.value,
+      customReason: customReason?.value,
       conversation,
       span,
       document: document,
       experiment: experiment,
       dataset: dataset,
       datasetLabel: datasetLabel,
+      datasetReason: datasetReason,
       datasetRow: datasetRow,
       commit: commit,
       workspace: workspace,
