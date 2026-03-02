@@ -1,4 +1,3 @@
-import React from "react"
 import { renderEmail } from "../utils/render.ts"
 import { MagicLinkEmail } from "./MagicLinkEmail.tsx"
 
