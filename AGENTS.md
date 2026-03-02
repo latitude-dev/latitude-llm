@@ -137,6 +137,7 @@ Biome config (`biome.json`) is the source of truth:
 - Keep imports explicit and grep-friendly
 - Preserve clear grouping/order (external, internal alias, then relative)
 - Avoid wildcard exports/imports when explicit named exports are practical
+- Avoid barrel files (index.ts re-exporting from the same directory); import from the specific module
 
 ### TypeScript
 
