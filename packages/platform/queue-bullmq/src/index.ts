@@ -1,31 +1,28 @@
-import type { EventEnvelope, EventsPublisher } from "@domain/events";
-import type { Queue } from "bullmq";
-import { Data, Effect, ServiceMap } from "effect";
+import type { EventEnvelope, EventsPublisher } from "@domain/events"
+import type { Queue } from "bullmq"
+import { Data, Effect, ServiceMap } from "effect"
 
 export class BullmqQueueAdapterTag extends ServiceMap.Service<
   BullmqQueueAdapterTag,
   {
-    readonly type: "bullmq";
+    readonly type: "bullmq"
   }
 >()("BullmqQueueAdapterTag") {}
 
 export const bullmqQueueAdapter = {
   type: "bullmq" as const,
-};
+}
 
 export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
-  readonly cause: unknown;
-  readonly eventId: string;
+  readonly cause: unknown
+  readonly eventId: string
 }> {}
 
 export interface BullmqEventsPublisherConfig {
-  readonly queue: Queue;
+  readonly queue: Queue
 }
 
-const publishEffect = (
-  queue: Queue,
-  envelope: EventEnvelope,
-): Effect.Effect<void, QueuePublishError> =>
+const publishEffect = (queue: Queue, envelope: EventEnvelope): Effect.Effect<void, QueuePublishError> =>
   Effect.tryPromise({
     try: () =>
       queue.add(
@@ -41,15 +38,14 @@ const publishEffect = (
         },
       ),
     catch: (error) => new QueuePublishError({ cause: error, eventId: envelope.id }),
-  });
+  })
 
 export const createBullmqEventsPublisherEffect = (
   config: BullmqEventsPublisherConfig,
 ): Effect.Effect<EventsPublisher> =>
   Effect.succeed({
-    publish: (envelope: EventEnvelope): Promise<void> =>
-      Effect.runPromise(publishEffect(config.queue, envelope)),
-  });
+    publish: (envelope: EventEnvelope): Promise<void> => Effect.runPromise(publishEffect(config.queue, envelope)),
+  })
 
 export const createBullmqEventsPublisher = (config: BullmqEventsPublisherConfig): EventsPublisher =>
-  Effect.runSync(createBullmqEventsPublisherEffect(config));
+  Effect.runSync(createBullmqEventsPublisherEffect(config))

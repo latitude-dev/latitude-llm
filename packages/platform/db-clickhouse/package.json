@@ -12,9 +12,8 @@
     "ch:down": "bash clickhouse/scripts/down.sh",
     "ch:status": "bash clickhouse/scripts/status.sh",
     "ch:drop": "bash clickhouse/scripts/drop.sh",
-    "lint": "biome check src",
+    "check": "biome check src",
     "format": "biome format --write src",
-    "format:check": "biome format --check src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
