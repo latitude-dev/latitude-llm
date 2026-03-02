@@ -14,7 +14,6 @@
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
     "lint": "biome check src",
     "format": "biome format --write src",
-    "format:check": "biome format --check src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },

@@ -5,8 +5,7 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "lint": "turbo lint",
-    "format": "turbo lint -- --write",
-    "format:check": "pnpm lint",
+    "format": "turbo format",
     "tmux": "tmuxinator start .",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
@@ -23,7 +22,7 @@
     "typescript": "catalog:",
     "vitest": "catalog:"
   },
-  "packageManager": "pnpm@9.8.0+sha512.8e4c3550fb500e808dbc30bb0ce4dd1eb614e30b1c55245f211591ec2cdf9c611cabd34e1364b42f564bd54b3945ed0f49d61d1bbf2ec9bd74b866fcdc723276",
+  "packageManager": "pnpm@10.30.3",
   "engines": {
     "node": ">=25"
   },
