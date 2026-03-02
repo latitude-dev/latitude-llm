@@ -23,6 +23,16 @@ export class BadRequestError implements HttpError {
   }
 }
 
+export class UnauthorizedError implements HttpError {
+  readonly _tag = "UnauthorizedError"
+  readonly httpStatus = 401
+  readonly httpMessage: string
+
+  constructor(options: { httpMessage?: string } = {}) {
+    this.httpMessage = options.httpMessage ?? "Authentication required"
+  }
+}
+
 // Type guard to check if an error has HTTP properties
 export const isHttpError = (error: unknown): error is HttpError => {
   return (

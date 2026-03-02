@@ -11,6 +11,48 @@ This package provides centralized test tooling for integration tests across the 
 - **Hono test client** - HTTP testing without starting a server
 - **Auth helpers** - Utilities for generating test authentication
 
+## Environment Configuration
+
+Tests automatically load environment variables from `.env.test` at the repository root. This file is configured with test-specific database credentials and settings.
+
+### Default Test Configuration
+
+The `.env.test` file includes:
+- **DATABASE_URL**: Points to `latitude_test` database
+- **REDIS_HOST/PORT**: Local Redis instance
+- **CLICKHOUSE_URL**: Local ClickHouse instance
+- Lower connection pool limits (5 instead of 20)
+
+### Setting Up Test Database
+
+1. **Create the test database:**
+   ```bash
+   createdb latitude_test
+   ```
+
+2. **Run migrations:**
+   ```bash
+   cd packages/platform/db-postgres
+   DATABASE_URL=postgres://user:pass@localhost:5432/latitude_test npx drizzle-kit migrate
+   ```
+
+3. **Verify environment loading:**
+   ```bash
+   pnpm --filter @app/api test -- src/routes/health.test.ts
+   ```
+
+   You should see: `[dotenv@17.3.1] injecting env (24) from ../../.env.test`
+
+### Custom Test Environment
+
+To use a different test database, either:
+1. Edit `.env.test` at the repo root
+2. Or set environment variables before running tests:
+   ```bash
+   export DATABASE_URL=postgres://user:pass@localhost:5432/my_test_db
+   pnpm --filter @app/api test
+   ```
+
 ## Usage
 
 ### Basic Test Setup
@@ -148,39 +190,47 @@ expect(res.status).toBe(200);
 
 ## Running Tests
 
-### Prerequisites
+### Quick Start (Recommended)
 
-1. Start required services:
-   ```bash
-   # Start Postgres and Redis (use Docker or local instances)
-   docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=secret postgres:15
-   docker run -d -p 6379:6379 redis:7
-   ```
-
-2. Set environment variables:
-   ```bash
-   export DATABASE_URL=postgres://postgres:secret@localhost:5432/latitude_test
-   export REDIS_HOST=localhost
-   export REDIS_PORT=6379
-   ```
-
-3. Run migrations on test database:
-   ```bash
-   cd packages/platform/db-postgres
-   npx drizzle-kit migrate
-   ```
-
-### Run API Tests
+From the repo root, run all tests with automatic test database setup:
 
 ```bash
-# Run all API tests
+# Setup test database and run all tests across the monorepo
+pnpm test
+```
+
+This will:
+1. Setup the test database (create DB + run migrations)
+2. Run all test suites via Turbo
+
+### Individual Package Tests
+
+To run tests for a specific package:
+
+```bash
+# Run API tests only
 pnpm --filter @app/api test
 
-# Run specific test file
+# Run tests for a specific package
+pnpm --filter @platform/db-postgres test
+
+# Run a specific test file
 pnpm --filter @app/api test -- src/routes/organizations.test.ts
 ```
 
-## Test Isolation
+### Manual Setup
+
+If you prefer to run steps individually:
+
+```bash
+# 1. Setup test database (create DB + run migrations)
+pnpm test:db:setup
+
+# 2. Run tests (will use the already-setup database)
+pnpm --filter @app/api test
+```
+
+### Environment Configuration
 
 The testkit uses unique identifiers for all test data to prevent conflicts between parallel tests. Each fixture generates unique slugs, emails, and names using timestamps and random suffixes.
 

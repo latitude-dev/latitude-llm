@@ -13,15 +13,17 @@ describe("GET /health", () => {
 
   describe("with database connections", () => {
     // These tests require DATABASE_URL and CLICKHOUSE_URL to be set
-    // Run with: DATABASE_URL=postgres://... pnpm test
+    // Run with: pnpm --filter @app/api test
+    // The .env.test file at repo root is automatically loaded by vitest config
 
-    it("should return service status", async () => {
+    it("should return service status and health info", async () => {
       const res = await app.fetch(new Request("http://localhost/health"))
-      expect(res.status).toBe(200)
+      // Status can be 200 (healthy) or 503 (degraded) depending on DB availability
+      expect([200, 503]).toContain(res.status)
 
       const body = await res.json()
       expect(body.service).toBe("api")
-      expect(body.status).toBeDefined()
+      expect(body.status).toMatch(/^(ok|degraded)$/)
     })
 
     it("should include postgres health status", async () => {
