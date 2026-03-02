@@ -347,6 +347,18 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
 
+  packages/domain/datasets:
+    dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
+
   packages/domain/email:
     dependencies:
       '@react-email/components':
@@ -501,6 +513,9 @@ importers:
       '@domain/api-keys':
         specifier: workspace:^
         version: link:../../domain/api-keys
+      '@domain/datasets':
+        specifier: workspace:*
+        version: link:../../domain/datasets
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../domain/organizations

@@ -22,6 +22,10 @@ export type MembershipId = Branded<string, "MembershipId">
 // Project-related IDs
 export type ProjectId = Branded<string, "ProjectId">
 
+// Dataset-related IDs (if needed, can be added similarly)
+export type DatasetId = Branded<string, "DatasetId">
+export type DatasetRowId = Branded<string, "DatasetRowId">
+
 // API Key IDs
 export type ApiKeyId = Branded<string, "ApiKeyId">
 
@@ -36,6 +40,8 @@ export const SessionId = (value: string): SessionId => value as SessionId
 export const OrganizationId = (value: string): OrganizationId => value as OrganizationId
 export const MembershipId = (value: string): MembershipId => value as MembershipId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
+export const DatasetId = (value: string): DatasetId => value as DatasetId
+export const DatasetRowId = (value: string): DatasetRowId => value as DatasetRowId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
 export const SubscriptionId = (value: string): SubscriptionId => value as SubscriptionId
 export const GrantId = (value: string): GrantId => value as GrantId

@@ -27,6 +27,7 @@
     "@domain/shared-kernel": "workspace:*",
     "@domain/subscriptions": "workspace:*",
     "@domain/organizations": "workspace:*",
+    "@domain/datasets": "workspace:*",
     "@platform/env": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
