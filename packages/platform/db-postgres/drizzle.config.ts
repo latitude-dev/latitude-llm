@@ -12,7 +12,7 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath });
 }
 
-const url = Effect.runSync(parseEnv(process.env.DATABASE_URL, "string"));
+const url = Effect.runSync(parseEnv(process.env.LAT_DATABASE_URL, "string"));
 
 export default defineConfig({
   dialect: "postgresql",

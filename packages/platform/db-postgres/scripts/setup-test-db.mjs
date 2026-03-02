@@ -55,9 +55,9 @@ if (!envPath) {
 console.log(`📝 Loading environment from: ${envPath}`)
 loadDotenv({ path: envPath })
 
-const databaseUrl = process.env.DATABASE_URL
+const databaseUrl = process.env.LAT_DATABASE_URL
 if (!databaseUrl) {
-  console.error("❌ DATABASE_URL not set in .env.test")
+  console.error("❌ LAT_DATABASE_URL not set in .env.test")
   process.exit(1)
 }
 
@@ -102,7 +102,7 @@ async function setupTestDatabase() {
       cwd: process.cwd(),
       env: {
         ...process.env,
-        DATABASE_URL: databaseUrl,
+        LAT_DATABASE_URL: databaseUrl,
       },
     })
 

@@ -3,8 +3,8 @@ import { Link, createFileRoute } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/v1"
-const WEB_BASE_URL = import.meta.env.VITE_WEB_URL ?? "http://localhost:3000"
+const API_BASE_URL = import.meta.env.VITE_LAT_API_URL ?? "http://localhost:3001/v1"
+const WEB_BASE_URL = import.meta.env.VITE_LAT_WEB_URL ?? "http://localhost:3000"
 
 // Latitude logo SVG - actual implementation from legacy
 const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (

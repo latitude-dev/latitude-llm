@@ -26,16 +26,16 @@ export const createPostgresPoolEffect = (config: PostgresConfig = {}): Effect.Ef
   return Effect.all({
     connectionString: config.databaseUrl
       ? Effect.succeed(config.databaseUrl)
-      : parseEnv(process.env.DATABASE_URL, "string"),
+      : parseEnv(process.env.LAT_DATABASE_URL, "string"),
     max: config.maxConnections
       ? Effect.succeed(config.maxConnections)
-      : parseEnvOptional(process.env.PG_POOL_MAX, "number"),
+      : parseEnvOptional(process.env.LAT_PG_POOL_MAX, "number"),
     idleTimeoutMillis: config.idleTimeoutMs
       ? Effect.succeed(config.idleTimeoutMs)
-      : parseEnvOptional(process.env.PG_IDLE_TIMEOUT_MS, "number"),
+      : parseEnvOptional(process.env.LAT_PG_IDLE_TIMEOUT_MS, "number"),
     connectionTimeoutMillis: config.connectionTimeoutMs
       ? Effect.succeed(config.connectionTimeoutMs)
-      : parseEnvOptional(process.env.PG_CONNECT_TIMEOUT_MS, "number"),
+      : parseEnvOptional(process.env.LAT_PG_CONNECT_TIMEOUT_MS, "number"),
   }).pipe(
     Effect.map((poolConfig) => {
       const configWithTypes: PoolConfig = poolConfig

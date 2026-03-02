@@ -12,8 +12,8 @@ export const createRedisConnectionEffect = (
   host?: string,
   port?: number,
 ): Effect.Effect<RedisConnection, CreateRedisConnectionError> => {
-  const hostEffect = host ? Effect.succeed(host) : parseEnv(process.env.REDIS_HOST, "string")
-  const portEffect = port ? Effect.succeed(port) : parseEnv(process.env.REDIS_PORT, "number")
+  const hostEffect = host ? Effect.succeed(host) : parseEnv(process.env.LAT_REDIS_HOST, "string")
+  const portEffect = port ? Effect.succeed(port) : parseEnv(process.env.LAT_REDIS_PORT, "number")
 
   return Effect.all([hostEffect, portEffect]).pipe(
     Effect.map(([hostValue, portValue]) => ({

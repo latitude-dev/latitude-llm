@@ -2,6 +2,10 @@
 
 Operational guide for coding agents working in this repository.
 
+## Product Scope
+
+Multi-tenant LLM observability platform. Monorepo managed with `pnpm` workspaces + `turbo`.
+
 ## Architecture Rules
 
 ### App Boundaries (`apps/*`)
@@ -23,10 +27,14 @@ Business logic lives here. Domain packages expose:
 - Domain types and errors
 - Dependency ports (interfaces/tags)
 
+### Infrastructure (`packages/platform/*`)
+
+Infrastructure details live here only. Platform packages implement adapters for domain ports.
+
 ### Ports and Adapters
 
-- Domain depends on interfaces/tags only (ports)
-- Platform packages (`packages/platform/*`) implement adapters
+- Domain depends on interfaces/tags only (ports like `Repository`, `CacheStore`, `Publisher`)
+- Platform packages implement adapters
 - Composition roots in apps provide live layers
 - Domain must never import concrete DB/cache/queue/object storage clients
 
@@ -50,6 +58,7 @@ Business logic lives here. Domain packages expose:
 - Domain importing DB clients, Redis, BullMQ, or object storage SDKs
 - Cross-domain logic without clear ownership
 - New provider integrations without a core capability contract
+- Introducing application env vars without the `LAT_` prefix (see Environment Variables)
 
 ## Stack Conventions
 
@@ -151,6 +160,11 @@ Base config: `tsconfig.base.json`
 - Use `readonly` fields for immutable domain data shapes
 - Avoid `any`; use `unknown` + narrowing
 - Validate boundary inputs early (API input, queue payloads, external IO)
+
+### General Principles
+
+- Prefer minimal, explicit abstractions — YAGNI
+- Avoid comments except for genuinely non-obvious reasoning
 
 ### Naming Conventions
 
@@ -278,20 +292,48 @@ findById(id: WorkspaceId): Effect.Effect<Workspace, NotFoundError | RepositoryEr
 
 ### Environment Variables
 
+#### `LAT_` Prefix Convention
+
+All application environment variables **must** be prefixed with `LAT_` to avoid name collisions with third-party services, Docker containers, and standard conventions.
+
+**What gets the `LAT_` prefix:**
+- Database connection strings and pool config (`LAT_DATABASE_URL`, `LAT_PG_POOL_MAX`, ...)
+- Service connection details our code reads (`LAT_CLICKHOUSE_URL`, `LAT_REDIS_HOST`, ...)
+- Application ports (`LAT_API_PORT`, `LAT_WEB_PORT`, `LAT_INGEST_PORT`)
+- Auth, email, OAuth, Stripe, CORS config (`LAT_BETTER_AUTH_SECRET`, `LAT_MAILPIT_HOST`, ...)
+- Any new env var introduced for Latitude application code
+
+**What does NOT get the `LAT_` prefix:**
+- `NODE_ENV` — standard Node.js convention, used by many libraries
+- Docker service init vars (`POSTGRES_USER`, `CLICKHOUSE_USER`, ...) — required by container images
+- Weaviate, Redis, and other service-specific config consumed only by Docker
+- Vite client-side vars use the combined prefix `VITE_LAT_*` (Vite requires `VITE_` for browser exposure)
+
+**Reference:** See `.env.example` for the full list of current variables split into "Services" (Docker) and "Latitude Application" (`LAT_*`) sections.
+
+#### `.env.example` Maintenance
+
+Every new environment variable **must** be added to `.env.example`:
+
+- **Required vars**: add uncommented with a sensible local-development default (e.g. `LAT_API_PORT=3001`).
+- **Optional vars**: add commented out so the user can uncomment when needed (e.g. `# LAT_STRIPE_SECRET_KEY=sk_test_xxx`).
+
+This keeps `.env.example` the single source of truth for all configuration the project supports.
+
+#### Parsing
+
 **Always** use `parseEnv` or `parseEnvOptional` from `@platform/env`:
 
 ```typescript
-// ❌ Bad - direct process.env access
-const isDev = process.env.NODE_ENV === "development";
+// ❌ Bad - unprefixed variable or direct access
+const port = Number(process.env.PORT);
 
-// ✅ Good - using parseEnv
+// ✅ Good - LAT_ prefix + parseEnv
 import { parseEnv, parseEnvOptional } from "@platform/env";
 import { Effect } from "effect";
 
-const nodeEnv =
-  Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ??
-  "development";
-const port = Effect.runSync(parseEnv(process.env.PORT, "number", 3000));
+const port = Effect.runSync(parseEnv(process.env.LAT_API_PORT, "number", 3001));
+const dbUrl = Effect.runSync(parseEnv(process.env.LAT_DATABASE_URL, "string"));
 ```
 
 This ensures type-safe parsing, clear error messages for missing vars, and consistent validation.

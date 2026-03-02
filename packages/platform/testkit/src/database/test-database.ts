@@ -18,14 +18,14 @@ export interface TestDatabase extends PostgresClient {
 /**
  * Create a test database connection
  *
- * Uses DATABASE_URL_TEST env var if available, otherwise falls back
- * to DATABASE_URL with a test schema prefix.
+ * Uses LAT_DATABASE_URL_TEST env var if available, otherwise falls back
+ * to LAT_DATABASE_URL with a test schema prefix.
  */
 export const createTestDatabase = (config: TestDatabaseConfig = {}): TestDatabase => {
-  const testDatabaseUrl = process.env.DATABASE_URL_TEST || process.env.DATABASE_URL
+  const testDatabaseUrl = process.env.LAT_DATABASE_URL_TEST || process.env.LAT_DATABASE_URL
 
   if (!testDatabaseUrl) {
-    throw new Error("Neither DATABASE_URL_TEST nor DATABASE_URL environment variable is set")
+    throw new Error("Neither LAT_DATABASE_URL_TEST nor LAT_DATABASE_URL environment variable is set")
   }
 
   const client = createPostgresClient({
