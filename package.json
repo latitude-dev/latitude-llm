@@ -12,7 +12,8 @@
     "test:db:setup": "pnpm --filter @platform/db-postgres db:test:setup",
     "knip": "knip",
     "knip:fix": "knip --fix",
-    "knip:fix:files": "knip --fix-type files --allow-remove-files"
+    "knip:fix:files": "knip --fix-type files --allow-remove-files",
+    "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm build"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
