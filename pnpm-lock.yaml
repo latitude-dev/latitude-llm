@@ -170,6 +170,10 @@ importers:
       pg:
         specifier: 'catalog:'
         version: 8.16.0
+    devDependencies:
+      '@platform/testkit':
+        specifier: workspace:*
+        version: link:../../packages/platform/testkit
 
   apps/ingest:
     dependencies:
@@ -556,6 +560,37 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
 
+  packages/platform/testkit:
+    dependencies:
+      '@domain/shared-kernel':
+        specifier: workspace:*
+        version: link:../../domain/shared-kernel
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../cache-redis
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../db-postgres
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../env
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
+      hono:
+        specifier: 'catalog:'
+        version: 4.9.12
+      ioredis:
+        specifier: 'catalog:'
+        version: 5.8.2
+      pg:
+        specifier: 'catalog:'
+        version: 8.16.0
+    devDependencies:
+      '@types/pg':
+        specifier: 'catalog:'
+        version: 8.16.0
+
   packages/tsconfig: {}
 
   packages/ui:
@@ -610,7 +645,11 @@ importers:
         specifier: 'catalog:'
         version: 5.8.3
 
-  packages/vitest-config: {}
+  packages/vitest-config:
+    dependencies:
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.3.1
 
 packages:
 

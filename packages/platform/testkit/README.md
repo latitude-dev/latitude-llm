@@ -1,0 +1,251 @@
+# @platform/testkit
+
+Testing utilities for the Latitude API and platform packages.
+
+## Overview
+
+This package provides centralized test tooling for integration tests across the monorepo. It includes:
+
+- **Database fixtures** - Factory functions for creating test data
+- **Test database management** - Connection lifecycle helpers
+- **Hono test client** - HTTP testing without starting a server
+- **Auth helpers** - Utilities for generating test authentication
+
+## Usage
+
+### Basic Test Setup
+
+```typescript
+import { describe, it, beforeAll, afterAll } from "vitest";
+import {
+  createTestDatabase,
+  closeTestDatabase,
+  createOrganizationSetup,
+  createApiKeyFixture,
+  createApiKeyAuthHeaders,
+} from "@platform/testkit";
+import { Effect } from "effect";
+
+describe("My Tests", () => {
+  let testDb: TestDatabase;
+
+  beforeAll(() => {
+    testDb = createTestDatabase();
+  });
+
+  afterAll(async () => {
+    await closeTestDatabase(testDb);
+  });
+
+  it("should test something", async () => {
+    const setup = await Effect.runPromise(
+      createOrganizationSetup(testDb)
+    );
+    // ... test code
+  });
+});
+```
+
+### Environment Variables
+
+Tests require the following environment variables:
+
+```bash
+DATABASE_URL=postgres://user:password@localhost:5432/test_db
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+For isolated test runs, use a dedicated test database:
+
+```bash
+DATABASE_URL=postgres://user:password@localhost:5432/latitude_test
+```
+
+## API Reference
+
+### Database Fixtures
+
+#### `createUserFixture(db, input?)`
+Creates a test user in the database.
+
+```typescript
+const user = await Effect.runPromise(
+  createUserFixture(testDb.db, {
+    email: "test@example.com",
+    name: "Test User",
+  })
+);
+```
+
+#### `createOrganizationFixture(db, input?)`
+Creates a test organization.
+
+```typescript
+const org = await Effect.runPromise(
+  createOrganizationFixture(testDb.db, {
+    name: "Test Org",
+    slug: "test-org",
+  })
+);
+```
+
+#### `createOrganizationSetup(testDb)`
+Creates a complete organization with owner user and membership.
+
+```typescript
+const { user, organization, membership } = await Effect.runPromise(
+  createOrganizationSetup(testDb)
+);
+```
+
+#### `createApiKeyFixture(db, input)`
+Creates an API key for authentication testing.
+
+```typescript
+const apiKey = await Effect.runPromise(
+  createApiKeyFixture(testDb.db, {
+    organizationId: organization.id,
+    name: "Test Key",
+  })
+);
+```
+
+### Auth Helpers
+
+#### `createApiKeyAuthHeaders(token)`
+Generates headers for API key authentication.
+
+```typescript
+const headers = createApiKeyAuthHeaders(apiKey.token);
+// { "X-API-Key": "abc-123-xyz" }
+```
+
+#### `createBearerAuthHeaders(token)`
+Generates headers for Bearer token authentication.
+
+```typescript
+const headers = createBearerAuthHeaders(jwtToken);
+// { "Authorization": "Bearer eyJ..." }
+```
+
+### Hono Test Client
+
+#### `createTestClient(app)`
+Creates a test client for making HTTP requests to a Hono app.
+
+```typescript
+import { createTestClient } from "@platform/testkit";
+import { Hono } from "hono";
+
+const app = new Hono();
+app.get("/hello", (c) => c.json({ message: "Hello" }));
+
+const client = createTestClient(app);
+const res = await client.get("/hello");
+expect(res.status).toBe(200);
+```
+
+## Running Tests
+
+### Prerequisites
+
+1. Start required services:
+   ```bash
+   # Start Postgres and Redis (use Docker or local instances)
+   docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=secret postgres:15
+   docker run -d -p 6379:6379 redis:7
+   ```
+
+2. Set environment variables:
+   ```bash
+   export DATABASE_URL=postgres://postgres:secret@localhost:5432/latitude_test
+   export REDIS_HOST=localhost
+   export REDIS_PORT=6379
+   ```
+
+3. Run migrations on test database:
+   ```bash
+   cd packages/platform/db-postgres
+   npx drizzle-kit migrate
+   ```
+
+### Run API Tests
+
+```bash
+# Run all API tests
+pnpm --filter @app/api test
+
+# Run specific test file
+pnpm --filter @app/api test -- src/routes/organizations.test.ts
+```
+
+## Test Isolation
+
+The testkit uses unique identifiers for all test data to prevent conflicts between parallel tests. Each fixture generates unique slugs, emails, and names using timestamps and random suffixes.
+
+Example:
+- User email: `test_1234567890_abc123@example.com`
+- Organization slug: `test-org_1234567890_abc123`
+
+This allows tests to run in parallel without database conflicts.
+
+## Patterns
+
+### Integration Test Pattern
+
+```typescript
+describe("Feature", () => {
+  let testDb: TestDatabase;
+
+  beforeAll(() => {
+    testDb = createTestDatabase();
+  });
+
+  afterAll(async () => {
+    await closeTestDatabase(testDb);
+  });
+
+  it("tests the feature", async () => {
+    // Setup
+    const setup = await Effect.runPromise(createOrganizationSetup(testDb));
+    const apiKey = await Effect.runPromise(
+      createApiKeyFixture(testDb.db, { organizationId: setup.organization.id })
+    );
+
+    // Execute
+    const res = await app.fetch(
+      new Request("/endpoint", {
+        headers: createApiKeyAuthHeaders(apiKey.token),
+      })
+    );
+
+    // Assert
+    expect(res.status).toBe(200);
+  });
+});
+```
+
+### Error Testing Pattern
+
+```typescript
+it("should handle errors gracefully", async () => {
+  const res = await app.fetch(
+    new Request("/invalid-endpoint")
+  );
+  
+  expect(res.status).toBe(404);
+  const body = await res.json();
+  expect(body.error).toBeDefined();
+});
+```
+
+## Architecture
+
+The testkit follows the Ports and Adapters pattern:
+
+- **Domain packages** - Business logic and use cases
+- **Platform packages** - Infrastructure adapters (testkit, db-postgres, cache-redis)
+- **Apps** - HTTP handlers and routing
+
+Tests live alongside source files (e.g., `organizations.ts` → `organizations.test.ts`) for discoverability.
