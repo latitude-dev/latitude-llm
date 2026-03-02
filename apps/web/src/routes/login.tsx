@@ -1,4 +1,4 @@
-import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
+import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { Link } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
@@ -10,42 +10,13 @@ import { useState } from "react"
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001"
 const WEB_BASE_URL = import.meta.env.VITE_WEB_URL ?? "http://localhost:3000"
 
-// Latitude logo SVG - actual implementation from legacy
-const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" {...props}>
-    <title>Latitude</title>
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M5.92908e-05 12.9825C-0.000146101 12.9876 0.000264683 12.9929 5.92915e-05 12.998L2.28025 12.998C2.53495 8.96957 5.90153 5.77716 10.0001 5.77716C14.0936 5.77716 17.4501 8.96879 17.712 12.998L20 12.998C19.74 7.70424 15.3652 3.49923 10.0002 3.49923C4.64031 3.49923 0.267973 7.69573 0.000322466 12.9823L5.92908e-05 12.9825Z"
-      fill="#0080FF"
-    />
-    <path
-      d="M19.9998 13.9941C19.9578 14.864 19.8043 15.7039 19.5547 16.5007L0.445068 16.5007C0.19543 15.7039 0.0420302 14.864 0 13.9941L19.9998 13.9941Z"
-      fill="#030712"
-    />
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M3.28458 12.998L6.00826 12.998C6.25515 11.0171 7.95449 9.48451 10.0005 9.48451C12.0416 9.48451 13.7292 11.0239 13.9849 12.998L16.7164 12.998C16.459 9.50688 13.5566 6.77195 10.0004 6.77195C6.44155 6.77195 3.5384 9.51261 3.28442 12.998L3.28458 12.998Z"
-      fill="#E63948"
-    />
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M7.02004 12.998L12.973 12.998C12.729 11.5654 11.4995 10.4718 10.0002 10.4718C8.49606 10.4718 7.25845 11.5639 7.01978 12.998L7.02004 12.998Z"
-      fill="#FEC61A"
-    />
-  </svg>
-)
-
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
   const [email, setEmail] = useState("")
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isLoading) return
 

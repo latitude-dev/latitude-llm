@@ -42,7 +42,7 @@ const buttonContainerVariants = cva(
   },
 )
 
-const buttonVariants = cva(
+const buttonVariantsConfig = cva(
   cn(
     "w-full inline-flex items-center justify-center rounded-lg font-sans font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background group-disabled:opacity-50 group-disabled:pointer-events-none",
     font.size.h5,
@@ -95,7 +95,9 @@ const buttonVariants = cva(
   },
 )
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+export interface ButtonProps
+  extends ButtonHTMLAttributes<HTMLButtonElement>,
+    VariantProps<typeof buttonVariantsConfig> {
   asChild?: boolean
   isLoading?: boolean
   flat?: boolean
@@ -120,7 +122,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       >
         <div
-          className={cn(buttonVariants({ variant, size, className, fanciness }), {
+          className={cn(buttonVariantsConfig({ variant, size, className, fanciness }), {
             "animate-pulse": isLoading,
           })}
         >
@@ -137,4 +139,4 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-export { Button, buttonVariants }
+export { Button, buttonVariantsConfig }
