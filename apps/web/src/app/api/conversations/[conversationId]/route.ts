@@ -2,7 +2,7 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { AssembledTrace } from '@latitude-data/core/constants'
 import { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
-import { fetchConversationWithMessages } from '@latitude-data/core/data-access/conversations/fetchConversationWithMessages'
+import { fetchConversationWithMessages } from '@latitude-data/core/queries/conversations/fetchConversationWithMessages'
 import { NextRequest, NextResponse } from 'next/server'
 import { Message } from 'promptl-ai'
 

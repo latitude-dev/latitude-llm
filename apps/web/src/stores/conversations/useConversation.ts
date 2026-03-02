@@ -5,12 +5,13 @@ import useSWR, { SWRConfiguration } from 'swr'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import { ConversationTracesResponse } from '$/app/api/conversations/[conversationId]/route'
+import { ConversationEvaluationsResponse } from '$/app/api/conversations/[conversationId]/evaluations/route'
 
 type ConversationRouteParams = {
   conversationId: string
   projectId: number
   commitUuid: string
-  documentUuid: string
+  documentUuid?: string
 }
 
 export function getConversationKey({
@@ -23,7 +24,9 @@ export function getConversationKey({
   const params = new URLSearchParams()
   params.set('projectId', String(projectId))
   params.set('commitUuid', commitUuid)
-  params.set('documentUuid', documentUuid)
+  if (documentUuid) {
+    params.set('documentUuid', documentUuid)
+  }
   const qs = params.toString()
   return qs ? `${base}?${qs}` : base
 }
@@ -69,5 +72,38 @@ export function useConversation(
       isLoading,
     }),
     [data, mutate, isLoading],
+  )
+}
+
+export function useConversationEvaluations({
+  conversationId,
+  enabled = true,
+}: {
+  conversationId?: string
+  enabled?: boolean
+}) {
+  const route =
+    conversationId && enabled
+      ? ROUTES.api.conversations.detail(conversationId).evaluations.root
+      : null
+
+  const fetcher = useFetcher<ConversationEvaluationsResponse>(
+    route ?? undefined,
+    {
+      fallback: undefined,
+    },
+  )
+
+  const { data, isLoading } = useSWR<ConversationEvaluationsResponse>(
+    route ? ['conversationEvaluations', conversationId] : null,
+    fetcher,
+  )
+
+  return useMemo(
+    () => ({
+      results: data?.results ?? [],
+      isLoading,
+    }),
+    [data, isLoading],
   )
 }

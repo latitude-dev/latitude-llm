@@ -1,5 +1,5 @@
 import { use, useMemo } from 'react'
-import { TraceSpanSelectionStateContext } from './TraceSpanSelectionContext'
+import { TraceSpanSelectionStateContext } from '$/components/traces/TraceSpanSelectionContext'
 
 export function useTraceSelection() {
   const { selection } = use(TraceSpanSelectionStateContext)

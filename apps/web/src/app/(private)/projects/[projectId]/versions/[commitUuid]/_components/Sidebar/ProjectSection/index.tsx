@@ -92,7 +92,7 @@ export default function ProjectSection({
     defaultValue: RunSourceGroup.Playground,
   })
 
-  const PROJECT_ROUTES = useMemo(
+  const PROJECT_ROUTES = useMemo<ProjectRoute[]>(
     () =>
       [
         agentBuilder && {
@@ -101,6 +101,13 @@ export default function ProjectSection({
             .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid }).home.root,
           iconName: 'bot',
+        },
+        !promptManagement && {
+          label: 'Traces',
+          iconName: 'messagesSquare',
+          route: ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: commit.uuid }).traces.root,
         },
         {
           label: 'Annotations',

@@ -304,6 +304,9 @@ export const ROUTES = {
                   root: `${root}/annotations/${uuid}`,
                 }),
               },
+              traces: {
+                root: `${root}/traces`,
+              },
               issues: {
                 root: `${root}/issues`,
               },

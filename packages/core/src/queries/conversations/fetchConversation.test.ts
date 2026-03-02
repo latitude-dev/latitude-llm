@@ -341,8 +341,11 @@ describe('fetchConversation', () => {
       expect(conversation.totalCost).toBe(800)
     })
 
-    it('correctly calculates totalDuration for main span types', async () => {
+    it('correctly calculates totalDuration as wall-clock time per trace', async () => {
       const documentLogUuid = generateUUIDIdentifier()
+
+      const start = new Date('2024-01-01T00:00:00Z')
+      const end = new Date('2024-01-01T00:00:03Z')
 
       await createSpan({
         workspaceId: workspace.id,
@@ -351,27 +354,8 @@ describe('fetchConversation', () => {
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
         type: SpanType.Prompt,
-        duration: 1000,
-      })
-
-      await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-1',
-        documentLogUuid: documentLogUuid,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Chat,
-        duration: 500,
-      })
-
-      await createSpan({
-        workspaceId: workspace.id,
-        traceId: 'trace-1',
-        documentLogUuid: documentLogUuid,
-        documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
-        type: SpanType.Completion,
-        duration: 2000,
+        startedAt: start,
+        endedAt: end,
       })
 
       const result = await fetchConversation({
@@ -382,7 +366,43 @@ describe('fetchConversation', () => {
 
       expect(result.ok).toBe(true)
       const conversation = result.unwrap()
-      expect(conversation.totalDuration).toBe(1500)
+      expect(conversation.totalDuration).toBe(3000)
+    })
+
+    it('sums per-trace durations instead of using overall time diff', async () => {
+      const documentLogUuid = generateUUIDIdentifier()
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-1',
+        documentLogUuid: documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        startedAt: new Date('2024-01-01T10:00:00Z'),
+        endedAt: new Date('2024-01-01T10:00:02Z'),
+      })
+
+      await createSpan({
+        workspaceId: workspace.id,
+        traceId: 'trace-2',
+        documentLogUuid: documentLogUuid,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        type: SpanType.Prompt,
+        startedAt: new Date('2024-01-01T15:00:00Z'),
+        endedAt: new Date('2024-01-01T15:00:03Z'),
+      })
+
+      const result = await fetchConversation({
+        workspace,
+        projectId,
+        documentLogUuid,
+      })
+
+      expect(result.ok).toBe(true)
+      const conversation = result.unwrap()
+      expect(conversation.totalDuration).toBe(5000)
     })
 
     it('correctly counts unique traceIds', async () => {

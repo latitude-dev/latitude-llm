@@ -155,10 +155,6 @@ function shouldIncludeSpan(
     }
   }
 
-  if (filters.traceId && span.traceId !== filters.traceId) {
-    return false
-  }
-
   if (filters.spanId && span.id !== filters.spanId) {
     return false
   }

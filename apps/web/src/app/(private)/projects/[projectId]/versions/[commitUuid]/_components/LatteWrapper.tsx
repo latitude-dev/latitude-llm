@@ -2,7 +2,7 @@ import { ReactNode } from 'react'
 import { getLastLatteThreadUuidCached } from '$/app/(private)/_data-access'
 import { LatteRealtimeUpdatesProvider } from '../providers/LatteRealtimeUpdatesProvider'
 import { LatteLayout } from '$/components/LatteSidebar/LatteLayout'
-import { fetchConversationWithMessages } from '@latitude-data/core/data-access/conversations/fetchConversationWithMessages'
+import { fetchConversationWithMessages } from '@latitude-data/core/queries/conversations/fetchConversationWithMessages'
 import type { Workspace } from '@latitude-data/core/schema/models/types/Workspace'
 
 type Props = {
