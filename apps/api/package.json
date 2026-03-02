@@ -36,7 +36,9 @@
     "tsx": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.15",
     "@platform/testkit": "workspace:*",
-    "@repo/vitest-config": "workspace:*"
+    "@repo/vitest-config": "workspace:*",
+    "drizzle-kit": "catalog:"
   }
 }

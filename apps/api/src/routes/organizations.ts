@@ -3,11 +3,11 @@ import {
   createOrganizationUseCase,
   getOrganizationMembersUseCase,
 } from "@domain/organizations"
-import { OrganizationId, generateId } from "@domain/shared-kernel"
+import { OrganizationId, PermissionError, generateId } from "@domain/shared-kernel"
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
-import { Hono } from "hono"
-import { getPostgresClient } from "../clients.ts"
+import { type Context, Hono } from "hono"
+import { getDbDependencies } from "../db-deps.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
 import type { AuthContext } from "../types.ts"
@@ -23,11 +23,32 @@ import type { AuthContext } from "../types.ts"
  */
 
 export const createOrganizationsRoutes = () => {
-  const repos = createRepositories(getPostgresClient().db)
   const app = new Hono()
+  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
+  const assertOrganizationAccess = (auth: AuthContext, organizationId: string) => {
+    if (auth.organizationId !== organizationId) {
+      throw new PermissionError({
+        message: "You do not have access to this organization",
+        workspaceId: organizationId,
+      })
+    }
+  }
+
+  app.use("/:id", async (c, next) => {
+    const auth = c.get("auth") as AuthContext
+    assertOrganizationAccess(auth, c.req.param("id"))
+    await next()
+  })
+
+  app.use("/:id/*", async (c, next) => {
+    const auth = c.get("auth") as AuthContext
+    assertOrganizationAccess(auth, c.req.param("id"))
+    await next()
+  })
 
   // POST /organizations - Create organization
   app.post("/", async (c) => {
+    const repos = getRepos(c)
     const body = (await c.req.json()) as {
       readonly name: string
       readonly slug: string
@@ -49,12 +70,14 @@ export const createOrganizationsRoutes = () => {
 
   // GET /organizations - List user's organizations
   app.get("/", async (c) => {
+    const repos = getRepos(c)
     const organizations = await Effect.runPromise(repos.organization.findAll())
     return c.json({ organizations }, 200)
   })
 
   // GET /organizations/:id - Get organization by ID
   app.get("/:id", async (c) => {
+    const repos = getRepos(c)
     const id = extractParam(c, "id", OrganizationId)
     if (!id) {
       throw new BadRequestError({ httpMessage: "Organization ID required" })
@@ -71,6 +94,7 @@ export const createOrganizationsRoutes = () => {
 
   // GET /organizations/:id/members - List organization members
   app.get("/:id/members", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "id", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID required" })
@@ -83,6 +107,7 @@ export const createOrganizationsRoutes = () => {
 
   // DELETE /organizations/:id - Delete organization
   app.delete("/:id", async (c) => {
+    const repos = getRepos(c)
     const id = extractParam(c, "id", OrganizationId)
     if (!id) {
       throw new BadRequestError({ httpMessage: "Organization ID required" })

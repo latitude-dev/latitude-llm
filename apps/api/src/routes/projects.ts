@@ -2,8 +2,8 @@ import { type CreateProjectInput, type Project, createProjectUseCase, listProjec
 import { OrganizationId, ProjectId, generateId } from "@domain/shared-kernel"
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
-import { Hono } from "hono"
-import { getPostgresClient } from "../clients.ts"
+import { type Context, Hono } from "hono"
+import { getDbDependencies } from "../db-deps.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
 import type { AuthContext } from "../types.ts"
@@ -19,11 +19,12 @@ import type { AuthContext } from "../types.ts"
  */
 
 export const createProjectsRoutes = () => {
-  const repos = createRepositories(getPostgresClient().db)
   const app = new Hono()
+  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
 
   // POST /organizations/:organizationId/projects - Create project
   app.post("/", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID is required" })
@@ -57,6 +58,7 @@ export const createProjectsRoutes = () => {
 
   // GET /organizations/:organizationId/projects - List projects
   app.get("/", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID is required" })
@@ -68,6 +70,7 @@ export const createProjectsRoutes = () => {
 
   // GET /organizations/:organizationId/projects/:id - Get project
   app.get("/:id", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     const id = extractParam(c, "id", ProjectId)
     if (!organizationId || !id) {
@@ -85,6 +88,7 @@ export const createProjectsRoutes = () => {
 
   // PATCH /organizations/:organizationId/projects/:id - Update project
   app.patch("/:id", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     const id = extractParam(c, "id", ProjectId)
     if (!organizationId || !id) {
@@ -117,6 +121,7 @@ export const createProjectsRoutes = () => {
 
   // DELETE /organizations/:organizationId/projects/:id - Soft delete project
   app.delete("/:id", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     const id = extractParam(c, "id", ProjectId)
     if (!organizationId || !id) {

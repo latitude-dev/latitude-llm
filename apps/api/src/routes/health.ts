@@ -1,9 +1,10 @@
+import type { ClickHouseClient } from "@clickhouse/client"
 import { healthcheckClickhouse } from "@platform/db-clickhouse"
 import { healthcheckPostgres } from "@platform/db-postgres"
 import type { Effect as EffectType } from "effect"
 import { Effect } from "effect"
 import type { Hono } from "hono"
-import { getClickhouseClient, getPostgresClient } from "../clients.ts"
+import type { ApiDatabaseDependencies } from "../db-deps.ts"
 
 type HealthcheckFailure = {
   readonly ok: false
@@ -21,14 +22,16 @@ const withFailure = <TSuccess extends { readonly ok: boolean }>(
 
 interface HealthRouteContext {
   app: Hono
+  database: ApiDatabaseDependencies
+  clickhouse: ClickHouseClient
 }
 
 export const registerHealthRoute = (context: HealthRouteContext) => {
   context.app.get("/health", async (c) => {
     const health = await Effect.runPromise(
       Effect.all({
-        postgres: withFailure(healthcheckPostgres(getPostgresClient().pool)),
-        clickhouse: withFailure(healthcheckClickhouse(getClickhouseClient())),
+        postgres: withFailure(healthcheckPostgres(context.database.pool)),
+        clickhouse: withFailure(healthcheckClickhouse(context.clickhouse)),
       }),
     )
 

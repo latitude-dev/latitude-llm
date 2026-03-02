@@ -2,7 +2,8 @@ import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared-kernel
 import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
-import { getBetterAuth, getPostgresClient, getRedisClient } from "../clients.ts"
+import { getBetterAuth, getRedisClient } from "../clients.ts"
+import { getDbDependencies } from "../db-deps.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
 
@@ -17,6 +18,14 @@ const MIN_VALIDATION_TIME_MS = 50
  */
 const VALID_KEY_TTL_SECONDS = 300 // 5 minutes for valid keys
 const INVALID_KEY_TTL_SECONDS = 5 // 5 seconds for invalid keys (prevents timing attacks)
+const REDIS_OPERATION_TIMEOUT_MS = 50
+
+const withTimeout = <T>(operation: Promise<T>, fallback: T): Promise<T> => {
+  return Promise.race([
+    operation,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), REDIS_OPERATION_TIMEOUT_MS)),
+  ])
+}
 
 const getApiKeyCacheKey = (token: string): string => `apikey:${token}`
 
@@ -30,7 +39,7 @@ const getCachedApiKey = (
   const cacheKey = getApiKeyCacheKey(token)
   return Effect.tryPromise({
     try: async () => {
-      const cached = await redis.get(cacheKey)
+      const cached = await withTimeout(redis.get(cacheKey), null)
       if (!cached) return undefined
       const parsed = JSON.parse(cached)
       return parsed as { organizationId: string; keyId: string } | null
@@ -50,7 +59,7 @@ const cacheApiKeyResult = (
   const redis = getRedisClient()
   const cacheKey = getApiKeyCacheKey(token)
   return Effect.tryPromise({
-    try: () => redis.setex(cacheKey, ttl, JSON.stringify(result)),
+    try: () => withTimeout(redis.setex(cacheKey, ttl, JSON.stringify(result)), undefined),
     catch: () => undefined,
   }).pipe(Effect.orDie)
 }
@@ -64,10 +73,13 @@ const cacheApiKeyResult = (
  * - Invalid keys are cached briefly to prevent repeated DB hits and timing enumeration
  * - Graceful degradation: continues without cache if Redis unavailable
  */
-const validateApiKey = (token: string): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
-  const { db } = getPostgresClient()
-  const apiKeyRepository = createApiKeyPostgresRepository(db)
-  const touchBuffer = createTouchBuffer()
+const validateApiKey = (
+  c: Context,
+  token: string,
+): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
+  const dependencies = getDbDependencies(c)
+  const apiKeyRepository = createApiKeyPostgresRepository(dependencies.db)
+  const touchBuffer = createTouchBuffer(dependencies)
 
   return Effect.gen(function* () {
     const startTime = Date.now()
@@ -130,9 +142,13 @@ const enforceMinimumTime = (startTime: number, minMs: number): Effect.Effect<voi
  * Validate that a user is a member of the specified organization.
  * Returns true if membership is valid, false otherwise.
  */
-const validateOrganizationMembership = (userId: string, organizationId: string): Effect.Effect<boolean, never> => {
-  const { db } = getPostgresClient()
-  const membershipRepository = createMembershipPostgresRepository(db)
+const validateOrganizationMembership = (
+  c: Context,
+  userId: string,
+  organizationId: string,
+): Effect.Effect<boolean, never> => {
+  const dependencies = getDbDependencies(c)
+  const membershipRepository = createMembershipPostgresRepository(dependencies.db)
   return membershipRepository.isMember(OrganizationId(organizationId), userId).pipe(Effect.orDie)
 }
 
@@ -156,9 +172,9 @@ const extractApiKeyToken = (c: Context): string | undefined => {
 /**
  * Authenticate via API key.
  */
-const authenticateWithApiKey = (_c: Context, token: string): Effect.Effect<AuthContext | null, never> => {
+const authenticateWithApiKey = (c: Context, token: string): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
-    const result = yield* validateApiKey(token)
+    const result = yield* validateApiKey(c, token)
 
     if (result) {
       return {
@@ -193,7 +209,7 @@ const authenticateWithSession = (c: Context): Effect.Effect<AuthContext | null, 
       return null
     }
 
-    const isMember = yield* validateOrganizationMembership(session.user.id, orgId)
+    const isMember = yield* validateOrganizationMembership(c, session.user.id, orgId)
     if (!isMember) {
       return null
     }
