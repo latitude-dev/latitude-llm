@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import { beforeAll, describe, expect, it } from "vitest"
+import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 import { registerHealthRoute } from "./health.ts"
 
 describe("GET /health", () => {
@@ -8,7 +9,11 @@ describe("GET /health", () => {
   beforeAll(() => {
     // Create fresh Hono app for each test suite
     app = new Hono()
-    registerHealthRoute({ app })
+    registerHealthRoute({
+      app,
+      database: getPostgresClient(),
+      clickhouse: getClickhouseClient(),
+    })
   })
 
   describe("with database connections", () => {

@@ -2,7 +2,7 @@ import { ApiKeyId } from "@domain/shared-kernel"
 import { createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
-import { getPostgresClient } from "../clients.ts"
+import type { ApiDbDependencies } from "../db-deps.ts"
 
 const logger = createLogger("touch-buffer")
 
@@ -41,8 +41,10 @@ export class TouchBuffer {
   private flushInterval: NodeJS.Timeout | null = null
   private readonly intervalMs: number
   private readonly maxBufferSize: number
+  private readonly dependencies: ApiDbDependencies
 
-  constructor(config: TouchBufferConfig = {}) {
+  constructor(dependencies: ApiDbDependencies, config: TouchBufferConfig = {}) {
+    this.dependencies = dependencies
     this.intervalMs = config.intervalMs ?? 30000
     this.maxBufferSize = config.maxBufferSize ?? 10000
 
@@ -97,9 +99,7 @@ export class TouchBuffer {
 
     const startTime = Date.now()
 
-    // Get repository at flush time (direct import pattern)
-    const { db } = getPostgresClient()
-    const apiKeyRepository = createApiKeyPostgresRepository(db)
+    const apiKeyRepository = createApiKeyPostgresRepository(this.dependencies.db)
 
     try {
       await Effect.runPromise(apiKeyRepository.touchBatch(keyIds))
@@ -170,9 +170,9 @@ export class TouchBuffer {
  */
 let touchBufferInstance: TouchBuffer | null = null
 
-export const createTouchBuffer = (config?: TouchBufferConfig): TouchBuffer => {
+export const createTouchBuffer = (dependencies: ApiDbDependencies, config?: TouchBufferConfig): TouchBuffer => {
   if (!touchBufferInstance) {
-    touchBufferInstance = new TouchBuffer(config)
+    touchBufferInstance = new TouchBuffer(dependencies, config)
   }
   return touchBufferInstance
 }

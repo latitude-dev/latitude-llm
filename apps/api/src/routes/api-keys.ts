@@ -7,8 +7,9 @@ import {
 import { ApiKeyId, OrganizationId, generateId } from "@domain/shared-kernel"
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
-import { Hono } from "hono"
-import { getPostgresClient, getRedisClient } from "../clients.ts"
+import { type Context, Hono } from "hono"
+import { getRedisClient } from "../clients.ts"
+import { getDbDependencies } from "../db-deps.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
 
@@ -38,12 +39,13 @@ const createApiKeyCacheInvalidator = (): CacheInvalidator => {
 }
 
 export const createApiKeysRoutes = () => {
-  const repos = createRepositories(getPostgresClient().db)
   const cacheInvalidator = createApiKeyCacheInvalidator()
   const app = new Hono()
+  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
 
   // POST /organizations/:organizationId/api-keys - Generate API key
   app.post("/", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID is required" })
@@ -65,6 +67,7 @@ export const createApiKeysRoutes = () => {
 
   // GET /organizations/:organizationId/api-keys - List API keys
   app.get("/", async (c) => {
+    const repos = getRepos(c)
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID is required" })
@@ -76,6 +79,7 @@ export const createApiKeysRoutes = () => {
 
   // DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
   app.delete("/:id", async (c) => {
+    const repos = getRepos(c)
     const id = extractParam(c, "id", ApiKeyId)
     if (!id) {
       throw new BadRequestError({ httpMessage: "API Key ID is required" })

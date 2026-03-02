@@ -1,5 +1,6 @@
 import type { OrganizationId, UserId } from "@domain/shared-kernel"
 import type { Context } from "hono"
+import type { ApiDbDependencies } from "./db-deps.ts"
 
 /**
  * Authentication context set by the auth middleware.
@@ -52,5 +53,6 @@ export type AuthenticatedContext = Context<{ Variables: HonoVariables }>
 declare module "hono" {
   interface ContextVariableMap {
     auth?: AuthContext
+    dbDependencies?: ApiDbDependencies
   }
 }
