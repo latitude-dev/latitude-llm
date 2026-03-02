@@ -10,10 +10,10 @@ import {
   Row,
   Section,
   Tailwind,
-} from "@react-email/components";
-import type { ReactNode } from "react";
+} from "@react-email/components"
+import type { ReactNode } from "react"
 
-const LATITUDE_LOGO_URL = "https://app.latitude.so/latitude-logo.png";
+const LATITUDE_LOGO_URL = "https://app.latitude.so/latitude-logo.png"
 
 const tailwindConfig = {
   theme: {
@@ -41,13 +41,13 @@ const tailwindConfig = {
       },
     },
   },
-};
+}
 
 interface ContainerLayoutProps {
-  readonly children: ReactNode;
-  readonly title?: string;
-  readonly previewText: string;
-  readonly footer?: ReactNode;
+  readonly children: ReactNode
+  readonly title?: string
+  readonly previewText: string
+  readonly footer?: ReactNode
 }
 
 export function ContainerLayout({ children, title, previewText, footer }: ContainerLayoutProps) {
@@ -82,20 +82,14 @@ export function ContainerLayout({ children, title, previewText, footer }: Contai
                 </Section>
               )}
               {children}
-              {footer ? (
-                <Section className="pt-6 border-t border-dashed mt-8 border-border">
-                  {footer}
-                </Section>
-              ) : null}
+              {footer ? <Section className="pt-6 border-t border-dashed mt-8 border-border">{footer}</Section> : null}
             </Section>
             <Section className="mt-8" align="center">
               <div className="mb-1 text-center">
                 <span className="text-sm font-medium text-foreground">Latitude Data S.L.</span>
               </div>
               <div className="mb-1 text-center">
-                <span className="text-sm text-muted-foreground">
-                  The AI engineering platform for product teams.
-                </span>
+                <span className="text-sm text-muted-foreground">The AI engineering platform for product teams.</span>
               </div>
               <Link href="https://latitude.so">
                 <span className="text-sm text-primary text-center">latitude.so</span>
@@ -105,5 +99,5 @@ export function ContainerLayout({ children, title, previewText, footer }: Contai
         </Body>
       </Tailwind>
     </Html>
-  );
+  )
 }

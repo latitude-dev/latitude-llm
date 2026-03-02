@@ -1,6 +1,6 @@
-import type { Effect } from "effect";
-import type { EmailContent } from "../entities/email.ts";
-import type { EmailSendError, EmailSender } from "../ports/email-sender.ts";
+import type { Effect } from "effect"
+import type { EmailContent } from "../entities/email.ts"
+import type { EmailSendError, EmailSender } from "../ports/email-sender.ts"
 
 /**
  * Send email use case
@@ -10,7 +10,7 @@ import type { EmailSendError, EmailSender } from "../ports/email-sender.ts";
  */
 
 export const sendEmail = (deps: {
-  readonly emailSender: EmailSender;
+  readonly emailSender: EmailSender
 }) => {
   return (email: EmailContent): Effect.Effect<void, EmailSendError> => {
     return deps.emailSender.send({
@@ -18,8 +18,8 @@ export const sendEmail = (deps: {
       subject: email.subject,
       html: email.html,
       ...(email.text && { text: email.text }),
-    });
-  };
-};
+    })
+  }
+}
 
-export type SendEmail = ReturnType<typeof sendEmail>;
+export type SendEmail = ReturnType<typeof sendEmail>

@@ -1,9 +1,9 @@
-import { Slot } from "@radix-ui/react-slot";
-import { type VariantProps, cva } from "class-variance-authority";
-import { type ButtonHTMLAttributes, forwardRef } from "react";
+import { Slot } from "@radix-ui/react-slot"
+import { type VariantProps, cva } from "class-variance-authority"
+import { type ButtonHTMLAttributes, forwardRef } from "react"
 
-import { font } from "../../tokens/index.js";
-import { cn } from "../../utils/cn.js";
+import { font } from "../../tokens/index.js"
+import { cn } from "../../utils/cn.js"
 
 const buttonContainerVariants = cva(
   cn("group relative inline-flex rounded-lg disabled:opacity-50 disabled:pointer-events-none"),
@@ -19,8 +19,7 @@ const buttonContainerVariants = cva(
       },
       fanciness: {
         default: "bg-transparent hover:bg-transparent",
-        fancy:
-          "border-0 pb-1 active:pb-0 active:mt-1 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)]",
+        fancy: "border-0 pb-1 active:pb-0 active:mt-1 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)]",
       },
     },
     compoundVariants: [
@@ -41,7 +40,7 @@ const buttonContainerVariants = cva(
       fanciness: "fancy",
     },
   },
-);
+)
 
 const buttonVariants = cva(
   cn(
@@ -54,10 +53,8 @@ const buttonVariants = cva(
         default:
           "border border-transparent bg-primary text-primary-foreground group-hover:bg-primary/90 disabled:cursor-default",
         destructive: "bg-destructive text-destructive-foreground group-hover:bg-destructive/90",
-        outline:
-          "border border-input bg-background group-hover:bg-secondary group-hover:text-secondary-foreground/80",
-        secondary:
-          "border border-transparent bg-secondary text-secondary-foreground group-hover:bg-secondary/80",
+        outline: "border border-input bg-background group-hover:bg-secondary group-hover:text-secondary-foreground/80",
+        secondary: "border border-transparent bg-secondary text-secondary-foreground group-hover:bg-secondary/80",
         ghost: "border border-transparent shadow-none bg-transparent text-muted-foreground",
         link: "shadow-none underline-offset-4 group-hover:underline text-accent-foreground",
       },
@@ -96,33 +93,21 @@ const buttonVariants = cva(
       fanciness: "fancy",
     },
   },
-);
+)
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-  isLoading?: boolean;
-  flat?: boolean;
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  asChild?: boolean
+  isLoading?: boolean
+  flat?: boolean
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
-    {
-      className,
-      variant,
-      size,
-      asChild = false,
-      isLoading = false,
-      flat = false,
-      children,
-      disabled,
-      ...props
-    },
+    { className, variant, size, asChild = false, isLoading = false, flat = false, children, disabled, ...props },
     ref,
   ) => {
-    const Comp = asChild ? Slot : "button";
-    const fanciness = flat ? "default" : "fancy";
+    const Comp = asChild ? Slot : "button"
+    const fanciness = flat ? "default" : "fancy"
 
     return (
       <Comp
@@ -147,9 +132,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           </div>
         </div>
       </Comp>
-    );
+    )
   },
-);
-Button.displayName = "Button";
+)
+Button.displayName = "Button"
 
-export { Button, buttonVariants };
+export { Button, buttonVariants }

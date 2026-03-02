@@ -1,19 +1,19 @@
-import type { ClickHouseClient } from "@clickhouse/client";
-import { Data, Effect } from "effect";
+import type { ClickHouseClient } from "@clickhouse/client"
+import { Data, Effect } from "effect"
 
 class ClickhouseQueryError extends Data.TaggedError("ClickhouseQueryError")<{
-  readonly cause: unknown;
-  readonly query: string;
+  readonly cause: unknown
+  readonly query: string
 }> {}
 
 class ClickhouseCommandError extends Data.TaggedError("ClickhouseCommandError")<{
-  readonly cause: unknown;
-  readonly query: string;
+  readonly cause: unknown
+  readonly query: string
 }> {}
 
 class ClickhouseInsertError extends Data.TaggedError("ClickhouseInsertError")<{
-  readonly cause: unknown;
-  readonly table: string;
+  readonly cause: unknown
+  readonly table: string
 }> {}
 
 export const queryClickhouse = <TRow extends Record<string, unknown>>(
@@ -27,12 +27,12 @@ export const queryClickhouse = <TRow extends Record<string, unknown>>(
         query,
         ...(queryParams !== undefined && { query_params: queryParams }),
         format: "JSONEachRow",
-      });
+      })
 
-      return result.json<TRow>();
+      return result.json<TRow>()
     },
     catch: (error) => new ClickhouseQueryError({ cause: error, query }),
-  });
+  })
 
 export const commandClickhouse = (
   client: ClickHouseClient,
@@ -46,7 +46,7 @@ export const commandClickhouse = (
         ...(queryParams !== undefined && { query_params: queryParams }),
       }),
     catch: (error) => new ClickhouseCommandError({ cause: error, query }),
-  });
+  })
 
 export const insertJsonEachRow = <TRow extends Record<string, unknown>>(
   client: ClickHouseClient,
@@ -55,7 +55,7 @@ export const insertJsonEachRow = <TRow extends Record<string, unknown>>(
 ): Effect.Effect<void, ClickhouseInsertError> =>
   Effect.gen(function* () {
     if (values.length === 0) {
-      return;
+      return
     }
 
     yield* Effect.tryPromise({
@@ -66,5 +66,5 @@ export const insertJsonEachRow = <TRow extends Record<string, unknown>>(
           format: "JSONEachRow",
         }),
       catch: (error) => new ClickhouseInsertError({ cause: error, table }),
-    });
-  });
+    })
+  })

@@ -1,21 +1,21 @@
-import type { RedisConnection } from "@platform/cache-redis";
-import { createRedisConnection } from "@platform/cache-redis";
-import { createPostgresPool } from "@platform/db-postgres";
-import type { Pool } from "pg";
+import type { RedisConnection } from "@platform/cache-redis"
+import { createRedisConnection } from "@platform/cache-redis"
+import { createPostgresPool } from "@platform/db-postgres"
+import type { Pool } from "pg"
 
-let redisConnectionInstance: RedisConnection | undefined;
-let pgPoolInstance: Pool | undefined;
+let redisConnectionInstance: RedisConnection | undefined
+let pgPoolInstance: Pool | undefined
 
 export const getRedisConnection = (): RedisConnection => {
   if (!redisConnectionInstance) {
-    redisConnectionInstance = createRedisConnection();
+    redisConnectionInstance = createRedisConnection()
   }
-  return redisConnectionInstance;
-};
+  return redisConnectionInstance
+}
 
 export const getPostgresPool = (maxConnections?: number): Pool => {
   if (!pgPoolInstance) {
-    pgPoolInstance = createPostgresPool(maxConnections ? { maxConnections } : undefined);
+    pgPoolInstance = createPostgresPool(maxConnections ? { maxConnections } : undefined)
   }
-  return pgPoolInstance;
-};
+  return pgPoolInstance
+}

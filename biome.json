@@ -15,7 +15,7 @@
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
-      "semicolons": "always"
+      "semicolons": "asNeeded"
     }
   },
   "files": {

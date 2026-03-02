@@ -1,4 +1,4 @@
-import type { Context } from "hono";
+import type { Context } from "hono"
 
 /**
  * Effect utilities for API routes.
@@ -21,12 +21,8 @@ import type { Context } from "hono";
  * if (!organizationId) throw new BadRequestError({ httpMessage: "Organization ID required" });
  * ```
  */
-export const extractParam = <T>(
-  c: Context,
-  name: string,
-  validator: (value: string) => T | null,
-): T | null => {
-  const value = c.req.param(name);
-  if (!value) return null;
-  return validator(value);
-};
+export const extractParam = <T>(c: Context, name: string, validator: (value: string) => T | null): T | null => {
+  const value = c.req.param(name)
+  if (!value) return null
+  return validator(value)
+}

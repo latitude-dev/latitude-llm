@@ -1,9 +1,9 @@
-import { type VariantProps, cva } from "class-variance-authority";
-import { type InputHTMLAttributes, forwardRef } from "react";
+import { type VariantProps, cva } from "class-variance-authority"
+import { type InputHTMLAttributes, forwardRef } from "react"
 
-import { font } from "../../tokens/index.js";
-import { cn } from "../../utils/cn.js";
-import { FormField } from "../form-field/form-field.js";
+import { font } from "../../tokens/index.js"
+import { cn } from "../../utils/cn.js"
+import { FormField } from "../form-field/form-field.js"
 
 const inputVariants = cva(
   cn(
@@ -22,19 +22,19 @@ const inputVariants = cva(
       size: "default",
     },
   },
-);
+)
 
-import type { ReactNode } from "react";
+import type { ReactNode } from "react"
 
 export interface InputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "size" | "className">,
     VariantProps<typeof inputVariants> {
-  label?: ReactNode;
-  description?: ReactNode;
-  info?: string | undefined;
-  errors?: string[] | undefined;
-  inline?: boolean | undefined;
-  className?: string;
+  label?: ReactNode
+  description?: ReactNode
+  info?: string | undefined
+  errors?: string[] | undefined
+  inline?: boolean | undefined
+  className?: string
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
@@ -42,32 +42,23 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const input = (
       <input
         type={type}
-        className={cn(
-          inputVariants({ size, className }),
-          errors && errors.length > 0 && "border-destructive",
-        )}
+        className={cn(inputVariants({ size, className }), errors && errors.length > 0 && "border-destructive")}
         ref={ref}
         {...props}
       />
-    );
+    )
 
     if (label || description || errors) {
       return (
-        <FormField
-          label={label}
-          description={description}
-          info={info}
-          errors={errors}
-          inline={inline}
-        >
+        <FormField label={label} description={description} info={info} errors={errors} inline={inline}>
           {input}
         </FormField>
-      );
+      )
     }
 
-    return input;
+    return input
   },
-);
-Input.displayName = "Input";
+)
+Input.displayName = "Input"
 
-export { Input };
+export { Input }

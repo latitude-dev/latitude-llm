@@ -5,20 +5,20 @@
  * to bundle their HTTP status code and message.
  */
 interface HttpError {
-  readonly _tag: string;
-  readonly httpStatus: number;
-  readonly httpMessage: string;
+  readonly _tag: string
+  readonly httpStatus: number
+  readonly httpMessage: string
 }
 
 export class BadRequestError implements HttpError {
-  readonly _tag = "BadRequestError";
-  readonly httpStatus = 400;
-  readonly httpMessage: string;
+  readonly _tag = "BadRequestError"
+  readonly httpStatus = 400
+  readonly httpMessage: string
 
   constructor(options: { httpMessage: string; field?: string }) {
-    this.httpMessage = options.httpMessage;
+    this.httpMessage = options.httpMessage
     if (options.field) {
-      this.httpMessage += ` ${options.field}`;
+      this.httpMessage += ` ${options.field}`
     }
   }
 }
@@ -32,23 +32,21 @@ export const isHttpError = (error: unknown): error is HttpError => {
     typeof error.httpStatus === "number" &&
     "httpMessage" in error &&
     typeof error.httpMessage === "string"
-  );
-};
+  )
+}
 
 // Helper to convert domain errors to HTTP responses
-export const toHttpResponse = (
-  error: unknown,
-): { status: number; body: Record<string, unknown> } => {
+export const toHttpResponse = (error: unknown): { status: number; body: Record<string, unknown> } => {
   if (isHttpError(error)) {
     return {
       status: error.httpStatus,
       body: { error: error.httpMessage },
-    };
+    }
   }
 
   // Default to 500 for unknown errors
   return {
     status: 500,
     body: { error: "Internal server error" },
-  };
-};
+  }
+}

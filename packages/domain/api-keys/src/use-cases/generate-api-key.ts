@@ -1,12 +1,7 @@
-import type {
-  ApiKeyId,
-  OrganizationId,
-  RepositoryError,
-  ValidationError,
-} from "@domain/shared-kernel";
-import { Data, Effect } from "effect";
-import { type ApiKey, createApiKey, generateApiKeyToken } from "../entities/api-key.ts";
-import type { ApiKeyRepository } from "../ports/api-key-repository.ts";
+import type { ApiKeyId, OrganizationId, RepositoryError, ValidationError } from "@domain/shared-kernel"
+import { Data, Effect } from "effect"
+import { type ApiKey, createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
+import type { ApiKeyRepository } from "../ports/api-key-repository.ts"
 
 /**
  * Generate a new API key for an organization.
@@ -19,22 +14,22 @@ import type { ApiKeyRepository } from "../ports/api-key-repository.ts";
  * 5. Returns the created API key
  */
 export interface GenerateApiKeyInput {
-  readonly id: ApiKeyId;
-  readonly organizationId: OrganizationId;
-  readonly name: string;
+  readonly id: ApiKeyId
+  readonly organizationId: OrganizationId
+  readonly name: string
 }
 
 export class InvalidApiKeyNameError extends Data.TaggedError("InvalidApiKeyNameError")<{
-  readonly name: string;
-  readonly reason: string;
+  readonly name: string
+  readonly reason: string
 }> {
-  readonly httpStatus = 400;
+  readonly httpStatus = 400
   get httpMessage() {
-    return this.reason;
+    return this.reason
   }
 }
 
-export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError;
+export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError
 
 export const generateApiKeyUseCase =
   (repository: ApiKeyRepository) =>
@@ -45,18 +40,18 @@ export const generateApiKeyUseCase =
         return yield* new InvalidApiKeyNameError({
           name: input.name,
           reason: "Name cannot be empty",
-        });
+        })
       }
 
       if (input.name.length > 256) {
         return yield* new InvalidApiKeyNameError({
           name: input.name,
           reason: "Name exceeds 256 characters",
-        });
+        })
       }
 
       // Generate token
-      const token = generateApiKeyToken();
+      const token = generateApiKeyToken()
 
       // Create API key entity
       const apiKey = createApiKey({
@@ -64,11 +59,11 @@ export const generateApiKeyUseCase =
         organizationId: input.organizationId,
         token,
         name: input.name.trim(),
-      });
+      })
 
       // Persist
-      yield* repository.save(apiKey);
+      yield* repository.save(apiKey)
 
-      return apiKey;
-    });
-  };
+      return apiKey
+    })
+  }

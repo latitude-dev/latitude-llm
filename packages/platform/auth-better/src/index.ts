@@ -1,14 +1,14 @@
-import { stripe } from "@better-auth/stripe";
-import type { PostgresDb } from "@platform/db-postgres";
-import { postgresSchema } from "@platform/db-postgres";
-import { parseEnv, parseEnvOptional } from "@platform/env";
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink } from "better-auth/plugins";
-import { organization } from "better-auth/plugins";
-import type { BetterAuthPlugin } from "better-auth/types";
-import { Effect } from "effect";
-import Stripe from "stripe";
+import { stripe } from "@better-auth/stripe"
+import type { PostgresDb } from "@platform/db-postgres"
+import { postgresSchema } from "@platform/db-postgres"
+import { parseEnv, parseEnvOptional } from "@platform/env"
+import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { magicLink } from "better-auth/plugins"
+import { organization } from "better-auth/plugins"
+import type { BetterAuthPlugin } from "better-auth/types"
+import { Effect } from "effect"
+import Stripe from "stripe"
 
 /**
  * Better Auth configuration and factory.
@@ -22,68 +22,59 @@ import Stripe from "stripe";
  */
 
 export interface BetterAuthConfig {
-  readonly db: PostgresDb;
-  readonly baseUrl?: string;
-  readonly secret?: string;
-  readonly googleClientId?: string;
-  readonly googleClientSecret?: string;
-  readonly githubClientId?: string;
-  readonly githubClientSecret?: string;
-  readonly stripeSecretKey?: string;
-  readonly stripeWebhookSecret?: string;
-  readonly stripePublishableKey?: string;
-  readonly subscriptionPlans?: StripePlanConfig[];
+  readonly db: PostgresDb
+  readonly baseUrl?: string
+  readonly secret?: string
+  readonly googleClientId?: string
+  readonly googleClientSecret?: string
+  readonly githubClientId?: string
+  readonly githubClientSecret?: string
+  readonly stripeSecretKey?: string
+  readonly stripeWebhookSecret?: string
+  readonly stripePublishableKey?: string
+  readonly subscriptionPlans?: StripePlanConfig[]
   // Magic Link email configuration
   readonly sendMagicLink?: (params: {
-    email: string;
-    url: string;
-    token: string;
-  }) => Promise<void>;
+    email: string
+    url: string
+    token: string
+  }) => Promise<void>
   // User creation hook for onboarding
-  readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>;
+  readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
   // Trusted origins for callback URLs
-  readonly trustedOrigins?: string[];
+  readonly trustedOrigins?: string[]
 }
 
 export interface StripePlanConfig {
-  readonly name: string;
-  readonly priceId: string;
-  readonly annualDiscountPriceId?: string;
-  readonly limits?: Record<string, number>;
+  readonly name: string
+  readonly priceId: string
+  readonly annualDiscountPriceId?: string
+  readonly limits?: Record<string, number>
   readonly freeTrial?: {
-    readonly days: number;
-  };
+    readonly days: number
+  }
 }
 
 export const createBetterAuth = (config: BetterAuthConfig) => {
   const baseUrl =
-    config.baseUrl ??
-    Effect.runSync(parseEnvOptional(process.env.BETTER_AUTH_URL, "string")) ??
-    "http://localhost:3000";
-  const secret =
-    config.secret ?? Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"));
+    config.baseUrl ?? Effect.runSync(parseEnvOptional(process.env.BETTER_AUTH_URL, "string")) ?? "http://localhost:3000"
+  const secret = config.secret ?? Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"))
 
   // Get OAuth credentials from env if not provided
   const googleClientId =
-    config.googleClientId ??
-    Effect.runSync(parseEnvOptional(process.env.GOOGLE_CLIENT_ID, "string"));
+    config.googleClientId ?? Effect.runSync(parseEnvOptional(process.env.GOOGLE_CLIENT_ID, "string"))
   const googleClientSecret =
-    config.googleClientSecret ??
-    Effect.runSync(parseEnvOptional(process.env.GOOGLE_CLIENT_SECRET, "string"));
+    config.googleClientSecret ?? Effect.runSync(parseEnvOptional(process.env.GOOGLE_CLIENT_SECRET, "string"))
   const githubClientId =
-    config.githubClientId ??
-    Effect.runSync(parseEnvOptional(process.env.GITHUB_CLIENT_ID, "string"));
+    config.githubClientId ?? Effect.runSync(parseEnvOptional(process.env.GITHUB_CLIENT_ID, "string"))
   const githubClientSecret =
-    config.githubClientSecret ??
-    Effect.runSync(parseEnvOptional(process.env.GITHUB_CLIENT_SECRET, "string"));
+    config.githubClientSecret ?? Effect.runSync(parseEnvOptional(process.env.GITHUB_CLIENT_SECRET, "string"))
 
   // Get Stripe credentials from env if not provided
   const stripeSecretKey =
-    config.stripeSecretKey ??
-    Effect.runSync(parseEnvOptional(process.env.STRIPE_SECRET_KEY, "string"));
+    config.stripeSecretKey ?? Effect.runSync(parseEnvOptional(process.env.STRIPE_SECRET_KEY, "string"))
   const stripeWebhookSecret =
-    config.stripeWebhookSecret ??
-    Effect.runSync(parseEnvOptional(process.env.STRIPE_WEBHOOK_SECRET, "string"));
+    config.stripeWebhookSecret ?? Effect.runSync(parseEnvOptional(process.env.STRIPE_WEBHOOK_SECRET, "string"))
 
   // Create organization plugin
   // Note: Better Auth's organization plugin has a type issue where 'team' schema
@@ -93,28 +84,28 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   // We use 'unknown' as a type-safe way to handle this mismatch.
   const orgPlugin: BetterAuthPlugin = organization({
     allowUserToCreateOrganization: () => true,
-  }) as unknown as BetterAuthPlugin;
+  }) as unknown as BetterAuthPlugin
 
   // Build plugins array
-  const plugins: BetterAuthPlugin[] = [orgPlugin];
+  const plugins: BetterAuthPlugin[] = [orgPlugin]
 
   // Add Magic Link plugin if email sender is configured
   if (config.sendMagicLink) {
-    const sendMagicLinkFn = config.sendMagicLink;
+    const sendMagicLinkFn = config.sendMagicLink
     const magicLinkPlugin = magicLink({
       sendMagicLink: async ({ email, url, token }) => {
-        await sendMagicLinkFn({ email, url, token });
+        await sendMagicLinkFn({ email, url, token })
       },
       expiresIn: 3600, // 1 hour
-    }) as unknown as BetterAuthPlugin;
-    plugins.push(magicLinkPlugin);
+    }) as unknown as BetterAuthPlugin
+    plugins.push(magicLinkPlugin)
   }
 
   // Add Stripe plugin if credentials are available
   if (stripeSecretKey && stripeWebhookSecret) {
     const stripeClient = new Stripe(stripeSecretKey, {
       apiVersion: "2026-02-25.clover",
-    });
+    })
 
     const stripePlugin = stripe({
       stripeClient,
@@ -133,17 +124,17 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
           if (referenceId !== user.id) {
             // This would need to check if user is an owner/admin of the organization
             // For now, allow all - the caller should implement proper authorization
-            return true;
+            return true
           }
-          return true;
+          return true
         },
       },
       organization: {
         enabled: true,
       },
-    }) as unknown as BetterAuthPlugin;
+    }) as unknown as BetterAuthPlugin
 
-    plugins.push(stripePlugin);
+    plugins.push(stripePlugin)
   }
 
   return betterAuth({
@@ -214,14 +205,14 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
                 id: user.id,
                 email: user.email,
                 name: user.name ?? undefined,
-              });
+              })
             }
           },
         },
       },
     },
-  });
-};
+  })
+}
 
 // Export types from better-auth for convenience
-export type { User, Session } from "better-auth";
+export type { User, Session } from "better-auth"

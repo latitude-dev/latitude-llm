@@ -1,6 +1,6 @@
-import type { DomainEvent } from "@domain/events";
-import type { OrganizationId, UserId } from "@domain/shared-kernel";
-import type { MembershipRole } from "../entities/membership.ts";
+import type { DomainEvent } from "@domain/events"
+import type { OrganizationId, UserId } from "@domain/shared-kernel"
+import type { MembershipRole } from "../entities/membership.ts"
 
 /**
  * MemberJoined event - emitted when a user joins an organization.
@@ -8,16 +8,16 @@ import type { MembershipRole } from "../entities/membership.ts";
 export type MemberJoinedEvent = DomainEvent<
   "MemberJoined",
   {
-    organizationId: OrganizationId;
-    userId: UserId;
-    role: MembershipRole;
+    organizationId: OrganizationId
+    userId: UserId
+    role: MembershipRole
   }
->;
+>
 
 export const createMemberJoinedEvent = (params: {
-  organizationId: OrganizationId;
-  userId: UserId;
-  role: MembershipRole;
+  organizationId: OrganizationId
+  userId: UserId
+  role: MembershipRole
 }): MemberJoinedEvent => ({
   name: "MemberJoined",
   workspaceId: params.organizationId,
@@ -26,4 +26,4 @@ export const createMemberJoinedEvent = (params: {
     userId: params.userId,
     role: params.role,
   },
-});
+})

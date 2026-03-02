@@ -1,5 +1,5 @@
-import { Redis } from "ioredis";
-import type { RedisConnection } from "./connection.ts";
+import { Redis } from "ioredis"
+import type { RedisConnection } from "./connection.ts"
 
 /**
  * Create an ioredis client from connection config
@@ -14,13 +14,13 @@ export const createRedisClient = (connection: RedisConnection): Redis => {
     enableOfflineQueue: true,
     // Retry strategy with exponential backoff
     retryStrategy: (times) => {
-      const delay = Math.min(times * 50, 2000);
-      return delay;
+      const delay = Math.min(times * 50, 2000)
+      return delay
     },
-  });
-};
+  })
+}
 
 /**
  * Type alias for Redis client
  */
-export type RedisClient = Redis;
+export type RedisClient = Redis

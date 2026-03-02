@@ -1,6 +1,6 @@
-import type { Effect } from "effect";
-import type { RepositoryError } from "../errors.ts";
-import type { User } from "../user.ts";
+import type { Effect } from "effect"
+import type { RepositoryError } from "../errors.ts"
+import type { User } from "../user.ts"
 
 /**
  * User repository port - interface for user persistence operations.
@@ -13,5 +13,5 @@ export interface UserRepository {
   /**
    * Find a user by their email address.
    */
-  readonly findByEmail: (email: string) => Effect.Effect<User | null, RepositoryError>;
+  readonly findByEmail: (email: string) => Effect.Effect<User | null, RepositoryError>
 }

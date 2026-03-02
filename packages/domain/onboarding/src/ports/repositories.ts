@@ -1,5 +1,5 @@
-import type { Effect } from "effect";
-import type { MembershipCreationError, WorkspaceCreationError } from "../errors.ts";
+import type { Effect } from "effect"
+import type { MembershipCreationError, WorkspaceCreationError } from "../errors.ts"
 
 /**
  * Workspace repository port
@@ -9,9 +9,9 @@ import type { MembershipCreationError, WorkspaceCreationError } from "../errors.
 
 export interface WorkspaceRepository {
   readonly create: (params: {
-    name: string;
-    userId: string;
-  }) => Effect.Effect<{ id: string; name: string }, WorkspaceCreationError>;
+    name: string
+    userId: string
+  }) => Effect.Effect<{ id: string; name: string }, WorkspaceCreationError>
 }
 
 /**
@@ -20,8 +20,8 @@ export interface WorkspaceRepository {
 
 export interface MembershipRepository {
   readonly create: (params: {
-    userId: string;
-    workspaceId: string;
-    role: "owner" | "admin" | "member";
-  }) => Effect.Effect<{ id: string }, MembershipCreationError>;
+    userId: string
+    workspaceId: string
+    role: "owner" | "admin" | "member"
+  }) => Effect.Effect<{ id: string }, MembershipCreationError>
 }

@@ -1,4 +1,4 @@
-import { boolean, jsonb, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core"
 
 /**
  * Outbox events table for reliable event publishing.
@@ -6,7 +6,7 @@ import { boolean, jsonb, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-
  * Scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude");
+const latitudeSchema = pgSchema("latitude")
 
 export const outboxEvents = latitudeSchema.table("outbox_events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -18,4 +18,4 @@ export const outboxEvents = latitudeSchema.table("outbox_events", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+})

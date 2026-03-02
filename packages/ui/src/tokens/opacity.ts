@@ -12,6 +12,6 @@ export const opacity = {
     90: "opacity-90",
     100: "opacity-100",
   },
-};
+}
 
-export type TextOpacity = keyof typeof opacity.text;
+export type TextOpacity = keyof typeof opacity.text

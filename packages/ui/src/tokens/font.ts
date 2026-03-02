@@ -30,10 +30,10 @@ export const font = {
     center: "text-center",
     right: "text-right",
   },
-};
+}
 
-export type FontFamily = keyof typeof font.family;
-export type FontSize = keyof typeof font.size;
-export type TextAlign = keyof typeof font.align;
-export type FontWeight = keyof typeof font.weight;
-export type FontSpacing = keyof typeof font.spacing;
+export type FontFamily = keyof typeof font.family
+export type FontSize = keyof typeof font.size
+export type TextAlign = keyof typeof font.align
+export type FontWeight = keyof typeof font.weight
+export type FontSpacing = keyof typeof font.spacing

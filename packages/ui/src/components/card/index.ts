@@ -5,4 +5,4 @@ export {
   CardTitle,
   CardDescription,
   CardContent,
-} from "./card.tsx";
+} from "./card.tsx"

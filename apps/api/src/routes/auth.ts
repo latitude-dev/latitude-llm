@@ -1,17 +1,17 @@
-import { createBetterAuth } from "@platform/auth-better";
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis";
-import { createUserPostgresRepository } from "@platform/db-postgres";
-import { parseEnv } from "@platform/env";
-import type { User } from "better-auth";
-import { Effect } from "effect";
-import { Hono } from "hono";
-import { getPostgresClient } from "../clients.ts";
-import { BadRequestError } from "../errors.ts";
-import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts";
+import { createBetterAuth } from "@platform/auth-better"
+import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
+import { createUserPostgresRepository } from "@platform/db-postgres"
+import { parseEnv } from "@platform/env"
+import type { User } from "better-auth"
+import { Effect } from "effect"
+import { Hono } from "hono"
+import { getPostgresClient } from "../clients.ts"
+import { BadRequestError } from "../errors.ts"
+import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts"
 
 // Email template
-import { magicLinkTemplate, sendEmail } from "@domain/email";
-import { createNodemailerEmailSender } from "@platform/email-nodemailer";
+import { magicLinkTemplate, sendEmail } from "@domain/email"
+import { createMailgunEmailSender } from "@platform/email-mailgun"
 
 /**
  * Auth routes for Better Auth
@@ -36,13 +36,13 @@ import { createNodemailerEmailSender } from "@platform/email-nodemailer";
 // Matches the actual Better Auth API structure
 interface BetterAuthAPI {
   signUpEmail: (options: {
-    body: { email: string; password: string; name: string };
-    headers?: Headers;
-  }) => Promise<{ token: string; user: User } | { token: null; user: User }>;
+    body: { email: string; password: string; name: string }
+    headers?: Headers
+  }) => Promise<{ token: string; user: User } | { token: null; user: User }>
   signInEmail: (options: {
-    body: { email: string; password: string };
-    headers?: Headers;
-  }) => Promise<{ token: string; user: User } | { token: null; user: User }>;
+    body: { email: string; password: string }
+    headers?: Headers
+  }) => Promise<{ token: string; user: User } | { token: null; user: User }>
 }
 
 /**
@@ -51,25 +51,25 @@ interface BetterAuthAPI {
  * This mounts the Better Auth handlers at /auth/* and adds JWT-specific endpoints.
  */
 export const createAuthRoutes = () => {
-  const app = new Hono();
+  const app = new Hono()
 
   // Get URLs from environment variables
-  const baseUrl = Effect.runSync(parseEnv(process.env.BETTER_AUTH_URL, "string"));
-  const webUrl = Effect.runSync(parseEnv(process.env.WEB_URL, "string"));
+  const baseUrl = Effect.runSync(parseEnv(process.env.BETTER_AUTH_URL, "string"))
+  const webUrl = Effect.runSync(parseEnv(process.env.WEB_URL, "string"))
 
   // Initialize dependencies where they are used
-  const { db } = getPostgresClient();
-  const redisConn = createRedisConnection();
-  const redis = createRedisClient(redisConn);
+  const { db } = getPostgresClient()
+  const redisConn = createRedisConnection()
+  const redis = createRedisClient(redisConn)
 
-  const betterAuthSecret = Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"));
+  const betterAuthSecret = Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"))
 
   // Create email sender adapter
-  const emailSender = createNodemailerEmailSender();
-  const sendEmailUseCase = sendEmail({ emailSender });
+  const emailSender = createMailgunEmailSender()
+  const sendEmailUseCase = sendEmail({ emailSender })
 
   // Create user repository
-  const userRepository = createUserPostgresRepository(db);
+  const userRepository = createUserPostgresRepository(db)
 
   const auth = createBetterAuth({
     db,
@@ -80,9 +80,9 @@ export const createAuthRoutes = () => {
     // Magic Link email configuration
     sendMagicLink: async ({ email, url }: { email: string; url: string; token: string }) => {
       // Find user by email using the repository
-      const user = await Effect.runPromise(userRepository.findByEmail(email));
-      const userName = user?.name ?? email.split("@")[0];
-      const html = await magicLinkTemplate({ userName, magicLinkUrl: url });
+      const user = await Effect.runPromise(userRepository.findByEmail(email))
+      const userName = user?.name ?? email.split("@")[0]
+      const html = await magicLinkTemplate({ userName, magicLinkUrl: url })
 
       await Effect.runPromise(
         sendEmailUseCase({
@@ -90,37 +90,37 @@ export const createAuthRoutes = () => {
           subject: "Log in to Latitude",
           html,
         }),
-      );
+      )
     },
     // User creation hook for auto-onboarding
     onUserCreated: async (_user) => {
       // Publish UserCreated event to trigger workspace creation
       // This would integrate with the events queue/worker
     },
-  });
+  })
 
-  const betterAuthHandler = auth.handler;
-  const betterAuthApi = auth.api as unknown as BetterAuthAPI;
-  const signUpRateLimiter = createSignUpIpRateLimiter(redis);
+  const betterAuthHandler = auth.handler
+  const betterAuthApi = auth.api as unknown as BetterAuthAPI
+  const signUpRateLimiter = createSignUpIpRateLimiter(redis)
 
   // JWT-specific: POST /auth/sign-up/email - Email/password sign up
   // Returns JSON instead of redirect (for JWT tools)
   app.post("/sign-up/email", signUpRateLimiter, async (c) => {
     const body = (await c.req.json()) as {
-      readonly email: string;
-      readonly password: string;
-      readonly name: string;
-    };
+      readonly email: string
+      readonly password: string
+      readonly name: string
+    }
 
     // Validate required fields
     if (!body.email || typeof body.email !== "string") {
-      throw new BadRequestError({ httpMessage: "Email is required", field: "email" });
+      throw new BadRequestError({ httpMessage: "Email is required", field: "email" })
     }
     if (!body.password || typeof body.password !== "string") {
-      throw new BadRequestError({ httpMessage: "Password is required", field: "password" });
+      throw new BadRequestError({ httpMessage: "Password is required", field: "password" })
     }
     if (!body.name || typeof body.name !== "string") {
-      throw new BadRequestError({ httpMessage: "Name is required", field: "name" });
+      throw new BadRequestError({ httpMessage: "Name is required", field: "name" })
     }
 
     // Validate password length
@@ -128,13 +128,13 @@ export const createAuthRoutes = () => {
       throw new BadRequestError({
         httpMessage: "Password must be at least 8 characters",
         field: "password",
-      });
+      })
     }
     if (body.password.length > 128) {
       throw new BadRequestError({
         httpMessage: "Password must not exceed 128 characters",
         field: "password",
-      });
+      })
     }
 
     // Call Better Auth API - let errors propagate to middleware
@@ -145,10 +145,10 @@ export const createAuthRoutes = () => {
         name: body.name,
       },
       headers: c.req.raw.headers,
-    });
+    })
 
     if (!result.token) {
-      throw new Error("Failed to create account");
+      throw new Error("Failed to create account")
     }
 
     // Return token and user info for JWT storage
@@ -163,24 +163,24 @@ export const createAuthRoutes = () => {
         },
       },
       201,
-    );
-  });
+    )
+  })
 
   // JWT-specific: POST /auth/sign-in/email - Email/password sign in
   // Returns JSON instead of redirect/cookies (for JWT tools)
   // Note: IP-based rate limiting applied at middleware level
   app.post("/sign-in/email", signUpRateLimiter, async (c) => {
     const body = (await c.req.json()) as {
-      readonly email: string;
-      readonly password: string;
-    };
+      readonly email: string
+      readonly password: string
+    }
 
     // Validate required fields
     if (!body.email || typeof body.email !== "string") {
-      throw new BadRequestError({ httpMessage: "Email is required", field: "email" });
+      throw new BadRequestError({ httpMessage: "Email is required", field: "email" })
     }
     if (!body.password || typeof body.password !== "string") {
-      throw new BadRequestError({ httpMessage: "Password is required", field: "password" });
+      throw new BadRequestError({ httpMessage: "Password is required", field: "password" })
     }
 
     // Call Better Auth API - let errors propagate to middleware
@@ -190,10 +190,10 @@ export const createAuthRoutes = () => {
         password: body.password,
       },
       headers: c.req.raw.headers,
-    });
+    })
 
     if (!result.token) {
-      throw new BadRequestError({ httpMessage: "Invalid credentials" });
+      throw new BadRequestError({ httpMessage: "Invalid credentials" })
     }
 
     // Return token and user info for JWT storage
@@ -205,8 +205,8 @@ export const createAuthRoutes = () => {
         name: result.user.name,
         emailVerified: result.user.emailVerified,
       },
-    });
-  });
+    })
+  })
 
   // OAuth callback handler - redirects to frontend after auth
   // Better Auth handles the actual callback, this is for custom post-auth logic
@@ -216,8 +216,8 @@ export const createAuthRoutes = () => {
     // such as redirecting to the frontend with tokens
 
     // Redirect to the frontend root
-    return c.redirect(webUrl);
-  });
+    return c.redirect(webUrl)
+  })
 
   // Mount Better Auth handlers at /auth/*
   // This handles all Better Auth endpoints:
@@ -228,7 +228,7 @@ export const createAuthRoutes = () => {
   // - /auth/sign-out
   // - /auth/organization/*
   // Note: This must come last to not override our custom endpoints above
-  app.all("/*", async (c) => betterAuthHandler(c.req.raw));
+  app.all("/*", async (c) => betterAuthHandler(c.req.raw))
 
-  return app;
-};
+  return app
+}

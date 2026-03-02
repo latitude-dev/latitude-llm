@@ -3,6 +3,6 @@ export const wordBreak = {
   words: "break-words",
   all: "break-all",
   keep: "keep-all",
-};
+}
 
-export type WordBreak = keyof typeof wordBreak;
+export type WordBreak = keyof typeof wordBreak

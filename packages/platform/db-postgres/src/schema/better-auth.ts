@@ -1,4 +1,4 @@
-import { boolean, pgEnum, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, pgEnum, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
 /**
  * Better Auth Schema - Drizzle ORM definitions
@@ -20,10 +20,10 @@ import { boolean, pgEnum, pgSchema, text, timestamp, varchar } from "drizzle-orm
  * All tables are scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude");
+const latitudeSchema = pgSchema("latitude")
 
 // User role enum
-export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"])
 
 /**
  * User table - stores user accounts
@@ -42,7 +42,7 @@ export const user = latitudeSchema.table("user", {
   banExpires: timestamp("ban_expires", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+})
 
 /**
  * Session table - stores active sessions
@@ -59,7 +59,7 @@ export const session = latitudeSchema.table("session", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   // Organization plugin adds activeOrganizationId via additionalFields
-});
+})
 
 /**
  * Account table - stores OAuth provider accounts
@@ -80,7 +80,7 @@ export const account = latitudeSchema.table("account", {
   password: text("password"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+})
 
 /**
  * Verification table - stores email verification tokens and magic links
@@ -92,10 +92,10 @@ export const verification = latitudeSchema.table("verification", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+})
 
 // Organization member role enum
-export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"]);
+export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"])
 
 /**
  * Organization table - stores organizations/workspaces
@@ -115,7 +115,7 @@ export const organization = latitudeSchema.table("organization", {
   stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+})
 
 /**
  * Member table - stores organization memberships
@@ -132,7 +132,7 @@ export const member = latitudeSchema.table("member", {
     .references(() => user.id, { onDelete: "cascade" }),
   role: memberRoleEnum("role").notNull().default("member"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+})
 
 /**
  * Invitation table - stores pending organization invitations
@@ -151,4 +151,4 @@ export const invitation = latitudeSchema.table("invitation", {
   inviterId: text("inviter_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-});
+})
