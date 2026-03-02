@@ -1,4 +1,4 @@
-name: Node Lint
+name: Node Check
 
 on:
   pull_request:
@@ -25,5 +25,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
+      - name: Check
+        run: pnpm check

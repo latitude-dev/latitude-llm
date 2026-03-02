@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
-    "lint": "turbo lint",
+    "check": "turbo check",
     "format": "turbo format",
     "tmux": "tmuxinator start .",
     "typecheck": "turbo typecheck",

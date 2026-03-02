@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "lint": "biome check .",
+    "check": "biome check .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
