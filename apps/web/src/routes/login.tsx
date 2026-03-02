@@ -1,5 +1,6 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui";
 import { Link } from "@tanstack/react-router";
+import { AlertCircle, Mail } from "lucide-react";
 import { useState } from "react";
 
 /**
@@ -93,7 +94,7 @@ export default function LoginPage() {
 
           <div className="flex flex-col items-center gap-4 w-full">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Icon name="Mail" className="h-6 w-6 text-primary" />
+              <Icon icon={Mail} className="h-6 w-6 text-primary" />
             </div>
             <Text.H3 align="center">Check your email</Text.H3>
             <Text.H5 color="foregroundMuted" align="center">
@@ -148,7 +149,7 @@ export default function LoginPage() {
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive">
-                <Icon name="AlertCircle" className="h-4 w-4" />
+                <Icon icon={AlertCircle} className="h-4 w-4" />
                 <Text.H6 color="destructive">{error}</Text.H6>
               </div>
             )}
