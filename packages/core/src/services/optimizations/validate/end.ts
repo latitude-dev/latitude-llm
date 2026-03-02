@@ -1,13 +1,13 @@
 import { and, eq } from 'drizzle-orm'
 import { publisher } from '../../../events/publisher'
 import { UnprocessableEntityError } from '../../../lib/errors'
+import { raiseForAborted } from '../../../lib/raiseForAborted'
 import { Result } from '../../../lib/Result'
 import Transaction from '../../../lib/Transaction'
 import { optimizations } from '../../../schema/models/optimizations'
 import { Optimization } from '../../../schema/models/types/Optimization'
 import { type Workspace } from '../../../schema/models/types/Workspace'
 import { endOptimization } from '../end'
-import { raiseForAborted } from '../shared'
 
 export async function endValidateOptimization(
   {

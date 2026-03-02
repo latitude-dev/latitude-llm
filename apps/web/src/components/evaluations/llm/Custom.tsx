@@ -74,7 +74,7 @@ ${
 `
     : ''
 }
-  Evaluate the assistant response:
+  Based on the given instructions, evaluate the assistant response:
   \`\`\`
   {{ actualOutput }}
   \`\`\`

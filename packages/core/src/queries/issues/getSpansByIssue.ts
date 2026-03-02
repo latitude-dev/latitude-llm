@@ -25,14 +25,14 @@ export async function getSpansByIssue(
     commit,
     issue,
     spanTypes = Array.from(MAIN_SPAN_TYPES) as MainSpanType[],
-    cursor,
+    cursor = null,
     limit = 25,
   }: {
     workspace: Workspace
     commit: Commit
     issue: Issue
     spanTypes?: MainSpanType[]
-    cursor: Cursor<string, string> | null
+    cursor?: Cursor<string, string> | null
     limit?: number
   },
   db = database,

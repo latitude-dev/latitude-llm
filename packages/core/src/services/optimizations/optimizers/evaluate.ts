@@ -24,6 +24,7 @@ import { hashContent } from '../../../lib/hashContent'
 import { hashObject } from '../../../lib/hashObject'
 import { isAbortError } from '../../../lib/isAbortError'
 import { isRetryableError } from '../../../lib/isRetryableError'
+import { raiseForAborted } from '../../../lib/raiseForAborted'
 import { Result } from '../../../lib/Result'
 import {
   SpanMetadatasRepository,
@@ -46,7 +47,6 @@ import {
   selectSpansForTrigger,
 } from '../../evaluationsV2/triggers'
 import { generateSimulatedUserAction } from '../../simulation/simulateUserResponse'
-import { raiseForAborted } from '../shared'
 import { OptimizerEvaluateArgs } from './index'
 import { LearnableTrajectory } from './shared'
 
@@ -70,6 +70,7 @@ export async function evaluateFactory<
   document,
   commit,
   workspace,
+  dry = false,
 }: {
   evaluation: EvaluationV2<T, M>
   trainset: Dataset
@@ -78,6 +79,7 @@ export async function evaluateFactory<
   document: DocumentVersion
   commit: Commit
   workspace: WorkspaceDto
+  dry?: boolean
 }) {
   const {
     parameters: baselineParameters,
@@ -110,6 +112,7 @@ export async function evaluateFactory<
         commit: commit,
         workspace: workspace,
         abortSignal: abortSignal,
+        dry: dry,
       },
       db,
     )
@@ -131,6 +134,7 @@ export async function evaluateFactory<
         commit: commit,
         workspace: workspace,
         abortSignal: abortSignal,
+        dry: dry,
       },
       db,
     )
@@ -173,6 +177,7 @@ export async function evaluateFactory<
           commit: commit,
           workspace: workspace,
           abortSignal: abortSignal,
+          dry: dry,
         },
         db,
       )
@@ -223,6 +228,7 @@ async function validatePrompt(
     commit: Commit
     workspace: WorkspaceDto
     abortSignal?: AbortSignal
+    dry?: boolean
   },
   _ = database,
 ) {
@@ -319,6 +325,7 @@ async function runPrompt(
     commit,
     workspace,
     abortSignal,
+    dry = false,
   }: {
     prompt: string
     example: DatasetRow
@@ -329,6 +336,7 @@ async function runPrompt(
     commit: Commit
     workspace: WorkspaceDto
     abortSignal?: AbortSignal
+    dry?: boolean
   },
   _ = database,
 ) {
@@ -363,6 +371,7 @@ async function runPrompt(
     commit: commit,
     workspace: workspace,
     abortSignal: abortSignal,
+    dry: dry,
   })
   if (running.error) {
     return Result.error(running.error)
@@ -406,6 +415,7 @@ ${error.message}
       simulationSettings: simulationSettings,
       initialMessages: messages,
       abortSignal: abortSignal,
+      dry: dry,
     })
     if (simulating.error) {
       // Note: all post-first turn simulation errors are not
@@ -434,6 +444,7 @@ async function evaluatePrompt<
     commit,
     workspace,
     abortSignal,
+    dry = false,
   }: {
     prompt: string
     example: DatasetRow
@@ -445,6 +456,7 @@ async function evaluatePrompt<
     commit: Commit
     workspace: WorkspaceDto
     abortSignal?: AbortSignal
+    dry?: boolean
   },
   _ = database,
 ) {
@@ -455,9 +467,11 @@ async function evaluatePrompt<
     span: span,
     dataset: dataset,
     datasetLabel: optimization.configuration.dataset?.label,
+    datasetReason: optimization.configuration.dataset?.reason,
     datasetRow: example,
     commit: commit,
     workspace: workspace,
+    dry: dry,
   })
   if (evaluating.error) {
     // BONUS(AO/OPT): Exponential backoff on rate limit errors
@@ -610,12 +624,14 @@ async function simulateConversation({
   simulationSettings,
   initialMessages,
   abortSignal,
+  dry = false,
 }: {
   workspace: WorkspaceDto
   documentLogUuid: string
   simulationSettings: SimulationSettings
   initialMessages: Message[]
   abortSignal?: AbortSignal
+  dry?: boolean
 }) {
   const maxTurns = Math.min(
     simulationSettings.maxTurns ?? 1,
@@ -644,18 +660,19 @@ async function simulateConversation({
     const userAction = userActionResult.value
     if (userAction.action === 'end') break
 
+    const userMessage = {
+      role: 'user' as const,
+      content: [{ type: 'text' as const, text: userAction.message }],
+    }
+
     const addResult = await addMessages({
       workspace,
       documentLogUuid,
-      messages: [
-        {
-          role: 'user' as const,
-          content: [{ type: 'text' as const, text: userAction.message }],
-        },
-      ],
+      messages: [userMessage],
       source: LogSources.Optimization,
       abortSignal,
       simulationSettings,
+      dry: dry,
     })
     if (addResult.error) {
       return Result.error(addResult.error)

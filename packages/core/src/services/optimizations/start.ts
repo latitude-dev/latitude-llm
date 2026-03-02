@@ -222,12 +222,32 @@ async function validateConfiguration({
     if (!dataset.columns.find((c) => c.name === configuration.dataset?.label)) {
       return Result.error(
         new BadRequestError(
-          'A dataset label is required for evaluations that require expected output',
+          'A dataset label column is required for evaluations that require expected output',
         ),
       )
     }
   } else if (configuration.dataset?.label !== undefined) {
     configuration.dataset.label = undefined
+  }
+
+  if (configuration.dataset?.reason !== undefined) {
+    if (!dataset) {
+      return Result.error(
+        new BadRequestError(
+          'A dataset is required for evaluations using custom reasons',
+        ),
+      )
+    }
+
+    if (
+      !dataset.columns.find((c) => c.name === configuration.dataset?.reason)
+    ) {
+      return Result.error(
+        new BadRequestError(
+          'A dataset reason column is required for evaluations using custom reasons',
+        ),
+      )
+    }
   }
 
   if (configuration.parameters) {

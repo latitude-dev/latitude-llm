@@ -78,6 +78,8 @@ function grade({
 async function run(
   {
     evaluation,
+    customReason,
+    datasetReason,
     results,
   }: EvaluationMetricRunArgs<
     EvaluationType.Composite,
@@ -91,6 +93,8 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: '',
+    customReason: customReason,
+    datasetReason: datasetReason,
     results: {},
   } as CompositeEvaluationCustomResultMetadata
 

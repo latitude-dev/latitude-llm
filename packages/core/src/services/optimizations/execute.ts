@@ -4,6 +4,7 @@ import { publisher } from '../../events/publisher'
 import { validateOptimizationJobKey } from '../../jobs/job-definitions/optimizations/validateOptimizationJob'
 import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
+import { raiseForAborted } from '../../lib/raiseForAborted'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { findProjectById } from '../../queries/projects/findById'
@@ -29,7 +30,6 @@ import {
   evaluateFactory,
   proposeFactory,
 } from './optimizers'
-import { raiseForAborted } from './shared'
 
 // BONUS(AO/OPT): Implement multi-objective optimization
 // BONUS(AO/OPT): Implement multi-document optimization

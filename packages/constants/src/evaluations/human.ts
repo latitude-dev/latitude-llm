@@ -4,7 +4,18 @@ import {
   baseEvaluationConfiguration,
   baseEvaluationResultError,
   baseEvaluationResultMetadata,
+  baseResultReason,
 } from './shared'
+
+function humanResultReason<
+  M extends HumanEvaluationMetric = HumanEvaluationMetric,
+>(): (
+  result: EvaluationResultSuccessValue<EvaluationType.Human, M>,
+) => string | undefined {
+  return baseResultReason<EvaluationType.Human, M>((result) => {
+    return result.metadata.reason
+  })
+}
 
 const selectedContextSchema = z.object({
   messageIndex: z.number().int().nonnegative(),
@@ -58,25 +69,20 @@ export const HumanEvaluationBinarySpecification = {
   configuration: humanEvaluationBinaryConfiguration,
   resultMetadata: humanEvaluationBinaryResultMetadata,
   resultError: humanEvaluationBinaryResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Human,
-      HumanEvaluationMetric.Binary
-    >,
-  ) => result.metadata.reason,
+  resultReason: humanResultReason<HumanEvaluationMetric.Binary>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
   supportsManualEvaluation: true,
 } as const
 export type HumanEvaluationBinaryConfiguration = z.infer<
-  typeof HumanEvaluationBinarySpecification.configuration
+  typeof humanEvaluationBinaryConfiguration
 >
 export type HumanEvaluationBinaryResultMetadata = z.infer<
-  typeof HumanEvaluationBinarySpecification.resultMetadata
+  typeof humanEvaluationBinaryResultMetadata
 >
 export type HumanEvaluationBinaryResultError = z.infer<
-  typeof HumanEvaluationBinarySpecification.resultError
+  typeof humanEvaluationBinaryResultError
 >
 
 // RATING
@@ -101,25 +107,20 @@ export const HumanEvaluationRatingSpecification = {
   configuration: humanEvaluationRatingConfiguration,
   resultMetadata: humanEvaluationRatingResultMetadata,
   resultError: humanEvaluationRatingResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Human,
-      HumanEvaluationMetric.Rating
-    >,
-  ) => result.metadata.reason,
+  resultReason: humanResultReason<HumanEvaluationMetric.Rating>(),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: false,
   supportsManualEvaluation: true,
 } as const
 export type HumanEvaluationRatingConfiguration = z.infer<
-  typeof HumanEvaluationRatingSpecification.configuration
+  typeof humanEvaluationRatingConfiguration
 >
 export type HumanEvaluationRatingResultMetadata = z.infer<
-  typeof HumanEvaluationRatingSpecification.resultMetadata
+  typeof humanEvaluationRatingResultMetadata
 >
 export type HumanEvaluationRatingResultError = z.infer<
-  typeof HumanEvaluationRatingSpecification.resultError
+  typeof humanEvaluationRatingResultError
 >
 
 /* ------------------------------------------------------------------------- */

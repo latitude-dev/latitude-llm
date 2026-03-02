@@ -18,10 +18,11 @@ import { queues } from '../../jobs/queues'
 import { NotFoundError, UnprocessableEntityError } from '../../lib/errors'
 import { hashObject } from '../../lib/hashObject'
 import { interleaveList } from '../../lib/interleaveList'
+import { raiseForAborted } from '../../lib/raiseForAborted'
 import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { findActiveIssuesByDocument } from '../../queries/issues/findActiveByDocument'
-import { getSpansByIssue } from '../../queries/issues/getSpansByIssue'
+import { getSpansByIssueForOptimization } from '../../queries/issues/getSpansByIssueForOptimization'
 import { getSpansWithoutIssues } from '../../queries/issues/getSpansWithoutIssues'
 import { findProjectById } from '../../queries/projects/findById'
 import { findWorkspaceUserById } from '../../queries/users/findInWorkspace'
@@ -45,7 +46,7 @@ import { Cursor } from '../../schema/types'
 import { insertRowsInBatch } from '../datasetRows/insertRowsInBatch'
 import { createDataset } from '../datasets/create'
 import { buildColumns, nanoidHashAlgorithm } from '../datasets/utils'
-import { maskParameter, raiseForAborted } from './shared'
+import { maskParameter } from './shared'
 
 export async function prepareOptimization(
   {
@@ -385,7 +386,7 @@ async function getNegativeExamples({
 
   async function collectSpansByIssue(issue: Issue, target: number) {
     const validSpans: SpanWithDetails<SpanType.Prompt>[] = []
-    let cursor: Cursor<string, string> | null = null
+    let cursor: Cursor<Date, string> | null = null
     let searches = 0
 
     while (validSpans.length < target && searches < maxSearches) {
@@ -393,7 +394,7 @@ async function getNegativeExamples({
 
       searches++
 
-      const gettingsp = await getSpansByIssue({
+      const gettingsp = await getSpansByIssueForOptimization({
         issue: issue,
         spanTypes: [SpanType.Prompt],
         commit: baselineCommit,

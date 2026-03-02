@@ -17,6 +17,7 @@ export const OptimizationConfigurationSchema = z.object({
     .object({
       target: z.number().min(0).optional(), // Note: number of rows to curate when not provided by the user
       label: z.string().optional(), // Note: expected output column when using a labeled evaluation
+      reason: z.string().optional(), // Note: custom reason column when using evaluation with custom reasons
     })
     .optional(),
   parameters: z

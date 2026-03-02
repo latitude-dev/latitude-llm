@@ -38,6 +38,7 @@ type AddMessagesArgs = {
   context?: TelemetryContext
   testDeploymentId?: number
   simulationSettings?: SimulationSettings
+  dry?: boolean
 }
 
 export async function addMessages(

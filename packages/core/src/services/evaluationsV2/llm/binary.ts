@@ -11,6 +11,7 @@ import {
 import { BadRequestError } from '../../../lib/errors'
 import { Result } from '../../../lib/Result'
 import { type ProviderApiKey } from '../../../schema/models/types/ProviderApiKey'
+import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 import {
   EvaluationMetricCloneArgs,
   EvaluationMetricRunArgs,
@@ -18,7 +19,6 @@ import {
   normalizeScore,
 } from '../shared'
 import { buildEvaluationParameters, promptTask, runPrompt } from './shared'
-import { assembleTraceWithMessages } from '../../tracing/traces/assemble'
 
 export const LlmEvaluationBinarySpecification = {
   ...specification,
@@ -127,6 +127,8 @@ async function run(
     resultUuid,
     evaluation,
     actualOutput,
+    customReason,
+    datasetReason,
     conversation,
     span,
     providers,
@@ -138,6 +140,8 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
+    customReason: customReason,
+    datasetReason: datasetReason,
     evaluationLogId: -1,
     reason: '',
     tokens: 0,
@@ -226,6 +230,7 @@ async function clone(
       reverseScale: evaluation.configuration.reverseScale,
       actualOutput: evaluation.configuration.actualOutput,
       expectedOutput: evaluation.configuration.expectedOutput,
+      trigger: evaluation.configuration.trigger,
       provider: evaluation.configuration.provider,
       model: evaluation.configuration.model,
       prompt: `

@@ -4,7 +4,20 @@ import {
   baseEvaluationConfiguration,
   baseEvaluationResultError,
   baseEvaluationResultMetadata,
+  baseResultReason,
 } from './shared'
+
+function ruleResultReason<
+  M extends RuleEvaluationMetric = RuleEvaluationMetric,
+>(
+  fn?: (
+    result: EvaluationResultSuccessValue<EvaluationType.Rule, M>,
+  ) => string | undefined,
+): (
+  result: EvaluationResultSuccessValue<EvaluationType.Rule, M>,
+) => string | undefined {
+  return baseResultReason<EvaluationType.Rule, M>(fn)
+}
 
 const ruleEvaluationConfiguration = baseEvaluationConfiguration.extend({})
 const ruleEvaluationResultMetadata = baseEvaluationResultMetadata.extend({
@@ -30,45 +43,42 @@ export const RuleEvaluationExactMatchSpecification = {
   configuration: ruleEvaluationExactMatchConfiguration,
   resultMetadata: ruleEvaluationExactMatchResultMetadata,
   resultError: ruleEvaluationExactMatchResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Rule,
-      RuleEvaluationMetric.ExactMatch
-    >,
-  ) => {
-    let reason = ''
+  resultReason: ruleResultReason<RuleEvaluationMetric.ExactMatch>(
+    (result) => {
+      let reason = ''
 
-    if (result.score === 1) {
-      reason = `Response is`
-    } else {
-      reason = `Response is not`
-    }
+      if (result.score === 1) {
+        reason = `Response is`
+      } else {
+        reason = `Response is not`
+      }
 
-    reason += ` exactly the same as '${result.metadata.expectedOutput}'`
+      reason += ` exactly the same as '${result.metadata.expectedOutput}'`
 
-    if (result.metadata.configuration.caseInsensitive) {
-      reason += ' (comparison is case-insensitive)'
-    }
+      if (result.metadata.configuration.caseInsensitive) {
+        reason += ' (comparison is case-insensitive)'
+      }
 
-    if (result.metadata.reason) {
-      reason += `, because: ${result.metadata.reason}`
-    }
+      if (result.metadata.reason) {
+        reason += `, because: ${result.metadata.reason}`
+      }
 
-    return reason + '.'
-  },
+      return reason + '.'
+    },
+  ),
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type RuleEvaluationExactMatchConfiguration = z.infer<
-  typeof RuleEvaluationExactMatchSpecification.configuration
+  typeof ruleEvaluationExactMatchConfiguration
 >
 export type RuleEvaluationExactMatchResultMetadata = z.infer<
-  typeof RuleEvaluationExactMatchSpecification.resultMetadata
+  typeof ruleEvaluationExactMatchResultMetadata
 >
 export type RuleEvaluationExactMatchResultError = z.infer<
-  typeof RuleEvaluationExactMatchSpecification.resultError
+  typeof ruleEvaluationExactMatchResultError
 >
 
 // REGULAR EXPRESSION
@@ -90,41 +100,38 @@ export const RuleEvaluationRegularExpressionSpecification = {
   configuration: ruleEvaluationRegularExpressionConfiguration,
   resultMetadata: ruleEvaluationRegularExpressionResultMetadata,
   resultError: ruleEvaluationRegularExpressionResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Rule,
-      RuleEvaluationMetric.RegularExpression
-    >,
-  ) => {
-    let reason = ''
+  resultReason: ruleResultReason<RuleEvaluationMetric.RegularExpression>(
+    (result) => {
+      let reason = ''
 
-    if (result.score === 1) {
-      reason = `Response matches`
-    } else {
-      reason = `Response does not match`
-    }
+      if (result.score === 1) {
+        reason = `Response matches`
+      } else {
+        reason = `Response does not match`
+      }
 
-    reason += ` the regular expression \`/${result.metadata.configuration.pattern}/gm\``
+      reason += ` the regular expression \`/${result.metadata.configuration.pattern}/gm\``
 
-    if (result.metadata.reason) {
-      reason += `, because: ${result.metadata.reason}`
-    }
+      if (result.metadata.reason) {
+        reason += `, because: ${result.metadata.reason}`
+      }
 
-    return reason + '.'
-  },
+      return reason + '.'
+    },
+  ),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type RuleEvaluationRegularExpressionConfiguration = z.infer<
-  typeof RuleEvaluationRegularExpressionSpecification.configuration
+  typeof ruleEvaluationRegularExpressionConfiguration
 >
 export type RuleEvaluationRegularExpressionResultMetadata = z.infer<
-  typeof RuleEvaluationRegularExpressionSpecification.resultMetadata
+  typeof ruleEvaluationRegularExpressionResultMetadata
 >
 export type RuleEvaluationRegularExpressionResultError = z.infer<
-  typeof RuleEvaluationRegularExpressionSpecification.resultError
+  typeof ruleEvaluationRegularExpressionResultError
 >
 
 // SCHEMA VALIDATION
@@ -147,41 +154,38 @@ export const RuleEvaluationSchemaValidationSpecification = {
   configuration: ruleEvaluationSchemaValidationConfiguration,
   resultMetadata: ruleEvaluationSchemaValidationResultMetadata,
   resultError: ruleEvaluationSchemaValidationResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Rule,
-      RuleEvaluationMetric.SchemaValidation
-    >,
-  ) => {
-    let reason = ''
+  resultReason: ruleResultReason<RuleEvaluationMetric.SchemaValidation>(
+    (result) => {
+      let reason = ''
 
-    if (result.score === 1) {
-      reason = `Response follows`
-    } else {
-      reason = `Response does not follow`
-    }
+      if (result.score === 1) {
+        reason = `Response follows`
+      } else {
+        reason = `Response does not follow`
+      }
 
-    reason += ` the ${result.metadata.configuration.format.toUpperCase()} schema:\n\`\`\`\n${result.metadata.configuration.schema}\n\`\`\``
+      reason += ` the ${result.metadata.configuration.format.toUpperCase()} schema:\n\`\`\`\n${result.metadata.configuration.schema}\n\`\`\``
 
-    if (result.metadata.reason) {
-      reason += `\nbecause: ${result.metadata.reason}`
-    }
+      if (result.metadata.reason) {
+        reason += `\nbecause: ${result.metadata.reason}`
+      }
 
-    return reason + '.'
-  },
+      return reason + '.'
+    },
+  ),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type RuleEvaluationSchemaValidationConfiguration = z.infer<
-  typeof RuleEvaluationSchemaValidationSpecification.configuration
+  typeof ruleEvaluationSchemaValidationConfiguration
 >
 export type RuleEvaluationSchemaValidationResultMetadata = z.infer<
-  typeof RuleEvaluationSchemaValidationSpecification.resultMetadata
+  typeof ruleEvaluationSchemaValidationResultMetadata
 >
 export type RuleEvaluationSchemaValidationResultError = z.infer<
-  typeof RuleEvaluationSchemaValidationSpecification.resultError
+  typeof ruleEvaluationSchemaValidationResultError
 >
 
 // LENGTH COUNT
@@ -206,47 +210,44 @@ export const RuleEvaluationLengthCountSpecification = {
   configuration: ruleEvaluationLengthCountConfiguration,
   resultMetadata: ruleEvaluationLengthCountResultMetadata,
   resultError: ruleEvaluationLengthCountResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Rule,
-      RuleEvaluationMetric.LengthCount
-    >,
-  ) => {
-    let reason = `Response length is ${result.score} ${result.metadata.configuration.algorithm}s`
+  resultReason: ruleResultReason<RuleEvaluationMetric.LengthCount>(
+    (result) => {
+      let reason = `Response length is ${result.score} ${result.metadata.configuration.algorithm}s`
 
-    if (result.hasPassed) {
-      reason += ', which is'
-    } else {
-      reason += ', which is not'
-    }
+      if (result.hasPassed) {
+        reason += ', which is'
+      } else {
+        reason += ', which is not'
+      }
 
-    reason += ` between ${result.metadata.configuration.minLength ?? 0} and ${result.metadata.configuration.maxLength ?? Infinity} ${result.metadata.configuration.algorithm}s`
+      reason += ` between ${result.metadata.configuration.minLength ?? 0} and ${result.metadata.configuration.maxLength ?? Infinity} ${result.metadata.configuration.algorithm}s`
 
-    if (result.metadata.configuration.reverseScale) {
-      reason += ' (shorter is better)'
-    } else {
-      reason += ' (longer is better)'
-    }
+      if (result.metadata.configuration.reverseScale) {
+        reason += ' (shorter is better)'
+      } else {
+        reason += ' (longer is better)'
+      }
 
-    if (result.metadata.reason) {
-      reason += `, because: ${result.metadata.reason}`
-    }
+      if (result.metadata.reason) {
+        reason += `, because: ${result.metadata.reason}`
+      }
 
-    return reason + '.'
-  },
+      return reason + '.'
+    },
+  ),
   requiresExpectedOutput: false,
   supportsLiveEvaluation: true,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type RuleEvaluationLengthCountConfiguration = z.infer<
-  typeof RuleEvaluationLengthCountSpecification.configuration
+  typeof ruleEvaluationLengthCountConfiguration
 >
 export type RuleEvaluationLengthCountResultMetadata = z.infer<
-  typeof RuleEvaluationLengthCountSpecification.resultMetadata
+  typeof ruleEvaluationLengthCountResultMetadata
 >
 export type RuleEvaluationLengthCountResultError = z.infer<
-  typeof RuleEvaluationLengthCountSpecification.resultError
+  typeof ruleEvaluationLengthCountResultError
 >
 
 // LEXICAL OVERLAP
@@ -270,47 +271,44 @@ export const RuleEvaluationLexicalOverlapSpecification = {
   configuration: ruleEvaluationLexicalOverlapConfiguration,
   resultMetadata: ruleEvaluationLexicalOverlapResultMetadata,
   resultError: ruleEvaluationLexicalOverlapResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Rule,
-      RuleEvaluationMetric.LexicalOverlap
-    >,
-  ) => {
-    let reason = `Response lexical overlap with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
+  resultReason: ruleResultReason<RuleEvaluationMetric.LexicalOverlap>(
+    (result) => {
+      let reason = `Response lexical overlap with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
 
-    if (result.hasPassed) {
-      reason += ', which is'
-    } else {
-      reason += ', which is not'
-    }
+      if (result.hasPassed) {
+        reason += ', which is'
+      } else {
+        reason += ', which is not'
+      }
 
-    reason += ` between ${(result.metadata.configuration.minOverlap ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxOverlap ?? 100).toFixed(0)}%`
+      reason += ` between ${(result.metadata.configuration.minOverlap ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxOverlap ?? 100).toFixed(0)}%`
 
-    if (result.metadata.configuration.reverseScale) {
-      reason += ' (lower is better)'
-    } else {
-      reason += ' (higher is better)'
-    }
+      if (result.metadata.configuration.reverseScale) {
+        reason += ' (lower is better)'
+      } else {
+        reason += ' (higher is better)'
+      }
 
-    if (result.metadata.reason) {
-      reason += `, because: ${result.metadata.reason}`
-    }
+      if (result.metadata.reason) {
+        reason += `, because: ${result.metadata.reason}`
+      }
 
-    return reason + '.'
-  },
+      return reason + '.'
+    },
+  ),
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type RuleEvaluationLexicalOverlapConfiguration = z.infer<
-  typeof RuleEvaluationLexicalOverlapSpecification.configuration
+  typeof ruleEvaluationLexicalOverlapConfiguration
 >
 export type RuleEvaluationLexicalOverlapResultMetadata = z.infer<
-  typeof RuleEvaluationLexicalOverlapSpecification.resultMetadata
+  typeof ruleEvaluationLexicalOverlapResultMetadata
 >
 export type RuleEvaluationLexicalOverlapResultError = z.infer<
-  typeof RuleEvaluationLexicalOverlapSpecification.resultError
+  typeof ruleEvaluationLexicalOverlapResultError
 >
 
 // SEMANTIC SIMILARITY
@@ -334,47 +332,44 @@ export const RuleEvaluationSemanticSimilaritySpecification = {
   configuration: ruleEvaluationSemanticSimilarityConfiguration,
   resultMetadata: ruleEvaluationSemanticSimilarityResultMetadata,
   resultError: ruleEvaluationSemanticSimilarityResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Rule,
-      RuleEvaluationMetric.SemanticSimilarity
-    >,
-  ) => {
-    let reason = `Response semantic similarity with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
+  resultReason: ruleResultReason<RuleEvaluationMetric.SemanticSimilarity>(
+    (result) => {
+      let reason = `Response semantic similarity with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
 
-    if (result.hasPassed) {
-      reason += ', which is'
-    } else {
-      reason += ', which is not'
-    }
+      if (result.hasPassed) {
+        reason += ', which is'
+      } else {
+        reason += ', which is not'
+      }
 
-    reason += ` between ${(result.metadata.configuration.minSimilarity ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxSimilarity ?? 100).toFixed(0)}%`
+      reason += ` between ${(result.metadata.configuration.minSimilarity ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxSimilarity ?? 100).toFixed(0)}%`
 
-    if (result.metadata.configuration.reverseScale) {
-      reason += ' (lower is better)'
-    } else {
-      reason += ' (higher is better)'
-    }
+      if (result.metadata.configuration.reverseScale) {
+        reason += ' (lower is better)'
+      } else {
+        reason += ' (higher is better)'
+      }
 
-    if (result.metadata.reason) {
-      reason += `, because: ${result.metadata.reason}`
-    }
+      if (result.metadata.reason) {
+        reason += `, because: ${result.metadata.reason}`
+      }
 
-    return reason + '.'
-  },
+      return reason + '.'
+    },
+  ),
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type RuleEvaluationSemanticSimilarityConfiguration = z.infer<
-  typeof RuleEvaluationSemanticSimilaritySpecification.configuration
+  typeof ruleEvaluationSemanticSimilarityConfiguration
 >
 export type RuleEvaluationSemanticSimilarityResultMetadata = z.infer<
-  typeof RuleEvaluationSemanticSimilaritySpecification.resultMetadata
+  typeof ruleEvaluationSemanticSimilarityResultMetadata
 >
 export type RuleEvaluationSemanticSimilarityResultError = z.infer<
-  typeof RuleEvaluationSemanticSimilaritySpecification.resultError
+  typeof ruleEvaluationSemanticSimilarityResultError
 >
 
 // NUMERIC SIMILARITY
@@ -398,47 +393,44 @@ export const RuleEvaluationNumericSimilaritySpecification = {
   configuration: ruleEvaluationNumericSimilarityConfiguration,
   resultMetadata: ruleEvaluationNumericSimilarityResultMetadata,
   resultError: ruleEvaluationNumericSimilarityResultError,
-  resultReason: (
-    result: EvaluationResultSuccessValue<
-      EvaluationType.Rule,
-      RuleEvaluationMetric.NumericSimilarity
-    >,
-  ) => {
-    let reason = `Response numeric similarity with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
+  resultReason: ruleResultReason<RuleEvaluationMetric.NumericSimilarity>(
+    (result) => {
+      let reason = `Response numeric similarity with '${result.metadata.expectedOutput}' is ${result.score.toFixed(0)}%`
 
-    if (result.hasPassed) {
-      reason += ', which is'
-    } else {
-      reason += ', which is not'
-    }
+      if (result.hasPassed) {
+        reason += ', which is'
+      } else {
+        reason += ', which is not'
+      }
 
-    reason += ` between ${(result.metadata.configuration.minSimilarity ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxSimilarity ?? 100).toFixed(0)}%`
+      reason += ` between ${(result.metadata.configuration.minSimilarity ?? 0).toFixed(0)}% and ${(result.metadata.configuration.maxSimilarity ?? 100).toFixed(0)}%`
 
-    if (result.metadata.configuration.reverseScale) {
-      reason += ' (lower is better)'
-    } else {
-      reason += ' (higher is better)'
-    }
+      if (result.metadata.configuration.reverseScale) {
+        reason += ' (lower is better)'
+      } else {
+        reason += ' (higher is better)'
+      }
 
-    if (result.metadata.reason) {
-      reason += `, because: ${result.metadata.reason}`
-    }
+      if (result.metadata.reason) {
+        reason += `, because: ${result.metadata.reason}`
+      }
 
-    return reason + '.'
-  },
+      return reason + '.'
+    },
+  ),
   requiresExpectedOutput: true,
   supportsLiveEvaluation: false,
   supportsBatchEvaluation: true,
   supportsManualEvaluation: false,
 } as const
 export type RuleEvaluationNumericSimilarityConfiguration = z.infer<
-  typeof RuleEvaluationNumericSimilaritySpecification.configuration
+  typeof ruleEvaluationNumericSimilarityConfiguration
 >
 export type RuleEvaluationNumericSimilarityResultMetadata = z.infer<
-  typeof RuleEvaluationNumericSimilaritySpecification.resultMetadata
+  typeof ruleEvaluationNumericSimilarityResultMetadata
 >
 export type RuleEvaluationNumericSimilarityResultError = z.infer<
-  typeof RuleEvaluationNumericSimilaritySpecification.resultError
+  typeof ruleEvaluationNumericSimilarityResultError
 >
 
 /* ------------------------------------------------------------------------- */

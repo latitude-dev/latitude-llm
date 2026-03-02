@@ -92,6 +92,8 @@ async function run(
   {
     evaluation,
     actualOutput,
+    customReason,
+    datasetReason,
   }: EvaluationMetricRunArgs<
     EvaluationType.Rule,
     RuleEvaluationMetric.SchemaValidation
@@ -101,6 +103,8 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
+    customReason: customReason,
+    datasetReason: datasetReason,
   } as RuleEvaluationSchemaValidationResultMetadata
 
   if (actualOutput.error) {

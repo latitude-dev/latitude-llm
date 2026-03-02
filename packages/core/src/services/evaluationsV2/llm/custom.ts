@@ -170,7 +170,9 @@ async function run(
     evaluation,
     actualOutput,
     expectedOutput,
+    customReason,
     datasetLabel,
+    datasetReason,
     conversation,
     span,
     providers,
@@ -185,8 +187,10 @@ async function run(
   const metadata = {
     configuration: evaluation.configuration,
     actualOutput: actualOutput.value ?? '',
-    expectedOutput: expectedOutput?.value,
+    expectedOutput: expectedOutput,
+    customReason: customReason,
     datasetLabel: datasetLabel,
+    datasetReason: datasetReason,
     evaluationLogId: -1,
     reason: '',
     tokens: 0,
@@ -197,10 +201,6 @@ async function run(
   if (actualOutput.error) {
     metadata.reason = actualOutput.error.message
     return grade({ score: 0, metadata })
-  }
-
-  if (expectedOutput?.error) {
-    throw expectedOutput.error
   }
 
   const provider = providers?.get(metadata.configuration.provider)

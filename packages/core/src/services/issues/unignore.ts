@@ -6,7 +6,7 @@ import Transaction from '../../lib/Transaction'
 import { issues } from '../../schema/models/issues'
 import { Issue } from '../../schema/models/types/Issue'
 import { User } from '../../schema/models/types/User'
-import { unignoreIssueEvaluations } from './evaluations/unignoreIssueEvaluations'
+import { unignoreIssueEvaluations } from './evaluations/unignore'
 
 export async function unignoreIssue(
   {
