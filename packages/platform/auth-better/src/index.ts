@@ -1,4 +1,5 @@
 import { stripe } from "@better-auth/stripe"
+import { generateId } from "@domain/shared-kernel"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
@@ -194,6 +195,12 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // 1 day
+    },
+    // Use CUID2 for ID generation
+    advanced: {
+      database: {
+        generateId: () => generateId(),
+      },
     },
     // Multi-tenancy via organizations plugin + Stripe for billing
     plugins,
