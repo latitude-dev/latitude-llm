@@ -21,10 +21,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "effect": "catalog:"
+    "@react-email/components": "^0.0.33",
+    "effect": "catalog:",
+    "react": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
+    "@types/react": "catalog:",
     "typescript": "^5.7.0"
   }
 }
