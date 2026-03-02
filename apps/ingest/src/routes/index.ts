@@ -1,7 +1,7 @@
 import type { Hono } from "hono";
 import { registerHealthRoute } from "./health.js";
 
-export interface RoutesContext {
+interface RoutesContext {
   app: Hono;
 }
 

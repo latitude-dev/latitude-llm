@@ -1,7 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client";
 import { Effect } from "effect";
 
-export interface ClickhouseHealth {
+interface ClickhouseHealth {
   readonly ok: boolean;
   readonly latencyMs: number;
 }

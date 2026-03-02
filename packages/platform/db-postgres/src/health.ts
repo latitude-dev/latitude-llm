@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import type { Pool } from "pg";
 
-export interface PostgresHealth {
+interface PostgresHealth {
   readonly ok: boolean;
   readonly latencyMs: number;
 }

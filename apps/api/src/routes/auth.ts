@@ -82,7 +82,7 @@ export const createAuthRoutes = () => {
       // Find user by email using the repository
       const user = await Effect.runPromise(userRepository.findByEmail(email));
       const userName = user?.name ?? email.split("@")[0];
-      const html = await magicLinkTemplate({ userName, magicLinkUrl: url });
+      const html = magicLinkTemplate({ userName, magicLinkUrl: url });
 
       await Effect.runPromise(
         sendEmailUseCase({
@@ -231,28 +231,6 @@ export const createAuthRoutes = () => {
   // - /auth/organization/*
   // Note: This must come last to not override our custom endpoints above
   app.all("/*", async (c) => betterAuthHandler(c.req.raw));
-
-  return app;
-};
-
-/**
- * Create a simple auth callback handler for use with Better Auth
- *
- * This can be used to handle specific OAuth provider callbacks
- * if you need custom logic beyond what Better Auth provides.
- */
-export const createOAuthCallbackHandler = (deps: {
-  readonly onSuccess: (user: User, provider: string) => Promise<void>;
-  readonly redirectUrl: string;
-}) => {
-  const app = new Hono();
-
-  app.get("/:provider", async (_c) => {
-    // Better Auth handles the actual OAuth exchange
-    // This route is for any additional custom logic
-
-    return _c.redirect(deps.redirectUrl);
-  });
 
   return app;
 };

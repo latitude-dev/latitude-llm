@@ -6,7 +6,7 @@ export interface RedisConnection {
   readonly port: number;
 }
 
-export type CreateRedisConnectionError = MissingEnvValueError | InvalidEnvValueError;
+type CreateRedisConnectionError = MissingEnvValueError | InvalidEnvValueError;
 
 export const createRedisConnectionEffect = (
   host?: string,

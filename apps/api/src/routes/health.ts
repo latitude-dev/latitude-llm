@@ -19,7 +19,7 @@ const withFailure = <TSuccess extends { readonly ok: boolean }>(
   });
 };
 
-export interface HealthRouteContext {
+interface HealthRouteContext {
   app: Hono;
 }
 

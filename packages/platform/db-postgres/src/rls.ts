@@ -130,28 +130,3 @@ export const withOrganizationContext = <T, E>(
       }),
   );
 };
-
-/**
- * SQL helper function to get current organization ID in RLS policies.
- * This function should be created in the database.
- */
-export const GET_CURRENT_ORGANIZATION_ID_SQL = `
-CREATE OR REPLACE FUNCTION get_current_organization_id()
-RETURNS TEXT AS $$
-BEGIN
-  RETURN NULLIF(current_setting('app.current_organization_id', true), '');
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-`;
-
-/**
- * SQL helper function to get current user ID in RLS policies.
- */
-export const GET_CURRENT_USER_ID_SQL = `
-CREATE OR REPLACE FUNCTION get_current_user_id()
-RETURNS TEXT AS $$
-BEGIN
-  RETURN NULLIF(current_setting('app.current_user_id', true), '');
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-`;

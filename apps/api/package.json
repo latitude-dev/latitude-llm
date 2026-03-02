@@ -16,7 +16,6 @@
     "@clickhouse/client": "catalog:",
     "@domain/api-keys": "workspace:*",
     "@domain/email": "workspace:*",
-    "@domain/onboarding": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared-kernel": "workspace:*",
@@ -35,7 +34,6 @@
     "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
-    "nodemailer": "^6.9.0",
     "pg": "catalog:"
   }
 }

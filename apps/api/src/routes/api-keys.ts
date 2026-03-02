@@ -8,7 +8,7 @@ import { createRepositories } from "@platform/db-postgres";
 import { Effect } from "effect";
 import { Hono } from "hono";
 import { getPostgresClient } from "../clients.js";
-import { BadRequestError } from "../errors.js";
+import { BadRequestError } from "../errors.ts";
 import { extractParam } from "../lib/effect-utils.js";
 
 /**

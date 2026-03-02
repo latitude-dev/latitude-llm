@@ -19,7 +19,6 @@
     "@platform/env": "workspace:*",
     "better-auth": "catalog:",
     "effect": "catalog:",
-    "hono": "catalog:",
     "stripe": "^20.0.0"
   }
 }
