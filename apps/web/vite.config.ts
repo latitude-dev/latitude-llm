@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "@platform/env";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { config as loadDotenv } from "dotenv";
 import { Effect } from "effect";
@@ -16,7 +17,7 @@ if (existsSync(envFilePath)) {
 const webPortNumber = Effect.runSync(parseEnv(process.env.WEB_PORT, "number", 3000));
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   server:
     nodeEnv === "development"
       ? {
