@@ -2,7 +2,7 @@ services:
   postgres:
     image: postgres:16
     env_file:
-      - .env
+      - .env.${NODE_ENV:-development}
     ports:
       - "5432:5432"
     volumes:
@@ -12,7 +12,7 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:24.8
     env_file:
-      - .env
+      - .env.${NODE_ENV:-development}
     ports:
       - "8123:8123"
       - "9000:9000"
@@ -23,7 +23,7 @@ services:
     image: cr.weaviate.io/semitechnologies/weaviate:1.36.2
     command: ["--host", "0.0.0.0", "--port", "8099", "--scheme", "http"]
     env_file:
-      - .env
+      - .env.${NODE_ENV:-development}
     ports:
       - 8099:8099
       - 50051:50051
@@ -33,14 +33,14 @@ services:
   redis:
     image: redis:7
     env_file:
-      - .env
+      - .env.${NODE_ENV:-development}
     ports:
       - "6379:6379"
 
   mailpit:
     image: axllent/mailpit:v1.24
     env_file:
-      - .env
+      - .env.${NODE_ENV:-development}
     ports:
       - "1025:1025"
       - "8025:8025"
