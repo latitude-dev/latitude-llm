@@ -1,14 +1,14 @@
-import { healthcheckClickhouse } from "@platform/db-clickhouse";
-import { healthcheckPostgres } from "@platform/db-postgres";
-import type { Effect as EffectType } from "effect";
-import { Effect } from "effect";
-import type { Hono } from "hono";
-import { getClickhouseClient, getPostgresPool } from "../clients.ts";
+import { healthcheckClickhouse } from "@platform/db-clickhouse"
+import { healthcheckPostgres } from "@platform/db-postgres"
+import type { Effect as EffectType } from "effect"
+import { Effect } from "effect"
+import type { Hono } from "hono"
+import { getClickhouseClient, getPostgresPool } from "../clients.ts"
 
 type HealthcheckFailure = {
-  readonly ok: false;
-  readonly error: string;
-};
+  readonly ok: false
+  readonly error: string
+}
 
 const withFailure = <TSuccess extends { readonly ok: boolean }>(
   effect: EffectType.Effect<TSuccess, unknown>,
@@ -16,11 +16,11 @@ const withFailure = <TSuccess extends { readonly ok: boolean }>(
   return Effect.match(effect, {
     onFailure: (error) => ({ ok: false, error: String(error) }),
     onSuccess: (value) => value,
-  });
-};
+  })
+}
 
 interface HealthRouteContext {
-  app: Hono;
+  app: Hono
 }
 
 export const registerHealthRoute = (context: HealthRouteContext) => {
@@ -30,9 +30,9 @@ export const registerHealthRoute = (context: HealthRouteContext) => {
         postgres: withFailure(healthcheckPostgres(getPostgresPool())),
         clickhouse: withFailure(healthcheckClickhouse(getClickhouseClient())),
       }),
-    );
+    )
 
-    const ok = health.postgres.ok && health.clickhouse.ok;
+    const ok = health.postgres.ok && health.clickhouse.ok
 
     return c.json(
       {
@@ -42,6 +42,6 @@ export const registerHealthRoute = (context: HealthRouteContext) => {
         clickhouse: health.clickhouse,
       },
       ok ? 200 : 503,
-    );
-  });
-};
+    )
+  })
+}

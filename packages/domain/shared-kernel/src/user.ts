@@ -1,4 +1,4 @@
-import type { UserId } from "./id.ts";
+import type { UserId } from "./id.ts"
 
 /**
  * User entity - represents a user in the system.
@@ -8,12 +8,12 @@ import type { UserId } from "./id.ts";
  */
 
 export interface User {
-  readonly id: UserId;
-  readonly email: string;
-  readonly name: string | null;
-  readonly emailVerified: boolean;
-  readonly image: string | null;
-  readonly role: "user" | "admin";
-  readonly banned: boolean;
-  readonly createdAt: Date;
+  readonly id: UserId
+  readonly email: string
+  readonly name: string | null
+  readonly emailVerified: boolean
+  readonly image: string | null
+  readonly role: "user" | "admin"
+  readonly banned: boolean
+  readonly createdAt: Date
 }

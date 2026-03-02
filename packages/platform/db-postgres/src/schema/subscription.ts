@@ -1,4 +1,4 @@
-import { boolean, integer, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
 /**
  * Better Auth Stripe Plugin - Subscription table
@@ -12,7 +12,7 @@ import { boolean, integer, pgSchema, text, timestamp, varchar } from "drizzle-or
  * Scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude");
+const latitudeSchema = pgSchema("latitude")
 
 export const subscription = latitudeSchema.table("subscription", {
   id: text("id").primaryKey(),
@@ -32,4 +32,4 @@ export const subscription = latitudeSchema.table("subscription", {
   trialEnd: timestamp("trial_end", { withTimezone: true }),
   billingInterval: text("billing_interval"),
   stripeScheduleId: varchar("stripe_schedule_id", { length: 256 }),
-});
+})

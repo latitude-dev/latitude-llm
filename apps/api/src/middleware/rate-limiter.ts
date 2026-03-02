@@ -1,7 +1,7 @@
-import type { RedisClient } from "@platform/cache-redis";
-import { parseEnvOptional } from "@platform/env";
-import { Effect } from "effect";
-import type { Context, Next } from "hono";
+import type { RedisClient } from "@platform/cache-redis"
+import { parseEnvOptional } from "@platform/env"
+import { Effect } from "effect"
+import type { Context, Next } from "hono"
 
 /**
  * Redis-backed rate limiter for authentication endpoints.
@@ -16,15 +16,15 @@ import type { Context, Next } from "hono";
 
 interface RateLimitConfig {
   /** Maximum number of requests allowed within the window */
-  maxRequests: number;
+  maxRequests: number
   /** Time window in seconds (default: 15 minutes = 900 seconds) */
-  windowSeconds: number;
+  windowSeconds: number
   /** Function to extract the identifier from the request (IP, email, etc.) */
-  keyGenerator: (c: Context) => string;
+  keyGenerator: (c: Context) => string
   /** Optional: Custom error message */
-  errorMessage?: string;
+  errorMessage?: string
   /** Redis key prefix for namespacing */
-  keyPrefix: string;
+  keyPrefix: string
 }
 
 /**
@@ -32,42 +32,42 @@ interface RateLimitConfig {
  */
 const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConfig) => {
   return async (c: Context, next: Next) => {
-    const key = `${config.keyPrefix}:${config.keyGenerator(c)}`;
+    const key = `${config.keyPrefix}:${config.keyGenerator(c)}`
 
     try {
       // Use Redis multi to atomically increment and set expiry
-      const pipeline = redis.pipeline();
-      pipeline.incr(key);
-      pipeline.ttl(key);
+      const pipeline = redis.pipeline()
+      pipeline.incr(key)
+      pipeline.ttl(key)
 
-      const results = await pipeline.exec();
+      const results = await pipeline.exec()
 
       if (!results) {
         // Redis error, allow request but log warning
-        await next();
-        return;
+        await next()
+        return
       }
 
-      const [incrResult, ttlResult] = results;
+      const [incrResult, ttlResult] = results
 
       // Check for errors
       if (incrResult[0] || ttlResult[0]) {
-        await next();
-        return;
+        await next()
+        return
       }
 
-      const count = incrResult[1] as number;
-      let ttl = ttlResult[1] as number;
+      const count = incrResult[1] as number
+      let ttl = ttlResult[1] as number
 
       // Set expiry on first request
       if (count === 1 || ttl === -1) {
-        await redis.expire(key, config.windowSeconds);
-        ttl = config.windowSeconds;
+        await redis.expire(key, config.windowSeconds)
+        ttl = config.windowSeconds
       }
 
       // Check if limit exceeded
       if (count > config.maxRequests) {
-        const retryAfter = ttl;
+        const retryAfter = ttl
         return c.json(
           {
             error: config.errorMessage || "Too many requests",
@@ -75,16 +75,16 @@ const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConfig) => 
           },
           429,
           { "Retry-After": String(retryAfter) },
-        );
+        )
       }
 
-      await next();
+      await next()
     } catch (_error) {
       // Redis error - fail open (allow request) to avoid blocking legitimate users
-      await next();
+      await next()
     }
-  };
-};
+  }
+}
 
 /**
  * Rate limiter for sign-up attempts by IP address
@@ -92,17 +92,17 @@ const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConfig) => 
  */
 export const createSignUpIpRateLimiter = (redis: RedisClient) => {
   // In development, be more permissive
-  const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development";
-  const isDevelopment = nodeEnv === "development";
+  const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development"
+  const isDevelopment = nodeEnv === "development"
 
   return createRedisRateLimiter(redis, {
     maxRequests: isDevelopment ? 100 : 3,
     windowSeconds: 60 * 60, // 1 hour
     keyPrefix: "ratelimit:signup:ip",
     keyGenerator: (c: Context) => {
-      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown";
-      return ip.split(",")[0].trim();
+      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
+      return ip.split(",")[0].trim()
     },
     errorMessage: "Too many account creation attempts. Please try again later.",
-  });
-};
+  })
+}

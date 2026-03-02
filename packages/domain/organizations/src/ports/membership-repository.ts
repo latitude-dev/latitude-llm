@@ -1,6 +1,6 @@
-import type { OrganizationId, RepositoryError } from "@domain/shared-kernel";
-import type { Effect } from "effect";
-import type { Membership } from "../entities/membership.ts";
+import type { OrganizationId, RepositoryError } from "@domain/shared-kernel"
+import type { Effect } from "effect"
+import type { Membership } from "../entities/membership.ts"
 
 /**
  * Repository port for Membership entities.
@@ -12,19 +12,17 @@ export interface MembershipRepository {
   /**
    * Find a membership by ID.
    */
-  findById(id: string): Effect.Effect<Membership | null, RepositoryError>;
+  findById(id: string): Effect.Effect<Membership | null, RepositoryError>
 
   /**
    * Find all memberships for an organization.
    */
-  findByOrganizationId(
-    organizationId: OrganizationId,
-  ): Effect.Effect<readonly Membership[], RepositoryError>;
+  findByOrganizationId(organizationId: OrganizationId): Effect.Effect<readonly Membership[], RepositoryError>
 
   /**
    * Find all memberships for a user.
    */
-  findByUserId(userId: string): Effect.Effect<readonly Membership[], RepositoryError>;
+  findByUserId(userId: string): Effect.Effect<readonly Membership[], RepositoryError>
 
   /**
    * Find membership by organization and user.
@@ -32,25 +30,25 @@ export interface MembershipRepository {
   findByOrganizationAndUser(
     organizationId: OrganizationId,
     userId: string,
-  ): Effect.Effect<Membership | null, RepositoryError>;
+  ): Effect.Effect<Membership | null, RepositoryError>
 
   /**
    * Check if user is a member of organization.
    */
-  isMember(organizationId: OrganizationId, userId: string): Effect.Effect<boolean, RepositoryError>;
+  isMember(organizationId: OrganizationId, userId: string): Effect.Effect<boolean, RepositoryError>
 
   /**
    * Check if user has admin role in organization.
    */
-  isAdmin(organizationId: OrganizationId, userId: string): Effect.Effect<boolean, RepositoryError>;
+  isAdmin(organizationId: OrganizationId, userId: string): Effect.Effect<boolean, RepositoryError>
 
   /**
    * Save a membership.
    */
-  save(membership: Membership): Effect.Effect<void, RepositoryError>;
+  save(membership: Membership): Effect.Effect<void, RepositoryError>
 
   /**
    * Delete a membership.
    */
-  delete(id: string): Effect.Effect<void, RepositoryError>;
+  delete(id: string): Effect.Effect<void, RepositoryError>
 }

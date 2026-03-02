@@ -3,18 +3,18 @@
  *
  * V3/V4/V1 suffixes indicate major plan versions for migration tracking.
  */
-export type Plan = "HobbyV3" | "TeamV4" | "EnterpriseV1" | "ScaleV1";
+export type Plan = "HobbyV3" | "TeamV4" | "EnterpriseV1" | "ScaleV1"
 
 /**
  * Plan configuration - defines quotas and features for each plan.
  */
 export interface PlanConfig {
-  readonly name: Plan;
-  readonly displayName: string;
-  readonly seats: number;
-  readonly runs: number | null; // null = unlimited
-  readonly credits: number;
-  readonly features: readonly string[];
+  readonly name: Plan
+  readonly displayName: string
+  readonly seats: number
+  readonly runs: number | null // null = unlimited
+  readonly credits: number
+  readonly features: readonly string[]
 }
 
 /**
@@ -59,34 +59,27 @@ export const PLAN_CONFIGS: Record<Plan, PlanConfig> = {
     seats: 50,
     runs: 500_000,
     credits: 5_000,
-    features: [
-      "advanced-analytics",
-      "priority-support",
-      "api-access",
-      "webhooks",
-      "sso",
-      "audit-logs",
-    ],
+    features: ["advanced-analytics", "priority-support", "api-access", "webhooks", "sso", "audit-logs"],
   },
-};
+}
 
 /**
  * Get configuration for a specific plan.
  */
 export const getPlanConfig = (plan: Plan): PlanConfig => {
-  return PLAN_CONFIGS[plan];
-};
+  return PLAN_CONFIGS[plan]
+}
 
 /**
  * Check if plan includes a specific feature.
  */
 export const hasFeature = (plan: Plan, feature: string): boolean => {
-  return PLAN_CONFIGS[plan].features.includes(feature);
-};
+  return PLAN_CONFIGS[plan].features.includes(feature)
+}
 
 /**
  * Get all available plans.
  */
 export const getAvailablePlans = (): readonly Plan[] => {
-  return Object.keys(PLAN_CONFIGS) as Plan[];
-};
+  return Object.keys(PLAN_CONFIGS) as Plan[]
+}

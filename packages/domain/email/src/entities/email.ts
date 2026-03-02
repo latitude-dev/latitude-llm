@@ -6,15 +6,15 @@
  */
 
 export interface EmailContent {
-  readonly to: string;
-  readonly subject: string;
-  readonly html: string;
-  readonly text?: string;
+  readonly to: string
+  readonly subject: string
+  readonly html: string
+  readonly text?: string
 }
 
 export interface TemplatedEmail<TData = unknown> {
-  readonly to: string;
-  readonly subject: string;
-  readonly template: string;
-  readonly data: TData;
+  readonly to: string
+  readonly subject: string
+  readonly template: string
+  readonly data: TData
 }

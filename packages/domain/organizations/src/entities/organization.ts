@@ -1,4 +1,4 @@
-import type { OrganizationId, SubscriptionId, UserId } from "@domain/shared-kernel";
+import type { OrganizationId, SubscriptionId, UserId } from "@domain/shared-kernel"
 
 /**
  * Organization entity - represents a tenant/workspace.
@@ -7,34 +7,34 @@ import type { OrganizationId, SubscriptionId, UserId } from "@domain/shared-kern
  * Users can belong to multiple organizations via the member table.
  */
 export interface Organization {
-  readonly id: OrganizationId;
-  readonly name: string;
-  readonly slug: string;
-  readonly logo: string | null;
-  readonly metadata: string | null; // Better auth needs it
-  readonly creatorId: UserId | null;
-  readonly currentSubscriptionId: SubscriptionId | null;
-  readonly stripeCustomerId: string | null;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
+  readonly id: OrganizationId
+  readonly name: string
+  readonly slug: string
+  readonly logo: string | null
+  readonly metadata: string | null // Better auth needs it
+  readonly creatorId: UserId | null
+  readonly currentSubscriptionId: SubscriptionId | null
+  readonly stripeCustomerId: string | null
+  readonly createdAt: Date
+  readonly updatedAt: Date
 }
 
 /**
  * Factory function to create a new Organization.
  */
 export const createOrganization = (params: {
-  id: OrganizationId;
-  name: string;
-  slug: string;
-  logo?: string | null;
-  metadata?: string | null;
-  creatorId?: UserId;
-  currentSubscriptionId?: SubscriptionId;
-  stripeCustomerId?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  id: OrganizationId
+  name: string
+  slug: string
+  logo?: string | null
+  metadata?: string | null
+  creatorId?: UserId
+  currentSubscriptionId?: SubscriptionId
+  stripeCustomerId?: string
+  createdAt?: Date
+  updatedAt?: Date
 }): Organization => {
-  const now = new Date();
+  const now = new Date()
   return {
     id: params.id,
     name: params.name,
@@ -46,5 +46,5 @@ export const createOrganization = (params: {
     stripeCustomerId: params.stripeCustomerId ?? null,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
-  };
-};
+  }
+}

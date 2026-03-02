@@ -1,10 +1,10 @@
-import type { Membership, MembershipRepository, MembershipRole } from "@domain/organizations";
-import type { OrganizationId, UserId } from "@domain/shared-kernel";
-import { toRepositoryError } from "@domain/shared-kernel";
-import { and, eq } from "drizzle-orm";
-import { Effect } from "effect";
-import type { PostgresDb } from "../client.ts";
-import * as schema from "../schema/index.ts";
+import type { Membership, MembershipRepository, MembershipRole } from "@domain/organizations"
+import type { OrganizationId, UserId } from "@domain/shared-kernel"
+import { toRepositoryError } from "@domain/shared-kernel"
+import { and, eq } from "drizzle-orm"
+import { Effect } from "effect"
+import type { PostgresDb } from "../client.ts"
+import * as schema from "../schema/index.ts"
 
 /**
  * Maps a database member row to a domain Membership entity.
@@ -17,7 +17,7 @@ const toDomainMembership = (memberRow: typeof schema.member.$inferSelect): Membe
   invitedAt: null, // Better Auth doesn't store invitedAt separately
   confirmedAt: memberRow.createdAt, // Assume confirmed at creation for now
   createdAt: memberRow.createdAt,
-});
+})
 
 /**
  * Creates a Postgres implementation of the MembershipRepository port.
@@ -32,14 +32,14 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
         try: async () => {
           const member = await db.query.member.findFirst({
             where: eq(schema.member.id, id),
-          });
+          })
 
-          return member ? toDomainMembership(member) : null;
+          return member ? toDomainMembership(member) : null
         },
         catch: (error) => toRepositoryError(error, "findById"),
-      });
+      })
 
-      return result;
+      return result
     }),
 
   findByOrganizationId: (organizationId: OrganizationId) =>
@@ -48,14 +48,14 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
         try: async () => {
           const members = await db.query.member.findMany({
             where: eq(schema.member.organizationId, organizationId as string),
-          });
+          })
 
-          return members.map(toDomainMembership);
+          return members.map(toDomainMembership)
         },
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
-      });
+      })
 
-      return results;
+      return results
     }),
 
   findByUserId: (userId: string) =>
@@ -64,14 +64,14 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
         try: async () => {
           const members = await db.query.member.findMany({
             where: eq(schema.member.userId, userId),
-          });
+          })
 
-          return members.map(toDomainMembership);
+          return members.map(toDomainMembership)
         },
         catch: (error) => toRepositoryError(error, "findByUserId"),
-      });
+      })
 
-      return results;
+      return results
     }),
 
   findByOrganizationAndUser: (organizationId: OrganizationId, userId: string) =>
@@ -79,18 +79,15 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
       const result = yield* Effect.tryPromise({
         try: async () => {
           const member = await db.query.member.findFirst({
-            where: and(
-              eq(schema.member.organizationId, organizationId as string),
-              eq(schema.member.userId, userId),
-            ),
-          });
+            where: and(eq(schema.member.organizationId, organizationId as string), eq(schema.member.userId, userId)),
+          })
 
-          return member ? toDomainMembership(member) : null;
+          return member ? toDomainMembership(member) : null
         },
         catch: (error) => toRepositoryError(error, "findByOrganizationAndUser"),
-      });
+      })
 
-      return result;
+      return result
     }),
 
   isMember: (organizationId: OrganizationId, userId: string) =>
@@ -98,18 +95,15 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
       const result = yield* Effect.tryPromise({
         try: async () => {
           const member = await db.query.member.findFirst({
-            where: and(
-              eq(schema.member.organizationId, organizationId as string),
-              eq(schema.member.userId, userId),
-            ),
-          });
+            where: and(eq(schema.member.organizationId, organizationId as string), eq(schema.member.userId, userId)),
+          })
 
-          return member !== null;
+          return member !== null
         },
         catch: (error) => toRepositoryError(error, "isMember"),
-      });
+      })
 
-      return result;
+      return result
     }),
 
   isAdmin: (organizationId: OrganizationId, userId: string) =>
@@ -118,20 +112,17 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
         try: async () => {
           // Check if member exists with admin or owner role
           const member = await db.query.member.findFirst({
-            where: and(
-              eq(schema.member.organizationId, organizationId as string),
-              eq(schema.member.userId, userId),
-            ),
-          });
+            where: and(eq(schema.member.organizationId, organizationId as string), eq(schema.member.userId, userId)),
+          })
 
-          if (!member) return false;
+          if (!member) return false
 
-          return member.role === "admin" || member.role === "owner";
+          return member.role === "admin" || member.role === "owner"
         },
         catch: (error) => toRepositoryError(error, "isAdmin"),
-      });
+      })
 
-      return result;
+      return result
     }),
 
   save: (membership: Membership) =>
@@ -155,7 +146,7 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
               },
             }),
         catch: (error) => toRepositoryError(error, "save"),
-      });
+      })
     }),
 
   delete: (id: string) =>
@@ -163,4 +154,4 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
       try: () => db.delete(schema.member).where(eq(schema.member.id, id)),
       catch: (error) => toRepositoryError(error, "delete"),
     }),
-});
+})

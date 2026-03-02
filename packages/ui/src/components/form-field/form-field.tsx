@@ -1,32 +1,24 @@
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useId } from "react"
 
-import { cn } from "../../utils/cn.js";
-import { Label } from "../label/label.js";
-import { Text } from "../text/text.js";
+import { cn } from "../../utils/cn.js"
+import { Label } from "../label/label.js"
+import { Text } from "../text/text.js"
 
 export interface FormFieldProps {
-  children: ReactNode;
-  label?: ReactNode;
-  description?: ReactNode;
-  info?: string | undefined;
-  inline?: boolean | undefined;
-  errors?: string[] | undefined;
-  className?: string | undefined;
+  children: ReactNode
+  label?: ReactNode
+  description?: ReactNode
+  info?: string | undefined
+  inline?: boolean | undefined
+  errors?: string[] | undefined
+  className?: string | undefined
 }
 
-function FormField({
-  children,
-  label,
-  description,
-  info,
-  inline = false,
-  errors,
-  className,
-}: FormFieldProps) {
-  const hasError = errors && errors.length > 0;
-  const id = useId();
-  const errorId = `${id}-error`;
-  const descriptionId = `${id}-description`;
+function FormField({ children, label, description, info, inline = false, errors, className }: FormFieldProps) {
+  const hasError = errors && errors.length > 0
+  const id = useId()
+  const errorId = `${id}-error`
+  const descriptionId = `${id}-description`
 
   return (
     <div className={cn("flex gap-2", inline ? "flex-row items-center" : "flex-col", className)}>
@@ -56,7 +48,7 @@ function FormField({
         )}
       </div>
     </div>
-  );
+  )
 }
 
-export { FormField };
+export { FormField }

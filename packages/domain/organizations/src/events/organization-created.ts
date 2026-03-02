@@ -1,5 +1,5 @@
-import type { DomainEvent } from "@domain/events";
-import type { OrganizationId, UserId } from "@domain/shared-kernel";
+import type { DomainEvent } from "@domain/events"
+import type { OrganizationId, UserId } from "@domain/shared-kernel"
 
 /**
  * OrganizationCreated event - emitted when a new organization is created.
@@ -7,18 +7,18 @@ import type { OrganizationId, UserId } from "@domain/shared-kernel";
 export type OrganizationCreatedEvent = DomainEvent<
   "OrganizationCreated",
   {
-    organizationId: OrganizationId;
-    name: string;
-    slug: string;
-    creatorId: UserId;
+    organizationId: OrganizationId
+    name: string
+    slug: string
+    creatorId: UserId
   }
->;
+>
 
 export const createOrganizationCreatedEvent = (params: {
-  organizationId: OrganizationId;
-  name: string;
-  slug: string;
-  creatorId: UserId;
+  organizationId: OrganizationId
+  name: string
+  slug: string
+  creatorId: UserId
 }): OrganizationCreatedEvent => ({
   name: "OrganizationCreated",
   workspaceId: params.organizationId,
@@ -28,4 +28,4 @@ export const createOrganizationCreatedEvent = (params: {
     slug: params.slug,
     creatorId: params.creatorId,
   },
-});
+})

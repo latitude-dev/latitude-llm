@@ -1,23 +1,23 @@
-import { existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { createPollingOutboxConsumer } from "@platform/events-outbox";
-import { createBullmqEventsPublisher } from "@platform/queue-bullmq";
-import { createLogger } from "@repo/observability";
-import { config as loadDotenv } from "dotenv";
-import { getPostgresPool, getRedisConnection } from "./clients.ts";
-import { createEventsWorker } from "./workers/events.ts";
+import { existsSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { createPollingOutboxConsumer } from "@platform/events-outbox"
+import { createBullmqEventsPublisher } from "@platform/queue-bullmq"
+import { createLogger } from "@repo/observability"
+import { config as loadDotenv } from "dotenv"
+import { getPostgresPool, getRedisConnection } from "./clients.ts"
+import { createEventsWorker } from "./workers/events.ts"
 
-const nodeEnv = process.env.NODE_ENV || "development";
-const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));
+const nodeEnv = process.env.NODE_ENV || "development"
+const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
 
 if (existsSync(envFilePath)) {
-  loadDotenv({ path: envFilePath });
+  loadDotenv({ path: envFilePath })
 }
 
-const redisConnection = getRedisConnection();
-const pgPool = getPostgresPool(10);
-const { queue: eventsQueue, worker: eventsWorker } = createEventsWorker(redisConnection);
-const eventsPublisher = createBullmqEventsPublisher({ queue: eventsQueue });
+const redisConnection = getRedisConnection()
+const pgPool = getPostgresPool(10)
+const { queue: eventsQueue, worker: eventsWorker } = createEventsWorker(redisConnection)
+const eventsPublisher = createBullmqEventsPublisher({ queue: eventsQueue })
 const outboxConsumer = createPollingOutboxConsumer(
   {
     pool: pgPool,
@@ -25,20 +25,20 @@ const outboxConsumer = createPollingOutboxConsumer(
     batchSize: 100,
   },
   eventsPublisher,
-);
+)
 
-const logger = createLogger("workers");
+const logger = createLogger("workers")
 
 eventsWorker.on("ready", () => {
-  outboxConsumer.start();
+  outboxConsumer.start()
 
-  logger.info("workers ready and outbox consumer started");
-});
+  logger.info("workers ready and outbox consumer started")
+})
 
 process.on("SIGINT", async () => {
-  await outboxConsumer.stop();
-  await pgPool.end();
-  await eventsQueue.close();
-  await eventsWorker.close();
-  process.exit(0);
-});
+  await outboxConsumer.stop()
+  await pgPool.end()
+  await eventsQueue.close()
+  await eventsWorker.close()
+  process.exit(0)
+})

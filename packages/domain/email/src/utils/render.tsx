@@ -1,4 +1,4 @@
-import { render } from "@react-email/components";
+import { render } from "@react-email/components"
 
 /**
  * Renders a React email component to HTML string
@@ -6,5 +6,5 @@ import { render } from "@react-email/components";
  * @returns Promise resolving to HTML string
  */
 export async function renderEmail(component: React.ReactElement): Promise<string> {
-  return render(component);
+  return render(component)
 }

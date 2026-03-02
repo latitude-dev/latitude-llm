@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { pgPolicy, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm"
+import { pgPolicy, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
 /**
  * Projects table - stores projects within organizations.
@@ -11,7 +11,7 @@ import { pgPolicy, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-cor
  * Scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude");
+const latitudeSchema = pgSchema("latitude")
 
 export const projects = latitudeSchema.table(
   "projects",
@@ -33,4 +33,4 @@ export const projects = latitudeSchema.table(
       withCheck: sql`organization_id = get_current_organization_id()`,
     }),
   ],
-);
+)

@@ -1,41 +1,41 @@
-import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared-kernel";
-import type { GrantId } from "@domain/shared-kernel";
-import { Data, Effect } from "effect";
-import { type Grant, type GrantType, createGrant } from "../entities/grant.ts";
-import type { Plan } from "../entities/plan.ts";
-import type { Subscription } from "../entities/subscription.ts";
-import type { GrantRepository } from "../ports/grant-repository.ts";
-import type { SubscriptionRepository } from "../ports/subscription-repository.ts";
+import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared-kernel"
+import type { GrantId } from "@domain/shared-kernel"
+import { Data, Effect } from "effect"
+import { type Grant, type GrantType, createGrant } from "../entities/grant.ts"
+import type { Plan } from "../entities/plan.ts"
+import type { Subscription } from "../entities/subscription.ts"
+import type { GrantRepository } from "../ports/grant-repository.ts"
+import type { SubscriptionRepository } from "../ports/subscription-repository.ts"
 
 /**
  * Input for changing subscription plan.
  */
 export interface ChangePlanInput {
-  readonly organizationId: OrganizationId;
-  readonly newPlan: Plan;
+  readonly organizationId: OrganizationId
+  readonly newPlan: Plan
   readonly grantIds: {
-    seats: GrantId;
-    runs: GrantId;
-    credits: GrantId;
-  };
+    seats: GrantId
+    runs: GrantId
+    credits: GrantId
+  }
 }
 
 /**
  * Error types for change plan use case.
  */
 export class NoActiveSubscriptionError extends Data.TaggedError("NoActiveSubscriptionError")<{
-  readonly organizationId: OrganizationId;
+  readonly organizationId: OrganizationId
 }> {}
 
 export class SamePlanError extends Data.TaggedError("SamePlanError")<{
-  readonly currentPlan: Plan;
-  readonly requestedPlan: Plan;
+  readonly currentPlan: Plan
+  readonly requestedPlan: Plan
 }> {}
 
 export class PlanDowngradeError extends Data.TaggedError("PlanDowngradeError")<{
-  readonly currentPlan: Plan;
-  readonly requestedPlan: Plan;
-  readonly reason: string;
+  readonly currentPlan: Plan
+  readonly requestedPlan: Plan
+  readonly reason: string
 }> {}
 
 export type ChangePlanError =
@@ -43,15 +43,15 @@ export type ChangePlanError =
   | NotFoundError
   | NoActiveSubscriptionError
   | SamePlanError
-  | PlanDowngradeError;
+  | PlanDowngradeError
 
 /**
  * Result of changing a plan.
  */
 export interface ChangePlanResult {
-  readonly subscription: Subscription;
-  readonly previousGrants: readonly Grant[];
-  readonly newGrants: readonly Grant[];
+  readonly subscription: Subscription
+  readonly previousGrants: readonly Grant[]
+  readonly newGrants: readonly Grant[]
 }
 
 /**
@@ -67,18 +67,16 @@ export interface ChangePlanResult {
  */
 export const changePlan =
   (deps: {
-    subscriptionRepository: SubscriptionRepository;
-    grantRepository: GrantRepository;
+    subscriptionRepository: SubscriptionRepository
+    grantRepository: GrantRepository
   }) =>
   (input: ChangePlanInput): Effect.Effect<ChangePlanResult, ChangePlanError> => {
     return Effect.gen(function* () {
       // Find active subscription
-      const subscription = yield* deps.subscriptionRepository.findActiveByOrganizationId(
-        input.organizationId,
-      );
+      const subscription = yield* deps.subscriptionRepository.findActiveByOrganizationId(input.organizationId)
 
       if (!subscription) {
-        return yield* new NoActiveSubscriptionError({ organizationId: input.organizationId });
+        return yield* new NoActiveSubscriptionError({ organizationId: input.organizationId })
       }
 
       // Check if already on requested plan
@@ -86,27 +84,27 @@ export const changePlan =
         return yield* new SamePlanError({
           currentPlan: subscription.plan,
           requestedPlan: input.newPlan,
-        });
+        })
       }
 
       // Get existing grants before revocation
-      const previousGrants = yield* deps.grantRepository.findBySubscriptionId(subscription.id);
+      const previousGrants = yield* deps.grantRepository.findBySubscriptionId(subscription.id)
 
       // Revoke existing grants
-      yield* deps.grantRepository.revokeBySubscription(subscription.id);
+      yield* deps.grantRepository.revokeBySubscription(subscription.id)
 
       // Create new grants based on new plan
       const grantConfigs: Array<{ type: GrantType; amount: number }> = [
         { type: "seats", amount: 10 },
         { type: "runs", amount: 1000 },
         { type: "credits", amount: 500 },
-      ];
+      ]
 
       const grantIdByType: Record<GrantType, GrantId> = {
         seats: input.grantIds.seats,
         runs: input.grantIds.runs,
         credits: input.grantIds.credits,
-      };
+      }
 
       const newGrants = grantConfigs.map((config) =>
         createGrant({
@@ -116,24 +114,24 @@ export const changePlan =
           type: config.type,
           amount: config.amount,
         }),
-      );
+      )
 
       // Persist new grants
-      yield* deps.grantRepository.saveMany(newGrants);
+      yield* deps.grantRepository.saveMany(newGrants)
 
       // Update subscription with new plan and timestamp
       const updatedSubscription: Subscription = {
         ...subscription,
         plan: input.newPlan,
         updatedAt: new Date(),
-      };
+      }
 
-      yield* deps.subscriptionRepository.save(updatedSubscription);
+      yield* deps.subscriptionRepository.save(updatedSubscription)
 
       return {
         subscription: updatedSubscription,
         previousGrants,
         newGrants,
-      };
-    });
-  };
+      }
+    })
+  }

@@ -1,35 +1,28 @@
-import {
-  type InvalidEnvValueError,
-  type MissingEnvValueError,
-  parseEnv,
-  parseEnvOptional,
-} from "@platform/env";
-import { type NodePgDatabase, drizzle } from "drizzle-orm/node-postgres";
-import { Effect } from "effect";
-import { Pool, type PoolConfig } from "pg";
+import { type InvalidEnvValueError, type MissingEnvValueError, parseEnv, parseEnvOptional } from "@platform/env"
+import { type NodePgDatabase, drizzle } from "drizzle-orm/node-postgres"
+import { Effect } from "effect"
+import { Pool, type PoolConfig } from "pg"
 
-import * as schema from "./schema/index.ts";
+import * as schema from "./schema/index.ts"
 
-export type PostgresDb = NodePgDatabase<typeof schema>;
+export type PostgresDb = NodePgDatabase<typeof schema>
 
 export interface PostgresConfig {
-  readonly databaseUrl?: string;
-  readonly maxConnections?: number;
-  readonly idleTimeoutMs?: number;
-  readonly connectionTimeoutMs?: number;
+  readonly databaseUrl?: string
+  readonly maxConnections?: number
+  readonly idleTimeoutMs?: number
+  readonly connectionTimeoutMs?: number
 }
 
 export interface PostgresClient {
-  readonly pool: Pool;
-  readonly db: PostgresDb;
+  readonly pool: Pool
+  readonly db: PostgresDb
 }
 
-type CreatePostgresPoolError = MissingEnvValueError | InvalidEnvValueError;
-type CreatePostgresClientError = CreatePostgresPoolError;
+type CreatePostgresPoolError = MissingEnvValueError | InvalidEnvValueError
+type CreatePostgresClientError = CreatePostgresPoolError
 
-export const createPostgresPoolEffect = (
-  config: PostgresConfig = {},
-): Effect.Effect<Pool, CreatePostgresPoolError> => {
+export const createPostgresPoolEffect = (config: PostgresConfig = {}): Effect.Effect<Pool, CreatePostgresPoolError> => {
   return Effect.all({
     connectionString: config.databaseUrl
       ? Effect.succeed(config.databaseUrl)
@@ -45,33 +38,33 @@ export const createPostgresPoolEffect = (
       : parseEnvOptional(process.env.PG_CONNECT_TIMEOUT_MS, "number"),
   }).pipe(
     Effect.map((poolConfig) => {
-      const configWithTypes: PoolConfig = poolConfig;
+      const configWithTypes: PoolConfig = poolConfig
 
-      return new Pool(configWithTypes);
+      return new Pool(configWithTypes)
     }),
-  );
-};
+  )
+}
 
 export const createPostgresPool = (config: PostgresConfig = {}): Pool => {
-  return Effect.runSync(createPostgresPoolEffect(config));
-};
+  return Effect.runSync(createPostgresPoolEffect(config))
+}
 
 export const createPostgresClientEffect = (
   config: PostgresConfig = {},
 ): Effect.Effect<PostgresClient, CreatePostgresClientError> => {
   return createPostgresPoolEffect(config).pipe(
     Effect.map((pool) => {
-      const db = drizzle(pool, { schema });
+      const db = drizzle(pool, { schema })
 
-      return { db, pool };
+      return { db, pool }
     }),
-  );
-};
+  )
+}
 
 export const createPostgresClient = (config: PostgresConfig = {}): PostgresClient => {
-  return Effect.runSync(createPostgresClientEffect(config));
-};
+  return Effect.runSync(createPostgresClientEffect(config))
+}
 
 export const closePostgres = async (pool: Pool): Promise<void> => {
-  await pool.end();
-};
+  await pool.end()
+}

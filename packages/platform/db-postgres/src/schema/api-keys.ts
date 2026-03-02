@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm";
-import { pgPolicy, pgSchema, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm"
+import { pgPolicy, pgSchema, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core"
 
 /**
  * API Keys table - stores API keys for organization access.
@@ -11,7 +11,7 @@ import { pgPolicy, pgSchema, text, timestamp, uuid, varchar } from "drizzle-orm/
  * Scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude");
+const latitudeSchema = pgSchema("latitude")
 
 export const apiKeys = latitudeSchema.table(
   "api_keys",
@@ -33,4 +33,4 @@ export const apiKeys = latitudeSchema.table(
       withCheck: sql`organization_id = get_current_organization_id()`,
     }),
   ],
-);
+)

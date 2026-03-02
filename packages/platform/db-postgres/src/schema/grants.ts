@@ -1,15 +1,15 @@
-import { sql } from "drizzle-orm";
-import { bigint, pgEnum, pgPolicy, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm"
+import { bigint, pgEnum, pgPolicy, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core"
 
 /**
  * Quota type enum for grants.
  */
-export const quotaTypeEnum = pgEnum("quota_type", ["seats", "runs", "credits"]);
+export const quotaTypeEnum = pgEnum("quota_type", ["seats", "runs", "credits"])
 
 /**
  * Grant source enum.
  */
-export const grantSourceEnum = pgEnum("grant_source", ["subscription", "purchase", "promocode"]);
+export const grantSourceEnum = pgEnum("grant_source", ["subscription", "purchase", "promocode"])
 
 /**
  * Grants table - stores quota allocations.
@@ -17,7 +17,7 @@ export const grantSourceEnum = pgEnum("grant_source", ["subscription", "purchase
  * Scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude");
+const latitudeSchema = pgSchema("latitude")
 
 export const grants = latitudeSchema.table(
   "grants",
@@ -42,4 +42,4 @@ export const grants = latitudeSchema.table(
       withCheck: sql`organization_id = get_current_organization_id()`,
     }),
   ],
-);
+)

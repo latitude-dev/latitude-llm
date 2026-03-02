@@ -5,6 +5,6 @@ export const zIndex = {
   popover: "z-[60]",
   dropdown: "z-[65]",
   tooltip: "z-[70]",
-};
+}
 
-export type ZIndex = keyof typeof zIndex;
+export type ZIndex = keyof typeof zIndex

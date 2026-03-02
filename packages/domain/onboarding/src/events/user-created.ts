@@ -1,4 +1,4 @@
-import { Data } from "effect";
+import { Data } from "effect"
 
 /**
  * User created event
@@ -8,9 +8,9 @@ import { Data } from "effect";
  */
 
 export class UserCreated extends Data.TaggedClass("UserCreated")<{
-  readonly userId: string;
-  readonly email: string;
-  readonly name?: string;
+  readonly userId: string
+  readonly email: string
+  readonly name?: string
 }> {}
 
-export type OnboardingEvent = UserCreated;
+export type OnboardingEvent = UserCreated

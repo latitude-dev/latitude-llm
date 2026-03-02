@@ -66,9 +66,6 @@ catalogs:
     react-dom:
       specifier: 19.2.4
       version: 19.2.4
-    tsx:
-      specifier: 4.20.6
-      version: 4.20.6
     turbo:
       specifier: 2.5.8
       version: 2.5.8
@@ -98,9 +95,6 @@ importers:
       knip:
         specifier: ^5.85.0
         version: 5.85.0(@types/node@22.14.1)(typescript@5.8.3)
-      tsx:
-        specifier: 'catalog:'
-        version: 4.20.6
       turbo:
         specifier: 'catalog:'
         version: 2.5.8
@@ -146,18 +140,15 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
-      '@platform/email-nodemailer':
+      '@platform/email-mailgun':
         specifier: workspace:*
-        version: link:../../packages/platform/email-nodemailer
+        version: link:../../packages/platform/email-mailgun
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
-      '@types/nodemailer':
-        specifier: ^6.4.0
-        version: 6.4.23
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
@@ -491,6 +482,18 @@ importers:
       drizzle-kit:
         specifier: 'catalog:'
         version: 0.31.9
+
+  packages/platform/email-mailgun:
+    dependencies:
+      '@domain/email':
+        specifier: workspace:*
+        version: link:../../domain/email
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../env
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
 
   packages/platform/email-nodemailer:
     dependencies:
@@ -6564,6 +6567,7 @@ snapshots:
       get-tsconfig: 4.10.1
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
 
   turbo-darwin-64@2.5.8:
     optional: true

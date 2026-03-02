@@ -4,6 +4,6 @@ export const whiteSpace = {
   pre: "whitespace-pre",
   preLine: "whitespace-pre-line",
   preWrap: "whitespace-pre-wrap",
-};
+}
 
-export type WhiteSpace = keyof typeof whiteSpace;
+export type WhiteSpace = keyof typeof whiteSpace

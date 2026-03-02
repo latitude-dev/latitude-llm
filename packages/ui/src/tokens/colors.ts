@@ -106,11 +106,11 @@ export const colors = {
     primary: "prose-primary",
     latte: "prose-latte",
   },
-};
-export type TextColor = keyof typeof colors.textColors;
-export type DarkTextColor = keyof typeof colors.darkTextColors;
-export type BorderColor = keyof typeof colors.borderColors;
-export type BackgroundColor = keyof typeof colors.backgrounds;
-export type BackgroundHoverColor = keyof typeof colors.backgroundHoverColors;
-export type BorderHoverColor = keyof typeof colors.borderHoverColors;
-export type ProseColor = keyof typeof colors.proseColors;
+}
+export type TextColor = keyof typeof colors.textColors
+export type DarkTextColor = keyof typeof colors.darkTextColors
+export type BorderColor = keyof typeof colors.borderColors
+export type BackgroundColor = keyof typeof colors.backgrounds
+export type BackgroundHoverColor = keyof typeof colors.backgroundHoverColors
+export type BorderHoverColor = keyof typeof colors.borderHoverColors
+export type ProseColor = keyof typeof colors.proseColors

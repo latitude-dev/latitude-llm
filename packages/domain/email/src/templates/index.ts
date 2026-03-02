@@ -1,1 +1,1 @@
-export { magicLinkTemplate, type MagicLinkEmailData } from "./magic-link.ts";
+export { magicLinkTemplate, type MagicLinkEmailData } from "./magic-link.ts"

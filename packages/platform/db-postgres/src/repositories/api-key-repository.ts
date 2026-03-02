@@ -1,9 +1,9 @@
-import type { ApiKey, ApiKeyRepository } from "@domain/api-keys";
-import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel";
-import { and, eq, isNull } from "drizzle-orm";
-import { Effect } from "effect";
-import type { PostgresDb } from "../client.ts";
-import * as schema from "../schema/index.ts";
+import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
+import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
+import { and, eq, isNull } from "drizzle-orm"
+import { Effect } from "effect"
+import type { PostgresDb } from "../client.ts"
+import * as schema from "../schema/index.ts"
 
 /**
  * Maps a database API key row to a domain ApiKey entity.
@@ -17,7 +17,7 @@ const toDomainApiKey = (row: typeof schema.apiKeys.$inferSelect): ApiKey => ({
   deletedAt: row.deletedAt,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
-});
+})
 
 /**
  * Maps a domain ApiKey entity to a database insert row.
@@ -30,7 +30,7 @@ const toInsertRow = (apiKey: ApiKey): typeof schema.apiKeys.$inferInsert => ({
   lastUsedAt: apiKey.lastUsedAt,
   deletedAt: apiKey.deletedAt,
   // createdAt and updatedAt are set by defaultNow()
-});
+})
 
 /**
  * Creates a Postgres implementation of the ApiKeyRepository port.
@@ -44,9 +44,9 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
             where: eq(schema.apiKeys.id, id as string),
           }),
         catch: (error) => toRepositoryError(error, "findById"),
-      });
+      })
 
-      return result ? toDomainApiKey(result) : null;
+      return result ? toDomainApiKey(result) : null
     }),
 
   findByToken: (token: string) =>
@@ -57,9 +57,9 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
             where: and(eq(schema.apiKeys.token, token), isNull(schema.apiKeys.deletedAt)),
           }),
         catch: (error) => toRepositoryError(error, "findByToken"),
-      });
+      })
 
-      return result ? toDomainApiKey(result) : null;
+      return result ? toDomainApiKey(result) : null
     }),
 
   findByOrganizationId: (organizationId: OrganizationId) =>
@@ -67,20 +67,17 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.apiKeys.findMany({
-            where: and(
-              eq(schema.apiKeys.organizationId, organizationId as string),
-              isNull(schema.apiKeys.deletedAt),
-            ),
+            where: and(eq(schema.apiKeys.organizationId, organizationId as string), isNull(schema.apiKeys.deletedAt)),
           }),
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
-      });
+      })
 
-      return results.map(toDomainApiKey);
+      return results.map(toDomainApiKey)
     }),
 
   save: (apiKey: ApiKey) =>
     Effect.gen(function* () {
-      const row = toInsertRow(apiKey);
+      const row = toInsertRow(apiKey)
 
       yield* Effect.tryPromise({
         try: () =>
@@ -97,7 +94,7 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
               },
             }),
         catch: (error) => toRepositoryError(error, "save"),
-      });
+      })
     }),
 
   delete: (id: ApiKeyId) =>
@@ -105,7 +102,7 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
       yield* Effect.tryPromise({
         try: () => db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id as string)),
         catch: (error) => toRepositoryError(error, "delete"),
-      });
+      })
     }),
 
   touch: (id: ApiKeyId) =>
@@ -120,6 +117,6 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
             })
             .where(eq(schema.apiKeys.id, id as string)),
         catch: (error) => toRepositoryError(error, "touch"),
-      });
+      })
     }),
-});
+})

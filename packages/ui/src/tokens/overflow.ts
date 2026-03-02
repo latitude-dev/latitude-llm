@@ -3,6 +3,6 @@ export const overflow = {
   hidden: "overflow-hidden",
   xAuto: "overflow-x-auto",
   yAuto: "overflow-y-auto",
-};
+}
 
-export type Overflow = keyof typeof overflow;
+export type Overflow = keyof typeof overflow

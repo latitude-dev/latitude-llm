@@ -7,6 +7,6 @@ export const skeleton = {
   h6: "h-4",
   h7: "h-3",
   h8: "h-2",
-};
+}
 
-export type SkeletonHeight = keyof typeof skeleton;
+export type SkeletonHeight = keyof typeof skeleton

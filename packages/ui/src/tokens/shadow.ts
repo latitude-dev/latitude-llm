@@ -7,6 +7,6 @@ export const boxShadow = {
   xl: "shadow-xl",
   "2xl": "shadow-2xl",
   inner: "shadow-inner",
-};
+}
 
-export type BoxShadow = keyof typeof boxShadow;
+export type BoxShadow = keyof typeof boxShadow

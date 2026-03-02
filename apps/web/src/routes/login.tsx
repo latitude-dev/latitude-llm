@@ -1,14 +1,14 @@
-import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui";
-import { Link } from "@tanstack/react-router";
-import { AlertCircle, Mail } from "lucide-react";
-import { useState } from "react";
+import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
+import { Link } from "@tanstack/react-router"
+import { AlertCircle, Mail } from "lucide-react"
+import { useState } from "react"
 
 /**
  * Login page - matches https://app.latitude.so/login exactly
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
-const WEB_BASE_URL = import.meta.env.VITE_WEB_URL ?? "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001"
+const WEB_BASE_URL = import.meta.env.VITE_WEB_URL ?? "http://localhost:3000"
 
 // Latitude logo SVG - actual implementation from legacy
 const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
@@ -37,22 +37,22 @@ const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
       fill="#FEC61A"
     />
   </svg>
-);
+)
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>();
-  const [isSent, setIsSent] = useState(false);
-  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string>()
+  const [isSent, setIsSent] = useState(false)
+  const [email, setEmail] = useState("")
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (isLoading) return;
+    e.preventDefault()
+    if (isLoading) return
 
-    const emailValue = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value;
-    setEmail(emailValue);
-    setIsLoading(true);
-    setError(undefined);
+    const emailValue = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value
+    setEmail(emailValue)
+    setIsLoading(true)
+    setError(undefined)
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/sign-in/magic-link`, {
@@ -63,28 +63,28 @@ export default function LoginPage() {
           callbackURL: WEB_BASE_URL,
           newUserCallbackURL: WEB_BASE_URL,
         }),
-      });
+      })
 
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message ?? "Failed to send magic link");
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.message ?? "Failed to send magic link")
       }
 
-      setIsSent(true);
+      setIsSent(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const handleGoogleClick = () => {
-    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=google`;
-  };
+    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=google`
+  }
 
   const handleGitHubClick = () => {
-    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=github`;
-  };
+    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=github`
+  }
 
   if (isSent) {
     return (
@@ -107,8 +107,8 @@ export default function LoginPage() {
               variant="ghost"
               className="w-full"
               onClick={() => {
-                setIsSent(false);
-                setEmail("");
+                setIsSent(false)
+                setEmail("")
               }}
             >
               Use a different email
@@ -116,7 +116,7 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -209,10 +209,7 @@ export default function LoginPage() {
               documentation
             </a>{" "}
             or contact us via{" "}
-            <a
-              href="mailto:hello@latitude.so"
-              className="text-accent-foreground underline hover:no-underline"
-            >
+            <a href="mailto:hello@latitude.so" className="text-accent-foreground underline hover:no-underline">
               email
             </a>{" "}
             or{" "}
@@ -234,13 +231,7 @@ export default function LoginPage() {
               className="text-accent-foreground underline hover:no-underline inline-flex items-center gap-1"
             >
               Sign up
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="2"
-              >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                 <title>Arrow right</title>
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
@@ -249,5 +240,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,13 +1,7 @@
-import type {
-  ConflictError,
-  OrganizationId,
-  RepositoryError,
-  UserId,
-  ValidationError,
-} from "@domain/shared-kernel";
-import { Data, Effect } from "effect";
-import { type Organization, createOrganization } from "../entities/organization.ts";
-import type { OrganizationRepository } from "../ports/organization-repository.ts";
+import type { ConflictError, OrganizationId, RepositoryError, UserId, ValidationError } from "@domain/shared-kernel"
+import { Data, Effect } from "effect"
+import { type Organization, createOrganization } from "../entities/organization.ts"
+import type { OrganizationRepository } from "../ports/organization-repository.ts"
 
 /**
  * Create a new organization.
@@ -20,28 +14,26 @@ import type { OrganizationRepository } from "../ports/organization-repository.ts
  * 5. Returns the created organization
  */
 export interface CreateOrganizationInput {
-  readonly id: OrganizationId;
-  readonly name: string;
-  readonly slug: string;
-  readonly creatorId: UserId;
+  readonly id: OrganizationId
+  readonly name: string
+  readonly slug: string
+  readonly creatorId: UserId
 }
 
-export class OrganizationAlreadyExistsError extends Data.TaggedError(
-  "OrganizationAlreadyExistsError",
-)<{
-  readonly slug: string;
+export class OrganizationAlreadyExistsError extends Data.TaggedError("OrganizationAlreadyExistsError")<{
+  readonly slug: string
 }> {
-  readonly httpStatus = 409;
-  readonly httpMessage = "Organization already exists";
+  readonly httpStatus = 409
+  readonly httpMessage = "Organization already exists"
 }
 
 export class InvalidOrganizationNameError extends Data.TaggedError("InvalidOrganizationNameError")<{
-  readonly name: string;
-  readonly reason: string;
+  readonly name: string
+  readonly reason: string
 }> {
-  readonly httpStatus = 400;
+  readonly httpStatus = 400
   get httpMessage() {
-    return this.reason;
+    return this.reason
   }
 }
 
@@ -50,7 +42,7 @@ export type CreateOrganizationError =
   | ValidationError
   | ConflictError
   | OrganizationAlreadyExistsError
-  | InvalidOrganizationNameError;
+  | InvalidOrganizationNameError
 
 export const createOrganizationUseCase =
   (repository: OrganizationRepository) =>
@@ -61,14 +53,14 @@ export const createOrganizationUseCase =
         return yield* new InvalidOrganizationNameError({
           name: input.name,
           reason: "Name cannot be empty",
-        });
+        })
       }
 
       if (input.name.length > 256) {
         return yield* new InvalidOrganizationNameError({
           name: input.name,
           reason: "Name exceeds 256 characters",
-        });
+        })
       }
 
       // Validate slug
@@ -76,13 +68,13 @@ export const createOrganizationUseCase =
         return yield* new InvalidOrganizationNameError({
           name: input.slug,
           reason: "Slug cannot be empty",
-        });
+        })
       }
 
       // Check if slug already exists
-      const exists = yield* repository.existsBySlug(input.slug);
+      const exists = yield* repository.existsBySlug(input.slug)
       if (exists) {
-        return yield* new OrganizationAlreadyExistsError({ slug: input.slug });
+        return yield* new OrganizationAlreadyExistsError({ slug: input.slug })
       }
 
       // Create organization entity
@@ -91,11 +83,11 @@ export const createOrganizationUseCase =
         name: input.name.trim(),
         slug: input.slug.trim().toLowerCase(),
         creatorId: input.creatorId,
-      });
+      })
 
       // Persist
-      yield* repository.save(organization);
+      yield* repository.save(organization)
 
-      return organization;
-    });
-  };
+      return organization
+    })
+  }
