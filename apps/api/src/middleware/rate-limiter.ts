@@ -1,4 +1,6 @@
 import type { RedisClient } from "@platform/cache-redis";
+import { parseEnvOptional } from "@platform/env";
+import { Effect } from "effect";
 import type { Context, Next } from "hono";
 
 /**
@@ -42,7 +44,6 @@ export const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConf
 
       if (!results) {
         // Redis error, allow request but log warning
-        console.warn("Rate limiter: Redis pipeline returned null");
         await next();
         return;
       }
@@ -51,7 +52,6 @@ export const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConf
 
       // Check for errors
       if (incrResult[0] || ttlResult[0]) {
-        console.error("Rate limiter Redis error:", incrResult[0] || ttlResult[0]);
         await next();
         return;
       }
@@ -79,9 +79,8 @@ export const createRedisRateLimiter = (redis: RedisClient, config: RateLimitConf
       }
 
       await next();
-    } catch (error) {
+    } catch (_error) {
       // Redis error - fail open (allow request) to avoid blocking legitimate users
-      console.error("Rate limiter error:", error);
       await next();
     }
   };
@@ -106,11 +105,15 @@ export const createSignInIpRateLimiter = (redis: RedisClient) =>
 
 /**
  * Rate limiter for sign-up attempts by IP address
- * 3 attempts per hour (to prevent mass account creation)
+ * 3 attempts per hour in production, 100 attempts per hour in development (to prevent mass account creation)
  */
-export const createSignUpIpRateLimiter = (redis: RedisClient) =>
-  createRedisRateLimiter(redis, {
-    maxRequests: 3,
+export const createSignUpIpRateLimiter = (redis: RedisClient) => {
+  // In development, be more permissive
+  const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development";
+  const isDevelopment = nodeEnv === "development";
+
+  return createRedisRateLimiter(redis, {
+    maxRequests: isDevelopment ? 100 : 3,
     windowSeconds: 60 * 60, // 1 hour
     keyPrefix: "ratelimit:signup:ip",
     keyGenerator: (c: Context) => {
@@ -119,6 +122,7 @@ export const createSignUpIpRateLimiter = (redis: RedisClient) =>
     },
     errorMessage: "Too many account creation attempts. Please try again later.",
   });
+};
 
 /**
  * Rate limiter for sign-in attempts by email
@@ -199,7 +203,6 @@ export const createMagicLinkEmailRateLimiter = (redis: RedisClient) => {
       const results = await pipeline.exec();
 
       if (!results) {
-        console.warn("Magic link email rate limiter: Redis pipeline returned null");
         await next();
         return;
       }
@@ -207,7 +210,6 @@ export const createMagicLinkEmailRateLimiter = (redis: RedisClient) => {
       const [incrResult, ttlResult] = results;
 
       if (incrResult[0] || ttlResult[0]) {
-        console.error("Magic link email rate limiter Redis error:", incrResult[0] || ttlResult[0]);
         await next();
         return;
       }
@@ -235,9 +237,8 @@ export const createMagicLinkEmailRateLimiter = (redis: RedisClient) => {
       }
 
       await next();
-    } catch (error) {
+    } catch (_error) {
       // Fail open on errors
-      console.error("Magic link email rate limiter error:", error);
       await next();
     }
   };

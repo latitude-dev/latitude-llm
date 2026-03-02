@@ -5,6 +5,7 @@ export * from "./tokens/index.js";
 export { cn } from "./utils/cn.js";
 
 // Components
+export * from "./components/brand-icons/index.js";
 export * from "./components/button/index.js";
 export * from "./components/card/index.js";
 export * from "./components/checkbox/index.js";

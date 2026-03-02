@@ -221,4 +221,4 @@ namespace Text {
   Mono.displayName = "Text.Mono";
 }
 
-export { Text };
+export { Text, TextAtom };
