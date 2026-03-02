@@ -28,7 +28,6 @@
     "dotenv": "catalog:",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
-    "tailwindcss-animate": "^1.0.7",
     "vite": "catalog:"
   }
 }

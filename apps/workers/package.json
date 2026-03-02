@@ -15,7 +15,6 @@
   "dependencies": {
     "@platform/cache-redis": "workspace:*",
     "@platform/db-postgres": "workspace:*",
-    "@platform/env": "workspace:*",
     "@platform/events-outbox": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
     "@repo/observability": "workspace:*",
@@ -23,7 +22,6 @@
     "bullmq": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
-    "ioredis": "catalog:",
     "pg": "catalog:"
   }
 }

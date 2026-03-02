@@ -1,17 +1,17 @@
 import type { ClickHouseClient } from "@clickhouse/client";
 import { Data, Effect } from "effect";
 
-export class ClickhouseQueryError extends Data.TaggedError("ClickhouseQueryError")<{
+class ClickhouseQueryError extends Data.TaggedError("ClickhouseQueryError")<{
   readonly cause: unknown;
   readonly query: string;
 }> {}
 
-export class ClickhouseCommandError extends Data.TaggedError("ClickhouseCommandError")<{
+class ClickhouseCommandError extends Data.TaggedError("ClickhouseCommandError")<{
   readonly cause: unknown;
   readonly query: string;
 }> {}
 
-export class ClickhouseInsertError extends Data.TaggedError("ClickhouseInsertError")<{
+class ClickhouseInsertError extends Data.TaggedError("ClickhouseInsertError")<{
   readonly cause: unknown;
   readonly table: string;
 }> {}

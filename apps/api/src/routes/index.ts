@@ -1,4 +1,3 @@
-import type { Repositories } from "@platform/db-postgres";
 import type { Hono } from "hono";
 import { createApiKeysRoutes } from "./api-keys.js";
 import { createAuthRoutes } from "./auth.js";
@@ -6,7 +5,7 @@ import { registerHealthRoute } from "./health.js";
 import { createOrganizationsRoutes } from "./organizations.js";
 import { createProjectsRoutes } from "./projects.js";
 
-export interface RoutesContext {
+interface RoutesContext {
   app: Hono;
 }
 
@@ -34,6 +33,3 @@ export const registerRoutes = (context: RoutesContext) => {
   // API Key routes (nested under organizations)
   app.route("/organizations/:organizationId/api-keys", createApiKeysRoutes());
 };
-
-// Re-export types for convenience
-export type { Repositories };

@@ -24,8 +24,8 @@ export interface PostgresClient {
   readonly db: PostgresDb;
 }
 
-export type CreatePostgresPoolError = MissingEnvValueError | InvalidEnvValueError;
-export type CreatePostgresClientError = CreatePostgresPoolError;
+type CreatePostgresPoolError = MissingEnvValueError | InvalidEnvValueError;
+type CreatePostgresClientError = CreatePostgresPoolError;
 
 export const createPostgresPoolEffect = (
   config: PostgresConfig = {},

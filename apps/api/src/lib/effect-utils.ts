@@ -1,4 +1,3 @@
-import { Effect } from "effect";
 import type { Context } from "hono";
 
 /**
@@ -30,24 +29,4 @@ export const extractParam = <T>(
   const value = c.req.param(name);
   if (!value) return null;
   return validator(value);
-};
-
-/**
- * Extract and validate body from request.
- *
- * @param c - Hono context
- * @param validator - Zod schema or validation function
- * @returns Parsed body or null if invalid
- */
-export const extractBody = <T>(
-  c: Context,
-  validator: (body: unknown) => T | null,
-): Effect.Effect<T | null, null> => {
-  return Effect.gen(function* () {
-    const body = yield* Effect.tryPromise({
-      try: () => c.req.json(),
-      catch: () => null,
-    });
-    return body ? validator(body) : null;
-  });
 };

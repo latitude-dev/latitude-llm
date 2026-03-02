@@ -13,7 +13,7 @@ export interface ClickhouseConfig {
   readonly database?: string;
 }
 
-export type CreateClickhouseClientError = MissingEnvValueError | InvalidEnvValueError;
+type CreateClickhouseClientError = MissingEnvValueError | InvalidEnvValueError;
 
 export const createClickhouseClientEffect = (
   config: ClickhouseConfig = {},

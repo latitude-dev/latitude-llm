@@ -1,48 +1,26 @@
-import { Data } from "effect";
-
 /**
  * Interface for errors that can be returned in an HTTP context.
  *
  * Domain errors that need specific HTTP handling should implement this interface
  * to bundle their HTTP status code and message.
  */
-export interface HttpError {
+interface HttpError {
   readonly _tag: string;
   readonly httpStatus: number;
   readonly httpMessage: string;
 }
 
-// Common HTTP error types that can be reused across domains
-
-export class BadRequestError extends Data.TaggedError("BadRequestError")<{
-  readonly httpMessage: string;
-  readonly field?: string;
-}> {
+export class BadRequestError implements HttpError {
+  readonly _tag = "BadRequestError";
   readonly httpStatus = 400;
-}
-
-export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   readonly httpMessage: string;
-}> {
-  readonly httpStatus = 401;
-}
 
-export class ForbiddenError extends Data.TaggedError("ForbiddenError")<{
-  readonly httpMessage: string;
-}> {
-  readonly httpStatus = 403;
-}
-
-export class NotFoundHttpError extends Data.TaggedError("NotFoundHttpError")<{
-  readonly httpMessage: string;
-}> {
-  readonly httpStatus = 404;
-}
-
-export class ConflictHttpError extends Data.TaggedError("ConflictHttpError")<{
-  readonly httpMessage: string;
-}> {
-  readonly httpStatus = 409;
+  constructor(options: { httpMessage: string; field?: string }) {
+    this.httpMessage = options.httpMessage;
+    if (options.field) {
+      this.httpMessage += ` ${options.field}`;
+    }
+  }
 }
 
 // Type guard to check if an error has HTTP properties
