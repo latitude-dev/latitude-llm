@@ -9,12 +9,16 @@
     "format:check": "pnpm lint",
     "tmux": "tmuxinator start .",
     "typecheck": "turbo typecheck",
-    "test": "turbo test"
+    "test": "turbo test",
+    "knip": "knip",
+    "knip:fix": "knip --fix",
+    "knip:fix:files": "knip --fix-type files --allow-remove-files"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@effect/language-service": "^0.77.0",
     "@types/node": "catalog:",
+    "knip": "^5.85.0",
     "tsx": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",

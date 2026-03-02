@@ -1,0 +1,57 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [],
+      "project": []
+    },
+    "apps/*": {
+      "entry": ["src/server.ts", "src/main.tsx"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "packages/domain/*": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/platform/*": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ui": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "packages/*": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  },
+  "ignore": [
+    "**/*.d.ts",
+    "**/*.config.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.test.tsx",
+    "**/*.spec.tsx",
+    "**/vitest.config.*",
+    "**/drizzle/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/e2e/**"
+  ],
+  "ignoreDependencies": [
+    "@types/node",
+    "@types/react",
+    "@types/react-dom",
+    "@types/pg",
+    "@types/nodemailer",
+    "typescript",
+    "vitest",
+    "tsx",
+    "turbo",
+    "@biomejs/biome",
+    "@effect/language-service"
+  ],
+  "ignoreBinaries": ["tmuxinator"]
+}
