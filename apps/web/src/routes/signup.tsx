@@ -1,13 +1,9 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
-import { Link } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
 
-/**
- * Signup page - matches https://app.latitude.so/login design
- */
-
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001"
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/v1"
 const WEB_BASE_URL = import.meta.env.VITE_WEB_URL ?? "http://localhost:3000"
 
 // Latitude logo SVG - actual implementation from legacy
@@ -39,7 +35,11 @@ const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
-export default function SignupPage() {
+export const Route = createFileRoute("/signup")({
+  component: SignupPage,
+})
+
+function SignupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSuccess, setIsSuccess] = useState(false)
@@ -58,19 +58,24 @@ export default function SignupPage() {
     setEmail(emailValue)
 
     try {
+      // Generate a secure random password for passwordless auth
+      const array = new Uint8Array(32)
+      crypto.getRandomValues(array)
+      const password = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
+
       // Step 1: Create user account
-      const response = await fetch(`${API_BASE_URL}/auth/sign-up/email`, {
+      const signupResponse = await fetch(`${API_BASE_URL}/auth/sign-up/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: emailValue,
           name,
-          password: generateSecurePassword(),
+          password,
         }),
       })
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
+      if (!signupResponse.ok) {
+        const data = await signupResponse.json().catch(() => ({}))
         throw new Error(data.message ?? "Failed to create account")
       }
 
@@ -286,11 +291,4 @@ export default function SignupPage() {
       </div>
     </div>
   )
-}
-
-// Generate a secure random password for passwordless auth
-function generateSecurePassword(): string {
-  const array = new Uint8Array(32)
-  crypto.getRandomValues(array)
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
 }
