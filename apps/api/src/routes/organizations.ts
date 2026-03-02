@@ -3,13 +3,14 @@ import {
   createOrganizationUseCase,
   getOrganizationMembersUseCase,
 } from "@domain/organizations"
-import { OrganizationId, UserId, generateId } from "@domain/shared-kernel"
+import { OrganizationId, generateId } from "@domain/shared-kernel"
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { getPostgresClient } from "../clients.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
+import type { AuthContext } from "../types.ts"
 
 /**
  * Organization routes
@@ -20,9 +21,6 @@ import { extractParam } from "../lib/effect-utils.ts"
  * - GET /organizations/:id/members - List organization members
  * - DELETE /organizations/:id - Delete organization
  */
-
-// Placeholder for getting current user ID - in production, get from auth context
-const getCurrentUserId = () => "user-id-placeholder"
 
 export const createOrganizationsRoutes = () => {
   const repos = createRepositories(getPostgresClient().db)
@@ -35,11 +33,13 @@ export const createOrganizationsRoutes = () => {
       readonly slug: string
     }
 
+    const auth = c.get("auth") as AuthContext
+
     const input: CreateOrganizationInput = {
       id: OrganizationId(generateId()),
       name: body.name,
       slug: body.slug,
-      creatorId: UserId(getCurrentUserId()),
+      creatorId: auth.userId,
     }
 
     const organization = await Effect.runPromise(createOrganizationUseCase(repos.organization)(input))

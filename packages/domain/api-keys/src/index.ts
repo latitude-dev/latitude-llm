@@ -24,4 +24,6 @@ export {
   ApiKeyAlreadyRevokedError,
   type RevokeApiKeyInput,
   type RevokeApiKeyError,
+  type RevokeApiKeyDeps,
+  type CacheInvalidator,
 } from "./use-cases/revoke-api-key.ts"

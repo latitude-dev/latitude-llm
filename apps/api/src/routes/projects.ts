@@ -1,11 +1,12 @@
 import { type CreateProjectInput, type Project, createProjectUseCase, listProjectsUseCase } from "@domain/projects"
-import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared-kernel"
+import { OrganizationId, ProjectId, generateId } from "@domain/shared-kernel"
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { getPostgresClient } from "../clients.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
+import type { AuthContext } from "../types.ts"
 
 /**
  * Project routes
@@ -17,9 +18,6 @@ import { extractParam } from "../lib/effect-utils.ts"
  * - DELETE /organizations/:organizationId/projects/:id - Soft delete project
  */
 
-// Placeholder for getting current user ID - in production, get from auth context
-const getCurrentUserId = () => "user-id-placeholder"
-
 export const createProjectsRoutes = () => {
   const repos = createRepositories(getPostgresClient().db)
   const app = new Hono()
@@ -30,6 +28,8 @@ export const createProjectsRoutes = () => {
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID is required" })
     }
+
+    const auth = c.get("auth") as AuthContext
 
     const body = (await c.req.json()) as {
       readonly name: string
@@ -48,7 +48,7 @@ export const createProjectsRoutes = () => {
       name: body.name,
       slug,
       ...(body.description !== undefined && { description: body.description }),
-      createdById: UserId(getCurrentUserId()),
+      createdById: auth.userId,
     }
 
     const project = await Effect.runPromise(createProjectUseCase(repos.project)(input))

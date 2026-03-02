@@ -1,10 +1,14 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import { createBetterAuth } from "@platform/auth-better"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { type PostgresDb, createPostgresClient } from "@platform/db-postgres"
+import { parseEnv, parseEnvOptional } from "@platform/env"
+import { Effect } from "effect"
 import type { Pool } from "pg"
 
 let postgresClientInstance: { db: PostgresDb; pool: Pool } | undefined
 let clickhouseInstance: ClickHouseClient | undefined
+let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 
 export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
   if (!postgresClientInstance) {
@@ -18,4 +22,36 @@ export const getClickhouseClient = (): ClickHouseClient => {
     clickhouseInstance = createClickhouseClient()
   }
   return clickhouseInstance
+}
+
+/**
+ * Get or create the Better Auth instance.
+ *
+ * This is a singleton to ensure the same auth instance is used
+ * across routes and middleware.
+ */
+export const getBetterAuth = () => {
+  if (!betterAuthInstance) {
+    const { db } = getPostgresClient()
+    const baseUrl = Effect.runSync(parseEnv(process.env.BETTER_AUTH_URL, "string"))
+    const betterAuthSecret = Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"))
+    const webUrl = Effect.runSync(parseEnvOptional(process.env.WEB_URL, "string")) ?? "http://localhost:3000"
+
+    // Parse trusted origins from comma-separated env var or fallback to webUrl
+    const trustedOriginsEnv = Effect.runSync(parseEnvOptional(process.env.TRUSTED_ORIGINS, "string"))
+    const trustedOrigins = trustedOriginsEnv
+      ? trustedOriginsEnv
+          .split(",")
+          .map((o) => o.trim())
+          .filter(Boolean)
+      : [webUrl]
+
+    betterAuthInstance = createBetterAuth({
+      db,
+      secret: betterAuthSecret,
+      baseUrl,
+      trustedOrigins,
+    })
+  }
+  return betterAuthInstance
 }

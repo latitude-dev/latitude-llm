@@ -1,5 +1,11 @@
-import { type GenerateApiKeyInput, generateApiKeyUseCase, revokeApiKeyUseCase } from "@domain/api-keys"
+import {
+  type CacheInvalidator,
+  type GenerateApiKeyInput,
+  generateApiKeyUseCase,
+  revokeApiKeyUseCase,
+} from "@domain/api-keys"
 import { ApiKeyId, OrganizationId, generateId } from "@domain/shared-kernel"
+import type { RedisClient } from "@platform/cache-redis"
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
@@ -15,8 +21,23 @@ import { extractParam } from "../lib/effect-utils.ts"
  * - DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
  */
 
-export const createApiKeysRoutes = () => {
+/**
+ * Create a cache invalidator for API keys using Redis.
+ * Cache invalidation failures are logged but don't fail the operation.
+ */
+const createApiKeyCacheInvalidator = (redis: RedisClient): CacheInvalidator => ({
+  delete: (token: string) =>
+    Effect.tryPromise({
+      try: () => redis.del(`apikey:${token}`),
+      catch: () => {
+        // Silently ignore - DB is source of truth
+      },
+    }).pipe(Effect.orDie),
+})
+
+export const createApiKeysRoutes = (redis: RedisClient) => {
   const repos = createRepositories(getPostgresClient().db)
+  const cacheInvalidator = createApiKeyCacheInvalidator(redis)
   const app = new Hono()
 
   // POST /organizations/:organizationId/api-keys - Generate API key
@@ -58,7 +79,7 @@ export const createApiKeysRoutes = () => {
       throw new BadRequestError({ httpMessage: "API Key ID is required" })
     }
 
-    await Effect.runPromise(revokeApiKeyUseCase(repos.apiKey)({ id }))
+    await Effect.runPromise(revokeApiKeyUseCase({ repository: repos.apiKey, cacheInvalidator })({ id }))
     return c.body(null, 204)
   })
 

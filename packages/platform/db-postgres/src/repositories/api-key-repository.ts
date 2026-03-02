@@ -1,6 +1,6 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
 import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import * as schema from "../schema/index.ts"
@@ -117,6 +117,28 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
             })
             .where(eq(schema.apiKeys.id, id as string)),
         catch: (error) => toRepositoryError(error, "touch"),
+      })
+    }),
+
+  touchBatch: (ids: readonly ApiKeyId[]) =>
+    Effect.gen(function* () {
+      if (ids.length === 0) {
+        return
+      }
+
+      const now = new Date()
+      const idStrings = ids.map((id) => id as string)
+
+      yield* Effect.tryPromise({
+        try: () =>
+          db
+            .update(schema.apiKeys)
+            .set({
+              lastUsedAt: now,
+              updatedAt: now,
+            })
+            .where(inArray(schema.apiKeys.id, idStrings)),
+        catch: (error) => toRepositoryError(error, "touchBatch"),
       })
     }),
 })

@@ -11,6 +11,7 @@ import type { ApiKeyRepository } from "../ports/api-key-repository.ts"
  * 2. Checks if it exists and is not already revoked
  * 3. Marks it as revoked (sets deletedAt)
  * 4. Persists the changes
+ * 5. Invalidates the cache entry (security-critical)
  */
 export interface RevokeApiKeyInput {
   readonly id: ApiKeyId
@@ -32,12 +33,29 @@ export class ApiKeyAlreadyRevokedError extends Data.TaggedError("ApiKeyAlreadyRe
 
 export type RevokeApiKeyError = RepositoryError | NotFoundError | ApiKeyNotFoundError | ApiKeyAlreadyRevokedError
 
+/**
+ * Port for cache invalidation operations.
+ * Implemented by platform layer (e.g., Redis adapter).
+ */
+export interface CacheInvalidator {
+  /**
+   * Delete a cached API key entry.
+   * @param token The API key token to invalidate
+   */
+  readonly delete: (token: string) => Effect.Effect<void, never>
+}
+
+export interface RevokeApiKeyDeps {
+  readonly repository: ApiKeyRepository
+  readonly cacheInvalidator: CacheInvalidator
+}
+
 export const revokeApiKeyUseCase =
-  (repository: ApiKeyRepository) =>
+  (deps: RevokeApiKeyDeps) =>
   (input: RevokeApiKeyInput): Effect.Effect<ApiKey, RevokeApiKeyError> => {
     return Effect.gen(function* () {
       // Find the API key
-      const apiKey = yield* repository.findById(input.id)
+      const apiKey = yield* deps.repository.findById(input.id)
 
       if (!apiKey) {
         return yield* new ApiKeyNotFoundError({ id: input.id })
@@ -52,7 +70,11 @@ export const revokeApiKeyUseCase =
       const revokedApiKey = revoke(apiKey)
 
       // Persist
-      yield* repository.save(revokedApiKey)
+      yield* deps.repository.save(revokedApiKey)
+
+      // Invalidate cache entry (security-critical)
+      // This ensures revoked keys are immediately rejected
+      yield* deps.cacheInvalidator.delete(apiKey.token)
 
       return revokedApiKey
     })
