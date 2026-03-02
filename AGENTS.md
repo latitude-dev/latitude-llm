@@ -7,6 +7,7 @@ Operational guide for coding agents working in this repository.
 ### App Boundaries (`apps/*`)
 
 Apps only handle:
+
 - Input validation
 - Authentication and authorization
 - Workspace access enforcement
@@ -17,6 +18,7 @@ No business logic in handlers, controllers, or jobs.
 ### Domain Layer (`packages/domain/*`)
 
 Business logic lives here. Domain packages expose:
+
 - Use-cases
 - Domain types and errors
 - Dependency ports (interfaces/tags)
@@ -59,7 +61,7 @@ Business logic lives here. Domain packages expose:
 
 ## Required Toolchain
 
-- Node.js: `>=26` (see root `package.json`)
+- Node.js: `>=25` (see root `package.json`)
 - Package manager: `pnpm@9`
 - Task runner: `turbo` via root scripts
 - Lint/format: Biome (`@biomejs/biome` 1.9.x)
@@ -117,7 +119,7 @@ pnpm typecheck
 pnpm test
 ```
 
-CI workflows (`node-lint.yml`, `typecheck.yml`, `test.yml`) use Node 26 + pnpm 9 and run the same commands.
+CI workflows (`node-lint.yml`, `typecheck.yml`, `test.yml`) use Node 25 + pnpm 9 and run the same commands.
 
 ## Code Style
 
