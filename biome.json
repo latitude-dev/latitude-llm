@@ -19,6 +19,6 @@
     }
   },
   "files": {
-    "ignore": ["dist/**", "coverage/**", ".turbo/**", "node_modules/**"]
+    "ignore": ["dist/**", "coverage/**", ".turbo/**", "node_modules/**", "**/*.gen.ts"]
   }
 }

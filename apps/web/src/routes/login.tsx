@@ -1,22 +1,22 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
-import { Link } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
 
-/**
- * Login page - matches https://app.latitude.so/login exactly
- */
-
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001"
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001/v1"
 const WEB_BASE_URL = import.meta.env.VITE_WEB_URL ?? "http://localhost:3000"
 
-export default function LoginPage() {
+export const Route = createFileRoute("/login")({
+  component: LoginPage,
+})
+
+function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
   const [email, setEmail] = useState("")
 
-  const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isLoading) return
 
