@@ -41,10 +41,17 @@ export const createProjectsRoutes = () => {
       readonly description?: string;
     };
 
+    // Generate slug from name
+    const slug = body.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
     const input: CreateProjectInput = {
       id: ProjectId(generateId()),
       organizationId,
       name: body.name,
+      slug,
       ...(body.description !== undefined && { description: body.description }),
       createdById: UserId(getCurrentUserId()),
     };

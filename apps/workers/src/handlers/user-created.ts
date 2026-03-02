@@ -1,4 +1,5 @@
-import { createLogger } from "@platform/observability";
+import { createLogger } from "@repo/observability";
+import { Effect } from "effect";
 
 /**
  * User created event handler
@@ -7,7 +8,7 @@ import { createLogger } from "@platform/observability";
  * Uses Better Auth's organization API directly.
  */
 
-const logger = createLogger({ service: "user-created-handler" });
+const logger = createLogger("user-created-handler");
 
 export interface UserCreatedHandlerDeps {
   readonly betterAuthApi: {
@@ -21,47 +22,69 @@ export interface UserCreatedHandlerDeps {
   };
 }
 
-export const handleUserCreated = async (
-  deps: UserCreatedHandlerDeps,
-  event: {
-    userId: string;
-    email: string;
-    name?: string;
-  },
-) => {
-  try {
-    const userName = event.name ?? event.email.split("@")[0];
-    const workspaceName = `${userName}'s Workspace`;
-    const slug = generateSlug(workspaceName);
+export interface UserCreatedEvent {
+  readonly userId: string;
+  readonly email: string;
+  readonly name?: string;
+}
 
-    logger.info("Creating default workspace for new user", {
-      userId: event.userId,
-      workspaceName,
-    });
+export interface WorkspaceCreationSuccess {
+  readonly success: true;
+  readonly organizationId: string;
+}
 
-    // Create workspace using Better Auth's organization API
-    const org = await deps.betterAuthApi.organization.create({
-      name: workspaceName,
-      slug,
-      userId: event.userId,
-    });
+export interface WorkspaceCreationFailure {
+  readonly success: false;
+  readonly error: string;
+}
 
-    logger.info("Workspace created successfully", {
-      userId: event.userId,
-      organizationId: org.id,
-    });
+export type WorkspaceCreationResult = WorkspaceCreationSuccess | WorkspaceCreationFailure;
 
-    return { success: true, organizationId: org.id };
-  } catch (error) {
-    logger.error("Failed to create workspace for new user", {
-      userId: event.userId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-
-    // Don't throw - we don't want to block user signup if workspace creation fails
-    // User can manually create a workspace later
-    return { success: false, error };
+class WorkspaceCreationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "WorkspaceCreationError";
   }
+}
+
+export const handleUserCreated = (
+  deps: UserCreatedHandlerDeps,
+  event: UserCreatedEvent,
+): Effect.Effect<WorkspaceCreationResult, never> => {
+  const userName = event.name ?? event.email.split("@")[0];
+  const workspaceName = `${userName}'s Workspace`;
+  const slug = generateSlug(workspaceName);
+
+  return Effect.tryPromise({
+    try: async () => {
+      logger.info(
+        `Creating default workspace for new user: ${event.userId}, workspace: ${workspaceName}`,
+      );
+
+      const org = await deps.betterAuthApi.organization.create({
+        name: workspaceName,
+        slug,
+        userId: event.userId,
+      });
+
+      logger.info(`Workspace created successfully: ${event.userId}, org: ${org.id}`);
+
+      return { success: true as const, organizationId: org.id };
+    },
+    catch: (error) =>
+      new WorkspaceCreationError(error instanceof Error ? error.message : String(error)),
+  }).pipe(
+    Effect.match({
+      onSuccess: (result) => result,
+      onFailure: (error) => {
+        logger.info(
+          `Failed to create workspace for new user: ${event.userId}, error: ${error.message}`,
+        );
+        // Return failure result - don't propagate error
+        return { success: false as const, error: error.message };
+      },
+    }),
+  );
 };
 
 // Generate URL-friendly slug from name

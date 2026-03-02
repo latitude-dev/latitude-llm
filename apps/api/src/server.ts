@@ -1,11 +1,12 @@
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
-import { parseEnv } from "@platform/env";
+import { parseEnv, parseEnvOptional } from "@platform/env";
 import { createLogger } from "@repo/observability";
 import { config as loadDotenv } from "dotenv";
 import { Effect } from "effect";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { honoErrorHandler } from "./middleware/error-handler.js";
 import { registerRoutes } from "./routes/index.js";
 
@@ -19,6 +20,18 @@ const logger = createLogger("api");
 
 // Register global error handler
 app.onError(honoErrorHandler);
+
+// Enable CORS for web frontend
+const webUrl =
+  Effect.runSync(parseEnvOptional(process.env.WEB_URL, "string")) ?? "http://localhost:3000";
+app.use(
+  cors({
+    origin: webUrl,
+    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    credentials: true,
+  }),
+);
 
 registerRoutes({ app });
 

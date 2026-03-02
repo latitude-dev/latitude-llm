@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
 /**
- * Login page - matches https://app.latitude.so/login exactly
+ * Signup page - matches https://app.latitude.so/login design
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
@@ -38,23 +38,43 @@ const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
-  const [isSent, setIsSent] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [email, setEmail] = useState("");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isLoading) return;
 
-    const emailValue = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value;
-    setEmail(emailValue);
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const emailValue = formData.get("email") as string;
+
     setIsLoading(true);
     setError(undefined);
+    setEmail(emailValue);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/sign-in/magic-link`, {
+      // Step 1: Create user account
+      const response = await fetch(`${API_BASE_URL}/auth/sign-up/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailValue,
+          name,
+          password: generateSecurePassword(),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message ?? "Failed to create account");
+      }
+
+      // Step 2: Send magic link for authentication
+      const magicLinkResponse = await fetch(`${API_BASE_URL}/auth/sign-in/magic-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -64,12 +84,12 @@ export default function LoginPage() {
         }),
       });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
+      if (!magicLinkResponse.ok) {
+        const data = await magicLinkResponse.json().catch(() => ({}));
         throw new Error(data.message ?? "Failed to send magic link");
       }
 
-      setIsSent(true);
+      setIsSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -85,7 +105,7 @@ export default function LoginPage() {
     window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=github`;
   };
 
-  if (isSent) {
+  if (isSuccess) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
         <div className="flex flex-col items-center justify-center gap-y-6 max-w-[22rem] w-full">
@@ -106,7 +126,7 @@ export default function LoginPage() {
               variant="ghost"
               className="w-full"
               onClick={() => {
-                setIsSent(false);
+                setIsSuccess(false);
                 setEmail("");
               }}
             >
@@ -133,6 +153,19 @@ export default function LoginPage() {
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
+              <Text.H6 weight="medium">Name</Text.H6>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Jon Snow"
+                required
+                autoComplete="name"
+                className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
               <Text.H6 weight="medium">Email</Text.H6>
               <input
                 id="email"
@@ -141,7 +174,18 @@ export default function LoginPage() {
                 placeholder="Ex.: jon@example.com"
                 required
                 autoComplete="email"
-                data-autofocus="true"
+                className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Text.H6 weight="medium">Workspace Name</Text.H6>
+              <input
+                id="companyName"
+                name="companyName"
+                type="text"
+                placeholder="Acme Inc."
+                required
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </div>
@@ -159,7 +203,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
             >
-              {isLoading ? "Sending..." : "Login"}
+              {isLoading ? "Creating..." : "Create account"}
             </Button>
           </form>
 
@@ -173,6 +217,7 @@ export default function LoginPage() {
           {/* OAuth buttons */}
           <div className="flex flex-col gap-2">
             <Button
+              type="button"
               variant="ghost"
               onClick={handleGoogleClick}
               disabled={isLoading}
@@ -183,7 +228,7 @@ export default function LoginPage() {
             </Button>
 
             <Button
-              size="lg"
+              type="button"
               variant="ghost"
               onClick={handleGitHubClick}
               disabled={isLoading}
@@ -227,12 +272,12 @@ export default function LoginPage() {
           </Text.H6>
 
           <Text.H6 color="foregroundMuted" align="center">
-            Do not have an account yet?{" "}
+            Already have an account?{" "}
             <Link
-              to="/signup"
+              to="/login"
               className="text-accent-foreground underline hover:no-underline inline-flex items-center gap-1"
             >
-              Sign up
+              Sign in
               <svg
                 className="h-4 w-4"
                 fill="none"
@@ -249,4 +294,11 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+// Generate a secure random password for passwordless auth
+function generateSecurePassword(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

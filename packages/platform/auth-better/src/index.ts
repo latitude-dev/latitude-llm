@@ -41,6 +41,8 @@ export interface BetterAuthConfig {
   }) => Promise<void>;
   // User creation hook for onboarding
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>;
+  // Trusted origins for callback URLs
+  readonly trustedOrigins?: string[];
 }
 
 export interface StripePlanConfig {
@@ -121,7 +123,11 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       subscription: {
         enabled: true,
         plans: config.subscriptionPlans ?? [],
-        authorizeReference: async ({ user, referenceId, action }) => {
+        authorizeReference: async ({
+          user,
+          referenceId,
+          action,
+        }: { user: { id: string }; referenceId: string; action: string }) => {
           // Default authorization: users can manage their own subscriptions
           // For organization subscriptions, check if user is owner/admin
           if (referenceId !== user.id) {
@@ -155,7 +161,10 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       },
     }),
     baseURL: baseUrl,
+    basePath: "/auth", // Mount at /auth to match our Hono route mounting
     secret,
+    // Trusted origins for callback URL validation
+    trustedOrigins: config.trustedOrigins ?? [],
     // OAuth providers
     socialProviders: {
       ...(googleClientId &&
