@@ -12,7 +12,7 @@ const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "develop
 const envFilePath = fileURLToPath(new URL(`../../.env.${nodeEnv}`, import.meta.url))
 
 if (existsSync(envFilePath)) {
-  loadDotenv({ path: envFilePath })
+  loadDotenv({ path: envFilePath, quiet: true })
 }
 
 const webPortNumber = Effect.runSync(parseEnv(process.env.LAT_WEB_PORT, "number", 3000))

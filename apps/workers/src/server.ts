@@ -11,7 +11,7 @@ const nodeEnv = process.env.NODE_ENV || "development"
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
 
 if (existsSync(envFilePath)) {
-  loadDotenv({ path: envFilePath })
+  loadDotenv({ path: envFilePath, quiet: true })
 }
 
 const redisConnection = getRedisConnection()

@@ -9,7 +9,7 @@ import { defineConfig } from "vitest/config"
 const findAndLoadEnvTest = () => {
   const envTestPath = resolve(process.cwd(), ".env.test")
   if (existsSync(envTestPath)) {
-    loadDotenv({ path: envTestPath })
+    loadDotenv({ path: envTestPath, quiet: true })
     return
   }
 
@@ -18,7 +18,7 @@ const findAndLoadEnvTest = () => {
   for (let i = 0; i < 5; i++) {
     const parentEnvPath = resolve(currentDir, "..", ".env.test")
     if (existsSync(parentEnvPath)) {
-      loadDotenv({ path: parentEnvPath })
+      loadDotenv({ path: parentEnvPath, quiet: true })
       return
     }
     currentDir = resolve(currentDir, "..")
@@ -28,7 +28,7 @@ const findAndLoadEnvTest = () => {
   const __dirname = fileURLToPath(new URL(".", import.meta.url))
   const fromConfigDir = resolve(__dirname, "..", "..", "..", ".env.test")
   if (existsSync(fromConfigDir)) {
-    loadDotenv({ path: fromConfigDir })
+    loadDotenv({ path: fromConfigDir, quiet: true })
   }
 }
 

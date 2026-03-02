@@ -53,7 +53,7 @@ if (!envPath) {
 }
 
 console.log(`📝 Loading environment from: ${envPath}`)
-loadDotenv({ path: envPath })
+loadDotenv({ path: envPath, quiet: true })
 
 const databaseUrl = process.env.LAT_DATABASE_URL
 if (!databaseUrl) {
