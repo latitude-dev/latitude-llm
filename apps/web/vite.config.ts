@@ -15,7 +15,7 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath })
 }
 
-const webPortNumber = Effect.runSync(parseEnv(process.env.WEB_PORT, "number", 3000))
+const webPortNumber = Effect.runSync(parseEnv(process.env.LAT_WEB_PORT, "number", 3000))
 
 export default defineConfig({
   plugins: [tanstackStart(), tailwindcss(), react()],

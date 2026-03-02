@@ -21,10 +21,10 @@ type MutablePartial<T> = {
 }
 
 const getConfigFromEnv = (): Partial<MailgunConfig> => {
-  const apiKey = Effect.runSync(parseEnvOptional(process.env.MAILGUN_API_KEY, "string"))
-  const domain = Effect.runSync(parseEnvOptional(process.env.MAILGUN_DOMAIN, "string"))
-  const from = Effect.runSync(parseEnvOptional(process.env.MAILGUN_FROM, "string"))
-  const region = Effect.runSync(parseEnvOptional(process.env.MAILGUN_REGION, "string"))
+  const apiKey = Effect.runSync(parseEnvOptional(process.env.LAT_MAILGUN_API_KEY, "string"))
+  const domain = Effect.runSync(parseEnvOptional(process.env.LAT_MAILGUN_DOMAIN, "string"))
+  const from = Effect.runSync(parseEnvOptional(process.env.LAT_MAILGUN_FROM, "string"))
+  const region = Effect.runSync(parseEnvOptional(process.env.LAT_MAILGUN_REGION, "string"))
 
   const config: MutablePartial<MailgunConfig> = {}
   if (apiKey) config.apiKey = apiKey

@@ -33,9 +33,9 @@ const defaultConfig: NodemailerConfig = {
 }
 
 const getConfigFromEnv = (): NodemailerConfig => {
-  const host = Effect.runSync(parseEnvOptional(process.env.MAILPIT_HOST, "string")) ?? defaultConfig.host
-  const portStr = Effect.runSync(parseEnvOptional(process.env.MAILPIT_PORT, "string")) ?? String(defaultConfig.port)
-  const from = Effect.runSync(parseEnvOptional(process.env.MAILPIT_FROM, "string")) ?? defaultConfig.from
+  const host = Effect.runSync(parseEnvOptional(process.env.LAT_MAILPIT_HOST, "string")) ?? defaultConfig.host
+  const portStr = Effect.runSync(parseEnvOptional(process.env.LAT_MAILPIT_PORT, "string")) ?? String(defaultConfig.port)
+  const from = Effect.runSync(parseEnvOptional(process.env.LAT_MAILPIT_FROM, "string")) ?? defaultConfig.from
 
   return {
     host,

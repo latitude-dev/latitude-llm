@@ -8,10 +8,9 @@ windows:
       layout: main-vertical
       panes:
         - nvim
-        -
   - infra:
       panes:
-        - docker compose up
+        - docker compose up --menu=false
   - db:
       panes:
         - pnpm --filter @platform/db-postgres pg:studio

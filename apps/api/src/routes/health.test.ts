@@ -12,7 +12,7 @@ describe("GET /health", () => {
   })
 
   describe("with database connections", () => {
-    // These tests require DATABASE_URL and CLICKHOUSE_URL to be set
+    // These tests require LAT_DATABASE_URL and LAT_CLICKHOUSE_URL to be set
     // Run with: pnpm --filter @app/api test
     // The .env.test file at repo root is automatically loaded by vitest config
 

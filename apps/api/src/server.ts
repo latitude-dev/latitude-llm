@@ -16,7 +16,7 @@ const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.met
 if (existsSync(envFilePath)) loadDotenv({ path: envFilePath })
 
 const app = new Hono()
-const port = Effect.runSync(parseEnv(process.env.PORT, "number", 3001))
+const port = Effect.runSync(parseEnv(process.env.LAT_API_PORT, "number", 3001))
 const logger = createLogger("api")
 
 // Register global error handler
@@ -24,9 +24,9 @@ app.onError(honoErrorHandler)
 
 // Parse CORS allowed origins from environment variable
 // Format: comma-separated list of origins
-// Example: CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+// Example: LAT_CORS_ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
 const parseAllowedOrigins = (): string[] => {
-  const originsEnv = Effect.runSync(parseEnvOptional(process.env.CORS_ALLOWED_ORIGINS, "string"))
+  const originsEnv = Effect.runSync(parseEnvOptional(process.env.LAT_CORS_ALLOWED_ORIGINS, "string"))
 
   if (originsEnv) {
     return originsEnv
@@ -41,7 +41,7 @@ const parseAllowedOrigins = (): string[] => {
   }
 
   // In production, require explicit configuration
-  logger.warn("CORS_ALLOWED_ORIGINS not set, using empty whitelist (will reject all browser requests)")
+  logger.warn("LAT_CORS_ALLOWED_ORIGINS not set, using empty whitelist (will reject all browser requests)")
   return []
 }
 
