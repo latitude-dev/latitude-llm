@@ -1,4 +1,4 @@
-import { parseEnvOptional } from "@platform/env"
+import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
 import type { Context, Next } from "hono"
 import { getRedisClient } from "../clients.ts"
@@ -94,7 +94,7 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
  */
 export const createSignUpIpRateLimiter = () => {
   // In development, be more permissive
-  const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development"
+  const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"))
   const isDevelopment = nodeEnv === "development"
 
   return createRedisRateLimiter({
@@ -116,7 +116,7 @@ export const createSignUpIpRateLimiter = () => {
  */
 export const createAuthRateLimiter = () => {
   // In development, be more permissive
-  const nodeEnv = Effect.runSync(parseEnvOptional(process.env.NODE_ENV, "string")) ?? "development"
+  const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"))
   const isDevelopment = nodeEnv === "development"
 
   return createRedisRateLimiter({

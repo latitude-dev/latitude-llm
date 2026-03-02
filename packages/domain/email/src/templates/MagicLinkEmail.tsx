@@ -1,4 +1,5 @@
 import { Section } from "@react-email/components"
+import React from "react"
 import { ContainerLayout } from "../components/ContainerLayout.js"
 
 interface MagicLinkEmailProps {
