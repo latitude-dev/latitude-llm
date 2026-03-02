@@ -124,3 +124,6 @@ packages/cli/prompts
 **/*/tsconfig.tsbuildinfo
 
 .localstorage*
+docs/
+todos/
+compound-engineering.*
