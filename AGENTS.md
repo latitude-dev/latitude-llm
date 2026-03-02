@@ -62,7 +62,7 @@ Business logic lives here. Domain packages expose:
 ## Required Toolchain
 
 - Node.js: `>=25` (see root `package.json`)
-- Package manager: `pnpm@9`
+- Package manager: check `package.json` and `packageManager` field (e.g. `pnpm` 10.30.0)
 - Task runner: `turbo` via root scripts
 - Lint/format: Biome (`@biomejs/biome` 1.9.x)
 - Tests: Vitest 3.x
@@ -74,14 +74,14 @@ Business logic lives here. Domain packages expose:
 
 - `pnpm dev` - run all workspace `dev` tasks via Turbo
 - `pnpm build` - run all workspace builds
-- `pnpm lint` - run all workspace lint scripts (also auto-fixes with `--write`)
+- `pnpm check` - run all workspace lint and format check scripts
 - `pnpm typecheck` - run all workspace typechecks
 - `pnpm test` - run all workspace tests
 
 ### Package-Scoped (use `--filter`)
 
 ```bash
-pnpm --filter @app/api lint
+pnpm --filter @app/api check
 pnpm --filter @app/api typecheck
 pnpm --filter @app/api build
 pnpm --filter @app/api test
@@ -91,7 +91,7 @@ Path-based filtering also works:
 
 ```bash
 pnpm --filter ./apps/api test
-pnpm --filter ./packages/domain/workspaces lint
+pnpm --filter ./packages/domain/workspaces check
 ```
 
 ### Single-Test Workflows
@@ -114,12 +114,12 @@ pnpm --filter @app/api test -- src/some-file.test.ts -t "returns 200"
 Before opening PRs:
 
 ```bash
-pnpm lint
+pnpm check
 pnpm typecheck
 pnpm test
 ```
 
-CI workflows (`node-lint.yml`, `typecheck.yml`, `test.yml`) use Node 25 + pnpm 9 and run the same commands.
+CI workflows (`node-check.yml`, `typecheck.yml`, `test.yml`) use Node 25 + pnpm 9 and run the same commands.
 
 ## Code Style
 
