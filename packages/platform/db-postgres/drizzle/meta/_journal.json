@@ -22,6 +22,13 @@
       "when": 1772406448036,
       "tag": "0002_tiny_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772470695094,
+      "tag": "0003_minor_lily_hollister",
+      "breakpoints": true
     }
   ]
 }

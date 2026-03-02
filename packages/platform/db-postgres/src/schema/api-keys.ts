@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm"
-import { pgPolicy, pgSchema, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core"
+import { pgPolicy, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
 /**
  * API Keys table - stores API keys for organization access.
@@ -16,8 +16,8 @@ const latitudeSchema = pgSchema("latitude")
 export const apiKeys = latitudeSchema.table(
   "api_keys",
   {
-    id: text("id").primaryKey(), // UUID, consistent with Better Auth
-    token: uuid("token").defaultRandom().unique().notNull(),
+    id: text("id").primaryKey(), // CUID2, consistent with Better Auth
+    token: text("token").notNull().unique(),
     organizationId: text("organization_id").notNull(),
     name: varchar("name", { length: 256 }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
