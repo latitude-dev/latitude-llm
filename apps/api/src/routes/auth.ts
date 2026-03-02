@@ -1,7 +1,7 @@
 import { createBetterAuth } from "@platform/auth-better"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createUserPostgresRepository } from "@platform/db-postgres"
-import { parseEnv } from "@platform/env"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import type { User } from "better-auth"
 import { Effect } from "effect"
 import { Hono } from "hono"
@@ -11,7 +11,7 @@ import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts"
 
 // Email template
 import { magicLinkTemplate, sendEmail } from "@domain/email"
-import { createMailgunEmailSender } from "@platform/email-mailgun"
+import { createNodemailerEmailSender } from "@platform/email-nodemailer"
 
 /**
  * Auth routes for Better Auth
@@ -57,6 +57,15 @@ export const createAuthRoutes = () => {
   const baseUrl = Effect.runSync(parseEnv(process.env.BETTER_AUTH_URL, "string"))
   const webUrl = Effect.runSync(parseEnv(process.env.WEB_URL, "string"))
 
+  // Parse trusted origins from comma-separated env var or fallback to webUrl
+  const trustedOriginsEnv = Effect.runSync(parseEnvOptional(process.env.TRUSTED_ORIGINS, "string"))
+  const trustedOrigins = trustedOriginsEnv
+    ? trustedOriginsEnv
+        .split(",")
+        .map((o) => o.trim())
+        .filter(Boolean)
+    : [webUrl]
+
   // Initialize dependencies where they are used
   const { db } = getPostgresClient()
   const redisConn = createRedisConnection()
@@ -65,7 +74,7 @@ export const createAuthRoutes = () => {
   const betterAuthSecret = Effect.runSync(parseEnv(process.env.BETTER_AUTH_SECRET, "string"))
 
   // Create email sender adapter
-  const emailSender = createMailgunEmailSender()
+  const emailSender = createNodemailerEmailSender()
   const sendEmailUseCase = sendEmail({ emailSender })
 
   // Create user repository
@@ -75,8 +84,7 @@ export const createAuthRoutes = () => {
     db,
     secret: betterAuthSecret,
     baseUrl,
-    // Allow web app origin for magic link callbacks
-    trustedOrigins: [webUrl],
+    trustedOrigins,
     // Magic Link email configuration
     sendMagicLink: async ({ email, url }: { email: string; url: string; token: string }) => {
       // Find user by email using the repository
@@ -220,14 +228,6 @@ export const createAuthRoutes = () => {
   })
 
   // Mount Better Auth handlers at /auth/*
-  // This handles all Better Auth endpoints:
-  // - /auth/sign-in/social
-  // - /auth/sign-in/social/callback
-  // - /auth/sign-in/magic-link
-  // - /auth/session
-  // - /auth/sign-out
-  // - /auth/organization/*
-  // Note: This must come last to not override our custom endpoints above
   app.all("/*", async (c) => betterAuthHandler(c.req.raw))
 
   return app

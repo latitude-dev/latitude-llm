@@ -140,9 +140,9 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
-      '@platform/email-mailgun':
+      '@platform/email-nodemailer':
         specifier: workspace:*
-        version: link:../../packages/platform/email-mailgun
+        version: link:../../packages/platform/email-nodemailer
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env

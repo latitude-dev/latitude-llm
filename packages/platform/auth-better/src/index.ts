@@ -152,7 +152,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       },
     }),
     baseURL: baseUrl,
-    basePath: "/auth", // Mount at /auth to match our Hono route mounting
+    basePath: "/auth", // Better Auth expects /auth prefix in URLs
     secret,
     // Trusted origins for callback URL validation
     trustedOrigins: config.trustedOrigins ?? [],
