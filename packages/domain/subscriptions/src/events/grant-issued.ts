@@ -1,6 +1,6 @@
 import type { DomainEvent } from "@domain/events";
 import type { GrantId, OrganizationId, SubscriptionId } from "@domain/shared-kernel";
-import type { GrantType } from "../entities/grant.js";
+import type { GrantType } from "../entities/grant.ts";
 
 /**
  * GrantIssued event - emitted when a new grant is issued to an organization.

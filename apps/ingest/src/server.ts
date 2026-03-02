@@ -6,7 +6,7 @@ import { createLogger } from "@repo/observability";
 import { config as loadDotenv } from "dotenv";
 import { Effect } from "effect";
 import { Hono } from "hono";
-import { registerRoutes } from "./routes/index.js";
+import { registerRoutes } from "./routes/index.ts";
 
 const nodeEnv = process.env.NODE_ENV || "development";
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));

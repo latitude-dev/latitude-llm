@@ -1,7 +1,7 @@
 import type { OrganizationId, RepositoryError } from "@domain/shared-kernel";
 import type { Effect } from "effect";
-import type { Project } from "../entities/project.js";
-import type { ProjectRepository } from "../ports/project-repository.js";
+import type { Project } from "../entities/project.ts";
+import type { ProjectRepository } from "../ports/project-repository.ts";
 
 /**
  * List projects use case.

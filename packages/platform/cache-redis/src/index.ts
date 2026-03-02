@@ -11,11 +11,11 @@ export const redisCacheAdapter = {
   type: "redis" as const,
 };
 
-export type { RedisConnection } from "./connection.js";
+export type { RedisConnection } from "./connection.ts";
 export {
   createRedisConnection,
   createRedisConnectionEffect,
-} from "./connection.js";
+} from "./connection.ts";
 
-export type { RedisClient } from "./client.js";
-export { createRedisClient } from "./client.js";
+export type { RedisClient } from "./client.ts";
+export { createRedisClient } from "./client.ts";

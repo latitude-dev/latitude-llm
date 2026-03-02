@@ -1,9 +1,9 @@
 import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared-kernel";
 import { Effect } from "effect";
-import type { Grant, GrantType } from "../entities/grant.js";
-import type { Plan } from "../entities/plan.js";
-import type { GrantRepository } from "../ports/grant-repository.js";
-import type { SubscriptionRepository } from "../ports/subscription-repository.js";
+import type { Grant, GrantType } from "../entities/grant.ts";
+import type { Plan } from "../entities/plan.ts";
+import type { GrantRepository } from "../ports/grant-repository.ts";
+import type { SubscriptionRepository } from "../ports/subscription-repository.ts";
 
 /**
  * Quota information for a specific resource type.

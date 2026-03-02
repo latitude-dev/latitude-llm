@@ -2,8 +2,8 @@ import type { Project, ProjectRepository } from "@domain/projects";
 import { type OrganizationId, type ProjectId, toRepositoryError } from "@domain/shared-kernel";
 import { and, eq, isNull } from "drizzle-orm";
 import { Effect } from "effect";
-import type { PostgresDb } from "../client.js";
-import * as schema from "../schema/index.js";
+import type { PostgresDb } from "../client.ts";
+import * as schema from "../schema/index.ts";
 
 /**
  * Maps a database project row to a domain Project entity.

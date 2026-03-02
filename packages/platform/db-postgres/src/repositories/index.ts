@@ -1,11 +1,11 @@
-import type { PostgresDb } from "../client.js";
-import { createApiKeyPostgresRepository } from "./api-key-repository.js";
-import { createGrantPostgresRepository } from "./grant-repository.js";
-import { createMembershipPostgresRepository } from "./membership-repository.js";
-import { createOrganizationPostgresRepository } from "./organization-repository.js";
-import { createProjectPostgresRepository } from "./project-repository.js";
-import { createSubscriptionPostgresRepository } from "./subscription-repository.js";
-import { createUserPostgresRepository } from "./user-repository.js";
+import type { PostgresDb } from "../client.ts";
+import { createApiKeyPostgresRepository } from "./api-key-repository.ts";
+import { createGrantPostgresRepository } from "./grant-repository.ts";
+import { createMembershipPostgresRepository } from "./membership-repository.ts";
+import { createOrganizationPostgresRepository } from "./organization-repository.ts";
+import { createProjectPostgresRepository } from "./project-repository.ts";
+import { createSubscriptionPostgresRepository } from "./subscription-repository.ts";
+import { createUserPostgresRepository } from "./user-repository.ts";
 
 /**
  * Consolidated repository factory.
@@ -39,10 +39,10 @@ export const createRepositories = (db: PostgresDb): Repositories => ({
   user: createUserPostgresRepository(db),
 });
 
-export { createApiKeyPostgresRepository } from "./api-key-repository.js";
-export { createGrantPostgresRepository } from "./grant-repository.js";
-export { createMembershipPostgresRepository } from "./membership-repository.js";
-export { createOrganizationPostgresRepository } from "./organization-repository.js";
-export { createProjectPostgresRepository } from "./project-repository.js";
-export { createSubscriptionPostgresRepository } from "./subscription-repository.js";
-export { createUserPostgresRepository } from "./user-repository.js";
+export { createApiKeyPostgresRepository } from "./api-key-repository.ts";
+export { createGrantPostgresRepository } from "./grant-repository.ts";
+export { createMembershipPostgresRepository } from "./membership-repository.ts";
+export { createOrganizationPostgresRepository } from "./organization-repository.ts";
+export { createProjectPostgresRepository } from "./project-repository.ts";
+export { createSubscriptionPostgresRepository } from "./subscription-repository.ts";
+export { createUserPostgresRepository } from "./user-repository.ts";

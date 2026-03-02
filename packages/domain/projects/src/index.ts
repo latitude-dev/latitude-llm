@@ -4,9 +4,9 @@ export {
   markProjectDeleted,
   restoreProject,
   type Project,
-} from "./entities/project.js";
+} from "./entities/project.ts";
 
-export type { ProjectRepository } from "./ports/project-repository.js";
+export type { ProjectRepository } from "./ports/project-repository.ts";
 
 export {
   createProjectUseCase,
@@ -14,16 +14,16 @@ export {
   ProjectAlreadyExistsError,
   type CreateProjectError,
   type CreateProjectInput,
-} from "./use-cases/create-project.js";
+} from "./use-cases/create-project.ts";
 
 export {
   listAllProjectsUseCase,
   listProjectsUseCase,
   type ListAllProjectsInput,
   type ListProjectsInput,
-} from "./use-cases/list-projects.js";
+} from "./use-cases/list-projects.ts";
 
 export {
   createProjectCreatedEvent,
   type ProjectCreatedEvent,
-} from "./events/project-created.js";
+} from "./events/project-created.ts";

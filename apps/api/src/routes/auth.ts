@@ -5,9 +5,9 @@ import { parseEnv } from "@platform/env";
 import type { User } from "better-auth";
 import { Effect } from "effect";
 import { Hono } from "hono";
-import { getPostgresClient } from "../clients.js";
-import { BadRequestError } from "../errors.js";
-import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.js";
+import { getPostgresClient } from "../clients.ts";
+import { BadRequestError } from "../errors.ts";
+import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts";
 
 // Email template
 import { magicLinkTemplate, sendEmail } from "@domain/email";

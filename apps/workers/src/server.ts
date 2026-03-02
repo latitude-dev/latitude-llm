@@ -4,8 +4,8 @@ import { createPollingOutboxConsumer } from "@platform/events-outbox";
 import { createBullmqEventsPublisher } from "@platform/queue-bullmq";
 import { createLogger } from "@repo/observability";
 import { config as loadDotenv } from "dotenv";
-import { getPostgresPool, getRedisConnection } from "./clients.js";
-import { createEventsWorker } from "./workers/events.js";
+import { getPostgresPool, getRedisConnection } from "./clients.ts";
+import { createEventsWorker } from "./workers/events.ts";
 
 const nodeEnv = process.env.NODE_ENV || "development";
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url));

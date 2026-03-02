@@ -1,6 +1,6 @@
 import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared-kernel";
 import type { Effect } from "effect";
-import type { Organization } from "../entities/organization.js";
+import type { Organization } from "../entities/organization.ts";
 
 /**
  * Repository port for Organization entities.

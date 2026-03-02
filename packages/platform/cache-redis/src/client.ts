@@ -1,5 +1,5 @@
 import { Redis } from "ioredis";
-import type { RedisConnection } from "./connection.js";
+import type { RedisConnection } from "./connection.ts";
 
 /**
  * Create an ioredis client from connection config

@@ -1,5 +1,5 @@
 import type { ErrorHandler } from "hono";
-import { isHttpError, toHttpResponse } from "../errors.js";
+import { isHttpError, toHttpResponse } from "../errors.ts";
 
 /**
  * Global error handler for Hono.

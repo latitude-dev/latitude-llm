@@ -1,6 +1,6 @@
 import type { OrganizationId, RepositoryError } from "@domain/shared-kernel";
 import type { Effect } from "effect";
-import type { Membership } from "../entities/membership.js";
+import type { Membership } from "../entities/membership.ts";
 
 /**
  * Repository port for Membership entities.

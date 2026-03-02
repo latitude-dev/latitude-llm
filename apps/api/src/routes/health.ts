@@ -3,7 +3,7 @@ import { healthcheckPostgres } from "@platform/db-postgres";
 import type { Effect as EffectType } from "effect";
 import { Effect } from "effect";
 import type { Hono } from "hono";
-import { getClickhouseClient, getPostgresClient } from "../clients.js";
+import { getClickhouseClient, getPostgresClient } from "../clients.ts";
 
 type HealthcheckFailure = {
   readonly ok: false;

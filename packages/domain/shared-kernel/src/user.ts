@@ -1,4 +1,4 @@
-import type { UserId } from "./id.js";
+import type { UserId } from "./id.ts";
 
 /**
  * User entity - represents a user in the system.

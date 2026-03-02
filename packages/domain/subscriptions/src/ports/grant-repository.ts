@@ -5,7 +5,7 @@ import type {
   SubscriptionId,
 } from "@domain/shared-kernel";
 import type { Effect } from "effect";
-import type { Grant, GrantType } from "../entities/grant.js";
+import type { Grant, GrantType } from "../entities/grant.ts";
 
 /**
  * Repository port for Grant entities.

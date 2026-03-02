@@ -19,7 +19,6 @@
     "@effect/language-service": "^0.77.0",
     "@types/node": "catalog:",
     "knip": "^5.85.0",
-    "tsx": "catalog:",
     "turbo": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
