@@ -1,6 +1,9 @@
-name: Node Lint
+name: Node Check
 
 on:
+  pull_request:
+    branches:
+      - latitude-v2
   workflow_call:
 
 jobs:
@@ -18,14 +21,9 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
-
-      - name: Format check
-        run: pnpm format:check
+      - name: Check
+        run: pnpm check

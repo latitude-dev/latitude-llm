@@ -14,6 +14,5 @@ This branch is the v2 rewrite workspace.
 - `pnpm build`
 - `pnpm lint`
 - `pnpm format`
-- `pnpm format:check`
 - `pnpm typecheck`
 - `pnpm test`

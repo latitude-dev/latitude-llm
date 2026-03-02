@@ -1,5 +1,5 @@
-import { renderEmail } from "../utils/render.js"
-import { MagicLinkEmail } from "./MagicLinkEmail.js"
+import { renderEmail } from "../utils/render.ts"
+import { MagicLinkEmail } from "./MagicLinkEmail.tsx"
 
 export interface MagicLinkEmailData {
   readonly userName: string
