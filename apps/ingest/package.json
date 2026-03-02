@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "node --watch src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -20,6 +20,7 @@
     "@repo/observability": "workspace:*",
     "dotenv": "catalog:",
     "effect": "catalog:",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "tsx": "catalog:"
   }
 }

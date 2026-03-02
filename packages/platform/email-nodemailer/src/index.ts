@@ -1,5 +1,5 @@
 import { type EmailMessage, EmailSendError, type EmailSender } from "@domain/email"
-import { parseEnvOptional } from "@platform/env"
+import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
 import { type Transporter, createTransport } from "nodemailer"
 
@@ -33,13 +33,13 @@ const defaultConfig: NodemailerConfig = {
 }
 
 const getConfigFromEnv = (): NodemailerConfig => {
-  const host = Effect.runSync(parseEnvOptional(process.env.LAT_MAILPIT_HOST, "string")) ?? defaultConfig.host
-  const portStr = Effect.runSync(parseEnvOptional(process.env.LAT_MAILPIT_PORT, "string")) ?? String(defaultConfig.port)
-  const from = Effect.runSync(parseEnvOptional(process.env.LAT_MAILPIT_FROM, "string")) ?? defaultConfig.from
+  const host = Effect.runSync(parseEnv(process.env.LAT_MAILPIT_HOST, "string", defaultConfig.host))
+  const port = Effect.runSync(parseEnv(process.env.LAT_MAILPIT_PORT, "number", defaultConfig.port))
+  const from = Effect.runSync(parseEnv(process.env.LAT_MAILPIT_FROM, "string", defaultConfig.from))
 
   return {
     host,
-    port: Number.parseInt(portStr, 10),
+    port,
     secure: defaultConfig.secure,
     from,
     tls: defaultConfig.tls,

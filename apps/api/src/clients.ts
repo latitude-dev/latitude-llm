@@ -52,7 +52,7 @@ export const getBetterAuth = () => {
     const { db } = getPostgresClient()
     const baseUrl = Effect.runSync(parseEnv(process.env.LAT_BETTER_AUTH_URL, "string"))
     const betterAuthSecret = Effect.runSync(parseEnv(process.env.LAT_BETTER_AUTH_SECRET, "string"))
-    const webUrl = Effect.runSync(parseEnvOptional(process.env.LAT_WEB_URL, "string")) ?? "http://localhost:3000"
+    const webUrl = Effect.runSync(parseEnv(process.env.LAT_WEB_URL, "string", "http://localhost:3000"))
 
     // Parse trusted origins from comma-separated env var or fallback to webUrl
     const trustedOriginsEnv = Effect.runSync(parseEnvOptional(process.env.LAT_TRUSTED_ORIGINS, "string"))

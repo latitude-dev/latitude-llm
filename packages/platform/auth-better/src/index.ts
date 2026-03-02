@@ -57,7 +57,9 @@ export interface StripePlanConfig {
 
 export const createBetterAuth = (config: BetterAuthConfig) => {
   const baseUrl =
-    config.baseUrl ?? Effect.runSync(parseEnvOptional(process.env.LAT_BETTER_AUTH_URL, "string")) ?? "http://localhost:3000"
+    config.baseUrl ??
+    Effect.runSync(parseEnvOptional(process.env.LAT_BETTER_AUTH_URL, "string")) ??
+    "http://localhost:3000"
   const secret = config.secret ?? Effect.runSync(parseEnv(process.env.LAT_BETTER_AUTH_SECRET, "string"))
 
   // Get OAuth credentials from env if not provided
