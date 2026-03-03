@@ -17,7 +17,8 @@ if (existsSync(envFilePath)) {
 
 const main = async () => {
   const { pool, db } = createPostgresClient()
-  const repositories = createRepositories(db)
+  const encryptionKeyHex = Effect.runSync(parseEnv("LAT_API_KEY_ENCRYPTION_KEY", "string"))
+  const repositories = createRepositories(db, Buffer.from(encryptionKeyHex, "hex"))
 
   console.log("Seeding database...\n")
 

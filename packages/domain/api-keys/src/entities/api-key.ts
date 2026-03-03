@@ -6,11 +6,15 @@ import type { ApiKeyId, OrganizationId } from "@domain/shared-kernel"
  * API keys are scoped to an organization and provide token-based
  * authentication for API access. Tokens are UUIDs generated
  * using crypto.randomUUID().
+ *
+ * The token is encrypted at rest (AES-256-GCM) and a SHA-256 hash
+ * (tokenHash) is stored for indexed lookups without decryption.
  */
 export interface ApiKey {
   readonly id: ApiKeyId
   readonly organizationId: OrganizationId
   readonly token: string
+  readonly tokenHash: string
   readonly name: string
   readonly lastUsedAt: Date | null
   readonly deletedAt: Date | null
@@ -25,6 +29,7 @@ export const createApiKey = (params: {
   id: ApiKeyId
   organizationId: OrganizationId
   token: string
+  tokenHash: string
   name: string
   lastUsedAt?: Date | null
   deletedAt?: Date | null
@@ -36,6 +41,7 @@ export const createApiKey = (params: {
     id: params.id,
     organizationId: params.organizationId,
     token: params.token,
+    tokenHash: params.tokenHash,
     name: params.name,
     lastUsedAt: params.lastUsedAt ?? null,
     deletedAt: params.deletedAt ?? null,

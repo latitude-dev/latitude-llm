@@ -7,6 +7,7 @@ import { OrganizationId, PermissionError, generateId } from "@domain/shared-kern
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { type Context, Hono } from "hono"
+import { getApiKeyEncryptionKey } from "../clients.ts"
 import { getDbDependencies } from "../db-deps.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
@@ -24,7 +25,8 @@ import type { AuthContext } from "../types.ts"
 
 export const createOrganizationsRoutes = () => {
   const app = new Hono()
-  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
+  const getRepos = (c: Context) =>
+    createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
   const assertOrganizationAccess = (auth: AuthContext, organizationId: string) => {
     if (auth.organizationId !== organizationId) {
       throw new PermissionError({

@@ -1,8 +1,9 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared-kernel"
 import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
+import { hashApiKeyToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
-import { getBetterAuth, getRedisClient } from "../clients.ts"
+import { getApiKeyEncryptionKey, getBetterAuth, getRedisClient } from "../clients.ts"
 import { getDbDependencies } from "../db-deps.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
@@ -27,16 +28,16 @@ const withTimeout = <T>(operation: Promise<T>, fallback: T): Promise<T> => {
   ])
 }
 
-const getApiKeyCacheKey = (token: string): string => `apikey:${token}`
+const getApiKeyCacheKey = (tokenHash: string): string => `apikey:${tokenHash}`
 
 /**
- * Get cached API key result from Redis.
+ * Get cached API key result from Redis (keyed by token hash).
  */
 const getCachedApiKey = (
-  token: string,
+  tokenHash: string,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null | undefined, never> => {
   const redis = getRedisClient()
-  const cacheKey = getApiKeyCacheKey(token)
+  const cacheKey = getApiKeyCacheKey(tokenHash)
   return Effect.tryPromise({
     try: async () => {
       const cached = await withTimeout(redis.get(cacheKey), null)
@@ -49,15 +50,15 @@ const getCachedApiKey = (
 }
 
 /**
- * Cache API key result in Redis.
+ * Cache API key result in Redis (keyed by token hash).
  */
 const cacheApiKeyResult = (
-  token: string,
+  tokenHash: string,
   result: { organizationId: string; keyId: string } | null,
   ttl: number,
 ): Effect.Effect<void, never> => {
   const redis = getRedisClient()
-  const cacheKey = getApiKeyCacheKey(token)
+  const cacheKey = getApiKeyCacheKey(tokenHash)
   return Effect.tryPromise({
     try: () => withTimeout(redis.setex(cacheKey, ttl, JSON.stringify(result)), undefined),
     catch: () => undefined,
@@ -68,6 +69,7 @@ const cacheApiKeyResult = (
  * Validate API key with Redis caching and constant-time execution.
  *
  * Security features:
+ * - Incoming token is hashed (SHA-256) before any lookup — raw tokens never touch cache or DB queries
  * - All code paths take at least MIN_VALIDATION_TIME_MS (~50ms) to prevent timing attacks
  * - Redis cache provides consistent lookup time for both valid and invalid keys
  * - Invalid keys are cached briefly to prevent repeated DB hits and timing enumeration
@@ -78,14 +80,16 @@ const validateApiKey = (
   token: string,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const dependencies = getDbDependencies(c)
-  const apiKeyRepository = createApiKeyPostgresRepository(dependencies.db)
+  const encryptionKey = getApiKeyEncryptionKey()
+  const apiKeyRepository = createApiKeyPostgresRepository(dependencies.db, encryptionKey)
   const touchBuffer = createTouchBuffer(dependencies)
 
   return Effect.gen(function* () {
     const startTime = Date.now()
+    const tokenHash = hashApiKeyToken(token)
 
-    // Try cache first for consistent lookup time
-    const cached = yield* getCachedApiKey(token)
+    // Try cache first for consistent lookup time (keyed by hash)
+    const cached = yield* getCachedApiKey(tokenHash)
 
     if (cached !== undefined) {
       // Cache hit - enforce minimum time and return
@@ -93,12 +97,12 @@ const validateApiKey = (
       return cached
     }
 
-    // Cache miss - hit database
-    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByToken(token))
+    // Cache miss - hit database (lookup by token hash)
+    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
 
     if (Option.isNone(apiKeyOption) || apiKeyOption.value === null) {
       // Cache negative result briefly to prevent timing attacks
-      yield* cacheApiKeyResult(token, null, INVALID_KEY_TTL_SECONDS)
+      yield* cacheApiKeyResult(tokenHash, null, INVALID_KEY_TTL_SECONDS)
       yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
       return null
     }
@@ -110,8 +114,8 @@ const validateApiKey = (
       keyId: apiKey.id as string,
     }
 
-    // Cache successful validation for 5 minutes
-    yield* cacheApiKeyResult(token, result, VALID_KEY_TTL_SECONDS)
+    // Cache successful validation for 5 minutes (keyed by hash)
+    yield* cacheApiKeyResult(tokenHash, result, VALID_KEY_TTL_SECONDS)
 
     // Use TouchBuffer for batched updates instead of fire-and-forget
     // This reduces database writes by 90%+ by batching updates

@@ -2,6 +2,7 @@ import { ApiKeyId } from "@domain/shared-kernel"
 import { createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
+import { getApiKeyEncryptionKey } from "../clients.ts"
 import type { ApiDbDependencies } from "../db-deps.ts"
 
 const logger = createLogger("touch-buffer")
@@ -99,7 +100,10 @@ class TouchBuffer {
 
     const startTime = Date.now()
 
-    const apiKeyRepository = createApiKeyPostgresRepository(this.dependencies.db)
+    const apiKeyRepository = createApiKeyPostgresRepository(
+      this.dependencies.db,
+      getApiKeyEncryptionKey(),
+    )
 
     try {
       await Effect.runPromise(apiKeyRepository.touchBatch(keyIds))

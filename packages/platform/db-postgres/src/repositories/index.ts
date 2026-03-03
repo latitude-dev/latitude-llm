@@ -14,7 +14,7 @@ import { createUserPostgresRepository } from "./user-repository.ts"
  *
  * Usage:
  * ```typescript
- * const repos = createRepositories(db);
+ * const repos = createRepositories(db, apiKeyEncryptionKey);
  * // repos.organization.findById(...)
  * // repos.project.findByOrganizationId(...)
  * ```
@@ -29,10 +29,13 @@ export interface Repositories {
   user: ReturnType<typeof createUserPostgresRepository>
 }
 
-export const createRepositories = (db: PostgresDb): Repositories => ({
+export const createRepositories = (
+  db: PostgresDb,
+  apiKeyEncryptionKey: Buffer,
+): Repositories => ({
   organization: createOrganizationPostgresRepository(db),
   project: createProjectPostgresRepository(db),
-  apiKey: createApiKeyPostgresRepository(db),
+  apiKey: createApiKeyPostgresRepository(db, apiKeyEncryptionKey),
   membership: createMembershipPostgresRepository(db),
   subscription: createSubscriptionPostgresRepository(db),
   grant: createGrantPostgresRepository(db),

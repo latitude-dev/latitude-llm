@@ -1,6 +1,7 @@
 import { generateId } from "@domain/shared-kernel"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema as schema } from "@platform/db-postgres"
+import { encryptApiKeyToken, hashApiKeyToken } from "@repo/utils"
 import type { Effect as EffectType } from "effect"
 import { Effect } from "effect"
 import type { TestDatabase } from "./test-database.ts"
@@ -225,10 +226,12 @@ export const createProjectFixture = (
 export interface ApiKeyFixtureInput {
   readonly name?: string
   readonly organizationId: string
+  readonly encryptionKey: Buffer
 }
 
 /**
- * API Key fixture result
+ * API Key fixture result.
+ * The `token` field contains the plaintext token for use in test auth headers.
  */
 export interface ApiKeyFixture {
   readonly id: string
@@ -238,7 +241,7 @@ export interface ApiKeyFixture {
 }
 
 /**
- * Create a test API key
+ * Create a test API key with encrypted token and hash.
  */
 export const createApiKeyFixture = (
   db: PostgresDb,
@@ -250,23 +253,26 @@ export const createApiKeyFixture = (
   return Effect.tryPromise({
     try: async () => {
       const apiKeyId = generateId()
-      const token = `lat_test_${generateId()}`
+      const plaintextToken = `lat_test_${generateId()}`
+      const tokenHash = hashApiKeyToken(plaintextToken)
+      const encryptedToken = encryptApiKeyToken(plaintextToken, input.encryptionKey)
+
       const [apiKey] = await db
         .insert(schema.apiKeys)
         .values({
           id: apiKeyId,
-          token,
+          token: encryptedToken,
+          tokenHash,
           name,
           organizationId: input.organizationId,
         })
         .returning({
           id: schema.apiKeys.id,
-          token: schema.apiKeys.token,
           name: schema.apiKeys.name,
           organizationId: schema.apiKeys.organizationId,
         })
 
-      return apiKey
+      return { ...apiKey, token: plaintextToken }
     },
     catch: (error) =>
       error instanceof Error ? error : new Error(`Failed to create API key fixture: ${String(error)}`),

@@ -16,6 +16,7 @@
   "dependencies": {
     "@domain/shared-kernel": "workspace:*",
     "@domain/events": "workspace:*",
+    "@repo/utils": "workspace:*",
     "effect": "catalog:"
   }
 }

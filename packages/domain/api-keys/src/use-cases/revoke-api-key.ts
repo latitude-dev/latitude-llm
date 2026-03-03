@@ -39,10 +39,10 @@ export type RevokeApiKeyError = RepositoryError | NotFoundError | ApiKeyNotFound
  */
 export interface CacheInvalidator {
   /**
-   * Delete a cached API key entry.
-   * @param token The API key token to invalidate
+   * Delete a cached API key entry by its token hash.
+   * @param tokenHash The SHA-256 hash of the API key token to invalidate
    */
-  readonly delete: (token: string) => Effect.Effect<void, never>
+  readonly delete: (tokenHash: string) => Effect.Effect<void, never>
 }
 
 export interface RevokeApiKeyDeps {
@@ -74,7 +74,7 @@ export const revokeApiKeyUseCase =
 
       // Invalidate cache entry (security-critical)
       // This ensures revoked keys are immediately rejected
-      yield* deps.cacheInvalidator.delete(apiKey.token)
+      yield* deps.cacheInvalidator.delete(apiKey.tokenHash)
 
       return revokedApiKey
     })

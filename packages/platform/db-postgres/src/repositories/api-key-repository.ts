@@ -1,5 +1,6 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
 import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
+import { decryptApiKeyToken, encryptApiKeyToken } from "@repo/utils"
 import { eq, inArray } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -7,11 +8,16 @@ import { apiKeys } from "../schema/index.ts"
 
 /**
  * Maps a database API key row to a domain ApiKey entity.
+ * Decrypts the token from its stored encrypted form.
  */
-const toDomainApiKey = (row: typeof apiKeys.$inferSelect): ApiKey => ({
+const toDomainApiKey = (
+  row: typeof apiKeys.$inferSelect,
+  encryptionKey: Buffer,
+): ApiKey => ({
   id: row.id as ApiKey["id"],
   organizationId: row.organizationId as ApiKey["organizationId"],
-  token: row.token,
+  token: decryptApiKeyToken(row.token, encryptionKey),
+  tokenHash: row.tokenHash,
   name: row.name ?? "",
   lastUsedAt: row.lastUsedAt,
   deletedAt: row.deletedAt,
@@ -21,11 +27,16 @@ const toDomainApiKey = (row: typeof apiKeys.$inferSelect): ApiKey => ({
 
 /**
  * Maps a domain ApiKey entity to a database insert row.
+ * Encrypts the plaintext token before storage.
  */
-const toInsertRow = (apiKey: ApiKey): typeof apiKeys.$inferInsert => ({
+const toInsertRow = (
+  apiKey: ApiKey,
+  encryptionKey: Buffer,
+): typeof apiKeys.$inferInsert => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
-  token: apiKey.token,
+  token: encryptApiKeyToken(apiKey.token, encryptionKey),
+  tokenHash: apiKey.tokenHash,
   name: apiKey.name,
   lastUsedAt: apiKey.lastUsedAt,
   deletedAt: apiKey.deletedAt,
@@ -33,8 +44,14 @@ const toInsertRow = (apiKey: ApiKey): typeof apiKeys.$inferInsert => ({
 
 /**
  * Creates a Postgres implementation of the ApiKeyRepository port.
+ *
+ * @param db - Drizzle database instance
+ * @param encryptionKey - 32-byte AES-256 key for token encryption/decryption
  */
-export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository => ({
+export const createApiKeyPostgresRepository = (
+  db: PostgresDb,
+  encryptionKey: Buffer,
+): ApiKeyRepository => ({
   findById: (id: ApiKeyId) =>
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
@@ -42,20 +59,23 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
-      return result ? toDomainApiKey(result) : null
+      return result ? toDomainApiKey(result, encryptionKey) : null
     }),
 
-  findByToken: (token: string) =>
+  findByTokenHash: (tokenHash: string) =>
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.apiKeys.findFirst({
-            where: { token, deletedAt: { isNull: true } },
+            where: {
+              tokenHash,
+              deletedAt: { isNull: true },
+            },
           }),
-        catch: (error) => toRepositoryError(error, "findByToken"),
+        catch: (error) => toRepositoryError(error, "findByTokenHash"),
       })
 
-      return result ? toDomainApiKey(result) : null
+      return result ? toDomainApiKey(result, encryptionKey) : null
     }),
 
   findByOrganizationId: (organizationId: OrganizationId) =>
@@ -71,12 +91,12 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
       })
 
-      return results.map(toDomainApiKey)
+      return results.map((row) => toDomainApiKey(row, encryptionKey))
     }),
 
   save: (apiKey: ApiKey) =>
     Effect.gen(function* () {
-      const row = toInsertRow(apiKey)
+      const row = toInsertRow(apiKey, encryptionKey)
 
       yield* Effect.tryPromise({
         try: () =>

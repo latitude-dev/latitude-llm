@@ -8,7 +8,7 @@ import { ApiKeyId, OrganizationId, generateId } from "@domain/shared-kernel"
 import { createRepositories } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { type Context, Hono } from "hono"
-import { getRedisClient } from "../clients.ts"
+import { getApiKeyEncryptionKey, getRedisClient } from "../clients.ts"
 import { getDbDependencies } from "../db-deps.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
@@ -23,14 +23,14 @@ import { extractParam } from "../lib/effect-utils.ts"
 
 /**
  * Create a cache invalidator for API keys using Redis.
- * Cache invalidation failures are logged but don't fail the operation.
+ * Keys are cached by token hash, so invalidation uses the hash.
  */
 const createApiKeyCacheInvalidator = (): CacheInvalidator => {
   const redis = getRedisClient()
   return {
-    delete: (token: string) =>
+    delete: (tokenHash: string) =>
       Effect.tryPromise({
-        try: () => redis.del(`apikey:${token}`),
+        try: () => redis.del(`apikey:${tokenHash}`),
         catch: () => {
           // Silently ignore - DB is source of truth
         },
@@ -41,7 +41,8 @@ const createApiKeyCacheInvalidator = (): CacheInvalidator => {
 export const createApiKeysRoutes = () => {
   const cacheInvalidator = createApiKeyCacheInvalidator()
   const app = new Hono()
-  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
+  const getRepos = (c: Context) =>
+    createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
 
   // POST /organizations/:organizationId/api-keys - Generate API key
   app.post("/", async (c) => {
