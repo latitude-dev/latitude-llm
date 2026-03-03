@@ -1,55 +1,69 @@
+import { createFakeClickhouseClient, createFakePostgresPool } from "@platform/testkit"
 import { Hono } from "hono"
-import { beforeAll, describe, expect, it } from "vitest"
-import { getClickhouseClient, getPostgresClient } from "../clients.ts"
+import { describe, expect, it } from "vitest"
+import type { ApiDatabaseDependencies } from "../db-deps.ts"
 import { registerHealthRoute } from "./health.ts"
 
 describe("GET /health", () => {
-  let app: Hono
+  const createApp = (options: { postgresHealthy?: boolean; clickhouseHealthy?: boolean } = {}) => {
+    const app = new Hono()
+    const postgresPool = createFakePostgresPool({ healthy: options.postgresHealthy ?? true })
+    const clickhouseClient = createFakeClickhouseClient({ healthy: options.clickhouseHealthy ?? true })
 
-  beforeAll(() => {
-    // Create fresh Hono app for each test suite
-    app = new Hono()
+    const database: ApiDatabaseDependencies = {
+      db: {} as ApiDatabaseDependencies["db"],
+      pool: postgresPool as unknown as ApiDatabaseDependencies["pool"],
+    }
+
     registerHealthRoute({
       app,
-      database: getPostgresClient(),
-      clickhouse: getClickhouseClient(),
+      database,
+      clickhouse: clickhouseClient as never,
     })
-  })
+    return app
+  }
 
-  describe("with database connections", () => {
-    // These tests require LAT_DATABASE_URL and LAT_CLICKHOUSE_URL to be set
-    // Run with: pnpm --filter @app/api test
-    // The .env.test file at repo root is automatically loaded by vitest config
-
+  describe("with healthy dependencies", () => {
     it("should return service status and health info", async () => {
+      const app = createApp()
       const res = await app.fetch(new Request("http://localhost/health"))
-      // Status can be 200 (healthy) or 503 (degraded) depending on DB availability
-      expect([200, 503]).toContain(res.status)
+      expect(res.status).toBe(200)
 
       const body = await res.json()
       expect(body.service).toBe("api")
-      expect(body.status).toMatch(/^(ok|degraded)$/)
+      expect(body.status).toBe("ok")
+      expect(body.postgres.ok).toBe(true)
+      expect(body.clickhouse.ok).toBe(true)
+    })
+  })
+
+  describe("with unhealthy dependencies", () => {
+    it("should return degraded status when postgres is unhealthy", async () => {
+      const app = createApp({ postgresHealthy: false })
+      const res = await app.fetch(new Request("http://localhost/health"))
+      expect(res.status).toBe(503)
+
+      const body = await res.json()
+      expect(body.status).toBe("degraded")
+      expect(body.postgres.ok).toBe(false)
+      expect(body.clickhouse.ok).toBe(true)
     })
 
-    it("should include postgres health status", async () => {
+    it("should return degraded status when clickhouse is unhealthy", async () => {
+      const app = createApp({ clickhouseHealthy: false })
       const res = await app.fetch(new Request("http://localhost/health"))
+      expect(res.status).toBe(503)
+
       const body = await res.json()
-
-      expect(body.postgres).toBeDefined()
-      expect(body.postgres).toHaveProperty("ok")
-    })
-
-    it("should include clickhouse health status", async () => {
-      const res = await app.fetch(new Request("http://localhost/health"))
-      const body = await res.json()
-
-      expect(body.clickhouse).toBeDefined()
-      expect(body.clickhouse).toHaveProperty("ok")
+      expect(body.status).toBe("degraded")
+      expect(body.postgres.ok).toBe(true)
+      expect(body.clickhouse.ok).toBe(false)
     })
   })
 
   describe("response format", () => {
     it("should return JSON content type", async () => {
+      const app = createApp()
       const res = await app.fetch(new Request("http://localhost/health"))
       expect(res.headers.get("content-type")).toContain("application/json")
     })

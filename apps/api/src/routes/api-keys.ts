@@ -12,6 +12,7 @@ import { getRedisClient } from "../clients.ts"
 import { getDbDependencies } from "../db-deps.ts"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
+import type { ApiRedisClient } from "../lib/redis-client.ts"
 
 /**
  * API Key routes
@@ -25,8 +26,11 @@ import { extractParam } from "../lib/effect-utils.ts"
  * Create a cache invalidator for API keys using Redis.
  * Cache invalidation failures are logged but don't fail the operation.
  */
-const createApiKeyCacheInvalidator = (): CacheInvalidator => {
-  const redis = getRedisClient()
+interface ApiKeysRoutesOptions {
+  readonly redisClient?: ApiRedisClient | undefined
+}
+
+const createApiKeyCacheInvalidator = (redis: ApiRedisClient): CacheInvalidator => {
   return {
     delete: (token: string) =>
       Effect.tryPromise({
@@ -38,8 +42,8 @@ const createApiKeyCacheInvalidator = (): CacheInvalidator => {
   }
 }
 
-export const createApiKeysRoutes = () => {
-  const cacheInvalidator = createApiKeyCacheInvalidator()
+export const createApiKeysRoutes = (options: ApiKeysRoutesOptions = {}) => {
+  const cacheInvalidator = createApiKeyCacheInvalidator(options.redisClient ?? getRedisClient())
   const app = new Hono()
   const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
 

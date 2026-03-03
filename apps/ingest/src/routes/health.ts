@@ -21,14 +21,19 @@ const withFailure = <TSuccess extends { readonly ok: boolean }>(
 
 interface HealthRouteContext {
   app: Hono
+  postgresPool?: ReturnType<typeof getPostgresPool>
+  clickhouseClient?: ReturnType<typeof getClickhouseClient>
 }
 
 export const registerHealthRoute = (context: HealthRouteContext) => {
+  const postgresPool = context.postgresPool ?? getPostgresPool()
+  const clickhouseClient = context.clickhouseClient ?? getClickhouseClient()
+
   context.app.get("/health", async (c) => {
     const health = await Effect.runPromise(
       Effect.all({
-        postgres: withFailure(healthcheckPostgres(getPostgresPool())),
-        clickhouse: withFailure(healthcheckClickhouse(getClickhouseClient())),
+        postgres: withFailure(healthcheckPostgres(postgresPool)),
+        clickhouse: withFailure(healthcheckClickhouse(clickhouseClient)),
       }),
     )
 

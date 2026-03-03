@@ -1,6 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { Hono } from "hono"
 import { type ApiDatabaseDependencies, createDbDependenciesMiddleware } from "../db-deps.ts"
+import type { ApiRedisClient } from "../lib/redis-client.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
@@ -13,6 +14,7 @@ interface RoutesContext {
   app: Hono
   database: ApiDatabaseDependencies
   clickhouse: ClickHouseClient
+  redisClient?: ApiRedisClient
 }
 
 /**
@@ -20,6 +22,7 @@ interface RoutesContext {
  */
 export const registerRoutes = (context: RoutesContext) => {
   const { app } = context
+  const { redisClient } = context
 
   registerHealthRoute(context)
 
@@ -30,15 +33,15 @@ export const registerRoutes = (context: RoutesContext) => {
   v1.use("*", createDbDependenciesMiddleware(context.database))
 
   // Auth routes (Better Auth) - PUBLIC, no auth required
-  v1.route("/auth", createAuthRoutes())
+  v1.route("/auth", createAuthRoutes({ redisClient }))
 
   // Rate limiting before auth to prevent brute force attacks
-  protectedRoutes.use("*", createAuthRateLimiter())
-  protectedRoutes.use("*", createAuthMiddleware())
+  protectedRoutes.use("*", createAuthRateLimiter({ redisClient }))
+  protectedRoutes.use("*", createAuthMiddleware({ redisClient }))
 
   protectedRoutes.route("/", createOrganizationsRoutes())
   protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
-  protectedRoutes.route("/:organizationId/api-keys", createApiKeysRoutes())
+  protectedRoutes.route("/:organizationId/api-keys", createApiKeysRoutes({ redisClient }))
 
   v1.route("/organizations", protectedRoutes)
   app.route("/v1", v1)

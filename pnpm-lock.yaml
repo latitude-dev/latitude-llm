@@ -626,6 +626,9 @@ importers:
 
   packages/platform/testkit:
     dependencies:
+      '@electric-sql/pglite':
+        specifier: 0.3.15
+        version: 0.3.15
       '@domain/shared-kernel':
         specifier: workspace:*
         version: link:../../domain/shared-kernel
@@ -635,6 +638,12 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../db-postgres
+      drizzle-kit:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.15-859cf75
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.15-859cf75(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@7.4.2(prisma@7.4.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.16.0)(mssql@11.0.1(@azure/core-client@1.10.1))(mysql2@3.15.3)(pg@8.16.0)(postgres@3.4.7)(prisma@7.4.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(valibot@1.2.0(typescript@5.8.3))(zod@4.3.6)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0

@@ -66,8 +66,7 @@ const resolveWeaviateConfigEffect = (
       config.url !== undefined
         ? Effect.succeed(normalizeOptional(config.url))
         : parseEnvOptional("LAT_WEAVIATE_URL", "string"),
-    apiKey:
-      config.apiKey !== undefined ? parseEnv(config.apiKey, "string") : parseEnv("LAT_WEAVIATE_API_KEY", "string"),
+    apiKey: config.apiKey !== undefined ? Effect.succeed(config.apiKey) : parseEnv("LAT_WEAVIATE_API_KEY", "string"),
     host:
       config.host !== undefined
         ? Effect.succeed(normalizeOptional(config.host))

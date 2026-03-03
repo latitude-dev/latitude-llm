@@ -1,18 +1,21 @@
 import { randomUUID } from "node:crypto"
 import { generateId } from "@domain/shared-kernel"
 import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
-import { createApiKeyAuthHeaders } from "@platform/testkit"
+import {
+  type InMemoryPostgres,
+  type InMemoryRedisClient,
+  closeInMemoryPostgres,
+  createApiKeyAuthHeaders,
+  createInMemoryPostgres,
+  createInMemoryRedis,
+} from "@platform/testkit"
 import { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { createDbDependenciesMiddleware } from "../db-deps.ts"
+import type { ApiRedisClient } from "../lib/redis-client.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
-import {
-  type InMemoryPostgres,
-  closeInMemoryPostgres,
-  createInMemoryPostgres,
-} from "../test-utils/in-memory-postgres.ts"
 import { createOrganizationsRoutes } from "./organizations.ts"
 
 interface OrganizationSetup {
@@ -27,13 +30,13 @@ interface OrganizationsTestContext extends TestContext {
   database: InMemoryPostgres
 }
 
-const createApp = (db: PostgresDb): Hono => {
+const createApp = (db: PostgresDb, redisClient: ApiRedisClient): Hono => {
   const app = new Hono()
   app.onError(honoErrorHandler)
   const protectedRoutes = new Hono()
 
   protectedRoutes.use("*", createDbDependenciesMiddleware({ db }))
-  protectedRoutes.use("*", createAuthMiddleware())
+  protectedRoutes.use("*", createAuthMiddleware({ redisClient }))
   protectedRoutes.route("/", createOrganizationsRoutes())
 
   app.route("/v1/organizations", protectedRoutes)
@@ -89,10 +92,12 @@ const createOrganizationSetup = async (db: InMemoryPostgres["db"]): Promise<Orga
 describe("Organization Routes Integration", () => {
   let app: Hono
   let database: InMemoryPostgres
+  let redisClient: InMemoryRedisClient
 
   beforeAll(async () => {
     database = await createInMemoryPostgres()
-    app = createApp(database.postgresDb)
+    redisClient = createInMemoryRedis()
+    app = createApp(database.postgresDb, redisClient)
   })
 
   beforeEach<OrganizationsTestContext>((context) => {
@@ -103,6 +108,7 @@ describe("Organization Routes Integration", () => {
   afterAll(async () => {
     await destroyTouchBuffer()
     await closeInMemoryPostgres(database)
+    await redisClient.quit()
   })
 
   it<OrganizationsTestContext>("GET /v1/organizations should list organizations for an authenticated API key", async ({

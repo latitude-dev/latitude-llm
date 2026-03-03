@@ -1,11 +1,7 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { createPollingOutboxConsumer } from "@platform/events-outbox"
-import { createBullmqEventsPublisher } from "@platform/queue-bullmq"
-import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
-import { getPostgresPool, getRedisConnection } from "./clients.ts"
-import { createEventsWorker } from "./workers/events.ts"
+import { createWorkersRuntime } from "./runtime.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
@@ -14,31 +10,11 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath, quiet: true })
 }
 
-const redisConnection = getRedisConnection()
-const pgPool = getPostgresPool(10)
-const { queue: eventsQueue, worker: eventsWorker } = createEventsWorker(redisConnection)
-const eventsPublisher = createBullmqEventsPublisher({ queue: eventsQueue })
-const outboxConsumer = createPollingOutboxConsumer(
-  {
-    pool: pgPool,
-    pollIntervalMs: 1000,
-    batchSize: 100,
-  },
-  eventsPublisher,
-)
+const runtime = createWorkersRuntime()
 
-const logger = createLogger("workers")
-
-eventsWorker.on("ready", () => {
-  outboxConsumer.start()
-
-  logger.info("workers ready and outbox consumer started")
-})
+runtime.eventsWorker.on("ready", runtime.onReady)
 
 process.on("SIGINT", async () => {
-  await outboxConsumer.stop()
-  await pgPool.end()
-  await eventsQueue.close()
-  await eventsWorker.close()
+  await runtime.stop()
   process.exit(0)
 })

@@ -4,6 +4,7 @@ import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 import { getBetterAuth, getRedisClient } from "../clients.ts"
 import { getDbDependencies } from "../db-deps.ts"
+import type { ApiRedisClient } from "../lib/redis-client.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
 
@@ -20,6 +21,19 @@ const VALID_KEY_TTL_SECONDS = 300 // 5 minutes for valid keys
 const INVALID_KEY_TTL_SECONDS = 5 // 5 seconds for invalid keys (prevents timing attacks)
 const REDIS_OPERATION_TIMEOUT_MS = 50
 
+interface BetterAuthSessionClient {
+  readonly api: {
+    readonly getSession: (options: { readonly headers: Headers }) => Promise<{
+      readonly user?: { readonly id: string }
+    } | null>
+  }
+}
+
+interface AuthMiddlewareOptions {
+  readonly redisClient?: ApiRedisClient | undefined
+  readonly betterAuth?: BetterAuthSessionClient | undefined
+}
+
 const withTimeout = <T>(operation: Promise<T>, fallback: T): Promise<T> => {
   return Promise.race([
     operation,
@@ -33,9 +47,9 @@ const getApiKeyCacheKey = (token: string): string => `apikey:${token}`
  * Get cached API key result from Redis.
  */
 const getCachedApiKey = (
+  redis: ApiRedisClient,
   token: string,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null | undefined, never> => {
-  const redis = getRedisClient()
   const cacheKey = getApiKeyCacheKey(token)
   return Effect.tryPromise({
     try: async () => {
@@ -52,11 +66,11 @@ const getCachedApiKey = (
  * Cache API key result in Redis.
  */
 const cacheApiKeyResult = (
+  redis: ApiRedisClient,
   token: string,
   result: { organizationId: string; keyId: string } | null,
   ttl: number,
 ): Effect.Effect<void, never> => {
-  const redis = getRedisClient()
   const cacheKey = getApiKeyCacheKey(token)
   return Effect.tryPromise({
     try: () => withTimeout(redis.setex(cacheKey, ttl, JSON.stringify(result)), undefined),
@@ -75,6 +89,7 @@ const cacheApiKeyResult = (
  */
 const validateApiKey = (
   c: Context,
+  redis: ApiRedisClient,
   token: string,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const dependencies = getDbDependencies(c)
@@ -85,7 +100,7 @@ const validateApiKey = (
     const startTime = Date.now()
 
     // Try cache first for consistent lookup time
-    const cached = yield* getCachedApiKey(token)
+    const cached = yield* getCachedApiKey(redis, token)
 
     if (cached !== undefined) {
       // Cache hit - enforce minimum time and return
@@ -98,7 +113,7 @@ const validateApiKey = (
 
     if (Option.isNone(apiKeyOption) || apiKeyOption.value === null) {
       // Cache negative result briefly to prevent timing attacks
-      yield* cacheApiKeyResult(token, null, INVALID_KEY_TTL_SECONDS)
+      yield* cacheApiKeyResult(redis, token, null, INVALID_KEY_TTL_SECONDS)
       yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
       return null
     }
@@ -111,7 +126,7 @@ const validateApiKey = (
     }
 
     // Cache successful validation for 5 minutes
-    yield* cacheApiKeyResult(token, result, VALID_KEY_TTL_SECONDS)
+    yield* cacheApiKeyResult(redis, token, result, VALID_KEY_TTL_SECONDS)
 
     // Use TouchBuffer for batched updates instead of fire-and-forget
     // This reduces database writes by 90%+ by batching updates
@@ -172,9 +187,13 @@ const extractApiKeyToken = (c: Context): string | undefined => {
 /**
  * Authenticate via API key.
  */
-const authenticateWithApiKey = (c: Context, token: string): Effect.Effect<AuthContext | null, never> => {
+const authenticateWithApiKey = (
+  c: Context,
+  redis: ApiRedisClient,
+  token: string,
+): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
-    const result = yield* validateApiKey(c, token)
+    const result = yield* validateApiKey(c, redis, token)
 
     if (result) {
       return {
@@ -191,10 +210,11 @@ const authenticateWithApiKey = (c: Context, token: string): Effect.Effect<AuthCo
 /**
  * Authenticate via Better Auth session (cookie or JWT).
  */
-const authenticateWithSession = (c: Context): Effect.Effect<AuthContext | null, never> => {
+const authenticateWithSession = (
+  c: Context,
+  auth: BetterAuthSessionClient,
+): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
-    const auth = getBetterAuth()
-
     const session = yield* Effect.tryPromise({
       try: () => auth.api.getSession({ headers: c.req.raw.headers }),
       catch: () => null,
@@ -225,16 +245,22 @@ const authenticateWithSession = (c: Context): Effect.Effect<AuthContext | null, 
 /**
  * Main authentication effect that tries all authentication methods.
  */
-const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError> => {
+const authenticate = (
+  c: Context,
+  options: {
+    readonly redisClient: ApiRedisClient
+    readonly betterAuth: BetterAuthSessionClient
+  },
+): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
     const apiKeyToken = extractApiKeyToken(c)
 
     let authContext: AuthContext | null = null
 
     if (apiKeyToken) {
-      authContext = yield* authenticateWithApiKey(c, apiKeyToken)
+      authContext = yield* authenticateWithApiKey(c, options.redisClient, apiKeyToken)
     } else {
-      authContext = yield* authenticateWithSession(c)
+      authContext = yield* authenticateWithSession(c, options.betterAuth)
     }
 
     if (!authContext) {
@@ -256,11 +282,19 @@ const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError>
  * The middleware sets auth context on the Hono context for downstream handlers.
  * Public routes should be excluded from this middleware.
  */
-export const createAuthMiddleware = (): MiddlewareHandler => {
+export const createAuthMiddleware = (options: AuthMiddlewareOptions = {}): MiddlewareHandler => {
+  const redisClient = options.redisClient ?? getRedisClient()
+  const betterAuth = options.betterAuth ?? getBetterAuth()
+
   return async (c: Context, next: Next) => {
     // Build and run the authentication program
     // Errors will propagate to the global error handler
-    const authContext = await Effect.runPromise(authenticate(c))
+    const authContext = await Effect.runPromise(
+      authenticate(c, {
+        redisClient,
+        betterAuth,
+      }),
+    )
 
     // Set auth context on Hono context - type-safe via module augmentation
     c.set("auth", authContext)

@@ -100,7 +100,9 @@ When writing a utility function that is not specific to a single domain or packa
 - `pnpm build` - run all workspace builds
 - `pnpm check` - run all workspace lint and format check scripts
 - `pnpm typecheck` - run all workspace typechecks
-- `pnpm test` - run all workspace tests
+- `pnpm test` - run all workspace tests (hermetic default, no Docker required)
+- `pnpm test:db:setup` - optional Postgres test DB setup for integration-style runs
+- `pnpm test:integration` - opt-in integration path that runs DB setup before tests
 - `pnpm hooks` - configure local git hooks for this clone
 
 ### Git Hooks (Pre-commit)
@@ -415,26 +417,33 @@ const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"));
 
 ## Cloud Agent Environment Setup
 
-When running as a cloud agent (e.g. Cursor Cloud Agent), the repository may not have `.env.development` or `.env.test` files. These are required for running the dev server and tests respectively.
+When running as a cloud agent (e.g. Cursor Cloud Agent), the repository may not have `.env.development` or `.env.test` files.
 
-**If `.env.development` or `.env.test` do not exist**, copy `.env.example` as-is:
+**If `.env.development` does not exist**, copy `.env.example` as-is:
 
 ```bash
 cp .env.example .env.development
+```
+
+For optional integration-style tests that use real services, also create `.env.test`:
+
+```bash
 cp .env.example .env.test
 ```
 
-Then set `NODE_ENV` appropriately in each file:
+Then set `NODE_ENV` appropriately:
 
 - In `.env.development`: `NODE_ENV=development`
-- In `.env.test`: `NODE_ENV=test`
+- In `.env.test`: `NODE_ENV=test` (only needed for real-service integration flows)
 
-This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests and dev commands to run without additional configuration.
+`pnpm test` is hermetic-first and should not require Docker or service URLs. Keep `.env.test` for explicit integration scenarios (`pnpm test:integration`).
 
 ## Testing Conventions
 
 - Test runner: Vitest
 - Shared default environment: Node with globals enabled (`packages/vitest-config/index.ts`)
+- Default model: hermetic tests with fakes/in-memory dependencies (no live Postgres/Redis/ClickHouse/Weaviate)
+- Integration tests against live services are opt-in and should run via dedicated commands (`pnpm test:integration`)
 - Write tests, mostly e2e, some unit tests when logic is complex
 - **Unit tests**: domain entities/use-cases/policies with fakes
 - **Contract tests**: adapter compliance against domain ports
@@ -442,6 +451,17 @@ This provides working defaults for all services (Postgres, ClickHouse, Redis, et
 - **End-to-end tests**: ingest boundary to query boundary across workspace scoping
 - Keep tests deterministic and isolated
 - Prefer package-local runs during iteration; run full monorepo tests before PR
+
+### Hermetic Test Helpers (`@platform/testkit`)
+
+Use shared testkit doubles instead of ad-hoc mocks:
+
+- Postgres: `createInMemoryPostgres()`, `closeInMemoryPostgres()`, `createFakePostgresPool()`
+- Redis: `createInMemoryRedis()`
+- ClickHouse: `createFakeClickhouseClient()`
+- Weaviate: `createFakeWeaviateClient()`
+
+When adding routes/middleware in apps, keep dependency seams injectable so tests can pass testkit doubles without touching singleton client constructors.
 
 ## Adding New Infrastructure Dependencies
 

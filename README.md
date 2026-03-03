@@ -82,6 +82,13 @@ Follow the instructions in the [self-hosted guide](https://docs.latitude.so/guid
 
 After setting up Latitude Self-Hosted, you can follow the same steps as in the Latitude Cloud guide to create, test, evaluate, and deploy your prompts.
 
+## 🧪 Monorepo Testing
+
+- `pnpm test` runs the workspace test graph in hermetic mode (no Docker services required by default).
+- `pnpm test:integration` is the opt-in path for real-service integration scenarios.
+- Contributor testing conventions live in `AGENTS.md`.
+- Shared testing helpers and examples live in `packages/platform/testkit/README.md`.
+
 ## 👥 Community
 
 The Latitude community is on

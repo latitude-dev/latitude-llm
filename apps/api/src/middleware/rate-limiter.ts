@@ -2,6 +2,7 @@ import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
 import type { Context, Next } from "hono"
 import { getRedisClient } from "../clients.ts"
+import type { ApiRedisClient } from "../lib/redis-client.ts"
 
 /**
  * Redis-backed rate limiter for authentication endpoints.
@@ -27,12 +28,15 @@ interface RateLimitConfig {
   keyPrefix: string
 }
 
+interface RateLimiterOptions {
+  readonly redisClient?: ApiRedisClient | undefined
+  readonly nodeEnv?: string | undefined
+}
+
 /**
  * Create a Redis-backed rate limiting middleware
  */
-const createRedisRateLimiter = (config: RateLimitConfig) => {
-  const redis = getRedisClient()
-
+const createRedisRateLimiter = (config: RateLimitConfig, redis: ApiRedisClient) => {
   return async (c: Context, next: Next) => {
     const key = `${config.keyPrefix}:${config.keyGenerator(c)}`
 
@@ -88,25 +92,24 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
   }
 }
 
-/**
- * Rate limiter for sign-up attempts by IP address
- * 3 attempts per hour in production, 100 attempts per hour in development (to prevent mass account creation)
- */
-export const createSignUpIpRateLimiter = () => {
-  // In development, be more permissive
-  const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
+export const createSignUpIpRateLimiter = (options: RateLimiterOptions = {}) => {
+  const nodeEnv = options.nodeEnv ?? Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
   const isDevelopment = nodeEnv === "development"
+  const redisClient = options.redisClient ?? getRedisClient()
 
-  return createRedisRateLimiter({
-    maxRequests: isDevelopment ? 100 : 3,
-    windowSeconds: 60 * 60, // 1 hour
-    keyPrefix: "ratelimit:signup:ip",
-    keyGenerator: (c: Context) => {
-      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
-      return ip.split(",")[0].trim()
+  return createRedisRateLimiter(
+    {
+      maxRequests: isDevelopment ? 100 : 3,
+      windowSeconds: 60 * 60, // 1 hour
+      keyPrefix: "ratelimit:signup:ip",
+      keyGenerator: (c: Context) => {
+        const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
+        return ip.split(",")[0].trim()
+      },
+      errorMessage: "Too many account creation attempts. Please try again later.",
     },
-    errorMessage: "Too many account creation attempts. Please try again later.",
-  })
+    redisClient,
+  )
 }
 
 /**
@@ -114,19 +117,22 @@ export const createSignUpIpRateLimiter = () => {
  * 10 attempts per 15 minutes in production, 100 attempts per 15 minutes in development
  * This protects against brute force attacks on API keys and JWT tokens
  */
-export const createAuthRateLimiter = () => {
-  // In development, be more permissive
-  const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
+export const createAuthRateLimiter = (options: RateLimiterOptions = {}) => {
+  const nodeEnv = options.nodeEnv ?? Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
   const isDevelopment = nodeEnv === "development"
+  const redisClient = options.redisClient ?? getRedisClient()
 
-  return createRedisRateLimiter({
-    maxRequests: isDevelopment ? 100 : 10,
-    windowSeconds: 15 * 60, // 15 minutes
-    keyPrefix: "ratelimit:auth:ip",
-    keyGenerator: (c: Context) => {
-      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
-      return ip.split(",")[0].trim()
+  return createRedisRateLimiter(
+    {
+      maxRequests: isDevelopment ? 100 : 10,
+      windowSeconds: 15 * 60, // 15 minutes
+      keyPrefix: "ratelimit:auth:ip",
+      keyGenerator: (c: Context) => {
+        const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
+        return ip.split(",")[0].trim()
+      },
+      errorMessage: "Too many authentication attempts. Please try again later.",
     },
-    errorMessage: "Too many authentication attempts. Please try again later.",
-  })
+    redisClient,
+  )
 }

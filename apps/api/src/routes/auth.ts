@@ -11,6 +11,7 @@ import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts"
 // Email template
 import { magicLinkTemplate, sendEmail } from "@domain/email"
 import { createNodemailerEmailSender } from "@platform/email-nodemailer"
+import type { ApiRedisClient } from "../lib/redis-client.ts"
 
 /**
  * Auth routes for Better Auth
@@ -44,12 +45,16 @@ interface BetterAuthAPI {
   }) => Promise<{ token: string; user: User } | { token: null; user: User }>
 }
 
+interface AuthRoutesOptions {
+  readonly redisClient?: ApiRedisClient | undefined
+}
+
 /**
  * Create auth routes for Better Auth
  *
  * This mounts the Better Auth handlers at /auth/* and adds JWT-specific endpoints.
  */
-export const createAuthRoutes = () => {
+export const createAuthRoutes = (options: AuthRoutesOptions = {}) => {
   const app = new Hono()
 
   // Get URLs from environment variables
@@ -111,7 +116,7 @@ export const createAuthRoutes = () => {
     betterAuthApi = auth.api as unknown as BetterAuthAPI
     return { handler: betterAuthHandler, api: betterAuthApi }
   }
-  const signUpRateLimiter = createSignUpIpRateLimiter()
+  const signUpRateLimiter = createSignUpIpRateLimiter({ redisClient: options.redisClient })
 
   // JWT-specific: POST /auth/sign-up/email - Email/password sign up
   // Returns JSON instead of redirect (for JWT tools)

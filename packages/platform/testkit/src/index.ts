@@ -8,6 +8,16 @@ export {
   type TestDatabase,
   type TestDatabaseConfig,
 } from "./database/test-database.ts"
+export {
+  closeInMemoryPostgres,
+  createInMemoryPostgres,
+  type InMemoryPostgres,
+} from "./database/in-memory-postgres.ts"
+export {
+  createFakePostgresPool,
+  type FakePostgresPool,
+  type FakePostgresPoolOptions,
+} from "./database/fake-postgres-pool.ts"
 
 // Fixture exports
 export {
@@ -61,3 +71,24 @@ export {
   type TestRedis,
   type TestRedisConfig,
 } from "./redis/test-redis.ts"
+export {
+  createInMemoryRedis,
+  createInMemoryRedis as createFakeRedisClient,
+  type InMemoryRedisClient,
+  type InMemoryRedisPipeline,
+} from "./redis/in-memory-redis.ts"
+
+// ClickHouse test utilities exports
+export {
+  createFakeClickhouseClient,
+  type FakeClickhouseClient,
+  type FakeClickhouseClientOptions,
+} from "./clickhouse/fake-clickhouse.ts"
+
+// Weaviate test utilities exports
+export {
+  createFakeWeaviateClient,
+  type FakeWeaviateClient,
+  type FakeWeaviateClientOptions,
+  type FakeWeaviateCollectionDefinition,
+} from "./weaviate/fake-weaviate.ts"
