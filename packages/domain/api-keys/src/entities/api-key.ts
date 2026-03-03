@@ -7,8 +7,9 @@ import type { ApiKeyId, OrganizationId } from "@domain/shared-kernel"
  * authentication for API access. Tokens are UUIDs generated
  * using crypto.randomUUID().
  *
- * The token is encrypted at rest (AES-256-GCM) and a SHA-256 hash
- * (tokenHash) is stored for indexed lookups without decryption.
+ * The token is encrypted at the application level (AES-256-GCM)
+ * and a SHA-256 hash (tokenHash) is stored for indexed lookups
+ * without decryption.
  */
 export interface ApiKey {
   readonly id: ApiKeyId

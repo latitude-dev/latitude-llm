@@ -4,9 +4,9 @@ import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } 
 /**
  * API Keys table - stores API keys for organization access.
  *
- * The token is encrypted at rest (AES-256-GCM). A SHA-256 hash
- * (token_hash) is stored alongside for indexed lookups without
- * decryption.
+ * The token is encrypted at the application level (AES-256-GCM)
+ * before being persisted. A SHA-256 hash (token_hash) is stored
+ * alongside for indexed lookups without decryption.
  *
  * Supports soft delete via deleted_at (for revocation).
  * RLS is enabled on this table.
