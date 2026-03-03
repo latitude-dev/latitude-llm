@@ -1,4 +1,5 @@
 import { boolean, jsonb, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
+import { cuid } from "../schemaHelpers.js"
 
 /**
  * Outbox events table for reliable event publishing.
@@ -9,7 +10,7 @@ import { boolean, jsonb, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
 const latitudeSchema = pgSchema("latitude")
 
 export const outboxEvents = latitudeSchema.table("outbox_events", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   eventName: text("event_name").notNull(),
   aggregateId: text("aggregate_id").notNull(),
   workspaceId: text("workspace_id").notNull(),

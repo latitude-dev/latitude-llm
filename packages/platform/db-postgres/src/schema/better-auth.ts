@@ -1,4 +1,5 @@
 import { boolean, pgEnum, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
+import { cuid } from "../schemaHelpers.js"
 
 /**
  * Better Auth Schema - Drizzle ORM definitions
@@ -31,7 +32,7 @@ export const userRoleEnum = pgEnum("user_role", ["user", "admin"])
  * This is the core Better Auth user table.
  */
 export const user = latitudeSchema.table("user", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   name: text("name"),
@@ -48,7 +49,7 @@ export const user = latitudeSchema.table("user", {
  * Session table - stores active sessions
  */
 export const session = latitudeSchema.table("session", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   token: text("token").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -65,7 +66,7 @@ export const session = latitudeSchema.table("session", {
  * Account table - stores OAuth provider accounts
  */
 export const account = latitudeSchema.table("account", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
   userId: text("user_id")
@@ -86,7 +87,7 @@ export const account = latitudeSchema.table("account", {
  * Verification table - stores email verification tokens and magic links
  */
 export const verification = latitudeSchema.table("verification", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -104,7 +105,7 @@ export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"]
  * and workspace management. This is the primary tenant boundary.
  */
 export const organization = latitudeSchema.table("organization", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").unique().notNull(),
   logo: text("logo"),
@@ -123,7 +124,7 @@ export const organization = latitudeSchema.table("organization", {
  * Better Auth organization plugin table.
  */
 export const member = latitudeSchema.table("member", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
     .references(() => organization.id, { onDelete: "cascade" }),
@@ -140,7 +141,7 @@ export const member = latitudeSchema.table("member", {
  * Better Auth organization plugin table.
  */
 export const invitation = latitudeSchema.table("invitation", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   organizationId: text("organization_id")
     .notNull()
     .references(() => organization.id, { onDelete: "cascade" }),

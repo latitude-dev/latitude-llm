@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm"
 import { createId } from "@paralleldrive/cuid2"
+import { sql } from "drizzle-orm"
 import { pgPolicy, pgSchema, timestamp, varchar } from "drizzle-orm/pg-core"
 
 export const LATITUDE_SCHEMA = pgSchema("latitude")

@@ -1,4 +1,5 @@
 import { boolean, integer, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
+import { cuid } from "../schemaHelpers.js"
 
 /**
  * Better Auth Stripe Plugin - Subscription table
@@ -15,7 +16,7 @@ import { boolean, integer, pgSchema, text, timestamp, varchar } from "drizzle-or
 const latitudeSchema = pgSchema("latitude")
 
 export const subscription = latitudeSchema.table("subscription", {
-  id: text("id").primaryKey(),
+  id: cuid("id").primaryKey(),
   plan: text("plan").notNull(),
   referenceId: text("reference_id").notNull(),
   stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
