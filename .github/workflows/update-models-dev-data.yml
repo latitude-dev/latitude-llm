@@ -15,23 +15,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 25.x
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
-
-      - name: Setup pnpm cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
+        uses: pnpm/action-setup@v4
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -50,7 +42,7 @@ jobs:
 
       - name: Create Pull Request
         if: steps.changes.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: 'chore: update bundled models.dev data'
           title: 'chore: update bundled models.dev data'
