@@ -1,6 +1,6 @@
 import type { Project, ProjectRepository } from "@domain/projects"
 import { type OrganizationId, type ProjectId, toRepositoryError } from "@domain/shared-kernel"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import * as schema from "../schema/index.ts"
@@ -24,8 +24,8 @@ const toDomainProject = (row: typeof schema.projects.$inferSelect): Project => (
  * Maps a domain Project entity to a database insert row.
  */
 const toInsertRow = (project: Project): typeof schema.projects.$inferInsert => ({
-  id: project.id as string,
-  organizationId: project.organizationId as string,
+  id: project.id,
+  organizationId: project.organizationId,
   name: project.name,
   slug: project.slug,
   deletedAt: project.deletedAt,
@@ -41,11 +41,11 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.projects.findFirst({
-            where: and(
-              eq(schema.projects.id, id as string),
-              eq(schema.projects.organizationId, organizationId as string),
-              isNull(schema.projects.deletedAt),
-            ),
+            where: {
+              id,
+              organizationId,
+              deletedAt: { isNull: true },
+            },
           }),
         catch: (error) => toRepositoryError(error, "findById"),
       })
@@ -58,7 +58,10 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.projects.findMany({
-            where: and(eq(schema.projects.organizationId, organizationId as string), isNull(schema.projects.deletedAt)),
+            where: {
+              organizationId,
+              deletedAt: { isNull: true },
+            },
           }),
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
       })
@@ -71,7 +74,7 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.projects.findMany({
-            where: eq(schema.projects.organizationId, organizationId as string),
+            where: { organizationId },
           }),
         catch: (error) => toRepositoryError(error, "findAllByOrganizationIdIncludingDeleted"),
       })
@@ -111,9 +114,7 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
               deletedAt: new Date(),
               updatedAt: new Date(),
             })
-            .where(
-              and(eq(schema.projects.id, id as string), eq(schema.projects.organizationId, organizationId as string)),
-            ),
+            .where(and(eq(schema.projects.id, id), eq(schema.projects.organizationId, organizationId))),
         catch: (error) => toRepositoryError(error, "softDelete"),
       })
     }),
@@ -124,9 +125,7 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
         try: () =>
           db
             .delete(schema.projects)
-            .where(
-              and(eq(schema.projects.id, id as string), eq(schema.projects.organizationId, organizationId as string)),
-            ),
+            .where(and(eq(schema.projects.id, id), eq(schema.projects.organizationId, organizationId))),
         catch: (error) => toRepositoryError(error, "hardDelete"),
       })
     }),
@@ -136,11 +135,11 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.projects.findFirst({
-            where: and(
-              eq(schema.projects.organizationId, organizationId as string),
-              eq(schema.projects.name, name),
-              isNull(schema.projects.deletedAt),
-            ),
+            where: {
+              organizationId,
+              name,
+              deletedAt: { isNull: true },
+            },
           }),
         catch: (error) => toRepositoryError(error, "existsByName"),
       })
@@ -153,11 +152,11 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.projects.findFirst({
-            where: and(
-              eq(schema.projects.organizationId, organizationId as string),
-              eq(schema.projects.slug, slug),
-              isNull(schema.projects.deletedAt),
-            ),
+            where: {
+              organizationId,
+              slug,
+              deletedAt: { isNull: true },
+            },
           }),
         catch: (error) => toRepositoryError(error, "existsBySlug"),
       })

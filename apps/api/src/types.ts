@@ -1,5 +1,4 @@
 import type { OrganizationId, UserId } from "@domain/shared-kernel"
-import type { Context } from "hono"
 import type { ApiDbDependencies } from "./db-deps.ts"
 
 /**
@@ -17,30 +16,6 @@ export interface AuthContext {
   /** The authentication method that was used */
   readonly method: "cookie" | "jwt" | "api-key"
 }
-
-/**
- * Type definition for Hono context variables.
- *
- * Extend this interface to add custom variables to Hono's context.
- * This enables type-safe access via `c.get('auth')`.
- */
-export interface HonoVariables {
-  auth: AuthContext
-}
-
-/**
- * Type alias for Hono Context with our custom variables.
- *
- * Use this type for route handlers to get type-safe access to auth context:
- *
- * ```typescript
- * app.get("/", (c: AuthenticatedContext) => {
- *   const auth = c.get("auth")
- *   // auth.userId and auth.organizationId are fully typed
- * })
- * ```
- */
-export type AuthenticatedContext = Context<{ Variables: HonoVariables }>
 
 /**
  * Hono module augmentation for type-safe context variables.

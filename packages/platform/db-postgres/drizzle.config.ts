@@ -5,14 +5,14 @@ import { config as loadDotenv } from "dotenv"
 import { defineConfig } from "drizzle-kit"
 import { Effect } from "effect"
 
-const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"))
+const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
 
 if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath, quiet: true })
 }
 
-const url = Effect.runSync(parseEnv(process.env.LAT_DATABASE_URL, "string"))
+const url = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"))
 
 export default defineConfig({
   dialect: "postgresql",

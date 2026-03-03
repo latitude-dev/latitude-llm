@@ -268,27 +268,3 @@ export const createAuthMiddleware = (): MiddlewareHandler => {
     await next()
   }
 }
-
-/**
- * Helper to get auth context from Hono context.
- *
- * This helper provides runtime safety by throwing if auth context is not set.
- * Only use this in routes protected by the auth middleware.
- *
- * Usage in route handlers:
- * ```typescript
- * const auth = getAuthContext(c)
- * console.log(auth.userId, auth.organizationId)
- * ```
- *
- * @throws {UnauthorizedError} If auth context is not found (middleware not applied)
- */
-export const getAuthContext = (c: Context): AuthContext => {
-  const auth = c.get("auth")
-  if (!auth) {
-    throw new UnauthorizedError({
-      message: "Auth context not found - ensure auth middleware is applied to this route",
-    })
-  }
-  return auth
-}

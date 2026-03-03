@@ -10,7 +10,7 @@ interface RegisterCorsMiddlewareOptions {
 }
 
 const parseAllowedOrigins = (nodeEnv: string, logger: ReturnType<typeof createLogger>): string[] => {
-  const originsEnv = Effect.runSync(parseEnvOptional(process.env.LAT_CORS_ALLOWED_ORIGINS, "string"))
+  const originsEnv = Effect.runSync(parseEnvOptional("LAT_CORS_ALLOWED_ORIGINS", "string"))
 
   if (originsEnv) {
     return originsEnv

@@ -11,7 +11,8 @@
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
-    "update:models-dev": "tsx scripts/update-models-dev-data.ts"
+    "update:models-dev": "tsx scripts/update-models-dev-data.ts",
+    "check:fix": "biome check --fix src"
   },
   "dependencies": {
     "@repo/utils": "workspace:*",

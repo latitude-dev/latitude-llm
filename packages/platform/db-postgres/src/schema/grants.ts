@@ -1,16 +1,8 @@
-import { sql } from "drizzle-orm"
-import { bigint, pgEnum, pgPolicy, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.ts"
+import { bigint, text, varchar } from "drizzle-orm/pg-core"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
-/**
- * Quota type enum for grants.
- */
-export const quotaTypeEnum = pgEnum("quota_type", ["seats", "runs", "credits"])
-
-/**
- * Grant source enum.
- */
-export const grantSourceEnum = pgEnum("grant_source", ["subscription", "purchase", "promocode"])
+export type QuotaType = "seats" | "runs" | "credits"
+export type GrantSource = "subscription" | "purchase" | "promocode"
 
 /**
  * Grants table - stores quota allocations.
@@ -18,28 +10,18 @@ export const grantSourceEnum = pgEnum("grant_source", ["subscription", "purchase
  * Scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude")
-
 export const grants = latitudeSchema.table(
   "grants",
   {
     id: cuid("id").primaryKey(),
     organizationId: text("organization_id").notNull(),
     subscriptionId: text("subscription_id").notNull(),
-    source: grantSourceEnum("source").notNull(),
-    type: quotaTypeEnum("type").notNull(),
-    amount: bigint("amount", { mode: "number" }), // null means unlimited
+    source: varchar("source", { length: 50 }).notNull().$type<GrantSource>(),
+    type: varchar("type", { length: 50 }).notNull().$type<QuotaType>(),
+    amount: bigint("amount", { mode: "number" }),
     balance: bigint("balance", { mode: "number" }).notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: tzTimestamp("expires_at"),
+    ...timestamps(),
   },
-  (table) => [
-    pgPolicy("grants_organization_policy", {
-      for: "all",
-      to: "public",
-      using: sql`organization_id = get_current_organization_id()`,
-      withCheck: sql`organization_id = get_current_organization_id()`,
-    }),
-  ],
+  () => [organizationRLSPolicy("grants")],
 )
