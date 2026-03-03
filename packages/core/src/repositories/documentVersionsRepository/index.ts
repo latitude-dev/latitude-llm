@@ -11,6 +11,7 @@ import {
 import { alias } from 'drizzle-orm/pg-core'
 
 import { database } from '../../client'
+import { cache } from '../../cache'
 import {
   databaseErrorCodes,
   NotFoundError,
@@ -24,6 +25,24 @@ import { type Commit } from '../../schema/models/types/Commit'
 import { type DocumentVersion } from '../../schema/models/types/DocumentVersion'
 import { CommitsRepository } from '../commitsRepository'
 import Repository from '../repositoryV2'
+
+const DATE_FIELDS = [
+  'createdAt',
+  'updatedAt',
+  'deletedAt',
+  'mergedAt',
+] as const
+
+function hydrateDocumentDto(raw: Record<string, unknown>): DocumentVersionDto {
+  const hydrated = { ...raw }
+  for (const field of DATE_FIELDS) {
+    const value = hydrated[field]
+    if (typeof value === 'string') {
+      hydrated[field] = new Date(value)
+    }
+  }
+  return hydrated as unknown as DocumentVersionDto
+}
 
 function mergeDocuments(
   ...documentsArr: DocumentVersion[][]
@@ -246,10 +265,55 @@ export class DocumentVersionsRepository extends Repository<DocumentVersionDto> {
 
   async getDocumentByPath({ commit, path }: { commit: Commit; path: string }) {
     try {
-      const result = await this.getDocumentsAtCommit(commit)
-      const documents = result.unwrap()
-      const document = documents.find((doc) => doc.path === path)
-      if (!document) {
+      if (commit.mergedAt !== null) {
+        const document = await this.getLatestMergedDocumentByPath({
+          projectId: commit.projectId,
+          maxMergedAt: commit.mergedAt,
+          path,
+        })
+
+        if (!document || (!this.opts.includeDeleted && document.deletedAt !== null)) {
+          return Result.error(
+            new NotFoundError(
+              `No document with path ${path} at commit ${commit.uuid}`,
+            ),
+          )
+        }
+
+        return Result.ok(document)
+      }
+
+      // Draft commit: check the draft first
+      const [draftDoc] = await this.scope
+        .where(
+          and(
+            this.scopeFilter,
+            eq(documentVersions.commitId, commit.id),
+            eq(documentVersions.path, path),
+          ),
+        )
+        .limit(1)
+
+      if (draftDoc) {
+        if (!this.opts.includeDeleted && draftDoc.deletedAt !== null) {
+          return Result.error(
+            new NotFoundError(
+              `No document with path ${path} at commit ${commit.uuid}`,
+            ),
+          )
+        }
+
+        return Result.ok(draftDoc)
+      }
+
+      // Not in draft at this path — check merged commits
+      const mergedDoc = await this.getLatestMergedDocumentByPath({
+        projectId: commit.projectId,
+        maxMergedAt: null,
+        path,
+      })
+
+      if (!mergedDoc) {
         return Result.error(
           new NotFoundError(
             `No document with path ${path} at commit ${commit.uuid}`,
@@ -257,10 +321,75 @@ export class DocumentVersionsRepository extends Repository<DocumentVersionDto> {
         )
       }
 
-      return Result.ok(document!)
+      // Ensure the draft hasn't overridden this document (e.g. renamed or deleted it)
+      const [draftOverride] = await this.scope
+        .where(
+          and(
+            this.scopeFilter,
+            eq(documentVersions.commitId, commit.id),
+            eq(documentVersions.documentUuid, mergedDoc.documentUuid),
+          ),
+        )
+        .limit(1)
+
+      if (draftOverride) {
+        return Result.error(
+          new NotFoundError(
+            `No document with path ${path} at commit ${commit.uuid}`,
+          ),
+        )
+      }
+
+      if (!this.opts.includeDeleted && mergedDoc.deletedAt !== null) {
+        return Result.error(
+          new NotFoundError(
+            `No document with path ${path} at commit ${commit.uuid}`,
+          ),
+        )
+      }
+
+      return Result.ok(mergedDoc)
     } catch (err) {
       return Result.error(err as Error)
     }
+  }
+
+  /**
+   * Returns the latest merged version of a document at the given path, using a
+   * subquery so the path filter runs after the DISTINCT ON — avoiding the need
+   * to fetch all documents and filter in application memory.
+   */
+  private async getLatestMergedDocumentByPath({
+    projectId,
+    maxMergedAt,
+    path,
+  }: {
+    projectId: number
+    maxMergedAt: Date | null
+    path: string
+  }): Promise<DocumentVersionDto | undefined> {
+    const mergedAtFilter = maxMergedAt
+      ? and(isNotNull(commits.mergedAt), lte(commits.mergedAt, maxMergedAt))
+      : isNotNull(commits.mergedAt)
+
+    const latestVersions = this.db
+      .selectDistinctOn([documentVersions.documentUuid], tt)
+      .from(documentVersions)
+      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+      .innerJoin(projects, eq(projects.id, commits.projectId))
+      .where(
+        and(this.scopeFilter, mergedAtFilter, eq(commits.projectId, projectId)),
+      )
+      .orderBy(desc(documentVersions.documentUuid), desc(commits.mergedAt))
+      .as('latest_versions')
+
+    const [document] = await this.db
+      .select()
+      .from(latestVersions)
+      .where(eq(latestVersions.path, path))
+      .limit(1)
+
+    return document
   }
 
   /**
@@ -422,15 +551,45 @@ export class DocumentVersionsRepository extends Repository<DocumentVersionDto> {
     const filterByProject = () =>
       projectId ? eq(commits.projectId, projectId) : undefined
 
-    const documentsFromMergedCommits = await this.db
-      .selectDistinctOn([documentVersions.documentUuid], tt)
-      .from(documentVersions)
-      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
-      .innerJoin(projects, eq(projects.id, commits.projectId))
-      .where(and(this.scopeFilter, filterByMaxMergedAt(), filterByProject()))
-      .orderBy(desc(documentVersions.documentUuid), desc(commits.mergedAt))
+    const query = () =>
+      this.db
+        .selectDistinctOn([documentVersions.documentUuid], tt)
+        .from(documentVersions)
+        .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+        .innerJoin(projects, eq(projects.id, commits.projectId))
+        .where(and(this.scopeFilter, filterByMaxMergedAt(), filterByProject()))
+        .orderBy(desc(documentVersions.documentUuid), desc(commits.mergedAt))
 
-    return Result.ok(documentsFromMergedCommits)
+    // Merged-commit snapshots are immutable: safe to cache indefinitely.
+    // Skip caching when maxMergedAt is absent (draft commits — the set of
+    // merged documents grows as new commits land).
+    if (!maxMergedAt) return Result.ok(await query())
+
+    const cacheKey = `workspace:${this.workspaceId}:project:${projectId}:merged-docs:${maxMergedAt.toISOString()}`
+
+    try {
+      const cacheClient = await cache()
+      const cached = await cacheClient.get(cacheKey)
+      if (cached !== null && cached !== undefined) {
+        const parsed = JSON.parse(cached) as Record<string, unknown>[]
+        return Result.ok(parsed.map(hydrateDocumentDto))
+      }
+    } catch (_error) {
+      // Ignore cache read errors
+    }
+
+    const documents = await query()
+
+    try {
+      const cacheClient = await cache()
+      // 24-hour TTL as a conservative upper bound; the data is actually
+      // immutable for a given maxMergedAt so no invalidation is needed.
+      await cacheClient.set(cacheKey, JSON.stringify(documents), 'EX', 86400)
+    } catch (_error) {
+      // Ignore cache write errors
+    }
+
+    return Result.ok(documents)
   }
 
   async getDocumentsForImport(projectId: number) {
