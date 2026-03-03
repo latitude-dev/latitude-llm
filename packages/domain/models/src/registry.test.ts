@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { LlmModel } from "./entities/model.ts"
+import type { Model } from "./entities/model.ts"
 import {
   costBreakdownKey,
   estimateCost,
@@ -14,7 +14,7 @@ import {
   getModelsForProvider,
 } from "./registry.ts"
 
-const gpt4o: LlmModel = {
+const gpt4o: Model = {
   id: "gpt-4o",
   name: "GPT-4o",
   provider: "openai",
@@ -28,20 +28,20 @@ const gpt4o: LlmModel = {
   knowledgeCutoff: "2024-06-01",
 }
 
-const claudeSonnet4: LlmModel = {
+const claudeSonnet4: Model = {
   id: "claude-sonnet-4-20250514",
   name: "Claude Sonnet 4",
   provider: "anthropic",
   pricing: { input: 3, output: 15, cacheRead: 0.3 },
 }
 
-const noPricing: LlmModel = {
+const noPricing: Model = {
   id: "no-pricing",
   name: "No Pricing Model",
   provider: "unknown",
 }
 
-const mockModels: LlmModel[] = [gpt4o, claudeSonnet4, noPricing]
+const mockModels: Model[] = [gpt4o, claudeSonnet4, noPricing]
 
 describe("findModel", () => {
   it("finds model by exact ID", () => {
@@ -66,7 +66,7 @@ describe("findModelWithFallback", () => {
   })
 
   it("falls back to longest prefix", () => {
-    const models: LlmModel[] = [
+    const models: Model[] = [
       { id: "gpt-4", name: "GPT-4", provider: "openai" },
       { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
     ]
@@ -90,7 +90,7 @@ describe("getModelPricing", () => {
   })
 
   it("returns null when input is zero (no meaningful pricing)", () => {
-    const model: LlmModel = {
+    const model: Model = {
       id: "test",
       name: "Test",
       provider: "test",

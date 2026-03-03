@@ -21,7 +21,7 @@ export type ModelPricing = {
   readonly reasoning?: number | undefined
 }
 
-export type LlmModel = {
+export type Model = {
   readonly id: string
   readonly name: string
   readonly provider: string
@@ -80,14 +80,14 @@ function hasValidCost(
 }
 
 /**
- * Parse raw models.dev JSON data into a flat array of LlmModel entries.
+ * Parse raw models.dev JSON data into a flat array of Model entries.
  *
  * The raw JSON has the structure:
  * `{ providerId: { id, name, models: { modelId: { ... } } } }`
  */
-export function parseModelsDevData(data: unknown): LlmModel[] {
+export function parseModelsDevData(data: unknown): Model[] {
   const providers = data as RawModelsDevData
-  const models: LlmModel[] = []
+  const models: Model[] = []
 
   for (const providerId in providers) {
     const provider = providers[providerId]

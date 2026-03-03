@@ -29,12 +29,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Update models.dev data
-        run: pnpm --filter @domain/llm-models update:models-dev
+        run: pnpm --filter @domain/models update:models-dev
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet packages/domain/llm-models/src/data/models.dev.json; then
+          if git diff --quiet packages/domain/models/src/data/models.dev.json; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -49,7 +49,7 @@ jobs:
           body: |
             Automated update of the bundled models.dev JSON data.
 
-            Updates `packages/domain/llm-models/src/data/models.dev.json`
+            Updates `packages/domain/models/src/data/models.dev.json`
             with the latest model information from the models.dev API.
           branch: chore/update-models-dev-data
           delete-branch: true

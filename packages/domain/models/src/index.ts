@@ -1,5 +1,5 @@
 export type {
-  LlmModel,
+  Model,
   ModelModality,
   ModelModalities,
   ModelPricing,

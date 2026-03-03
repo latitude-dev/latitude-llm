@@ -7,12 +7,12 @@
 
 import type { CostBreakdown, CostLookupResult, TokenUsage } from "./entities/cost.ts"
 import { computeCostBreakdown, computeTokenCost, estimateTotalCost } from "./entities/cost.ts"
-import type { LlmModel, ModelPricing } from "./entities/model.ts"
+import type { Model, ModelPricing } from "./entities/model.ts"
 import { parseModelsDevData } from "./entities/model.ts"
 
 import modelsDevJson from "./data/models.dev.json" with { type: "json" }
 
-let cachedModels: LlmModel[] | null = null
+let cachedModels: Model[] | null = null
 
 /**
  * Maps well-known provider identifiers to their models.dev equivalents.
@@ -35,7 +35,7 @@ function resolveProviderName(provider: string): string {
  *
  * The result is cached after the first call.
  */
-export function getAllModels(): LlmModel[] {
+export function getAllModels(): Model[] {
   if (!cachedModels) {
     cachedModels = parseModelsDevData(modelsDevJson)
   }
@@ -45,7 +45,7 @@ export function getAllModels(): LlmModel[] {
 /**
  * Find a model by its exact ID (case-insensitive).
  */
-export function findModel(models: LlmModel[], modelId: string): LlmModel | undefined {
+export function findModel(models: Model[], modelId: string): Model | undefined {
   const needle = modelId.toLowerCase()
   return models.find((m) => m.id.toLowerCase() === needle)
 }
@@ -57,12 +57,12 @@ export function findModel(models: LlmModel[], modelId: string): LlmModel | undef
  * model whose ID is the longest prefix of the requested `modelId`.
  * Useful for versioned model names like `gpt-4.1-2025-04-14` matching `gpt-4.1`.
  */
-export function findModelWithFallback(models: LlmModel[], modelId: string): LlmModel | undefined {
+export function findModelWithFallback(models: Model[], modelId: string): Model | undefined {
   const exact = findModel(models, modelId)
   if (exact) return exact
 
   const needle = modelId.toLowerCase()
-  let best: LlmModel | undefined
+  let best: Model | undefined
   let bestLen = 0
 
   for (const m of models) {
@@ -79,7 +79,7 @@ export function findModelWithFallback(models: LlmModel[], modelId: string): LlmM
 /**
  * Get the pricing for a model, or null if unavailable.
  */
-export function getModelPricing(model: LlmModel): ModelPricing | null {
+export function getModelPricing(model: Model): ModelPricing | null {
   if (!model.pricing?.input || !model.pricing?.output) return null
   return model.pricing
 }
@@ -90,7 +90,7 @@ export function getModelPricing(model: LlmModel): ModelPricing | null {
  * Provider name matching is case-insensitive. Well-known aliases
  * (e.g. `amazon_bedrock` -> `bedrock`) are resolved automatically.
  */
-export function getModelsForProvider(provider: string): LlmModel[] {
+export function getModelsForProvider(provider: string): Model[] {
   const name = resolveProviderName(provider).toLowerCase()
   return getAllModels().filter((m) => m.provider.toLowerCase() === name)
 }
@@ -98,7 +98,7 @@ export function getModelsForProvider(provider: string): LlmModel[] {
 /**
  * Find a specific model within a provider's model list.
  */
-export function getModelForProvider(provider: string, modelId: string): LlmModel | undefined {
+export function getModelForProvider(provider: string, modelId: string): Model | undefined {
   const models = getModelsForProvider(provider)
   return findModelWithFallback(models, modelId)
 }
@@ -166,7 +166,7 @@ export function costBreakdownKey(provider: string, modelId: string): string {
  * Includes name, modalities, features, context window, pricing,
  * and knowledge cutoff when available.
  */
-export function formatModel(model: LlmModel): string {
+export function formatModel(model: Model): string {
   const lines: string[] = [`${model.name} (${model.id})`]
 
   if (model.modalities) {

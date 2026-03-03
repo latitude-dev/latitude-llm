@@ -374,7 +374,7 @@ importers:
 
   packages/domain/events: {}
 
-  packages/domain/llm-models:
+  packages/domain/models:
     dependencies:
       tsx:
         specifier: 'catalog:'
