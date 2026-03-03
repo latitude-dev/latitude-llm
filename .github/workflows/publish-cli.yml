@@ -3,7 +3,7 @@ name: Publish Latitude CLI Package
 on:
   push:
     branches:
-      - main
+      - latitude-v1
 
 jobs:
   publish:

@@ -34,14 +34,7 @@ export async function createInstantlyLeadHandler({
     (w) =>
       w.currentSubscription && !FREE_PLANS.includes(w.currentSubscription.plan),
   )
-  if (hasPaidPlan) {
-    captureException(
-      new Error(
-        `[createInstantlyLead] skipped for ${event.data.userEmail}: has paid plan`,
-      ),
-    )
-    return
-  }
+  if (hasPaidPlan) return
 
   const workspace = workspaces[0]!
   if (!workspace.currentSubscription) {
@@ -63,11 +56,16 @@ export async function createInstantlyLeadHandler({
     return
   }
 
+  const userGoal = event.data.latitudeGoal ?? event.data.latitudeGoalOther
+
+  // This can happen for people invited to existing workspaces, we don't want to send emails to them
+  if (!userGoal) return
+
   await createInstantlyLeadService(
     {
-      email: event.data.userEmail,
-      name: event.data.name,
-      latitudeGoal: event.data.latitudeGoal,
+      email,
+      name: event.data.name ?? '',
+      latitudeGoal: userGoal,
     },
     apiKey,
   )

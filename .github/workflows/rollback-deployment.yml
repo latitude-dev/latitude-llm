@@ -3,7 +3,7 @@ name: Rollback Deployment
 on:
   push:
     branches:
-      - main
+      - latitude-v1
 
 jobs:
   check-commit-message:
