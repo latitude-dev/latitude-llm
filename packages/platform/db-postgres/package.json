@@ -28,6 +28,7 @@
     "@domain/subscriptions": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@platform/env": "workspace:*",
+    "@repo/utils": "workspace:*",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "@paralleldrive/cuid2": "catalog:",

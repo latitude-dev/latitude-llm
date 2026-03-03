@@ -4,7 +4,15 @@ import { parseEnv } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { closePostgres, createPostgresClient } from "../client.ts"
-import { createRepositories } from "../repositories/index.ts"
+import {
+  createApiKeyPostgresRepository,
+  createGrantPostgresRepository,
+  createMembershipPostgresRepository,
+  createOrganizationPostgresRepository,
+  createProjectPostgresRepository,
+  createSubscriptionPostgresRepository,
+  createUserPostgresRepository,
+} from "../repositories/index.ts"
 import { allSeeders } from "./all.ts"
 import { runSeeders } from "./runner.ts"
 
@@ -17,7 +25,15 @@ if (existsSync(envFilePath)) {
 
 const main = async () => {
   const { pool, db } = createPostgresClient()
-  const repositories = createRepositories(db)
+  const repositories = {
+    apiKey: createApiKeyPostgresRepository(db),
+    grant: createGrantPostgresRepository(db),
+    membership: createMembershipPostgresRepository(db),
+    organization: createOrganizationPostgresRepository(db),
+    project: createProjectPostgresRepository(db),
+    subscription: createSubscriptionPostgresRepository(db),
+    user: createUserPostgresRepository(db),
+  }
 
   console.log("Seeding database...\n")
 

@@ -15,9 +15,10 @@ export interface ApiKeyRepository {
   findById(id: ApiKeyId): Effect.Effect<ApiKey | null, RepositoryError>
 
   /**
-   * Find an API key by its token (for authentication).
+   * Find an API key by its token hash (for authentication).
+   * The caller hashes the raw token before calling this method.
    */
-  findByToken(token: string): Effect.Effect<ApiKey | null, RepositoryError>
+  findByTokenHash(tokenHash: string): Effect.Effect<ApiKey | null, RepositoryError>
 
   /**
    * Find all active (non-deleted) API keys for an organization.

@@ -1,9 +1,8 @@
-import { type CreateProjectInput, type Project, createProjectUseCase, listProjectsUseCase } from "@domain/projects"
+import { type CreateProjectInput, type Project, createProjectUseCase } from "@domain/projects"
 import { OrganizationId, ProjectId, generateId } from "@domain/shared-kernel"
-import { createRepositories } from "@platform/db-postgres"
+import { createProjectPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
-import { type Context, Hono } from "hono"
-import { getDbDependencies } from "../db-deps.ts"
+import { Hono } from "hono"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
 import type { AuthContext } from "../types.ts"
@@ -20,11 +19,10 @@ import type { AuthContext } from "../types.ts"
 
 export const createProjectsRoutes = () => {
   const app = new Hono()
-  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
 
   // POST /organizations/:organizationId/projects - Create project
   app.post("/", async (c) => {
-    const repos = getRepos(c)
+    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID is required" })
@@ -52,32 +50,34 @@ export const createProjectsRoutes = () => {
       createdById: auth.userId,
     }
 
-    const project = await Effect.runPromise(createProjectUseCase(repos.project)(input))
+    const project = await Effect.runPromise(createProjectUseCase(projectRepository)(input))
     return c.json(project, 201)
   })
 
   // GET /organizations/:organizationId/projects - List projects
   app.get("/", async (c) => {
-    const repos = getRepos(c)
+    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID is required" })
     }
 
-    const projects = await Effect.runPromise(listProjectsUseCase(repos.project)({ organizationId }))
+    const projects = await Effect.runPromise(projectRepository.findByOrganizationId(organizationId))
     return c.json({ projects }, 200)
   })
 
   // GET /organizations/:organizationId/projects/:id - Get project
   app.get("/:id", async (c) => {
-    const repos = getRepos(c)
+    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     const id = extractParam(c, "id", ProjectId)
     if (!organizationId || !id) {
-      throw new BadRequestError({ httpMessage: "Organization ID and Project ID are required" })
+      throw new BadRequestError({
+        httpMessage: "Organization ID and Project ID are required",
+      })
     }
 
-    const project = await Effect.runPromise(repos.project.findById(id, organizationId))
+    const project = await Effect.runPromise(projectRepository.findById(id, organizationId))
 
     if (!project) {
       throw new BadRequestError({ httpMessage: "Project not found" })
@@ -88,11 +88,13 @@ export const createProjectsRoutes = () => {
 
   // PATCH /organizations/:organizationId/projects/:id - Update project
   app.patch("/:id", async (c) => {
-    const repos = getRepos(c)
+    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     const id = extractParam(c, "id", ProjectId)
     if (!organizationId || !id) {
-      throw new BadRequestError({ httpMessage: "Organization ID and Project ID are required" })
+      throw new BadRequestError({
+        httpMessage: "Organization ID and Project ID are required",
+      })
     }
 
     const body = (await c.req.json()) as {
@@ -101,7 +103,7 @@ export const createProjectsRoutes = () => {
     }
 
     // First, find the existing project
-    const existingProject = await Effect.runPromise(repos.project.findById(id, organizationId))
+    const existingProject = await Effect.runPromise(projectRepository.findById(id, organizationId))
 
     if (!existingProject) {
       throw new BadRequestError({ httpMessage: "Project not found" })
@@ -115,20 +117,22 @@ export const createProjectsRoutes = () => {
       updatedAt: new Date(),
     }
 
-    await Effect.runPromise(repos.project.save(updatedProject))
+    await Effect.runPromise(projectRepository.save(updatedProject))
     return c.json(updatedProject, 200)
   })
 
   // DELETE /organizations/:organizationId/projects/:id - Soft delete project
   app.delete("/:id", async (c) => {
-    const repos = getRepos(c)
+    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = extractParam(c, "organizationId", OrganizationId)
     const id = extractParam(c, "id", ProjectId)
     if (!organizationId || !id) {
-      throw new BadRequestError({ httpMessage: "Organization ID and Project ID are required" })
+      throw new BadRequestError({
+        httpMessage: "Organization ID and Project ID are required",
+      })
     }
 
-    await Effect.runPromise(repos.project.softDelete(id, organizationId))
+    await Effect.runPromise(projectRepository.softDelete(id, organizationId))
     return c.body(null, 204)
   })
 

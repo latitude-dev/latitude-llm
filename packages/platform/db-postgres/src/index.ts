@@ -24,8 +24,6 @@ export {
   createMembershipPostgresRepository,
   createOrganizationPostgresRepository,
   createProjectPostgresRepository,
-  createRepositories,
   createSubscriptionPostgresRepository,
   createUserPostgresRepository,
 } from "./repositories/index.ts"
-export type { Repositories } from "./repositories/index.ts"

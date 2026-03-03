@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto"
 import { generateId } from "@domain/shared-kernel"
 import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
+import { encrypt, hashToken } from "@repo/utils"
 import { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { createDbDependenciesMiddleware } from "../db-deps.ts"
+import { getRedisClient } from "../clients.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
@@ -32,13 +33,19 @@ const createApp = (db: PostgresDb): Hono => {
   app.onError(honoErrorHandler)
   const protectedRoutes = new Hono()
 
-  protectedRoutes.use("*", createDbDependenciesMiddleware({ db }))
+  protectedRoutes.use("*", async (c, next) => {
+    c.set("db", db)
+    c.set("redis", getRedisClient())
+    await next()
+  })
   protectedRoutes.use("*", createAuthMiddleware())
   protectedRoutes.route("/", createOrganizationsRoutes())
 
   app.route("/v1/organizations", protectedRoutes)
   return app
 }
+
+const TEST_ENCRYPTION_KEY = Buffer.from("75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b", "hex")
 
 const createOrganizationSetup = async (db: InMemoryPostgres["db"]): Promise<OrganizationSetup> => {
   const userId = generateId()
@@ -66,23 +73,20 @@ const createOrganizationSetup = async (db: InMemoryPostgres["db"]): Promise<Orga
     role: "owner",
   })
 
-  const [apiKey] = await db
-    .insert(postgresSchema.apiKeys)
-    .values({
-      id: generateId(),
-      organizationId,
-      token: randomUUID(),
-      name: "Test API Key",
-    })
-    .returning({
-      token: postgresSchema.apiKeys.token,
-    })
+  const plaintextToken = randomUUID()
+  await db.insert(postgresSchema.apiKeys).values({
+    id: generateId(),
+    organizationId,
+    token: encrypt(plaintextToken, TEST_ENCRYPTION_KEY),
+    tokenHash: hashToken(plaintextToken),
+    name: "Test API Key",
+  })
 
   return {
     userId,
     organizationId,
     organizationName,
-    apiKeyToken: apiKey.token,
+    apiKeyToken: plaintextToken,
   }
 }
 

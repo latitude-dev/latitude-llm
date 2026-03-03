@@ -1,13 +1,8 @@
-import {
-  type CreateOrganizationInput,
-  createOrganizationUseCase,
-  getOrganizationMembersUseCase,
-} from "@domain/organizations"
+import { type CreateOrganizationInput, createOrganizationUseCase } from "@domain/organizations"
 import { OrganizationId, PermissionError, generateId } from "@domain/shared-kernel"
-import { createRepositories } from "@platform/db-postgres"
+import { createMembershipPostgresRepository, createOrganizationPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
-import { type Context, Hono } from "hono"
-import { getDbDependencies } from "../db-deps.ts"
+import { Hono } from "hono"
 import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
 import type { AuthContext } from "../types.ts"
@@ -24,7 +19,6 @@ import type { AuthContext } from "../types.ts"
 
 export const createOrganizationsRoutes = () => {
   const app = new Hono()
-  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db)
   const assertOrganizationAccess = (auth: AuthContext, organizationId: string) => {
     if (auth.organizationId !== organizationId) {
       throw new PermissionError({
@@ -48,7 +42,7 @@ export const createOrganizationsRoutes = () => {
 
   // POST /organizations - Create organization
   app.post("/", async (c) => {
-    const repos = getRepos(c)
+    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
     const body = (await c.req.json()) as {
       readonly name: string
       readonly slug: string
@@ -63,27 +57,27 @@ export const createOrganizationsRoutes = () => {
       creatorId: auth.userId,
     }
 
-    const organization = await Effect.runPromise(createOrganizationUseCase(repos.organization)(input))
+    const organization = await Effect.runPromise(createOrganizationUseCase(organizationRepository)(input))
 
     return c.json(organization, 201)
   })
 
   // GET /organizations - List user's organizations
   app.get("/", async (c) => {
-    const repos = getRepos(c)
-    const organizations = await Effect.runPromise(repos.organization.findAll())
+    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
+    const organizations = await Effect.runPromise(organizationRepository.findAll())
     return c.json({ organizations }, 200)
   })
 
   // GET /organizations/:id - Get organization by ID
   app.get("/:id", async (c) => {
-    const repos = getRepos(c)
+    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
     const id = extractParam(c, "id", OrganizationId)
     if (!id) {
       throw new BadRequestError({ httpMessage: "Organization ID required" })
     }
 
-    const organization = await Effect.runPromise(repos.organization.findById(id))
+    const organization = await Effect.runPromise(organizationRepository.findById(id))
 
     if (!organization) {
       throw new BadRequestError({ httpMessage: "Organization not found" })
@@ -94,26 +88,26 @@ export const createOrganizationsRoutes = () => {
 
   // GET /organizations/:id/members - List organization members
   app.get("/:id/members", async (c) => {
-    const repos = getRepos(c)
+    const membershipRepository = createMembershipPostgresRepository(c.get("db"))
     const organizationId = extractParam(c, "id", OrganizationId)
     if (!organizationId) {
       throw new BadRequestError({ httpMessage: "Organization ID required" })
     }
 
-    const members = await Effect.runPromise(getOrganizationMembersUseCase(repos.membership)({ organizationId }))
+    const members = await Effect.runPromise(membershipRepository.findByOrganizationId(organizationId))
 
     return c.json({ members }, 200)
   })
 
   // DELETE /organizations/:id - Delete organization
   app.delete("/:id", async (c) => {
-    const repos = getRepos(c)
+    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
     const id = extractParam(c, "id", OrganizationId)
     if (!id) {
       throw new BadRequestError({ httpMessage: "Organization ID required" })
     }
 
-    await Effect.runPromise(repos.organization.delete(id))
+    await Effect.runPromise(organizationRepository.delete(id))
     return c.body(null, 204)
   })
 

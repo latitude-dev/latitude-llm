@@ -90,7 +90,7 @@ When writing a utility function that is not specific to a single domain or packa
 - Node.js: `>=25` (see root `package.json`)
 - Package manager: check `package.json` and `packageManager` field (e.g. `pnpm` 10.30.0)
 - Check if mise is installed and use mise to switch to found node version in
-`package.json`. If Mise is not found ignore this.
+  `package.json`. If Mise is not found ignore this.
 - Task runner: `turbo` via root scripts
 - Lint/format: Biome (`@biomejs/biome` 1.9.x)
 - Tests: Vitest 3.x
@@ -184,6 +184,7 @@ Base config: `tsconfig.base.json`
 - `strict: true` is enabled; keep code strict-clean
 - Module system: `NodeNext` + ESM (`"type": "module"` in packages/apps)
 - Prefer explicit domain types/interfaces over loose objects
+- Methods/functions with more than one argument should default to a single named-arguments object rather than positional arguments
 - Use `readonly` fields for immutable domain data shapes
 - Avoid `any`; use `unknown` + narrowing
 - Validate boundary inputs early (API input, queue payloads, external IO)
@@ -238,7 +239,7 @@ export const projects = latitudeSchema.table(
     ...timestamps(),
   },
   () => [organizationRLSPolicy("projects")],
-)
+);
 ```
 
 ### Database Migrations (Drizzle Kit)
@@ -370,6 +371,7 @@ findById(id: WorkspaceId): Effect.Effect<Workspace, NotFoundError | RepositoryEr
 All application environment variables **must** be prefixed with `LAT_` to avoid name collisions with third-party services, Docker containers, and standard conventions.
 
 **What gets the `LAT_` prefix:**
+
 - Database connection strings and pool config (`LAT_DATABASE_URL`, `LAT_PG_POOL_MAX`, ...)
 - Service connection details our code reads (`LAT_CLICKHOUSE_URL`, `LAT_REDIS_HOST`, ...)
 - Application ports (`LAT_API_PORT`, `LAT_WEB_PORT`, `LAT_INGEST_PORT`)
@@ -377,6 +379,7 @@ All application environment variables **must** be prefixed with `LAT_` to avoid 
 - Any new env var introduced for Latitude application code
 
 **What does NOT get the `LAT_` prefix:**
+
 - `NODE_ENV` — standard Node.js convention, used by many libraries
 - Docker service init vars (`POSTGRES_USER`, `CLICKHOUSE_USER`, ...) — required by container images
 - Weaviate, Redis, and other service-specific config consumed only by Docker
