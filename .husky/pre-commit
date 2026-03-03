@@ -1,6 +1,5 @@
 #!/usr/bin/env sh
 set -e
 
-pnpm check
-pnpm typecheck
+pnpm format
 pnpm knip
