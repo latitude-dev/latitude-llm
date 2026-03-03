@@ -1,5 +1,5 @@
 {
-  "name": "@platform/storage-object",
+  "name": "@domain/spans",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,14 +10,11 @@
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "check:fix": "biome check --fix src"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/s3-request-presigner": "^3.0.0",
-    "@platform/env": "workspace:*",
+    "@domain/shared": "workspace:*",
     "effect": "catalog:",
-    "flydrive": "^1.2.0"
+    "rosetta-ai": "catalog:"
   }
 }

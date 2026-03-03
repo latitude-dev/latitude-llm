@@ -1,0 +1,22 @@
+<clickhouse>
+  <storage_configuration>
+    <disks>
+      <default/>
+      <cold>
+        <path>/var/lib/clickhouse/cold/</path>
+      </cold>
+    </disks>
+    <policies>
+      <tiered>
+        <volumes>
+          <hot>
+            <disk>default</disk>
+          </hot>
+          <cold>
+            <disk>cold</disk>
+          </cold>
+        </volumes>
+      </tiered>
+    </policies>
+  </storage_configuration>
+</clickhouse>

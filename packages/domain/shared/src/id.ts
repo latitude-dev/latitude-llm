@@ -13,7 +13,6 @@ type Branded<T, B> = T & { readonly __brand: B }
 
 // User-related IDs
 export type UserId = Branded<string, "UserId">
-export type SessionId = Branded<string, "SessionId">
 
 // Organization/Workspace-related IDs (workspace is now organization)
 export type OrganizationId = Branded<string, "OrganizationId">
@@ -29,6 +28,11 @@ export type ApiKeyId = Branded<string, "ApiKeyId">
 export type SubscriptionId = Branded<string, "SubscriptionId">
 export type GrantId = Branded<string, "GrantId">
 
+// Telemetry-related IDs
+export type TraceId = Branded<string, "TraceId">
+export type SpanId = Branded<string, "SpanId">
+export type SessionId = Branded<string, "SessionId">
+
 // Factory functions to create branded IDs
 // Use these when creating IDs from strings (e.g., from database rows)
 export const UserId = (value: string): UserId => value as UserId
@@ -39,6 +43,8 @@ export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
 export const SubscriptionId = (value: string): SubscriptionId => value as SubscriptionId
 export const GrantId = (value: string): GrantId => value as GrantId
+export const TraceId = (value: string): TraceId => value as TraceId
+export const SpanId = (value: string): SpanId => value as SpanId
 
 /**
  * Generate a unique ID using CUID2.

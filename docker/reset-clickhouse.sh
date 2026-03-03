@@ -37,8 +37,8 @@ echo "Starting clickhouse..."
 docker compose up -d clickhouse
 
 echo "Waiting for clickhouse to be ready..."
-until docker compose exec clickhouse clickhouse-client --query "SELECT 1" &>/dev/null; do
-	sleep 1
+until curl -sf "http://localhost:8123/ping" &>/dev/null; do
+  sleep 1
 done
 
 echo "Running migrations..."

@@ -20,6 +20,7 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./docker/clickhouse/storage.xml:/etc/clickhouse-server/config.d/storage.xml:ro
 
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.36.2
