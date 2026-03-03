@@ -77,6 +77,7 @@ async function writeToRedis(redis: RedisClient, rawJson: string): Promise<void> 
  */
 export function createModelsDevRepository(redis?: RedisClient): ModelRepository {
   let localModels: Model[] | null = null
+  let localFetchedAt = 0
   let fetchInFlight: Promise<Model[]> | null = null
 
   const getRedis = (() => {
@@ -90,8 +91,10 @@ export function createModelsDevRepository(redis?: RedisClient): ModelRepository 
     }
   })()
 
+  const isLocalCacheValid = () => localModels !== null && Date.now() - localFetchedAt < CACHE_TTL_SECONDS * 1000
+
   const getAllModels = async (): Promise<Model[]> => {
-    if (localModels) return localModels
+    if (isLocalCacheValid()) return localModels as Model[]
 
     if (!fetchInFlight) {
       fetchInFlight = (async () => {
@@ -100,6 +103,7 @@ export function createModelsDevRepository(redis?: RedisClient): ModelRepository 
         const fromRedis = await readFromRedis(redisClient)
         if (fromRedis) {
           localModels = fromRedis
+          localFetchedAt = Date.now()
           return fromRedis
         }
 
@@ -107,10 +111,12 @@ export function createModelsDevRepository(redis?: RedisClient): ModelRepository 
           const { models, rawJson } = await fetchFromApi()
           await writeToRedis(redisClient, rawJson)
           localModels = models
+          localFetchedAt = Date.now()
           return models
         } catch {
           const models = loadBundledModels()
           localModels = models
+          localFetchedAt = Date.now()
           return models
         }
       })().finally(() => {
