@@ -39,6 +39,15 @@ Examples: `formatCount`, `formatPrice`, string helpers, number formatters.
 
 When writing a utility function that is not specific to a single domain or package, place it in `@repo/utils` instead of keeping it local.
 
+### Shared Kernel vs Utils
+
+`@domain/shared-kernel` and `@repo/utils` have different responsibilities and should not be merged.
+
+- Use `@domain/shared-kernel` for domain-level contracts shared across bounded contexts: branded IDs, domain errors, and domain ports/types.
+- Use `@repo/utils` for generic, pure helpers with no domain semantics (formatters, string/number/date helpers).
+- If a helper can be reused outside domain code without carrying business meaning, it belongs in `@repo/utils`.
+- Do not put generic validation/formatting helpers in `@domain/shared-kernel`.
+
 ### Ports and Adapters
 
 - Domain depends on interfaces/tags only (ports like `Repository`, `CacheStore`, `Publisher`)
