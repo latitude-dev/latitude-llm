@@ -159,16 +159,16 @@ const validateOrganizationMembership = (
  */
 const extractApiKeyToken = (c: Context): string | undefined => {
   const apiKeyHeader = c.req.header("X-API-Key")
-  if (apiKeyHeader) {
-    return apiKeyHeader
-  }
+  return apiKeyHeader || undefined
+}
 
+const extractBearerToken = (c: Context): string | undefined => {
   const authHeader = c.req.header("Authorization")
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.slice(7)
+  if (!authHeader?.startsWith("Bearer ")) {
+    return undefined
   }
 
-  return undefined
+  return authHeader.slice(7)
 }
 
 /**
@@ -191,14 +191,16 @@ const authenticateWithApiKey = (c: Context, token: string): Effect.Effect<AuthCo
 }
 
 /**
- * Authenticate via Better Auth session (cookie or JWT).
+ * Authenticate via JWT bearer token.
  */
-const authenticateWithSession = (c: Context): Effect.Effect<AuthContext | null, never> => {
+const authenticateWithJwt = (c: Context, token: string): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
     const auth = getBetterAuth()
+    const headers = new Headers(c.req.raw.headers)
+    headers.set("authorization", `Bearer ${token}`)
 
     const session = yield* Effect.tryPromise({
-      try: () => auth.api.getSession({ headers: c.req.raw.headers }),
+      try: () => auth.api.getSession({ headers }),
       catch: () => null,
     }).pipe(Effect.orDie)
 
@@ -219,7 +221,7 @@ const authenticateWithSession = (c: Context): Effect.Effect<AuthContext | null, 
     return {
       userId: UserId(session.user.id),
       organizationId: OrganizationId(orgId),
-      method: "cookie" as const,
+      method: "jwt" as const,
     }
   }).pipe(Effect.orDie)
 }
@@ -230,13 +232,14 @@ const authenticateWithSession = (c: Context): Effect.Effect<AuthContext | null, 
 const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
     const apiKeyToken = extractApiKeyToken(c)
+    const bearerToken = extractBearerToken(c)
 
     let authContext: AuthContext | null = null
 
     if (apiKeyToken) {
       authContext = yield* authenticateWithApiKey(c, apiKeyToken)
-    } else {
-      authContext = yield* authenticateWithSession(c)
+    } else if (bearerToken) {
+      authContext = yield* authenticateWithJwt(c, bearerToken)
     }
 
     if (!authContext) {
@@ -252,10 +255,9 @@ const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError>
 /**
  * Create authentication middleware.
  *
- * This middleware validates requests using one of three methods:
- * 1. Cookie-based session (Better Auth)
- * 2. JWT Bearer token (Better Auth)
- * 3. API Key
+ * This middleware validates requests using one of two methods:
+ * 1. JWT Bearer token (Better Auth)
+ * 2. API Key
  *
  * The middleware sets auth context on the Hono context for downstream handlers.
  * Public routes should be excluded from this middleware.

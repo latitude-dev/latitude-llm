@@ -1,6 +1,7 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import "@repo/ui/styles/globals.css"
+import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
@@ -44,7 +45,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <AppQueryProvider>
+          <Outlet />
+        </AppQueryProvider>
         <Scripts />
       </body>
     </html>

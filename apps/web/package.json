@@ -13,10 +13,18 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
+    "@domain/organizations": "workspace:*",
+    "@domain/projects": "workspace:*",
+    "@domain/shared-kernel": "workspace:*",
+    "@platform/auth-better": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/ui": "workspace:*",
-    "@tanstack/react-router": "catalog:",
-    "@tanstack/react-start": "^1.163.2",
+    "@tanstack/query-db-collection": "1.0.27",
+    "@tanstack/react-db": "0.1.74",
+    "@tanstack/react-query": "5.90.21",
+    "@tanstack/react-router": "1.163.3",
+    "@tanstack/react-start": "1.166.1",
     "effect": "catalog:",
     "lucide-react": "^0.481.0",
     "react": "catalog:",
@@ -30,6 +38,7 @@
     "@vitejs/plugin-react": "catalog:",
     "dotenv": "catalog:",
     "postcss": "^8.5.3",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "pg": "catalog:"
   }
 }

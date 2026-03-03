@@ -3,7 +3,6 @@ import { OrganizationId, ProjectId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
 import type { AuthContext } from "../types.ts"
 

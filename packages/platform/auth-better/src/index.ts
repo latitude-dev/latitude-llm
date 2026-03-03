@@ -7,6 +7,7 @@ import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { magicLink } from "better-auth/plugins"
 import { organization } from "better-auth/plugins"
+import { tanstackStartCookies } from "better-auth/tanstack-start"
 import type { BetterAuthPlugin } from "better-auth/types"
 import { Effect } from "effect"
 import Stripe from "stripe"
@@ -41,9 +42,17 @@ export interface BetterAuthConfig {
     token: string
   }) => Promise<void>
   // User creation hook for onboarding
-  readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
+  readonly onUserCreated?: (user: {
+    id: string
+    email: string
+    name?: string
+  }) => Promise<void>
   // Trusted origins for callback URLs
   readonly trustedOrigins?: string[]
+  // Mount path where Better Auth handlers are exposed
+  readonly basePath?: string
+  // TanStack Start cookie integration for server functions
+  readonly enableTanStackCookies?: boolean
 }
 
 export interface StripePlanConfig {
@@ -57,8 +66,8 @@ export interface StripePlanConfig {
 }
 
 export const createBetterAuth = (config: BetterAuthConfig) => {
-  const baseUrl =
-    config.baseUrl ?? Effect.runSync(parseEnvOptional("LAT_BETTER_AUTH_URL", "string")) ?? "http://localhost:3000"
+  const baseUrl = config.baseUrl ?? Effect.runSync(parseEnv("LAT_BETTER_AUTH_URL", "string", "http://localhost:3000"))
+  const basePath = config.basePath ?? "/auth"
   const secret = config.secret ?? Effect.runSync(parseEnv("LAT_BETTER_AUTH_SECRET", "string"))
 
   // Get OAuth credentials from env if not provided
@@ -116,7 +125,11 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
           user,
           referenceId,
           action,
-        }: { user: { id: string }; referenceId: string; action: string }) => {
+        }: {
+          user: { id: string }
+          referenceId: string
+          action: string
+        }) => {
           // Default authorization: users can manage their own subscriptions
           // For organization subscriptions, check if user is owner/admin
           if (referenceId !== user.id) {
@@ -135,6 +148,10 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     plugins.push(stripePlugin)
   }
 
+  if (config.enableTanStackCookies) {
+    plugins.push(tanstackStartCookies() as unknown as BetterAuthPlugin)
+  }
+
   return betterAuth({
     database: drizzleAdapter(config.db, {
       provider: "pg",
@@ -150,7 +167,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       },
     }),
     baseURL: baseUrl,
-    basePath: "/auth", // Better Auth expects /auth prefix in URLs
+    basePath,
     secret,
     // Trusted origins for callback URL validation
     trustedOrigins: config.trustedOrigins ?? [],

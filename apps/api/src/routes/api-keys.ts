@@ -9,7 +9,6 @@ import type { RedisClient } from "@platform/cache-redis"
 import { createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import { BadRequestError } from "../errors.ts"
 import { extractParam } from "../lib/effect-utils.ts"
 
 /**
