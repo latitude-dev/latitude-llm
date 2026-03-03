@@ -1,17 +1,31 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
 import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
+import { parseEnv } from "@platform/env"
+import { decrypt, encrypt } from "@repo/utils"
 import { eq, inArray } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import { apiKeys } from "../schema/index.ts"
 
+let encryptionKeyCache: Buffer | undefined
+
+const getEncryptionKey = (): Buffer => {
+  if (!encryptionKeyCache) {
+    const encryptionKeyHex = Effect.runSync(parseEnv("LAT_API_KEY_ENCRYPTION_KEY", "string"))
+    encryptionKeyCache = Buffer.from(encryptionKeyHex, "hex")
+  }
+  return encryptionKeyCache
+}
+
 /**
  * Maps a database API key row to a domain ApiKey entity.
+ * Decrypts the token from its stored encrypted form.
  */
-const toDomainApiKey = (row: typeof apiKeys.$inferSelect): ApiKey => ({
+const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
   id: row.id as ApiKey["id"],
   organizationId: row.organizationId as ApiKey["organizationId"],
-  token: row.token,
+  token: decrypt(row.token, encryptionKey),
+  tokenHash: row.tokenHash,
   name: row.name ?? "",
   lastUsedAt: row.lastUsedAt,
   deletedAt: row.deletedAt,
@@ -21,11 +35,13 @@ const toDomainApiKey = (row: typeof apiKeys.$inferSelect): ApiKey => ({
 
 /**
  * Maps a domain ApiKey entity to a database insert row.
+ * Encrypts the plaintext token before storage.
  */
-const toInsertRow = (apiKey: ApiKey): typeof apiKeys.$inferInsert => ({
+const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer): typeof apiKeys.$inferInsert => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
-  token: apiKey.token,
+  token: encrypt(apiKey.token, encryptionKey),
+  tokenHash: apiKey.tokenHash,
   name: apiKey.name,
   lastUsedAt: apiKey.lastUsedAt,
   deletedAt: apiKey.deletedAt,
@@ -33,107 +49,116 @@ const toInsertRow = (apiKey: ApiKey): typeof apiKeys.$inferInsert => ({
 
 /**
  * Creates a Postgres implementation of the ApiKeyRepository port.
+ *
+ * @param db - Drizzle database instance
  */
-export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository => ({
-  findById: (id: ApiKeyId) =>
-    Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () => db.query.apiKeys.findFirst({ where: { id } }),
-        catch: (error) => toRepositoryError(error, "findById"),
-      })
+export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository => {
+  const encryptionKey = getEncryptionKey()
 
-      return result ? toDomainApiKey(result) : null
-    }),
+  return {
+    findById: (id: ApiKeyId) =>
+      Effect.gen(function* () {
+        const result = yield* Effect.tryPromise({
+          try: () => db.query.apiKeys.findFirst({ where: { id } }),
+          catch: (error) => toRepositoryError(error, "findById"),
+        })
 
-  findByToken: (token: string) =>
-    Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          db.query.apiKeys.findFirst({
-            where: { token, deletedAt: { isNull: true } },
-          }),
-        catch: (error) => toRepositoryError(error, "findByToken"),
-      })
+        return result ? toDomainApiKey(result, encryptionKey) : null
+      }),
 
-      return result ? toDomainApiKey(result) : null
-    }),
-
-  findByOrganizationId: (organizationId: OrganizationId) =>
-    Effect.gen(function* () {
-      const results = yield* Effect.tryPromise({
-        try: () =>
-          db.query.apiKeys.findMany({
-            where: {
-              organizationId,
-              deletedAt: { isNull: true },
-            },
-          }),
-        catch: (error) => toRepositoryError(error, "findByOrganizationId"),
-      })
-
-      return results.map(toDomainApiKey)
-    }),
-
-  save: (apiKey: ApiKey) =>
-    Effect.gen(function* () {
-      const row = toInsertRow(apiKey)
-
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insert(apiKeys)
-            .values(row)
-            .onConflictDoUpdate({
-              target: apiKeys.id,
-              set: {
-                name: row.name,
-                lastUsedAt: row.lastUsedAt,
-                deletedAt: row.deletedAt,
-                updatedAt: new Date(),
+    findByTokenHash: (tokenHash: string) =>
+      Effect.gen(function* () {
+        const result = yield* Effect.tryPromise({
+          try: () =>
+            db.query.apiKeys.findFirst({
+              where: {
+                tokenHash,
+                deletedAt: { isNull: true },
               },
             }),
-        catch: (error) => toRepositoryError(error, "save"),
-      })
-    }),
+          catch: (error) => toRepositoryError(error, "findByTokenHash"),
+        })
 
-  delete: (id: ApiKeyId) =>
-    Effect.tryPromise({
-      try: () => db.delete(apiKeys).where(eq(apiKeys.id, id)),
-      catch: (error) => toRepositoryError(error, "delete"),
-    }),
+        return result ? toDomainApiKey(result, encryptionKey) : null
+      }),
 
-  touch: (id: ApiKeyId) =>
-    Effect.tryPromise({
-      try: () =>
-        db
-          .update(apiKeys)
-          .set({
-            lastUsedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(apiKeys.id, id)),
-      catch: (error) => toRepositoryError(error, "touch"),
-    }),
+    findByOrganizationId: (organizationId: OrganizationId) =>
+      Effect.gen(function* () {
+        const results = yield* Effect.tryPromise({
+          try: () =>
+            db.query.apiKeys.findMany({
+              where: {
+                organizationId,
+                deletedAt: { isNull: true },
+              },
+            }),
+          catch: (error) => toRepositoryError(error, "findByOrganizationId"),
+        })
 
-  touchBatch: (ids: readonly ApiKeyId[]) =>
-    Effect.gen(function* () {
-      if (ids.length === 0) {
-        return
-      }
+        return results.map((row) => toDomainApiKey(row, encryptionKey))
+      }),
 
-      const now = new Date()
-      const idStrings = ids.map((id) => id as string)
+    save: (apiKey: ApiKey) =>
+      Effect.gen(function* () {
+        const row = toInsertRow(apiKey, encryptionKey)
 
-      yield* Effect.tryPromise({
+        yield* Effect.tryPromise({
+          try: () =>
+            db
+              .insert(apiKeys)
+              .values(row)
+              .onConflictDoUpdate({
+                target: apiKeys.id,
+                set: {
+                  name: row.name,
+                  lastUsedAt: row.lastUsedAt,
+                  deletedAt: row.deletedAt,
+                  updatedAt: new Date(),
+                },
+              }),
+          catch: (error) => toRepositoryError(error, "save"),
+        })
+      }),
+
+    delete: (id: ApiKeyId) =>
+      Effect.tryPromise({
+        try: () => db.delete(apiKeys).where(eq(apiKeys.id, id)),
+        catch: (error) => toRepositoryError(error, "delete"),
+      }),
+
+    touch: (id: ApiKeyId) =>
+      Effect.tryPromise({
         try: () =>
           db
             .update(apiKeys)
             .set({
-              lastUsedAt: now,
-              updatedAt: now,
+              lastUsedAt: new Date(),
+              updatedAt: new Date(),
             })
-            .where(inArray(apiKeys.id, idStrings)),
-        catch: (error) => toRepositoryError(error, "touchBatch"),
-      })
-    }),
-})
+            .where(eq(apiKeys.id, id)),
+        catch: (error) => toRepositoryError(error, "touch"),
+      }),
+
+    touchBatch: (ids: readonly ApiKeyId[]) =>
+      Effect.gen(function* () {
+        if (ids.length === 0) {
+          return
+        }
+
+        const now = new Date()
+        const idStrings = ids.map((id) => id as string)
+
+        yield* Effect.tryPromise({
+          try: () =>
+            db
+              .update(apiKeys)
+              .set({
+                lastUsedAt: now,
+                updatedAt: now,
+              })
+              .where(inArray(apiKeys.id, idStrings)),
+          catch: (error) => toRepositoryError(error, "touchBatch"),
+        })
+      }),
+  }
+}

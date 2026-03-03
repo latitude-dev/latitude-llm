@@ -1,7 +1,6 @@
 import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
 import type { Context, Next } from "hono"
-import { getRedisClient } from "../clients.ts"
 
 /**
  * Redis-backed rate limiter for authentication endpoints.
@@ -31,9 +30,8 @@ interface RateLimitConfig {
  * Create a Redis-backed rate limiting middleware
  */
 const createRedisRateLimiter = (config: RateLimitConfig) => {
-  const redis = getRedisClient()
-
   return async (c: Context, next: Next) => {
+    const redis = c.get("redis")
     const key = `${config.keyPrefix}:${config.keyGenerator(c)}`
 
     try {

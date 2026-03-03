@@ -1,5 +1,6 @@
 import { createApiKey } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared-kernel"
+import { hashToken } from "@repo/utils"
 import { Effect } from "effect"
 import { SEED_ORG_ID } from "../organizations/index.ts"
 import type { SeedContext, Seeder } from "../types.ts"
@@ -15,6 +16,7 @@ const seedApiKeys: Seeder = {
         id: SEED_API_KEY_ID,
         organizationId: SEED_ORG_ID,
         token: SEED_API_KEY_TOKEN,
+        tokenHash: hashToken(SEED_API_KEY_TOKEN),
         name: "Default API Key",
       })
       yield* ctx.repositories.apiKey.save(apiKey)
