@@ -27,4 +27,3 @@ export const Message = memo(
     return <DebugMessage role={role} isStreaming={isStreaming} {...rest} />
   },
 )
-

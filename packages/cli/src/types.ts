@@ -36,4 +36,3 @@ export interface CheckoutOptions extends CommonOptions {
 export interface PushOptions extends CommonOptions {
   yes?: boolean
 }
-
