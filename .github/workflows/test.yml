@@ -10,6 +10,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: test
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -24,6 +27,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Create .env.test from example
+        run: cp .env.example .env.test
 
       - name: Test
         run: pnpm test

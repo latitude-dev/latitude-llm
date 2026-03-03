@@ -31,6 +31,14 @@ Business logic lives here. Domain packages expose:
 
 Infrastructure details live here only. Platform packages implement adapters for domain ports.
 
+### Shared Utilities (`packages/utils`)
+
+General-purpose utility functions that can be shared across any package (domain, platform, or app) live in `@repo/utils`. This package should contain pure, stateless helper functions with no domain or infrastructure dependencies.
+
+Examples: `formatCount`, `formatPrice`, string helpers, number formatters.
+
+When writing a utility function that is not specific to a single domain or package, place it in `@repo/utils` instead of keeping it local.
+
 ### Ports and Adapters
 
 - Domain depends on interfaces/tags only (ports like `Repository`, `CacheStore`, `Publisher`)
@@ -133,7 +141,7 @@ pnpm typecheck
 pnpm test
 ```
 
-CI workflows (`node-check.yml`, `typecheck.yml`, `test.yml`) use Node 25 + pnpm 9 and run the same commands.
+CI workflows (`check.yml`, `typecheck.yml`, `knip.yml`, `test.yml`) use Node 25 + pnpm and run the same commands.
 
 ## Code Style
 
@@ -368,6 +376,24 @@ This ensures type-safe parsing, clear error messages for missing vars, and consi
 - Pass IDs in async jobs/queue payloads, not full mutable models
 - Re-fetch current state inside task handlers
 - Make stale/deleted entity behavior explicit
+
+## Cloud Agent Environment Setup
+
+When running as a cloud agent (e.g. Cursor Cloud Agent), the repository may not have `.env.development` or `.env.test` files. These are required for running the dev server and tests respectively.
+
+**If `.env.development` or `.env.test` do not exist**, copy `.env.example` as-is:
+
+```bash
+cp .env.example .env.development
+cp .env.example .env.test
+```
+
+Then set `NODE_ENV` appropriately in each file:
+
+- In `.env.development`: `NODE_ENV=development`
+- In `.env.test`: `NODE_ENV=test`
+
+This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests and dev commands to run without additional configuration.
 
 ## Testing Conventions
 
