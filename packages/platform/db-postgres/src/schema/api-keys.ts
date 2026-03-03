@@ -1,12 +1,13 @@
 import { sql } from "drizzle-orm"
 import { pgPolicy, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
+import { cuid } from "../schemaHelpers.js"
 
 /**
  * API Keys table - stores API keys for organization access.
  *
  * Supports soft delete via deleted_at (for revocation).
  * RLS is enabled on this table.
- * Uses text ID for consistency with Better Auth tables.
+ * Uses CUID2 ID for consistency with Better Auth tables.
  *
  * Scoped to the 'latitude' schema.
  */
@@ -16,7 +17,7 @@ const latitudeSchema = pgSchema("latitude")
 export const apiKeys = latitudeSchema.table(
   "api_keys",
   {
-    id: text("id").primaryKey(), // CUID2, consistent with Better Auth
+    id: cuid("id").primaryKey(), // CUID2, consistent with Better Auth
     token: text("token").notNull().unique(),
     organizationId: text("organization_id").notNull(),
     name: varchar("name", { length: 256 }),

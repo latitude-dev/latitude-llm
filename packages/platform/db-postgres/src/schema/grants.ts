@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import { bigint, pgEnum, pgPolicy, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
+import { cuid } from "../schemaHelpers.js"
 
 /**
  * Quota type enum for grants.
@@ -22,7 +23,7 @@ const latitudeSchema = pgSchema("latitude")
 export const grants = latitudeSchema.table(
   "grants",
   {
-    id: text("id").primaryKey(),
+    id: cuid("id").primaryKey(),
     organizationId: text("organization_id").notNull(),
     subscriptionId: text("subscription_id").notNull(),
     source: grantSourceEnum("source").notNull(),
