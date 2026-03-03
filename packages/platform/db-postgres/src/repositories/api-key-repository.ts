@@ -1,6 +1,6 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
 import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
-import { decryptApiKeyToken, encryptApiKeyToken } from "@repo/utils"
+import { decrypt, encrypt } from "@repo/utils"
 import { eq, inArray } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -16,7 +16,7 @@ const toDomainApiKey = (
 ): ApiKey => ({
   id: row.id as ApiKey["id"],
   organizationId: row.organizationId as ApiKey["organizationId"],
-  token: decryptApiKeyToken(row.token, encryptionKey),
+  token: decrypt(row.token, encryptionKey),
   tokenHash: row.tokenHash,
   name: row.name ?? "",
   lastUsedAt: row.lastUsedAt,
@@ -35,7 +35,7 @@ const toInsertRow = (
 ): typeof apiKeys.$inferInsert => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
-  token: encryptApiKeyToken(apiKey.token, encryptionKey),
+  token: encrypt(apiKey.token, encryptionKey),
   tokenHash: apiKey.tokenHash,
   name: apiKey.name,
   lastUsedAt: apiKey.lastUsedAt,

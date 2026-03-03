@@ -1,7 +1,7 @@
 import { generateId } from "@domain/shared-kernel"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema as schema } from "@platform/db-postgres"
-import { encryptApiKeyToken, hashApiKeyToken } from "@repo/utils"
+import { encrypt, hashToken } from "@repo/utils"
 import type { Effect as EffectType } from "effect"
 import { Effect } from "effect"
 import type { TestDatabase } from "./test-database.ts"
@@ -254,8 +254,8 @@ export const createApiKeyFixture = (
     try: async () => {
       const apiKeyId = generateId()
       const plaintextToken = `lat_test_${generateId()}`
-      const tokenHash = hashApiKeyToken(plaintextToken)
-      const encryptedToken = encryptApiKeyToken(plaintextToken, input.encryptionKey)
+      const tokenHash = hashToken(plaintextToken)
+      const encryptedToken = encrypt(plaintextToken, input.encryptionKey)
 
       const [apiKey] = await db
         .insert(schema.apiKeys)

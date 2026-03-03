@@ -10,21 +10,21 @@ const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
 
 /**
- * Hash an API key token using SHA-256.
+ * Hash a plaintext string using SHA-256.
  * Returns a hex-encoded hash suitable for indexed lookups.
  */
-export function hashApiKeyToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex")
+export function hashToken(plaintext: string): string {
+  return createHash("sha256").update(plaintext).digest("hex")
 }
 
 /**
- * Encrypt an API key token using AES-256-GCM.
+ * Encrypt a plaintext string using AES-256-GCM.
  *
- * @param plaintext - The plaintext token to encrypt
+ * @param plaintext - The plaintext to encrypt
  * @param key - 32-byte encryption key
  * @returns Encrypted string in format: iv:authTag:ciphertext (hex-encoded)
  */
-export function encryptApiKeyToken(plaintext: string, key: Buffer): string {
+export function encrypt(plaintext: string, key: Buffer): string {
   const iv = randomBytes(IV_LENGTH)
   const cipher = createCipheriv(ALGORITHM, key, iv)
 
@@ -38,13 +38,13 @@ export function encryptApiKeyToken(plaintext: string, key: Buffer): string {
 }
 
 /**
- * Decrypt an API key token encrypted with AES-256-GCM.
+ * Decrypt a string encrypted with AES-256-GCM.
  *
  * @param ciphertext - Encrypted string in format: iv:authTag:ciphertext (hex-encoded)
  * @param key - 32-byte encryption key (same key used for encryption)
- * @returns The decrypted plaintext token
+ * @returns The decrypted plaintext
  */
-export function decryptApiKeyToken(ciphertext: string, key: Buffer): string {
+export function decrypt(ciphertext: string, key: Buffer): string {
   const parts = ciphertext.split(":")
   if (parts.length !== 3) {
     throw new Error("Invalid ciphertext format")

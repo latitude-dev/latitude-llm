@@ -1,6 +1,6 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared-kernel"
 import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
-import { hashApiKeyToken } from "@repo/utils"
+import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 import { getApiKeyEncryptionKey, getBetterAuth, getRedisClient } from "../clients.ts"
@@ -86,7 +86,7 @@ const validateApiKey = (
 
   return Effect.gen(function* () {
     const startTime = Date.now()
-    const tokenHash = hashApiKeyToken(token)
+    const tokenHash = hashToken(token)
 
     // Try cache first for consistent lookup time (keyed by hash)
     const cached = yield* getCachedApiKey(tokenHash)

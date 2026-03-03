@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto"
 import { generateId } from "@domain/shared-kernel"
 import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
-import { encryptApiKeyToken, hashApiKeyToken } from "@repo/utils"
+import { encrypt, hashToken } from "@repo/utils"
 import { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { createDbDependenciesMiddleware } from "../db-deps.ts"
@@ -76,8 +76,8 @@ const createOrganizationSetup = async (db: InMemoryPostgres["db"]): Promise<Orga
   await db.insert(postgresSchema.apiKeys).values({
     id: generateId(),
     organizationId,
-    token: encryptApiKeyToken(plaintextToken, TEST_ENCRYPTION_KEY),
-    tokenHash: hashApiKeyToken(plaintextToken),
+    token: encrypt(plaintextToken, TEST_ENCRYPTION_KEY),
+    tokenHash: hashToken(plaintextToken),
     name: "Test API Key",
   })
 
