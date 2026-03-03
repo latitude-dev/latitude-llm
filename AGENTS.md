@@ -424,6 +424,11 @@ When working on `apps/web` or any frontend code:
 - **Always** use `Button` component from `@repo/ui` for all buttons
 - **Always** use `GoogleIcon` and `GitHubIcon` from `@repo/ui` for OAuth provider icons
 
+### Design System Showcase
+
+- When adding a new implemented UI component in `packages/ui` (or replacing a placeholder export with a real implementation), update `apps/web/src/routes/design-system.tsx` to include a usage example for that component in both light and dark mode previews.
+- Treat `apps/web/src/routes/design-system.tsx` as the canonical visual inventory for `@repo/ui` components.
+
 ### Layout & Spacing
 
 - **Always** use flexbox for layout (`flex`, `flex-col`, `flex-row`)
