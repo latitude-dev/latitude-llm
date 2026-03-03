@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm"
 import { pgPolicy, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.js"
+import { cuid } from "../schemaHelpers.ts"
 
 /**
  * Projects table - stores projects within organizations.

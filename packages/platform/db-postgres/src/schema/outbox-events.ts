@@ -1,5 +1,5 @@
 import { boolean, jsonb, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.js"
+import { cuid } from "../schemaHelpers.ts"
 
 /**
  * Outbox events table for reliable event publishing.

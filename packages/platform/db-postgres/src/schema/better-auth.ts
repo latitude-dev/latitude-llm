@@ -1,5 +1,5 @@
 import { boolean, pgEnum, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.js"
+import { cuid } from "../schemaHelpers.ts"
 
 /**
  * Better Auth Schema - Drizzle ORM definitions

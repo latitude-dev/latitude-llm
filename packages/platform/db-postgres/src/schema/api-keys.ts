@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm"
 import { pgPolicy, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.js"
+import { cuid } from "../schemaHelpers.ts"
 
 /**
  * API Keys table - stores API keys for organization access.
