@@ -1,5 +1,5 @@
 CREATE TABLE "latitude"."account" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
 	"user_id" text NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE "latitude"."account" (
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."invitation" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"email" text NOT NULL,
 	"role" varchar(50),
@@ -26,7 +26,7 @@ CREATE TABLE "latitude"."invitation" (
 --> statement-breakpoint
 ALTER TABLE "latitude"."invitation" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."member" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"user_id" text NOT NULL,
 	"role" varchar(50) DEFAULT 'member' NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE "latitude"."member" (
 --> statement-breakpoint
 ALTER TABLE "latitude"."member" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."organization" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"name" text NOT NULL,
 	"slug" text NOT NULL UNIQUE,
 	"logo" text,
@@ -48,7 +48,7 @@ CREATE TABLE "latitude"."organization" (
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."session" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"expires_at" timestamp with time zone NOT NULL,
 	"token" text NOT NULL UNIQUE,
 	"ip_address" text,
@@ -59,7 +59,7 @@ CREATE TABLE "latitude"."session" (
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."user" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"email" text NOT NULL UNIQUE,
 	"email_verified" boolean DEFAULT false NOT NULL,
 	"name" text,
@@ -73,7 +73,7 @@ CREATE TABLE "latitude"."user" (
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."verification" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"identifier" text NOT NULL,
 	"value" text NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
@@ -82,7 +82,7 @@ CREATE TABLE "latitude"."verification" (
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."subscription" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"plan" text NOT NULL,
 	"reference_id" text NOT NULL,
 	"stripe_customer_id" varchar(256),
@@ -103,7 +103,7 @@ CREATE TABLE "latitude"."subscription" (
 --> statement-breakpoint
 ALTER TABLE "latitude"."subscription" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."projects" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"name" varchar(256) NOT NULL,
 	"slug" varchar(256) NOT NULL,
@@ -115,7 +115,7 @@ CREATE TABLE "latitude"."projects" (
 --> statement-breakpoint
 ALTER TABLE "latitude"."projects" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."api_keys" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"token" text NOT NULL UNIQUE,
 	"organization_id" text NOT NULL,
 	"name" varchar(256),
@@ -127,7 +127,7 @@ CREATE TABLE "latitude"."api_keys" (
 --> statement-breakpoint
 ALTER TABLE "latitude"."api_keys" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."grants" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"subscription_id" text NOT NULL,
 	"source" varchar(50) NOT NULL,
@@ -141,7 +141,7 @@ CREATE TABLE "latitude"."grants" (
 --> statement-breakpoint
 ALTER TABLE "latitude"."grants" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."outbox_events" (
-	"id" varchar(128) PRIMARY KEY,
+	"id" varchar(24) PRIMARY KEY,
 	"event_name" text NOT NULL,
 	"aggregate_id" text NOT NULL,
 	"workspace_id" text NOT NULL,
