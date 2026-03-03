@@ -32,6 +32,8 @@ export const registerRoutes = (context: RoutesContext) => {
   v1.use("*", async (c, next) => {
     c.set("db", context.database.db)
     c.set("redis", context.redis)
+    c.set("clickhouse", context.clickhouse)
+
     await next()
   })
 

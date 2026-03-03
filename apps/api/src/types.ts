@@ -1,3 +1,4 @@
+import type { ClickHouseClient } from "@clickhouse/client"
 import type { OrganizationId, UserId } from "@domain/shared-kernel"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresDb } from "@platform/db-postgres"
@@ -31,5 +32,6 @@ declare module "hono" {
     auth?: AuthContext
     db: PostgresDb
     redis: RedisClient
+    clickhouse: ClickHouseClient
   }
 }
