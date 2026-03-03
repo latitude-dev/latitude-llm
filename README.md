@@ -1,14 +1,7 @@
 <div align="center">
-  <a href="https://ai.latitude.so?utm_source=github" target="_blank">
-    <img src="docs/assets/readme/Logo.png?raw=true" alt="Latitude — Open Source AI Engineering Platform" width="700"/>
-  </a>
+  <h1>Latitude</h1>
+  <p>Open-Source AI Engineering Platform</p>
 </div>
-
-<br/>
-
-<h1 align="center" style="border: none; margin-bottom: 8px;">
-  Open-Source AI Engineering Platform
-</h1>
 
 <p align="center">
   Observability and evaluations first, then an eval-driven reliability loop to continuously improve prompts.
@@ -20,12 +13,11 @@
   <a href="https://x.com/trylatitude">X</a>
 </p>
 
-> [!NOTE]
-> You are viewing the **Latitude v2 Alpha** branch (`main`). For the current stable release, use [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1).
+> [!WARNING]
+> You are viewing the **Latitude v2 Alpha** branch (`latitude-v2`). This branch is in **active development** and is **not ready for production use**. APIs, features, and data formats may change without notice.
+>
+> For production use, please use the stable release on the [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1) branch.
 
-<p align="center">
-  <img src="docs/assets/readme/gif_ui.gif?raw=true" alt="Latitude demo — observability, evals, and prompt management" width="800"/>
-</p>
 
 ## 🌈 Why Latitude?
 
