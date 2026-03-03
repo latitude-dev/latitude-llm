@@ -34,9 +34,6 @@
     "./MagicLinkMail": {
       "import": "./src/templates/magicLinks/magicLinkMail.tsx"
     },
-    "./SuggestionMail": {
-      "import": "./src/templates/suggestions/SuggestionMail.tsx"
-    },
     "./WeeklyEmailMail": {
       "import": "./src/templates/weeklyEmail/WeeklyEmailMail.tsx"
     },

@@ -5,7 +5,7 @@
   "version": "0.0.1",
   "description": "Common envvars for latitude llm",
   "type": "module",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "scripts": {
     "lint": "eslint src",
     "tc": "tsc --noEmit"

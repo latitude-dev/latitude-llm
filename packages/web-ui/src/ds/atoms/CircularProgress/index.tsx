@@ -77,5 +77,3 @@ export function CircularProgress({
     </svg>
   )
 }
-
-export default CircularProgress

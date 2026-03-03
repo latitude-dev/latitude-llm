@@ -1,10 +1,3 @@
-import { Command } from 'commander'
-
-/**
- * Represents a command handler for the CLI
- */
-export type CommandHandler = (program: Command) => void
-
 /**
  * Common options for all commands
  */
@@ -44,11 +37,3 @@ export interface PushOptions extends CommonOptions {
   yes?: boolean
 }
 
-/**
- * CLI configuration
- */
-export interface CliConfig {
-  apiKey?: string
-  projectId?: string
-  versionUuid?: string
-}

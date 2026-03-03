@@ -164,5 +164,3 @@ export function useActiveRunsByDocument(
     [data, mutate, attachRun, hasActiveStream, stopRun, isStoppingRun],
   )
 }
-
-export type ActiveDocumentStore = ReturnType<typeof useActiveRunsByDocument>

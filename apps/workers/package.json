@@ -19,7 +19,6 @@
     "@bull-board/express": "6.15.0",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "@t3-oss/env-core": "*",
     "bullmq": "catalog:",
     "dd-trace": "catalog:",
     "express": "4.21.2"

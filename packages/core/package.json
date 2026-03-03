@@ -7,9 +7,6 @@
     "./client": {
       "import": "./src/client/index.ts"
     },
-    "./client/models": {
-      "import": "./src/client/models.ts"
-    },
     "./constants": {
       "import": "./src/constants.ts"
     },
@@ -28,9 +25,6 @@
     "./voyage": {
       "import": "./src/voyage/index.ts"
     },
-    "./data-access": {
-      "import": "./src/data-access/index.ts"
-    },
     "./data-access/*": {
       "import": "./src/data-access/*.ts"
     },
@@ -43,12 +37,6 @@
     "./factories": {
       "import": "./src/tests/factories/index.ts"
     },
-    "./jobs": {
-      "import": "./src/jobs/index.ts"
-    },
-    "./jobs/constants": {
-      "import": "./src/jobs/constants.ts"
-    },
     "./jobs/definitions": {
       "import": "./src/jobs/job-definitions/index.ts"
     },
@@ -57,12 +45,6 @@
     },
     "./lib/*": {
       "import": "./src/lib/*.ts"
-    },
-    "./mailers": {
-      "import": "./src/mailers/index.ts"
-    },
-    "./utils/promptlAdapter": {
-      "import": "./src/utils/promptlAdapter.ts"
     },
     "./queues": {
       "import": "./src/jobs/queues/index.ts"
@@ -97,14 +79,8 @@
     "./websockets/*": {
       "import": "./src/websockets/*.ts"
     },
-    "./workers/*": {
-      "import": "./src/workers/*.js"
-    },
     "./utils/*": {
       "import": "./src/utils/*.ts"
-    },
-    "./queries": {
-      "import": "./src/queries/index.ts"
     },
     "./queries/*": {
       "import": "./src/queries/*.ts"
@@ -157,7 +133,6 @@
     "@ai-sdk/perplexity": "2.0.9",
     "@ai-sdk/provider-utils": "3.0.9",
     "@ai-sdk/xai": "2.0.18",
-    "@anthropic-ai/sdk": "0.62.0",
     "@aws-sdk/client-s3": "3.850.0",
     "@aws-sdk/s3-request-presigner": "3.850.0",
     "@clickhouse/client": "^1.16.0",
@@ -177,10 +152,7 @@
     "@opentelemetry/sdk-trace-node": "catalog:",
     "@opentelemetry/semantic-conventions": "catalog:",
     "@pipedream/sdk": "^2.0.0",
-    "@plunk/node": "3.0.2",
-    "@sentry/node": "9.9.0",
     "@sindresorhus/slugify": "2.2.1",
-    "@t3-oss/env-core": "0.13.8",
     "@tavily/core": "0.3.1",
     "ai": "catalog:",
     "ajv": "8.17.1",
@@ -201,11 +173,9 @@
     "istextorbinary": "9.5.0",
     "jose": "5.8.0",
     "js-rouge": "3.0.0",
-    "js-yaml": "4.1.0",
     "json-schema": "0.4.0",
     "lodash-es": "4.17.21",
     "loops": "3.3.0",
-    "mustache": "4.2.0",
     "nanoid": "5.0.9",
     "nodemailer": "6.9.14",
     "nodemailer-html-to-text": "3.2.0",
@@ -217,10 +187,7 @@
     "promptl-ai": "catalog:",
     "rosetta-ai": "catalog:",
     "rate-limiter-flexible": "5.0.3",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "safe-regex": "2.1.1",
-    "socket.io-client": "4.7.5",
     "stripe": "20.1.0",
     "uuid": "11.1.0",
     "voyageai": "0.0.8",
@@ -232,33 +199,21 @@
     "@faker-js/faker": "^8.4.1",
     "@types/blessed": "^0.1.25",
     "@types/diff-match-patch": "^1.0.36",
-    "@types/inquirer": "^9.0.3",
-    "@types/js-yaml": "^4.0.9",
     "@types/json-schema": "^7.0.15",
     "@types/lodash-es": "^4.17.12",
-    "@types/mustache": "^4.2.5",
     "@types/node": "^22.5.0",
     "@types/nodemailer": "^6.4.15",
     "@types/nodemailer-html-to-text": "^3.1.3",
     "@types/nodemailer-mailgun-transport": "^1.4.6",
     "@types/pg": "8.15.4",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
     "@types/safe-regex": "^1.1.6",
     "@types/uuid": "^10.0.0",
-    "@typescript/analyze-trace": "^0.10.1",
     "blessed": "^0.1.81",
     "chalk": "^5.4.1",
     "dd-trace": "catalog:",
     "drizzle-kit": "catalog:",
-    "eslint-plugin-drizzle": "^0.2.3",
-    "inquirer": "^9.2.7",
     "pg-transactional-tests": "^1.0.9",
-    "recast": "^0.23.11",
-    "supertest": "^7.0.0",
-    "svelte": "^4.2.19",
     "vitest": "^3.1.4",
-    "vue": "^3.4.38",
     "yaml": "^2.4.5"
   },
   "peerDependencies": {

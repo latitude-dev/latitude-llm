@@ -1,35 +1,12 @@
 'use client'
 
-import { createContext, ReactNode, useContext } from 'react'
-import { DraggableOverlayNode } from './DragOverlayNode'
-import { ClientOnly } from '@latitude-data/web-ui/atoms/ClientOnly'
+import { createContext, useContext } from 'react'
 
 type IFilesContext = {
   onMergeCommitClick: () => void
 }
 
 const FileTreeContext = createContext({} as IFilesContext)
-const FileTreeProvider = ({
-  onMergeCommitClick,
-  children,
-}: IFilesContext & {
-  children: ReactNode
-}) => {
-  return (
-    <>
-      <FileTreeContext.Provider
-        value={{
-          onMergeCommitClick,
-        }}
-      >
-        {children}
-      </FileTreeContext.Provider>
-      <ClientOnly>
-        <DraggableOverlayNode />
-      </ClientOnly>
-    </>
-  )
-}
 
 const useFileTreeContext = () => {
   const fileTreeContext = useContext(FileTreeContext)
@@ -39,4 +16,4 @@ const useFileTreeContext = () => {
   return fileTreeContext
 }
 
-export { FileTreeProvider, useFileTreeContext }
+export { useFileTreeContext }

@@ -94,19 +94,6 @@ export type Project = {
   deletedAt: string | null
 }
 
-export type Commit = {
-  id: number
-  uuid: string
-  title: string
-  description: string
-  projectId: number
-  version: number
-  userId: string
-  mergedAt: string
-  deletedAt: string | null
-  mainDocumentUuid: string | null
-}
-
 export type Version = {
   createdAt: string
   updatedAt: string
@@ -396,15 +383,6 @@ export type ChatOptionsWithSDKOptions<
   S extends AssertedStreamType = 'text',
 > = ChatOptions<Tools, S> & {
   options: SDKOptions
-}
-
-export interface EvalOptions {
-  evaluationUuids?: string[]
-}
-
-export type EvalPromptOptions = {
-  projectId?: number
-  versionUuid?: string
 }
 
 export type Prompt = {

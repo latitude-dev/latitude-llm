@@ -13,8 +13,6 @@ const SIDEBAR_VISIBLE_SOURCES = new Set<LogSources>([
   LogSources.Playground,
   LogSources.Experiment,
 ])
-const EMPTY_COUNTS = new Map<string, number>()
-
 type RunningDocumentsStore = {
   countsByScope: Record<string, Map<string, number>>
   setCounts: (scope: string, counts: Map<string, number>) => void
@@ -49,12 +47,6 @@ export const useRunningDocumentsStore = create<RunningDocumentsStore>(
       }),
   }),
 )
-
-export function useRunningDocumentsCounts(scope: string) {
-  return useRunningDocumentsStore(
-    (state) => state.countsByScope[scope] || EMPTY_COUNTS,
-  )
-}
 
 /**
  * Hook to track which documents are currently running in a project.

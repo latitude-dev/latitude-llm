@@ -4,7 +4,11 @@ const config: KnipConfig = {
   workspaces: {
     '.': {
       entry: ['bin/*.ts', 'eslint.config.mjs'],
-      ignoreDependencies: ['@next/eslint-plugin-next', 'glob'],
+      ignore: [
+        'docs/script.js',
+        'tools/generate-server-action-key.js',
+        'tools/typescript/types/acorn.d.ts',
+      ],
     },
     'apps/web': {
       entry: [
@@ -24,21 +28,16 @@ const config: KnipConfig = {
       project: ['src/**/*.{ts,tsx}'],
       ignore: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'src/tests/**'],
       ignoreDependencies: [
-        '@datadog/datadog-ci',
-        'sharp',
-        '@latitude-data/web-ui',
-        '@babel/preset-typescript',
-        '@rollup/plugin-typescript',
-        'autoprefixer',
-        'postcss',
-        'tailwindcss',
-        'import-in-the-middle',
-        'require-in-the-middle',
+        '@napi-rs/canvas',
+        'bullmq',
+        'openid-client',
+        'pdfjs-dist',
+        'stripe',
       ],
     },
     'apps/gateway': {
+      entry: ['src/**/*.ts', 'src/**/*.test.ts'],
       project: ['src/**/*.ts'],
-      ignore: ['src/**/*.test.ts'],
     },
     'apps/workers': {
       project: ['src/**/*.ts'],
@@ -55,7 +54,7 @@ const config: KnipConfig = {
       entry: ['src/**/*.ts', 'drizzle.config.ts'],
       project: ['src/**/*.ts'],
       ignore: ['src/**/*.test.ts', 'src/**/*.spec.ts', 'src/tests/**'],
-      ignoreDependencies: ['dd-trace', '@clickhouse/client'],
+      ignoreDependencies: ['@napi-rs/canvas', '@latitude-data/eslint-config'], // pragma: allowlist secret
     },
     'packages/web-ui': {
       entry: ['src/**/index.ts', 'src/**/index.tsx'],
@@ -72,15 +71,16 @@ const config: KnipConfig = {
     'packages/emails': {
       entry: ['src/**/index.tsx', 'src/**/*.ts'],
       project: ['src/**/*.{ts,tsx}'],
+      ignoreDependencies: ['react-dom'],
     },
     'packages/cli': {
       project: ['src/**/*.ts'],
       ignore: ['src/**/*.test.ts'],
     },
     'packages/sdks/typescript': {
-      entry: ['src/index.ts'],
+      entry: ['src/index.ts', 'src/tests/**/*.ts', 'src/**/*.test.ts'],
       project: ['src/**/*.ts'],
-      ignore: ['src/**/*.test.ts', 'src/test/**', 'src/tests/**'],
+      ignoreDependencies: ['zod', '@opentelemetry/semantic-conventions'],
     },
     'packages/telemetry/typescript': {
       entry: ['src/index.ts'],
@@ -88,7 +88,13 @@ const config: KnipConfig = {
       ignore: ['src/**/*.test.ts', 'src/tests/**'],
     },
   },
-  exclude: ['optionalPeerDependencies', 'unlisted', 'binaries', 'unresolved'],
+  exclude: [
+    'optionalPeerDependencies',
+    'unlisted',
+    'binaries',
+    'unresolved',
+    'devDependencies',
+  ],
   ignoreExportsUsedInFile: true,
   eslint: false,
   tsup: false,
