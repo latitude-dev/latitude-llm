@@ -128,6 +128,7 @@ export function getCostSpec(provider: string, modelId: string): CostLookupResult
         output: pricing.output,
         reasoning: pricing.reasoning,
         cacheRead: pricing.cacheRead,
+        cacheWrite: pricing.cacheWrite,
       },
       costImplemented: true,
     }
@@ -195,7 +196,8 @@ export function formatModel(model: LlmModel): string {
     const parts: string[] = []
     if (model.pricing.input !== undefined) parts.push(`input: ${formatPrice(model.pricing.input)}`)
     if (model.pricing.output !== undefined) parts.push(`output: ${formatPrice(model.pricing.output)}`)
-    if (model.pricing.cacheRead !== undefined) parts.push(`cached: ${formatPrice(model.pricing.cacheRead)}`)
+    if (model.pricing.cacheRead !== undefined) parts.push(`cache read: ${formatPrice(model.pricing.cacheRead)}`)
+    if (model.pricing.cacheWrite !== undefined) parts.push(`cache write: ${formatPrice(model.pricing.cacheWrite)}`)
     if (parts.length) lines.push(`Pricing (per 1M tokens): ${parts.join(", ")}`)
   }
 

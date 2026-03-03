@@ -173,8 +173,8 @@ describe("getCostSpec", () => {
 describe("estimateCost", () => {
   it("computes cost for known provider/model", () => {
     const cost = estimateCost("openai", "gpt-4o", {
-      promptTokens: 1000,
-      completionTokens: 500,
+      inputTokens: 1000,
+      outputTokens: 500,
     })
     expect(typeof cost).toBe("number")
     expect(cost).toBeGreaterThanOrEqual(0)
@@ -182,16 +182,16 @@ describe("estimateCost", () => {
 
   it("returns zero for unknown model", () => {
     const cost = estimateCost("openai", "nonexistent-xyz", {
-      promptTokens: 1000,
-      completionTokens: 500,
+      inputTokens: 1000,
+      outputTokens: 500,
     })
     expect(cost).toBe(0)
   })
 
   it("handles NaN tokens gracefully", () => {
     const cost = estimateCost("openai", "gpt-4o", {
-      promptTokens: Number.NaN,
-      completionTokens: Number.NaN,
+      inputTokens: Number.NaN,
+      outputTokens: Number.NaN,
     })
     expect(cost).toBe(0)
   })
@@ -200,16 +200,16 @@ describe("estimateCost", () => {
 describe("estimateCostWithBreakdown", () => {
   it("returns a full breakdown", () => {
     const breakdown = estimateCostWithBreakdown("openai", "gpt-4o", {
-      promptTokens: 2_000_000,
-      completionTokens: 500_000,
+      inputTokens: 2_000_000,
+      outputTokens: 500_000,
       reasoningTokens: 100_000,
-      cachedInputTokens: 300_000,
+      cacheReadTokens: 300_000,
     })
 
-    expect(breakdown.input.prompt.tokens).toBe(2_000_000)
-    expect(breakdown.input.prompt.cost).toBeGreaterThan(0)
-    expect(breakdown.output.completion.tokens).toBe(500_000)
-    expect(breakdown.output.completion.cost).toBeGreaterThan(0)
+    expect(breakdown.input.direct.tokens).toBe(2_000_000)
+    expect(breakdown.input.direct.cost).toBeGreaterThan(0)
+    expect(breakdown.output.direct.tokens).toBe(500_000)
+    expect(breakdown.output.direct.cost).toBeGreaterThan(0)
   })
 })
 

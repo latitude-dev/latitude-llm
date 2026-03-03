@@ -40,6 +40,11 @@ describe("computeTokenCost", () => {
     expect(cost).toBeCloseTo(2.5)
   })
 
+  it("falls back cacheWrite to input rate when cacheWrite is undefined", () => {
+    const cost = computeTokenCost(tier, 1_000_000, "cacheWrite")
+    expect(cost).toBeCloseTo(2.5)
+  })
+
   it("uses explicit reasoning rate when provided", () => {
     const withReasoning: ModelCostTier = { input: 2.5, output: 10, reasoning: 5 }
     const cost = computeTokenCost(withReasoning, 1_000_000, "reasoning")
@@ -50,6 +55,12 @@ describe("computeTokenCost", () => {
     const withCache: ModelCostTier = { input: 2.5, output: 10, cacheRead: 0.5 }
     const cost = computeTokenCost(withCache, 1_000_000, "cacheRead")
     expect(cost).toBeCloseTo(0.5)
+  })
+
+  it("uses explicit cacheWrite rate when provided", () => {
+    const withCache: ModelCostTier = { input: 2.5, output: 10, cacheWrite: 3.75 }
+    const cost = computeTokenCost(withCache, 1_000_000, "cacheWrite")
+    expect(cost).toBeCloseTo(3.75)
   })
 
   describe("tiered pricing", () => {
@@ -84,19 +95,21 @@ describe("computeTokenCost", () => {
 })
 
 describe("estimateTotalCost", () => {
-  const tier: ModelCostTier = { input: 2.5, output: 10, reasoning: 5, cacheRead: 0.5 }
+  const tier: ModelCostTier = { input: 2.5, output: 10, reasoning: 5, cacheRead: 0.5, cacheWrite: 3.75 }
 
   it("sums costs for all token types", () => {
     const usage: TokenUsage = {
-      promptTokens: 1_000_000,
-      completionTokens: 500_000,
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
       reasoningTokens: 200_000,
-      cachedInputTokens: 300_000,
+      cacheReadTokens: 300_000,
+      cacheWriteTokens: 100_000,
     }
 
     const expected =
       (2.5 * 1_000_000) / 1_000_000 +
       (0.5 * 300_000) / 1_000_000 +
+      (3.75 * 100_000) / 1_000_000 +
       (5 * 200_000) / 1_000_000 +
       (10 * 500_000) / 1_000_000
 
@@ -105,10 +118,11 @@ describe("estimateTotalCost", () => {
 
   it("handles NaN token counts by treating them as zero", () => {
     const usage: TokenUsage = {
-      promptTokens: Number.NaN,
-      completionTokens: Number.NaN,
+      inputTokens: Number.NaN,
+      outputTokens: Number.NaN,
       reasoningTokens: Number.NaN,
-      cachedInputTokens: Number.NaN,
+      cacheReadTokens: Number.NaN,
+      cacheWriteTokens: Number.NaN,
     }
 
     expect(estimateTotalCost(tier, usage)).toBe(0)
@@ -116,8 +130,8 @@ describe("estimateTotalCost", () => {
 
   it("handles undefined optional tokens", () => {
     const usage: TokenUsage = {
-      promptTokens: 1_000_000,
-      completionTokens: 500_000,
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
     }
 
     const expected = (2.5 * 1_000_000) / 1_000_000 + (10 * 500_000) / 1_000_000
@@ -127,38 +141,41 @@ describe("estimateTotalCost", () => {
 })
 
 describe("computeCostBreakdown", () => {
-  const tier: ModelCostTier = { input: 2.5, output: 10, reasoning: 5, cacheRead: 0.5 }
+  const tier: ModelCostTier = { input: 2.5, output: 10, reasoning: 5, cacheRead: 0.5, cacheWrite: 3.75 }
 
   it("returns breakdown with all categories", () => {
     const usage: TokenUsage = {
-      promptTokens: 2_000_000,
-      completionTokens: 500_000,
+      inputTokens: 2_000_000,
+      outputTokens: 500_000,
       reasoningTokens: 300_000,
-      cachedInputTokens: 1_000_000,
+      cacheReadTokens: 1_000_000,
+      cacheWriteTokens: 200_000,
     }
 
     const breakdown = computeCostBreakdown(tier, usage)
 
-    expect(breakdown.input.prompt.tokens).toBe(2_000_000)
-    expect(breakdown.input.prompt.cost).toBeCloseTo(5)
-    expect(breakdown.input.cached.tokens).toBe(1_000_000)
-    expect(breakdown.input.cached.cost).toBeCloseTo(0.5)
+    expect(breakdown.input.direct.tokens).toBe(2_000_000)
+    expect(breakdown.input.direct.cost).toBeCloseTo(5)
+    expect(breakdown.input.cacheRead.tokens).toBe(1_000_000)
+    expect(breakdown.input.cacheRead.cost).toBeCloseTo(0.5)
+    expect(breakdown.input.cacheWrite.tokens).toBe(200_000)
+    expect(breakdown.input.cacheWrite.cost).toBeCloseTo(0.75)
     expect(breakdown.output.reasoning.tokens).toBe(300_000)
     expect(breakdown.output.reasoning.cost).toBeCloseTo(1.5)
-    expect(breakdown.output.completion.tokens).toBe(500_000)
-    expect(breakdown.output.completion.cost).toBeCloseTo(5)
+    expect(breakdown.output.direct.tokens).toBe(500_000)
+    expect(breakdown.output.direct.cost).toBeCloseTo(5)
   })
 
   it("converts NaN tokens to zero", () => {
     const usage: TokenUsage = {
-      promptTokens: Number.NaN,
-      completionTokens: Number.NaN,
+      inputTokens: Number.NaN,
+      outputTokens: Number.NaN,
     }
 
     const breakdown = computeCostBreakdown(tier, usage)
-    expect(breakdown.input.prompt.tokens).toBe(0)
-    expect(breakdown.input.prompt.cost).toBe(0)
-    expect(breakdown.output.completion.tokens).toBe(0)
-    expect(breakdown.output.completion.cost).toBe(0)
+    expect(breakdown.input.direct.tokens).toBe(0)
+    expect(breakdown.input.direct.cost).toBe(0)
+    expect(breakdown.output.direct.tokens).toBe(0)
+    expect(breakdown.output.direct.cost).toBe(0)
   })
 })

@@ -5,13 +5,14 @@
  * different per-million-token rates.
  */
 
-export type TokenType = "input" | "output" | "reasoning" | "cacheRead"
+export type TokenType = "input" | "output" | "reasoning" | "cacheRead" | "cacheWrite"
 
 export type TokenUsage = {
-  readonly promptTokens: number
-  readonly completionTokens: number
-  readonly reasoningTokens?: number
-  readonly cachedInputTokens?: number
+  readonly inputTokens: number
+  readonly outputTokens: number
+  readonly reasoningTokens?: number | undefined
+  readonly cacheReadTokens?: number | undefined
+  readonly cacheWriteTokens?: number | undefined
 }
 
 export type ModelCostTier = {
@@ -19,6 +20,7 @@ export type ModelCostTier = {
   readonly output: number
   readonly reasoning?: number | undefined
   readonly cacheRead?: number | undefined
+  readonly cacheWrite?: number | undefined
   readonly tokensRangeStart?: number | undefined
 }
 
@@ -36,12 +38,13 @@ export type TokenCostEntry = {
 
 export type CostBreakdown = {
   readonly input: {
-    readonly prompt: TokenCostEntry
-    readonly cached: TokenCostEntry
+    readonly direct: TokenCostEntry
+    readonly cacheRead: TokenCostEntry
+    readonly cacheWrite: TokenCostEntry
   }
   readonly output: {
+    readonly direct: TokenCostEntry
     readonly reasoning: TokenCostEntry
-    readonly completion: TokenCostEntry
   }
 }
 
@@ -50,6 +53,7 @@ function getCostPerToken(tier: ModelCostTier, tokenType: TokenType): number {
   if (tokenType === "output") return tier.output
   if (tokenType === "reasoning") return tier.reasoning ?? tier.output
   if (tokenType === "cacheRead") return tier.cacheRead ?? tier.input
+  if (tokenType === "cacheWrite") return tier.cacheWrite ?? tier.input
   return 0
 }
 
@@ -94,53 +98,60 @@ function sanitizeTokenCount(value: number | undefined): number {
 /**
  * Estimate the total cost for a given token usage and pricing spec.
  *
- * Sums up costs for all token types: input, cached input, reasoning, and output.
+ * Sums up costs for all token types: input, cache read, cache write, reasoning, and output.
  */
 export function estimateTotalCost(costSpec: ModelCostSpec, usage: TokenUsage): number {
-  const prompt = sanitizeTokenCount(usage.promptTokens)
-  const cached = sanitizeTokenCount(usage.cachedInputTokens)
+  const input = sanitizeTokenCount(usage.inputTokens)
+  const cacheRead = sanitizeTokenCount(usage.cacheReadTokens)
+  const cacheWrite = sanitizeTokenCount(usage.cacheWriteTokens)
   const reasoning = sanitizeTokenCount(usage.reasoningTokens)
-  const completion = sanitizeTokenCount(usage.completionTokens)
+  const output = sanitizeTokenCount(usage.outputTokens)
 
   return (
-    computeTokenCost(costSpec, prompt, "input") +
-    computeTokenCost(costSpec, cached, "cacheRead") +
+    computeTokenCost(costSpec, input, "input") +
+    computeTokenCost(costSpec, cacheRead, "cacheRead") +
+    computeTokenCost(costSpec, cacheWrite, "cacheWrite") +
     computeTokenCost(costSpec, reasoning, "reasoning") +
-    computeTokenCost(costSpec, completion, "output")
+    computeTokenCost(costSpec, output, "output")
   )
 }
 
 /**
  * Compute a detailed cost breakdown by token type.
  *
- * Returns per-category token counts and costs for prompt, cached,
- * reasoning, and completion tokens.
+ * Returns per-category token counts and costs for input, cache read,
+ * cache write, reasoning, and output tokens.
  */
 export function computeCostBreakdown(costSpec: ModelCostSpec, usage: TokenUsage): CostBreakdown {
-  const prompt = sanitizeTokenCount(usage.promptTokens)
-  const cached = sanitizeTokenCount(usage.cachedInputTokens)
+  const input = sanitizeTokenCount(usage.inputTokens)
+  const cacheRead = sanitizeTokenCount(usage.cacheReadTokens)
+  const cacheWrite = sanitizeTokenCount(usage.cacheWriteTokens)
   const reasoning = sanitizeTokenCount(usage.reasoningTokens)
-  const completion = sanitizeTokenCount(usage.completionTokens)
+  const output = sanitizeTokenCount(usage.outputTokens)
 
   return {
     input: {
-      prompt: {
-        tokens: prompt,
-        cost: computeTokenCost(costSpec, prompt, "input"),
+      direct: {
+        tokens: input,
+        cost: computeTokenCost(costSpec, input, "input"),
       },
-      cached: {
-        tokens: cached,
-        cost: computeTokenCost(costSpec, cached, "cacheRead"),
+      cacheRead: {
+        tokens: cacheRead,
+        cost: computeTokenCost(costSpec, cacheRead, "cacheRead"),
+      },
+      cacheWrite: {
+        tokens: cacheWrite,
+        cost: computeTokenCost(costSpec, cacheWrite, "cacheWrite"),
       },
     },
     output: {
+      direct: {
+        tokens: output,
+        cost: computeTokenCost(costSpec, output, "output"),
+      },
       reasoning: {
         tokens: reasoning,
         cost: computeTokenCost(costSpec, reasoning, "reasoning"),
-      },
-      completion: {
-        tokens: completion,
-        cost: computeTokenCost(costSpec, completion, "output"),
       },
     },
   }

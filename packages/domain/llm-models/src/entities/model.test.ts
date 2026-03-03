@@ -103,7 +103,7 @@ describe("parseModelsDevData", () => {
     expect(models[0]?.pricing).toBeUndefined()
   })
 
-  it("handles cost with cache_read and reasoning", () => {
+  it("handles cost with cache_read, cache_write, and reasoning", () => {
     const raw = {
       test: {
         id: "test",
@@ -112,7 +112,7 @@ describe("parseModelsDevData", () => {
           m: {
             id: "m",
             name: "M",
-            cost: { input: 1, output: 5, cache_read: 0.5, reasoning: 3 },
+            cost: { input: 1, output: 5, cache_read: 0.5, cache_write: 1.25, reasoning: 3 },
           },
         },
       },
@@ -123,6 +123,7 @@ describe("parseModelsDevData", () => {
       input: 1,
       output: 5,
       cacheRead: 0.5,
+      cacheWrite: 1.25,
       reasoning: 3,
     })
   })

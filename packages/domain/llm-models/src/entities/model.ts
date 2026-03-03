@@ -17,6 +17,7 @@ export type ModelPricing = {
   readonly input: number
   readonly output: number
   readonly cacheRead?: number | undefined
+  readonly cacheWrite?: number | undefined
   readonly reasoning?: number | undefined
 }
 
@@ -55,6 +56,7 @@ type RawModel = {
     input?: number
     output?: number
     cache_read?: number
+    cache_write?: number
     reasoning?: number
   }
   limit?: {
@@ -73,7 +75,7 @@ type RawModelsDevData = Record<string, RawProvider>
 
 function hasValidCost(
   cost: RawModel["cost"],
-): cost is { input: number; output: number; cache_read?: number; reasoning?: number } {
+): cost is { input: number; output: number; cache_read?: number; cache_write?: number; reasoning?: number } {
   return cost !== undefined && typeof cost === "object" && "input" in cost && "output" in cost
 }
 
@@ -115,6 +117,7 @@ export function parseModelsDevData(data: unknown): LlmModel[] {
               input: raw.cost.input,
               output: raw.cost.output,
               cacheRead: raw.cost.cache_read,
+              cacheWrite: raw.cost.cache_write,
               reasoning: raw.cost.reasoning,
             }
           : undefined,
