@@ -118,7 +118,6 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
         catch: (error) => toRepositoryError(error, "softDelete"),
       })
     }),
-
   hardDelete: (id: ProjectId, organizationId: OrganizationId) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
