@@ -11,6 +11,10 @@ export type {
   CostBreakdown,
 } from "./entities/cost.ts"
 
+export type { ModelRepository } from "./ports/model-repository.ts"
+
 export { computeTokenCost, estimateTotalCost, computeCostBreakdown } from "./use-cases/compute-cost.ts"
 
 export { findModel, getModelPricing, formatModel } from "./use-cases/find-model.ts"
+
+export { createCostEstimator } from "./use-cases/estimate-cost.ts"

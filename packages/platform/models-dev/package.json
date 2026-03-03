@@ -13,7 +13,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/models": "workspace:*"
+    "@domain/models": "workspace:*",
+    "@platform/cache-redis": "workspace:*"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*"

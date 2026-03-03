@@ -608,6 +608,9 @@ importers:
       '@domain/models':
         specifier: workspace:*
         version: link:../../domain/models
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../cache-redis
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*

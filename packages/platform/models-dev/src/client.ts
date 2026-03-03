@@ -1,44 +1,27 @@
-import {
-  type CostBreakdown,
-  type CostLookupResult,
-  type Model,
-  type TokenUsage,
-  computeCostBreakdown,
-  estimateTotalCost,
-  findModel,
-  getModelPricing,
-  parseModelsDevData,
-} from "@domain/models"
+import { gunzipSync, gzipSync } from "node:zlib"
+import { type Model, type ModelRepository, parseModelsDevData } from "@domain/models"
+import { type RedisClient, createRedisClient, createRedisConnection } from "@platform/cache-redis"
 
 import bundledJson from "./data/models.dev.json" with { type: "json" }
 
 const MODELS_DEV_API_URL = "https://models.dev/api.json"
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const REDIS_CACHE_KEY = "models-dev:data"
+const CACHE_TTL_SECONDS = 24 * 60 * 60
 const FETCH_TIMEOUT_MS = 10_000
 
-type ModelsCache = {
-  models: Model[]
-  fetchedAt: number
+function compress(data: string): Buffer {
+  return gzipSync(Buffer.from(data, "utf-8"))
 }
 
-let cache: ModelsCache | null = null
-let fetchInFlight: Promise<Model[]> | null = null
-
-const PROVIDER_ALIASES: Record<string, string> = {
-  amazon_bedrock: "bedrock",
-  google_vertex: "google-vertex",
-  anthropic_vertex: "anthropic-vertex",
-}
-
-function resolveProviderName(provider: string): string {
-  return PROVIDER_ALIASES[provider] ?? provider
+function decompress(data: Buffer): string {
+  return gunzipSync(data).toString("utf-8")
 }
 
 function loadBundledModels(): Model[] {
   return parseModelsDevData(bundledJson)
 }
 
-async function fetchFromApi(): Promise<Model[]> {
+async function fetchFromApi(): Promise<{ models: Model[]; rawJson: string }> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
 
@@ -52,150 +35,91 @@ async function fetchFromApi(): Promise<Model[]> {
       throw new Error(`models.dev API returned ${response.status}`)
     }
 
-    const data = await response.json()
-    return parseModelsDevData(data)
+    const rawJson = await response.text()
+    const data = JSON.parse(rawJson) as unknown
+    const models = parseModelsDevData(data)
+    return { models, rawJson }
   } finally {
     clearTimeout(timeoutId)
   }
 }
 
-function getCachedIfValid(): Model[] | null {
-  if (cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS) {
-    return cache.models
+async function readFromRedis(redis: RedisClient): Promise<Model[] | null> {
+  try {
+    const compressed = await redis.getBuffer(REDIS_CACHE_KEY)
+    if (!compressed) return null
+
+    const json = decompress(compressed)
+    const raw = JSON.parse(json) as unknown
+    return parseModelsDevData(raw)
+  } catch {
+    return null
   }
-  return null
 }
 
-function ensureBundledFallback(): Model[] {
-  if (!cache) {
-    cache = { models: loadBundledModels(), fetchedAt: Date.now() }
+async function writeToRedis(redis: RedisClient, rawJson: string): Promise<void> {
+  try {
+    const compressed = compress(rawJson)
+    await redis.setex(REDIS_CACHE_KEY, CACHE_TTL_SECONDS, compressed)
+  } catch {
+    // Redis write failures are non-fatal
   }
-  return cache.models
 }
 
 /**
- * Get all models, using a 24-hour in-memory cache.
+ * Create a ModelRepository backed by models.dev with Redis caching.
  *
- * On the first call, fetches from the models.dev API (falling back to
- * bundled data on failure). Subsequent calls within 24 hours return the
- * cached result. After the TTL expires, a fresh fetch is triggered.
+ * Resolution order for `getAllModels()`:
+ * 1. In-process parsed models (avoids repeated deserialization within same process)
+ * 2. Redis cache (gzip-compressed, 24h TTL)
+ * 3. Fresh fetch from models.dev API (result written to Redis)
+ * 4. Bundled JSON fallback (when both API and Redis are unavailable)
  */
-export async function getAllModels(): Promise<Model[]> {
-  const cached = getCachedIfValid()
-  if (cached) return cached
+export function createModelsDevRepository(redis?: RedisClient): ModelRepository {
+  let localModels: Model[] | null = null
+  let fetchInFlight: Promise<Model[]> | null = null
 
-  if (!fetchInFlight) {
-    fetchInFlight = fetchFromApi()
-      .then((models) => {
-        cache = { models, fetchedAt: Date.now() }
-        return models
-      })
-      .catch(() => ensureBundledFallback())
-      .finally(() => {
+  const getRedis = (() => {
+    let client = redis ?? null
+    return () => {
+      if (!client) {
+        const conn = createRedisConnection()
+        client = createRedisClient(conn)
+      }
+      return client
+    }
+  })()
+
+  const getAllModels = async (): Promise<Model[]> => {
+    if (localModels) return localModels
+
+    if (!fetchInFlight) {
+      fetchInFlight = (async () => {
+        const redisClient = getRedis()
+
+        const fromRedis = await readFromRedis(redisClient)
+        if (fromRedis) {
+          localModels = fromRedis
+          return fromRedis
+        }
+
+        try {
+          const { models, rawJson } = await fetchFromApi()
+          await writeToRedis(redisClient, rawJson)
+          localModels = models
+          return models
+        } catch {
+          const models = loadBundledModels()
+          localModels = models
+          return models
+        }
+      })().finally(() => {
         fetchInFlight = null
       })
-  }
-
-  if (cache) return cache.models
-
-  return fetchInFlight
-}
-
-/**
- * Get all models for a specific provider.
- *
- * Provider name matching is case-insensitive. Well-known aliases
- * (e.g. `amazon_bedrock` -> `bedrock`) are resolved automatically.
- */
-export async function getModelsForProvider(provider: string): Promise<Model[]> {
-  const name = resolveProviderName(provider).toLowerCase()
-  const models = await getAllModels()
-  return models.filter((m) => m.provider.toLowerCase() === name)
-}
-
-/**
- * Find a specific model within a provider's model list.
- */
-export async function getModelForProvider(provider: string, modelId: string): Promise<Model | undefined> {
-  const models = await getModelsForProvider(provider)
-  return findModel(models, modelId)
-}
-
-/**
- * Look up the per-1M-token cost specification for a provider/model pair.
- *
- * Returns `{ costImplemented: true, cost }` when pricing is available,
- * or `{ costImplemented: false, cost: { input: 0, output: 0 } }` otherwise.
- */
-export async function getCostSpec(provider: string, modelId: string): Promise<CostLookupResult> {
-  const NOT_IMPLEMENTED: CostLookupResult = {
-    cost: { input: 0, output: 0 },
-    costImplemented: false,
-  }
-
-  try {
-    const model = await getModelForProvider(provider, modelId)
-    if (!model) return NOT_IMPLEMENTED
-
-    const pricing = getModelPricing(model)
-    if (!pricing) return NOT_IMPLEMENTED
-
-    return {
-      cost: {
-        input: pricing.input,
-        output: pricing.output,
-        reasoning: pricing.reasoning,
-        cacheRead: pricing.cacheRead,
-        cacheWrite: pricing.cacheWrite,
-      },
-      costImplemented: true,
     }
-  } catch {
-    return NOT_IMPLEMENTED
+
+    return fetchInFlight
   }
-}
 
-/**
- * Estimate the total cost (in USD) for a provider/model and token usage.
- */
-export async function estimateCost(provider: string, modelId: string, usage: TokenUsage): Promise<number> {
-  const { cost } = await getCostSpec(provider, modelId)
-  return estimateTotalCost(cost, usage)
-}
-
-/**
- * Produce a detailed cost breakdown for a provider/model and token usage.
- */
-export async function estimateCostWithBreakdown(
-  provider: string,
-  modelId: string,
-  usage: TokenUsage,
-): Promise<CostBreakdown> {
-  const { cost } = await getCostSpec(provider, modelId)
-  return computeCostBreakdown(cost, usage)
-}
-
-/**
- * Build a `provider/model` key suitable for use as a cost-breakdown map key.
- */
-export function costBreakdownKey(provider: string, modelId: string): string {
-  return `${provider}/${modelId}`
-}
-
-/**
- * Force-refresh the model cache from the models.dev API.
- * Useful for testing or manual cache invalidation.
- */
-export async function refreshModels(): Promise<Model[]> {
-  cache = null
-  return getAllModels()
-}
-
-/**
- * Clear the model cache entirely.
- * Primarily useful for testing.
- */
-export function clearCache(): void {
-  cache = null
-  fetchInFlight = null
+  return { getAllModels }
 }
