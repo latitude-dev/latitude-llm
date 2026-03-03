@@ -74,10 +74,3 @@ export const migrateWeaviateCollectionsEffect = (
     }
   })
 }
-
-export const migrateWeaviateCollections = async (
-  client: WeaviateClient,
-  definitions: readonly WeaviateCollectionDefinition[],
-): Promise<void> => {
-  await Effect.runPromise(migrateWeaviateCollectionsEffect(client, definitions))
-}

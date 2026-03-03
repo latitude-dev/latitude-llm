@@ -9,7 +9,7 @@ const logger = createLogger("touch-buffer")
 /**
  * Configuration options for TouchBuffer.
  */
-export interface TouchBufferConfig {
+interface TouchBufferConfig {
   /** Flush interval in milliseconds (default: 30000ms = 30s) */
   intervalMs?: number
   /** Maximum buffer size before forced flush (default: 10000) */
@@ -36,7 +36,7 @@ export interface TouchBufferConfig {
  * touchBuffer.destroy() // Final flush
  * ```
  */
-export class TouchBuffer {
+class TouchBuffer {
   private buffer = new Map<string, number>() // keyId -> timestamp
   private flushInterval: NodeJS.Timeout | null = null
   private readonly intervalMs: number
@@ -174,13 +174,6 @@ export const createTouchBuffer = (dependencies: ApiDbDependencies, config?: Touc
   if (!touchBufferInstance) {
     touchBufferInstance = new TouchBuffer(dependencies, config)
   }
-  return touchBufferInstance
-}
-
-/**
- * Get the existing TouchBuffer instance or null if not created.
- */
-export const getTouchBuffer = (): TouchBuffer | null => {
   return touchBufferInstance
 }
 

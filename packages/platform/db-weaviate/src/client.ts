@@ -65,23 +65,21 @@ const resolveWeaviateConfigEffect = (
     url:
       config.url !== undefined
         ? Effect.succeed(normalizeOptional(config.url))
-        : parseEnvOptional(process.env.LAT_WEAVIATE_URL, "string"),
+        : parseEnvOptional("LAT_WEAVIATE_URL", "string"),
     apiKey:
-      config.apiKey !== undefined
-        ? parseEnv(config.apiKey, "string")
-        : parseEnv(process.env.LAT_WEAVIATE_API_KEY, "string"),
+      config.apiKey !== undefined ? parseEnv(config.apiKey, "string") : parseEnv("LAT_WEAVIATE_API_KEY", "string"),
     host:
       config.host !== undefined
         ? Effect.succeed(normalizeOptional(config.host))
-        : parseEnvOptional(process.env.LAT_WEAVIATE_HOST, "string"),
+        : parseEnvOptional("LAT_WEAVIATE_HOST", "string"),
     httpPort:
       config.httpPort !== undefined
         ? Effect.succeed(config.httpPort)
-        : parseEnv(process.env.LAT_WEAVIATE_HTTP_PORT, "number", 8099),
+        : parseEnv("LAT_WEAVIATE_HTTP_PORT", "number", 8099),
     grpcPort:
       config.grpcPort !== undefined
         ? Effect.succeed(config.grpcPort)
-        : parseEnv(process.env.LAT_WEAVIATE_GRPC_PORT, "number", 50051),
+        : parseEnv("LAT_WEAVIATE_GRPC_PORT", "number", 50051),
   })
 }
 

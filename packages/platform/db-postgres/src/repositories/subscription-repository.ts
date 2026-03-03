@@ -1,9 +1,8 @@
 import { type OrganizationId, type SubscriptionId, toRepositoryError } from "@domain/shared-kernel"
 import type { Plan, Subscription, SubscriptionRepository } from "@domain/subscriptions"
-import { and, desc, eq, isNull, or } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
-import * as schema from "../schema/index.ts"
+import type * as schema from "../schema/index.ts"
 
 /**
  * Maps database plan name to domain Plan type.
@@ -53,7 +52,7 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.subscription.findFirst({
-            where: eq(schema.subscription.id, id as string),
+            where: { id },
           }),
         catch: (error) => toRepositoryError(error, "findById"),
       })
@@ -66,12 +65,12 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.subscription.findFirst({
-            where: and(
-              eq(schema.subscription.referenceId, organizationId as string),
-              or(eq(schema.subscription.status, "active"), eq(schema.subscription.status, "trialing")),
-              isNull(schema.subscription.canceledAt),
-            ),
-            orderBy: desc(schema.subscription.periodStart),
+            where: {
+              referenceId: organizationId,
+              status: { in: ["active", "trialing"] },
+              canceledAt: { isNull: true },
+            },
+            orderBy: { periodStart: "desc" },
           }),
         catch: (error) => toRepositoryError(error, "findActiveByOrganizationId"),
       })
@@ -84,8 +83,8 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.subscription.findMany({
-            where: eq(schema.subscription.referenceId, organizationId as string),
-            orderBy: desc(schema.subscription.periodStart),
+            where: { referenceId: organizationId },
+            orderBy: { periodStart: "desc" },
           }),
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
       })
@@ -120,7 +119,7 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.subscription.findFirst({
-            where: eq(schema.subscription.referenceId, organizationId as string),
+            where: { referenceId: organizationId },
           }),
         catch: (error) => toRepositoryError(error, "existsForOrganization"),
       })

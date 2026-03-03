@@ -47,7 +47,7 @@ export const createOrganizationPostgresRepository = (db: PostgresDb): Organizati
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.organization.findFirst({
-            where: eq(schema.organization.id, id as string),
+            where: { id },
           }),
         catch: (error) => toRepositoryError(error, "findById"),
       })
@@ -100,7 +100,7 @@ export const createOrganizationPostgresRepository = (db: PostgresDb): Organizati
 
   delete: (id: OrganizationId) =>
     Effect.tryPromise({
-      try: () => db.delete(schema.organization).where(eq(schema.organization.id, id as string)),
+      try: () => db.delete(schema.organization).where(eq(schema.organization.id, id)),
       catch: (error) => toRepositoryError(error, "delete"),
     }),
 
@@ -109,7 +109,7 @@ export const createOrganizationPostgresRepository = (db: PostgresDb): Organizati
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.organization.findFirst({
-            where: eq(schema.organization.slug, slug),
+            where: { slug },
           }),
         catch: (error) => toRepositoryError(error, "existsBySlug"),
       })

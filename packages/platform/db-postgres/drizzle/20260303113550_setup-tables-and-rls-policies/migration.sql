@@ -1,9 +1,5 @@
-CREATE TYPE "public"."member_role" AS ENUM('owner', 'admin', 'member');--> statement-breakpoint
-CREATE TYPE "public"."user_role" AS ENUM('user', 'admin');--> statement-breakpoint
-CREATE TYPE "public"."grant_source" AS ENUM('subscription', 'purchase', 'promocode');--> statement-breakpoint
-CREATE TYPE "public"."quota_type" AS ENUM('seats', 'runs', 'credits');--> statement-breakpoint
 CREATE TABLE "latitude"."account" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
 	"user_id" text NOT NULL,
@@ -19,68 +15,65 @@ CREATE TABLE "latitude"."account" (
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."invitation" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"email" text NOT NULL,
-	"role" "member_role",
+	"role" varchar(50),
 	"status" varchar(50) DEFAULT 'pending' NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"inviter_id" text NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "latitude"."invitation" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."member" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"user_id" text NOT NULL,
-	"role" "member_role" DEFAULT 'member' NOT NULL,
+	"role" varchar(50) DEFAULT 'member' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "latitude"."member" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."organization" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"name" text NOT NULL,
-	"slug" text NOT NULL,
+	"slug" text NOT NULL UNIQUE,
 	"logo" text,
 	"metadata" text,
-	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"creator_id" text,
 	"current_subscription_id" text,
 	"stripe_customer_id" varchar(256),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "organization_slug_unique" UNIQUE("slug"),
-	CONSTRAINT "organization_uuid_unique" UNIQUE("uuid")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."session" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"expires_at" timestamp with time zone NOT NULL,
-	"token" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"token" text NOT NULL UNIQUE,
 	"ip_address" text,
 	"user_agent" text,
 	"user_id" text NOT NULL,
-	CONSTRAINT "session_token_unique" UNIQUE("token")
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."user" (
-	"id" text PRIMARY KEY NOT NULL,
-	"email" text NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
+	"email" text NOT NULL UNIQUE,
 	"email_verified" boolean DEFAULT false NOT NULL,
 	"name" text,
 	"image" text,
-	"role" "user_role" DEFAULT 'user' NOT NULL,
+	"role" varchar(50) DEFAULT 'user' NOT NULL,
 	"banned" boolean DEFAULT false NOT NULL,
 	"ban_reason" text,
 	"ban_expires" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "user_email_unique" UNIQUE("email")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."verification" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"identifier" text NOT NULL,
 	"value" text NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
@@ -89,7 +82,7 @@ CREATE TABLE "latitude"."verification" (
 );
 --> statement-breakpoint
 CREATE TABLE "latitude"."subscription" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"plan" text NOT NULL,
 	"reference_id" text NOT NULL,
 	"stripe_customer_id" varchar(256),
@@ -108,10 +101,12 @@ CREATE TABLE "latitude"."subscription" (
 	"stripe_schedule_id" varchar(256)
 );
 --> statement-breakpoint
+ALTER TABLE "latitude"."subscription" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."projects" (
-	"id" text PRIMARY KEY NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"name" varchar(256) NOT NULL,
+	"slug" varchar(256) NOT NULL,
 	"deleted_at" timestamp with time zone,
 	"last_edited_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -120,39 +115,36 @@ CREATE TABLE "latitude"."projects" (
 --> statement-breakpoint
 ALTER TABLE "latitude"."projects" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."api_keys" (
-	"id" text PRIMARY KEY NOT NULL,
-	"token" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
+	"token" text NOT NULL UNIQUE,
 	"organization_id" text NOT NULL,
 	"name" varchar(256),
 	"last_used_at" timestamp with time zone,
 	"deleted_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "api_keys_token_unique" UNIQUE("token")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "latitude"."api_keys" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."grants" (
-	"id" text PRIMARY KEY NOT NULL,
-	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"organization_id" text NOT NULL,
 	"subscription_id" text NOT NULL,
-	"source" "grant_source" NOT NULL,
-	"type" "quota_type" NOT NULL,
+	"source" varchar(50) NOT NULL,
+	"type" varchar(50) NOT NULL,
 	"amount" bigint,
 	"balance" bigint NOT NULL,
 	"expires_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "grants_uuid_unique" UNIQUE("uuid")
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "latitude"."grants" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."outbox_events" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" varchar(128) PRIMARY KEY,
 	"event_name" text NOT NULL,
-	"aggregate_id" uuid NOT NULL,
-	"workspace_id" uuid NOT NULL,
+	"aggregate_id" text NOT NULL,
+	"workspace_id" text NOT NULL,
 	"payload" jsonb NOT NULL,
 	"published" boolean DEFAULT false NOT NULL,
 	"published_at" timestamp with time zone,
@@ -160,13 +152,16 @@ CREATE TABLE "latitude"."outbox_events" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "latitude"."account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "latitude"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "latitude"."invitation" ADD CONSTRAINT "invitation_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "latitude"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "latitude"."invitation" ADD CONSTRAINT "invitation_inviter_id_user_id_fk" FOREIGN KEY ("inviter_id") REFERENCES "latitude"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "latitude"."member" ADD CONSTRAINT "member_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "latitude"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "latitude"."member" ADD CONSTRAINT "member_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "latitude"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "latitude"."organization" ADD CONSTRAINT "organization_creator_id_user_id_fk" FOREIGN KEY ("creator_id") REFERENCES "latitude"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "latitude"."session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "latitude"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "latitude"."account" ADD CONSTRAINT "account_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "latitude"."user"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "latitude"."invitation" ADD CONSTRAINT "invitation_organization_id_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "latitude"."organization"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "latitude"."invitation" ADD CONSTRAINT "invitation_inviter_id_user_id_fkey" FOREIGN KEY ("inviter_id") REFERENCES "latitude"."user"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "latitude"."member" ADD CONSTRAINT "member_organization_id_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "latitude"."organization"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "latitude"."member" ADD CONSTRAINT "member_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "latitude"."user"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "latitude"."organization" ADD CONSTRAINT "organization_creator_id_user_id_fkey" FOREIGN KEY ("creator_id") REFERENCES "latitude"."user"("id");--> statement-breakpoint
+ALTER TABLE "latitude"."session" ADD CONSTRAINT "session_user_id_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "latitude"."user"("id") ON DELETE CASCADE;--> statement-breakpoint
+CREATE POLICY "invitation_organization_policy" ON "latitude"."invitation" AS PERMISSIVE FOR ALL TO public USING (organization_id = get_current_organization_id()) WITH CHECK (organization_id = get_current_organization_id());--> statement-breakpoint
+CREATE POLICY "member_organization_policy" ON "latitude"."member" AS PERMISSIVE FOR ALL TO public USING (organization_id = get_current_organization_id()) WITH CHECK (organization_id = get_current_organization_id());--> statement-breakpoint
+CREATE POLICY "subscription_organization_policy" ON "latitude"."subscription" AS PERMISSIVE FOR ALL TO public USING (reference_id = get_current_organization_id()) WITH CHECK (reference_id = get_current_organization_id());--> statement-breakpoint
 CREATE POLICY "projects_organization_policy" ON "latitude"."projects" AS PERMISSIVE FOR ALL TO public USING (organization_id = get_current_organization_id()) WITH CHECK (organization_id = get_current_organization_id());--> statement-breakpoint
 CREATE POLICY "api_keys_organization_policy" ON "latitude"."api_keys" AS PERMISSIVE FOR ALL TO public USING (organization_id = get_current_organization_id()) WITH CHECK (organization_id = get_current_organization_id());--> statement-breakpoint
 CREATE POLICY "grants_organization_policy" ON "latitude"."grants" AS PERMISSIVE FOR ALL TO public USING (organization_id = get_current_organization_id()) WITH CHECK (organization_id = get_current_organization_id());

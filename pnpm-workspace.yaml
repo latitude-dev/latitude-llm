@@ -16,8 +16,8 @@ catalog:
   better-auth: 1.5.0
   bullmq: 5.66.0
   dotenv: 17.3.1
-  drizzle-kit: 0.31.9
-  drizzle-orm: 0.44.2
+  drizzle-kit: 1.0.0-beta.15-859cf75
+  drizzle-orm: 1.0.0-beta.15-859cf75
   effect: 4.0.0-beta.0
   hono: 4.9.12
   ioredis: 5.8.2

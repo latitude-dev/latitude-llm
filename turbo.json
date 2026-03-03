@@ -12,6 +12,9 @@
     "check": {
       "dependsOn": ["^check"]
     },
+    "check:fix": {
+      "cache": false
+    },
     "format": {
       "cache": false
     },

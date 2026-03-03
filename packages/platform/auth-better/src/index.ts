@@ -58,26 +58,21 @@ export interface StripePlanConfig {
 
 export const createBetterAuth = (config: BetterAuthConfig) => {
   const baseUrl =
-    config.baseUrl ??
-    Effect.runSync(parseEnvOptional(process.env.LAT_BETTER_AUTH_URL, "string")) ??
-    "http://localhost:3000"
-  const secret = config.secret ?? Effect.runSync(parseEnv(process.env.LAT_BETTER_AUTH_SECRET, "string"))
+    config.baseUrl ?? Effect.runSync(parseEnvOptional("LAT_BETTER_AUTH_URL", "string")) ?? "http://localhost:3000"
+  const secret = config.secret ?? Effect.runSync(parseEnv("LAT_BETTER_AUTH_SECRET", "string"))
 
   // Get OAuth credentials from env if not provided
-  const googleClientId =
-    config.googleClientId ?? Effect.runSync(parseEnvOptional(process.env.LAT_GOOGLE_CLIENT_ID, "string"))
+  const googleClientId = config.googleClientId ?? Effect.runSync(parseEnvOptional("LAT_GOOGLE_CLIENT_ID", "string"))
   const googleClientSecret =
-    config.googleClientSecret ?? Effect.runSync(parseEnvOptional(process.env.LAT_GOOGLE_CLIENT_SECRET, "string"))
-  const githubClientId =
-    config.githubClientId ?? Effect.runSync(parseEnvOptional(process.env.LAT_GITHUB_CLIENT_ID, "string"))
+    config.googleClientSecret ?? Effect.runSync(parseEnvOptional("LAT_GOOGLE_CLIENT_SECRET", "string"))
+  const githubClientId = config.githubClientId ?? Effect.runSync(parseEnvOptional("LAT_GITHUB_CLIENT_ID", "string"))
   const githubClientSecret =
-    config.githubClientSecret ?? Effect.runSync(parseEnvOptional(process.env.LAT_GITHUB_CLIENT_SECRET, "string"))
+    config.githubClientSecret ?? Effect.runSync(parseEnvOptional("LAT_GITHUB_CLIENT_SECRET", "string"))
 
   // Get Stripe credentials from env if not provided
-  const stripeSecretKey =
-    config.stripeSecretKey ?? Effect.runSync(parseEnvOptional(process.env.LAT_STRIPE_SECRET_KEY, "string"))
+  const stripeSecretKey = config.stripeSecretKey ?? Effect.runSync(parseEnvOptional("LAT_STRIPE_SECRET_KEY", "string"))
   const stripeWebhookSecret =
-    config.stripeWebhookSecret ?? Effect.runSync(parseEnvOptional(process.env.LAT_STRIPE_WEBHOOK_SECRET, "string"))
+    config.stripeWebhookSecret ?? Effect.runSync(parseEnvOptional("LAT_STRIPE_WEBHOOK_SECRET", "string"))
 
   // Create organization plugin
   // Note: Better Auth's organization plugin has a type issue where 'team' schema

@@ -1,5 +1,5 @@
-import { boolean, pgEnum, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.ts"
+import { boolean, text, varchar } from "drizzle-orm/pg-core"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 /**
  * Better Auth Schema - Drizzle ORM definitions
@@ -21,10 +21,8 @@ import { cuid } from "../schemaHelpers.ts"
  * All tables are scoped to the 'latitude' schema.
  */
 
-const latitudeSchema = pgSchema("latitude")
-
-// User role enum
-export const userRoleEnum = pgEnum("user_role", ["user", "admin"])
+export type UserRole = "user" | "admin"
+export type MemberRole = "owner" | "admin" | "member"
 
 /**
  * User table - stores user accounts
@@ -37,12 +35,11 @@ export const user = latitudeSchema.table("user", {
   emailVerified: boolean("email_verified").notNull().default(false),
   name: text("name"),
   image: text("image"),
-  role: userRoleEnum("role").notNull().default("user"),
+  role: varchar("role", { length: 50 }).notNull().default("user").$type<UserRole>(),
   banned: boolean("banned").notNull().default(false),
   banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  banExpires: tzTimestamp("ban_expires"),
+  ...timestamps(),
 })
 
 /**
@@ -50,16 +47,14 @@ export const user = latitudeSchema.table("user", {
  */
 export const session = latitudeSchema.table("session", {
   id: cuid("id").primaryKey(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  expiresAt: tzTimestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  // Organization plugin adds activeOrganizationId via additionalFields
+  ...timestamps(),
 })
 
 /**
@@ -75,12 +70,11 @@ export const account = latitudeSchema.table("account", {
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
+  accessTokenExpiresAt: tzTimestamp("access_token_expires_at"),
+  refreshTokenExpiresAt: tzTimestamp("refresh_token_expires_at"),
   scope: text("scope"),
   password: text("password"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps(),
 })
 
 /**
@@ -90,13 +84,9 @@ export const verification = latitudeSchema.table("verification", {
   id: cuid("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: tzTimestamp("expires_at").notNull(),
+  ...timestamps(),
 })
-
-// Organization member role enum
-export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member"])
 
 /**
  * Organization table - stores organizations/workspaces
@@ -109,13 +99,11 @@ export const organization = latitudeSchema.table("organization", {
   name: text("name").notNull(),
   slug: text("slug").unique().notNull(),
   logo: text("logo"),
-  metadata: text("metadata"), // JSON stored as text
-  // Extended fields from former workspaces table
+  metadata: text("metadata"),
   creatorId: text("creator_id").references(() => user.id),
   currentSubscriptionId: text("current_subscription_id"),
   stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  ...timestamps(),
 })
 
 /**
@@ -123,33 +111,41 @@ export const organization = latitudeSchema.table("organization", {
  *
  * Better Auth organization plugin table.
  */
-export const member = latitudeSchema.table("member", {
-  id: cuid("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  role: memberRoleEnum("role").notNull().default("member"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-})
+export const member = latitudeSchema.table(
+  "member",
+  {
+    id: cuid("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 50 }).notNull().default("member").$type<MemberRole>(),
+    createdAt: tzTimestamp("created_at").notNull().defaultNow(),
+  },
+  () => [organizationRLSPolicy("member")],
+)
 
 /**
  * Invitation table - stores pending organization invitations
  *
  * Better Auth organization plugin table.
  */
-export const invitation = latitudeSchema.table("invitation", {
-  id: cuid("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
-  role: memberRoleEnum("role"),
-  status: varchar("status", { length: 50 }).notNull().default("pending"),
-  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  inviterId: text("inviter_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-})
+export const invitation = latitudeSchema.table(
+  "invitation",
+  {
+    id: cuid("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: varchar("role", { length: 50 }).$type<MemberRole>(),
+    status: varchar("status", { length: 50 }).notNull().default("pending"),
+    expiresAt: tzTimestamp("expires_at").notNull(),
+    inviterId: text("inviter_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  () => [organizationRLSPolicy("invitation")],
+)

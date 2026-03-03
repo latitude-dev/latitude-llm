@@ -1,8 +1,9 @@
 import { type GrantId, type OrganizationId, type SubscriptionId, toRepositoryError } from "@domain/shared-kernel"
 import type { Grant, GrantRepository, GrantType } from "@domain/subscriptions"
-import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
+import type { QuotaType } from "../schema/grants.ts"
 import * as schema from "../schema/index.ts"
 
 /**
@@ -20,8 +21,8 @@ const toDomainGrantType = (type: string): GrantType => {
 /**
  * Maps domain GrantType to database quota type enum value.
  */
-const toDbGrantType = (type: GrantType): string => {
-  return type // They match 1:1
+const toDbGrantType = (type: GrantType): QuotaType => {
+  return type
 }
 
 /**
@@ -43,10 +44,10 @@ const toDomainGrant = (row: typeof schema.grants.$inferSelect): Grant => ({
  * Maps a domain Grant entity to a database insert row.
  */
 const toInsertRow = (grant: Grant): typeof schema.grants.$inferInsert => ({
-  id: grant.id as string,
-  organizationId: grant.organizationId as string,
-  subscriptionId: grant.subscriptionId as string,
-  type: toDbGrantType(grant.type) as (typeof schema.quotaTypeEnum.enumValues)[number],
+  id: grant.id,
+  organizationId: grant.organizationId,
+  subscriptionId: grant.subscriptionId,
+  type: toDbGrantType(grant.type),
   amount: grant.amount,
   balance: grant.balance,
   expiresAt: grant.expiresAt,
@@ -64,7 +65,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.grants.findFirst({
-            where: eq(schema.grants.id, id as string),
+            where: { id },
           }),
         catch: (error) => toRepositoryError(error, "findById"),
       })
@@ -77,7 +78,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.grants.findMany({
-            where: eq(schema.grants.organizationId, organizationId as string),
+            where: { organizationId },
           }),
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
       })
@@ -90,7 +91,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.grants.findMany({
-            where: eq(schema.grants.subscriptionId, subscriptionId as string),
+            where: { subscriptionId },
           }),
         catch: (error) => toRepositoryError(error, "findBySubscriptionId"),
       })
@@ -104,12 +105,12 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.grants.findMany({
-            where: and(
-              eq(schema.grants.organizationId, organizationId as string),
-              eq(schema.grants.type, toDbGrantType(type) as (typeof schema.quotaTypeEnum.enumValues)[number]),
-              gt(schema.grants.balance, 0),
-              or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now)),
-            ),
+            where: {
+              organizationId,
+              type: toDbGrantType(type),
+              balance: { gt: 0 },
+              OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gte: now } }],
+            },
           }),
         catch: (error) => toRepositoryError(error, "findActiveByType"),
       })
@@ -123,11 +124,11 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.grants.findMany({
-            where: and(
-              eq(schema.grants.organizationId, organizationId as string),
-              gt(schema.grants.balance, 0),
-              or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now)),
-            ),
+            where: {
+              organizationId,
+              balance: { gt: 0 },
+              OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gte: now } }],
+            },
           }),
         catch: (error) => toRepositoryError(error, "findAllActive"),
       })
@@ -180,7 +181,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
               balance: 0,
               updatedAt: new Date(),
             })
-            .where(eq(schema.grants.subscriptionId, subscriptionId as string)),
+            .where(eq(schema.grants.subscriptionId, subscriptionId)),
         catch: (error) => toRepositoryError(error, "revokeBySubscription"),
       })
     }),
@@ -188,7 +189,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
   delete: (id: GrantId) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
-        try: () => db.delete(schema.grants).where(eq(schema.grants.id, id as string)),
+        try: () => db.delete(schema.grants).where(eq(schema.grants.id, id)),
         catch: (error) => toRepositoryError(error, "delete"),
       })
     }),
@@ -196,7 +197,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
   deleteBySubscription: (subscriptionId: SubscriptionId) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
-        try: () => db.delete(schema.grants).where(eq(schema.grants.subscriptionId, subscriptionId as string)),
+        try: () => db.delete(schema.grants).where(eq(schema.grants.subscriptionId, subscriptionId)),
         catch: (error) => toRepositoryError(error, "deleteBySubscription"),
       })
     }),

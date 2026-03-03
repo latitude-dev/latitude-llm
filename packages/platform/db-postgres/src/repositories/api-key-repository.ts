@@ -1,14 +1,14 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
 import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
-import { and, eq, inArray, isNull } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
-import * as schema from "../schema/index.ts"
+import { apiKeys } from "../schema/index.ts"
 
 /**
  * Maps a database API key row to a domain ApiKey entity.
  */
-const toDomainApiKey = (row: typeof schema.apiKeys.$inferSelect): ApiKey => ({
+const toDomainApiKey = (row: typeof apiKeys.$inferSelect): ApiKey => ({
   id: row.id as ApiKey["id"],
   organizationId: row.organizationId as ApiKey["organizationId"],
   token: row.token,
@@ -22,14 +22,13 @@ const toDomainApiKey = (row: typeof schema.apiKeys.$inferSelect): ApiKey => ({
 /**
  * Maps a domain ApiKey entity to a database insert row.
  */
-const toInsertRow = (apiKey: ApiKey): typeof schema.apiKeys.$inferInsert => ({
+const toInsertRow = (apiKey: ApiKey): typeof apiKeys.$inferInsert => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
   token: apiKey.token,
   name: apiKey.name,
   lastUsedAt: apiKey.lastUsedAt,
   deletedAt: apiKey.deletedAt,
-  // createdAt and updatedAt are set by defaultNow()
 })
 
 /**
@@ -39,10 +38,7 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
   findById: (id: ApiKeyId) =>
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
-        try: () =>
-          db.query.apiKeys.findFirst({
-            where: eq(schema.apiKeys.id, id as string),
-          }),
+        try: () => db.query.apiKeys.findFirst({ where: { id } }),
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
@@ -54,7 +50,7 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.apiKeys.findFirst({
-            where: and(eq(schema.apiKeys.token, token), isNull(schema.apiKeys.deletedAt)),
+            where: { token, deletedAt: { isNull: true } },
           }),
         catch: (error) => toRepositoryError(error, "findByToken"),
       })
@@ -67,7 +63,10 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
       const results = yield* Effect.tryPromise({
         try: () =>
           db.query.apiKeys.findMany({
-            where: and(eq(schema.apiKeys.organizationId, organizationId as string), isNull(schema.apiKeys.deletedAt)),
+            where: {
+              organizationId,
+              deletedAt: { isNull: true },
+            },
           }),
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
       })
@@ -82,10 +81,10 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
       yield* Effect.tryPromise({
         try: () =>
           db
-            .insert(schema.apiKeys)
+            .insert(apiKeys)
             .values(row)
             .onConflictDoUpdate({
-              target: schema.apiKeys.id,
+              target: apiKeys.id,
               set: {
                 name: row.name,
                 lastUsedAt: row.lastUsedAt,
@@ -98,26 +97,22 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
     }),
 
   delete: (id: ApiKeyId) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () => db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id as string)),
-        catch: (error) => toRepositoryError(error, "delete"),
-      })
+    Effect.tryPromise({
+      try: () => db.delete(apiKeys).where(eq(apiKeys.id, id)),
+      catch: (error) => toRepositoryError(error, "delete"),
     }),
 
   touch: (id: ApiKeyId) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .update(schema.apiKeys)
-            .set({
-              lastUsedAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(eq(schema.apiKeys.id, id as string)),
-        catch: (error) => toRepositoryError(error, "touch"),
-      })
+    Effect.tryPromise({
+      try: () =>
+        db
+          .update(apiKeys)
+          .set({
+            lastUsedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(apiKeys.id, id)),
+      catch: (error) => toRepositoryError(error, "touch"),
     }),
 
   touchBatch: (ids: readonly ApiKeyId[]) =>
@@ -132,12 +127,12 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
       yield* Effect.tryPromise({
         try: () =>
           db
-            .update(schema.apiKeys)
+            .update(apiKeys)
             .set({
               lastUsedAt: now,
               updatedAt: now,
             })
-            .where(inArray(schema.apiKeys.id, idStrings)),
+            .where(inArray(apiKeys.id, idStrings)),
         catch: (error) => toRepositoryError(error, "touchBatch"),
       })
     }),

@@ -1,0 +1,12 @@
+import { apiKeySeeders } from "./api-keys/index.ts"
+import { organizationSeeders } from "./organizations/index.ts"
+import { projectSeeders } from "./projects/index.ts"
+import { subscriptionSeeders } from "./subscriptions/index.ts"
+import type { Seeder } from "./types.ts"
+
+export const allSeeders: readonly Seeder[] = [
+  ...organizationSeeders,
+  ...projectSeeders,
+  ...apiKeySeeders,
+  ...subscriptionSeeders,
+]

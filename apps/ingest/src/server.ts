@@ -16,7 +16,7 @@ if (existsSync(envFilePath)) {
 }
 
 const app = new Hono()
-const port = Effect.runSync(parseEnv(process.env.LAT_INGEST_PORT, "number", 3002))
+const port = Effect.runSync(parseEnv("LAT_INGEST_PORT", "number", 3002))
 
 const logger = createLogger("ingest")
 
