@@ -8,7 +8,7 @@ import type { ApiKeyRepository } from "../ports/api-key-repository.ts"
  *
  * This use case:
  * 1. Validates the API key name
- * 2. Generates a unique token (UUID)
+ * 2. Generates a unique API key secret token
  * 3. Creates the API key entity
  * 4. Persists to the repository
  * 5. Returns the created API key

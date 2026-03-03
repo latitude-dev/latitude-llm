@@ -10,9 +10,9 @@
     "typecheck": "turbo typecheck",
     "test": "pnpm test:db:setup && turbo test",
     "test:db:setup": "pnpm --filter @platform/db-postgres db:test:setup",
-    "knip": "knip",
-    "knip:fix": "knip --fix",
-    "knip:fix:files": "knip --fix-type files --allow-remove-files",
+    "knip": "knip --no-config-hints",
+    "knip:fix": "knip --fix --no-config-hints",
+    "knip:fix:files": "knip --fix-type files --allow-remove-files --no-config-hints",
     "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate && pnpm build"
   },
   "devDependencies": {

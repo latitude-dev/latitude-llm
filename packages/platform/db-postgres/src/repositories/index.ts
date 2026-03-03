@@ -1,5 +1,4 @@
 import type { PostgresDb } from "../client.ts"
-import { createApiKeyPostgresRepository } from "./api-key-repository.ts"
 import { createGrantPostgresRepository } from "./grant-repository.ts"
 import { createMembershipPostgresRepository } from "./membership-repository.ts"
 import { createOrganizationPostgresRepository } from "./organization-repository.ts"
@@ -22,7 +21,6 @@ import { createUserPostgresRepository } from "./user-repository.ts"
 export interface Repositories {
   organization: ReturnType<typeof createOrganizationPostgresRepository>
   project: ReturnType<typeof createProjectPostgresRepository>
-  apiKey: ReturnType<typeof createApiKeyPostgresRepository>
   membership: ReturnType<typeof createMembershipPostgresRepository>
   subscription: ReturnType<typeof createSubscriptionPostgresRepository>
   grant: ReturnType<typeof createGrantPostgresRepository>
@@ -32,7 +30,6 @@ export interface Repositories {
 export const createRepositories = (db: PostgresDb): Repositories => ({
   organization: createOrganizationPostgresRepository(db),
   project: createProjectPostgresRepository(db),
-  apiKey: createApiKeyPostgresRepository(db),
   membership: createMembershipPostgresRepository(db),
   subscription: createSubscriptionPostgresRepository(db),
   grant: createGrantPostgresRepository(db),

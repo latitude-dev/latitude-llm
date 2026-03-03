@@ -2,6 +2,7 @@ import { ApiKeyId } from "@domain/shared-kernel"
 import { createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
+import { getApiKeyTokenCrypto } from "../clients.ts"
 import type { ApiDbDependencies } from "../db-deps.ts"
 
 const logger = createLogger("touch-buffer")
@@ -9,7 +10,7 @@ const logger = createLogger("touch-buffer")
 /**
  * Configuration options for TouchBuffer.
  */
-export interface TouchBufferConfig {
+interface TouchBufferConfig {
   /** Flush interval in milliseconds (default: 30000ms = 30s) */
   intervalMs?: number
   /** Maximum buffer size before forced flush (default: 10000) */
@@ -36,7 +37,7 @@ export interface TouchBufferConfig {
  * touchBuffer.destroy() // Final flush
  * ```
  */
-export class TouchBuffer {
+class TouchBuffer {
   private buffer = new Map<string, number>() // keyId -> timestamp
   private flushInterval: NodeJS.Timeout | null = null
   private readonly intervalMs: number
@@ -99,7 +100,7 @@ export class TouchBuffer {
 
     const startTime = Date.now()
 
-    const apiKeyRepository = createApiKeyPostgresRepository(this.dependencies.db)
+    const apiKeyRepository = createApiKeyPostgresRepository(this.dependencies.db, getApiKeyTokenCrypto())
 
     try {
       await Effect.runPromise(apiKeyRepository.touchBatch(keyIds))
@@ -179,15 +180,6 @@ export const createTouchBuffer = (dependencies: ApiDbDependencies, config?: Touc
 
 /**
  * Get the existing TouchBuffer instance or null if not created.
- */
-export const getTouchBuffer = (): TouchBuffer | null => {
-  return touchBufferInstance
-}
-
-/**
- * Destroy the singleton TouchBuffer instance.
- *
- * Call this during graceful shutdown.
  */
 export const destroyTouchBuffer = async (): Promise<void> => {
   if (touchBufferInstance) {

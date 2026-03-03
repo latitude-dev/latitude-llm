@@ -2,7 +2,7 @@ import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared-kernel
 import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
-import { getBetterAuth, getRedisClient } from "../clients.ts"
+import { getApiKeyTokenCrypto, getBetterAuth, getRedisClient } from "../clients.ts"
 import { getDbDependencies } from "../db-deps.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
@@ -78,7 +78,7 @@ const validateApiKey = (
   token: string,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const dependencies = getDbDependencies(c)
-  const apiKeyRepository = createApiKeyPostgresRepository(dependencies.db)
+  const apiKeyRepository = createApiKeyPostgresRepository(dependencies.db, getApiKeyTokenCrypto())
   const touchBuffer = createTouchBuffer(dependencies)
 
   return Effect.gen(function* () {
@@ -267,28 +267,4 @@ export const createAuthMiddleware = (): MiddlewareHandler => {
 
     await next()
   }
-}
-
-/**
- * Helper to get auth context from Hono context.
- *
- * This helper provides runtime safety by throwing if auth context is not set.
- * Only use this in routes protected by the auth middleware.
- *
- * Usage in route handlers:
- * ```typescript
- * const auth = getAuthContext(c)
- * console.log(auth.userId, auth.organizationId)
- * ```
- *
- * @throws {UnauthorizedError} If auth context is not found (middleware not applied)
- */
-export const getAuthContext = (c: Context): AuthContext => {
-  const auth = c.get("auth")
-  if (!auth) {
-    throw new UnauthorizedError({
-      message: "Auth context not found - ensure auth middleware is applied to this route",
-    })
-  }
-  return auth
 }

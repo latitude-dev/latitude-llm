@@ -4,7 +4,7 @@ import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import type { RedisClient } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { type PostgresDb, createPostgresClient } from "@platform/db-postgres"
-import { parseEnv, parseEnvOptional } from "@platform/env"
+import { type ValueCrypto, createValueCryptoFromEnv, parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import type { Pool } from "pg"
 
@@ -12,6 +12,7 @@ let postgresClientInstance: { db: PostgresDb; pool: Pool } | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
+let apiKeyTokenCryptoInstance: ValueCrypto | undefined
 
 export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
   if (!postgresClientInstance) {
@@ -71,4 +72,16 @@ export const getBetterAuth = () => {
     })
   }
   return betterAuthInstance
+}
+
+export const getApiKeyTokenCrypto = (): ValueCrypto => {
+  if (!apiKeyTokenCryptoInstance) {
+    apiKeyTokenCryptoInstance = createValueCryptoFromEnv({
+      env: process.env,
+      encryptionKeyVar: "LAT_API_KEY_ENCRYPTION_KEY",
+      hashKeyVar: "LAT_API_KEY_HASH_KEY",
+    })
+  }
+
+  return apiKeyTokenCryptoInstance
 }

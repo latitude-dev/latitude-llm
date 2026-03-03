@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto"
 import { generateId } from "@domain/shared-kernel"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema as schema } from "@platform/db-postgres"
@@ -5,6 +6,11 @@ import type { Effect as EffectType } from "effect"
 import { Effect } from "effect"
 import type { TestDatabase } from "./test-database.ts"
 import { generateTestId } from "./test-database.ts"
+
+const createTestApiKeyToken = (): string => {
+  const secret = randomBytes(32).toString("base64url")
+  return `lat_sk.${secret}`
+}
 
 /**
  * User fixture input
@@ -250,10 +256,13 @@ export const createApiKeyFixture = (
   return Effect.tryPromise({
     try: async () => {
       const apiKeyId = generateId()
+      const token = createTestApiKeyToken()
       const [apiKey] = await db
         .insert(schema.apiKeys)
         .values({
           id: apiKeyId,
+          token,
+          tokenHash: token,
           name,
           organizationId: input.organizationId,
         })

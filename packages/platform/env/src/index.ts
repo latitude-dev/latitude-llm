@@ -112,3 +112,6 @@ export function parseEnvOptional(
 
   return Effect.fail(new InvalidEnvValueError({ expectedType, value }))
 }
+
+export type { ValueCrypto } from "./crypto.ts"
+export { createValueCrypto, createValueCryptoFromEnv, parseBase64UrlKey } from "./crypto.ts"

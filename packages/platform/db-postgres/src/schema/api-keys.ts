@@ -18,6 +18,7 @@ export const apiKeys = latitudeSchema.table(
   {
     id: text("id").primaryKey(), // CUID2, consistent with Better Auth
     token: text("token").notNull().unique(),
+    tokenHash: text("token_hash").notNull().unique(),
     organizationId: text("organization_id").notNull(),
     name: varchar("name", { length: 256 }),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true }),

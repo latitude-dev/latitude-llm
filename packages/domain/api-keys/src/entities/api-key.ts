@@ -1,11 +1,13 @@
+import { randomBytes } from "node:crypto"
 import type { ApiKeyId, OrganizationId } from "@domain/shared-kernel"
+
+const API_KEY_TOKEN_PREFIX = "lat_sk"
 
 /**
  * API Key entity - authenticates organization-bound requests.
  *
  * API keys are scoped to an organization and provide token-based
- * authentication for API access. Tokens are UUIDs generated
- * using crypto.randomUUID().
+ * authentication for API access. Tokens are random secrets.
  */
 export interface ApiKey {
   readonly id: ApiKeyId
@@ -45,10 +47,11 @@ export const createApiKey = (params: {
 }
 
 /**
- * Generate a new API key token (UUID v4).
+ * Generate a new API key token.
  */
 export const generateApiKeyToken = (): string => {
-  return crypto.randomUUID()
+  const secret = randomBytes(32).toString("base64url")
+  return `${API_KEY_TOKEN_PREFIX}.${secret}`
 }
 
 /**

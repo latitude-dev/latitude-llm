@@ -16,7 +16,7 @@ const latitudeSchema = pgSchema("latitude")
 export const projects = latitudeSchema.table(
   "projects",
   {
-    id: text("id").primaryKey(), // UUID, consistent with Better Auth
+    id: text("id").primaryKey(), // CUID2, consistent with Better Auth
     organizationId: text("organization_id").notNull(),
     name: varchar("name", { length: 256 }).notNull(),
     slug: varchar("slug", { length: 256 }).notNull(),

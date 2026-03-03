@@ -1,41 +1,51 @@
+import { timingSafeEqual } from "node:crypto"
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
 import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
+import type { ValueCrypto } from "@platform/env"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import * as schema from "../schema/index.ts"
 
-/**
- * Maps a database API key row to a domain ApiKey entity.
- */
-const toDomainApiKey = (row: typeof schema.apiKeys.$inferSelect): ApiKey => ({
-  id: row.id as ApiKey["id"],
-  organizationId: row.organizationId as ApiKey["organizationId"],
-  token: row.token,
-  name: row.name ?? "",
-  lastUsedAt: row.lastUsedAt,
-  deletedAt: row.deletedAt,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-})
+const constantTimeEquals = (a: string, b: string): boolean => {
+  const left = Buffer.from(a)
+  const right = Buffer.from(b)
 
-/**
- * Maps a domain ApiKey entity to a database insert row.
- */
-const toInsertRow = (apiKey: ApiKey): typeof schema.apiKeys.$inferInsert => ({
+  if (left.length !== right.length) {
+    return false
+  }
+
+  return timingSafeEqual(left, right)
+}
+
+const decryptToken = (token: string, tokenCrypto: ValueCrypto): string => tokenCrypto.decrypt(token)
+
+const toDomainApiKey = (row: typeof schema.apiKeys.$inferSelect, tokenCrypto: ValueCrypto): ApiKey => {
+  const token = decryptToken(row.token, tokenCrypto)
+
+  return {
+    id: row.id as ApiKey["id"],
+    organizationId: row.organizationId as ApiKey["organizationId"],
+    token,
+    name: row.name ?? "",
+    lastUsedAt: row.lastUsedAt,
+    deletedAt: row.deletedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
+}
+
+const toInsertRow = (apiKey: ApiKey, tokenCrypto: ValueCrypto): typeof schema.apiKeys.$inferInsert => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
-  token: apiKey.token,
+  token: tokenCrypto.encrypt(apiKey.token),
+  tokenHash: tokenCrypto.hash(apiKey.token),
   name: apiKey.name,
   lastUsedAt: apiKey.lastUsedAt,
   deletedAt: apiKey.deletedAt,
-  // createdAt and updatedAt are set by defaultNow()
 })
 
-/**
- * Creates a Postgres implementation of the ApiKeyRepository port.
- */
-export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository => ({
+export const createApiKeyPostgresRepository = (db: PostgresDb, tokenCrypto: ValueCrypto): ApiKeyRepository => ({
   findById: (id: ApiKeyId) =>
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
@@ -46,20 +56,29 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
-      return result ? toDomainApiKey(result) : null
+      return result ? toDomainApiKey(result, tokenCrypto) : null
     }),
 
   findByToken: (token: string) =>
     Effect.gen(function* () {
+      const tokenHash = tokenCrypto.hash(token)
+
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.apiKeys.findFirst({
-            where: and(eq(schema.apiKeys.token, token), isNull(schema.apiKeys.deletedAt)),
+            where: and(eq(schema.apiKeys.tokenHash, tokenHash), isNull(schema.apiKeys.deletedAt)),
           }),
         catch: (error) => toRepositoryError(error, "findByToken"),
       })
 
-      return result ? toDomainApiKey(result) : null
+      if (result) {
+        const decryptedToken = decryptToken(result.token, tokenCrypto)
+        if (constantTimeEquals(decryptedToken, token)) {
+          return toDomainApiKey(result, tokenCrypto)
+        }
+      }
+
+      return null
     }),
 
   findByOrganizationId: (organizationId: OrganizationId) =>
@@ -72,12 +91,12 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
       })
 
-      return results.map(toDomainApiKey)
+      return results.map((row) => toDomainApiKey(row, tokenCrypto))
     }),
 
   save: (apiKey: ApiKey) =>
     Effect.gen(function* () {
-      const row = toInsertRow(apiKey)
+      const row = toInsertRow(apiKey, tokenCrypto)
 
       yield* Effect.tryPromise({
         try: () =>
@@ -87,6 +106,8 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
             .onConflictDoUpdate({
               target: schema.apiKeys.id,
               set: {
+                token: row.token,
+                tokenHash: row.tokenHash,
                 name: row.name,
                 lastUsedAt: row.lastUsedAt,
                 deletedAt: row.deletedAt,
@@ -98,26 +119,22 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
     }),
 
   delete: (id: ApiKeyId) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () => db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id as string)),
-        catch: (error) => toRepositoryError(error, "delete"),
-      })
+    Effect.tryPromise({
+      try: () => db.delete(schema.apiKeys).where(eq(schema.apiKeys.id, id as string)),
+      catch: (error) => toRepositoryError(error, "delete"),
     }),
 
   touch: (id: ApiKeyId) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .update(schema.apiKeys)
-            .set({
-              lastUsedAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(eq(schema.apiKeys.id, id as string)),
-        catch: (error) => toRepositoryError(error, "touch"),
-      })
+    Effect.tryPromise({
+      try: () =>
+        db
+          .update(schema.apiKeys)
+          .set({
+            lastUsedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.apiKeys.id, id as string)),
+      catch: (error) => toRepositoryError(error, "touch"),
     }),
 
   touchBatch: (ids: readonly ApiKeyId[]) =>

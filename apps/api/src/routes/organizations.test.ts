@@ -1,9 +1,10 @@
-import { randomUUID } from "node:crypto"
+import { generateApiKeyToken } from "@domain/api-keys"
 import { generateId } from "@domain/shared-kernel"
 import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
 import { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { getApiKeyTokenCrypto } from "../clients.ts"
 import { createDbDependenciesMiddleware } from "../db-deps.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
@@ -66,23 +67,24 @@ const createOrganizationSetup = async (db: InMemoryPostgres["db"]): Promise<Orga
     role: "owner",
   })
 
-  const [apiKey] = await db
-    .insert(postgresSchema.apiKeys)
-    .values({
-      id: generateId(),
-      organizationId,
-      token: randomUUID(),
-      name: "Test API Key",
-    })
-    .returning({
-      token: postgresSchema.apiKeys.token,
-    })
+  const apiKeyId = generateId()
+
+  const apiKeyToken = generateApiKeyToken()
+  const tokenCrypto = getApiKeyTokenCrypto()
+
+  await db.insert(postgresSchema.apiKeys).values({
+    id: apiKeyId,
+    organizationId,
+    token: tokenCrypto.encrypt(apiKeyToken),
+    tokenHash: tokenCrypto.hash(apiKeyToken),
+    name: "Test API Key",
+  })
 
   return {
     userId,
     organizationId,
     organizationName,
-    apiKeyToken: apiKey.token,
+    apiKeyToken,
   }
 }
 

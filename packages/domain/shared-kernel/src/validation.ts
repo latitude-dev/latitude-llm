@@ -34,11 +34,6 @@ export const maxLength = (value: string, max: number, fieldName: string): string
   return value
 }
 
-// UUID validation (simplified)
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-export const isValidUUID = (value: string): boolean => UUID_REGEX.test(value)
-
 // Timestamp type (ISO 8601 string)
 export type Timestamp = string & { readonly __brand: "Timestamp" }
 

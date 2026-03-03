@@ -6,12 +6,20 @@
       "project": []
     },
     "apps/*": {
-      "entry": ["src/server.ts", "src/main.tsx"],
+      "entry": ["src/server.ts"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "apps/web": {
+      "entry": ["src/entry-client.tsx", "src/entry-server.tsx"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "apps/workflows": {
+      "entry": ["src/worker.ts"],
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
     "packages/domain/*": {
       "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
     "packages/platform/*": {
       "entry": ["src/index.ts"],
