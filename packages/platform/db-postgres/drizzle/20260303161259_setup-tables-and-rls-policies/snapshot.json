@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "1ff2a037-6490-4f43-8cf5-1ee700870e82",
+  "id": "66ce44e6-2490-4597-8b1a-537d274129a0",
   "prevIds": [
     "06ad3b58-dde2-4a1e-b537-e0ed03500f17"
   ],
@@ -79,7 +79,7 @@
       "schema": "latitude"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -248,7 +248,7 @@
       "table": "account"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -339,7 +339,7 @@
       "table": "invitation"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -404,7 +404,7 @@
       "table": "member"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -534,7 +534,7 @@
       "table": "organization"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -638,7 +638,7 @@
       "table": "session"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -781,7 +781,7 @@
       "table": "user"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -859,7 +859,7 @@
       "table": "verification"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1080,7 +1080,7 @@
       "table": "subscription"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1184,7 +1184,7 @@
       "table": "projects"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1288,7 +1288,7 @@
       "table": "api_keys"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1418,7 +1418,7 @@
       "table": "grants"
     },
     {
-      "type": "varchar(128)",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,

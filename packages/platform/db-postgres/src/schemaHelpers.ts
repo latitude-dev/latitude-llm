@@ -29,8 +29,8 @@ export function timestamps() {
 
 /**
  * Generate a unique ID using CUID2.
- * CUID2 provides 24-25 character URL-safe unique identifiers.
+ * CUID2 provides 24 character URL-safe unique identifiers.
  */
 export function cuid(name: string) {
-  return varchar(name, { length: 128 }).$defaultFn(() => createId())
+  return varchar(name, { length: 24 }).$defaultFn(() => createId())
 }
