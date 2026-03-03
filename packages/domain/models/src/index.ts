@@ -24,7 +24,6 @@ export {
 export {
   getAllModels,
   findModel,
-  findModelWithFallback,
   getModelPricing,
   getModelsForProvider,
   getModelForProvider,

@@ -5,6 +5,7 @@
  * are synchronous and require no network calls.
  */
 
+import { formatCount, formatPrice } from "@repo/utils"
 import type { CostBreakdown, CostLookupResult, TokenUsage } from "./entities/cost.ts"
 import { computeCostBreakdown, computeTokenCost, estimateTotalCost } from "./entities/cost.ts"
 import type { Model, ModelPricing } from "./entities/model.ts"
@@ -43,25 +44,18 @@ export function getAllModels(): Model[] {
 }
 
 /**
- * Find a model by its exact ID (case-insensitive).
- */
-export function findModel(models: Model[], modelId: string): Model | undefined {
-  const needle = modelId.toLowerCase()
-  return models.find((m) => m.id.toLowerCase() === needle)
-}
-
-/**
- * Find a model by ID with prefix fallback.
+ * Find a model by ID (case-insensitive) with prefix fallback.
  *
- * First tries an exact match; if no match is found, falls back to the
+ * First tries an exact match; if none is found, falls back to the
  * model whose ID is the longest prefix of the requested `modelId`.
  * Useful for versioned model names like `gpt-4.1-2025-04-14` matching `gpt-4.1`.
  */
-export function findModelWithFallback(models: Model[], modelId: string): Model | undefined {
-  const exact = findModel(models, modelId)
+export function findModel(models: Model[], modelId: string): Model | undefined {
+  const needle = modelId.toLowerCase()
+
+  const exact = models.find((m) => m.id.toLowerCase() === needle)
   if (exact) return exact
 
-  const needle = modelId.toLowerCase()
   let best: Model | undefined
   let bestLen = 0
 
@@ -100,7 +94,7 @@ export function getModelsForProvider(provider: string): Model[] {
  */
 export function getModelForProvider(provider: string, modelId: string): Model | undefined {
   const models = getModelsForProvider(provider)
-  return findModelWithFallback(models, modelId)
+  return findModel(models, modelId)
 }
 
 /**
@@ -206,28 +200,4 @@ export function formatModel(model: Model): string {
   return lines.join("\n")
 }
 
-// Re-export computeTokenCost for callers that need fine-grained control
 export { computeTokenCost, computeCostBreakdown, estimateTotalCost }
-
-const COUNT_UNITS = ["", "K", "M", "B", "T"]
-
-function formatCount(count: number): string {
-  if (count < 0) return `-${formatCount(-count)}`
-  if (count < 1000) return String(count)
-
-  let unitIndex = 0
-  let value = count
-  while (value >= 1000 && unitIndex < COUNT_UNITS.length - 1) {
-    value /= 1000
-    unitIndex++
-  }
-
-  const decimal = value < 10 ? 1 : 0
-  return `${value.toFixed(decimal).replace(/\.0$/, "")}${COUNT_UNITS[unitIndex]}`
-}
-
-function formatPrice(price: number): string {
-  if (price === 0) return "$0"
-  if (price < 0.01) return `$${price.toFixed(3)}`
-  return `$${price.toFixed(2)}`
-}

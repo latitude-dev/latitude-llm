@@ -5,7 +5,6 @@ import {
   estimateCost,
   estimateCostWithBreakdown,
   findModel,
-  findModelWithFallback,
   formatModel,
   getAllModels,
   getCostSpec,
@@ -57,25 +56,18 @@ describe("findModel", () => {
   it("returns undefined when not found", () => {
     expect(findModel(mockModels, "nonexistent")).toBeUndefined()
   })
-})
 
-describe("findModelWithFallback", () => {
-  it("returns exact match first", () => {
-    const model = findModelWithFallback(mockModels, "gpt-4o")
-    expect(model?.id).toBe("gpt-4o")
-  })
-
-  it("falls back to longest prefix", () => {
+  it("falls back to longest prefix when no exact match", () => {
     const models: Model[] = [
       { id: "gpt-4", name: "GPT-4", provider: "openai" },
       { id: "gpt-4o", name: "GPT-4o", provider: "openai" },
     ]
-    const model = findModelWithFallback(models, "gpt-4o-2024-11-20")
+    const model = findModel(models, "gpt-4o-2024-11-20")
     expect(model?.id).toBe("gpt-4o")
   })
 
-  it("returns undefined when no prefix matches", () => {
-    expect(findModelWithFallback(mockModels, "totally-different")).toBeUndefined()
+  it("returns undefined when no prefix matches either", () => {
+    expect(findModel(mockModels, "totally-different")).toBeUndefined()
   })
 })
 

@@ -31,6 +31,14 @@ Business logic lives here. Domain packages expose:
 
 Infrastructure details live here only. Platform packages implement adapters for domain ports.
 
+### Shared Utilities (`packages/utils`)
+
+General-purpose utility functions that can be shared across any package (domain, platform, or app) live in `@repo/utils`. This package should contain pure, stateless helper functions with no domain or infrastructure dependencies.
+
+Examples: `formatCount`, `formatPrice`, string helpers, number formatters.
+
+When writing a utility function that is not specific to a single domain or package, place it in `@repo/utils` instead of keeping it local.
+
 ### Ports and Adapters
 
 - Domain depends on interfaces/tags only (ports like `Repository`, `CacheStore`, `Publisher`)
