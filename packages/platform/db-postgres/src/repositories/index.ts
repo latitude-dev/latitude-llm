@@ -29,10 +29,7 @@ export interface Repositories {
   user: ReturnType<typeof createUserPostgresRepository>
 }
 
-export const createRepositories = (
-  db: PostgresDb,
-  apiKeyEncryptionKey: Buffer,
-): Repositories => ({
+export const createRepositories = (db: PostgresDb, apiKeyEncryptionKey: Buffer): Repositories => ({
   organization: createOrganizationPostgresRepository(db),
   project: createProjectPostgresRepository(db),
   apiKey: createApiKeyPostgresRepository(db, apiKeyEncryptionKey),

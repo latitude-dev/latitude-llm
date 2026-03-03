@@ -25,8 +25,7 @@ import type { AuthContext } from "../types.ts"
 
 export const createOrganizationsRoutes = () => {
   const app = new Hono()
-  const getRepos = (c: Context) =>
-    createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
+  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
   const assertOrganizationAccess = (auth: AuthContext, organizationId: string) => {
     if (auth.organizationId !== organizationId) {
       throw new PermissionError({

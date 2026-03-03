@@ -41,8 +41,7 @@ const createApiKeyCacheInvalidator = (): CacheInvalidator => {
 export const createApiKeysRoutes = () => {
   const cacheInvalidator = createApiKeyCacheInvalidator()
   const app = new Hono()
-  const getRepos = (c: Context) =>
-    createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
+  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
 
   // POST /organizations/:organizationId/api-keys - Generate API key
   app.post("/", async (c) => {

@@ -10,10 +10,7 @@ import { apiKeys } from "../schema/index.ts"
  * Maps a database API key row to a domain ApiKey entity.
  * Decrypts the token from its stored encrypted form.
  */
-const toDomainApiKey = (
-  row: typeof apiKeys.$inferSelect,
-  encryptionKey: Buffer,
-): ApiKey => ({
+const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
   id: row.id as ApiKey["id"],
   organizationId: row.organizationId as ApiKey["organizationId"],
   token: decrypt(row.token, encryptionKey),
@@ -29,10 +26,7 @@ const toDomainApiKey = (
  * Maps a domain ApiKey entity to a database insert row.
  * Encrypts the plaintext token before storage.
  */
-const toInsertRow = (
-  apiKey: ApiKey,
-  encryptionKey: Buffer,
-): typeof apiKeys.$inferInsert => ({
+const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer): typeof apiKeys.$inferInsert => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
   token: encrypt(apiKey.token, encryptionKey),
@@ -48,10 +42,7 @@ const toInsertRow = (
  * @param db - Drizzle database instance
  * @param encryptionKey - 32-byte AES-256 key for token encryption/decryption
  */
-export const createApiKeyPostgresRepository = (
-  db: PostgresDb,
-  encryptionKey: Buffer,
-): ApiKeyRepository => ({
+export const createApiKeyPostgresRepository = (db: PostgresDb, encryptionKey: Buffer): ApiKeyRepository => ({
   findById: (id: ApiKeyId) =>
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({

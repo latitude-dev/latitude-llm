@@ -21,8 +21,7 @@ import type { AuthContext } from "../types.ts"
 
 export const createProjectsRoutes = () => {
   const app = new Hono()
-  const getRepos = (c: Context) =>
-    createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
+  const getRepos = (c: Context) => createRepositories(getDbDependencies(c).db, getApiKeyEncryptionKey())
 
   // POST /organizations/:organizationId/projects - Create project
   app.post("/", async (c) => {

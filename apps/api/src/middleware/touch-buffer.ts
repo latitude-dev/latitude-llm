@@ -100,10 +100,7 @@ class TouchBuffer {
 
     const startTime = Date.now()
 
-    const apiKeyRepository = createApiKeyPostgresRepository(
-      this.dependencies.db,
-      getApiKeyEncryptionKey(),
-    )
+    const apiKeyRepository = createApiKeyPostgresRepository(this.dependencies.db, getApiKeyEncryptionKey())
 
     try {
       await Effect.runPromise(apiKeyRepository.touchBatch(keyIds))

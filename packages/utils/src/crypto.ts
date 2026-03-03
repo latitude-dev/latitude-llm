@@ -1,9 +1,4 @@
-import {
-  createCipheriv,
-  createDecipheriv,
-  createHash,
-  randomBytes,
-} from "node:crypto"
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto"
 
 const ALGORITHM = "aes-256-gcm"
 const IV_LENGTH = 12
@@ -28,10 +23,7 @@ export function encrypt(plaintext: string, key: Buffer): string {
   const iv = randomBytes(IV_LENGTH)
   const cipher = createCipheriv(ALGORITHM, key, iv)
 
-  const encrypted = Buffer.concat([
-    cipher.update(plaintext, "utf8"),
-    cipher.final(),
-  ])
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()])
   const authTag = cipher.getAuthTag()
 
   return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`
@@ -50,9 +42,14 @@ export function decrypt(ciphertext: string, key: Buffer): string {
     throw new Error("Invalid ciphertext format")
   }
 
-  const iv = Buffer.from(parts[0]!, "hex")
-  const authTag = Buffer.from(parts[1]!, "hex")
-  const encrypted = Buffer.from(parts[2]!, "hex")
+  const [ivHex, authTagHex, encryptedHex] = parts
+  if (ivHex === undefined || authTagHex === undefined || encryptedHex === undefined) {
+    throw new Error("Invalid ciphertext format")
+  }
+
+  const iv = Buffer.from(ivHex, "hex")
+  const authTag = Buffer.from(authTagHex, "hex")
+  const encrypted = Buffer.from(encryptedHex, "hex")
 
   if (iv.length !== IV_LENGTH) {
     throw new Error("Invalid IV length")
