@@ -1,4 +1,4 @@
-name: Typecheck
+name: Knip
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
   workflow_call:
 
 jobs:
-  typecheck:
+  knip:
     runs-on: ubuntu-latest
 
     env:
@@ -28,5 +28,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Knip
+        run: pnpm knip

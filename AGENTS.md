@@ -133,7 +133,7 @@ pnpm typecheck
 pnpm test
 ```
 
-CI workflows (`node-check.yml`, `typecheck.yml`, `test.yml`) use Node 25 + pnpm 9 and run the same commands.
+CI workflows (`check.yml`, `typecheck.yml`, `knip.yml`, `test.yml`) use Node 25 + pnpm and run the same commands.
 
 ## Code Style
 
