@@ -250,10 +250,12 @@ export const createApiKeyFixture = (
   return Effect.tryPromise({
     try: async () => {
       const apiKeyId = generateId()
+      const token = crypto.randomUUID()
       const [apiKey] = await db
         .insert(schema.apiKeys)
         .values({
           id: apiKeyId,
+          token,
           name,
           organizationId: input.organizationId,
         })

@@ -374,6 +374,19 @@ importers:
 
   packages/domain/events: {}
 
+  packages/domain/models:
+    dependencies:
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+
   packages/domain/onboarding:
     dependencies:
       effect:
@@ -695,6 +708,12 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.8.3
+
+  packages/utils:
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../vitest-config
 
   packages/vitest-config:
     dependencies:

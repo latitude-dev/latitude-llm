@@ -1,4 +1,4 @@
-name: Node Check
+name: Check
 
 on:
   pull_request:
@@ -7,8 +7,11 @@ on:
   workflow_call:
 
 jobs:
-  node-lint:
+  check:
     runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
 
     steps:
       - name: Checkout repository
