@@ -5,7 +5,7 @@ import { createApiKeyAuthHeaders } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
 import { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { createDbDependenciesMiddleware } from "../db-deps.ts"
+import { getRedisClient } from "../clients.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
@@ -33,7 +33,11 @@ const createApp = (db: PostgresDb): Hono => {
   app.onError(honoErrorHandler)
   const protectedRoutes = new Hono()
 
-  protectedRoutes.use("*", createDbDependenciesMiddleware({ db }))
+  protectedRoutes.use("*", async (c, next) => {
+    c.set("db", db)
+    c.set("redis", getRedisClient())
+    await next()
+  })
   protectedRoutes.use("*", createAuthMiddleware())
   protectedRoutes.route("/", createOrganizationsRoutes())
 

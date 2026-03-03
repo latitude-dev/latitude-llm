@@ -6,7 +6,7 @@ import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import { getClickhouseClient, getPostgresClient } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "./clients.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
@@ -29,6 +29,7 @@ registerRoutes({
   app,
   database: getPostgresClient(),
   clickhouse: getClickhouseClient(),
+  redis: getRedisClient(),
 })
 
 // Graceful shutdown handler

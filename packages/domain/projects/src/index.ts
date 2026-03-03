@@ -18,9 +18,7 @@ export {
 
 export {
   listAllProjectsUseCase,
-  listProjectsUseCase,
   type ListAllProjectsInput,
-  type ListProjectsInput,
 } from "./use-cases/list-projects.ts"
 
 export {

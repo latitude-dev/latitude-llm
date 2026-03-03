@@ -3,8 +3,7 @@ import { createApiKeyPostgresRepository, createMembershipPostgresRepository } fr
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
-import { getApiKeyEncryptionKey, getBetterAuth, getRedisClient } from "../clients.ts"
-import { getDbDependencies } from "../db-deps.ts"
+import { getBetterAuth } from "../clients.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
 
@@ -34,9 +33,9 @@ const getApiKeyCacheKey = (tokenHash: string): string => `apikey:${tokenHash}`
  * Get cached API key result from Redis (keyed by token hash).
  */
 const getCachedApiKey = (
+  redis: Context["var"]["redis"],
   tokenHash: string,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null | undefined, never> => {
-  const redis = getRedisClient()
   const cacheKey = getApiKeyCacheKey(tokenHash)
   return Effect.tryPromise({
     try: async () => {
@@ -53,11 +52,11 @@ const getCachedApiKey = (
  * Cache API key result in Redis (keyed by token hash).
  */
 const cacheApiKeyResult = (
+  redis: Context["var"]["redis"],
   tokenHash: string,
   result: { organizationId: string; keyId: string } | null,
   ttl: number,
 ): Effect.Effect<void, never> => {
-  const redis = getRedisClient()
   const cacheKey = getApiKeyCacheKey(tokenHash)
   return Effect.tryPromise({
     try: () => withTimeout(redis.setex(cacheKey, ttl, JSON.stringify(result)), undefined),
@@ -79,17 +78,17 @@ const validateApiKey = (
   c: Context,
   token: string,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
-  const dependencies = getDbDependencies(c)
-  const encryptionKey = getApiKeyEncryptionKey()
-  const apiKeyRepository = createApiKeyPostgresRepository(dependencies.db, encryptionKey)
-  const touchBuffer = createTouchBuffer(dependencies)
+  const db = c.get("db")
+  const redis = c.get("redis")
+  const apiKeyRepository = createApiKeyPostgresRepository(db)
+  const touchBuffer = createTouchBuffer(db)
 
   return Effect.gen(function* () {
     const startTime = Date.now()
     const tokenHash = hashToken(token)
 
     // Try cache first for consistent lookup time (keyed by hash)
-    const cached = yield* getCachedApiKey(tokenHash)
+    const cached = yield* getCachedApiKey(redis, tokenHash)
 
     if (cached !== undefined) {
       // Cache hit - enforce minimum time and return
@@ -102,7 +101,7 @@ const validateApiKey = (
 
     if (Option.isNone(apiKeyOption) || apiKeyOption.value === null) {
       // Cache negative result briefly to prevent timing attacks
-      yield* cacheApiKeyResult(tokenHash, null, INVALID_KEY_TTL_SECONDS)
+      yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
       yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
       return null
     }
@@ -115,7 +114,7 @@ const validateApiKey = (
     }
 
     // Cache successful validation for 5 minutes (keyed by hash)
-    yield* cacheApiKeyResult(tokenHash, result, VALID_KEY_TTL_SECONDS)
+    yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)
 
     // Use TouchBuffer for batched updates instead of fire-and-forget
     // This reduces database writes by 90%+ by batching updates
@@ -151,8 +150,7 @@ const validateOrganizationMembership = (
   userId: string,
   organizationId: string,
 ): Effect.Effect<boolean, never> => {
-  const dependencies = getDbDependencies(c)
-  const membershipRepository = createMembershipPostgresRepository(dependencies.db)
+  const membershipRepository = createMembershipPostgresRepository(c.get("db"))
   return membershipRepository.isMember(OrganizationId(organizationId), userId).pipe(Effect.orDie)
 }
 
@@ -242,7 +240,9 @@ const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError>
     }
 
     if (!authContext) {
-      return yield* new UnauthorizedError({ message: "Authentication required" })
+      return yield* new UnauthorizedError({
+        message: "Authentication required",
+      })
     }
 
     return authContext

@@ -1,6 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import type { RedisClient } from "@platform/cache-redis"
+import type { PostgresClient } from "@platform/db-postgres"
 import { Hono } from "hono"
-import { type ApiDatabaseDependencies, createDbDependenciesMiddleware } from "../db-deps.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
@@ -11,8 +12,9 @@ import { createProjectsRoutes } from "./projects.ts"
 
 interface RoutesContext {
   app: Hono
-  database: ApiDatabaseDependencies
+  database: PostgresClient
   clickhouse: ClickHouseClient
+  redis: RedisClient
 }
 
 /**
@@ -21,13 +23,17 @@ interface RoutesContext {
 export const registerRoutes = (context: RoutesContext) => {
   const { app } = context
 
-  registerHealthRoute(context)
-
   const v1 = new Hono()
   const protectedRoutes = new Hono()
 
+  registerHealthRoute(context)
+
   // Make shared dependencies available via request context.
-  v1.use("*", createDbDependenciesMiddleware(context.database))
+  v1.use("*", async (c, next) => {
+    c.set("db", context.database.db)
+    c.set("redis", context.redis)
+    await next()
+  })
 
   // Auth routes (Better Auth) - PUBLIC, no auth required
   v1.route("/auth", createAuthRoutes())

@@ -1,4 +1,7 @@
-export { createOrganization, type Organization } from "./entities/organization.ts"
+export {
+  createOrganization,
+  type Organization,
+} from "./entities/organization.ts"
 export {
   createMembership,
   isAdminRole,
@@ -7,7 +10,10 @@ export {
 } from "./entities/membership.ts"
 export type { MembershipRepository } from "./ports/membership-repository.ts"
 export type { OrganizationRepository } from "./ports/organization-repository.ts"
-export { createMemberJoinedEvent, type MemberJoinedEvent } from "./events/member-joined.ts"
+export {
+  createMemberJoinedEvent,
+  type MemberJoinedEvent,
+} from "./events/member-joined.ts"
 export {
   createOrganizationCreatedEvent,
   type OrganizationCreatedEvent,
@@ -21,8 +27,3 @@ export {
   type CreateOrganizationInput,
   type CreateOrganizationError,
 } from "./use-cases/create-organization.ts"
-
-export {
-  getOrganizationMembersUseCase,
-  type GetOrganizationMembersInput,
-} from "./use-cases/get-organization-members.ts"

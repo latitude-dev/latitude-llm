@@ -1,5 +1,6 @@
 import type { OrganizationId, UserId } from "@domain/shared-kernel"
-import type { ApiDbDependencies } from "./db-deps.ts"
+import type { RedisClient } from "@platform/cache-redis"
+import type { PostgresDb } from "@platform/db-postgres"
 
 /**
  * Authentication context set by the auth middleware.
@@ -28,6 +29,7 @@ export interface AuthContext {
 declare module "hono" {
   interface ContextVariableMap {
     auth?: AuthContext
-    dbDependencies?: ApiDbDependencies
+    db: PostgresDb
+    redis: RedisClient
   }
 }

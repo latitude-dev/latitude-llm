@@ -4,7 +4,6 @@ import { parseEnv, parseEnvOptional } from "@platform/env"
 import type { User } from "better-auth"
 import { Effect } from "effect"
 import { type Context, Hono } from "hono"
-import { getDbDependencies } from "../db-deps.ts"
 import { BadRequestError } from "../errors.ts"
 import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts"
 
@@ -73,12 +72,17 @@ export const createAuthRoutes = () => {
 
   let betterAuthHandler: ((request: Request) => Promise<Response>) | undefined
   let betterAuthApi: BetterAuthAPI | undefined
-  const getAuth = (c: Context): { handler: (request: Request) => Promise<Response>; api: BetterAuthAPI } => {
+  const getAuth = (
+    c: Context,
+  ): {
+    handler: (request: Request) => Promise<Response>
+    api: BetterAuthAPI
+  } => {
     if (betterAuthHandler && betterAuthApi) {
       return { handler: betterAuthHandler, api: betterAuthApi }
     }
 
-    const { db } = getDbDependencies(c)
+    const db = c.get("db")
     const userRepository = createUserPostgresRepository(db)
     const auth = createBetterAuth({
       db,
@@ -86,7 +90,14 @@ export const createAuthRoutes = () => {
       baseUrl,
       trustedOrigins,
       // Magic Link email configuration
-      sendMagicLink: async ({ email, url }: { email: string; url: string; token: string }) => {
+      sendMagicLink: async ({
+        email,
+        url,
+      }: {
+        email: string
+        url: string
+        token: string
+      }) => {
         // Find user by email using the repository
         const user = await Effect.runPromise(userRepository.findByEmail(email))
         const userName = user?.name ?? email.split("@")[0]
@@ -125,13 +136,22 @@ export const createAuthRoutes = () => {
 
     // Validate required fields
     if (!body.email || typeof body.email !== "string") {
-      throw new BadRequestError({ httpMessage: "Email is required", field: "email" })
+      throw new BadRequestError({
+        httpMessage: "Email is required",
+        field: "email",
+      })
     }
     if (!body.password || typeof body.password !== "string") {
-      throw new BadRequestError({ httpMessage: "Password is required", field: "password" })
+      throw new BadRequestError({
+        httpMessage: "Password is required",
+        field: "password",
+      })
     }
     if (!body.name || typeof body.name !== "string") {
-      throw new BadRequestError({ httpMessage: "Name is required", field: "name" })
+      throw new BadRequestError({
+        httpMessage: "Name is required",
+        field: "name",
+      })
     }
 
     // Validate password length
@@ -189,10 +209,16 @@ export const createAuthRoutes = () => {
 
     // Validate required fields
     if (!body.email || typeof body.email !== "string") {
-      throw new BadRequestError({ httpMessage: "Email is required", field: "email" })
+      throw new BadRequestError({
+        httpMessage: "Email is required",
+        field: "email",
+      })
     }
     if (!body.password || typeof body.password !== "string") {
-      throw new BadRequestError({ httpMessage: "Password is required", field: "password" })
+      throw new BadRequestError({
+        httpMessage: "Password is required",
+        field: "password",
+      })
     }
 
     // Call Better Auth API - let errors propagate to middleware

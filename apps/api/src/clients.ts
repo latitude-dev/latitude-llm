@@ -12,7 +12,6 @@ let postgresClientInstance: { db: PostgresDb; pool: Pool } | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
-let apiKeyEncryptionKeyInstance: Buffer | undefined
 
 export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
   if (!postgresClientInstance) {
@@ -40,17 +39,6 @@ export const getRedisClient = (): RedisClient => {
     redisInstance = createRedisClient(redisConn)
   }
   return redisInstance
-}
-
-/**
- * Get the API key encryption key (32-byte Buffer from hex env var).
- */
-export const getApiKeyEncryptionKey = (): Buffer => {
-  if (!apiKeyEncryptionKeyInstance) {
-    const hex = Effect.runSync(parseEnv("LAT_API_KEY_ENCRYPTION_KEY", "string"))
-    apiKeyEncryptionKeyInstance = Buffer.from(hex, "hex")
-  }
-  return apiKeyEncryptionKeyInstance
 }
 
 /**
