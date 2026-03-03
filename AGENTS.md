@@ -369,6 +369,24 @@ This ensures type-safe parsing, clear error messages for missing vars, and consi
 - Re-fetch current state inside task handlers
 - Make stale/deleted entity behavior explicit
 
+## Cloud Agent Environment Setup
+
+When running as a cloud agent (e.g. Cursor Cloud Agent), the repository may not have `.env.development` or `.env.test` files. These are required for running the dev server and tests respectively.
+
+**If `.env.development` or `.env.test` do not exist**, copy `.env.example` as-is:
+
+```bash
+cp .env.example .env.development
+cp .env.example .env.test
+```
+
+Then set `NODE_ENV` appropriately in each file:
+
+- In `.env.development`: `NODE_ENV=development`
+- In `.env.test`: `NODE_ENV=test`
+
+This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests and dev commands to run without additional configuration.
+
 ## Testing Conventions
 
 - Test runner: Vitest
