@@ -1,5 +1,5 @@
 import { boolean, integer, pgSchema, text, timestamp, varchar } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.js"
+import { cuid } from "../schemaHelpers.ts"
 
 /**
  * Better Auth Stripe Plugin - Subscription table

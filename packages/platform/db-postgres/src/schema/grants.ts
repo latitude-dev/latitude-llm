@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm"
 import { bigint, pgEnum, pgPolicy, pgSchema, text, timestamp } from "drizzle-orm/pg-core"
-import { cuid } from "../schemaHelpers.js"
+import { cuid } from "../schemaHelpers.ts"
 
 /**
  * Quota type enum for grants.
