@@ -1,7 +1,7 @@
 import { createMembership, createOrganizationUseCase } from "@domain/organizations"
 import type { Membership, Organization } from "@domain/organizations"
 import { OrganizationId, UserId, generateId } from "@domain/shared-kernel"
-import { createRepositories } from "@platform/db-postgres"
+import { createMembershipPostgresRepository, createOrganizationPostgresRepository } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { requireSession } from "../../server/auth.ts"
@@ -18,14 +18,15 @@ const toSlug = (value: string) =>
 export const listOrganizations = createServerFn({ method: "GET" }).handler(async (): Promise<OrganizationRecord[]> => {
   const { userId } = await requireSession()
   const { db } = getPostgresClient()
-  const repos = createRepositories(db)
+  const membershipsRepo = createMembershipPostgresRepository(db)
+  const organizationsRepo = createOrganizationPostgresRepository(db)
 
-  const memberships = (await Effect.runPromise(repos.membership.findByUserId(userId))) as readonly Membership[]
+  const memberships = (await Effect.runPromise(membershipsRepo.findByUserId(userId))) as readonly Membership[]
 
   const organizations = await Promise.all(
     memberships.map(async (membership) => {
       const organization = (await Effect.runPromise(
-        repos.organization.findById(membership.organizationId),
+        organizationsRepo.findById(membership.organizationId),
       )) as Organization
 
       return {
@@ -45,13 +46,14 @@ export const createOrganization = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<OrganizationRecord> => {
     const { userId } = await requireSession()
     const { db } = getPostgresClient()
-    const repos = createRepositories(db)
+    const membershipsRepo = createMembershipPostgresRepository(db)
+    const organizationsRepo = createOrganizationPostgresRepository(db)
 
     const name = data.name.trim()
     const slug = data.slug ? toSlug(data.slug) : toSlug(data.name)
 
     const organization = (await Effect.runPromise(
-      createOrganizationUseCase(repos.organization)({
+      createOrganizationUseCase(organizationsRepo)({
         id: OrganizationId(generateId()),
         name,
         slug,
@@ -60,7 +62,7 @@ export const createOrganization = createServerFn({ method: "POST" })
     )) as Organization
 
     await Effect.runPromise(
-      repos.membership.save(
+      membershipsRepo.save(
         createMembership({
           id: generateId(),
           organizationId: organization.id,

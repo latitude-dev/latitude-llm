@@ -1,7 +1,7 @@
-import { createProjectUseCase, listProjectsUseCase } from "@domain/projects"
+import { createProjectUseCase } from "@domain/projects"
 import type { Project } from "@domain/projects"
 import { NotFoundError, OrganizationId, ProjectId, UserId, generateId } from "@domain/shared-kernel"
-import { createRepositories } from "@platform/db-postgres"
+import { createProjectPostgresRepository } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { assertOrganizationMembership, requireSession } from "../../server/auth.ts"
@@ -38,12 +38,10 @@ export const listProjects = createServerFn({ method: "GET" })
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
-    const repos = createRepositories(db)
+    const projectsRepo = createProjectPostgresRepository(db)
 
     const projects = (await Effect.runPromise(
-      listProjectsUseCase(repos.project)({
-        organizationId: OrganizationId(data.organizationId),
-      }),
+      projectsRepo.findByOrganizationId(OrganizationId(data.organizationId)),
     )) as readonly Project[]
 
     return projects.map(toRecord)
@@ -55,10 +53,10 @@ export const createProject = createServerFn({ method: "POST" })
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
-    const repos = createRepositories(db)
+    const projectsRepo = createProjectPostgresRepository(db)
 
     const project = (await Effect.runPromise(
-      createProjectUseCase(repos.project)({
+      createProjectUseCase(projectsRepo)({
         id: ProjectId(generateId()),
         organizationId: OrganizationId(data.organizationId),
         name: data.name,
@@ -77,11 +75,11 @@ export const updateProject = createServerFn({ method: "POST" })
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
-    const repos = createRepositories(db)
+    const projectsRepo = createProjectPostgresRepository(db)
 
     const updatedProject = (await Effect.runPromise(
       Effect.gen(function* () {
-        const existingProject = (yield* repos.project.findById(
+        const existingProject = (yield* projectsRepo.findById(
           ProjectId(data.id),
           OrganizationId(data.organizationId),
         )) as Project | null
@@ -98,7 +96,7 @@ export const updateProject = createServerFn({ method: "POST" })
           updatedAt: new Date(),
         }
 
-        yield* repos.project.save(projectToSave)
+        yield* projectsRepo.save(projectToSave)
 
         return projectToSave
       }),
@@ -113,7 +111,7 @@ export const deleteProject = createServerFn({ method: "POST" })
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
-    const repos = createRepositories(db)
+    const projectsRepo = createProjectPostgresRepository(db)
 
-    await Effect.runPromise(repos.project.softDelete(ProjectId(data.id), OrganizationId(data.organizationId)))
+    await Effect.runPromise(projectsRepo.softDelete(ProjectId(data.id), OrganizationId(data.organizationId)))
   })
