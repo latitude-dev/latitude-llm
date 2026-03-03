@@ -376,9 +376,6 @@ importers:
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*
@@ -605,6 +602,16 @@ importers:
       pg:
         specifier: 'catalog:'
         version: 8.16.0
+
+  packages/platform/models-dev:
+    dependencies:
+      '@domain/models':
+        specifier: workspace:*
+        version: link:../../domain/models
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
 
   packages/platform/queue-bullmq:
     dependencies:

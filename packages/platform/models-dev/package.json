@@ -1,5 +1,5 @@
 {
-  "name": "@domain/models",
+  "name": "@platform/models-dev",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,11 +10,10 @@
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "check:fix": "biome check --fix src"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@repo/utils": "workspace:*"
+    "@domain/models": "workspace:*"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*"

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest"
-import {
-  type ModelCostTier,
-  type TokenUsage,
-  computeCostBreakdown,
-  computeTokenCost,
-  estimateTotalCost,
-} from "./cost.ts"
+import type { ModelCostTier, TokenUsage } from "../entities/cost.ts"
+import { computeCostBreakdown, computeTokenCost, estimateTotalCost } from "./compute-cost.ts"
 
 describe("computeTokenCost", () => {
   const tier: ModelCostTier = { input: 2.5, output: 10 }
