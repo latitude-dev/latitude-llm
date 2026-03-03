@@ -8,14 +8,14 @@ import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { defineConfig } from "vite"
 
-const nodeEnv = Effect.runSync(parseEnv(process.env.NODE_ENV, "string", "development"))
+const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
 const envFilePath = fileURLToPath(new URL(`../../.env.${nodeEnv}`, import.meta.url))
 
 if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath, quiet: true })
 }
 
-const webPortNumber = Effect.runSync(parseEnv(process.env.LAT_WEB_PORT, "number", 3000))
+const webPortNumber = Effect.runSync(parseEnv("LAT_WEB_PORT", "number", 3000))
 
 export default defineConfig({
   plugins: [tanstackStart(), tailwindcss(), react()],

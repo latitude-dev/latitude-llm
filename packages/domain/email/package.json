@@ -8,7 +8,8 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "check": "biome check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:fix": "biome check --fix ."
   },
   "dependencies": {
     "@react-email/components": "^0.0.33",

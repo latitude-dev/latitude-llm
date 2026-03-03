@@ -7,7 +7,7 @@
 
 import { formatCount, formatPrice } from "@repo/utils"
 import type { CostBreakdown, CostLookupResult, TokenUsage } from "./entities/cost.ts"
-import { computeCostBreakdown, computeTokenCost, estimateTotalCost } from "./entities/cost.ts"
+import { computeCostBreakdown, estimateTotalCost } from "./entities/cost.ts"
 import type { Model, ModelPricing } from "./entities/model.ts"
 import { parseModelsDevData } from "./entities/model.ts"
 
@@ -199,5 +199,3 @@ export function formatModel(model: Model): string {
 
   return lines.join("\n")
 }
-
-export { computeTokenCost, computeCostBreakdown, estimateTotalCost }

@@ -80,6 +80,8 @@ When writing a utility function that is not specific to a single domain or packa
 
 - Node.js: `>=25` (see root `package.json`)
 - Package manager: check `package.json` and `packageManager` field (e.g. `pnpm` 10.30.0)
+- Check if mise is installed and use mise to switch to found node version in
+`package.json`. If Mise is not found ignore this.
 - Task runner: `turbo` via root scripts
 - Lint/format: Biome (`@biomejs/biome` 1.9.x)
 - Tests: Vitest 3.x
@@ -202,6 +204,31 @@ Base config: `tsconfig.base.json`
 - Mapping from DB rows to domain objects belongs in platform adapters
 - **Apps use pool-based connections**: Use `createPostgresPool()` in `apps/*/clients.ts` for direct pool access
 
+### Postgres Schema Conventions
+
+All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **must** follow these rules. Shared helpers live in `schemaHelpers.ts`.
+
+1. **Use `latitudeSchema`** — never create a local `pgSchema("latitude")`. Import `latitudeSchema` from `../schemaHelpers.ts`.
+2. **Use `cuid("id").primaryKey()`** — every table's primary key must use the `cuid()` helper (`varchar(128)` with auto-generated CUID2).
+3. **Use `tzTimestamp(name)`** — never use raw `timestamp(name, { withTimezone: true })`. Import `tzTimestamp` from the helpers.
+4. **Use `...timestamps()`** — every table that has `createdAt`/`updatedAt` must spread the `timestamps()` helper (includes `$onUpdateFn` on `updatedAt`).
+5. **Use `organizationRLSPolicy(tableName)`** — every table with an `organization_id` column must include this helper in its third argument to enable row-level security.
+
+```typescript
+// ✅ Good - follows all conventions
+export const projects = latitudeSchema.table(
+  "projects",
+  {
+    id: cuid("id").primaryKey(),
+    organizationId: text("organization_id").notNull(),
+    name: varchar("name", { length: 256 }).notNull(),
+    deletedAt: tzTimestamp("deleted_at"),
+    ...timestamps(),
+  },
+  () => [organizationRLSPolicy("projects")],
+)
+```
+
 ### Database Migrations (Drizzle Kit)
 
 **Always use drizzle-kit for migrations.** Never create manual SQL files in the drizzle folder.
@@ -209,27 +236,28 @@ Base config: `tsconfig.base.json`
 **Schema changes:**
 
 ```bash
-# Generate migration from schema changes
-npx drizzle-kit generate
+# Generate migration from schema changes (always provide --name)
+pnpm --filter @platform/db-postgres pg:generate --name=describe-the-change
 
 # Apply migrations
-npx drizzle-kit migrate
+pnpm --filter @platform/db-postgres pg:migrate
 ```
 
 **Custom SQL (RLS policies, seed data):**
 
 ```bash
 # Create custom migration for DDL not supported by Drizzle
-npx drizzle-kit generate --custom --name=enable-rls
+pnpm --filter @platform/db-postgres pg:generate:custom --name=enable-rls
 
 # Edit the SQL file, then run:
-npx drizzle-kit migrate
+pnpm --filter @platform/db-postgres pg:migrate
 ```
 
 **Key points:**
 
-- Use `drizzle-kit generate` for schema changes (creates timestamped migration)
-- Use `drizzle-kit generate --custom` for custom SQL
+- **Always pass `--name`** — use a short kebab-case description (e.g. `--name=add-projects-table`). Never let Drizzle auto-generate a random name.
+- Use `pg:generate --name=...` for schema changes (creates timestamped migration)
+- Use `pg:generate:custom --name=...` for custom SQL
 - Never manually create SQL files in the drizzle folder
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
@@ -361,15 +389,15 @@ This keeps `.env.example` the single source of truth for all configuration the p
 // ❌ Bad - unprefixed variable or direct access
 const port = Number(process.env.PORT);
 
-// ✅ Good - LAT_ prefix + parseEnv
+// ✅ Good - LAT_ prefix + parseEnv (pass variable name, not process.env value)
 import { parseEnv, parseEnvOptional } from "@platform/env";
 import { Effect } from "effect";
 
-const port = Effect.runSync(parseEnv(process.env.LAT_API_PORT, "number", 3001));
-const dbUrl = Effect.runSync(parseEnv(process.env.LAT_DATABASE_URL, "string"));
+const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001));
+const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"));
 ```
 
-This ensures type-safe parsing, clear error messages for missing vars, and consistent validation.
+`parseEnv` looks up `process.env[name]` internally, so pass the variable **name** as a string. This ensures type-safe parsing, clear error messages that include the missing variable name, and consistent validation.
 
 ## Async and Background Task Guidance
 

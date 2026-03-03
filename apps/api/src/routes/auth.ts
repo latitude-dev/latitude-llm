@@ -53,11 +53,11 @@ export const createAuthRoutes = () => {
   const app = new Hono()
 
   // Get URLs from environment variables
-  const baseUrl = Effect.runSync(parseEnv(process.env.LAT_BETTER_AUTH_URL, "string"))
-  const webUrl = Effect.runSync(parseEnv(process.env.LAT_WEB_URL, "string"))
+  const baseUrl = Effect.runSync(parseEnv("LAT_BETTER_AUTH_URL", "string"))
+  const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string"))
 
   // Parse trusted origins from comma-separated env var or fallback to webUrl
-  const trustedOriginsEnv = Effect.runSync(parseEnvOptional(process.env.LAT_TRUSTED_ORIGINS, "string"))
+  const trustedOriginsEnv = Effect.runSync(parseEnvOptional("LAT_TRUSTED_ORIGINS", "string"))
   const trustedOrigins = trustedOriginsEnv
     ? trustedOriginsEnv
         .split(",")
@@ -65,7 +65,7 @@ export const createAuthRoutes = () => {
         .filter(Boolean)
     : [webUrl]
 
-  const betterAuthSecret = Effect.runSync(parseEnv(process.env.LAT_BETTER_AUTH_SECRET, "string"))
+  const betterAuthSecret = Effect.runSync(parseEnv("LAT_BETTER_AUTH_SECRET", "string"))
 
   // Create email sender adapter
   const emailSender = createNodemailerEmailSender()

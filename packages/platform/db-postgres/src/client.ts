@@ -3,9 +3,9 @@ import { type NodePgDatabase, drizzle } from "drizzle-orm/node-postgres"
 import { Effect } from "effect"
 import { Pool, type PoolConfig } from "pg"
 
-import * as schema from "./schema/index.ts"
+import { relations } from "./relations.ts"
 
-export type PostgresDb = NodePgDatabase<typeof schema>
+export type PostgresDb = NodePgDatabase<Record<string, never>, typeof relations>
 
 export interface PostgresConfig {
   readonly databaseUrl?: string
@@ -24,18 +24,14 @@ type CreatePostgresClientError = CreatePostgresPoolError
 
 export const createPostgresPoolEffect = (config: PostgresConfig = {}): Effect.Effect<Pool, CreatePostgresPoolError> => {
   return Effect.all({
-    connectionString: config.databaseUrl
-      ? Effect.succeed(config.databaseUrl)
-      : parseEnv(process.env.LAT_DATABASE_URL, "string"),
-    max: config.maxConnections
-      ? Effect.succeed(config.maxConnections)
-      : parseEnvOptional(process.env.LAT_PG_POOL_MAX, "number"),
+    connectionString: config.databaseUrl ? Effect.succeed(config.databaseUrl) : parseEnv("LAT_DATABASE_URL", "string"),
+    max: config.maxConnections ? Effect.succeed(config.maxConnections) : parseEnvOptional("LAT_PG_POOL_MAX", "number"),
     idleTimeoutMillis: config.idleTimeoutMs
       ? Effect.succeed(config.idleTimeoutMs)
-      : parseEnvOptional(process.env.LAT_PG_IDLE_TIMEOUT_MS, "number"),
+      : parseEnvOptional("LAT_PG_IDLE_TIMEOUT_MS", "number"),
     connectionTimeoutMillis: config.connectionTimeoutMs
       ? Effect.succeed(config.connectionTimeoutMs)
-      : parseEnvOptional(process.env.LAT_PG_CONNECT_TIMEOUT_MS, "number"),
+      : parseEnvOptional("LAT_PG_CONNECT_TIMEOUT_MS", "number"),
   }).pipe(
     Effect.map((poolConfig) => {
       const configWithTypes: PoolConfig = poolConfig
@@ -54,7 +50,7 @@ export const createPostgresClientEffect = (
 ): Effect.Effect<PostgresClient, CreatePostgresClientError> => {
   return createPostgresPoolEffect(config).pipe(
     Effect.map((pool) => {
-      const db = drizzle(pool, { schema })
+      const db = drizzle({ client: pool, relations })
 
       return { db, pool }
     }),

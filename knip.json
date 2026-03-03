@@ -1,56 +1,46 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
-    ".": {
-      "entry": [],
-      "project": []
+    ".": {},
+    "apps/api": {
+      "project": ["src/**/*.ts"]
     },
-    "apps/*": {
-      "entry": ["src/server.ts", "src/main.tsx"],
+    "apps/ingest": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/workers": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/workflows": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/web": {
+      "entry": ["src/router.tsx", "src/routes/**/*.tsx"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "packages/domain/email": {
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
     "packages/domain/*": {
-      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/platform/db-postgres": {
+      "entry": ["src/seeds/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/platform/*": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/ui": {
-      "entry": ["src/index.ts"],
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
-    "packages/*": {
-      "entry": ["src/index.ts"],
-      "project": ["src/**/*.ts"]
+    "packages/vitest-config": {
+      "project": ["**/*.ts"]
+    },
+    "packages/tsconfig": {
+      "entry": [],
+      "project": []
     }
   },
-  "ignore": [
-    "**/*.d.ts",
-    "**/*.config.ts",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "**/*.test.tsx",
-    "**/*.spec.tsx",
-    "**/vitest.config.*",
-    "**/drizzle/**",
-    "**/__tests__/**",
-    "**/test/**",
-    "**/tests/**",
-    "**/e2e/**"
-  ],
-  "ignoreDependencies": [
-    "@types/node",
-    "@types/react",
-    "@types/react-dom",
-    "@types/pg",
-    "@types/nodemailer",
-    "typescript",
-    "vitest",
-    "turbo",
-    "@biomejs/biome",
-    "@effect/language-service"
-  ],
   "ignoreBinaries": ["tmuxinator"]
 }

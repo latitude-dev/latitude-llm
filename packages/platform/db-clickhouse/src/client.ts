@@ -15,12 +15,10 @@ export const createClickhouseClientEffect = (
   config: ClickhouseConfig = {},
 ): Effect.Effect<ClickHouseClient, CreateClickhouseClientError> => {
   return Effect.all({
-    url: config.url ? Effect.succeed(config.url) : parseEnv(process.env.LAT_CLICKHOUSE_URL, "string"),
-    username: config.username ? Effect.succeed(config.username) : parseEnv(process.env.LAT_CLICKHOUSE_USER, "string"),
-    password: config.password
-      ? Effect.succeed(config.password)
-      : parseEnv(process.env.LAT_CLICKHOUSE_PASSWORD, "string"),
-    database: config.database ? Effect.succeed(config.database) : parseEnv(process.env.LAT_CLICKHOUSE_DB, "string"),
+    url: config.url ? Effect.succeed(config.url) : parseEnv("LAT_CLICKHOUSE_URL", "string"),
+    username: config.username ? Effect.succeed(config.username) : parseEnv("LAT_CLICKHOUSE_USER", "string"),
+    password: config.password ? Effect.succeed(config.password) : parseEnv("LAT_CLICKHOUSE_PASSWORD", "string"),
+    database: config.database ? Effect.succeed(config.database) : parseEnv("LAT_CLICKHOUSE_DB", "string"),
   }).pipe(
     Effect.map((resolvedConfig) => {
       const options: ClickHouseClientConfigOptions = {

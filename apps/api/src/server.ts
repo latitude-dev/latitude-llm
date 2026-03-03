@@ -17,7 +17,7 @@ const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.met
 if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 
 const app = new Hono()
-const port = Effect.runSync(parseEnv(process.env.LAT_API_PORT, "number", 3001))
+const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
 const logger = createLogger("api")
 
 // Register global error handler

@@ -1,9 +1,8 @@
 import type { User, UserRepository } from "@domain/shared-kernel"
 import { toRepositoryError } from "@domain/shared-kernel"
-import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
-import * as schema from "../schema/index.ts"
+import type * as schema from "../schema/index.ts"
 
 /**
  * Maps a database user row to a domain User entity.
@@ -28,7 +27,7 @@ export const createUserPostgresRepository = (db: PostgresDb): UserRepository => 
       const result = yield* Effect.tryPromise({
         try: () =>
           db.query.user.findFirst({
-            where: eq(schema.user.email, email),
+            where: { email },
           }),
         catch: (error) => toRepositoryError(error, "findByEmail"),
       })

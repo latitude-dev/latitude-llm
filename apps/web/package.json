@@ -9,7 +9,8 @@
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "check:fix": "biome check --fix src"
   },
   "dependencies": {
     "@platform/env": "workspace:*",
@@ -29,7 +30,6 @@
     "@vitejs/plugin-react": "catalog:",
     "dotenv": "catalog:",
     "postcss": "^8.5.3",
-    "tailwindcss": "^4.0.0",
     "vite": "catalog:"
   }
 }
