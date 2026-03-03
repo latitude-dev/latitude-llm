@@ -292,9 +292,6 @@ importers:
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
-      pg:
-        specifier: 'catalog:'
-        version: 8.16.0
       postcss:
         specifier: ^8.5.3
         version: 8.5.6

@@ -1,13 +1,12 @@
 import { createBetterAuth } from "@platform/auth-better"
-import { type PostgresDb, createPostgresClient } from "@platform/db-postgres"
+import { type PostgresClient, type PostgresDb, createPostgresClient } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
-import type { Pool } from "pg"
 
-let postgresClientInstance: { db: PostgresDb; pool: Pool } | undefined
+let postgresClientInstance: PostgresClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 
-export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
+export const getPostgresClient = (): { db: PostgresDb; pool: PostgresClient["pool"] } => {
   if (!postgresClientInstance) {
     postgresClientInstance = createPostgresClient()
   }

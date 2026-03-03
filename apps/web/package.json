@@ -38,7 +38,6 @@
     "@vitejs/plugin-react": "catalog:",
     "dotenv": "catalog:",
     "postcss": "^8.5.3",
-    "vite": "catalog:",
-    "pg": "catalog:"
+    "vite": "catalog:"
   }
 }
