@@ -1,1 +1,6 @@
-pnpm check && pnpm typecheck && pnpm knip
+#!/usr/bin/env sh
+set -e
+
+pnpm check
+pnpm typecheck
+pnpm knip
