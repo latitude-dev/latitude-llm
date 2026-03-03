@@ -20,7 +20,5 @@
     "effect": "catalog:",
     "hono": "catalog:",
     "ioredis": "catalog:"
-  },
-  "devDependencies": {
   }
 }

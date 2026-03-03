@@ -1,0 +1,1 @@
+pnpm check && pnpm typecheck && pnpm knip
