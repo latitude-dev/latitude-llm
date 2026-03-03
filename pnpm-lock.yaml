@@ -374,6 +374,16 @@ importers:
 
   packages/domain/events: {}
 
+  packages/domain/llm-models:
+    dependencies:
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+
   packages/domain/onboarding:
     dependencies:
       effect:

@@ -1,0 +1,231 @@
+/**
+ * Model registry: query, look up, and estimate costs for LLM models.
+ *
+ * Uses the bundled models.dev JSON as the data source. All operations
+ * are synchronous and require no network calls.
+ */
+
+import type { CostBreakdown, CostLookupResult, TokenUsage } from "./entities/cost.ts"
+import { computeCostBreakdown, computeTokenCost, estimateTotalCost } from "./entities/cost.ts"
+import type { LlmModel, ModelPricing } from "./entities/model.ts"
+import { parseModelsDevData } from "./entities/model.ts"
+
+import modelsDevJson from "./data/models.dev.json" with { type: "json" }
+
+let cachedModels: LlmModel[] | null = null
+
+/**
+ * Maps well-known provider identifiers to their models.dev equivalents.
+ *
+ * Providers whose internal names differ from the models.dev convention
+ * are mapped here. Unknown providers pass through unchanged.
+ */
+const PROVIDER_ALIASES: Record<string, string> = {
+  amazon_bedrock: "bedrock",
+  google_vertex: "google-vertex",
+  anthropic_vertex: "anthropic-vertex",
+}
+
+function resolveProviderName(provider: string): string {
+  return PROVIDER_ALIASES[provider] ?? provider
+}
+
+/**
+ * Return the full list of bundled LLM models from models.dev.
+ *
+ * The result is cached after the first call.
+ */
+export function getAllModels(): LlmModel[] {
+  if (!cachedModels) {
+    cachedModels = parseModelsDevData(modelsDevJson)
+  }
+  return cachedModels
+}
+
+/**
+ * Find a model by its exact ID (case-insensitive).
+ */
+export function findModel(models: LlmModel[], modelId: string): LlmModel | undefined {
+  const needle = modelId.toLowerCase()
+  return models.find((m) => m.id.toLowerCase() === needle)
+}
+
+/**
+ * Find a model by ID with prefix fallback.
+ *
+ * First tries an exact match; if no match is found, falls back to the
+ * model whose ID is the longest prefix of the requested `modelId`.
+ * Useful for versioned model names like `gpt-4.1-2025-04-14` matching `gpt-4.1`.
+ */
+export function findModelWithFallback(models: LlmModel[], modelId: string): LlmModel | undefined {
+  const exact = findModel(models, modelId)
+  if (exact) return exact
+
+  const needle = modelId.toLowerCase()
+  let best: LlmModel | undefined
+  let bestLen = 0
+
+  for (const m of models) {
+    const id = m.id.toLowerCase()
+    if (needle.startsWith(id) && id.length > bestLen) {
+      best = m
+      bestLen = id.length
+    }
+  }
+
+  return best
+}
+
+/**
+ * Get the pricing for a model, or null if unavailable.
+ */
+export function getModelPricing(model: LlmModel): ModelPricing | null {
+  if (!model.pricing?.input || !model.pricing?.output) return null
+  return model.pricing
+}
+
+/**
+ * Get all models for a specific provider.
+ *
+ * Provider name matching is case-insensitive. Well-known aliases
+ * (e.g. `amazon_bedrock` -> `bedrock`) are resolved automatically.
+ */
+export function getModelsForProvider(provider: string): LlmModel[] {
+  const name = resolveProviderName(provider).toLowerCase()
+  return getAllModels().filter((m) => m.provider.toLowerCase() === name)
+}
+
+/**
+ * Find a specific model within a provider's model list.
+ */
+export function getModelForProvider(provider: string, modelId: string): LlmModel | undefined {
+  const models = getModelsForProvider(provider)
+  return findModelWithFallback(models, modelId)
+}
+
+/**
+ * Look up the per-1M-token cost specification for a provider/model pair.
+ *
+ * Returns `{ costImplemented: true, cost }` when pricing is available,
+ * or `{ costImplemented: false, cost: { input: 0, output: 0 } }` otherwise.
+ */
+export function getCostSpec(provider: string, modelId: string): CostLookupResult {
+  const NOT_IMPLEMENTED: CostLookupResult = {
+    cost: { input: 0, output: 0 },
+    costImplemented: false,
+  }
+
+  try {
+    const model = getModelForProvider(provider, modelId)
+    if (!model) return NOT_IMPLEMENTED
+
+    const pricing = getModelPricing(model)
+    if (!pricing) return NOT_IMPLEMENTED
+
+    return {
+      cost: {
+        input: pricing.input,
+        output: pricing.output,
+        reasoning: pricing.reasoning,
+        cacheRead: pricing.cacheRead,
+      },
+      costImplemented: true,
+    }
+  } catch {
+    return NOT_IMPLEMENTED
+  }
+}
+
+/**
+ * Estimate the total cost (in USD) for a provider/model and token usage.
+ */
+export function estimateCost(provider: string, modelId: string, usage: TokenUsage): number {
+  const { cost } = getCostSpec(provider, modelId)
+  return estimateTotalCost(cost, usage)
+}
+
+/**
+ * Produce a detailed cost breakdown for a provider/model and token usage.
+ */
+export function estimateCostWithBreakdown(provider: string, modelId: string, usage: TokenUsage): CostBreakdown {
+  const { cost } = getCostSpec(provider, modelId)
+  return computeCostBreakdown(cost, usage)
+}
+
+/**
+ * Build a `provider/model` key suitable for use as a cost-breakdown map key.
+ */
+export function costBreakdownKey(provider: string, modelId: string): string {
+  return `${provider}/${modelId}`
+}
+
+/**
+ * Format a model into a human-readable summary string.
+ *
+ * Includes name, modalities, features, context window, pricing,
+ * and knowledge cutoff when available.
+ */
+export function formatModel(model: LlmModel): string {
+  const lines: string[] = [`${model.name} (${model.id})`]
+
+  if (model.modalities) {
+    const input = model.modalities.input?.join(", ")
+    const output = model.modalities.output?.join(", ")
+    if (input) lines.push(`Input modalities: ${input}`)
+    if (output) lines.push(`Output modalities: ${output}`)
+  }
+
+  const features: string[] = []
+  if (model.supportsTemperature) features.push("temperature")
+  else lines.push("Temperature not supported")
+  if (model.toolCall) features.push("tool calling")
+  if (model.reasoning) features.push("reasoning")
+  if (model.structuredOutput) features.push("structured output")
+  if (model.attachment) features.push("attachments")
+  if (features.length) lines.push(`Supported features: ${features.join(", ")}`)
+
+  if (model.contextLimit || model.outputLimit) {
+    const parts: string[] = []
+    if (model.contextLimit) parts.push(`input: ${formatCount(model.contextLimit)}`)
+    if (model.outputLimit) parts.push(`output: ${formatCount(model.outputLimit)}`)
+    if (parts.length) lines.push(`Context window: ${parts.join(", ")}`)
+  }
+
+  if (model.pricing) {
+    const parts: string[] = []
+    if (model.pricing.input !== undefined) parts.push(`input: ${formatPrice(model.pricing.input)}`)
+    if (model.pricing.output !== undefined) parts.push(`output: ${formatPrice(model.pricing.output)}`)
+    if (model.pricing.cacheRead !== undefined) parts.push(`cached: ${formatPrice(model.pricing.cacheRead)}`)
+    if (parts.length) lines.push(`Pricing (per 1M tokens): ${parts.join(", ")}`)
+  }
+
+  if (model.knowledgeCutoff) lines.push(`Knowledge cutoff: ${model.knowledgeCutoff}`)
+
+  return lines.join("\n")
+}
+
+// Re-export computeTokenCost for callers that need fine-grained control
+export { computeTokenCost, computeCostBreakdown, estimateTotalCost }
+
+const COUNT_UNITS = ["", "K", "M", "B", "T"]
+
+function formatCount(count: number): string {
+  if (count < 0) return `-${formatCount(-count)}`
+  if (count < 1000) return String(count)
+
+  let unitIndex = 0
+  let value = count
+  while (value >= 1000 && unitIndex < COUNT_UNITS.length - 1) {
+    value /= 1000
+    unitIndex++
+  }
+
+  const decimal = value < 10 ? 1 : 0
+  return `${value.toFixed(decimal).replace(/\.0$/, "")}${COUNT_UNITS[unitIndex]}`
+}
+
+function formatPrice(price: number): string {
+  if (price === 0) return "$0"
+  if (price < 0.01) return `$${price.toFixed(3)}`
+  return `$${price.toFixed(2)}`
+}
