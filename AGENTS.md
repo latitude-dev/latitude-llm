@@ -87,11 +87,6 @@ When writing a utility function that is not specific to a single domain or packa
 - Tests: Vitest 3.x
 - Install deps: `pnpm install`
 
-### Agent Install Safety Rule
-
-- Agents must **never** run `pnpm install` (including `--no-frozen-lockfile`) in this repository.
-- If dependency installation is needed, ask the user to run `pnpm install` locally and continue only after confirmation.
-
 ## Commands
 
 ### Top-Level (run from repo root)
