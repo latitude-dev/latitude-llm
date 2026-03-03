@@ -101,6 +101,14 @@ When writing a utility function that is not specific to a single domain or packa
 - `pnpm check` - run all workspace lint and format check scripts
 - `pnpm typecheck` - run all workspace typechecks
 - `pnpm test` - run all workspace tests
+- `pnpm hooks` - configure local git hooks for this clone
+
+### Git Hooks (Pre-commit)
+
+- Pre-commit hook lives at `.husky/pre-commit`
+- Pre-commit runs: `pnpm check`, `pnpm typecheck`, and `pnpm knip`
+- Hooks are auto-configured on dependency install via root `prepare` script (`pnpm hooks`)
+- Existing clones should run `pnpm hooks` once to configure `core.hooksPath` and hook permissions
 
 ### Package-Scoped (use `--filter`)
 
