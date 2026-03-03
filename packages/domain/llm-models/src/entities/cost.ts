@@ -8,11 +8,11 @@
 export type TokenType = "input" | "output" | "reasoning" | "cacheRead" | "cacheWrite"
 
 export type TokenUsage = {
-  readonly inputTokens: number
-  readonly outputTokens: number
-  readonly reasoningTokens?: number | undefined
-  readonly cacheReadTokens?: number | undefined
-  readonly cacheWriteTokens?: number | undefined
+  readonly input: number
+  readonly output: number
+  readonly reasoning?: number | undefined
+  readonly cacheRead?: number | undefined
+  readonly cacheWrite?: number | undefined
 }
 
 export type ModelCostTier = {
@@ -101,11 +101,11 @@ function sanitizeTokenCount(value: number | undefined): number {
  * Sums up costs for all token types: input, cache read, cache write, reasoning, and output.
  */
 export function estimateTotalCost(costSpec: ModelCostSpec, usage: TokenUsage): number {
-  const input = sanitizeTokenCount(usage.inputTokens)
-  const cacheRead = sanitizeTokenCount(usage.cacheReadTokens)
-  const cacheWrite = sanitizeTokenCount(usage.cacheWriteTokens)
-  const reasoning = sanitizeTokenCount(usage.reasoningTokens)
-  const output = sanitizeTokenCount(usage.outputTokens)
+  const input = sanitizeTokenCount(usage.input)
+  const cacheRead = sanitizeTokenCount(usage.cacheRead)
+  const cacheWrite = sanitizeTokenCount(usage.cacheWrite)
+  const reasoning = sanitizeTokenCount(usage.reasoning)
+  const output = sanitizeTokenCount(usage.output)
 
   return (
     computeTokenCost(costSpec, input, "input") +
@@ -123,11 +123,11 @@ export function estimateTotalCost(costSpec: ModelCostSpec, usage: TokenUsage): n
  * cache write, reasoning, and output tokens.
  */
 export function computeCostBreakdown(costSpec: ModelCostSpec, usage: TokenUsage): CostBreakdown {
-  const input = sanitizeTokenCount(usage.inputTokens)
-  const cacheRead = sanitizeTokenCount(usage.cacheReadTokens)
-  const cacheWrite = sanitizeTokenCount(usage.cacheWriteTokens)
-  const reasoning = sanitizeTokenCount(usage.reasoningTokens)
-  const output = sanitizeTokenCount(usage.outputTokens)
+  const input = sanitizeTokenCount(usage.input)
+  const cacheRead = sanitizeTokenCount(usage.cacheRead)
+  const cacheWrite = sanitizeTokenCount(usage.cacheWrite)
+  const reasoning = sanitizeTokenCount(usage.reasoning)
+  const output = sanitizeTokenCount(usage.output)
 
   return {
     input: {

@@ -173,8 +173,8 @@ describe("getCostSpec", () => {
 describe("estimateCost", () => {
   it("computes cost for known provider/model", () => {
     const cost = estimateCost("openai", "gpt-4o", {
-      inputTokens: 1000,
-      outputTokens: 500,
+      input: 1000,
+      output: 500,
     })
     expect(typeof cost).toBe("number")
     expect(cost).toBeGreaterThanOrEqual(0)
@@ -182,16 +182,16 @@ describe("estimateCost", () => {
 
   it("returns zero for unknown model", () => {
     const cost = estimateCost("openai", "nonexistent-xyz", {
-      inputTokens: 1000,
-      outputTokens: 500,
+      input: 1000,
+      output: 500,
     })
     expect(cost).toBe(0)
   })
 
   it("handles NaN tokens gracefully", () => {
     const cost = estimateCost("openai", "gpt-4o", {
-      inputTokens: Number.NaN,
-      outputTokens: Number.NaN,
+      input: Number.NaN,
+      output: Number.NaN,
     })
     expect(cost).toBe(0)
   })
@@ -200,10 +200,10 @@ describe("estimateCost", () => {
 describe("estimateCostWithBreakdown", () => {
   it("returns a full breakdown", () => {
     const breakdown = estimateCostWithBreakdown("openai", "gpt-4o", {
-      inputTokens: 2_000_000,
-      outputTokens: 500_000,
-      reasoningTokens: 100_000,
-      cacheReadTokens: 300_000,
+      input: 2_000_000,
+      output: 500_000,
+      reasoning: 100_000,
+      cacheRead: 300_000,
     })
 
     expect(breakdown.input.direct.tokens).toBe(2_000_000)

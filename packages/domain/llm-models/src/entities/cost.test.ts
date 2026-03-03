@@ -99,11 +99,11 @@ describe("estimateTotalCost", () => {
 
   it("sums costs for all token types", () => {
     const usage: TokenUsage = {
-      inputTokens: 1_000_000,
-      outputTokens: 500_000,
-      reasoningTokens: 200_000,
-      cacheReadTokens: 300_000,
-      cacheWriteTokens: 100_000,
+      input: 1_000_000,
+      output: 500_000,
+      reasoning: 200_000,
+      cacheRead: 300_000,
+      cacheWrite: 100_000,
     }
 
     const expected =
@@ -118,11 +118,11 @@ describe("estimateTotalCost", () => {
 
   it("handles NaN token counts by treating them as zero", () => {
     const usage: TokenUsage = {
-      inputTokens: Number.NaN,
-      outputTokens: Number.NaN,
-      reasoningTokens: Number.NaN,
-      cacheReadTokens: Number.NaN,
-      cacheWriteTokens: Number.NaN,
+      input: Number.NaN,
+      output: Number.NaN,
+      reasoning: Number.NaN,
+      cacheRead: Number.NaN,
+      cacheWrite: Number.NaN,
     }
 
     expect(estimateTotalCost(tier, usage)).toBe(0)
@@ -130,8 +130,8 @@ describe("estimateTotalCost", () => {
 
   it("handles undefined optional tokens", () => {
     const usage: TokenUsage = {
-      inputTokens: 1_000_000,
-      outputTokens: 500_000,
+      input: 1_000_000,
+      output: 500_000,
     }
 
     const expected = (2.5 * 1_000_000) / 1_000_000 + (10 * 500_000) / 1_000_000
@@ -145,11 +145,11 @@ describe("computeCostBreakdown", () => {
 
   it("returns breakdown with all categories", () => {
     const usage: TokenUsage = {
-      inputTokens: 2_000_000,
-      outputTokens: 500_000,
-      reasoningTokens: 300_000,
-      cacheReadTokens: 1_000_000,
-      cacheWriteTokens: 200_000,
+      input: 2_000_000,
+      output: 500_000,
+      reasoning: 300_000,
+      cacheRead: 1_000_000,
+      cacheWrite: 200_000,
     }
 
     const breakdown = computeCostBreakdown(tier, usage)
@@ -168,8 +168,8 @@ describe("computeCostBreakdown", () => {
 
   it("converts NaN tokens to zero", () => {
     const usage: TokenUsage = {
-      inputTokens: Number.NaN,
-      outputTokens: Number.NaN,
+      input: Number.NaN,
+      output: Number.NaN,
     }
 
     const breakdown = computeCostBreakdown(tier, usage)
