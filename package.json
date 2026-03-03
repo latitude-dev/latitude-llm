@@ -6,6 +6,7 @@
     "dev": "turbo dev",
     "check": "turbo check",
     "check:fix": "turbo check:fix",
+    "hooks": "node ./scripts/setup-git-hooks.mjs",
     "format": "turbo format",
     "tmux": "tmuxinator start .",
     "typecheck": "turbo typecheck",
@@ -13,7 +14,8 @@
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:fix:files": "knip --fix-type files --allow-remove-files",
-    "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate && pnpm build"
+    "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate && pnpm build",
+    "prepare": "pnpm hooks"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
