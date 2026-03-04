@@ -61,8 +61,7 @@ class TouchBuffer {
    * @param keyId - The API key ID to touch
    */
   touch(keyId: string): void {
-    const keyIdStr = keyId as string
-    this.buffer.set(keyIdStr, Date.now())
+    this.buffer.set(keyId, Date.now())
 
     // Force flush if buffer exceeds max size
     if (this.buffer.size >= this.maxBufferSize) {

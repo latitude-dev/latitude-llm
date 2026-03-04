@@ -89,10 +89,9 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   // is typed as potentially undefined, but BetterAuthPlugin expects it to be required.
   // This is a known issue in Better Auth's type definitions (v1.2.7+).
   // See: https://github.com/better-auth/better-auth/issues/3079
-  // We use 'unknown' as a type-safe way to handle this mismatch.
   const orgPlugin: BetterAuthPlugin = organization({
     allowUserToCreateOrganization: () => true,
-  }) as unknown as BetterAuthPlugin
+  }) as BetterAuthPlugin
 
   // Build plugins array
   const plugins: BetterAuthPlugin[] = [orgPlugin]
@@ -114,7 +113,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
           ...(activeOrganizationId ? { activeOrganizationId } : {}),
         },
       }
-    }) as unknown as BetterAuthPlugin,
+    }) as BetterAuthPlugin,
   )
 
   // Add Magic Link plugin if email sender is configured
@@ -125,7 +124,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         await sendMagicLinkFn({ email, url, token })
       },
       expiresIn: 3600, // 1 hour
-    }) as unknown as BetterAuthPlugin
+    }) as BetterAuthPlugin
     plugins.push(magicLinkPlugin)
   }
 
@@ -163,13 +162,13 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       organization: {
         enabled: true,
       },
-    }) as unknown as BetterAuthPlugin
+    }) as BetterAuthPlugin
 
     plugins.push(stripePlugin)
   }
 
   if (config.enableTanStackCookies) {
-    plugins.push(tanstackStartCookies() as unknown as BetterAuthPlugin)
+    plugins.push(tanstackStartCookies() as BetterAuthPlugin)
   }
 
   return betterAuth({

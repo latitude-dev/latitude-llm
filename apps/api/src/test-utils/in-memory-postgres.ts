@@ -9,6 +9,8 @@ export interface InMemoryPostgres {
   readonly postgresDb: PostgresDb
 }
 
+const unsafeCast = <T>(value: unknown): T => value as T
+
 export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
   const client = new PGlite()
   await client.exec(`
@@ -22,7 +24,7 @@ export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
   `)
   const db = drizzle({ client, schema: postgresSchema })
 
-  const { sqlStatements } = await pushSchema(postgresSchema as Record<string, unknown>, db as unknown as PgliteDatabase)
+  const { sqlStatements } = await pushSchema(postgresSchema as Record<string, unknown>, unsafeCast<PgliteDatabase>(db))
   const filtered = sqlStatements.filter((s) => !/^(DROP|CREATE) SCHEMA\b/i.test(s.trim()))
   for (const stmt of filtered) {
     await client.exec(stmt)
@@ -31,7 +33,7 @@ export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
   return {
     client,
     db,
-    postgresDb: db as unknown as PostgresDb,
+    postgresDb: unsafeCast<PostgresDb>(db),
   }
 }
 

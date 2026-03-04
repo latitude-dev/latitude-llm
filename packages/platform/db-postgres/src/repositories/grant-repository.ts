@@ -1,4 +1,12 @@
-import { type GrantId, type OrganizationId, type SubscriptionId, toRepositoryError } from "@domain/shared"
+import {
+  GrantId,
+  type GrantId as GrantIdType,
+  OrganizationId,
+  type OrganizationId as OrganizationIdType,
+  SubscriptionId,
+  type SubscriptionId as SubscriptionIdType,
+  toRepositoryError,
+} from "@domain/shared"
 import type { Grant, GrantRepository, GrantType } from "@domain/subscriptions"
 import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
 import { Effect } from "effect"
@@ -29,9 +37,9 @@ const toDbGrantType = (type: GrantType): QuotaType => {
  * Maps a database grant row to a domain Grant entity.
  */
 const toDomainGrant = (row: typeof schema.grants.$inferSelect): Grant => ({
-  id: row.id as Grant["id"],
-  organizationId: row.organizationId as Grant["organizationId"],
-  subscriptionId: row.subscriptionId as Grant["subscriptionId"],
+  id: GrantId(row.id),
+  organizationId: OrganizationId(row.organizationId),
+  subscriptionId: SubscriptionId(row.subscriptionId),
   type: toDomainGrantType(row.type),
   amount: Number(row.amount),
   balance: Number(row.balance),
@@ -62,10 +70,10 @@ const toInsertRow = (grant: Grant): typeof schema.grants.$inferInsert => ({
  * @param db - The database connection
  * @param organizationId - The organization ID this repository is scoped to
  */
-export const createGrantPostgresRepository = (db: PostgresDb, organizationId: OrganizationId): GrantRepository => ({
+export const createGrantPostgresRepository = (db: PostgresDb, organizationId: OrganizationIdType): GrantRepository => ({
   organizationId,
 
-  findById: (id: GrantId) =>
+  findById: (id: GrantIdType) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>
@@ -90,7 +98,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
       return results.map(toDomainGrant)
     }),
 
-  findBySubscriptionId: (subscriptionId: SubscriptionId) =>
+  findBySubscriptionId: (subscriptionId: SubscriptionIdType) =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
         try: () =>
@@ -184,7 +192,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
       })
     }),
 
-  revokeBySubscription: (subscriptionId: SubscriptionId) =>
+  revokeBySubscription: (subscriptionId: SubscriptionIdType) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
         try: () =>
@@ -201,7 +209,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
       })
     }),
 
-  delete: (id: GrantId) =>
+  delete: (id: GrantIdType) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
         try: () =>
@@ -212,7 +220,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
       })
     }),
 
-  deleteBySubscription: (subscriptionId: SubscriptionId) =>
+  deleteBySubscription: (subscriptionId: SubscriptionIdType) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
         try: () =>

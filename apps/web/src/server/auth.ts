@@ -9,24 +9,48 @@ interface AuthenticatedSession {
   readonly organizationId: string
 }
 
-export const requireSession = async (): Promise<AuthenticatedSession> => {
-  const session = (await ensureSession()) as {
-    user?: { id: string }
-    session?: {
-      activeOrganizationId?: string | null
-    }
-  } | null
+const getSessionUserId = (session: unknown): string | null => {
+  if (typeof session !== "object" || session === null) {
+    return null
+  }
 
-  if (!session?.user) {
+  const user = Reflect.get(session, "user")
+  if (typeof user !== "object" || user === null) {
+    return null
+  }
+
+  const id = Reflect.get(user, "id")
+  return typeof id === "string" ? id : null
+}
+
+const getSessionOrganizationId = (session: unknown): string | null => {
+  if (typeof session !== "object" || session === null) {
+    return null
+  }
+
+  const sessionData = Reflect.get(session, "session")
+  if (typeof sessionData !== "object" || sessionData === null) {
+    return null
+  }
+
+  const organizationId = Reflect.get(sessionData, "activeOrganizationId")
+  return typeof organizationId === "string" ? organizationId : null
+}
+
+export const requireSession = async (): Promise<AuthenticatedSession> => {
+  const session = await ensureSession()
+  const userId = getSessionUserId(session)
+
+  if (!userId) {
     throw new HttpUnauthorizedError()
   }
 
-  const organizationId = session.session?.activeOrganizationId
+  const organizationId = getSessionOrganizationId(session)
   if (!organizationId) {
     throw new UnauthorizedError({ message: "No active organization in session" })
   }
 
-  return { userId: session.user.id, organizationId }
+  return { userId, organizationId }
 }
 
 export const assertOrganizationMembership = async (organizationId: string, userId: string): Promise<void> => {

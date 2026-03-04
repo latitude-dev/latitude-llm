@@ -1,5 +1,11 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
-import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared"
+import {
+  ApiKeyId,
+  type ApiKeyId as ApiKeyIdType,
+  OrganizationId,
+  type OrganizationId as OrganizationIdType,
+  toRepositoryError,
+} from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { decrypt, encrypt } from "@repo/utils"
 import { and, eq, isNull } from "drizzle-orm"
@@ -22,8 +28,8 @@ const getEncryptionKey = (): Buffer => {
  * Decrypts the token from its stored encrypted form.
  */
 const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
-  id: row.id as ApiKey["id"],
-  organizationId: row.organizationId as ApiKey["organizationId"],
+  id: ApiKeyId(row.id),
+  organizationId: OrganizationId(row.organizationId),
   token: decrypt(row.token, encryptionKey),
   tokenHash: row.tokenHash,
   name: row.name ?? "",
@@ -54,13 +60,16 @@ const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer): typeof apiKeys.$inf
  * @param db - Drizzle database instance
  * @param organizationId - The organization ID this repository is scoped to
  */
-export const createApiKeyPostgresRepository = (db: PostgresDb, organizationId: OrganizationId): ApiKeyRepository => {
+export const createApiKeyPostgresRepository = (
+  db: PostgresDb,
+  organizationId: OrganizationIdType,
+): ApiKeyRepository => {
   const encryptionKey = getEncryptionKey()
 
   return {
     organizationId,
 
-    findById: (id: ApiKeyId) =>
+    findById: (id: ApiKeyIdType) =>
       Effect.gen(function* () {
         const [result] = yield* Effect.tryPromise({
           try: () =>
@@ -111,13 +120,13 @@ export const createApiKeyPostgresRepository = (db: PostgresDb, organizationId: O
         })
       }),
 
-    delete: (id: ApiKeyId) =>
+    delete: (id: ApiKeyIdType) =>
       Effect.tryPromise({
         try: () => db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
         catch: (error) => toRepositoryError(error, "delete"),
       }),
 
-    touch: (id: ApiKeyId) =>
+    touch: (id: ApiKeyIdType) =>
       Effect.tryPromise({
         try: () =>
           db

@@ -1,5 +1,11 @@
 import type { Project, ProjectRepository } from "@domain/projects"
-import { type OrganizationId, type ProjectId, toRepositoryError } from "@domain/shared"
+import {
+  OrganizationId,
+  type OrganizationId as OrganizationIdType,
+  ProjectId,
+  type ProjectId as ProjectIdType,
+  toRepositoryError,
+} from "@domain/shared"
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -9,8 +15,8 @@ import * as schema from "../schema/index.ts"
  * Maps a database project row to a domain Project entity.
  */
 const toDomainProject = (row: typeof schema.projects.$inferSelect): Project => ({
-  id: row.id as Project["id"],
-  organizationId: row.organizationId as Project["organizationId"],
+  id: ProjectId(row.id),
+  organizationId: OrganizationId(row.organizationId),
   name: row.name,
   slug: row.slug,
   description: null, // Not in schema, default to null
@@ -38,10 +44,13 @@ const toInsertRow = (project: Project): typeof schema.projects.$inferInsert => (
  * @param db - The database connection
  * @param organizationId - The organization ID this repository is scoped to
  */
-export const createProjectPostgresRepository = (db: PostgresDb, organizationId: OrganizationId): ProjectRepository => ({
+export const createProjectPostgresRepository = (
+  db: PostgresDb,
+  organizationId: OrganizationIdType,
+): ProjectRepository => ({
   organizationId,
 
-  findById: (id: ProjectId) =>
+  findById: (id: ProjectIdType) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>
@@ -108,7 +117,7 @@ export const createProjectPostgresRepository = (db: PostgresDb, organizationId: 
       })
     }),
 
-  softDelete: (id: ProjectId) =>
+  softDelete: (id: ProjectIdType) =>
     Effect.tryPromise({
       try: () =>
         db
@@ -121,7 +130,7 @@ export const createProjectPostgresRepository = (db: PostgresDb, organizationId: 
       catch: (error) => toRepositoryError(error, "softDelete"),
     }),
 
-  hardDelete: (id: ProjectId) =>
+  hardDelete: (id: ProjectIdType) =>
     Effect.tryPromise({
       try: () =>
         db

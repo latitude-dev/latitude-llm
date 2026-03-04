@@ -1,6 +1,5 @@
-import type { Membership, MembershipRepository, MembershipRole } from "@domain/organizations"
-import type { OrganizationId, UserId } from "@domain/shared"
-import { toRepositoryError } from "@domain/shared"
+import type { Membership, MembershipRepository } from "@domain/organizations"
+import { MembershipId, OrganizationId, UserId, toRepositoryError } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -10,10 +9,10 @@ import * as schema from "../schema/index.ts"
  * Maps a database member row to a domain Membership entity.
  */
 const toDomainMembership = (memberRow: typeof schema.member.$inferSelect): Membership => ({
-  id: memberRow.id,
-  organizationId: memberRow.organizationId as OrganizationId,
-  userId: memberRow.userId as UserId,
-  role: memberRow.role as MembershipRole,
+  id: MembershipId(memberRow.id),
+  organizationId: OrganizationId(memberRow.organizationId),
+  userId: UserId(memberRow.userId),
+  role: memberRow.role,
   invitedAt: null, // Better Auth doesn't store invitedAt separately
   confirmedAt: memberRow.createdAt, // Assume confirmed at creation for now
   createdAt: memberRow.createdAt,

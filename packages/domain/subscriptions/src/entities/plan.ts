@@ -5,6 +5,8 @@
  */
 export type Plan = "HobbyV3" | "TeamV4" | "EnterpriseV1" | "ScaleV1"
 
+const AVAILABLE_PLANS: readonly Plan[] = ["HobbyV3", "TeamV4", "EnterpriseV1", "ScaleV1"]
+
 /**
  * Plan configuration - defines quotas and features for each plan.
  */
@@ -81,5 +83,5 @@ export const hasFeature = (plan: Plan, feature: string): boolean => {
  * Get all available plans.
  */
 export const getAvailablePlans = (): readonly Plan[] => {
-  return Object.keys(PLAN_CONFIGS) as Plan[]
+  return AVAILABLE_PLANS
 }

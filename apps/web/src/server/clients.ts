@@ -89,7 +89,7 @@ export const getBetterAuth = () => {
         let authIntentContext: AuthIntentEmailContext | undefined
 
         if (authIntentId) {
-          const authIntent = (await Effect.runPromise(authIntents.findById(authIntentId))) as AuthIntent | null
+          const authIntent = await Effect.runPromise(authIntents.findById(authIntentId))
 
           if (authIntent) {
             authIntentContext = {

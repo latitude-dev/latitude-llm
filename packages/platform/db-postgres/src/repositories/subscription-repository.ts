@@ -1,4 +1,10 @@
-import { type OrganizationId, type SubscriptionId, toRepositoryError } from "@domain/shared"
+import {
+  OrganizationId,
+  type OrganizationId as OrganizationIdType,
+  SubscriptionId,
+  type SubscriptionId as SubscriptionIdType,
+  toRepositoryError,
+} from "@domain/shared"
 import type { Plan, Subscription, SubscriptionRepository } from "@domain/subscriptions"
 import { and, desc, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
@@ -30,8 +36,8 @@ const toDomainPlan = (plan: string): Plan => {
  * Better Auth stores subscriptions with referenceId (which maps to organizationId).
  */
 const toDomainSubscription = (row: typeof schema.subscription.$inferSelect): Subscription => ({
-  id: row.id as Subscription["id"],
-  organizationId: row.referenceId as Subscription["organizationId"],
+  id: SubscriptionId(row.id),
+  organizationId: OrganizationId(row.referenceId),
   plan: toDomainPlan(row.plan),
   trialEndsAt: row.trialEnd,
   // Better Auth uses multiple cancellation fields - map them appropriately
@@ -52,11 +58,11 @@ const toDomainSubscription = (row: typeof schema.subscription.$inferSelect): Sub
  */
 export const createSubscriptionPostgresRepository = (
   db: PostgresDb,
-  organizationId: OrganizationId,
+  organizationId: OrganizationIdType,
 ): SubscriptionRepository => ({
   organizationId,
 
-  findById: (id: SubscriptionId) =>
+  findById: (id: SubscriptionIdType) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>
@@ -119,7 +125,7 @@ export const createSubscriptionPostgresRepository = (
       return
     }),
 
-  delete: (_id: SubscriptionId) =>
+  delete: (_id: SubscriptionIdType) =>
     Effect.gen(function* () {
       // Note: With Better Auth Stripe plugin, subscriptions are managed by Better Auth.
       // The domain should not directly delete subscriptions.

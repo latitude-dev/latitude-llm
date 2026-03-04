@@ -1,5 +1,5 @@
 import type { ApiKey, UnscopedApiKeyRepository } from "@domain/api-keys"
-import { type ApiKeyId, toRepositoryError } from "@domain/shared"
+import { ApiKeyId, type ApiKeyId as ApiKeyIdType, OrganizationId, toRepositoryError } from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { decrypt } from "@repo/utils"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
@@ -22,8 +22,8 @@ const getEncryptionKey = (): Buffer => {
  * Decrypts the token from its stored encrypted form.
  */
 const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
-  id: row.id as ApiKey["id"],
-  organizationId: row.organizationId as ApiKey["organizationId"],
+  id: ApiKeyId(row.id),
+  organizationId: OrganizationId(row.organizationId),
   token: decrypt(row.token, encryptionKey),
   tokenHash: row.tokenHash,
   name: row.name ?? "",
@@ -62,14 +62,14 @@ export const createUnscopedApiKeyPostgresRepository = (db: PostgresDb): Unscoped
         return result ? toDomainApiKey(result, encryptionKey) : null
       }),
 
-    touchBatch: (ids: readonly ApiKeyId[]) =>
+    touchBatch: (ids: readonly ApiKeyIdType[]) =>
       Effect.gen(function* () {
         if (ids.length === 0) {
           return
         }
 
         const now = new Date()
-        const idStrings = ids.map((id) => id as string)
+        const idStrings = ids.map(String)
 
         yield* Effect.tryPromise({
           try: () =>

@@ -3,7 +3,7 @@ import type { GrantId } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { createGrant } from "../entities/grant.ts"
 import type { GrantType } from "../entities/grant.ts"
-import type { Plan } from "../entities/plan.ts"
+import { type Plan, getAvailablePlans } from "../entities/plan.ts"
 import { type Subscription, createSubscription } from "../entities/subscription.ts"
 import type { GrantRepository } from "../ports/grant-repository.ts"
 import type { SubscriptionRepository } from "../ports/subscription-repository.ts"
@@ -56,7 +56,7 @@ export const subscribe =
   (input: SubscribeInput): Effect.Effect<Subscription, SubscribeError> => {
     return Effect.gen(function* () {
       // Validate plan
-      const validPlans = ["HobbyV3", "TeamV4", "EnterpriseV1", "ScaleV1"] as Plan[]
+      const validPlans = getAvailablePlans()
       if (!validPlans.includes(input.plan)) {
         return yield* new InvalidPlanError({ plan: input.plan, reason: "Unknown plan" })
       }

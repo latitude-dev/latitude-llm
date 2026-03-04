@@ -38,11 +38,21 @@ const createApiKeyCacheInvalidator = (redis: RedisClient): CacheInvalidator => {
 export const createApiKeysRoutes = () => {
   const app = new Hono<OrganizationScopedEnv>()
 
+  const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === "object" && value !== null
+  }
+
   // POST /organizations/:organizationId/api-keys - Generate API key
   app.post("/", async (c) => {
     const organizationId = c.var.organization.id
-    const body = (await c.req.json()) as {
-      readonly name: string
+    const body = await c.req.json()
+
+    if (!isObjectRecord(body)) {
+      throw new BadRequestError({ httpMessage: "Invalid request body" })
+    }
+
+    if (typeof body.name !== "string") {
+      throw new BadRequestError({ httpMessage: "Name is required", field: "name" })
     }
 
     const input: GenerateApiKeyInput = {

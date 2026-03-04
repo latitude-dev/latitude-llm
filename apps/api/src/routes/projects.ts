@@ -18,20 +18,31 @@ import type { OrganizationScopedEnv } from "../types.ts"
 export const createProjectsRoutes = () => {
   const app = new Hono<OrganizationScopedEnv>()
 
+  const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === "object" && value !== null
+  }
+
   // POST /organizations/:organizationId/projects - Create project
   app.post("/", async (c) => {
     const organizationId = c.var.organization.id
     const auth = c.var.auth
-    const body = (await c.req.json()) as {
-      readonly name: string
-      readonly description?: string
+    const body = await c.req.json()
+
+    if (!isObjectRecord(body)) {
+      throw new BadRequestError({ httpMessage: "Invalid request body" })
     }
+
+    if (typeof body.name !== "string") {
+      throw new BadRequestError({ httpMessage: "Project name is required", field: "name" })
+    }
+
+    const description = typeof body.description === "string" ? body.description : undefined
 
     const input: CreateProjectInput = {
       id: ProjectId(generateId()),
       organizationId,
       name: body.name,
-      ...(body.description !== undefined && { description: body.description }),
+      ...(description !== undefined && { description }),
       createdById: auth.userId,
     }
 
@@ -97,10 +108,22 @@ export const createProjectsRoutes = () => {
       })
     }
 
-    const body = (await c.req.json()) as {
-      readonly name?: string
-      readonly description?: string | null
+    const body = await c.req.json()
+
+    if (!isObjectRecord(body)) {
+      throw new BadRequestError({ httpMessage: "Invalid request body" })
     }
+
+    if (body.name !== undefined && typeof body.name !== "string") {
+      throw new BadRequestError({ httpMessage: "Invalid project name", field: "name" })
+    }
+
+    if (body.description !== undefined && body.description !== null && typeof body.description !== "string") {
+      throw new BadRequestError({ httpMessage: "Invalid project description", field: "description" })
+    }
+
+    const name = typeof body.name === "string" ? body.name : undefined
+    const description = typeof body.description === "string" || body.description === null ? body.description : undefined
 
     const updatedProject = await runCommand(
       c.var.db,
@@ -112,8 +135,8 @@ export const createProjectsRoutes = () => {
         updateProjectUseCase(projectRepository)({
           id,
           organizationId,
-          ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(name !== undefined ? { name } : {}),
+          ...(description !== undefined ? { description } : {}),
         }),
       )
     })
