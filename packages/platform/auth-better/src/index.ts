@@ -1,10 +1,11 @@
 import { stripe } from "@better-auth/stripe"
-import { generateId } from "@domain/shared"
+import { UserId, generateId } from "@domain/shared"
 import type { PostgresDb } from "@platform/db-postgres"
-import { postgresSchema } from "@platform/db-postgres"
+import { createMembershipPostgresRepository, postgresSchema } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { customSession } from "better-auth/plugins"
 import { magicLink } from "better-auth/plugins"
 import { organization } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
@@ -96,6 +97,26 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   // Build plugins array
   const plugins: BetterAuthPlugin[] = [orgPlugin]
 
+  const membershipRepository = createMembershipPostgresRepository(config.db)
+
+  plugins.push(
+    customSession(async ({ user, session }) => {
+      const activeOrganizationIdInSession = "activeOrganizationId" in session ? session.activeOrganizationId : null
+      if (activeOrganizationIdInSession) return { user, session }
+
+      const memberships = await Effect.runPromise(membershipRepository.findByUserId(UserId(user.id)))
+      const activeOrganizationId = memberships[0]?.organizationId
+
+      return {
+        user,
+        session: {
+          ...session,
+          ...(activeOrganizationId ? { activeOrganizationId } : {}),
+        },
+      }
+    }) as unknown as BetterAuthPlugin,
+  )
+
   // Add Magic Link plugin if email sender is configured
   if (config.sendMagicLink) {
     const sendMagicLinkFn = config.sendMagicLink
@@ -124,7 +145,6 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         authorizeReference: async ({
           user,
           referenceId,
-          action,
         }: {
           user: { id: string }
           referenceId: string
@@ -207,6 +227,11 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     session: {
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // 1 day
+      cookieCache: {
+        enabled: true,
+        maxAge: 5 * 60,
+        strategy: "compact",
+      },
     },
     // Use CUID2 for ID generation
     advanced: {

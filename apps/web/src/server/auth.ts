@@ -1,4 +1,4 @@
-import { BadRequestError, HttpUnauthorizedError, OrganizationId, PermissionError } from "@domain/shared"
+import { HttpUnauthorizedError, OrganizationId, PermissionError, UnauthorizedError } from "@domain/shared"
 import { createMembershipPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { ensureSession } from "../domains/sessions/session.functions.ts"
@@ -23,7 +23,7 @@ export const requireSession = async (): Promise<AuthenticatedSession> => {
 
   const organizationId = session.session?.activeOrganizationId
   if (!organizationId) {
-    throw new BadRequestError({ httpMessage: "No active organization in session" })
+    throw new UnauthorizedError({ message: "No active organization in session" })
   }
 
   return { userId: session.user.id, organizationId }
