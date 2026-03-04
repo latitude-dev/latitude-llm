@@ -1,4 +1,10 @@
-import { type OrganizationId, type SubscriptionId, toRepositoryError } from "@domain/shared"
+import {
+  OrganizationId,
+  type OrganizationId as OrganizationIdType,
+  SubscriptionId,
+  type SubscriptionId as SubscriptionIdType,
+  toRepositoryError,
+} from "@domain/shared"
 import type { Plan, Subscription, SubscriptionRepository } from "@domain/subscriptions"
 import { and, desc, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
@@ -30,8 +36,8 @@ const toDomainPlan = (plan: string): Plan => {
  * Better Auth stores subscriptions with referenceId (which maps to organizationId).
  */
 const toDomainSubscription = (row: typeof schema.subscription.$inferSelect): Subscription => ({
-  id: row.id as Subscription["id"],
-  organizationId: row.referenceId as Subscription["organizationId"],
+  id: SubscriptionId(row.id),
+  organizationId: OrganizationId(row.referenceId),
   plan: toDomainPlan(row.plan),
   trialEndsAt: row.trialEnd,
   // Better Auth uses multiple cancellation fields - map them appropriately
@@ -46,19 +52,32 @@ const toDomainSubscription = (row: typeof schema.subscription.$inferSelect): Sub
  *
  * This adapter queries the Better Auth subscription table managed by
  * the Better Auth Stripe plugin.
+ *
+ * @param db - The database connection
+ * @param organizationId - The organization ID this repository is scoped to
  */
-export const createSubscriptionPostgresRepository = (db: PostgresDb): SubscriptionRepository => ({
-  findById: (id: SubscriptionId) =>
+export const createSubscriptionPostgresRepository = (
+  db: PostgresDb,
+  organizationId: OrganizationIdType,
+): SubscriptionRepository => ({
+  organizationId,
+
+  findById: (id: SubscriptionIdType) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
-        try: () => db.select().from(schema.subscription).where(eq(schema.subscription.id, id)).limit(1),
+        try: () =>
+          db
+            .select()
+            .from(schema.subscription)
+            .where(and(eq(schema.subscription.id, id), eq(schema.subscription.referenceId, organizationId)))
+            .limit(1),
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
       return result ? toDomainSubscription(result) : null
     }),
 
-  findActiveByOrganizationId: (organizationId: OrganizationId) =>
+  findActive: () =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>
@@ -74,13 +93,13 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
             )
             .orderBy(desc(schema.subscription.periodStart))
             .limit(1),
-        catch: (error) => toRepositoryError(error, "findActiveByOrganizationId"),
+        catch: (error) => toRepositoryError(error, "findActive"),
       })
 
       return result ? toDomainSubscription(result) : null
     }),
 
-  findByOrganizationId: (organizationId: OrganizationId) =>
+  findAll: () =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
         try: () =>
@@ -89,7 +108,7 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
             .from(schema.subscription)
             .where(eq(schema.subscription.referenceId, organizationId))
             .orderBy(desc(schema.subscription.periodStart)),
-        catch: (error) => toRepositoryError(error, "findByOrganizationId"),
+        catch: (error) => toRepositoryError(error, "findAll"),
       })
 
       return results.map(toDomainSubscription)
@@ -106,7 +125,7 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
       return
     }),
 
-  delete: (_id: SubscriptionId) =>
+  delete: (_id: SubscriptionIdType) =>
     Effect.gen(function* () {
       // Note: With Better Auth Stripe plugin, subscriptions are managed by Better Auth.
       // The domain should not directly delete subscriptions.
@@ -117,7 +136,7 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
       return
     }),
 
-  existsForOrganization: (organizationId: OrganizationId) =>
+  exists: () =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>
@@ -126,7 +145,7 @@ export const createSubscriptionPostgresRepository = (db: PostgresDb): Subscripti
             .from(schema.subscription)
             .where(eq(schema.subscription.referenceId, organizationId))
             .limit(1),
-        catch: (error) => toRepositoryError(error, "existsForOrganization"),
+        catch: (error) => toRepositoryError(error, "exists"),
       })
 
       return result !== undefined

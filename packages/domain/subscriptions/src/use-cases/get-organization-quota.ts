@@ -64,7 +64,7 @@ export const getOrganizationQuota =
   (organizationId: OrganizationId): Effect.Effect<OrganizationQuota, GetOrganizationQuotaError> => {
     return Effect.gen(function* () {
       // Find active subscription
-      const subscription = yield* deps.subscriptionRepository.findActiveByOrganizationId(organizationId)
+      const subscription = yield* deps.subscriptionRepository.findActive()
 
       const hasActiveSubscription = subscription !== null
       const isInTrial = subscription?.trialEndsAt ? new Date() < subscription.trialEndsAt : false
@@ -72,9 +72,9 @@ export const getOrganizationQuota =
       // Get active grants for each type
       const [seatsGrants, runsGrants, creditsGrants] = yield* Effect.all(
         [
-          deps.grantRepository.findActiveByType(organizationId, "seats"),
-          deps.grantRepository.findActiveByType(organizationId, "runs"),
-          deps.grantRepository.findActiveByType(organizationId, "credits"),
+          deps.grantRepository.findActiveByType("seats"),
+          deps.grantRepository.findActiveByType("runs"),
+          deps.grantRepository.findActiveByType("credits"),
         ],
         { concurrency: "unbounded" },
       )

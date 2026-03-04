@@ -3,7 +3,6 @@ import { magicLinkTemplate, sendEmail, signupExistingAccountMagicLinkTemplate } 
 import { createBetterAuth } from "@platform/auth-better"
 import {
   type PostgresClient,
-  type PostgresDb,
   createAuthIntentPostgresRepository,
   createAuthUserPostgresRepository,
   createPostgresClient,
@@ -40,7 +39,7 @@ const getAuthIntentIdFromMagicLinkUrl = ({
   return parsedCallbackUrl.searchParams.get("authIntentId")
 }
 
-export const getPostgresClient = (): { db: PostgresDb; pool: PostgresClient["pool"] } => {
+export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
     postgresClientInstance = createPostgresClient()
   }
@@ -90,7 +89,7 @@ export const getBetterAuth = () => {
         let authIntentContext: AuthIntentEmailContext | undefined
 
         if (authIntentId) {
-          const authIntent = (await Effect.runPromise(authIntents.findById(authIntentId))) as AuthIntent | null
+          const authIntent = await Effect.runPromise(authIntents.findById(authIntentId))
 
           if (authIntent) {
             authIntentContext = {

@@ -5,10 +5,10 @@ import { Hono } from "hono"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
+import type { ProtectedEnv } from "../types.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
 import { createAuthRoutes } from "./auth.ts"
 import { registerHealthRoute } from "./health.ts"
-import { createOrganizationsRoutes } from "./organizations.ts"
 import { createProjectsRoutes } from "./projects.ts"
 
 interface RoutesContext {
@@ -25,7 +25,7 @@ export const registerRoutes = (context: RoutesContext) => {
   const { app } = context
 
   const v1 = new Hono()
-  const protectedRoutes = new Hono()
+  const protectedRoutes = new Hono<ProtectedEnv>()
 
   registerHealthRoute(context)
 
@@ -36,20 +36,19 @@ export const registerRoutes = (context: RoutesContext) => {
     c.set("clickhouse", context.clickhouse)
 
     await next()
-  })
+  }) // available via c.var.*
 
   // Auth routes (Better Auth) - PUBLIC, no auth required
   v1.route("/auth", createAuthRoutes())
 
-  // Rate limiting before auth to prevent brute force attacks
-  protectedRoutes.use("*", createAuthRateLimiter())
+  protectedRoutes.use("*", createAuthRateLimiter()) // Rate limiting before auth prevents brute force attacks
   protectedRoutes.use("*", createAuthMiddleware())
-  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware("organizationId"))
+  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
 
-  protectedRoutes.route("/", createOrganizationsRoutes())
   protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
   protectedRoutes.route("/:organizationId/api-keys", createApiKeysRoutes())
 
   v1.route("/organizations", protectedRoutes)
+
   app.route("/v1", v1)
 }

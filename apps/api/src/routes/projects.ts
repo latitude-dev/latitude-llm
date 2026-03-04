@@ -3,7 +3,7 @@ import { BadRequestError, ProjectId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import type { AuthContext, OrganizationScopedEnv } from "../types.ts"
+import type { OrganizationScopedEnv } from "../types.ts"
 
 /**
  * Project routes
@@ -18,25 +18,39 @@ import type { AuthContext, OrganizationScopedEnv } from "../types.ts"
 export const createProjectsRoutes = () => {
   const app = new Hono<OrganizationScopedEnv>()
 
+  const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === "object" && value !== null
+  }
+
   // POST /organizations/:organizationId/projects - Create project
   app.post("/", async (c) => {
     const organizationId = c.var.organization.id
-    const auth = c.get("auth") as AuthContext
-    const body = (await c.req.json()) as {
-      readonly name: string
-      readonly description?: string
+    const auth = c.var.auth
+    const body = await c.req.json()
+
+    if (!isObjectRecord(body)) {
+      throw new BadRequestError({ httpMessage: "Invalid request body" })
     }
+
+    if (typeof body.name !== "string") {
+      throw new BadRequestError({ httpMessage: "Project name is required", field: "name" })
+    }
+
+    const description = typeof body.description === "string" ? body.description : undefined
 
     const input: CreateProjectInput = {
       id: ProjectId(generateId()),
       organizationId,
       name: body.name,
-      ...(body.description !== undefined && { description: body.description }),
+      ...(description !== undefined && { description }),
       createdById: auth.userId,
     }
 
-    const project = await runCommand(c.get("db"), async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb)
+    const project = await runCommand(
+      c.var.db,
+      organizationId,
+    )(async (txDb) => {
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
 
       return Effect.runPromise(createProjectUseCase(projectRepository)(input))
     })
@@ -45,16 +59,20 @@ export const createProjectsRoutes = () => {
 
   // GET /organizations/:organizationId/projects - List projects
   app.get("/", async (c) => {
-    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = c.var.organization.id
 
-    const projects = await Effect.runPromise(projectRepository.findByOrganizationId(organizationId))
+    const projects = await runCommand(
+      c.var.db,
+      organizationId,
+    )(async (txDb) => {
+      const scopedRepo = createProjectPostgresRepository(txDb, organizationId)
+      return Effect.runPromise(scopedRepo.findAll())
+    })
     return c.json({ projects }, 200)
   })
 
   // GET /organizations/:organizationId/projects/:id - Get project
   app.get("/:id", async (c) => {
-    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = c.var.organization.id
     const idParam = c.req.param("id")
     const id = idParam ? ProjectId(idParam) : null
@@ -64,7 +82,13 @@ export const createProjectsRoutes = () => {
       })
     }
 
-    const project = await Effect.runPromise(projectRepository.findById(id, organizationId))
+    const project = await runCommand(
+      c.var.db,
+      organizationId,
+    )(async (txDb) => {
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
+      return Effect.runPromise(projectRepository.findById(id))
+    })
 
     if (!project) {
       throw new BadRequestError({ httpMessage: "Project not found" })
@@ -84,20 +108,35 @@ export const createProjectsRoutes = () => {
       })
     }
 
-    const body = (await c.req.json()) as {
-      readonly name?: string
-      readonly description?: string | null
+    const body = await c.req.json()
+
+    if (!isObjectRecord(body)) {
+      throw new BadRequestError({ httpMessage: "Invalid request body" })
     }
 
-    const updatedProject = await runCommand(c.get("db"), async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb)
+    if (body.name !== undefined && typeof body.name !== "string") {
+      throw new BadRequestError({ httpMessage: "Invalid project name", field: "name" })
+    }
+
+    if (body.description !== undefined && body.description !== null && typeof body.description !== "string") {
+      throw new BadRequestError({ httpMessage: "Invalid project description", field: "description" })
+    }
+
+    const name = typeof body.name === "string" ? body.name : undefined
+    const description = typeof body.description === "string" || body.description === null ? body.description : undefined
+
+    const updatedProject = await runCommand(
+      c.var.db,
+      organizationId,
+    )(async (txDb) => {
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
 
       return Effect.runPromise(
         updateProjectUseCase(projectRepository)({
           id,
           organizationId,
-          ...(body.name !== undefined ? { name: body.name } : {}),
-          ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(name !== undefined ? { name } : {}),
+          ...(description !== undefined ? { description } : {}),
         }),
       )
     })
@@ -116,10 +155,13 @@ export const createProjectsRoutes = () => {
       })
     }
 
-    await runCommand(c.get("db"), async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb)
+    await runCommand(
+      c.var.db,
+      organizationId,
+    )(async (txDb) => {
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
 
-      return Effect.runPromise(projectRepository.softDelete(id, organizationId))
+      return Effect.runPromise(projectRepository.softDelete(id))
     })
     return c.body(null, 204)
   })

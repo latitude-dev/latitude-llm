@@ -1,5 +1,11 @@
 import type { Project, ProjectRepository } from "@domain/projects"
-import { type OrganizationId, type ProjectId, toRepositoryError } from "@domain/shared"
+import {
+  OrganizationId,
+  type OrganizationId as OrganizationIdType,
+  ProjectId,
+  type ProjectId as ProjectIdType,
+  toRepositoryError,
+} from "@domain/shared"
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -9,8 +15,8 @@ import * as schema from "../schema/index.ts"
  * Maps a database project row to a domain Project entity.
  */
 const toDomainProject = (row: typeof schema.projects.$inferSelect): Project => ({
-  id: row.id as Project["id"],
-  organizationId: row.organizationId as Project["organizationId"],
+  id: ProjectId(row.id),
+  organizationId: OrganizationId(row.organizationId),
   name: row.name,
   slug: row.slug,
   description: null, // Not in schema, default to null
@@ -34,9 +40,17 @@ const toInsertRow = (project: Project): typeof schema.projects.$inferInsert => (
 
 /**
  * Creates a Postgres implementation of the ProjectRepository port.
+ *
+ * @param db - The database connection
+ * @param organizationId - The organization ID this repository is scoped to
  */
-export const createProjectPostgresRepository = (db: PostgresDb): ProjectRepository => ({
-  findById: (id: ProjectId, organizationId: OrganizationId) =>
+export const createProjectPostgresRepository = (
+  db: PostgresDb,
+  organizationId: OrganizationIdType,
+): ProjectRepository => ({
+  organizationId,
+
+  findById: (id: ProjectIdType) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>
@@ -57,7 +71,7 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       return result ? toDomainProject(result) : null
     }),
 
-  findByOrganizationId: (organizationId: OrganizationId) =>
+  findAll: () =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
         try: () =>
@@ -65,17 +79,17 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
             .select()
             .from(schema.projects)
             .where(and(eq(schema.projects.organizationId, organizationId), isNull(schema.projects.deletedAt))),
-        catch: (error) => toRepositoryError(error, "findByOrganizationId"),
+        catch: (error) => toRepositoryError(error, "findAll"),
       })
 
       return results.map(toDomainProject)
     }),
 
-  findAllByOrganizationIdIncludingDeleted: (organizationId: OrganizationId) =>
+  findAllIncludingDeleted: () =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
         try: () => db.select().from(schema.projects).where(eq(schema.projects.organizationId, organizationId)),
-        catch: (error) => toRepositoryError(error, "findAllByOrganizationIdIncludingDeleted"),
+        catch: (error) => toRepositoryError(error, "findAllIncludingDeleted"),
       })
 
       return results.map(toDomainProject)
@@ -103,33 +117,29 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       })
     }),
 
-  softDelete: (id: ProjectId, organizationId: OrganizationId) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .update(schema.projects)
-            .set({
-              deletedAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(and(eq(schema.projects.id, id), eq(schema.projects.organizationId, organizationId))),
-        catch: (error) => toRepositoryError(error, "softDelete"),
-      })
+  softDelete: (id: ProjectIdType) =>
+    Effect.tryPromise({
+      try: () =>
+        db
+          .update(schema.projects)
+          .set({
+            deletedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(schema.projects.id, id), eq(schema.projects.organizationId, organizationId))),
+      catch: (error) => toRepositoryError(error, "softDelete"),
     }),
 
-  hardDelete: (id: ProjectId, organizationId: OrganizationId) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .delete(schema.projects)
-            .where(and(eq(schema.projects.id, id), eq(schema.projects.organizationId, organizationId))),
-        catch: (error) => toRepositoryError(error, "hardDelete"),
-      })
+  hardDelete: (id: ProjectIdType) =>
+    Effect.tryPromise({
+      try: () =>
+        db
+          .delete(schema.projects)
+          .where(and(eq(schema.projects.id, id), eq(schema.projects.organizationId, organizationId))),
+      catch: (error) => toRepositoryError(error, "hardDelete"),
     }),
 
-  existsByName: (name: string, organizationId: OrganizationId) =>
+  existsByName: (name: string) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>
@@ -150,7 +160,7 @@ export const createProjectPostgresRepository = (db: PostgresDb): ProjectReposito
       return result !== undefined
     }),
 
-  existsBySlug: (slug: string, organizationId: OrganizationId) =>
+  existsBySlug: (slug: string) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
         try: () =>

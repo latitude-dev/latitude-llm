@@ -81,6 +81,19 @@ CREATE TABLE "latitude"."verification" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "latitude"."auth_intent" (
+	"id" varchar(24) PRIMARY KEY,
+	"type" varchar(32) NOT NULL,
+	"email" text NOT NULL,
+	"data" jsonb DEFAULT '{}' NOT NULL,
+	"existing_account_at_request" boolean DEFAULT false NOT NULL,
+	"created_organization_id" text,
+	"expires_at" timestamp with time zone NOT NULL,
+	"consumed_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "latitude"."subscription" (
 	"id" varchar(24) PRIMARY KEY,
 	"plan" text NOT NULL,
@@ -116,7 +129,8 @@ CREATE TABLE "latitude"."projects" (
 ALTER TABLE "latitude"."projects" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."api_keys" (
 	"id" varchar(24) PRIMARY KEY,
-	"token" text NOT NULL UNIQUE,
+	"token" text NOT NULL,
+	"token_hash" text NOT NULL UNIQUE,
 	"organization_id" text NOT NULL,
 	"name" varchar(256),
 	"last_used_at" timestamp with time zone,

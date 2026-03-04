@@ -4,6 +4,12 @@ import type { OrganizationId, UserId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresDb } from "@platform/db-postgres"
 
+type SharedContextVariables = {
+  db: PostgresDb
+  redis: RedisClient
+  clickhouse: ClickHouseClient
+}
+
 /**
  * Authentication context set by the auth middleware.
  *
@@ -31,15 +37,21 @@ export interface AuthContext {
 declare module "hono" {
   interface ContextVariableMap {
     auth?: AuthContext
-    db: PostgresDb
-    redis: RedisClient
-    clickhouse: ClickHouseClient
+    db: SharedContextVariables["db"]
+    redis: SharedContextVariables["redis"]
+    clickhouse: SharedContextVariables["clickhouse"]
     organization?: Organization
   }
 }
 
+export type ProtectedEnv = {
+  Variables: SharedContextVariables & {
+    auth: AuthContext
+  }
+}
+
 export type OrganizationScopedEnv = {
-  Variables: {
+  Variables: ProtectedEnv["Variables"] & {
     organization: Organization
   }
 }

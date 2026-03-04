@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { ProjectId, RepositoryError, ScopedRepository } from "@domain/shared"
 import type { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
 
@@ -9,24 +9,22 @@ import type { Project } from "../entities/project.ts"
  * All methods are RLS-aware - they operate within the context of an organization.
  * Implementations are provided in the platform layer (e.g., Postgres adapter).
  */
-export interface ProjectRepository {
+export interface ProjectRepository extends ScopedRepository {
   /**
    * Find a project by its unique ID.
    * Returns null if not found or if project belongs to a different organization.
    */
-  findById(id: ProjectId, organizationId: OrganizationId): Effect.Effect<Project | null, RepositoryError>
+  findById(id: ProjectId): Effect.Effect<Project | null, RepositoryError>
 
   /**
    * Find all projects in an organization (excluding soft-deleted ones).
    */
-  findByOrganizationId(organizationId: OrganizationId): Effect.Effect<readonly Project[], RepositoryError>
+  findAll(): Effect.Effect<readonly Project[], RepositoryError>
 
   /**
    * Find all projects in an organization including soft-deleted ones.
    */
-  findAllByOrganizationIdIncludingDeleted(
-    organizationId: OrganizationId,
-  ): Effect.Effect<readonly Project[], RepositoryError>
+  findAllIncludingDeleted(): Effect.Effect<readonly Project[], RepositoryError>
 
   /**
    * Save a project (create or update).
@@ -37,21 +35,21 @@ export interface ProjectRepository {
    * Soft delete a project by ID.
    * Sets deletedAt to current timestamp.
    */
-  softDelete(id: ProjectId, organizationId: OrganizationId): Effect.Effect<void, RepositoryError>
+  softDelete(id: ProjectId): Effect.Effect<void, RepositoryError>
 
   /**
    * Hard delete a project by ID (permanent removal).
    * Use with caution - prefer softDelete for user-facing operations.
    */
-  hardDelete(id: ProjectId, organizationId: OrganizationId): Effect.Effect<void, RepositoryError>
+  hardDelete(id: ProjectId): Effect.Effect<void, RepositoryError>
 
   /**
    * Check if a project exists with the given name in the organization.
    */
-  existsByName(name: string, organizationId: OrganizationId): Effect.Effect<boolean, RepositoryError>
+  existsByName(name: string): Effect.Effect<boolean, RepositoryError>
 
   /**
    * Check if a project exists with the given slug in the organization.
    */
-  existsBySlug(slug: string, organizationId: OrganizationId): Effect.Effect<boolean, RepositoryError>
+  existsBySlug(slug: string): Effect.Effect<boolean, RepositoryError>
 }

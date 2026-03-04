@@ -43,7 +43,7 @@ const createApp = (db: PostgresDb): Hono => {
   })
 
   protectedRoutes.use("*", createAuthMiddleware())
-  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware("organizationId"))
+  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
   protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
 
   app.route("/v1/organizations", protectedRoutes)

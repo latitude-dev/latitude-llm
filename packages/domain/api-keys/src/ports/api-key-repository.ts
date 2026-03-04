@@ -1,4 +1,4 @@
-import type { ApiKeyId, OrganizationId, RepositoryError } from "@domain/shared"
+import type { ApiKeyId, RepositoryError, ScopedRepository } from "@domain/shared"
 import type { Effect } from "effect"
 import type { ApiKey } from "../entities/api-key.ts"
 
@@ -6,45 +6,36 @@ import type { ApiKey } from "../entities/api-key.ts"
  * Repository port for API Key entities.
  *
  * This interface defines the contract for API key persistence operations.
+ * All operations are scoped to a single organization for data isolation.
+ *
+ * For cross-organization operations (e.g., authentication lookups),
+ * use UnscopedApiKeyRepository instead.
+ *
  * Implementations are provided in the platform layer (e.g., Postgres adapter).
  */
-export interface ApiKeyRepository {
+export interface ApiKeyRepository extends ScopedRepository {
   /**
-   * Find an API key by its unique ID.
+   * Find an API key by its unique ID within the organization scope.
    */
   findById(id: ApiKeyId): Effect.Effect<ApiKey | null, RepositoryError>
 
   /**
-   * Find an API key by its token hash (for authentication).
-   * The caller hashes the raw token before calling this method.
+   * Find all active (non-deleted) API keys for the organization.
    */
-  findByTokenHash(tokenHash: string): Effect.Effect<ApiKey | null, RepositoryError>
+  findAll(): Effect.Effect<readonly ApiKey[], RepositoryError>
 
   /**
-   * Find all active (non-deleted) API keys for an organization.
-   */
-  findByOrganizationId(organizationId: OrganizationId): Effect.Effect<readonly ApiKey[], RepositoryError>
-
-  /**
-   * Save an API key (create or update).
+   * Save an API key (create or update) within the organization scope.
    */
   save(apiKey: ApiKey): Effect.Effect<void, RepositoryError>
 
   /**
-   * Delete an API key by ID (hard delete).
+   * Delete an API key by ID within the organization scope.
    */
   delete(id: ApiKeyId): Effect.Effect<void, RepositoryError>
 
   /**
-   * Update the lastUsedAt timestamp for an API key.
+   * Update the lastUsedAt timestamp for an API key within the organization scope.
    */
   touch(id: ApiKeyId): Effect.Effect<void, RepositoryError>
-
-  /**
-   * Update the lastUsedAt timestamp for multiple API keys in a batch.
-   *
-   * This is more efficient than calling touch() individually for each key,
-   * as it performs a single database UPDATE query.
-   */
-  touchBatch(ids: readonly ApiKeyId[]): Effect.Effect<void, RepositoryError>
 }

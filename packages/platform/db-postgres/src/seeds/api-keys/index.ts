@@ -7,6 +7,7 @@ import type { SeedContext, Seeder } from "../types.ts"
 
 const SEED_API_KEY_ID = ApiKeyId("v42lqe92hgq2hpvilg91brnt")
 const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
+const SEED_API_KEY_NAME = "Default API Key"
 
 const seedApiKeys: Seeder = {
   name: "api-keys/default-key",
@@ -17,10 +18,11 @@ const seedApiKeys: Seeder = {
         organizationId: SEED_ORG_ID,
         token: SEED_API_KEY_TOKEN,
         tokenHash: hashToken(SEED_API_KEY_TOKEN),
-        name: "Default API Key",
+        name: SEED_API_KEY_NAME,
       })
       yield* ctx.repositories.apiKey.save(apiKey)
-      console.log(`    API Key token: ${SEED_API_KEY_TOKEN}`)
+      console.log(`  -> api key: ${apiKey.name}`)
+      console.log(`  -> token: ${SEED_API_KEY_TOKEN}`)
     }),
 }
 

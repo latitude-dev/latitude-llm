@@ -13,9 +13,9 @@ export interface ListAllProjectsInput {
 
 export const listAllProjectsUseCase =
   (repository: ProjectRepository) =>
-  (input: ListAllProjectsInput): Effect.Effect<readonly Project[], RepositoryError> => {
-    if (input.includeDeleted) {
-      return repository.findAllByOrganizationIdIncludingDeleted(input.organizationId)
+  (_input: ListAllProjectsInput): Effect.Effect<readonly Project[], RepositoryError> => {
+    if (_input.includeDeleted) {
+      return repository.findAllIncludingDeleted()
     }
-    return repository.findByOrganizationId(input.organizationId)
+    return repository.findAll()
   }

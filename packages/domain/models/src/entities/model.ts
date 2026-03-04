@@ -73,6 +73,34 @@ type RawProvider = {
 
 type RawModelsDevData = Record<string, RawProvider>
 
+const isRawModel = (value: unknown): value is RawModel => {
+  return typeof value === "object" && value !== null && typeof Reflect.get(value, "id") === "string"
+}
+
+const isRawProvider = (value: unknown): value is RawProvider => {
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+
+  const id = Reflect.get(value, "id")
+  const name = Reflect.get(value, "name")
+  const models = Reflect.get(value, "models")
+
+  return (
+    typeof id === "string" &&
+    typeof name === "string" &&
+    (models === undefined || (typeof models === "object" && models !== null))
+  )
+}
+
+const isRawModelsDevData = (value: unknown): value is RawModelsDevData => {
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+
+  return Object.values(value).every(isRawProvider)
+}
+
 function hasValidCost(
   cost: RawModel["cost"],
 ): cost is { input: number; output: number; cache_read?: number; cache_write?: number; reasoning?: number } {
@@ -86,7 +114,11 @@ function hasValidCost(
  * `{ providerId: { id, name, models: { modelId: { ... } } } }`
  */
 export function parseModelsDevData(data: unknown): Model[] {
-  const providers = data as RawModelsDevData
+  if (!isRawModelsDevData(data)) {
+    return []
+  }
+
+  const providers = data
   const models: Model[] = []
 
   for (const providerId in providers) {
@@ -95,7 +127,7 @@ export function parseModelsDevData(data: unknown): Model[] {
 
     for (const modelId in provider.models) {
       const raw = provider.models[modelId]
-      if (!raw) continue
+      if (!isRawModel(raw)) continue
 
       models.push({
         id: raw.id,

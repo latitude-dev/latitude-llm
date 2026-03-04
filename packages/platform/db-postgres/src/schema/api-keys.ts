@@ -9,7 +9,11 @@ import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } 
  * alongside for indexed lookups without decryption.
  *
  * Supports soft delete via deleted_at (for revocation).
- * RLS is enabled on this table.
+ * RLS is enabled but NOT forced on this table to allow unscoped
+ * authentication lookups (finding an API key by token hash before
+ * organization context is known) while still enforcing tenant
+ * isolation for regular queries. Authorization is primarily
+ * enforced at the application layer.
  *
  * Scoped to the 'latitude' schema.
  */

@@ -8,10 +8,3 @@ export interface OrganizationRecord {
   readonly slug: string
   readonly role: z.infer<typeof organizationRoleSchema>
 }
-
-export const createOrganizationInputSchema = z.object({
-  name: z.string(),
-  slug: z.string().optional(),
-})
-
-export type CreateOrganizationInput = z.infer<typeof createOrganizationInputSchema>

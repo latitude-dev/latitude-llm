@@ -27,7 +27,6 @@
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "@types/pg": "catalog:",
-    "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
