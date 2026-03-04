@@ -7,7 +7,6 @@ catalog:
   '@clickhouse/client': 1.17.0
   '@hono/node-server': 1.19.6
   '@paralleldrive/cuid2': 3.3.0
-  '@tanstack/react-router': 1.163.2
   '@types/node': 22.14.1
   '@types/pg': 8.16.0
   '@types/react': 19.2.14

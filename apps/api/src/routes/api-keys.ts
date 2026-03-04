@@ -1,17 +1,16 @@
 import {
+  ApiKeyNotFoundError,
   type CacheInvalidator,
   type GenerateApiKeyInput,
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId, OrganizationId, generateId } from "@domain/shared"
+import { ApiKeyId, BadRequestError, generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
-import { createApiKeyPostgresRepository } from "@platform/db-postgres"
+import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import { BadRequestError } from "../errors.ts"
-import { extractParam } from "../lib/effect-utils.ts"
-
+import type { OrganizationScopedEnv } from "../types.ts"
 /**
  * API Key routes
  *
@@ -37,16 +36,11 @@ const createApiKeyCacheInvalidator = (redis: RedisClient): CacheInvalidator => {
 }
 
 export const createApiKeysRoutes = () => {
-  const app = new Hono()
+  const app = new Hono<OrganizationScopedEnv>()
 
   // POST /organizations/:organizationId/api-keys - Generate API key
   app.post("/", async (c) => {
-    const apiKeyRepository = createApiKeyPostgresRepository(c.get("db"))
-    const organizationId = extractParam(c, "organizationId", OrganizationId)
-    if (!organizationId) {
-      throw new BadRequestError({ httpMessage: "Organization ID is required" })
-    }
-
+    const organizationId = c.var.organization.id
     const body = (await c.req.json()) as {
       readonly name: string
     }
@@ -57,17 +51,18 @@ export const createApiKeysRoutes = () => {
       name: body.name,
     }
 
-    const apiKey = await Effect.runPromise(generateApiKeyUseCase(apiKeyRepository)(input))
+    const apiKey = await runCommand(c.get("db"), async (txDb) => {
+      const apiKeyRepository = createApiKeyPostgresRepository(txDb)
+
+      return Effect.runPromise(generateApiKeyUseCase(apiKeyRepository)(input))
+    })
     return c.json(apiKey, 201)
   })
 
   // GET /organizations/:organizationId/api-keys - List API keys
   app.get("/", async (c) => {
     const apiKeyRepository = createApiKeyPostgresRepository(c.get("db"))
-    const organizationId = extractParam(c, "organizationId", OrganizationId)
-    if (!organizationId) {
-      throw new BadRequestError({ httpMessage: "Organization ID is required" })
-    }
+    const organizationId = c.var.organization.id
 
     const apiKeys = await Effect.runPromise(apiKeyRepository.findByOrganizationId(organizationId))
     return c.json({ apiKeys }, 200)
@@ -75,18 +70,28 @@ export const createApiKeysRoutes = () => {
 
   // DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
   app.delete("/:id", async (c) => {
-    const apiKeyRepository = createApiKeyPostgresRepository(c.get("db"))
     const cacheInvalidator = createApiKeyCacheInvalidator(c.get("redis"))
-    const id = extractParam(c, "id", ApiKeyId)
+    const organizationId = c.var.organization.id
+    const idParam = c.req.param("id")
+    const id = idParam ? ApiKeyId(idParam) : null
     if (!id) {
       throw new BadRequestError({ httpMessage: "API Key ID is required" })
     }
 
-    await Effect.runPromise(
-      revokeApiKeyUseCase({ repository: apiKeyRepository, cacheInvalidator })({
-        id,
-      }),
-    )
+    await runCommand(c.get("db"), async (txDb) => {
+      const apiKeyRepository = createApiKeyPostgresRepository(txDb)
+
+      const apiKey = await Effect.runPromise(apiKeyRepository.findById(id))
+      if (!apiKey || apiKey.organizationId !== organizationId) {
+        throw new ApiKeyNotFoundError({ id })
+      }
+
+      return Effect.runPromise(
+        revokeApiKeyUseCase({ repository: apiKeyRepository, cacheInvalidator })({
+          id,
+        }),
+      )
+    })
     return c.body(null, 204)
   })
 

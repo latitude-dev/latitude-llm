@@ -1,4 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import type { Organization } from "@domain/organizations"
 import type { OrganizationId, UserId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresDb } from "@platform/db-postgres"
@@ -16,7 +17,7 @@ export interface AuthContext {
   /** The organization ID for this request (from URL param or API key) */
   readonly organizationId: OrganizationId
   /** The authentication method that was used */
-  readonly method: "cookie" | "jwt" | "api-key"
+  readonly method: "jwt" | "api-key"
 }
 
 /**
@@ -33,5 +34,12 @@ declare module "hono" {
     db: PostgresDb
     redis: RedisClient
     clickhouse: ClickHouseClient
+    organization?: Organization
+  }
+}
+
+export type OrganizationScopedEnv = {
+  Variables: {
+    organization: Organization
   }
 }

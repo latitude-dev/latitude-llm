@@ -17,10 +17,16 @@ export interface CreateProjectInput {
   readonly id: ProjectId
   readonly organizationId: OrganizationId
   readonly name: string
-  readonly slug: string
   readonly description?: string
   readonly createdById?: UserId
 }
+
+const toSlug = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
 
 export class ProjectAlreadyExistsError extends Data.TaggedError("ProjectAlreadyExistsError")<{
   readonly name: string
@@ -55,7 +61,6 @@ export const createProjectUseCase =
   (input: CreateProjectInput): Effect.Effect<Project, CreateProjectError> => {
     return Effect.gen(function* () {
       const trimmedName = input.name.trim()
-      const trimmedSlug = input.slug.trim().toLowerCase()
 
       // Validate name
       if (!trimmedName || trimmedName.length === 0) {
@@ -71,6 +76,8 @@ export const createProjectUseCase =
           reason: "Name exceeds 256 characters",
         })
       }
+
+      const trimmedSlug = toSlug(trimmedName)
 
       // Validate slug
       if (!trimmedSlug || trimmedSlug.length === 0) {

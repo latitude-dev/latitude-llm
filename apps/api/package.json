@@ -15,7 +15,6 @@
   "dependencies": {
     "@clickhouse/client": "catalog:",
     "@domain/api-keys": "workspace:*",
-    "@domain/email": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
@@ -24,7 +23,6 @@
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
-    "@platform/email-nodemailer": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",

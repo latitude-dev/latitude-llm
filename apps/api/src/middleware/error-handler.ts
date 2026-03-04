@@ -1,5 +1,5 @@
+import { isHttpError, toHttpResponse } from "@domain/shared"
 import type { ErrorHandler } from "hono"
-import { isHttpError, toHttpResponse } from "../errors.ts"
 
 /**
  * Global error handler for Hono.

@@ -1,12 +1,20 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute, redirect } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
-
-const API_BASE_URL = import.meta.env.VITE_LAT_API_URL ?? "http://localhost:3001/v1"
-const WEB_BASE_URL = import.meta.env.VITE_LAT_WEB_URL ?? "http://localhost:3000"
+import { createLoginIntent } from "../domains/auth/auth.functions.ts"
+import { getSession } from "../domains/sessions/session.functions.ts"
+import { authClient } from "../lib/auth-client.ts"
+import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: async () => {
+    const session = await getSession()
+
+    if (session) {
+      throw redirect({ to: "/" })
+    }
+  },
   component: LoginPage,
 })
 
@@ -20,25 +28,23 @@ function LoginPage() {
     e.preventDefault()
     if (isLoading) return
 
-    const emailValue = (e.currentTarget.elements.namedItem("email") as HTMLInputElement).value
-    setEmail(emailValue)
+    const formData = new FormData(e.currentTarget)
+    const email = String(formData.get("email") ?? "")
+    setEmail(email)
+
     setIsLoading(true)
     setError(undefined)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/sign-in/magic-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailValue,
-          callbackURL: WEB_BASE_URL,
-          newUserCallbackURL: WEB_BASE_URL,
-        }),
+      const { intentId } = await createLoginIntent({ data: { email } })
+
+      const { error: signInError } = await authClient.signIn.magicLink({
+        email,
+        callbackURL: `${WEB_BASE_URL}/?authIntentId=${intentId}`,
       })
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.message ?? "Failed to send magic link")
+      if (signInError) {
+        throw new Error(signInError.message ?? "Failed to send magic link")
       }
 
       setIsSent(true)
@@ -49,12 +55,32 @@ function LoginPage() {
     }
   }
 
+  const submitSocialSignIn = (provider: "google" | "github") => {
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = `${AUTH_BASE_PATH}/sign-in/social`
+
+    const providerInput = document.createElement("input")
+    providerInput.type = "hidden"
+    providerInput.name = "provider"
+    providerInput.value = provider
+
+    const callbackUrlInput = document.createElement("input")
+    callbackUrlInput.type = "hidden"
+    callbackUrlInput.name = "callbackURL"
+    callbackUrlInput.value = WEB_BASE_URL
+
+    form.append(providerInput, callbackUrlInput)
+    document.body.appendChild(form)
+    form.submit()
+  }
+
   const handleGoogleClick = () => {
-    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=google`
+    submitSocialSignIn("google")
   }
 
   const handleGitHubClick = () => {
-    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=github`
+    submitSocialSignIn("github")
   }
 
   if (isSent) {
@@ -104,7 +130,7 @@ function LoginPage() {
         {/* Card container */}
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
+            <label htmlFor="email" className="flex flex-col gap-2">
               <Text.H6 weight="medium">Email</Text.H6>
               <input
                 id="email"
@@ -116,7 +142,7 @@ function LoginPage() {
                 data-autofocus="true"
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
-            </div>
+            </label>
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive">

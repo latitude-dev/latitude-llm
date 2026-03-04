@@ -63,3 +63,16 @@ export const createPostgresClient = (config: PostgresConfig = {}): PostgresClien
 export const closePostgres = async (pool: Pool): Promise<void> => {
   await pool.end()
 }
+
+export const withPostgresTransaction = async <T>(
+  db: PostgresDb,
+  callback: (txDb: PostgresDb) => Promise<T>,
+): Promise<T> => {
+  return (db as { transaction: (fn: (tx: unknown) => Promise<T>) => Promise<T> }).transaction(async (tx) => {
+    return callback(tx as PostgresDb)
+  })
+}
+
+export const runCommand = async <T>(db: PostgresDb, execute: (txDb: PostgresDb) => Promise<T>): Promise<T> => {
+  return withPostgresTransaction(db, execute)
+}

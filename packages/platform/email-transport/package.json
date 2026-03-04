@@ -1,5 +1,5 @@
 {
-  "name": "@platform/email-nodemailer",
+  "name": "@platform/email-transport",
   "version": "0.1.0",
   "private": true,
   "type": "module",

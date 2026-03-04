@@ -1,5 +1,6 @@
 // Better Auth tables
 export * from "./better-auth.ts"
+export * from "./auth-intent.ts"
 export * from "./subscription.ts"
 
 // Domain tables

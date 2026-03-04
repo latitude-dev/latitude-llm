@@ -5,6 +5,8 @@ export {
   createPostgresClientEffect,
   createPostgresPool,
   createPostgresPoolEffect,
+  runCommand,
+  withPostgresTransaction,
 } from "./client.ts"
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 export { healthcheckPostgres } from "./health.ts"
@@ -19,6 +21,8 @@ export {
 // Repository exports
 export {
   createApiKeyPostgresRepository,
+  createAuthIntentPostgresRepository,
+  createAuthUserPostgresRepository,
   createGrantPostgresRepository,
   createMembershipPostgresRepository,
   createOrganizationPostgresRepository,

@@ -19,6 +19,14 @@ Apps only handle:
 
 No business logic in handlers, controllers, or jobs.
 
+### Web vs Public API Boundary (`apps/web` and `apps/api`)
+
+- `apps/api` is the stable public API surface. Treat its routes/contracts as externally consumed and evolve them carefully.
+- `apps/web` must not call or proxy through `apps/api` for internal product features.
+- For web product development, implement backend behavior in `apps/web` server functions by composing domain use-cases and platform adapters directly.
+- Keep iteration velocity in `apps/web` by adding web-private server functions/stores while preserving `apps/api` stability.
+- Shared business rules still belong in domain packages; `apps/web` and `apps/api` should both orchestrate domain use-cases rather than duplicating policy.
+
 ### Domain Layer (`packages/domain/*`)
 
 Business logic lives here. Domain packages expose:

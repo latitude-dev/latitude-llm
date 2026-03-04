@@ -6,7 +6,8 @@
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "email dev -d ./src/templates",
+    "dev:types": "tsc --watch",
     "check": "biome check .",
     "typecheck": "tsc --noEmit",
     "check:fix": "biome check --fix ."

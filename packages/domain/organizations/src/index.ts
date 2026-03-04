@@ -27,3 +27,4 @@ export {
   type CreateOrganizationInput,
   type CreateOrganizationError,
 } from "./use-cases/create-organization.ts"
+export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
