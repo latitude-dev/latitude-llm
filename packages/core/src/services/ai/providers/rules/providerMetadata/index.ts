@@ -23,6 +23,7 @@ const CONTENT_DEFINED_ATTRIBUTES = [
   'text',
   'type',
   'image',
+  'file',
   'mimeType', // Deprecated in v5, use 'mediaType' instead
   'mediaType', // v4 -> v5 migration
   'data',
@@ -30,8 +31,19 @@ const CONTENT_DEFINED_ATTRIBUTES = [
   'toolName',
   'args', // Deprecated in v5, use 'input' instead for tool calls
   'input', // v4 -> v5 migration
-  // TODO: Add a test for this
   'result',
+  'isError',
+  'id',
+  'isStreaming',
+  'providerOptions',
+] as const
+
+// Internal fields injected by Latitude's pipeline (e.g. convertResponseMessages)
+// that must be stripped before messages reach the AI provider.
+const INTERNAL_CONTENT_ATTRIBUTES = [
+  '_sourceData',
+  '_promptlSourceMap',
+  'toolArguments',
 ] as const
 
 function processAttributes({
@@ -103,6 +115,41 @@ type MessageWithMetadata = Message & {
   providerOptions?: Record<string, Record<string, unknown>>
 }
 
+function stripInternalAttributes(
+  content: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.keys(content).reduce(
+    (acc, key) => {
+      if (
+        INTERNAL_CONTENT_ATTRIBUTES.includes(
+          key as (typeof INTERNAL_CONTENT_ATTRIBUTES)[number],
+        )
+      ) {
+        return acc
+      }
+      return { ...acc, [key]: content[key] }
+    },
+    {} as Record<string, unknown>,
+  )
+}
+
+function cleanContentItems({
+  content,
+  provider,
+}: {
+  content: Message['content']
+  provider: Providers
+}): Message['content'] {
+  if (typeof content === 'string') return content
+  if (!Array.isArray(content)) return content
+
+  return content.map((item) => {
+    const record = item as Record<string, unknown>
+    const stripped = stripInternalAttributes(record)
+    return extractContentMetadata({ content: stripped, provider })
+  }) as Message['content']
+}
+
 export function extractMessageMetadata({
   message,
   provider,
@@ -113,9 +160,11 @@ export function extractMessageMetadata({
   const { role, content, ...rest } = message
   const toolCalls = 'toolCalls' in message ? message.toolCalls : undefined
 
+  const cleanedContent = cleanContentItems({ content, provider })
+
   let common = removeUndefinedValues({
     role,
-    content,
+    content: cleanedContent,
     toolCalls,
   }) as Message & { name?: string }
 
