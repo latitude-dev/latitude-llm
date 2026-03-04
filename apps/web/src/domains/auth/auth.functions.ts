@@ -94,4 +94,3 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
       return Effect.runPromise(program)
     })
   })
-

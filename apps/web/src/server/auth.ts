@@ -49,4 +49,3 @@ export const requireSession = async (): Promise<AuthenticatedSession> => {
 
   return { userId, organizationId }
 }
-
