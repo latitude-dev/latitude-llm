@@ -8,8 +8,10 @@ import {
   ToolRequestContent,
   ToolResultContent,
 } from '@latitude-data/constants/messages'
+import { ToolSource } from '@latitude-data/constants/toolSources'
 import { describe, expect, it } from 'vitest'
 import { applyAllRules } from './all'
+import { extractMessageMetadata } from './providerMetadata'
 
 describe('rules', () => {
   it('add providerOptions to rules config', () => {
@@ -636,6 +638,193 @@ describe('message translation (Promptl to VercelAI)', () => {
     })
   })
 
+  describe('content-level metadata stripping', () => {
+    it('strips _sourceData from tool-call content items', () => {
+      const messages: Message[] = [
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call',
+              toolCallId: 'call_123',
+              toolName: 'opensea_get_collections',
+              args: { slugs: ['boredapeyachtclub'] },
+              _sourceData: {
+                source: ToolSource.Integration,
+                integrationId: 2,
+                toolName: 'get_collections',
+                simulated: false,
+              },
+            } as ToolRequestContent,
+          ],
+          toolCalls: null,
+        } as AssistantMessage,
+      ]
+
+      const result = applyAllRules({
+        providerType: Providers.OpenAI,
+        messages,
+        config: defaultConfig,
+      })
+
+      const content = result.messages[0]?.content as unknown as Array<Record<string, unknown>>
+      // _sourceData must not appear as a top-level field on the content item
+      expect(content[0]).not.toHaveProperty('_sourceData')
+      // The standard fields must be preserved
+      expect(content[0]).toMatchObject({
+        type: 'tool-call',
+        toolCallId: 'call_123',
+        toolName: 'opensea_get_collections',
+      })
+    })
+
+    it('strips _promptlSourceMap from text content items', () => {
+      const messages: Message[] = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Hello world',
+              _promptlSourceMap: [{ start: 0, end: 11 }],
+            } as TextContent,
+          ],
+        },
+      ]
+
+      const result = applyAllRules({
+        providerType: Providers.OpenAI,
+        messages,
+        config: defaultConfig,
+      })
+
+      // For single text content, rosetta may simplify to string
+      // Either way, _promptlSourceMap must not survive
+      const msg = result.messages[0] as Record<string, unknown>
+      if (typeof msg.content === 'string') {
+        expect(msg.content).toBe('Hello world')
+      } else {
+        const content = msg.content as Array<Record<string, unknown>>
+        expect(content[0]).not.toHaveProperty('_promptlSourceMap')
+      }
+    })
+
+    it('strips _sourceData and toolArguments from tool-call in multi-step chain replay', () => {
+      // Simulates messages accumulated from step 1 being replayed in step 2
+      const messages: Message[] = [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Evaluate these collections' } as TextContent],
+        },
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call',
+              toolCallId: 'call_1',
+              toolName: 'get_collections',
+              args: { slugs: ['boredapeyachtclub'] },
+              toolArguments: { slugs: ['boredapeyachtclub'] },
+              _sourceData: {
+                source: ToolSource.Integration,
+                integrationId: 2,
+                toolName: 'get_collections',
+                simulated: false,
+              },
+            } as ToolRequestContent,
+            {
+              type: 'tool-call',
+              toolCallId: 'call_2',
+              toolName: 'get_collections',
+              args: { slugs: ['pudgypenguins'] },
+              toolArguments: { slugs: ['pudgypenguins'] },
+              _sourceData: {
+                source: ToolSource.Integration,
+                integrationId: 2,
+                toolName: 'get_collections',
+                simulated: false,
+              },
+            } as ToolRequestContent,
+          ],
+          toolCalls: [
+            {
+              id: 'call_1',
+              name: 'get_collections',
+              arguments: { slugs: ['boredapeyachtclub'] },
+              _sourceData: {
+                source: ToolSource.Integration,
+                integrationId: 2,
+                toolName: 'get_collections',
+                simulated: false,
+              },
+            },
+            {
+              id: 'call_2',
+              name: 'get_collections',
+              arguments: { slugs: ['pudgypenguins'] },
+              _sourceData: {
+                source: ToolSource.Integration,
+                integrationId: 2,
+                toolName: 'get_collections',
+                simulated: false,
+              },
+            },
+          ],
+        } as AssistantMessage,
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'call_1',
+              toolName: 'get_collections',
+              result: { collections: [{ slug: 'boredapeyachtclub' }] },
+              isError: false,
+            } as ToolResultContent,
+          ],
+        },
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'call_2',
+              toolName: 'get_collections',
+              result: { collections: [{ slug: 'pudgypenguins' }] },
+              isError: false,
+            } as ToolResultContent,
+          ],
+        },
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: '{"violation": false}',
+            },
+          ],
+          toolCalls: null,
+        } as AssistantMessage,
+      ]
+
+      // This must not throw — the messages must be valid ModelMessage[]
+      const result = applyAllRules({
+        providerType: Providers.OpenAI,
+        messages,
+        config: defaultConfig,
+      })
+
+      // Assistant message with tool calls
+      const assistantContent = result.messages[1]?.content as unknown as Array<Record<string, unknown>>
+      for (const item of assistantContent) {
+        if (item.type === 'tool-call') {
+          expect(item).not.toHaveProperty('_sourceData')
+          expect(item).not.toHaveProperty('toolArguments')
+        }
+      }
+    })
+  })
+
   describe('provider metadata extraction', () => {
     it('extracts provider-specific attributes to providerOptions on messages', () => {
       const messages: Message[] = [
@@ -772,6 +961,191 @@ describe('message translation (Promptl to VercelAI)', () => {
         role: 'assistant',
         content: 'The answer is 4!',
       })
+    })
+  })
+})
+
+describe('extractMessageMetadata', () => {
+  describe('content-level internal field stripping', () => {
+    it('strips _sourceData from tool-call content items', () => {
+      const message: AssistantMessage = {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'call_123',
+            toolName: 'opensea_get_collections',
+            args: { slugs: ['boredapeyachtclub'] },
+            _sourceData: {
+              source: 'integration',
+              integrationId: 2,
+              toolName: 'get_collections',
+              simulated: false,
+            },
+          } as ToolRequestContent,
+        ],
+        toolCalls: null,
+      }
+
+      const result = extractMessageMetadata({
+        message,
+        provider: Providers.OpenAI,
+      })
+
+      const content = result.content as Array<Record<string, unknown>>
+      expect(content[0]).not.toHaveProperty('_sourceData')
+      expect(content[0]).toMatchObject({
+        type: 'tool-call',
+        toolCallId: 'call_123',
+        toolName: 'opensea_get_collections',
+        args: { slugs: ['boredapeyachtclub'] },
+      })
+    })
+
+    it('strips _promptlSourceMap from text content items', () => {
+      const message: Message = {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Hello world',
+            _promptlSourceMap: [{ start: 0, end: 11 }],
+          } as TextContent,
+        ],
+      }
+
+      const result = extractMessageMetadata({
+        message,
+        provider: Providers.OpenAI,
+      })
+
+      const content = result.content as Array<Record<string, unknown>>
+      expect(content[0]).not.toHaveProperty('_promptlSourceMap')
+      expect(content[0]).toMatchObject({
+        type: 'text',
+        text: 'Hello world',
+      })
+    })
+
+    it('strips toolArguments from tool-call content items', () => {
+      const message: AssistantMessage = {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'call_456',
+            toolName: 'search',
+            args: { query: 'test' },
+            toolArguments: { query: 'test' },
+          } as ToolRequestContent,
+        ],
+        toolCalls: null,
+      }
+
+      const result = extractMessageMetadata({
+        message,
+        provider: Providers.OpenAI,
+      })
+
+      const content = result.content as Array<Record<string, unknown>>
+      expect(content[0]).not.toHaveProperty('toolArguments')
+    })
+
+    it('strips multiple internal fields from chain replay scenario', () => {
+      const message: AssistantMessage = {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: 'call_1',
+            toolName: 'get_collections',
+            args: { slugs: ['boredapeyachtclub'] },
+            toolArguments: { slugs: ['boredapeyachtclub'] },
+            _sourceData: {
+              source: 'integration',
+              integrationId: 2,
+              toolName: 'get_collections',
+              simulated: false,
+            },
+          } as ToolRequestContent,
+          {
+            type: 'tool-call',
+            toolCallId: 'call_2',
+            toolName: 'get_collections',
+            args: { slugs: ['pudgypenguins'] },
+            toolArguments: { slugs: ['pudgypenguins'] },
+            _sourceData: {
+              source: 'integration',
+              integrationId: 2,
+              toolName: 'get_collections',
+              simulated: false,
+            },
+          } as ToolRequestContent,
+        ],
+        toolCalls: [
+          {
+            id: 'call_1',
+            name: 'get_collections',
+            arguments: { slugs: ['boredapeyachtclub'] },
+            _sourceData: {
+              source: ToolSource.Integration,
+              integrationId: 2,
+              toolName: 'get_collections',
+              simulated: false,
+            },
+          },
+          {
+            id: 'call_2',
+            name: 'get_collections',
+            arguments: { slugs: ['pudgypenguins'] },
+            _sourceData: {
+              source: ToolSource.Integration,
+              integrationId: 2,
+              toolName: 'get_collections',
+              simulated: false,
+            },
+          },
+        ],
+      }
+
+      const result = extractMessageMetadata({
+        message,
+        provider: Providers.OpenAI,
+      })
+
+      const content = result.content as Array<Record<string, unknown>>
+      for (const item of content) {
+        expect(item).not.toHaveProperty('_sourceData')
+        expect(item).not.toHaveProperty('toolArguments')
+        expect(item).not.toHaveProperty('_promptlSourceMap')
+      }
+    })
+
+    it('preserves provider-specific content attributes like cache_control', () => {
+      const message: Message = {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Important message',
+            cache_control: { type: 'ephemeral' },
+          } as TextContent & { cache_control: unknown },
+        ],
+      }
+
+      const result = extractMessageMetadata({
+        message,
+        provider: Providers.Anthropic,
+      })
+
+      const content = result.content as Array<Record<string, unknown>>
+      // cache_control should be moved to providerOptions, not left as raw field
+      expect(content[0]).not.toHaveProperty('cache_control')
+      expect(content[0]).toHaveProperty('providerOptions')
+      expect(
+        (content[0] as { providerOptions: Record<string, Record<string, unknown>> })
+          .providerOptions.anthropic,
+      ).toEqual({ cacheControl: { type: 'ephemeral' } })
     })
   })
 })
