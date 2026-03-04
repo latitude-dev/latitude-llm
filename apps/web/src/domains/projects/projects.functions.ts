@@ -1,6 +1,6 @@
 import { createProjectUseCase, updateProjectUseCase } from "@domain/projects"
 import type { Project } from "@domain/projects"
-import { BadRequestError, OrganizationId, ProjectId, UserId, generateId } from "@domain/shared"
+import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
@@ -28,16 +28,16 @@ const toRecord = (project: Project): ProjectRecord => ({
 
 export const listProjects = createServerFn({ method: "GET" })
   .inputValidator(zodValidator(listProjectsInputSchema))
-  .handler(async ({ data }): Promise<ProjectRecord[]> => {
-    const { userId } = await requireSession()
-    await assertOrganizationMembership(data.organizationId, userId)
+  .handler(async (): Promise<ProjectRecord[]> => {
+    const { userId, organizationId } = await requireSession()
+    await assertOrganizationMembership(organizationId, userId)
     const { db } = getPostgresClient()
 
     const projects = await runCommand(
       db,
-      data.organizationId,
+      organizationId,
     )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(data.organizationId))
+      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
       return Effect.runPromise(projectsRepo.findAll())
     })
 
@@ -47,20 +47,20 @@ export const listProjects = createServerFn({ method: "GET" })
 export const createProject = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(createProjectInputSchema))
   .handler(async ({ data }): Promise<ProjectRecord> => {
-    const { userId } = await requireSession()
-    await assertOrganizationMembership(data.organizationId, userId)
+    const { userId, organizationId } = await requireSession()
+    await assertOrganizationMembership(organizationId, userId)
     const { db } = getPostgresClient()
 
     const project = await runCommand(
       db,
-      data.organizationId,
+      organizationId,
     )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(data.organizationId))
+      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
 
       return Effect.runPromise(
         createProjectUseCase(projectsRepo)({
           id: ProjectId(generateId()),
-          organizationId: OrganizationId(data.organizationId),
+          organizationId: OrganizationId(organizationId),
           name: data.name,
           ...(data.description !== undefined ? { description: data.description } : {}),
           createdById: UserId(userId),
@@ -75,9 +75,6 @@ export const updateProject = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(updateProjectInputSchema))
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { userId, organizationId } = await requireSession()
-    if (!organizationId) {
-      throw new BadRequestError({ httpMessage: "No active organization in session" })
-    }
 
     await assertOrganizationMembership(organizationId, userId)
     const { db } = getPostgresClient()
@@ -104,15 +101,15 @@ export const updateProject = createServerFn({ method: "POST" })
 export const deleteProject = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(deleteProjectInputSchema))
   .handler(async ({ data }): Promise<void> => {
-    const { userId } = await requireSession()
-    await assertOrganizationMembership(data.organizationId, userId)
+    const { userId, organizationId } = await requireSession()
+    await assertOrganizationMembership(organizationId, userId)
     const { db } = getPostgresClient()
 
     await runCommand(
       db,
-      data.organizationId,
+      organizationId,
     )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(data.organizationId))
+      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
 
       return Effect.runPromise(projectsRepo.softDelete(ProjectId(data.id)))
     })

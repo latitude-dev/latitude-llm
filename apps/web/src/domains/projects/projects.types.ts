@@ -12,7 +12,6 @@ export interface ProjectRecord {
 }
 
 export const createProjectInputSchema = z.object({
-  organizationId: z.string(),
   name: z.string(),
   description: z.string().optional(),
 })
@@ -24,10 +23,7 @@ export const updateProjectInputSchema = z.object({
 })
 
 export const deleteProjectInputSchema = z.object({
-  organizationId: z.string(),
   id: z.string(),
 })
 
-export const listProjectsInputSchema = z.object({
-  organizationId: z.string(),
-})
+export const listProjectsInputSchema = z.object({})

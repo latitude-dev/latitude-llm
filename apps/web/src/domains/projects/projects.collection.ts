@@ -12,14 +12,13 @@ const createProjectsCollection = (organizationId: string) =>
     queryCollectionOptions({
       queryClient,
       queryKey: ["projects", organizationId],
-      queryFn: () => listProjects({ data: { organizationId } }),
+      queryFn: () => listProjects({ data: {} }),
       getKey: (item: ProjectRecord) => item.id,
       onInsert: async ({ transaction }) => {
         await Promise.all(
           transaction.mutations.map((mutation) =>
             createProject({
               data: {
-                organizationId,
                 name: mutation.modified.name,
                 ...(mutation.modified.description !== null ? { description: mutation.modified.description } : {}),
               },
@@ -45,7 +44,6 @@ const createProjectsCollection = (organizationId: string) =>
           transaction.mutations.map((mutation) =>
             deleteProject({
               data: {
-                organizationId,
                 id: mutation.key,
               },
             }),

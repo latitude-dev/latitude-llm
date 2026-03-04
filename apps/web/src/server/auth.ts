@@ -1,4 +1,4 @@
-import { HttpUnauthorizedError, OrganizationId, PermissionError } from "@domain/shared"
+import { BadRequestError, HttpUnauthorizedError, OrganizationId, PermissionError } from "@domain/shared"
 import { createMembershipPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { ensureSession } from "../domains/sessions/session.functions.ts"
@@ -6,7 +6,7 @@ import { getPostgresClient } from "./clients.ts"
 
 interface AuthenticatedSession {
   readonly userId: string
-  readonly organizationId?: string
+  readonly organizationId: string
 }
 
 export const requireSession = async (): Promise<AuthenticatedSession> => {
@@ -14,7 +14,6 @@ export const requireSession = async (): Promise<AuthenticatedSession> => {
     user?: { id: string }
     session?: {
       activeOrganizationId?: string | null
-      activeOrganization?: { id?: string | null } | null
     }
   } | null
 
@@ -22,9 +21,12 @@ export const requireSession = async (): Promise<AuthenticatedSession> => {
     throw new HttpUnauthorizedError()
   }
 
-  const organizationId = session.session?.activeOrganizationId ?? session.session?.activeOrganization?.id ?? undefined
+  const organizationId = session.session?.activeOrganizationId
+  if (!organizationId) {
+    throw new BadRequestError({ httpMessage: "No active organization in session" })
+  }
 
-  return { userId: session.user.id, ...(organizationId ? { organizationId } : {}) }
+  return { userId: session.user.id, organizationId }
 }
 
 export const assertOrganizationMembership = async (organizationId: string, userId: string): Promise<void> => {
