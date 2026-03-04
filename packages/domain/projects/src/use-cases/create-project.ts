@@ -95,7 +95,7 @@ export const createProjectUseCase =
       }
 
       // Check if name already exists in organization
-      const nameExists = yield* repository.existsByName(trimmedName, input.organizationId)
+      const nameExists = yield* repository.existsByName(trimmedName)
       if (nameExists) {
         return yield* new ProjectAlreadyExistsError({
           name: trimmedName,
@@ -105,7 +105,7 @@ export const createProjectUseCase =
       }
 
       // Check if slug already exists in organization
-      const slugExists = yield* repository.existsBySlug(trimmedSlug, input.organizationId)
+      const slugExists = yield* repository.existsBySlug(trimmedSlug)
       if (slugExists) {
         return yield* new ProjectAlreadyExistsError({
           name: trimmedName,

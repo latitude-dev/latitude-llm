@@ -39,7 +39,7 @@ export const createProjectsRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb)
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
 
       return Effect.runPromise(createProjectUseCase(projectRepository)(input))
     })
@@ -54,8 +54,8 @@ export const createProjectsRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const scopedRepo = createProjectPostgresRepository(txDb)
-      return Effect.runPromise(scopedRepo.findByOrganizationId(organizationId))
+      const scopedRepo = createProjectPostgresRepository(txDb, organizationId)
+      return Effect.runPromise(scopedRepo.findAll())
     })
     return c.json({ projects }, 200)
   })
@@ -75,8 +75,8 @@ export const createProjectsRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb)
-      return Effect.runPromise(projectRepository.findById(id, organizationId))
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
+      return Effect.runPromise(projectRepository.findById(id))
     })
 
     if (!project) {
@@ -106,7 +106,7 @@ export const createProjectsRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb)
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
 
       return Effect.runPromise(
         updateProjectUseCase(projectRepository)({
@@ -136,9 +136,9 @@ export const createProjectsRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb)
+      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
 
-      return Effect.runPromise(projectRepository.softDelete(id, organizationId))
+      return Effect.runPromise(projectRepository.softDelete(id))
     })
     return c.body(null, 204)
   })

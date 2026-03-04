@@ -18,7 +18,6 @@ export const createProjectInputSchema = z.object({
 })
 
 export const updateProjectInputSchema = z.object({
-  organizationId: z.string(),
   id: z.string(),
   name: z.string().optional(),
   description: z.string().nullable().optional(),

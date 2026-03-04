@@ -73,7 +73,7 @@ export const changePlan =
   (input: ChangePlanInput): Effect.Effect<ChangePlanResult, ChangePlanError> => {
     return Effect.gen(function* () {
       // Find active subscription
-      const subscription = yield* deps.subscriptionRepository.findActiveByOrganizationId(input.organizationId)
+      const subscription = yield* deps.subscriptionRepository.findActive()
 
       if (!subscription) {
         return yield* new NoActiveSubscriptionError({ organizationId: input.organizationId })

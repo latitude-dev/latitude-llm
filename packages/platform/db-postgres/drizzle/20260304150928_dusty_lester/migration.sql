@@ -1,6 +1,7 @@
 -- Consolidated migration: Simplified RLS setup
 -- Organization, member, and user tables have no RLS (app-level auth only)
--- Only org-scoped tables (projects, api_keys, invitation, grants, subscription) have RLS
+-- api_keys table has RLS enabled but not forced (allows owner bypass for unscoped auth lookups)
+-- Only org-scoped tables (projects, invitation, grants, subscription) have forced RLS
 
 -- Ensure RLS is disabled on organization, member, and user tables
 -- These rely on application-level authorization
@@ -21,7 +22,7 @@ DROP POLICY IF EXISTS "organization_update_delete_policy" ON "latitude"."organiz
 -- Drop any existing member policy (clean state)
 DROP POLICY IF EXISTS "member_organization_policy" ON "latitude"."member";
 
--- Ensure RLS is enabled and forced on org-scoped tables only
+-- Ensure RLS is enabled on org-scoped tables
 -- These tables have organization_id columns and use organizationRLSPolicy()
 ALTER TABLE "latitude"."projects" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "latitude"."api_keys" ENABLE ROW LEVEL SECURITY;
@@ -29,9 +30,12 @@ ALTER TABLE "latitude"."invitation" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "latitude"."grants" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "latitude"."subscription" ENABLE ROW LEVEL SECURITY;
 
--- Force RLS on org-scoped tables (prevents owner bypass)
+-- Force RLS on most org-scoped tables (prevents owner bypass)
+-- api_keys is NOT forced to allow unscoped authentication lookups
 ALTER TABLE "latitude"."projects" FORCE ROW LEVEL SECURITY;
-ALTER TABLE "latitude"."api_keys" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "latitude"."invitation" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "latitude"."grants" FORCE ROW LEVEL SECURITY;
 ALTER TABLE "latitude"."subscription" FORCE ROW LEVEL SECURITY;
+
+-- api_keys: enable RLS but don't force it - owner can bypass for unscoped queries
+ALTER TABLE "latitude"."api_keys" NO FORCE ROW LEVEL SECURITY;

@@ -55,7 +55,7 @@ export const createApiKeysRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const apiKeyRepository = createApiKeyPostgresRepository(txDb)
+      const apiKeyRepository = createApiKeyPostgresRepository(txDb, organizationId)
 
       return Effect.runPromise(generateApiKeyUseCase(apiKeyRepository)(input))
     })
@@ -70,8 +70,8 @@ export const createApiKeysRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const apiKeyRepository = createApiKeyPostgresRepository(txDb)
-      return Effect.runPromise(apiKeyRepository.findByOrganizationId(organizationId))
+      const apiKeyRepository = createApiKeyPostgresRepository(txDb, organizationId)
+      return Effect.runPromise(apiKeyRepository.findAll())
     })
     return c.json({ apiKeys }, 200)
   })
@@ -90,7 +90,7 @@ export const createApiKeysRoutes = () => {
       c.var.db,
       organizationId,
     )(async (txDb) => {
-      const apiKeyRepository = createApiKeyPostgresRepository(txDb)
+      const apiKeyRepository = createApiKeyPostgresRepository(txDb, organizationId)
 
       const apiKey = await Effect.runPromise(apiKeyRepository.findById(id))
       if (!apiKey || apiKey.organizationId !== organizationId) {

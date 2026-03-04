@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
+import { OrganizationId } from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
@@ -25,13 +26,14 @@ if (existsSync(envFilePath)) {
 
 const main = async () => {
   const { pool, db } = createPostgresClient()
+  const systemOrgId = OrganizationId("000000000000000000000000") // Placeholder for seeders
   const repositories = {
-    apiKey: createApiKeyPostgresRepository(db),
-    grant: createGrantPostgresRepository(db),
+    apiKey: createApiKeyPostgresRepository(db, systemOrgId),
+    grant: createGrantPostgresRepository(db, systemOrgId),
     membership: createMembershipPostgresRepository(db),
     organization: createOrganizationPostgresRepository(db),
-    project: createProjectPostgresRepository(db),
-    subscription: createSubscriptionPostgresRepository(db),
+    project: createProjectPostgresRepository(db, systemOrgId),
+    subscription: createSubscriptionPostgresRepository(db, systemOrgId),
     user: createUserPostgresRepository(db),
   }
 

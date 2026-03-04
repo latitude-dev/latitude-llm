@@ -62,7 +62,7 @@ export const subscribe =
       }
 
       // Check for existing subscription
-      const existing = yield* deps.subscriptionRepository.existsForOrganization(input.organizationId)
+      const existing = yield* deps.subscriptionRepository.exists()
       if (existing) {
         return yield* new SubscriptionAlreadyExistsError({ organizationId: input.organizationId })
       }

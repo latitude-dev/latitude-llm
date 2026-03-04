@@ -6,16 +6,25 @@ import { getPostgresClient } from "./clients.ts"
 
 interface AuthenticatedSession {
   readonly userId: string
+  readonly organizationId?: string
 }
 
 export const requireSession = async (): Promise<AuthenticatedSession> => {
-  const session = (await ensureSession()) as { user?: { id: string } } | null
+  const session = (await ensureSession()) as {
+    user?: { id: string }
+    session?: {
+      activeOrganizationId?: string | null
+      activeOrganization?: { id?: string | null } | null
+    }
+  } | null
 
   if (!session?.user) {
     throw new HttpUnauthorizedError()
   }
 
-  return { userId: session.user.id }
+  const organizationId = session.session?.activeOrganizationId ?? session.session?.activeOrganization?.id ?? undefined
+
+  return { userId: session.user.id, ...(organizationId ? { organizationId } : {}) }
 }
 
 export const assertOrganizationMembership = async (organizationId: string, userId: string): Promise<void> => {

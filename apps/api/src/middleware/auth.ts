@@ -1,5 +1,5 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
-import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
+import { createMembershipPostgresRepository, createUnscopedApiKeyPostgresRepository } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
@@ -80,7 +80,8 @@ const validateApiKey = (
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const db = c.get("db")
   const redis = c.get("redis")
-  const apiKeyRepository = createApiKeyPostgresRepository(db)
+  // Use unscoped repository for cross-org authentication lookup
+  const unscopedApiKeyRepository = createUnscopedApiKeyPostgresRepository(db)
   const touchBuffer = createTouchBuffer(db)
 
   return Effect.gen(function* () {
@@ -96,8 +97,8 @@ const validateApiKey = (
       return cached
     }
 
-    // Cache miss - hit database (lookup by token hash)
-    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
+    // Cache miss - hit database (lookup by token hash using unscoped repo)
+    const apiKeyOption = yield* Effect.option(unscopedApiKeyRepository.findByTokenHash(tokenHash))
 
     if (Option.isNone(apiKeyOption) || apiKeyOption.value === null) {
       // Cache negative result briefly to prevent timing attacks

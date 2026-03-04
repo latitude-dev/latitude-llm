@@ -32,7 +32,6 @@ const createProjectsCollection = (organizationId: string) =>
           transaction.mutations.map((mutation) =>
             updateProject({
               data: {
-                organizationId,
                 id: mutation.key,
                 name: mutation.modified.name,
                 description: mutation.modified.description,

@@ -1,190 +1,110 @@
-# Tenancy Enforcement
+# Tenancy Model
 
-This document explains how multi-tenancy is enforced in the Latitude LLM platform.
+Two-layer defense: application-level repository scoping + database-level RLS policies.
 
-## Overview
+## Repository Types
 
-We use a **simplified, single-layer approach** to tenancy enforcement:
+| Type | Interface | Org ID | Use Case |
+|------|-----------|--------|----------|
+| **Scoped** | `ScopedRepository` | Constructor param | Regular CRUD within one org |
+| **Unscoped** | `UnscopedRepository` | None | Cross-org operations (auth, batch jobs) |
 
-- **Database Layer**: RLS policies on org-scoped tables only
-- **Application Layer**: Explicit authorization checks for non-RLS tables
-- **Single Command API**: `runCommand(db, organizationId?)` for all database operations
-
-## Architecture
-
-### RLS-Enabled Tables (Org-Scoped)
-
-These tables have `organization_id` columns and enforce tenant isolation via Row Level Security:
-
-| Table | RLS Policy |
-|-------|-----------|
-| `projects` | `organization_id = get_current_organization_id()` |
-| `api_keys` | `organization_id = get_current_organization_id()` |
-| `invitation` | `organization_id = get_current_organization_id()` |
-| `grants` | `organization_id = get_current_organization_id()` |
-| `subscription` | `organization_id = get_current_organization_id()` |
-
-All these tables have `FORCE ROW LEVEL SECURITY` enabled, preventing owner bypass.
-
-### Non-RLS Tables (App-Level Auth)
-
-These tables rely on application-level authorization:
-
-| Table | Enforcement |
-|-------|-------------|
-| `organization` | App-level membership checks |
-| `member` | App-level membership checks |
-| `user` | App-level auth checks |
-
-## Command API
-
-### `runCommand(db, organizationId?)`
-
-The unified database command API:
+### Scoped Repository
 
 ```typescript
-import { runCommand } from "@platform/db-postgres"
+// Organization ID baked in at initialization
+const repo = createProjectPostgresRepository(db, organizationId)
 
-// With org context (sets RLS variable)
-await runCommand(db, organizationId)(async (txDb) => {
-  const repo = createProjectPostgresRepository(txDb)
-  return repo.findByOrganizationId(organizationId)
-})
-
-// Without org context (for org/member/user operations)
-await runCommand(db)(async (txDb) => {
-  const repo = createOrganizationPostgresRepository(txDb)
-  return repo.findAll()
-})
+// All operations automatically scoped
+await repo.findById(id)           // Only finds if id belongs to org
+await repo.save(project)          // Validates project.orgId matches
+await repo.findAll()              // Only returns org's projects
 ```
 
-**When to use org context:**
-- Operations on RLS-enabled tables (`projects`, `api_keys`, etc.)
-- Cross-tenant queries that need isolation
+### Unscoped Repository
 
-**When to omit org context:**
-- Operations on `organization`, `member`, `user` tables
-- Bootstrap flows (creating first org + membership)
-- Admin/listing operations across organizations
+```typescript
+// No organization context required
+const repo = createUnscopedApiKeyPostgresRepository(db)
 
-## Migration
-
-The tenancy setup is defined in:
-
-```
-drizzle/20260304135240_simplified-rls-setup/
-├── migration.sql
-└── snapshot.json
+// Cross-organization operations
+await repo.findByTokenHash(hash)  // Looks up across all orgs
+await repo.touchBatch(ids)        // Updates keys from any org
 ```
 
-**Migration contents:**
+## Database RLS Policies
 
-```sql
--- Disable RLS on non-org tables
-ALTER TABLE "latitude"."organization" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "latitude"."member" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "latitude"."user" DISABLE ROW LEVEL SECURITY;
+| Table | RLS | Forced | Notes |
+|-------|-----|--------|-------|
+| `projects` | ✅ | ✅ | Org-scoped, no bypass |
+| `grants` | ✅ | ✅ | Org-scoped, no bypass |
+| `subscription` | ✅ | ✅ | Org-scoped, no bypass |
+| `invitation` | ✅ | ✅ | Org-scoped, no bypass |
+| `api_keys` | ✅ | ❌ | **Not forced** - allows owner bypass for unscoped queries |
+| `organization` | ❌ | ❌ | App-level auth |
+| `member` | ❌ | ❌ | App-level auth |
+| `user` | ❌ | ❌ | App-level auth |
 
--- Enable and force RLS on org-scoped tables
-ALTER TABLE "latitude"."projects" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "latitude"."projects" FORCE ROW LEVEL SECURITY;
--- ... (api_keys, invitation, grants, subscription)
+**Why `api_keys` is special:**
+- Authentication needs to find API key by token hash **before** knowing which org it belongs to
+- Touch buffer needs to batch-update keys across all orgs efficiently
+- RLS enabled but **not forced** = regular queries go through RLS, owner bypasses for unscoped operations
+
+## Code Examples
+
+### Authentication (Unscoped)
+
+```typescript
+// apps/api/src/middleware/auth.ts
+const unscopedRepo = createUnscopedApiKeyPostgresRepository(db)
+const apiKey = await unscopedRepo.findByTokenHash(tokenHash)
+// ^ Cross-org lookup works because:
+// 1. Uses unscoped repository (no org filter in query)
+// 2. api_keys table is not FORCE RLS (owner bypasses policy)
 ```
 
-## Usage Examples
+### Touch Buffer (Unscoped)
 
-### Creating a Project (RLS-Enabled Table)
+```typescript
+// apps/api/src/middleware/touch-buffer.ts
+const unscopedRepo = createUnscopedApiKeyPostgresRepository(db)
+await unscopedRepo.touchBatch(keyIds)  // Updates across all orgs
+```
+
+### Regular Operations (Scoped)
 
 ```typescript
 // apps/api/src/routes/projects.ts
-app.post("/", async (c) => {
-  const organizationId = c.var.organization.id
-  
-  const project = await runCommand(
-    c.get("db"),
-    organizationId  // Sets RLS context
-  )(async (txDb) => {
-    const repo = createProjectPostgresRepository(txDb)
-    return Effect.runPromise(createProjectUseCase(repo)(input))
-  })
-  
-  return c.json(project, 201)
+const repo = createProjectPostgresRepository(db, organizationId)
+await createProjectUseCase(repo)(input)
+// ^ Scoped repository + FORCE RLS = double protection
+```
+
+## Transaction Context
+
+```typescript
+// Scoped operations set RLS context
+await runCommand(db, organizationId)(async (txDb) => {
+  const repo = createProjectPostgresRepository(txDb, organizationId)
+  return repo.findAll()
+})
+
+// Unscoped operations don't set RLS context
+await runCommand(db)(async (txDb) => {
+  const repo = createUnscopedApiKeyPostgresRepository(txDb)
+  return repo.findByTokenHash(hash)
 })
 ```
 
-### Creating an Organization (Non-RLS Table)
+## Security Model
 
-```typescript
-// apps/api/src/routes/organizations.ts
-app.post("/", async (c) => {
-  const auth = c.get("auth")
-  
-  const organization = await runCommand(
-    c.get("db")
-    // No org ID - runs without RLS context
-  )(async (txDb) => {
-    const repo = createOrganizationPostgresRepository(txDb)
-    return Effect.runPromise(createOrganizationUseCase(repo)(input))
-  })
-  
-  return c.json(organization, 201)
-})
-```
+**Defense in depth:**
 
-### Listing User's Organizations (Non-RLS)
+1. **Application layer**: Repository scoping ensures code can't accidentally query wrong org
+2. **Database layer**: RLS policies enforce isolation even if app code has bugs
+3. **FORCE RLS**: Prevents even table owner from bypassing policies (except api_keys)
 
-```typescript
-// apps/web/src/domains/organizations/organizations.functions.ts
-export const listOrganizations = createServerFn({ method: "GET" })
-  .handler(async (): Promise<OrganizationRecord[]> => {
-    const { userId } = await requireSession()
-    const { db } = getPostgresClient()
-    
-    const memberships = (await runCommand(db)(async (txDb) => {
-      const repo = createMembershipPostgresRepository(txDb)
-      return Effect.runPromise(repo.findByUserId(userId))
-    })) as readonly Membership[]
-    
-    // ... fetch organizations from memberships
-  })
-```
-
-## Security Considerations
-
-1. **RLS-backed tables**: Enforced at database level - impossible to bypass via code bugs
-2. **Non-RLS tables**: Must have explicit app-level checks (middleware, use-cases)
-3. **No backoffice bypass**: We removed `runAdminCommand` - no privileged escape hatch exists
-4. **Force RLS**: All RLS tables have `FORCE ROW LEVEL SECURITY` preventing owner bypass
-
-## Future Backoffice Needs
-
-If true cross-tenant backoffice operations are needed in the future:
-
-1. Create a `LAT_BACKOFFICE_DATABASE_URL` env var with BYPASSRLS role
-2. Add `createBackofficePostgresClient()` in `packages/platform/db-postgres`
-3. Add `runAdminCommand({ actorId, reason })(execute)` with audit logging
-4. Restrict backoffice commands to internal tools/jobs only
-
-## Testing Tenancy
-
-All RLS-backed routes have integration tests verifying cross-tenant isolation:
-
-```typescript
-// apps/api/src/routes/projects.test.ts
-it("GET isolates organization projects", async () => {
-  const tenantA = await createTenantSetup(database.db)
-  const tenantB = await createTenantSetup(database.db)
-  
-  const response = await app.fetch(
-    new Request(`/v1/organizations/${tenantA.organizationId}/projects`, {
-      headers: createApiKeyAuthHeaders(tenantA.apiKeyToken),
-    }),
-  )
-  
-  const body = await response.json()
-  const ids = body.projects.map((p) => p.id)
-  
-  expect(ids).toContain(tenantAProject.id)
-  expect(ids).not.toContain(tenantBProject.id)  // RLS blocks this
-})
-```
+**api_keys exception:**
+- RLS policy exists and applies to regular queries
+- Not forced = owner (unscoped repo) can bypass for legitimate cross-org operations
+- Authorization still enforced at app layer (middleware validates token → org match)
