@@ -16,18 +16,6 @@ latitude-lock.json
 node_modules
 .pnpm-store
 **/.pnpm-store
-.npm
-.pnp
-.pnp.js
-.pnp.cjs
-.pnp.loader.mjs
-.yarn/*
-!.yarn/releases
-!.yarn/plugins
-!.yarn/sdks
-!.yarn/versions
-!.yarn/patches
-.yarn-integrity
 *.*-E
 
 # Logs and runtime files
@@ -36,11 +24,7 @@ node_modules
 *.seed
 *.pid.lock
 *.stackdump
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
 # Local env files
 .env
@@ -49,37 +33,22 @@ lerna-debug.log*
 
 # Testing
 coverage
-.nyc_output
 
 # Build/cache outputs
 .turbo
 .tsbuildinfo
+**/*/tsconfig.tsbuildinfo
 .cache
-.parcel-cache
 .eslintcache
-.stylelintcache
-.rpt2_cache
-.rts2_cache_*
-
-# Python artifacts
-*.py-E
-.venv
-**/*.egg-info/
-__pycache__
-
-# Vercel
-.vercel
-.expert
 
 # Build Outputs
-.next/
-out/
+out
 build
 dist
+
 # Vim crap
 *.ts-E
 *.tsx-E
-
 
 # macOS
 .DS_Store
@@ -98,8 +67,7 @@ dist
 # postgres data in development. Ignore
 docker/pgdata/
 
-# Next.js
-next-env.d.ts
+# Web scripts build output
 apps/web/scripts-dist
 
 # File uploads in development
@@ -131,7 +99,6 @@ ONLY_FOR_COPILOT/
 
 __testing__
 
-
 # New spans
 apps/web/ingest
 apps/workers/workspaces/*/traces
@@ -156,8 +123,6 @@ PRD.md
 progress.txt
 
 packages/cli/prompts
-
-**/*/tsconfig.tsbuildinfo
 
 .localstorage*
 docs/
