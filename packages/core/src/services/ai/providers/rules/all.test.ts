@@ -667,7 +667,9 @@ describe('message translation (Promptl to VercelAI)', () => {
         config: defaultConfig,
       })
 
-      const content = result.messages[0]?.content as unknown as Array<Record<string, unknown>>
+      const content = result.messages[0]?.content as unknown as Array<
+        Record<string, unknown>
+      >
       // _sourceData must not appear as a top-level field on the content item
       expect(content[0]).not.toHaveProperty('_sourceData')
       // The standard fields must be preserved
@@ -714,7 +716,9 @@ describe('message translation (Promptl to VercelAI)', () => {
       const messages: Message[] = [
         {
           role: 'user',
-          content: [{ type: 'text', text: 'Evaluate these collections' } as TextContent],
+          content: [
+            { type: 'text', text: 'Evaluate these collections' } as TextContent,
+          ],
         },
         {
           role: 'assistant',
@@ -815,7 +819,9 @@ describe('message translation (Promptl to VercelAI)', () => {
       })
 
       // Assistant message with tool calls
-      const assistantContent = result.messages[1]?.content as unknown as Array<Record<string, unknown>>
+      const assistantContent = result.messages[1]?.content as unknown as Array<
+        Record<string, unknown>
+      >
       for (const item of assistantContent) {
         if (item.type === 'tool-call') {
           expect(item).not.toHaveProperty('_sourceData')
@@ -1143,8 +1149,11 @@ describe('extractMessageMetadata', () => {
       expect(content[0]).not.toHaveProperty('cache_control')
       expect(content[0]).toHaveProperty('providerOptions')
       expect(
-        (content[0] as { providerOptions: Record<string, Record<string, unknown>> })
-          .providerOptions.anthropic,
+        (
+          content[0] as {
+            providerOptions: Record<string, Record<string, unknown>>
+          }
+        ).providerOptions.anthropic,
       ).toEqual({ cacheControl: { type: 'ephemeral' } })
     })
   })
