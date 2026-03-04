@@ -5,8 +5,7 @@ import { useState } from "react"
 import { createLoginIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
-
-const AUTH_BASE_PATH = "/api/auth"
+import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
@@ -41,7 +40,7 @@ function LoginPage() {
 
       const { error: signInError } = await authClient.signIn.magicLink({
         email,
-        callbackURL: `${window.location.origin}/?authIntentId=${intentId}`,
+        callbackURL: `${WEB_BASE_URL}/?authIntentId=${intentId}`,
       })
 
       if (signInError) {
@@ -69,7 +68,7 @@ function LoginPage() {
     const callbackUrlInput = document.createElement("input")
     callbackUrlInput.type = "hidden"
     callbackUrlInput.name = "callbackURL"
-    callbackUrlInput.value = window.location.origin
+    callbackUrlInput.value = WEB_BASE_URL
 
     form.append(providerInput, callbackUrlInput)
     document.body.appendChild(form)

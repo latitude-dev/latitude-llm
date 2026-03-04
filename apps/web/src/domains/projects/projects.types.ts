@@ -1,3 +1,5 @@
+import { z } from "zod"
+
 export interface ProjectRecord {
   readonly id: string
   readonly organizationId: string
@@ -9,24 +11,32 @@ export interface ProjectRecord {
   readonly updatedAt: string
 }
 
-export interface CreateProjectInput {
-  readonly organizationId: string
-  readonly name: string
-  readonly description?: string
-}
+export const createProjectInputSchema = z.object({
+  organizationId: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+})
 
-export interface UpdateProjectInput {
-  readonly organizationId: string
-  readonly id: string
-  readonly name?: string
-  readonly description?: string | null
-}
+type CreateProjectInput = z.infer<typeof createProjectInputSchema>
 
-export interface DeleteProjectInput {
-  readonly organizationId: string
-  readonly id: string
-}
+export const updateProjectInputSchema = z.object({
+  organizationId: z.string(),
+  id: z.string(),
+  name: z.string().optional(),
+  description: z.string().nullable().optional(),
+})
 
-export interface ListProjectsInput {
-  readonly organizationId: string
-}
+type UpdateProjectInput = z.infer<typeof updateProjectInputSchema>
+
+export const deleteProjectInputSchema = z.object({
+  organizationId: z.string(),
+  id: z.string(),
+})
+
+type DeleteProjectInput = z.infer<typeof deleteProjectInputSchema>
+
+export const listProjectsInputSchema = z.object({
+  organizationId: z.string(),
+})
+
+type ListProjectsInput = z.infer<typeof listProjectsInputSchema>

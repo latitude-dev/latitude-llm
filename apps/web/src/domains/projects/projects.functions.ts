@@ -3,15 +3,16 @@ import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared-kernel"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
+import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { assertOrganizationMembership, requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
-import type {
-  CreateProjectInput,
-  DeleteProjectInput,
-  ListProjectsInput,
-  ProjectRecord,
-  UpdateProjectInput,
+import {
+  type ProjectRecord,
+  createProjectInputSchema,
+  deleteProjectInputSchema,
+  listProjectsInputSchema,
+  updateProjectInputSchema,
 } from "./projects.types.ts"
 
 const toRecord = (project: Project): ProjectRecord => ({
@@ -26,7 +27,7 @@ const toRecord = (project: Project): ProjectRecord => ({
 })
 
 export const listProjects = createServerFn({ method: "GET" })
-  .inputValidator((data: ListProjectsInput) => data)
+  .inputValidator(zodValidator(listProjectsInputSchema))
   .handler(async ({ data }): Promise<ProjectRecord[]> => {
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
@@ -41,7 +42,7 @@ export const listProjects = createServerFn({ method: "GET" })
   })
 
 export const createProject = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateProjectInput) => data)
+  .inputValidator(zodValidator(createProjectInputSchema))
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
@@ -65,7 +66,7 @@ export const createProject = createServerFn({ method: "POST" })
   })
 
 export const updateProject = createServerFn({ method: "POST" })
-  .inputValidator((data: UpdateProjectInput) => data)
+  .inputValidator(zodValidator(updateProjectInputSchema))
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
@@ -88,7 +89,7 @@ export const updateProject = createServerFn({ method: "POST" })
   })
 
 export const deleteProject = createServerFn({ method: "POST" })
-  .inputValidator((data: DeleteProjectInput) => data)
+  .inputValidator(zodValidator(deleteProjectInputSchema))
   .handler(async ({ data }): Promise<void> => {
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)

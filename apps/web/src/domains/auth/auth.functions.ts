@@ -8,22 +8,14 @@ import {
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
+import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { getBetterAuth, getPostgresClient } from "../../server/clients.ts"
-
-type CreateLoginIntentInput = {
-  readonly email: string
-}
-
-type CreateSignupIntentInput = {
-  readonly name: string
-  readonly email: string
-  readonly organizationName: string
-}
-
-type CompleteAuthIntentInput = {
-  readonly intentId: string
-}
+import {
+  completeAuthIntentInputSchema,
+  createLoginIntentInputSchema,
+  createSignupIntentInputSchema,
+} from "./auth.types.ts"
 
 interface SessionResponse {
   readonly user: {
@@ -43,7 +35,7 @@ interface BetterAuthApi {
 }
 
 export const createLoginIntent = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateLoginIntentInput) => data)
+  .inputValidator(zodValidator(createLoginIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
 
@@ -62,7 +54,7 @@ export const createLoginIntent = createServerFn({ method: "POST" })
   })
 
 export const createSignupIntent = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateSignupIntentInput) => data)
+  .inputValidator(zodValidator(createSignupIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
     const intent = await runCommand(db, async (txDb) => {
@@ -85,7 +77,7 @@ export const createSignupIntent = createServerFn({ method: "POST" })
   })
 
 export const completeAuthIntent = createServerFn({ method: "POST" })
-  .inputValidator((data: CompleteAuthIntentInput) => data)
+  .inputValidator(zodValidator(completeAuthIntentInputSchema))
   .handler(async ({ data }) => {
     const headers = getRequestHeaders()
     const authApi = getBetterAuth().api as unknown as BetterAuthApi

@@ -7,10 +7,11 @@ import {
   runCommand,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
+import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
-import type { CreateOrganizationInput, OrganizationRecord } from "./organizations.types.ts"
+import { type OrganizationRecord, createOrganizationInputSchema } from "./organizations.types.ts"
 
 export const listOrganizations = createServerFn({ method: "GET" }).handler(async (): Promise<OrganizationRecord[]> => {
   const { userId } = await requireSession()
@@ -39,7 +40,7 @@ export const listOrganizations = createServerFn({ method: "GET" }).handler(async
 })
 
 export const createOrganization = createServerFn({ method: "POST" })
-  .inputValidator((data: CreateOrganizationInput) => data)
+  .inputValidator(zodValidator(createOrganizationInputSchema))
   .handler(async ({ data }): Promise<OrganizationRecord> => {
     const { userId } = await requireSession()
     const { db } = getPostgresClient()
