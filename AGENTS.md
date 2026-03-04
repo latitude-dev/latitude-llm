@@ -217,6 +217,22 @@ Base config: `tsconfig.base.json`
 - Mapping from DB rows to domain objects belongs in platform adapters
 - **Apps use pool-based connections**: Use `createPostgresPool()` in `apps/*/clients.ts` for direct pool access
 
+### Postgres Management
+
+Connect to the development database directly:
+
+```bash
+docker compose exec postgres psql -U latitude -d latitude_development
+```
+
+To reset only the Postgres volume and start fresh (without affecting other services):
+
+```bash
+pnpm --filter @platform/db-postgres pg:reset_db
+```
+
+This runs `docker/reset-postgres.sh` which stops postgres, removes the `data-llm_postgres_data` volume, restarts postgres, waits for it to be ready, runs migrations, and seeds the database.
+
 ### Postgres Schema Conventions
 
 All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **must** follow these rules. Shared helpers live in `schemaHelpers.ts`.

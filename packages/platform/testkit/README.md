@@ -93,15 +93,8 @@ describe("My Tests", () => {
 Tests require the following environment variables:
 
 ```bash
-DATABASE_URL=postgres://user:password@localhost:5432/test_db
 REDIS_HOST=localhost
 REDIS_PORT=6379
-```
-
-For isolated test runs, use a dedicated test database:
-
-```bash
-DATABASE_URL=postgres://user:password@localhost:5432/latitude_test
 ```
 
 ## API Reference
@@ -283,7 +276,7 @@ it("should handle errors gracefully", async () => {
   const res = await app.fetch(
     new Request("/invalid-endpoint")
   );
-  
+
   expect(res.status).toBe(404);
   const body = await res.json();
   expect(body.error).toBeDefined();
