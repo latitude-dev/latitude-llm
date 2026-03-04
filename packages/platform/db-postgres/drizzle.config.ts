@@ -19,6 +19,7 @@ export default defineConfig({
   schema: [
     // Better Auth tables
     "./src/schema/better-auth.ts",
+    "./src/schema/auth-intent.ts",
     "./src/schema/subscription.ts",
     // Domain tables
     "./src/schema/projects.ts",

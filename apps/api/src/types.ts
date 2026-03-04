@@ -1,5 +1,6 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type { OrganizationId, UserId } from "@domain/shared"
+import type { Organization } from "@domain/organizations"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresDb } from "@platform/db-postgres"
 
@@ -33,5 +34,12 @@ declare module "hono" {
     db: PostgresDb
     redis: RedisClient
     clickhouse: ClickHouseClient
+    organization?: Organization
+  }
+}
+
+export type OrganizationScopedEnv = {
+  Variables: {
+    organization: Organization
   }
 }

@@ -1,5 +1,6 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router"
 import type { ReactNode } from "react"
+import { useEffect } from "react"
 import "@repo/ui/styles/globals.css"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
@@ -7,6 +8,7 @@ const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
   "Latitude is the platform for building and running AI agents without code. With Latte, you can create complex automations using a single prompt. Latitude handles everything: creating the agents, connecting them to 2,500+ tools, and deploying them into production."
 const URL = "https://app.latitude.so"
+const HOST_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)"
 
 export const Route = createRootRoute({
   head: () => ({
@@ -15,6 +17,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: TITLE },
       { name: "description", content: DESCRIPTION },
+      { name: "color-scheme", content: "light dark" },
       { property: "og:type", content: "website" },
       { property: "og:url", content: URL },
       { property: "og:title", content: TITLE },
@@ -45,6 +48,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
       <body>
+        <HostThemeSync />
         <AppQueryProvider>
           <Outlet />
         </AppQueryProvider>
@@ -52,4 +56,30 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       </body>
     </html>
   )
+}
+
+function HostThemeSync() {
+  useEffect(() => {
+    const root = document.documentElement
+    const media = window.matchMedia(HOST_THEME_MEDIA_QUERY)
+
+    const applyTheme = (isDark: boolean) => {
+      root.classList.toggle("dark", isDark)
+      root.style.colorScheme = isDark ? "dark" : "light"
+    }
+
+    applyTheme(media.matches)
+
+    const onThemeChange = (event: MediaQueryListEvent) => {
+      applyTheme(event.matches)
+    }
+
+    media.addEventListener("change", onThemeChange)
+
+    return () => {
+      media.removeEventListener("change", onThemeChange)
+    }
+  }, [])
+
+  return null
 }

@@ -17,6 +17,14 @@ export {
 } from "./use-cases/create-project.ts"
 
 export {
+  updateProjectUseCase,
+  ProjectNotFoundError,
+  InvalidProjectNameError as UpdateInvalidProjectNameError,
+  type UpdateProjectError,
+  type UpdateProjectInput,
+} from "./use-cases/update-project.ts"
+
+export {
   listAllProjectsUseCase,
   type ListAllProjectsInput,
 } from "./use-cases/list-projects.ts"

@@ -1,4 +1,6 @@
 export { createApiKeyPostgresRepository } from "./api-key-repository.ts"
+export { createAuthIntentPostgresRepository } from "./auth-intent-repository.ts"
+export { createAuthUserPostgresRepository } from "./auth-user-repository.ts"
 export { createGrantPostgresRepository } from "./grant-repository.ts"
 export { createMembershipPostgresRepository } from "./membership-repository.ts"
 export { createOrganizationPostgresRepository } from "./organization-repository.ts"

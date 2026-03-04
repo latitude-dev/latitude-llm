@@ -1,10 +1,13 @@
 import { type CreateOrganizationInput, createOrganizationUseCase } from "@domain/organizations"
-import { OrganizationId, PermissionError, generateId } from "@domain/shared"
-import { createMembershipPostgresRepository, createOrganizationPostgresRepository } from "@platform/db-postgres"
+import { OrganizationId, generateId } from "@domain/shared"
+import {
+  createMembershipPostgresRepository,
+  createOrganizationPostgresRepository,
+  runCommand,
+} from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import { extractParam } from "../lib/effect-utils.ts"
-import type { AuthContext } from "../types.ts"
+import type { AuthContext, OrganizationScopedEnv } from "../types.ts"
 
 /**
  * Organization routes
@@ -17,46 +20,27 @@ import type { AuthContext } from "../types.ts"
  */
 
 export const createOrganizationsRoutes = () => {
-  const app = new Hono()
-  const assertOrganizationAccess = (auth: AuthContext, organizationId: string) => {
-    if (auth.organizationId !== organizationId) {
-      throw new PermissionError({
-        message: "You do not have access to this organization",
-        workspaceId: organizationId,
-      })
-    }
-  }
-
-  app.use("/:id", async (c, next) => {
-    const auth = c.get("auth") as AuthContext
-    assertOrganizationAccess(auth, c.req.param("id"))
-    await next()
-  })
-
-  app.use("/:id/*", async (c, next) => {
-    const auth = c.get("auth") as AuthContext
-    assertOrganizationAccess(auth, c.req.param("id"))
-    await next()
-  })
+  const app = new Hono<OrganizationScopedEnv>()
 
   // POST /organizations - Create organization
   app.post("/", async (c) => {
-    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
     const body = (await c.req.json()) as {
       readonly name: string
-      readonly slug: string
     }
 
     const auth = c.get("auth") as AuthContext
 
-    const input: CreateOrganizationInput = {
-      id: OrganizationId(generateId()),
-      name: body.name,
-      slug: body.slug,
-      creatorId: auth.userId,
-    }
+    const organization = await runCommand(c.get("db"), async (txDb) => {
+      const organizationRepository = createOrganizationPostgresRepository(txDb)
 
-    const organization = await Effect.runPromise(createOrganizationUseCase(organizationRepository)(input))
+      const input: CreateOrganizationInput = {
+        id: OrganizationId(generateId()),
+        name: body.name,
+        creatorId: auth.userId,
+      }
+
+      return Effect.runPromise(createOrganizationUseCase(organizationRepository)(input))
+    })
 
     return c.json(organization, 201)
   })
@@ -70,17 +54,7 @@ export const createOrganizationsRoutes = () => {
 
   // GET /organizations/:id - Get organization by ID
   app.get("/:id", async (c) => {
-    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
-    const id = extractParam(c, "id", OrganizationId)
-    if (!id) {
-      throw new BadRequestError({ httpMessage: "Organization ID required" })
-    }
-
-    const organization = await Effect.runPromise(organizationRepository.findById(id))
-
-    if (!organization) {
-      throw new BadRequestError({ httpMessage: "Organization not found" })
-    }
+    const organization = c.var.organization
 
     return c.json(organization, 200)
   })
@@ -88,11 +62,7 @@ export const createOrganizationsRoutes = () => {
   // GET /organizations/:id/members - List organization members
   app.get("/:id/members", async (c) => {
     const membershipRepository = createMembershipPostgresRepository(c.get("db"))
-    const organizationId = extractParam(c, "id", OrganizationId)
-    if (!organizationId) {
-      throw new BadRequestError({ httpMessage: "Organization ID required" })
-    }
-
+    const organizationId = c.var.organization.id
     const members = await Effect.runPromise(membershipRepository.findByOrganizationId(organizationId))
 
     return c.json({ members }, 200)
@@ -100,13 +70,13 @@ export const createOrganizationsRoutes = () => {
 
   // DELETE /organizations/:id - Delete organization
   app.delete("/:id", async (c) => {
-    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
-    const id = extractParam(c, "id", OrganizationId)
-    if (!id) {
-      throw new BadRequestError({ httpMessage: "Organization ID required" })
-    }
+    const id = c.var.organization.id
 
-    await Effect.runPromise(organizationRepository.delete(id))
+    await runCommand(c.get("db"), async (txDb) => {
+      const organizationRepository = createOrganizationPostgresRepository(txDb)
+
+      return Effect.runPromise(organizationRepository.delete(id))
+    })
     return c.body(null, 204)
   })
 

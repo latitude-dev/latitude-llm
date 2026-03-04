@@ -2,13 +2,14 @@ import type { ConflictError, OrganizationId, RepositoryError, UserId, Validation
 import { Data, Effect } from "effect"
 import { type Organization, createOrganization } from "../entities/organization.ts"
 import type { OrganizationRepository } from "../ports/organization-repository.ts"
+import { generateUniqueOrganizationSlugUseCase } from "./generate-unique-organization-slug.ts"
 
 /**
  * Create a new organization.
  *
  * This use case:
- * 1. Validates the organization name and slug
- * 2. Checks for slug uniqueness
+ * 1. Validates the organization name
+ * 2. Generates a unique slug
  * 3. Creates the organization entity
  * 4. Persists to the repository
  * 5. Returns the created organization
@@ -16,7 +17,6 @@ import type { OrganizationRepository } from "../ports/organization-repository.ts
 export interface CreateOrganizationInput {
   readonly id: OrganizationId
   readonly name: string
-  readonly slug: string
   readonly creatorId: UserId
 }
 
@@ -63,25 +63,21 @@ export const createOrganizationUseCase =
         })
       }
 
-      // Validate slug
-      if (!input.slug || input.slug.trim().length === 0) {
-        return yield* new InvalidOrganizationNameError({
-          name: input.slug,
-          reason: "Slug cannot be empty",
-        })
-      }
+      const slug = yield* generateUniqueOrganizationSlugUseCase(repository)({
+        name: input.name,
+      })
 
       // Check if slug already exists
-      const exists = yield* repository.existsBySlug(input.slug)
+      const exists = yield* repository.existsBySlug(slug)
       if (exists) {
-        return yield* new OrganizationAlreadyExistsError({ slug: input.slug })
+        return yield* new OrganizationAlreadyExistsError({ slug })
       }
 
       // Create organization entity
       const organization = createOrganization({
         id: input.id,
         name: input.name.trim(),
-        slug: input.slug.trim().toLowerCase(),
+        slug,
         creatorId: input.creatorId,
       })
 

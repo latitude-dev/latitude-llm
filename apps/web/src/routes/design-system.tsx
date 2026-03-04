@@ -166,13 +166,34 @@ function DesignSystemPage() {
   const pageSurfaceClass = theme === "dark" ? "bg-black" : "bg-white"
 
   useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)")
+
+    const syncTheme = (isDark: boolean) => {
+      setTheme(isDark ? "dark" : "light")
+    }
+
+    syncTheme(media.matches)
+
+    const onThemeChange = (event: MediaQueryListEvent) => {
+      syncTheme(event.matches)
+    }
+
+    media.addEventListener("change", onThemeChange)
+
+    return () => {
+      media.removeEventListener("change", onThemeChange)
+    }
+  }, [])
+
+  useEffect(() => {
     const root = document.documentElement
     root.classList.toggle("dark", theme === "dark")
     root.style.colorScheme = theme
 
     return () => {
-      root.classList.remove("dark")
-      root.style.colorScheme = "light"
+      const hostTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      root.classList.toggle("dark", hostTheme === "dark")
+      root.style.colorScheme = hostTheme
     }
   }, [theme])
 

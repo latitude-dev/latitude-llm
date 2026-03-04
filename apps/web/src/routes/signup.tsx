@@ -1,9 +1,10 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
 import { Link, createFileRoute, redirect } from "@tanstack/react-router"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
-import { signUp } from "../domains/auth/auth.functions.ts"
+import { createSignupIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
+import { authClient } from "../lib/auth-client.ts"
 
 const AUTH_BASE_PATH = "/api/auth"
 
@@ -50,29 +51,41 @@ export const Route = createFileRoute("/signup")({
 function SignupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
+  const [isSent, setIsSent] = useState(false)
+  const [email, setEmail] = useState("")
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isLoading) return
 
     const formData = new FormData(e.currentTarget)
-    const name = formData.get("name") as string
-    const emailValue = formData.get("email") as string
-    const password = formData.get("password") as string
+    const name = String(formData.get("name") ?? "")
+    const emailValue = String(formData.get("email") ?? "")
+    const organizationName = String(formData.get("companyName") ?? "")
+    setEmail(emailValue)
 
     setIsLoading(true)
     setError(undefined)
 
     try {
-      await signUp({
+      const { intentId } = await createSignupIntent({
         data: {
-          email: emailValue,
           name,
-          password,
+          email: emailValue,
+          organizationName,
         },
       })
 
-      window.location.href = "/"
+      const { error: signInError } = await authClient.signIn.magicLink({
+        email: emailValue,
+        callbackURL: `${window.location.origin}/?authIntentId=${intentId}`,
+      })
+
+      if (signInError) {
+        throw new Error(signInError.message ?? "Failed to send magic link")
+      }
+
+      setIsSent(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -108,6 +121,39 @@ function SignupPage() {
     submitSocialSignIn("github")
   }
 
+  if (isSent) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <div className="flex flex-col items-center justify-center gap-y-6 max-w-[22rem] w-full">
+          <LatitudeLogo />
+
+          <div className="flex flex-col items-center gap-4 w-full">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Icon icon={Mail} className="h-6 w-6 text-primary" />
+            </div>
+            <Text.H3 align="center">Check your email</Text.H3>
+            <Text.H5 color="foregroundMuted" align="center">
+              We sent a magic link to <strong>{email}</strong>
+            </Text.H5>
+            <Text.H6 color="foregroundMuted" align="center">
+              Click the link in the email to sign in. The link will expire in 1 hour.
+            </Text.H6>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => {
+                setIsSent(false)
+                setEmail("")
+              }}
+            >
+              Use a different email
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
       <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
@@ -131,6 +177,7 @@ function SignupPage() {
                 placeholder="Jon Snow"
                 required
                 autoComplete="name"
+                data-autofocus="true"
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </label>
@@ -160,19 +207,6 @@ function SignupPage() {
               />
             </label>
 
-            <label htmlFor="password" className="flex flex-col gap-2">
-              <Text.H6 weight="medium">Password</Text.H6>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-            </label>
-
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive">
                 <Icon icon={AlertCircle} className="h-4 w-4" />
@@ -186,7 +220,7 @@ function SignupPage() {
               disabled={isLoading}
               className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
             >
-              {isLoading ? "Creating..." : "Create account"}
+              {isLoading ? "Sending..." : "Create account"}
             </Button>
           </form>
 

@@ -7,4 +7,8 @@ export type { EmailContent, TemplatedEmail } from "./entities/email.ts"
 export { sendEmail, type SendEmail } from "./use-cases/send-email.ts"
 
 // Templates
-export { magicLinkTemplate, type MagicLinkEmailData } from "./templates/magic-link.tsx"
+export { magicLinkTemplate, type MagicLinkEmailData } from "./templates/magic-link.ts"
+export {
+  signupExistingAccountMagicLinkTemplate,
+  type SignupExistingAccountMagicLinkEmailData,
+} from "./templates/signup-existing-account-magic-link.ts"

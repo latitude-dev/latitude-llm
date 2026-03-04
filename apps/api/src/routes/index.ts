@@ -3,6 +3,7 @@ import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
 import { Hono } from "hono"
 import { createAuthMiddleware } from "../middleware/auth.ts"
+import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
 import { createAuthRoutes } from "./auth.ts"
@@ -43,6 +44,7 @@ export const registerRoutes = (context: RoutesContext) => {
   // Rate limiting before auth to prevent brute force attacks
   protectedRoutes.use("*", createAuthRateLimiter())
   protectedRoutes.use("*", createAuthMiddleware())
+  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware("organizationId"))
 
   protectedRoutes.route("/", createOrganizationsRoutes())
   protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
