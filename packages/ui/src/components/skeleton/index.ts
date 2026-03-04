@@ -1,2 +1,1 @@
-// Skeleton component - to be implemented
-export {}
+export { Skeleton } from "./skeleton.tsx"

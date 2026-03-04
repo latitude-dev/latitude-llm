@@ -13,8 +13,10 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
+    "@domain/api-keys": "workspace:*",
     "@domain/auth": "workspace:*",
     "@domain/email": "workspace:*",
+    "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@platform/auth-better": "workspace:*",
@@ -22,8 +24,10 @@
     "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/ui": "workspace:*",
+    "@repo/utils": "workspace:*",
     "@tanstack/query-db-collection": "1.0.27",
     "@tanstack/react-db": "0.1.74",
+    "@tanstack/react-form": "^1.28.4",
     "@tanstack/react-query": "5.90.21",
     "@tanstack/react-router": "1.163.3",
     "@tanstack/react-start": "1.166.1",

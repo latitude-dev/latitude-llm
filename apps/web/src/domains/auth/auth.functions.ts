@@ -95,9 +95,3 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
     })
   })
 
-export const signOut = createServerFn({ method: "POST" }).handler(async () => {
-  const authApi = getBetterAuth().api
-  const headers = getRequestHeaders()
-
-  await authApi.signOut({ headers })
-})

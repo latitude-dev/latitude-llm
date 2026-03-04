@@ -28,3 +28,11 @@ export {
   type CreateOrganizationError,
 } from "./use-cases/create-organization.ts"
 export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
+export {
+  removeMemberUseCase,
+  MembershipNotFoundError,
+  CannotRemoveSelfError,
+  MembershipOrganizationMismatchError,
+  type RemoveMemberInput,
+  type RemoveMemberError,
+} from "./use-cases/remove-member.ts"

@@ -2,25 +2,24 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
-import type { ProjectRecord } from "./projects.functions.ts"
+import { createApiKey, deleteApiKey, listApiKeys, updateApiKey } from "./api-keys.functions.ts"
+import type { ApiKeyRecord } from "./api-keys.functions.ts"
 
 const queryClient = getQueryClient()
 
-const createProjectsCollection = (organizationId: string) =>
+const createApiKeysCollection = (organizationId: string) =>
   createCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["projects", organizationId],
-      queryFn: () => listProjects({ data: {} }),
-      getKey: (item: ProjectRecord) => item.id,
+      queryKey: ["apiKeys", organizationId],
+      queryFn: () => listApiKeys({ data: {} }),
+      getKey: (item: ApiKeyRecord) => item.id,
       onInsert: async ({ transaction }) => {
         await Promise.all(
           transaction.mutations.map((mutation) =>
-            createProject({
+            createApiKey({
               data: {
-                name: mutation.modified.name,
-                ...(mutation.modified.description !== null ? { description: mutation.modified.description } : {}),
+                name: mutation.modified.name ?? "API Key",
               },
             }),
           ),
@@ -29,11 +28,10 @@ const createProjectsCollection = (organizationId: string) =>
       onUpdate: async ({ transaction }) => {
         await Promise.all(
           transaction.mutations.map((mutation) =>
-            updateProject({
+            updateApiKey({
               data: {
                 id: mutation.key,
-                name: mutation.modified.name,
-                description: mutation.modified.description,
+                name: mutation.modified.name ?? "API Key",
               },
             }),
           ),
@@ -42,7 +40,7 @@ const createProjectsCollection = (organizationId: string) =>
       onDelete: async ({ transaction }) => {
         await Promise.all(
           transaction.mutations.map((mutation) =>
-            deleteProject({
+            deleteApiKey({
               data: {
                 id: mutation.key,
               },
@@ -53,7 +51,7 @@ const createProjectsCollection = (organizationId: string) =>
     }),
   )
 
-export const useProjectsCollection = (organizationId: string) => {
-  const collection = useMemo(() => createProjectsCollection(organizationId), [organizationId])
-  return useLiveQuery((query) => query.from({ project: collection }))
+export const useApiKeysCollection = (organizationId: string) => {
+  const collection = useMemo(() => createApiKeysCollection(organizationId), [organizationId])
+  return useLiveQuery((query) => query.from({ apiKey: collection }))
 }

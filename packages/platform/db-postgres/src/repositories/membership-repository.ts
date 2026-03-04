@@ -1,9 +1,44 @@
 import type { Membership, MembershipRepository } from "@domain/organizations"
-import { MembershipId, OrganizationId, UserId, toRepositoryError } from "@domain/shared"
+import { MembershipId, OrganizationId, type RepositoryError, UserId, toRepositoryError } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import * as schema from "../schema/index.ts"
+
+export interface MemberWithUser {
+  readonly id: string
+  readonly organizationId: string
+  readonly userId: string
+  readonly role: string
+  readonly name: string | null
+  readonly email: string
+  readonly createdAt: Date
+}
+
+export const findMembersWithUser = (
+  db: PostgresDb,
+  organizationId: string,
+): Effect.Effect<readonly MemberWithUser[], RepositoryError> =>
+  Effect.tryPromise({
+    try: async () => {
+      const rows = await db
+        .select({
+          id: schema.member.id,
+          organizationId: schema.member.organizationId,
+          userId: schema.member.userId,
+          role: schema.member.role,
+          createdAt: schema.member.createdAt,
+          name: schema.user.name,
+          email: schema.user.email,
+        })
+        .from(schema.member)
+        .innerJoin(schema.user, eq(schema.member.userId, schema.user.id))
+        .where(eq(schema.member.organizationId, organizationId))
+
+      return rows
+    },
+    catch: (error) => toRepositoryError(error, "findMembersWithUser"),
+  })
 
 /**
  * Maps a database member row to a domain Membership entity.
