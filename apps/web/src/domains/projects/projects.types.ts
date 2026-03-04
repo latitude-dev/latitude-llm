@@ -17,8 +17,6 @@ export const createProjectInputSchema = z.object({
   description: z.string().optional(),
 })
 
-type CreateProjectInput = z.infer<typeof createProjectInputSchema>
-
 export const updateProjectInputSchema = z.object({
   organizationId: z.string(),
   id: z.string(),
@@ -26,17 +24,11 @@ export const updateProjectInputSchema = z.object({
   description: z.string().nullable().optional(),
 })
 
-type UpdateProjectInput = z.infer<typeof updateProjectInputSchema>
-
 export const deleteProjectInputSchema = z.object({
   organizationId: z.string(),
   id: z.string(),
 })
 
-type DeleteProjectInput = z.infer<typeof deleteProjectInputSchema>
-
 export const listProjectsInputSchema = z.object({
   organizationId: z.string(),
 })
-
-type ListProjectsInput = z.infer<typeof listProjectsInputSchema>
