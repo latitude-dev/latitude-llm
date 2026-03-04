@@ -246,9 +246,9 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
-      '@platform/email-mailgun':
+      '@platform/email-transport':
         specifier: workspace:*
-        version: link:../../packages/platform/email-mailgun
+        version: link:../../packages/platform/email-transport
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
@@ -608,19 +608,7 @@ importers:
         specifier: 'catalog:'
         version: 3.11.0
 
-  packages/platform/email-mailgun:
-    dependencies:
-      '@domain/email':
-        specifier: workspace:*
-        version: link:../../domain/email
-      '@platform/env':
-        specifier: workspace:*
-        version: link:../env
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0-beta.0
-
-  packages/platform/email-nodemailer:
+  packages/platform/email-transport:
     dependencies:
       '@domain/email':
         specifier: workspace:*

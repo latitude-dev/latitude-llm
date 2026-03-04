@@ -8,7 +8,7 @@ import {
   createAuthUserPostgresRepository,
   createPostgresClient,
 } from "@platform/db-postgres"
-import { createMailgunEmailSender } from "@platform/email-mailgun"
+import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 
@@ -69,10 +69,7 @@ export const getBetterAuth = () => {
           .filter(Boolean)
       : [webUrl]
 
-    const mailgunApiKey = Effect.runSync(parseEnvOptional("LAT_MAILGUN_API_KEY", "string"))
-    const mailgunDomain = Effect.runSync(parseEnvOptional("LAT_MAILGUN_DOMAIN", "string"))
-
-    const emailSender = createMailgunEmailSender()
+    const emailSender = createEmailTransportSender()
     const sendEmailUseCase = sendEmail({ emailSender })
     const authIntents = createAuthIntentPostgresRepository(db)
     const users = createAuthUserPostgresRepository(db)
@@ -85,12 +82,6 @@ export const getBetterAuth = () => {
       trustedOrigins,
       enableTanStackCookies: true,
       sendMagicLink: async ({ email, url, token }) => {
-        if (!mailgunApiKey || !mailgunDomain) {
-          console.info(`[Auth] Magic link for ${email}: ${url}`)
-          console.info(`[Auth] Magic token for ${email}: ${token}`)
-          return
-        }
-
         const authIntentId = getAuthIntentIdFromMagicLinkUrl({
           magicLinkUrl: url,
           webUrl,

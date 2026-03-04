@@ -20,7 +20,7 @@
     "@domain/shared-kernel": "workspace:*",
     "@platform/auth-better": "workspace:*",
     "@platform/db-postgres": "workspace:*",
-    "@platform/email-mailgun": "workspace:*",
+    "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tanstack/query-db-collection": "1.0.27",
