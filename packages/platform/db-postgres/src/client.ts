@@ -21,7 +21,7 @@ export interface PostgresClient {
 type CreatePostgresPoolError = MissingEnvValueError | InvalidEnvValueError
 type CreatePostgresClientError = CreatePostgresPoolError
 
-export const createPostgresPoolEffect = (config: PostgresConfig = {}): Effect.Effect<Pool, CreatePostgresPoolError> => {
+const createPostgresPoolEffect = (config: PostgresConfig = {}): Effect.Effect<Pool, CreatePostgresPoolError> => {
   return Effect.all({
     connectionString: config.databaseUrl ? Effect.succeed(config.databaseUrl) : parseEnv("LAT_DATABASE_URL", "string"),
     max: config.maxConnections ? Effect.succeed(config.maxConnections) : parseEnvOptional("LAT_PG_POOL_MAX", "number"),
@@ -44,7 +44,7 @@ export const createPostgresPool = (config: PostgresConfig = {}): Pool => {
   return Effect.runSync(createPostgresPoolEffect(config))
 }
 
-export const createPostgresClientEffect = (
+const createPostgresClientEffect = (
   config: PostgresConfig = {},
 ): Effect.Effect<PostgresClient, CreatePostgresClientError> => {
   return createPostgresPoolEffect(config).pipe(
@@ -64,10 +64,7 @@ export const closePostgres = async (pool: Pool): Promise<void> => {
   await pool.end()
 }
 
-export const withPostgresTransaction = async <T>(
-  db: PostgresDb,
-  callback: (txDb: PostgresDb) => Promise<T>,
-): Promise<T> => {
+const withPostgresTransaction = async <T>(db: PostgresDb, callback: (txDb: PostgresDb) => Promise<T>): Promise<T> => {
   return (db as { transaction: (fn: (tx: unknown) => Promise<T>) => Promise<T> }).transaction(async (tx) => {
     return callback(tx as PostgresDb)
   })
