@@ -7,6 +7,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+
     command: postgres -c wal_level=logical
 
   clickhouse:
