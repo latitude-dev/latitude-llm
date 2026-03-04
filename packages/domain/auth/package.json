@@ -1,5 +1,5 @@
 {
-  "name": "@platform/email-mailgun",
+  "name": "@domain/auth",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,9 +14,8 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
-    "@domain/email": "workspace:*",
-    "@platform/env": "workspace:*",
+    "@domain/organizations": "workspace:*",
+    "@domain/shared": "workspace:*",
     "effect": "catalog:"
-  },
-  "devDependencies": {}
+  }
 }

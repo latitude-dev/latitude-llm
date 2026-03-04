@@ -42,5 +42,5 @@
       "project": []
     }
   },
-  "ignoreBinaries": ["tmuxinator"]
+  "ignoreBinaries": ["tmuxinator", "email"]
 }

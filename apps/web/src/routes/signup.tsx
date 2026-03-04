@@ -1,10 +1,11 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute, redirect } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
-
-const API_BASE_URL = import.meta.env.VITE_LAT_API_URL ?? "http://localhost:3001/v1"
-const WEB_BASE_URL = import.meta.env.VITE_LAT_WEB_URL ?? "http://localhost:3000"
+import { createSignupIntent } from "../domains/auth/auth.functions.ts"
+import { getSession } from "../domains/sessions/session.functions.ts"
+import { authClient } from "../lib/auth-client.ts"
+import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
 
 // Latitude logo SVG - actual implementation from legacy
 const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
@@ -36,13 +37,20 @@ const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
 )
 
 export const Route = createFileRoute("/signup")({
+  beforeLoad: async () => {
+    const session = await getSession()
+
+    if (session) {
+      throw redirect({ to: "/" })
+    }
+  },
   component: SignupPage,
 })
 
 function SignupPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
-  const [isSuccess, setIsSuccess] = useState(false)
+  const [isSent, setIsSent] = useState(false)
   const [email, setEmail] = useState("")
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,52 +58,33 @@ function SignupPage() {
     if (isLoading) return
 
     const formData = new FormData(e.currentTarget)
-    const name = formData.get("name") as string
-    const emailValue = formData.get("email") as string
+    const name = String(formData.get("name") ?? "")
+    const emailValue = String(formData.get("email") ?? "")
+    const organizationName = String(formData.get("companyName") ?? "")
+    setEmail(emailValue)
 
     setIsLoading(true)
     setError(undefined)
-    setEmail(emailValue)
 
     try {
-      // Generate a secure random password for passwordless auth
-      const array = new Uint8Array(32)
-      crypto.getRandomValues(array)
-      const password = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("")
-
-      // Step 1: Create user account
-      const signupResponse = await fetch(`${API_BASE_URL}/auth/sign-up/email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: emailValue,
+      const { intentId } = await createSignupIntent({
+        data: {
           name,
-          password,
-        }),
-      })
-
-      if (!signupResponse.ok) {
-        const data = await signupResponse.json().catch(() => ({}))
-        throw new Error(data.message ?? "Failed to create account")
-      }
-
-      // Step 2: Send magic link for authentication
-      const magicLinkResponse = await fetch(`${API_BASE_URL}/auth/sign-in/magic-link`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
           email: emailValue,
-          callbackURL: WEB_BASE_URL,
-          newUserCallbackURL: WEB_BASE_URL,
-        }),
+          organizationName,
+        },
       })
 
-      if (!magicLinkResponse.ok) {
-        const data = await magicLinkResponse.json().catch(() => ({}))
-        throw new Error(data.message ?? "Failed to send magic link")
+      const { error: signInError } = await authClient.signIn.magicLink({
+        email: emailValue,
+        callbackURL: `${WEB_BASE_URL}/?authIntentId=${intentId}`,
+      })
+
+      if (signInError) {
+        throw new Error(signInError.message ?? "Failed to send magic link")
       }
 
-      setIsSuccess(true)
+      setIsSent(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred")
     } finally {
@@ -103,15 +92,35 @@ function SignupPage() {
     }
   }
 
+  const submitSocialSignIn = (provider: "google" | "github") => {
+    const form = document.createElement("form")
+    form.method = "POST"
+    form.action = `${AUTH_BASE_PATH}/sign-in/social`
+
+    const providerInput = document.createElement("input")
+    providerInput.type = "hidden"
+    providerInput.name = "provider"
+    providerInput.value = provider
+
+    const callbackUrlInput = document.createElement("input")
+    callbackUrlInput.type = "hidden"
+    callbackUrlInput.name = "callbackURL"
+    callbackUrlInput.value = WEB_BASE_URL
+
+    form.append(providerInput, callbackUrlInput)
+    document.body.appendChild(form)
+    form.submit()
+  }
+
   const handleGoogleClick = () => {
-    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=google`
+    submitSocialSignIn("google")
   }
 
   const handleGitHubClick = () => {
-    window.location.href = `${API_BASE_URL}/auth/sign-in/social?provider=github`
+    submitSocialSignIn("github")
   }
 
-  if (isSuccess) {
+  if (isSent) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
         <div className="flex flex-col items-center justify-center gap-y-6 max-w-[22rem] w-full">
@@ -132,7 +141,7 @@ function SignupPage() {
               variant="ghost"
               className="w-full"
               onClick={() => {
-                setIsSuccess(false)
+                setIsSent(false)
                 setEmail("")
               }}
             >
@@ -158,7 +167,7 @@ function SignupPage() {
         {/* Card container */}
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
+            <label htmlFor="name" className="flex flex-col gap-2">
               <Text.H6 weight="medium">Name</Text.H6>
               <input
                 id="name"
@@ -167,11 +176,12 @@ function SignupPage() {
                 placeholder="Jon Snow"
                 required
                 autoComplete="name"
+                data-autofocus="true"
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
-            </div>
+            </label>
 
-            <div className="flex flex-col gap-2">
+            <label htmlFor="email" className="flex flex-col gap-2">
               <Text.H6 weight="medium">Email</Text.H6>
               <input
                 id="email"
@@ -182,9 +192,9 @@ function SignupPage() {
                 autoComplete="email"
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
-            </div>
+            </label>
 
-            <div className="flex flex-col gap-2">
+            <label htmlFor="companyName" className="flex flex-col gap-2">
               <Text.H6 weight="medium">Workspace Name</Text.H6>
               <input
                 id="companyName"
@@ -194,7 +204,7 @@ function SignupPage() {
                 required
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
-            </div>
+            </label>
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive">
@@ -209,7 +219,7 @@ function SignupPage() {
               disabled={isLoading}
               className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
             >
-              {isLoading ? "Creating..." : "Create account"}
+              {isLoading ? "Sending..." : "Create account"}
             </Button>
           </form>
 

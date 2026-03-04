@@ -171,8 +171,9 @@ function DesignSystemPage() {
     root.style.colorScheme = theme
 
     return () => {
-      root.classList.remove("dark")
-      root.style.colorScheme = "light"
+      const hostTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      root.classList.toggle("dark", hostTheme === "dark")
+      root.style.colorScheme = hostTheme
     }
   }, [theme])
 
