@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - latitude-v1
   pull_request:
     branches:
       - main
+      - latitude-v1
   workflow_call:
     inputs:
       workflow_call:
@@ -22,7 +24,7 @@ jobs:
     uses: ./.github/workflows/python-lint.yml
 
   call-build-and-push:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/latitude-v1'
     permissions:
       contents: read
       packages: write
