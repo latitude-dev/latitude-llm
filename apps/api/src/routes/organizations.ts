@@ -29,12 +29,12 @@ export const createOrganizationsRoutes = () => {
     }
 
     const auth = c.get("auth") as AuthContext
-
-    const organization = await runCommand(c.get("db"), async (txDb) => {
+    const organizationId = OrganizationId(generateId())
+    const organization = await runCommand(c.get("db"))(async (txDb) => {
       const organizationRepository = createOrganizationPostgresRepository(txDb)
 
       const input: CreateOrganizationInput = {
-        id: OrganizationId(generateId()),
+        id: organizationId,
         name: body.name,
         creatorId: auth.userId,
       }
@@ -47,8 +47,10 @@ export const createOrganizationsRoutes = () => {
 
   // GET /organizations - List user's organizations
   app.get("/", async (c) => {
-    const organizationRepository = createOrganizationPostgresRepository(c.get("db"))
-    const organizations = await Effect.runPromise(organizationRepository.findAll())
+    const organizations = await runCommand(c.get("db"))(async (txDb) => {
+      const organizationRepository = createOrganizationPostgresRepository(txDb)
+      return Effect.runPromise(organizationRepository.findAll())
+    })
     return c.json({ organizations }, 200)
   })
 
@@ -61,9 +63,12 @@ export const createOrganizationsRoutes = () => {
 
   // GET /organizations/:id/members - List organization members
   app.get("/:id/members", async (c) => {
-    const membershipRepository = createMembershipPostgresRepository(c.get("db"))
     const organizationId = c.var.organization.id
-    const members = await Effect.runPromise(membershipRepository.findByOrganizationId(organizationId))
+
+    const members = await runCommand(c.get("db"))(async (txDb) => {
+      const membershipRepository = createMembershipPostgresRepository(txDb)
+      return Effect.runPromise(membershipRepository.findByOrganizationId(organizationId))
+    })
 
     return c.json({ members }, 200)
   })
@@ -72,7 +77,7 @@ export const createOrganizationsRoutes = () => {
   app.delete("/:id", async (c) => {
     const id = c.var.organization.id
 
-    await runCommand(c.get("db"), async (txDb) => {
+    await runCommand(c.get("db"))(async (txDb) => {
       const organizationRepository = createOrganizationPostgresRepository(txDb)
 
       return Effect.runPromise(organizationRepository.delete(id))

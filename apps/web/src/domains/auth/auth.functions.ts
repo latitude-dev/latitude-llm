@@ -39,7 +39,7 @@ export const createLoginIntent = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
 
-    const intent = await runCommand(db, async (txDb) => {
+    const intent = await runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
       const users = createAuthUserPostgresRepository(txDb)
 
@@ -57,7 +57,7 @@ export const createSignupIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(createSignupIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
-    const intent = await runCommand(db, async (txDb) => {
+    const intent = await runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
       const users = createAuthUserPostgresRepository(txDb)
 
@@ -89,7 +89,7 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
 
     const { db } = getPostgresClient()
 
-    return runCommand(db, async (txDb) => {
+    return runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
       const users = createAuthUserPostgresRepository(txDb)
       const memberships = createMembershipPostgresRepository(txDb)

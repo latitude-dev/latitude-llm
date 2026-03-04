@@ -328,7 +328,7 @@ Rules:
 
 ## Error Handling
 
-- Prefer typed errors (`Data.TaggedError`) over raw `Error` or `unknown`
+- Always use typed errors (`Data.TaggedError`) instead of raw `Error` at domain/platform boundaries
 - Use `Effect.either` for operations that may fail but shouldn't stop execution
 - Handle errors at boundaries; propagate through Effect error channel internally
 

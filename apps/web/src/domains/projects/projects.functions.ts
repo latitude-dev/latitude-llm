@@ -32,11 +32,14 @@ export const listProjects = createServerFn({ method: "GET" })
     const { userId } = await requireSession()
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
-    const projectsRepo = createProjectPostgresRepository(db)
 
-    const projects = (await Effect.runPromise(
-      projectsRepo.findByOrganizationId(OrganizationId(data.organizationId)),
-    )) as readonly Project[]
+    const projects = await runCommand(
+      db,
+      data.organizationId,
+    )(async (txDb) => {
+      const projectsRepo = createProjectPostgresRepository(txDb)
+      return Effect.runPromise(projectsRepo.findByOrganizationId(OrganizationId(data.organizationId)))
+    })
 
     return projects.map(toRecord)
   })
@@ -48,7 +51,10 @@ export const createProject = createServerFn({ method: "POST" })
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
 
-    const project = (await runCommand(db, async (txDb) => {
+    const project = await runCommand(
+      db,
+      data.organizationId,
+    )(async (txDb) => {
       const projectsRepo = createProjectPostgresRepository(txDb)
 
       return Effect.runPromise(
@@ -60,7 +66,7 @@ export const createProject = createServerFn({ method: "POST" })
           createdById: UserId(userId),
         }),
       )
-    })) as Project
+    })
 
     return toRecord(project)
   })
@@ -72,7 +78,10 @@ export const updateProject = createServerFn({ method: "POST" })
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
 
-    const updatedProject = (await runCommand(db, async (txDb) => {
+    const updatedProject = await runCommand(
+      db,
+      data.organizationId,
+    )(async (txDb) => {
       const projectsRepo = createProjectPostgresRepository(txDb)
 
       return Effect.runPromise(
@@ -83,7 +92,7 @@ export const updateProject = createServerFn({ method: "POST" })
           ...(data.description !== undefined ? { description: data.description } : {}),
         }),
       )
-    })) as Project
+    })
 
     return toRecord(updatedProject)
   })
@@ -95,7 +104,10 @@ export const deleteProject = createServerFn({ method: "POST" })
     await assertOrganizationMembership(data.organizationId, userId)
     const { db } = getPostgresClient()
 
-    await runCommand(db, async (txDb) => {
+    await runCommand(
+      db,
+      data.organizationId,
+    )(async (txDb) => {
       const projectsRepo = createProjectPostgresRepository(txDb)
 
       return Effect.runPromise(projectsRepo.softDelete(ProjectId(data.id), OrganizationId(data.organizationId)))

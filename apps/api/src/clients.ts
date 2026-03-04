@@ -3,17 +3,16 @@ import { createBetterAuth } from "@platform/auth-better"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import type { RedisClient } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
-import { type PostgresDb, createPostgresClient } from "@platform/db-postgres"
+import { type PostgresClient, createPostgresClient } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
-import type { Pool } from "pg"
 
-let postgresClientInstance: { db: PostgresDb; pool: Pool } | undefined
+let postgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 
-export const getPostgresClient = (): { db: PostgresDb; pool: Pool } => {
+export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
     postgresClientInstance = createPostgresClient()
   }

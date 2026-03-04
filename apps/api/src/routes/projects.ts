@@ -35,7 +35,10 @@ export const createProjectsRoutes = () => {
       createdById: auth.userId,
     }
 
-    const project = await runCommand(c.get("db"), async (txDb) => {
+    const project = await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
       const projectRepository = createProjectPostgresRepository(txDb)
 
       return Effect.runPromise(createProjectUseCase(projectRepository)(input))
@@ -45,16 +48,20 @@ export const createProjectsRoutes = () => {
 
   // GET /organizations/:organizationId/projects - List projects
   app.get("/", async (c) => {
-    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = c.var.organization.id
 
-    const projects = await Effect.runPromise(projectRepository.findByOrganizationId(organizationId))
+    const projects = await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
+      const scopedRepo = createProjectPostgresRepository(txDb)
+      return Effect.runPromise(scopedRepo.findByOrganizationId(organizationId))
+    })
     return c.json({ projects }, 200)
   })
 
   // GET /organizations/:organizationId/projects/:id - Get project
   app.get("/:id", async (c) => {
-    const projectRepository = createProjectPostgresRepository(c.get("db"))
     const organizationId = c.var.organization.id
     const idParam = c.req.param("id")
     const id = idParam ? ProjectId(idParam) : null
@@ -64,7 +71,13 @@ export const createProjectsRoutes = () => {
       })
     }
 
-    const project = await Effect.runPromise(projectRepository.findById(id, organizationId))
+    const project = await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
+      const projectRepository = createProjectPostgresRepository(txDb)
+      return Effect.runPromise(projectRepository.findById(id, organizationId))
+    })
 
     if (!project) {
       throw new BadRequestError({ httpMessage: "Project not found" })
@@ -89,7 +102,10 @@ export const createProjectsRoutes = () => {
       readonly description?: string | null
     }
 
-    const updatedProject = await runCommand(c.get("db"), async (txDb) => {
+    const updatedProject = await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
       const projectRepository = createProjectPostgresRepository(txDb)
 
       return Effect.runPromise(
@@ -116,7 +132,10 @@ export const createProjectsRoutes = () => {
       })
     }
 
-    await runCommand(c.get("db"), async (txDb) => {
+    await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
       const projectRepository = createProjectPostgresRepository(txDb)
 
       return Effect.runPromise(projectRepository.softDelete(id, organizationId))

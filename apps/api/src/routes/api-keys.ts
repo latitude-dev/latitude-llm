@@ -51,7 +51,10 @@ export const createApiKeysRoutes = () => {
       name: body.name,
     }
 
-    const apiKey = await runCommand(c.get("db"), async (txDb) => {
+    const apiKey = await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
       const apiKeyRepository = createApiKeyPostgresRepository(txDb)
 
       return Effect.runPromise(generateApiKeyUseCase(apiKeyRepository)(input))
@@ -61,10 +64,15 @@ export const createApiKeysRoutes = () => {
 
   // GET /organizations/:organizationId/api-keys - List API keys
   app.get("/", async (c) => {
-    const apiKeyRepository = createApiKeyPostgresRepository(c.get("db"))
     const organizationId = c.var.organization.id
 
-    const apiKeys = await Effect.runPromise(apiKeyRepository.findByOrganizationId(organizationId))
+    const apiKeys = await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
+      const apiKeyRepository = createApiKeyPostgresRepository(txDb)
+      return Effect.runPromise(apiKeyRepository.findByOrganizationId(organizationId))
+    })
     return c.json({ apiKeys }, 200)
   })
 
@@ -78,7 +86,10 @@ export const createApiKeysRoutes = () => {
       throw new BadRequestError({ httpMessage: "API Key ID is required" })
     }
 
-    await runCommand(c.get("db"), async (txDb) => {
+    await runCommand(
+      c.get("db"),
+      organizationId,
+    )(async (txDb) => {
       const apiKeyRepository = createApiKeyPostgresRepository(txDb)
 
       const apiKey = await Effect.runPromise(apiKeyRepository.findById(id))

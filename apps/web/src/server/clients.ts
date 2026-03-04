@@ -40,7 +40,7 @@ const getAuthIntentIdFromMagicLinkUrl = ({
   return parsedCallbackUrl.searchParams.get("authIntentId")
 }
 
-export const getPostgresClient = (): { db: PostgresDb; pool: PostgresClient["pool"] } => {
+export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
     postgresClientInstance = createPostgresClient()
   }

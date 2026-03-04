@@ -16,16 +16,18 @@ import { type OrganizationRecord, createOrganizationInputSchema } from "./organi
 export const listOrganizations = createServerFn({ method: "GET" }).handler(async (): Promise<OrganizationRecord[]> => {
   const { userId } = await requireSession()
   const { db } = getPostgresClient()
-  const membershipsRepo = createMembershipPostgresRepository(db)
-  const organizationsRepo = createOrganizationPostgresRepository(db)
 
-  const memberships = (await Effect.runPromise(membershipsRepo.findByUserId(userId))) as readonly Membership[]
+  const memberships = await runCommand(db)(async (txDb) => {
+    const membershipsRepo = createMembershipPostgresRepository(txDb)
+    return Effect.runPromise(membershipsRepo.findByUserId(userId))
+  })
 
   const organizations = await Promise.all(
     memberships.map(async (membership) => {
-      const organization = (await Effect.runPromise(
-        organizationsRepo.findById(membership.organizationId),
-      )) as Organization
+      const organization = await runCommand(db)(async (txDb) => {
+        const organizationsRepo = createOrganizationPostgresRepository(txDb)
+        return Effect.runPromise(organizationsRepo.findById(membership.organizationId))
+      })
 
       return {
         id: organization.id,
@@ -44,15 +46,16 @@ export const createOrganization = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<OrganizationRecord> => {
     const { userId } = await requireSession()
     const { db } = getPostgresClient()
+    const organizationId = OrganizationId(generateId())
 
-    return runCommand(db, async (txDb) => {
+    return runCommand(db)(async (txDb) => {
       const organizationsRepo = createOrganizationPostgresRepository(txDb)
       const membershipsRepo = createMembershipPostgresRepository(txDb)
       const name = data.name.trim()
 
       const organization = await Effect.runPromise(
         createOrganizationUseCase(organizationsRepo)({
-          id: OrganizationId(generateId()),
+          id: organizationId,
           name,
           creatorId: UserId(userId),
         }),
