@@ -1,5 +1,5 @@
 import type { Organization, OrganizationRepository } from "@domain/organizations"
-import { NotFoundError, type OrganizationId, toRepositoryError } from "@domain/shared"
+import { NotFoundError, type OrganizationId, type UserId, toRepositoryError } from "@domain/shared"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -56,17 +56,20 @@ export const createOrganizationPostgresRepository = (db: PostgresDb): Organizati
       return toDomainOrganization(result)
     }),
 
-  findAll: () =>
+  findByUserId: (userId: UserId) =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
         try: async () => {
-          // Query all organizations (RLS will filter by user membership via member table)
-          return db.select().from(schema.organization)
+          return db
+            .select({ organization: schema.organization })
+            .from(schema.organization)
+            .innerJoin(schema.member, eq(schema.member.organizationId, schema.organization.id))
+            .where(eq(schema.member.userId, userId))
         },
-        catch: (error) => toRepositoryError(error, "findAll"),
+        catch: (error) => toRepositoryError(error, "findByUserId"),
       })
 
-      return results.map(toDomainOrganization)
+      return results.map(({ organization }) => toDomainOrganization(organization))
     }),
 
   save: (organization: Organization) =>

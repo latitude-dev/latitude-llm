@@ -52,7 +52,7 @@ export const createApiKeysRoutes = () => {
     }
 
     const apiKey = await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const apiKeyRepository = createApiKeyPostgresRepository(txDb)
@@ -67,7 +67,7 @@ export const createApiKeysRoutes = () => {
     const organizationId = c.var.organization.id
 
     const apiKeys = await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const apiKeyRepository = createApiKeyPostgresRepository(txDb)
@@ -78,7 +78,7 @@ export const createApiKeysRoutes = () => {
 
   // DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
   app.delete("/:id", async (c) => {
-    const cacheInvalidator = createApiKeyCacheInvalidator(c.get("redis"))
+    const cacheInvalidator = createApiKeyCacheInvalidator(c.var.redis)
     const organizationId = c.var.organization.id
     const idParam = c.req.param("id")
     const id = idParam ? ApiKeyId(idParam) : null
@@ -87,7 +87,7 @@ export const createApiKeysRoutes = () => {
     }
 
     await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const apiKeyRepository = createApiKeyPostgresRepository(txDb)

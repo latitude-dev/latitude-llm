@@ -3,7 +3,6 @@ import { magicLinkTemplate, sendEmail, signupExistingAccountMagicLinkTemplate } 
 import { createBetterAuth } from "@platform/auth-better"
 import {
   type PostgresClient,
-  type PostgresDb,
   createAuthIntentPostgresRepository,
   createAuthUserPostgresRepository,
   createPostgresClient,

@@ -96,8 +96,8 @@ export const runCommand =
           throw new InvalidSqlParameterTypeError({ type: typeof organizationId })
         }
 
-        if (typeof db.execute === "function") {
-          await db.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
+        if (typeof txDb.execute === "function") {
+          await txDb.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
         } else {
           throw new DatabaseExecuteNotSupportedError({})
         }

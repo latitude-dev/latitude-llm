@@ -3,7 +3,7 @@ import { BadRequestError, ProjectId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import type { AuthContext, OrganizationScopedEnv } from "../types.ts"
+import type { OrganizationScopedEnv } from "../types.ts"
 
 /**
  * Project routes
@@ -21,7 +21,7 @@ export const createProjectsRoutes = () => {
   // POST /organizations/:organizationId/projects - Create project
   app.post("/", async (c) => {
     const organizationId = c.var.organization.id
-    const auth = c.get("auth") as AuthContext
+    const auth = c.var.auth
     const body = (await c.req.json()) as {
       readonly name: string
       readonly description?: string
@@ -36,7 +36,7 @@ export const createProjectsRoutes = () => {
     }
 
     const project = await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const projectRepository = createProjectPostgresRepository(txDb)
@@ -51,7 +51,7 @@ export const createProjectsRoutes = () => {
     const organizationId = c.var.organization.id
 
     const projects = await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const scopedRepo = createProjectPostgresRepository(txDb)
@@ -72,7 +72,7 @@ export const createProjectsRoutes = () => {
     }
 
     const project = await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const projectRepository = createProjectPostgresRepository(txDb)
@@ -103,7 +103,7 @@ export const createProjectsRoutes = () => {
     }
 
     const updatedProject = await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const projectRepository = createProjectPostgresRepository(txDb)
@@ -133,7 +133,7 @@ export const createProjectsRoutes = () => {
     }
 
     await runCommand(
-      c.get("db"),
+      c.var.db,
       organizationId,
     )(async (txDb) => {
       const projectRepository = createProjectPostgresRepository(txDb)
