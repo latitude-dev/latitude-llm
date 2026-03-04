@@ -1,5 +1,5 @@
-import type { OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared-kernel"
-import type { GrantId } from "@domain/shared-kernel"
+import type { OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared"
+import type { GrantId } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { createGrant } from "../entities/grant.ts"
 import type { GrantType } from "../entities/grant.ts"

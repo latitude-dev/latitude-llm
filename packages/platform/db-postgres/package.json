@@ -24,9 +24,10 @@
   "dependencies": {
     "@domain/api-keys": "workspace:^",
     "@domain/projects": "workspace:*",
-    "@domain/shared-kernel": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@domain/subscriptions": "workspace:*",
     "@domain/organizations": "workspace:*",
+    "@domain/users": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/utils": "workspace:*",
     "drizzle-orm": "catalog:",

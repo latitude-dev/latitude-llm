@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { generateId } from "@domain/shared-kernel"
+import { generateId } from "@domain/shared"
 import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
@@ -45,7 +45,8 @@ const createApp = (db: PostgresDb): Hono => {
   return app
 }
 
-const TEST_ENCRYPTION_KEY = Buffer.from("75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b", "hex")
+const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
+const TEST_ENCRYPTION_KEY = Buffer.from(TEST_ENCRYPTION_KEY_HEX, "hex")
 
 const createOrganizationSetup = async (db: InMemoryPostgres["db"]): Promise<OrganizationSetup> => {
   const userId = generateId()
@@ -95,6 +96,7 @@ describe("Organization Routes Integration", () => {
   let database: InMemoryPostgres
 
   beforeAll(async () => {
+    process.env.LAT_API_KEY_ENCRYPTION_KEY ??= TEST_ENCRYPTION_KEY_HEX
     database = await createInMemoryPostgres()
     app = createApp(database.postgresDb)
   })

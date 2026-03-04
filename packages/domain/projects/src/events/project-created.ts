@@ -1,5 +1,5 @@
 import type { DomainEvent } from "@domain/events"
-import type { OrganizationId, ProjectId, UserId } from "@domain/shared-kernel"
+import type { OrganizationId, ProjectId, UserId } from "@domain/shared"
 
 /**
  * ProjectCreated event - emitted when a new project is created.

@@ -8,7 +8,6 @@ export {
 } from "./client.ts"
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 export { healthcheckPostgres } from "./health.ts"
-export { relations as postgresRelations } from "./relations.ts"
 export * as postgresSchema from "./schema/index.ts"
 export {
   RLSError,

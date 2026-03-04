@@ -1,5 +1,5 @@
 import { type CreateProjectInput, type Project, createProjectUseCase } from "@domain/projects"
-import { OrganizationId, ProjectId, generateId } from "@domain/shared-kernel"
+import { OrganizationId, ProjectId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"

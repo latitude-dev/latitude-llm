@@ -1,11 +1,11 @@
 import { PGlite } from "@electric-sql/pglite"
-import { type PostgresDb, postgresRelations, postgresSchema } from "@platform/db-postgres"
+import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { pushSchema } from "drizzle-kit/api-postgres"
 import { type PgliteDatabase, drizzle } from "drizzle-orm/pglite"
 
 export interface InMemoryPostgres {
   readonly client: PGlite
-  readonly db: ReturnType<typeof drizzle<typeof postgresSchema, typeof postgresRelations>>
+  readonly db: ReturnType<typeof drizzle>
   readonly postgresDb: PostgresDb
 }
 
@@ -20,7 +20,7 @@ export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
     BEGIN RETURN NULLIF(current_setting('app.current_user_id', true), ''); END;
     $$ LANGUAGE plpgsql SECURITY DEFINER;
   `)
-  const db = drizzle({ client, schema: postgresSchema, relations: postgresRelations })
+  const db = drizzle({ client, schema: postgresSchema })
 
   const { sqlStatements } = await pushSchema(postgresSchema as Record<string, unknown>, db as unknown as PgliteDatabase)
   const filtered = sqlStatements.filter((s) => !/^(DROP|CREATE) SCHEMA\b/i.test(s.trim()))

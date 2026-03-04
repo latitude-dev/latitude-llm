@@ -1,6 +1,6 @@
+import type { RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
-import type { RepositoryError } from "../errors.ts"
-import type { User } from "../user.ts"
+import type { User } from "../entities/user.ts"
 
 /**
  * User repository port - interface for user persistence operations.
@@ -8,7 +8,6 @@ import type { User } from "../user.ts"
  * This port abstracts user data access so the domain doesn't depend
  * on specific database implementations.
  */
-
 export interface UserRepository {
   /**
    * Find a user by their email address.

@@ -1,5 +1,5 @@
 import { createProject } from "@domain/projects"
-import { ProjectId } from "@domain/shared-kernel"
+import { ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { SEED_ORG_ID, SEED_OWNER_USER_ID } from "../organizations/index.ts"
 import type { SeedContext, Seeder } from "../types.ts"

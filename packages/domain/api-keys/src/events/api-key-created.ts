@@ -1,5 +1,5 @@
 import type { DomainEvent } from "@domain/events"
-import type { ApiKeyId, OrganizationId } from "@domain/shared-kernel"
+import type { ApiKeyId, OrganizationId } from "@domain/shared"
 
 /**
  * ApiKeyCreated event - emitted when a new API key is generated.

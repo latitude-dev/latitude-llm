@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, RepositoryError } from "@domain/shared-kernel"
+import type { OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
 

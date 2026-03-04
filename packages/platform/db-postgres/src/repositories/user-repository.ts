@@ -1,13 +1,14 @@
-import type { User, UserRepository } from "@domain/shared-kernel"
-import { toRepositoryError } from "@domain/shared-kernel"
+import { toRepositoryError } from "@domain/shared"
+import type { User, UserRepository } from "@domain/users"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
-import type * as schema from "../schema/index.ts"
+import { user } from "../schema/index.ts"
 
 /**
  * Maps a database user row to a domain User entity.
  */
-const toDomainUser = (row: typeof schema.user.$inferSelect): User => ({
+const toDomainUser = (row: typeof user.$inferSelect): User => ({
   id: row.id as User["id"],
   email: row.email,
   name: row.name ?? null,
@@ -24,11 +25,8 @@ const toDomainUser = (row: typeof schema.user.$inferSelect): User => ({
 export const createUserPostgresRepository = (db: PostgresDb): UserRepository => ({
   findByEmail: (email: string) =>
     Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          db.query.user.findFirst({
-            where: { email },
-          }),
+      const [result] = yield* Effect.tryPromise({
+        try: () => db.select().from(user).where(eq(user.email, email)).limit(1),
         catch: (error) => toRepositoryError(error, "findByEmail"),
       })
 

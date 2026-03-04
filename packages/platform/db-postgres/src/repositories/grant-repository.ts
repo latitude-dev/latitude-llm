@@ -1,6 +1,6 @@
-import { type GrantId, type OrganizationId, type SubscriptionId, toRepositoryError } from "@domain/shared-kernel"
+import { type GrantId, type OrganizationId, type SubscriptionId, toRepositoryError } from "@domain/shared"
 import type { Grant, GrantRepository, GrantType } from "@domain/subscriptions"
-import { eq } from "drizzle-orm"
+import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import type { QuotaType } from "../schema/grants.ts"
@@ -62,11 +62,8 @@ const toInsertRow = (grant: Grant): typeof schema.grants.$inferInsert => ({
 export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository => ({
   findById: (id: GrantId) =>
     Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          db.query.grants.findFirst({
-            where: { id },
-          }),
+      const [result] = yield* Effect.tryPromise({
+        try: () => db.select().from(schema.grants).where(eq(schema.grants.id, id)).limit(1),
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
@@ -76,10 +73,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
   findByOrganizationId: (organizationId: OrganizationId) =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
-        try: () =>
-          db.query.grants.findMany({
-            where: { organizationId },
-          }),
+        try: () => db.select().from(schema.grants).where(eq(schema.grants.organizationId, organizationId)),
         catch: (error) => toRepositoryError(error, "findByOrganizationId"),
       })
 
@@ -89,10 +83,7 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
   findBySubscriptionId: (subscriptionId: SubscriptionId) =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
-        try: () =>
-          db.query.grants.findMany({
-            where: { subscriptionId },
-          }),
+        try: () => db.select().from(schema.grants).where(eq(schema.grants.subscriptionId, subscriptionId)),
         catch: (error) => toRepositoryError(error, "findBySubscriptionId"),
       })
 
@@ -104,14 +95,17 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
       const now = new Date()
       const results = yield* Effect.tryPromise({
         try: () =>
-          db.query.grants.findMany({
-            where: {
-              organizationId,
-              type: toDbGrantType(type),
-              balance: { gt: 0 },
-              OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gte: now } }],
-            },
-          }),
+          db
+            .select()
+            .from(schema.grants)
+            .where(
+              and(
+                eq(schema.grants.organizationId, organizationId),
+                eq(schema.grants.type, toDbGrantType(type)),
+                gt(schema.grants.balance, 0),
+                or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now)),
+              ),
+            ),
         catch: (error) => toRepositoryError(error, "findActiveByType"),
       })
 
@@ -123,13 +117,16 @@ export const createGrantPostgresRepository = (db: PostgresDb): GrantRepository =
       const now = new Date()
       const results = yield* Effect.tryPromise({
         try: () =>
-          db.query.grants.findMany({
-            where: {
-              organizationId,
-              balance: { gt: 0 },
-              OR: [{ expiresAt: { isNull: true } }, { expiresAt: { gte: now } }],
-            },
-          }),
+          db
+            .select()
+            .from(schema.grants)
+            .where(
+              and(
+                eq(schema.grants.organizationId, organizationId),
+                gt(schema.grants.balance, 0),
+                or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now)),
+              ),
+            ),
         catch: (error) => toRepositoryError(error, "findAllActive"),
       })
 

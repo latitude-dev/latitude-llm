@@ -12,11 +12,35 @@ latitude-lock.json
 .vscode
 .opencode
 
-# Dependencies
+# Node / package manager artifacts
 node_modules
+.pnpm-store
+**/.pnpm-store
+.npm
 .pnp
 .pnp.js
+.pnp.cjs
+.pnp.loader.mjs
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+!.yarn/patches
+.yarn-integrity
 *.*-E
+
+# Logs and runtime files
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.stackdump
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Local env files
 .env
@@ -25,14 +49,20 @@ node_modules
 
 # Testing
 coverage
+.nyc_output
 
-# Turbo
+# Build/cache outputs
 .turbo
 .tsbuildinfo
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+.rpt2_cache
+.rts2_cache_*
 
-# Vim shit
+# Python artifacts
 *.py-E
-# Python packages
 .venv
 **/*.egg-info/
 __pycache__
@@ -51,13 +81,19 @@ dist
 *.tsx-E
 
 
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Misc
+# macOS
 .DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.DocumentRevisions-V100
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
 
 # postgres data in development. Ignore
 docker/pgdata/

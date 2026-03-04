@@ -1,5 +1,5 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import type { OrganizationId, UserId } from "@domain/shared-kernel"
+import type { OrganizationId, UserId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresDb } from "@platform/db-postgres"
 

@@ -1,7 +1,7 @@
 import type { Membership, MembershipRepository, MembershipRole } from "@domain/organizations"
-import type { OrganizationId, UserId } from "@domain/shared-kernel"
-import { toRepositoryError } from "@domain/shared-kernel"
-import { eq } from "drizzle-orm"
+import type { OrganizationId, UserId } from "@domain/shared"
+import { toRepositoryError } from "@domain/shared"
+import { and, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import * as schema from "../schema/index.ts"
@@ -30,9 +30,7 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
         try: async () => {
-          const member = await db.query.member.findFirst({
-            where: { id },
-          })
+          const [member] = await db.select().from(schema.member).where(eq(schema.member.id, id)).limit(1)
 
           return member ? toDomainMembership(member) : null
         },
@@ -46,9 +44,7 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
         try: async () => {
-          const members = await db.query.member.findMany({
-            where: { organizationId },
-          })
+          const members = await db.select().from(schema.member).where(eq(schema.member.organizationId, organizationId))
 
           return members.map(toDomainMembership)
         },
@@ -62,9 +58,7 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
         try: async () => {
-          const members = await db.query.member.findMany({
-            where: { userId },
-          })
+          const members = await db.select().from(schema.member).where(eq(schema.member.userId, userId))
 
           return members.map(toDomainMembership)
         },
@@ -78,9 +72,11 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
         try: async () => {
-          const member = await db.query.member.findFirst({
-            where: { organizationId, userId },
-          })
+          const [member] = await db
+            .select()
+            .from(schema.member)
+            .where(and(eq(schema.member.organizationId, organizationId), eq(schema.member.userId, userId)))
+            .limit(1)
 
           return member ? toDomainMembership(member) : null
         },
@@ -94,11 +90,13 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
         try: async () => {
-          const member = await db.query.member.findFirst({
-            where: { organizationId, userId },
-          })
+          const [member] = await db
+            .select({ id: schema.member.id })
+            .from(schema.member)
+            .where(and(eq(schema.member.organizationId, organizationId), eq(schema.member.userId, userId)))
+            .limit(1)
 
-          return member !== null
+          return member !== undefined
         },
         catch: (error) => toRepositoryError(error, "isMember"),
       })
@@ -111,9 +109,11 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
       const result = yield* Effect.tryPromise({
         try: async () => {
           // Check if member exists with admin or owner role
-          const member = await db.query.member.findFirst({
-            where: { organizationId, userId },
-          })
+          const [member] = await db
+            .select({ role: schema.member.role })
+            .from(schema.member)
+            .where(and(eq(schema.member.organizationId, organizationId), eq(schema.member.userId, userId)))
+            .limit(1)
 
           if (!member) return false
 

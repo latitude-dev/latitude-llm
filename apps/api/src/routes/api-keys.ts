@@ -4,7 +4,7 @@ import {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId, OrganizationId, generateId } from "@domain/shared-kernel"
+import { ApiKeyId, OrganizationId, generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"

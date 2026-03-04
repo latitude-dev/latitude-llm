@@ -1,5 +1,5 @@
 import { stripe } from "@better-auth/stripe"
-import { generateId } from "@domain/shared-kernel"
+import { generateId } from "@domain/shared"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
