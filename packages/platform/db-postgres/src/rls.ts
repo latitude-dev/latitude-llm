@@ -1,4 +1,4 @@
-import type { OrganizationId } from "@domain/shared-kernel"
+import type { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import { Data } from "effect"
 import type { Pool, PoolClient } from "pg"

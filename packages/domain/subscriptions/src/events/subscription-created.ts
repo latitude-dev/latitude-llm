@@ -1,5 +1,5 @@
 import type { DomainEvent } from "@domain/events"
-import type { OrganizationId, SubscriptionId } from "@domain/shared-kernel"
+import type { OrganizationId, SubscriptionId } from "@domain/shared"
 import type { Plan } from "../entities/plan.ts"
 
 /**

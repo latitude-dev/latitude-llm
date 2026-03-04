@@ -14,7 +14,7 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
-    "@domain/shared-kernel": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@domain/events": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:"

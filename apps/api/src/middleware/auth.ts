@@ -1,4 +1,4 @@
-import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared-kernel"
+import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
 import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"

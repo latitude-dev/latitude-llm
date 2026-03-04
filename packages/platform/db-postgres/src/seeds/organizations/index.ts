@@ -1,5 +1,5 @@
 import { createMembership, createOrganization } from "@domain/organizations"
-import { OrganizationId, UserId } from "@domain/shared-kernel"
+import { OrganizationId, UserId } from "@domain/shared"
 import { Effect } from "effect"
 import { postgresSchema } from "../../index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"

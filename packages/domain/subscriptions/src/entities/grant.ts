@@ -1,4 +1,4 @@
-import type { GrantId, OrganizationId, SubscriptionId } from "@domain/shared-kernel"
+import type { GrantId, OrganizationId, SubscriptionId } from "@domain/shared"
 
 /**
  * Grant type enum - defines what quota is being granted.

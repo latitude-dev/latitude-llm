@@ -1,5 +1,5 @@
 import { createApiKey } from "@domain/api-keys"
-import { ApiKeyId } from "@domain/shared-kernel"
+import { ApiKeyId } from "@domain/shared"
 import { hashToken } from "@repo/utils"
 import { Effect } from "effect"
 import { SEED_ORG_ID } from "../organizations/index.ts"

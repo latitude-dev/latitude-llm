@@ -18,7 +18,7 @@
     "@domain/email": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
-    "@domain/shared-kernel": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/auth-better": "workspace:*",
     "@platform/cache-redis": "workspace:*",

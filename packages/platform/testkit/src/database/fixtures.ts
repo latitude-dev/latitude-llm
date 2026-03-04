@@ -1,4 +1,4 @@
-import { generateId } from "@domain/shared-kernel"
+import { generateId } from "@domain/shared"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema as schema } from "@platform/db-postgres"
 import { encrypt, hashToken } from "@repo/utils"

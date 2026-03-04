@@ -1,11 +1,10 @@
 import { type InvalidEnvValueError, type MissingEnvValueError, parseEnv, parseEnvOptional } from "@platform/env"
-import { type NodePgDatabase, drizzle } from "drizzle-orm/node-postgres"
+import { drizzle } from "drizzle-orm/node-postgres"
 import { Effect } from "effect"
 import { Pool, type PoolConfig } from "pg"
 
-import { relations } from "./relations.ts"
-
-export type PostgresDb = NodePgDatabase<Record<string, never>, typeof relations>
+const createPostgresDb = (pool: Pool) => drizzle({ client: pool })
+export type PostgresDb = ReturnType<typeof createPostgresDb>
 
 export interface PostgresConfig {
   readonly databaseUrl?: string
@@ -50,7 +49,7 @@ export const createPostgresClientEffect = (
 ): Effect.Effect<PostgresClient, CreatePostgresClientError> => {
   return createPostgresPoolEffect(config).pipe(
     Effect.map((pool) => {
-      const db = drizzle({ client: pool, relations })
+      const db = createPostgresDb(pool)
 
       return { db, pool }
     }),

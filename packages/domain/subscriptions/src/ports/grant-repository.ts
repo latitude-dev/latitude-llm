@@ -1,4 +1,4 @@
-import type { GrantId, OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared-kernel"
+import type { GrantId, OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared"
 import type { Effect } from "effect"
 import type { Grant, GrantType } from "../entities/grant.ts"
 

@@ -1,4 +1,4 @@
-import type { ApiKeyId, OrganizationId } from "@domain/shared-kernel"
+import type { ApiKeyId, OrganizationId } from "@domain/shared"
 
 /**
  * API Key entity - authenticates organization-bound requests.

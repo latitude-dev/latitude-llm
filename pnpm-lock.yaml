@@ -131,9 +131,9 @@ importers:
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../../packages/domain/shared-kernel
+        version: link:../../packages/domain/shared
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.6(hono@4.9.12)
@@ -343,9 +343,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../shared-kernel
+        version: link:../shared
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -408,9 +408,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../shared-kernel
+        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
@@ -420,14 +420,14 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../shared-kernel
+        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
 
-  packages/domain/shared-kernel:
+  packages/domain/shared:
     dependencies:
       '@paralleldrive/cuid2':
         specifier: 'catalog:'
@@ -441,9 +441,18 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../shared-kernel
+        version: link:../shared
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
+
+  packages/domain/users:
+    dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
@@ -459,9 +468,9 @@ importers:
       '@better-auth/stripe':
         specifier: ^1.5.0
         version: 1.5.0(@better-auth/core@1.5.0(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.3.2(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.1))(better-auth@1.5.0(9a1c8e5a13e2f7a47ac96fa05c69e1a9))(better-call@1.3.2(zod@4.3.6))(stripe@20.4.0(@types/node@24.10.3))
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../../domain/shared-kernel
+        version: link:../../domain/shared
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../db-postgres
@@ -513,12 +522,15 @@ importers:
       '@domain/projects':
         specifier: workspace:*
         version: link:../../domain/projects
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../../domain/shared-kernel
+        version: link:../../domain/shared
       '@domain/subscriptions':
         specifier: workspace:*
         version: link:../../domain/subscriptions
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../../domain/users
       '@paralleldrive/cuid2':
         specifier: 'catalog:'
         version: 3.3.0
@@ -635,9 +647,9 @@ importers:
 
   packages/platform/testkit:
     dependencies:
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../../domain/shared-kernel
+        version: link:../../domain/shared
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../cache-redis

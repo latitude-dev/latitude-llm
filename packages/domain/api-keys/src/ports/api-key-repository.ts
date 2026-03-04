@@ -1,4 +1,4 @@
-import type { ApiKeyId, OrganizationId, RepositoryError } from "@domain/shared-kernel"
+import type { ApiKeyId, OrganizationId, RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
 import type { ApiKey } from "../entities/api-key.ts"
 

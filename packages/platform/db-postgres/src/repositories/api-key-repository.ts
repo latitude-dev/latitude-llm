@@ -1,8 +1,8 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
-import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
+import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { decrypt, encrypt } from "@repo/utils"
-import { eq, inArray } from "drizzle-orm"
+import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import { apiKeys } from "../schema/index.ts"
@@ -58,8 +58,8 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
   return {
     findById: (id: ApiKeyId) =>
       Effect.gen(function* () {
-        const result = yield* Effect.tryPromise({
-          try: () => db.query.apiKeys.findFirst({ where: { id } }),
+        const [result] = yield* Effect.tryPromise({
+          try: () => db.select().from(apiKeys).where(eq(apiKeys.id, id)).limit(1),
           catch: (error) => toRepositoryError(error, "findById"),
         })
 
@@ -68,14 +68,13 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
 
     findByTokenHash: (tokenHash: string) =>
       Effect.gen(function* () {
-        const result = yield* Effect.tryPromise({
+        const [result] = yield* Effect.tryPromise({
           try: () =>
-            db.query.apiKeys.findFirst({
-              where: {
-                tokenHash,
-                deletedAt: { isNull: true },
-              },
-            }),
+            db
+              .select()
+              .from(apiKeys)
+              .where(and(eq(apiKeys.tokenHash, tokenHash), isNull(apiKeys.deletedAt)))
+              .limit(1),
           catch: (error) => toRepositoryError(error, "findByTokenHash"),
         })
 
@@ -86,12 +85,10 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
       Effect.gen(function* () {
         const results = yield* Effect.tryPromise({
           try: () =>
-            db.query.apiKeys.findMany({
-              where: {
-                organizationId,
-                deletedAt: { isNull: true },
-              },
-            }),
+            db
+              .select()
+              .from(apiKeys)
+              .where(and(eq(apiKeys.organizationId, organizationId), isNull(apiKeys.deletedAt))),
           catch: (error) => toRepositoryError(error, "findByOrganizationId"),
         })
 

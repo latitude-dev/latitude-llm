@@ -1,4 +1,4 @@
-import type { OrganizationId, SubscriptionId, UserId } from "@domain/shared-kernel"
+import type { OrganizationId, SubscriptionId, UserId } from "@domain/shared"
 
 /**
  * Organization entity - represents a tenant/workspace.

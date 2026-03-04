@@ -1,11 +1,4 @@
-import type {
-  ConflictError,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
-  UserId,
-  ValidationError,
-} from "@domain/shared-kernel"
+import type { ConflictError, OrganizationId, ProjectId, RepositoryError, UserId, ValidationError } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { type Project, createProject } from "../entities/project.ts"
 import type { ProjectRepository } from "../ports/project-repository.ts"

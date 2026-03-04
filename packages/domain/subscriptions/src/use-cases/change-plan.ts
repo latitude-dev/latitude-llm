@@ -1,5 +1,5 @@
-import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared-kernel"
-import type { GrantId } from "@domain/shared-kernel"
+import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
+import type { GrantId } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { type Grant, type GrantType, createGrant } from "../entities/grant.ts"
 import type { Plan } from "../entities/plan.ts"

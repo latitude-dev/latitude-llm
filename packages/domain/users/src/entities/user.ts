@@ -1,4 +1,4 @@
-import type { UserId } from "./id.ts"
+import type { UserId } from "@domain/shared"
 
 /**
  * User entity - represents a user in the system.
@@ -6,7 +6,6 @@ import type { UserId } from "./id.ts"
  * This is a minimal read-only representation of a user for domain operations.
  * The actual user storage and management is handled by Better Auth.
  */
-
 export interface User {
   readonly id: UserId
   readonly email: string

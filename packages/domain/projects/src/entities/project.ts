@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, UserId } from "@domain/shared-kernel"
+import type { OrganizationId, ProjectId, UserId } from "@domain/shared"
 
 /**
  * Project entity - represents a project within an organization.

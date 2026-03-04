@@ -14,7 +14,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/shared-kernel": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@repo/utils": "workspace:*",
