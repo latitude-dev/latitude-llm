@@ -26,6 +26,11 @@ interface RateLimitConfig {
   keyPrefix: string
 }
 
+const getNumericPipelineValue = (result: [unknown, unknown]): number | null => {
+  const value = result[1]
+  return typeof value === "number" ? value : null
+}
+
 /**
  * Create a Redis-backed rate limiting middleware
  */
@@ -56,8 +61,13 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
         return
       }
 
-      const count = incrResult[1] as number
-      let ttl = ttlResult[1] as number
+      const count = getNumericPipelineValue(incrResult)
+      let ttl = getNumericPipelineValue(ttlResult)
+
+      if (count === null || ttl === null) {
+        await next()
+        return
+      }
 
       // Set expiry on first request
       if (count === 1 || ttl === -1) {

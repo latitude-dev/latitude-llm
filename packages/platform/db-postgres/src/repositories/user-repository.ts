@@ -1,4 +1,4 @@
-import { toRepositoryError } from "@domain/shared"
+import { UserId, toRepositoryError } from "@domain/shared"
 import type { User, UserRepository } from "@domain/users"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
@@ -9,12 +9,12 @@ import { user } from "../schema/index.ts"
  * Maps a database user row to a domain User entity.
  */
 const toDomainUser = (row: typeof user.$inferSelect): User => ({
-  id: row.id as User["id"],
+  id: UserId(row.id),
   email: row.email,
   name: row.name ?? null,
   emailVerified: row.emailVerified,
   image: row.image ?? null,
-  role: row.role as User["role"],
+  role: row.role,
   banned: row.banned,
   createdAt: row.createdAt,
 })

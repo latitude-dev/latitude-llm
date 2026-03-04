@@ -15,7 +15,6 @@
   "dependencies": {
     "@domain/auth": "workspace:*",
     "@domain/email": "workspace:*",
-    "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@platform/auth-better": "workspace:*",

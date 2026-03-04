@@ -1,4 +1,4 @@
-import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
+import type { NotFoundError, OrganizationId, RepositoryError, UserId } from "@domain/shared"
 import type { Effect } from "effect"
 import type { Organization } from "../entities/organization.ts"
 
@@ -15,10 +15,9 @@ export interface OrganizationRepository {
   findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
 
   /**
-   * Find all organizations for the current user (via Better Auth membership).
-   * RLS policies ensure only organizations the user is a member of are returned.
+   * Find organizations where the given user is a member.
    */
-  findAll(): Effect.Effect<readonly Organization[], RepositoryError>
+  findByUserId(userId: UserId): Effect.Effect<readonly Organization[], RepositoryError>
 
   /**
    * Save an organization (create or update).

@@ -9,6 +9,10 @@ const SEED_ADMIN_USER_ID = UserId("uzm4d8pb5k0bd2oug9ud2xjs")
 export const SEED_ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")
 const SEED_OWNER_MEMBERSHIP_ID = "bg5hvjzpeop0atmz2nqydas7"
 const SEED_ADMIN_MEMBERSHIP_ID = "h5q2nionpzqmzvkgp0sp7jnl"
+const SEED_OWNER_EMAIL = "owner@acme.com"
+const SEED_ADMIN_EMAIL = "admin@acme.com"
+const SEED_ORG_NAME = "Acme Inc."
+const SEED_ORG_SLUG = "acme"
 
 const seedUsers: Seeder = {
   name: "organizations/users",
@@ -18,14 +22,14 @@ const seedUsers: Seeder = {
         const users = [
           {
             id: SEED_OWNER_USER_ID,
-            email: "owner@acme.com",
+            email: SEED_OWNER_EMAIL,
             name: "Owner User",
             emailVerified: true,
             role: "admin" as const,
           },
           {
             id: SEED_ADMIN_USER_ID,
-            email: "admin@acme.com",
+            email: SEED_ADMIN_EMAIL,
             name: "Admin User",
             emailVerified: true,
             role: "user" as const,
@@ -45,6 +49,8 @@ const seedUsers: Seeder = {
               },
             })
         }
+
+        console.log(`  -> users: ${users.map((user) => user.email).join(", ")}`)
       },
       catch: (error) => new SeedError({ reason: "Failed to seed users", cause: error }),
     }).pipe(Effect.asVoid),
@@ -56,11 +62,12 @@ const seedOrganizations: Seeder = {
     Effect.gen(function* () {
       const org = createOrganization({
         id: SEED_ORG_ID,
-        name: "Acme Inc.",
-        slug: "acme",
+        name: SEED_ORG_NAME,
+        slug: SEED_ORG_SLUG,
         creatorId: SEED_OWNER_USER_ID,
       })
       yield* ctx.repositories.organization.save(org)
+      console.log(`  -> organization: ${org.name} (${org.slug})`)
     }),
 }
 
@@ -83,6 +90,8 @@ const seedMemberships: Seeder = {
         role: "admin",
       })
       yield* ctx.repositories.membership.save(adminMembership)
+
+      console.log("  -> memberships: owner@acme.com (owner), admin@acme.com (admin)")
     }),
 }
 

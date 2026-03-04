@@ -1,31 +1,23 @@
 import { BadRequestError } from "@domain/shared"
-import type { User } from "better-auth"
 import { Hono } from "hono"
 import { getBetterAuth } from "../clients.ts"
 import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts"
 
-interface BetterAuthAPI {
-  signUpEmail: (options: {
-    body: { email: string; password: string; name: string }
-    headers?: Headers
-  }) => Promise<{ token: string; user: User } | { token: null; user: User }>
-  signInEmail: (options: {
-    body: { email: string; password: string }
-    headers?: Headers
-  }) => Promise<{ token: string; user: User } | { token: null; user: User }>
+const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null
 }
 
 export const createAuthRoutes = () => {
   const app = new Hono()
   const signUpRateLimiter = createSignUpIpRateLimiter()
   const auth = getBetterAuth()
-  const authApi = auth.api as unknown as BetterAuthAPI
+  const authApi = auth.api
 
   app.post("/sign-up/email", signUpRateLimiter, async (c) => {
-    const body = (await c.req.json()) as {
-      readonly email: string
-      readonly password: string
-      readonly name: string
+    const body = await c.req.json()
+
+    if (!isObjectRecord(body)) {
+      throw new BadRequestError({ httpMessage: "Invalid request body" })
     }
 
     if (!body.email || typeof body.email !== "string") {
@@ -88,9 +80,10 @@ export const createAuthRoutes = () => {
   })
 
   app.post("/sign-in/email", signUpRateLimiter, async (c) => {
-    const body = (await c.req.json()) as {
-      readonly email: string
-      readonly password: string
+    const body = await c.req.json()
+
+    if (!isObjectRecord(body)) {
+      throw new BadRequestError({ httpMessage: "Invalid request body" })
     }
 
     if (!body.email || typeof body.email !== "string") {

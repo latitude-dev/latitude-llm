@@ -1,8 +1,14 @@
 import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
-import { type ApiKeyId, type OrganizationId, toRepositoryError } from "@domain/shared"
+import {
+  ApiKeyId,
+  type ApiKeyId as ApiKeyIdType,
+  OrganizationId,
+  type OrganizationId as OrganizationIdType,
+  toRepositoryError,
+} from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { decrypt, encrypt } from "@repo/utils"
-import { and, eq, inArray, isNull } from "drizzle-orm"
+import { and, eq, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import { apiKeys } from "../schema/index.ts"
@@ -22,8 +28,8 @@ const getEncryptionKey = (): Buffer => {
  * Decrypts the token from its stored encrypted form.
  */
 const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
-  id: row.id as ApiKey["id"],
-  organizationId: row.organizationId as ApiKey["organizationId"],
+  id: ApiKeyId(row.id),
+  organizationId: OrganizationId(row.organizationId),
   token: decrypt(row.token, encryptionKey),
   tokenHash: row.tokenHash,
   name: row.name ?? "",
@@ -49,39 +55,36 @@ const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer): typeof apiKeys.$inf
 
 /**
  * Creates a Postgres implementation of the ApiKeyRepository port.
+ * All operations are scoped to the provided organization ID.
  *
  * @param db - Drizzle database instance
+ * @param organizationId - The organization ID this repository is scoped to
  */
-export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository => {
+export const createApiKeyPostgresRepository = (
+  db: PostgresDb,
+  organizationId: OrganizationIdType,
+): ApiKeyRepository => {
   const encryptionKey = getEncryptionKey()
 
   return {
-    findById: (id: ApiKeyId) =>
-      Effect.gen(function* () {
-        const [result] = yield* Effect.tryPromise({
-          try: () => db.select().from(apiKeys).where(eq(apiKeys.id, id)).limit(1),
-          catch: (error) => toRepositoryError(error, "findById"),
-        })
+    organizationId,
 
-        return result ? toDomainApiKey(result, encryptionKey) : null
-      }),
-
-    findByTokenHash: (tokenHash: string) =>
+    findById: (id: ApiKeyIdType) =>
       Effect.gen(function* () {
         const [result] = yield* Effect.tryPromise({
           try: () =>
             db
               .select()
               .from(apiKeys)
-              .where(and(eq(apiKeys.tokenHash, tokenHash), isNull(apiKeys.deletedAt)))
+              .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId)))
               .limit(1),
-          catch: (error) => toRepositoryError(error, "findByTokenHash"),
+          catch: (error) => toRepositoryError(error, "findById"),
         })
 
         return result ? toDomainApiKey(result, encryptionKey) : null
       }),
 
-    findByOrganizationId: (organizationId: OrganizationId) =>
+    findAll: () =>
       Effect.gen(function* () {
         const results = yield* Effect.tryPromise({
           try: () =>
@@ -89,7 +92,7 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
               .select()
               .from(apiKeys)
               .where(and(eq(apiKeys.organizationId, organizationId), isNull(apiKeys.deletedAt))),
-          catch: (error) => toRepositoryError(error, "findByOrganizationId"),
+          catch: (error) => toRepositoryError(error, "findAll"),
         })
 
         return results.map((row) => toDomainApiKey(row, encryptionKey))
@@ -117,13 +120,13 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
         })
       }),
 
-    delete: (id: ApiKeyId) =>
+    delete: (id: ApiKeyIdType) =>
       Effect.tryPromise({
-        try: () => db.delete(apiKeys).where(eq(apiKeys.id, id)),
+        try: () => db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
         catch: (error) => toRepositoryError(error, "delete"),
       }),
 
-    touch: (id: ApiKeyId) =>
+    touch: (id: ApiKeyIdType) =>
       Effect.tryPromise({
         try: () =>
           db
@@ -132,30 +135,8 @@ export const createApiKeyPostgresRepository = (db: PostgresDb): ApiKeyRepository
               lastUsedAt: new Date(),
               updatedAt: new Date(),
             })
-            .where(eq(apiKeys.id, id)),
+            .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
         catch: (error) => toRepositoryError(error, "touch"),
-      }),
-
-    touchBatch: (ids: readonly ApiKeyId[]) =>
-      Effect.gen(function* () {
-        if (ids.length === 0) {
-          return
-        }
-
-        const now = new Date()
-        const idStrings = ids.map((id) => id as string)
-
-        yield* Effect.tryPromise({
-          try: () =>
-            db
-              .update(apiKeys)
-              .set({
-                lastUsedAt: now,
-                updatedAt: now,
-              })
-              .where(inArray(apiKeys.id, idStrings)),
-          catch: (error) => toRepositoryError(error, "touchBatch"),
-        })
       }),
   }
 }

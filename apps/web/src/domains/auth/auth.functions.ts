@@ -17,29 +17,12 @@ import {
   createSignupIntentInputSchema,
 } from "./auth.types.ts"
 
-interface SessionResponse {
-  readonly user: {
-    readonly id: string
-    readonly email: string
-    readonly name?: string | null
-  }
-}
-
-interface BetterAuthApi {
-  getSession: (options: {
-    readonly headers?: Headers
-  }) => Promise<SessionResponse | null>
-  signOut: (options: {
-    readonly headers?: Headers
-  }) => Promise<unknown>
-}
-
 export const createLoginIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(createLoginIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
 
-    const intent = await runCommand(db, async (txDb) => {
+    const intent = await runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
       const users = createAuthUserPostgresRepository(txDb)
 
@@ -57,7 +40,7 @@ export const createSignupIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(createSignupIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
-    const intent = await runCommand(db, async (txDb) => {
+    const intent = await runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
       const users = createAuthUserPostgresRepository(txDb)
 
@@ -80,7 +63,7 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(completeAuthIntentInputSchema))
   .handler(async ({ data }) => {
     const headers = getRequestHeaders()
-    const authApi = getBetterAuth().api as unknown as BetterAuthApi
+    const authApi = getBetterAuth().api
     const session = await authApi.getSession({ headers })
 
     if (!session?.user) {
@@ -89,7 +72,7 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
 
     const { db } = getPostgresClient()
 
-    return runCommand(db, async (txDb) => {
+    return runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
       const users = createAuthUserPostgresRepository(txDb)
       const memberships = createMembershipPostgresRepository(txDb)
@@ -108,12 +91,12 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
         },
       })
 
-      return Effect.runPromise(program as Effect.Effect<{ completed: true }, unknown, never>)
+      return Effect.runPromise(program)
     })
   })
 
 export const signOut = createServerFn({ method: "POST" }).handler(async () => {
-  const authApi = getBetterAuth().api as unknown as BetterAuthApi
+  const authApi = getBetterAuth().api
   const headers = getRequestHeaders()
 
   await authApi.signOut({ headers })

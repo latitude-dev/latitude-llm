@@ -8,6 +8,7 @@ export {
 } from "./entities/api-key.ts"
 
 export type { ApiKeyRepository } from "./ports/api-key-repository.ts"
+export type { UnscopedApiKeyRepository } from "./ports/unscoped-api-key-repository.ts"
 
 export { createApiKeyCreatedEvent, type ApiKeyCreatedEvent } from "./events/api-key-created.ts"
 

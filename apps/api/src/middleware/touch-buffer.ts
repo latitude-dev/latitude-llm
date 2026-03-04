@@ -1,5 +1,5 @@
 import { ApiKeyId } from "@domain/shared"
-import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
+import { type PostgresDb, createUnscopedApiKeyPostgresRepository } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -61,8 +61,7 @@ class TouchBuffer {
    * @param keyId - The API key ID to touch
    */
   touch(keyId: string): void {
-    const keyIdStr = keyId as string
-    this.buffer.set(keyIdStr, Date.now())
+    this.buffer.set(keyId, Date.now())
 
     // Force flush if buffer exceeds max size
     if (this.buffer.size >= this.maxBufferSize) {
@@ -98,10 +97,11 @@ class TouchBuffer {
 
     const startTime = Date.now()
 
-    const apiKeyRepository = createApiKeyPostgresRepository(this.db)
+    // Use unscoped repository for cross-organization batch touch operations
+    const unscopedApiKeyRepository = createUnscopedApiKeyPostgresRepository(this.db)
 
     try {
-      await Effect.runPromise(apiKeyRepository.touchBatch(keyIds))
+      await Effect.runPromise(unscopedApiKeyRepository.touchBatch(keyIds))
 
       const duration = Date.now() - startTime
       logger.info(`Flushed ${keyIds.length} touch updates in ${duration}ms`)

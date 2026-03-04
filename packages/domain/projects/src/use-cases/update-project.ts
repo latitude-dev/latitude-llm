@@ -47,7 +47,7 @@ export const updateProjectUseCase =
   (repository: ProjectRepository) =>
   (input: UpdateProjectInput): Effect.Effect<Project, UpdateProjectError> => {
     return Effect.gen(function* () {
-      const existingProject = yield* repository.findById(input.id, input.organizationId)
+      const existingProject = yield* repository.findById(input.id)
 
       if (!existingProject) {
         return yield* new ProjectNotFoundError({
@@ -76,7 +76,7 @@ export const updateProjectUseCase =
         }
 
         if (trimmedName !== existingProject.name) {
-          const nameExists = yield* repository.existsByName(trimmedName, input.organizationId)
+          const nameExists = yield* repository.existsByName(trimmedName)
           if (nameExists) {
             return yield* new InvalidProjectNameError({
               name: trimmedName,

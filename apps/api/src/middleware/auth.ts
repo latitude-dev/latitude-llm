@@ -1,5 +1,5 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
-import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
+import { createMembershipPostgresRepository, createUnscopedApiKeyPostgresRepository } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
@@ -29,6 +29,22 @@ const withTimeout = <T>(operation: Promise<T>, fallback: T): Promise<T> => {
 
 const getApiKeyCacheKey = (tokenHash: string): string => `apikey:${tokenHash}`
 
+const isCachedApiKeyResult = (value: unknown): value is { organizationId: string; keyId: string } | null => {
+  if (value === null) {
+    return true
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+
+  if (!("organizationId" in value) || !("keyId" in value)) {
+    return false
+  }
+
+  return typeof value.organizationId === "string" && typeof value.keyId === "string"
+}
+
 /**
  * Get cached API key result from Redis (keyed by token hash).
  */
@@ -42,7 +58,7 @@ const getCachedApiKey = (
       const cached = await withTimeout(redis.get(cacheKey), null)
       if (!cached) return undefined
       const parsed = JSON.parse(cached)
-      return parsed as { organizationId: string; keyId: string } | null
+      return isCachedApiKeyResult(parsed) ? parsed : undefined
     },
     catch: () => undefined,
   }).pipe(Effect.orDie)
@@ -80,7 +96,8 @@ const validateApiKey = (
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const db = c.get("db")
   const redis = c.get("redis")
-  const apiKeyRepository = createApiKeyPostgresRepository(db)
+  // Use unscoped repository for cross-org authentication lookup
+  const unscopedApiKeyRepository = createUnscopedApiKeyPostgresRepository(db)
   const touchBuffer = createTouchBuffer(db)
 
   return Effect.gen(function* () {
@@ -96,8 +113,8 @@ const validateApiKey = (
       return cached
     }
 
-    // Cache miss - hit database (lookup by token hash)
-    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
+    // Cache miss - hit database (lookup by token hash using unscoped repo)
+    const apiKeyOption = yield* Effect.option(unscopedApiKeyRepository.findByTokenHash(tokenHash))
 
     if (Option.isNone(apiKeyOption) || apiKeyOption.value === null) {
       // Cache negative result briefly to prevent timing attacks
@@ -109,8 +126,8 @@ const validateApiKey = (
     const apiKey = apiKeyOption.value
 
     const result = {
-      organizationId: apiKey.organizationId as string,
-      keyId: apiKey.id as string,
+      organizationId: apiKey.organizationId,
+      keyId: apiKey.id,
     }
 
     // Cache successful validation for 5 minutes (keyed by hash)
@@ -118,7 +135,7 @@ const validateApiKey = (
 
     // Use TouchBuffer for batched updates instead of fire-and-forget
     // This reduces database writes by 90%+ by batching updates
-    touchBuffer.touch(apiKey.id as string)
+    touchBuffer.touch(apiKey.id)
 
     // Enforce minimum time before returning
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
@@ -179,11 +196,13 @@ const authenticateWithApiKey = (c: Context, token: string): Effect.Effect<AuthCo
     const result = yield* validateApiKey(c, token)
 
     if (result) {
-      return {
+      const authContext: AuthContext = {
         userId: UserId(`api-key:${result.keyId}`),
         organizationId: OrganizationId(result.organizationId),
-        method: "api-key" as const,
+        method: "api-key",
       }
+
+      return authContext
     }
 
     return null
@@ -218,11 +237,13 @@ const authenticateWithJwt = (c: Context, token: string): Effect.Effect<AuthConte
       return null
     }
 
-    return {
+    const authContext: AuthContext = {
       userId: UserId(session.user.id),
       organizationId: OrganizationId(orgId),
-      method: "jwt" as const,
+      method: "jwt",
     }
+
+    return authContext
   }).pipe(Effect.orDie)
 }
 

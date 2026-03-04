@@ -1,4 +1,4 @@
-import type { GrantId, OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared"
+import type { GrantId, RepositoryError, ScopedRepository, SubscriptionId } from "@domain/shared"
 import type { Effect } from "effect"
 import type { Grant, GrantType } from "../entities/grant.ts"
 
@@ -8,7 +8,7 @@ import type { Grant, GrantType } from "../entities/grant.ts"
  * This interface defines the contract for grant persistence operations.
  * Implementations are provided in the platform layer (e.g., Postgres adapter).
  */
-export interface GrantRepository {
+export interface GrantRepository extends ScopedRepository {
   /**
    * Find a grant by its unique ID.
    */
@@ -17,7 +17,7 @@ export interface GrantRepository {
   /**
    * Find all grants for an organization.
    */
-  findByOrganizationId(organizationId: OrganizationId): Effect.Effect<readonly Grant[], RepositoryError>
+  findAll(): Effect.Effect<readonly Grant[], RepositoryError>
 
   /**
    * Find all grants for a specific subscription.
@@ -25,14 +25,14 @@ export interface GrantRepository {
   findBySubscriptionId(subscriptionId: SubscriptionId): Effect.Effect<readonly Grant[], RepositoryError>
 
   /**
-   * Find active grants (not expired, with remaining balance) by type for an organization.
+   * Find active grants (not expired, with remaining balance) by type.
    */
-  findActiveByType(organizationId: OrganizationId, type: GrantType): Effect.Effect<readonly Grant[], RepositoryError>
+  findActiveByType(type: GrantType): Effect.Effect<readonly Grant[], RepositoryError>
 
   /**
-   * Find all active grants for an organization across all types.
+   * Find all active grants across all types.
    */
-  findAllActive(organizationId: OrganizationId): Effect.Effect<readonly Grant[], RepositoryError>
+  findAllActive(): Effect.Effect<readonly Grant[], RepositoryError>
 
   /**
    * Save a grant (create or update).
