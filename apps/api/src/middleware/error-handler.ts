@@ -1,4 +1,4 @@
-import { isHttpError, toHttpResponse } from "@domain/shared-kernel"
+import { isHttpError, toHttpResponse } from "@domain/shared"
 import type { ErrorHandler } from "hono"
 
 /**

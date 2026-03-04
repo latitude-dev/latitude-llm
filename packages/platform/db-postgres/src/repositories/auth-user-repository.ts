@@ -1,5 +1,5 @@
 import type { AuthUser, AuthUserRepository } from "@domain/auth"
-import { toRepositoryError } from "@domain/shared-kernel"
+import { toRepositoryError } from "@domain/shared"
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -16,9 +16,12 @@ export const createAuthUserPostgresRepository = (db: PostgresDb): AuthUserReposi
     Effect.gen(function* () {
       const result = yield* Effect.tryPromise({
         try: () =>
-          db.query.user.findFirst({
-            where: { email },
-          }),
+          db
+            .select()
+            .from(user)
+            .where(eq(user.email, email))
+            .limit(1)
+            .then((rows) => rows[0]),
         catch: (error) => toRepositoryError(error, "findByEmail"),
       })
 
@@ -40,6 +43,6 @@ export const createAuthUserPostgresRepository = (db: PostgresDb): AuthUserReposi
           })
           .where(and(eq(user.id, userId), isNull(user.name)))
       },
-      catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+      catch: (error) => toRepositoryError(error, "setNameIfMissing"),
     }),
 })

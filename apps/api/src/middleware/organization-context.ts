@@ -1,6 +1,6 @@
 import type { Organization } from "@domain/organizations"
-import { type OrganizationId, PermissionError } from "@domain/shared-kernel"
-import { BadRequestError } from "@domain/shared-kernel"
+import { type OrganizationId, PermissionError } from "@domain/shared"
+import { BadRequestError } from "@domain/shared"
 import { createOrganizationPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"

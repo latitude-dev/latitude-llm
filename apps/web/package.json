@@ -17,7 +17,7 @@
     "@domain/email": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
-    "@domain/shared-kernel": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@platform/auth-better": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",

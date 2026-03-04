@@ -1,6 +1,6 @@
 import { createMembership, createOrganizationUseCase } from "@domain/organizations"
 import type { Membership, Organization } from "@domain/organizations"
-import { OrganizationId, UserId, generateId } from "@domain/shared-kernel"
+import { OrganizationId, UserId, generateId } from "@domain/shared"
 import {
   createMembershipPostgresRepository,
   createOrganizationPostgresRepository,

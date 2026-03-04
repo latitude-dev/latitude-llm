@@ -1,10 +1,11 @@
 import {
+  ApiKeyNotFoundError,
   type CacheInvalidator,
   type GenerateApiKeyInput,
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId, generateId } from "@domain/shared"
+import { ApiKeyId, BadRequestError, generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
 import { Effect } from "effect"
@@ -70,6 +71,7 @@ export const createApiKeysRoutes = () => {
   // DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
   app.delete("/:id", async (c) => {
     const cacheInvalidator = createApiKeyCacheInvalidator(c.get("redis"))
+    const organizationId = c.var.organization.id
     const idParam = c.req.param("id")
     const id = idParam ? ApiKeyId(idParam) : null
     if (!id) {
@@ -78,6 +80,11 @@ export const createApiKeysRoutes = () => {
 
     await runCommand(c.get("db"), async (txDb) => {
       const apiKeyRepository = createApiKeyPostgresRepository(txDb)
+
+      const apiKey = await Effect.runPromise(apiKeyRepository.findById(id))
+      if (!apiKey || apiKey.organizationId !== organizationId) {
+        throw new ApiKeyNotFoundError({ id })
+      }
 
       return Effect.runPromise(
         revokeApiKeyUseCase({ repository: apiKeyRepository, cacheInvalidator })({

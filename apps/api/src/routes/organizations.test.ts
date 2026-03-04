@@ -8,6 +8,7 @@ import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it
 import { getRedisClient } from "../clients.ts"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
+import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
 import {
   type InMemoryPostgres,
@@ -39,6 +40,8 @@ const createApp = (db: PostgresDb): Hono => {
     await next()
   })
   protectedRoutes.use("*", createAuthMiddleware())
+  protectedRoutes.use("/:id", createOrganizationContextMiddleware("id"))
+  protectedRoutes.use("/:id/*", createOrganizationContextMiddleware("id"))
   protectedRoutes.route("/", createOrganizationsRoutes())
 
   app.route("/v1/organizations", protectedRoutes)
@@ -96,7 +99,7 @@ describe("Organization Routes Integration", () => {
   let database: InMemoryPostgres
 
   beforeAll(async () => {
-    process.env.LAT_API_KEY_ENCRYPTION_KEY ??= TEST_ENCRYPTION_KEY_HEX
+    process.env.LAT_API_KEY_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
     database = await createInMemoryPostgres()
     app = createApp(database.postgresDb)
   })

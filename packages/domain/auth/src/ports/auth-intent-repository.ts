@@ -1,4 +1,4 @@
-import type { RepositoryError } from "@domain/shared-kernel"
+import type { RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
 import type { AuthIntent } from "../types.ts"
 

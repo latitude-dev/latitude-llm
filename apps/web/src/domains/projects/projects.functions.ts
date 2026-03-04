@@ -1,6 +1,6 @@
 import { createProjectUseCase, updateProjectUseCase } from "@domain/projects"
 import type { Project } from "@domain/projects"
-import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared-kernel"
+import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"

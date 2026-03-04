@@ -5,7 +5,7 @@ import type {
   ProjectId,
   RepositoryError,
   ValidationError,
-} from "@domain/shared-kernel"
+} from "@domain/shared"
 import { Data, Effect } from "effect"
 import type { Project } from "../entities/project.ts"
 import type { ProjectRepository } from "../ports/project-repository.ts"

@@ -1,4 +1,4 @@
-import { generateId } from "@domain/shared-kernel"
+import { generateId } from "@domain/shared"
 import { Effect } from "effect"
 import type { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import type { AuthUserRepository } from "../ports/auth-user-repository.ts"

@@ -1,5 +1,5 @@
 import type { AuthIntent, AuthIntentRepository } from "@domain/auth"
-import { toRepositoryError } from "@domain/shared-kernel"
+import { toRepositoryError } from "@domain/shared"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -42,9 +42,12 @@ export const createAuthIntentPostgresRepository = (db: PostgresDb): AuthIntentRe
     Effect.gen(function* () {
       const row = yield* Effect.tryPromise({
         try: () =>
-          db.query.authIntent.findFirst({
-            where: { id },
-          }),
+          db
+            .select()
+            .from(authIntent)
+            .where(eq(authIntent.id, id))
+            .limit(1)
+            .then((rows) => rows[0]),
         catch: (error) => toRepositoryError(error, "findById"),
       })
 

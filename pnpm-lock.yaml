@@ -237,9 +237,9 @@ importers:
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../../packages/domain/shared-kernel
+        version: link:../../packages/domain/shared
       '@platform/auth-better':
         specifier: workspace:*
         version: link:../../packages/platform/auth-better
@@ -391,9 +391,9 @@ importers:
       '@domain/organizations':
         specifier: workspace:*
         version: link:../organizations
-      '@domain/shared-kernel':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../shared-kernel
+        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0

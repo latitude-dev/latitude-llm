@@ -1,4 +1,4 @@
-import { HttpUnauthorizedError, OrganizationId, PermissionError } from "@domain/shared-kernel"
+import { HttpUnauthorizedError, OrganizationId, PermissionError } from "@domain/shared"
 import { createMembershipPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { ensureSession } from "../domains/sessions/session.functions.ts"

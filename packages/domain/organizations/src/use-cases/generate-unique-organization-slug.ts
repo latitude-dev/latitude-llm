@@ -1,4 +1,4 @@
-import { type RepositoryError, generateId } from "@domain/shared-kernel"
+import { type RepositoryError, generateId } from "@domain/shared"
 import { Effect } from "effect"
 import type { OrganizationRepository } from "../ports/organization-repository.ts"
 

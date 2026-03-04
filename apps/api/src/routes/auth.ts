@@ -1,4 +1,4 @@
-import { BadRequestError } from "@domain/shared-kernel"
+import { BadRequestError } from "@domain/shared"
 import type { User } from "better-auth"
 import { Hono } from "hono"
 import { getBetterAuth } from "../clients.ts"

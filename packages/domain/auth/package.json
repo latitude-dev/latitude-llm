@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@domain/organizations": "workspace:*",
-    "@domain/shared-kernel": "workspace:*",
+    "@domain/shared": "workspace:*",
     "effect": "catalog:"
   }
 }
