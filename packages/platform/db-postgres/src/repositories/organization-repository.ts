@@ -1,5 +1,5 @@
 import type { Organization, OrganizationRepository } from "@domain/organizations"
-import { NotFoundError, type OrganizationId, toRepositoryError } from "@domain/shared-kernel"
+import { NotFoundError, type OrganizationId, toRepositoryError } from "@domain/shared"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -44,11 +44,8 @@ const toInsertRow = (org: Organization): typeof schema.organization.$inferInsert
 export const createOrganizationPostgresRepository = (db: PostgresDb): OrganizationRepository => ({
   findById: (id: OrganizationId) =>
     Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          db.query.organization.findFirst({
-            where: { id },
-          }),
+      const [result] = yield* Effect.tryPromise({
+        try: () => db.select().from(schema.organization).where(eq(schema.organization.id, id)).limit(1),
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
@@ -64,7 +61,7 @@ export const createOrganizationPostgresRepository = (db: PostgresDb): Organizati
       const results = yield* Effect.tryPromise({
         try: async () => {
           // Query all organizations (RLS will filter by user membership via member table)
-          return db.query.organization.findMany()
+          return db.select().from(schema.organization)
         },
         catch: (error) => toRepositoryError(error, "findAll"),
       })
@@ -106,14 +103,16 @@ export const createOrganizationPostgresRepository = (db: PostgresDb): Organizati
 
   existsBySlug: (slug: string) =>
     Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
+      const [result] = yield* Effect.tryPromise({
         try: () =>
-          db.query.organization.findFirst({
-            where: { slug },
-          }),
+          db
+            .select({ id: schema.organization.id })
+            .from(schema.organization)
+            .where(eq(schema.organization.slug, slug))
+            .limit(1),
         catch: (error) => toRepositoryError(error, "existsBySlug"),
       })
 
-      return result !== null
+      return result !== undefined
     }),
 })

@@ -1,5 +1,5 @@
 {
-  "name": "@domain/subscriptions",
+  "name": "@domain/users",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@domain/shared": "workspace:*",
-    "@domain/events": "workspace:*",
     "effect": "catalog:"
   }
 }

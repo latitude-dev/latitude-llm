@@ -1,4 +1,4 @@
-import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared-kernel"
+import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
 import type { Organization } from "../entities/organization.ts"
 

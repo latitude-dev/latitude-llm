@@ -1,4 +1,4 @@
-import type { ApiKeyId, NotFoundError, RepositoryError } from "@domain/shared-kernel"
+import type { ApiKeyId, NotFoundError, RepositoryError } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { type ApiKey, revoke } from "../entities/api-key.ts"
 import type { ApiKeyRepository } from "../ports/api-key-repository.ts"

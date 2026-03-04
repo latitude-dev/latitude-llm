@@ -1,5 +1,5 @@
 import { type CreateOrganizationInput, createOrganizationUseCase } from "@domain/organizations"
-import { OrganizationId, PermissionError, generateId } from "@domain/shared-kernel"
+import { OrganizationId, PermissionError, generateId } from "@domain/shared"
 import { createMembershipPostgresRepository, createOrganizationPostgresRepository } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { Hono } from "hono"

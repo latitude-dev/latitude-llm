@@ -1,4 +1,4 @@
-import { GrantId, SubscriptionId } from "@domain/shared-kernel"
+import { GrantId, SubscriptionId } from "@domain/shared"
 import { createGrant } from "@domain/subscriptions"
 import { Effect } from "effect"
 import { postgresSchema } from "../../index.ts"

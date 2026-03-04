@@ -1,4 +1,4 @@
-import { ApiKeyId } from "@domain/shared-kernel"
+import { ApiKeyId } from "@domain/shared"
 import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
