@@ -1,3 +1,4 @@
+import { SEED_API_KEY_ID, SEED_ORG_ID, SEED_PROJECT_ID } from "@domain/shared"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { Seeder } from "../types.ts"
@@ -5,10 +6,6 @@ import { type SpanRow, type TraceConfig, generateAllSpans } from "./generator.ts
 
 const TRACE_COUNT = 2000
 const BATCH_SIZE = 500
-
-const ORG_ID = "iapkf6osmlm7mbw9kulosua4"
-const PROJECT_ID = "yvl1e78evmwfs2mosyjb08rc"
-const API_KEY_ID = "v42lqe92hgq2hpvilg91brnt"
 
 const seedSpans: Seeder = {
   name: "spans",
@@ -20,9 +17,9 @@ const seedSpans: Seeder = {
       const config: TraceConfig = {
         traceCount: TRACE_COUNT,
         timeWindow: { from: thirtyDaysAgo, to: now },
-        organizationId: ORG_ID,
-        projectId: PROJECT_ID,
-        apiKeyId: API_KEY_ID,
+        organizationId: SEED_ORG_ID,
+        projectId: SEED_PROJECT_ID,
+        apiKeyId: SEED_API_KEY_ID,
       }
 
       const allSpans = generateAllSpans(config)

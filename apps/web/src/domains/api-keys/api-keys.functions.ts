@@ -3,7 +3,6 @@ import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyId, OrganizationId } from "@domain/shared"
 import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
@@ -53,7 +52,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
 
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ name: z.string().min(1).max(256) })))
+  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
     const { organizationId } = await requireSession()
     const { db } = getPostgresClient()
@@ -75,7 +74,7 @@ export const createApiKey = createServerFn({ method: "POST" })
 
 export const updateApiKey = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ id: z.string(), name: z.string().min(1).max(256) })))
+  .inputValidator(z.object({ id: z.string(), name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
     const { organizationId } = await requireSession()
     const { db } = getPostgresClient()
@@ -97,7 +96,7 @@ export const updateApiKey = createServerFn({ method: "POST" })
 
 export const deleteApiKey = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ id: z.string() })))
+  .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
     const { db } = getPostgresClient()

@@ -22,6 +22,7 @@ import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_au
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/index'
 import { Route as AuthenticatedProjectsProjectIdIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectId/issues/index'
 import { Route as AuthenticatedProjectsProjectIdDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectId/datasets/index'
+import { Route as AuthenticatedProjectsProjectIdDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectId/datasets/$datasetId'
 import { Route as AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRouteImport } from './routes/_authenticated/projects/$projectId/traces/$traceId/spans/index'
 import { Route as AuthenticatedProjectsProjectIdTracesTraceIdSpansSpanIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/traces/$traceId/spans/$spanId/index'
 
@@ -93,6 +94,12 @@ const AuthenticatedProjectsProjectIdDatasetsIndexRoute =
     path: '/datasets/',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute =
+  AuthenticatedProjectsProjectIdDatasetsDatasetIdRouteImport.update({
+    id: '/datasets/$datasetId',
+    path: '/datasets/$datasetId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRoute =
   AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRouteImport.update({
     id: '/traces/$traceId/spans/',
@@ -119,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/datasets/$datasetId': typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
   '/projects/$projectId/datasets/': typeof AuthenticatedProjectsProjectIdDatasetsIndexRoute
   '/projects/$projectId/issues/': typeof AuthenticatedProjectsProjectIdIssuesIndexRoute
   '/projects/$projectId/traces/$traceId/spans/': typeof AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRoute
@@ -134,6 +142,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/datasets/$datasetId': typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
   '/projects/$projectId/datasets': typeof AuthenticatedProjectsProjectIdDatasetsIndexRoute
   '/projects/$projectId/issues': typeof AuthenticatedProjectsProjectIdIssuesIndexRoute
   '/projects/$projectId/traces/$traceId/spans': typeof AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRoute
@@ -152,6 +161,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/_authenticated/projects/$projectId/datasets/$datasetId': typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
   '/_authenticated/projects/$projectId/datasets/': typeof AuthenticatedProjectsProjectIdDatasetsIndexRoute
   '/_authenticated/projects/$projectId/issues/': typeof AuthenticatedProjectsProjectIdIssuesIndexRoute
   '/_authenticated/projects/$projectId/traces/$traceId/spans/': typeof AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRoute
@@ -170,6 +180,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/api/auth/$'
     | '/projects/$projectId/'
+    | '/projects/$projectId/datasets/$datasetId'
     | '/projects/$projectId/datasets/'
     | '/projects/$projectId/issues/'
     | '/projects/$projectId/traces/$traceId/spans/'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/auth/$'
     | '/projects/$projectId'
+    | '/projects/$projectId/datasets/$datasetId'
     | '/projects/$projectId/datasets'
     | '/projects/$projectId/issues'
     | '/projects/$projectId/traces/$traceId/spans'
@@ -202,6 +214,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId'
     | '/api/auth/$'
     | '/_authenticated/projects/$projectId/'
+    | '/_authenticated/projects/$projectId/datasets/$datasetId'
     | '/_authenticated/projects/$projectId/datasets/'
     | '/_authenticated/projects/$projectId/issues/'
     | '/_authenticated/projects/$projectId/traces/$traceId/spans/'
@@ -311,6 +324,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdDatasetsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/datasets/$datasetId': {
+      id: '/_authenticated/projects/$projectId/datasets/$datasetId'
+      path: '/datasets/$datasetId'
+      fullPath: '/projects/$projectId/datasets/$datasetId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
     '/_authenticated/projects/$projectId/traces/$traceId/spans/': {
       id: '/_authenticated/projects/$projectId/traces/$traceId/spans/'
       path: '/traces/$traceId/spans'
@@ -330,6 +350,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
+  AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
   AuthenticatedProjectsProjectIdDatasetsIndexRoute: typeof AuthenticatedProjectsProjectIdDatasetsIndexRoute
   AuthenticatedProjectsProjectIdIssuesIndexRoute: typeof AuthenticatedProjectsProjectIdIssuesIndexRoute
   AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRoute: typeof AuthenticatedProjectsProjectIdTracesTraceIdSpansIndexRoute
@@ -340,6 +361,8 @@ const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectI
   {
     AuthenticatedProjectsProjectIdIndexRoute:
       AuthenticatedProjectsProjectIdIndexRoute,
+    AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute:
+      AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute,
     AuthenticatedProjectsProjectIdDatasetsIndexRoute:
       AuthenticatedProjectsProjectIdDatasetsIndexRoute,
     AuthenticatedProjectsProjectIdIssuesIndexRoute:

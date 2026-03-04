@@ -1,13 +1,9 @@
-import { GrantId, SubscriptionId } from "@domain/shared"
+import { SEED_GRANT_RUNS_ID, SEED_GRANT_SEATS_ID, SEED_ORG_ID, SEED_SUBSCRIPTION_ID } from "@domain/shared"
 import { createGrant } from "@domain/subscriptions"
 import { Effect } from "effect"
 import { postgresSchema } from "../../index.ts"
-import { SEED_ORG_ID } from "../organizations/index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
-const SEED_SUBSCRIPTION_ID = SubscriptionId("ry0fy0n6qwszk3kk04zlfsuy")
-const SEED_GRANT_SEATS_ID = GrantId("nkbbtxd5o7rbrr8miamhrnif")
-const SEED_GRANT_RUNS_ID = GrantId("drkvcpudmblnqxgk48irmt94")
 const HOBBY_PLAN_SEATS = 5
 const HOBBY_PLAN_RUNS = 10_000
 

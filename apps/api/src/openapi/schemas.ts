@@ -15,6 +15,5 @@ export const OrgAndIdParamsSchema = z.object({
   id: z.string().openapi({ description: "Resource ID" }),
 })
 
-
 /** Security scheme applied to protected endpoints. */
 export const PROTECTED_SECURITY = [{ ApiKeyAuth: [] }]

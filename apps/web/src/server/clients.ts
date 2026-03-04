@@ -9,6 +9,7 @@ import {
 import { createBetterAuth } from "@platform/auth-better"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import type { RedisClient } from "@platform/cache-redis"
+import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import {
   type PostgresClient,
   createAuthIntentPostgresRepository,
@@ -22,6 +23,7 @@ import { Effect } from "effect"
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let redisClientInstance: RedisClient | undefined
+let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 
 interface AuthIntentEmailContext {
@@ -85,6 +87,13 @@ export const getRedisClient = (): RedisClient => {
     redisClientInstance = createRedisClient(connection)
   }
   return redisClientInstance
+}
+
+export const getClickhouseClient = (): ClickHouseClient => {
+  if (!clickhouseClientInstance) {
+    clickhouseClientInstance = createClickhouseClient()
+  }
+  return clickhouseClientInstance
 }
 
 export const getBetterAuth = () => {

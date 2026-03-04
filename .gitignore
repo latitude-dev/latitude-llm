@@ -49,6 +49,7 @@ dist
 # Vim crap
 *.ts-E
 *.tsx-E
+*.tsconfig.tsbuildinfo
 
 # macOS
 .DS_Store

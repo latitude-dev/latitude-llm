@@ -1,18 +1,18 @@
 import { createMembership, createOrganization } from "@domain/organizations"
-import { OrganizationId, UserId } from "@domain/shared"
+import {
+  SEED_ADMIN_EMAIL,
+  SEED_ADMIN_MEMBERSHIP_ID,
+  SEED_ADMIN_USER_ID,
+  SEED_ORG_ID,
+  SEED_ORG_NAME,
+  SEED_ORG_SLUG,
+  SEED_OWNER_EMAIL,
+  SEED_OWNER_MEMBERSHIP_ID,
+  SEED_OWNER_USER_ID,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { postgresSchema } from "../../index.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
-
-export const SEED_OWNER_USER_ID = UserId("ye9d77pxi50nh1gyqljkffnb")
-const SEED_ADMIN_USER_ID = UserId("uzm4d8pb5k0bd2oug9ud2xjs")
-export const SEED_ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")
-const SEED_OWNER_MEMBERSHIP_ID = "bg5hvjzpeop0atmz2nqydas7"
-const SEED_ADMIN_MEMBERSHIP_ID = "h5q2nionpzqmzvkgp0sp7jnl"
-const SEED_OWNER_EMAIL = "owner@acme.com"
-const SEED_ADMIN_EMAIL = "admin@acme.com"
-const SEED_ORG_NAME = "Acme Inc."
-const SEED_ORG_SLUG = "acme"
 
 const seedUsers: Seeder = {
   name: "organizations/users",

@@ -17,7 +17,6 @@ import {
   runCommand,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { getAdminPostgresClient, getRedisClient } from "../../server/clients.ts"
@@ -44,7 +43,7 @@ const provideAuthServices = <A, E>(
 
 export const createLoginIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(createLoginIntentInputSchema))
+  .inputValidator(createLoginIntentInputSchema)
   .handler(async ({ data }) => {
     const { db } = getAdminPostgresClient()
 
@@ -57,7 +56,7 @@ export const createLoginIntent = createServerFn({ method: "POST" })
 
 export const createSignupIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(createSignupIntentInputSchema))
+  .inputValidator(createSignupIntentInputSchema)
   .handler(async ({ data }) => {
     const { db } = getAdminPostgresClient()
 
@@ -88,7 +87,7 @@ export interface AuthIntentInfo {
 
 export const getAuthIntentInfo = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(getAuthIntentInfoInputSchema))
+  .inputValidator(getAuthIntentInfoInputSchema)
   .handler(async ({ data }): Promise<AuthIntentInfo> => {
     const session = await ensureSession()
     const { db } = getAdminPostgresClient()
@@ -116,7 +115,7 @@ export const getAuthIntentInfo = createServerFn({ method: "POST" })
 
 export const completeAuthIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(completeAuthIntentInputSchema))
+  .inputValidator(completeAuthIntentInputSchema)
   .handler(async ({ data }) => {
     const session = await ensureSession()
     const { db } = getAdminPostgresClient()
@@ -142,7 +141,7 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
 
 export const exchangeCliSession = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ sessionToken: z.string() })))
+  .inputValidator(z.object({ sessionToken: z.string() }))
   .handler(async ({ data }) => {
     const session = await ensureSession()
     const redis = getRedisClient()

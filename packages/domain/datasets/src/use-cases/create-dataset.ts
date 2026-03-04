@@ -1,0 +1,15 @@
+import type { OrganizationId, ProjectId } from "@domain/shared"
+import { Effect } from "effect"
+import { DatasetRepository } from "../ports/dataset-repository.ts"
+
+export function createDataset(args: {
+  readonly organizationId: OrganizationId
+  readonly projectId: ProjectId
+  readonly name: string
+  readonly description?: string
+}) {
+  return Effect.gen(function* () {
+    const repo = yield* DatasetRepository
+    return yield* repo.create(args)
+  })
+}

@@ -41,3 +41,21 @@ export function formatDuration(ns: number): string {
   if (ns < 1_000_000_000) return `${(ns / 1_000_000).toFixed(1)}ms`
   return `${(ns / 1_000_000_000).toFixed(2)}s`
 }
+
+export function safeParseJson(value: string): Record<string, unknown> {
+  try {
+    return (JSON.parse(value || "{}") ?? {}) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
+export function safeStringifyJson(value: unknown, fallback = ""): string {
+  if (value === undefined || value === null) return fallback
+  if (typeof value === "string") return value
+  try {
+    return JSON.stringify(value) ?? fallback
+  } catch {
+    return fallback
+  }
+}

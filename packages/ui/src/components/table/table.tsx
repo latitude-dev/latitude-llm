@@ -20,7 +20,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
       className={cn("flex flex-col relative w-full rounded-xl border overflow-hidden", wrapperClassName)}
     >
       <div
-        className={cn("relative w-full flex-grow", overflow, {
+        className={cn("relative w-full grow", overflow, {
           "custom-scrollbar min-w-full": overflow === "overflow-auto",
         })}
       >
