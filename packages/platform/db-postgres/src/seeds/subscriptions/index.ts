@@ -8,6 +8,8 @@ import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 const SEED_SUBSCRIPTION_ID = SubscriptionId("ry0fy0n6qwszk3kk04zlfsuy")
 const SEED_GRANT_SEATS_ID = GrantId("nkbbtxd5o7rbrr8miamhrnif")
 const SEED_GRANT_RUNS_ID = GrantId("drkvcpudmblnqxgk48irmt94")
+const HOBBY_PLAN_SEATS = 5
+const HOBBY_PLAN_RUNS = 10_000
 
 const seedSubscription: Seeder = {
   name: "subscriptions/hobby-plan",
@@ -23,7 +25,7 @@ const seedSubscription: Seeder = {
             status: "active",
             periodStart: new Date(),
             periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-            seats: 5,
+            seats: HOBBY_PLAN_SEATS,
           })
           .onConflictDoUpdate({
             target: postgresSchema.subscription.id,
@@ -32,11 +34,14 @@ const seedSubscription: Seeder = {
               status: "active",
               periodStart: new Date(),
               periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-              seats: 5,
+              seats: HOBBY_PLAN_SEATS,
             },
           }),
       catch: (error) => new SeedError({ reason: "Failed to seed subscription", cause: error }),
-    }).pipe(Effect.asVoid),
+    }).pipe(
+      Effect.tap(() => Effect.sync(() => console.log(`  -> subscription: hobby (${HOBBY_PLAN_SEATS} seats)`))),
+      Effect.asVoid,
+    ),
 }
 
 const seedGrants: Seeder = {
@@ -48,7 +53,7 @@ const seedGrants: Seeder = {
         organizationId: SEED_ORG_ID,
         subscriptionId: SEED_SUBSCRIPTION_ID,
         type: "seats",
-        amount: 5,
+        amount: HOBBY_PLAN_SEATS,
       })
       yield* ctx.repositories.grant.save(seatsGrant)
 
@@ -57,9 +62,10 @@ const seedGrants: Seeder = {
         organizationId: SEED_ORG_ID,
         subscriptionId: SEED_SUBSCRIPTION_ID,
         type: "runs",
-        amount: 10_000,
+        amount: HOBBY_PLAN_RUNS,
       })
       yield* ctx.repositories.grant.save(runsGrant)
+      console.log(`  -> grants: seats=${HOBBY_PLAN_SEATS}, runs=${HOBBY_PLAN_RUNS}`)
     }),
 }
 

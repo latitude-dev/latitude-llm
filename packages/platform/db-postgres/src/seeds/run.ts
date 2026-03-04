@@ -35,13 +35,13 @@ const main = async () => {
     user: createUserPostgresRepository(db),
   }
 
-  console.log("Seeding database...\n")
+  console.log("Seeding database...")
 
   try {
     await Effect.runPromise(runSeeders(allSeeders, { db, repositories }))
-    console.log("\nDone.")
+    console.log("Seed complete.")
   } catch (error) {
-    console.error("\nSeed failed:", error)
+    console.error("Seed failed:", error)
     process.exitCode = 1
   } finally {
     await closePostgres(pool)

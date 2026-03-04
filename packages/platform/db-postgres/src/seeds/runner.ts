@@ -3,9 +3,12 @@ import type { SeedContext, Seeder } from "./types.ts"
 
 export const runSeeders = (seeders: readonly Seeder[], ctx: SeedContext): Effect.Effect<void, unknown> =>
   Effect.gen(function* () {
-    for (const seeder of seeders) {
-      console.log(`  ▸ ${seeder.name}`)
+    const total = seeders.length
+
+    for (const [index, seeder] of seeders.entries()) {
+      const step = `${index + 1}/${total}`
+      console.log(`- [${step}] ${seeder.name}`)
       yield* seeder.run(ctx)
-      console.log(`  ✓ ${seeder.name}`)
+      console.log("  -> ok")
     }
   })

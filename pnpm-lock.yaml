@@ -231,9 +231,6 @@ importers:
       '@domain/email':
         specifier: workspace:*
         version: link:../../packages/domain/email
-      '@domain/organizations':
-        specifier: workspace:*
-        version: link:../../packages/domain/organizations
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects
