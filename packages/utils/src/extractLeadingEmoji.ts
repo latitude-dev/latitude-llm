@@ -4,5 +4,5 @@ const EMOJI_REGEX =
 export function extractLeadingEmoji(text: string): [string | null, string] {
   const match = text.match(EMOJI_REGEX)
   if (!match) return [null, text]
-  return [match[1]!, text.slice(match[0].length)]
+  return [match[1] ?? null, text.slice(match[0].length)]
 }
