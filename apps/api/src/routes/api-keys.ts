@@ -5,9 +5,10 @@ import {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId, BadRequestError, generateId } from "@domain/shared"
+import { ApiKeyId, generateId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
+import { BadRequestError } from "@repo/utils"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import type { OrganizationScopedEnv } from "../types.ts"

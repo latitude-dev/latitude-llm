@@ -25,18 +25,29 @@ export interface ChangePlanInput {
  */
 export class NoActiveSubscriptionError extends Data.TaggedError("NoActiveSubscriptionError")<{
   readonly organizationId: OrganizationId
-}> {}
+}> {
+  readonly httpStatus = 404
+  readonly httpMessage = "No active subscription found"
+}
 
 export class SamePlanError extends Data.TaggedError("SamePlanError")<{
   readonly currentPlan: Plan
   readonly requestedPlan: Plan
-}> {}
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage = "Already on the requested plan"
+}
 
 export class PlanDowngradeError extends Data.TaggedError("PlanDowngradeError")<{
   readonly currentPlan: Plan
   readonly requestedPlan: Plan
   readonly reason: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.reason
+  }
+}
 
 export type ChangePlanError =
   | RepositoryError

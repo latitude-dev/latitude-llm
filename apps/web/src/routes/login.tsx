@@ -6,6 +6,7 @@ import { createLoginIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
+import { parseServerError } from "../server/middlewares.ts"
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
@@ -50,8 +51,8 @@ function LoginPage() {
 
       setIsSent(true)
     } catch (err) {
-      const message = err instanceof Error ? err.message : "An error occurred"
-      if (err instanceof Error && err.name === "LoginUserNotFoundError") {
+      const { _tag, message } = parseServerError(err)
+      if (_tag === "LoginUserNotFoundError") {
         navigate({ to: "/signup", search: { reason: "no-account" } })
         return
       }

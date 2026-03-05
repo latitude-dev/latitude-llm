@@ -17,7 +17,7 @@ export class BadRequestError implements HttpError {
   }
 }
 
-export class HttpUnauthorizedError implements HttpError {
+export class UnauthorizedError implements HttpError {
   readonly _tag = "HttpUnauthorizedError"
   readonly httpStatus = 401
   readonly httpMessage: string

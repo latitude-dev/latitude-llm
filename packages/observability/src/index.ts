@@ -2,8 +2,8 @@ import { Effect } from "effect"
 
 export const createLogger = (scope: string) => {
   return {
-    info: (message: string) => Effect.runSync(Effect.logInfo(`[${scope}] ${message}`)),
-    warn: (message: string) => Effect.runSync(Effect.logWarning(`[${scope}] ${message}`)),
-    error: (message: string) => Effect.runSync(Effect.logError(`[${scope}] ${message}`)),
+    info: (...args: unknown[]) => Effect.runSync(Effect.logInfo(`[${scope}]`, ...args)),
+    warn: (...args: unknown[]) => Effect.runSync(Effect.logWarning(`[${scope}]`, ...args)),
+    error: (...args: unknown[]) => Effect.runSync(Effect.logError(`[${scope}]`, ...args)),
   }
 }
