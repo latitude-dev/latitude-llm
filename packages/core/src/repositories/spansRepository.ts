@@ -59,6 +59,8 @@ import {
   normalizeCreatedAtRange,
   shouldFallbackToAllTime,
 } from '../services/spans/defaultCreatedAtWindow'
+import { isClickHouseSpansReadEnabled } from '../services/workspaceFeatures/isClickHouseSpansReadEnabled'
+import { captureException } from '../utils/datadogCapture'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(spans)
@@ -78,7 +80,15 @@ export class SpansRepository extends Repository<Span> {
   private async shouldUseClickHouse(): Promise<boolean> {
     if (this.clickHouseOverride !== undefined) return this.clickHouseOverride
 
-    this.clickHouseOverride = true
+    try {
+      this.clickHouseOverride = await isClickHouseSpansReadEnabled(
+        this.workspaceId,
+        this.db,
+      )
+    } catch (error) {
+      captureException(error as Error)
+      this.clickHouseOverride = false
+    }
 
     return this.clickHouseOverride
   }
