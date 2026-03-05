@@ -5,7 +5,7 @@ import { X } from "lucide-react"
 import type { ComponentPropsWithoutRef, ElementRef, ReactElement } from "react"
 import { forwardRef } from "react"
 
-import { cn } from "../../utils/cn.js"
+import { cn } from "../../utils/cn.ts"
 
 const ToastProvider = ToastPrimitives.Provider
 

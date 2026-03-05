@@ -16,8 +16,8 @@ import {
   overflow as overflowOptions,
   whiteSpace as whiteSpaceOptions,
   wordBreak as wordBreakOptions,
-} from "../../tokens/index.js"
-import { cn } from "../../utils/cn.js"
+} from "../../tokens/index.ts"
+import { cn } from "../../utils/cn.ts"
 
 // Define display sizes as const outside component for better performance
 const DISPLAY_SIZES = new Set<FontSize>(["h1", "h2", "h3", "h4"])

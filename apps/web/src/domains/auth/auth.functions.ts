@@ -65,9 +65,9 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
     const session = await ensureSession()
     const { db } = getPostgresClient()
 
-    const userId = (session.user as { id: string }).id
-    const email = (session.user as { email: string }).email
-    const name = (session.user as { name?: string | null }).name ?? null
+    const userId = session.user.id
+    const email = session.user.email
+    const name = session.user.name ?? null
 
     return runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)

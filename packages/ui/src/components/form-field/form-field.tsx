@@ -1,8 +1,8 @@
 import { type ReactNode, useId } from "react"
 
-import { cn } from "../../utils/cn.js"
-import { Label } from "../label/label.js"
-import { Text } from "../text/text.js"
+import { cn } from "../../utils/cn.ts"
+import { Label } from "../label/label.tsx"
+import { Text } from "../text/text.tsx"
 
 export interface FormFieldProps {
   children: ReactNode

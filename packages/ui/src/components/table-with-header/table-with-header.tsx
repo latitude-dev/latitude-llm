@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { cn } from "../../utils/cn.js"
+import { cn } from "../../utils/cn.ts"
 import { Button, type ButtonProps } from "../button/button.tsx"
 import { Text } from "../text/text.tsx"
 

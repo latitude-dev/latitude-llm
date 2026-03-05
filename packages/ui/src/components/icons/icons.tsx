@@ -1,8 +1,8 @@
 import type { LucideProps } from "lucide-react"
 import { forwardRef, memo } from "react"
 
-import { type TextColor, colors } from "../../tokens/index.js"
-import { cn } from "../../utils/cn.js"
+import { type TextColor, colors } from "../../tokens/index.ts"
+import { cn } from "../../utils/cn.ts"
 
 const sizeMap = {
   xs: "h-3 w-3",

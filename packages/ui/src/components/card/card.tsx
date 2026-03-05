@@ -1,7 +1,7 @@
 import { type HTMLAttributes, forwardRef } from "react"
 
-import { type BoxShadow, boxShadow } from "../../tokens/index.js"
-import { cn } from "../../utils/cn.js"
+import { type BoxShadow, boxShadow } from "../../tokens/index.ts"
+import { cn } from "../../utils/cn.ts"
 
 interface CardProps extends HTMLAttributes<HTMLDivElement> {
   shadow?: BoxShadow

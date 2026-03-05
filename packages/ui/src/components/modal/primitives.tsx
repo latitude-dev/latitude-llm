@@ -5,7 +5,7 @@ import { X } from "lucide-react"
 import type { ComponentPropsWithoutRef, ElementRef, HTMLAttributes, ReactNode } from "react"
 import { forwardRef, useCallback } from "react"
 
-import { cn } from "../../utils/cn.js"
+import { cn } from "../../utils/cn.ts"
 import { Text } from "../text/text.tsx"
 
 const Dialog = DialogPrimitive.Root

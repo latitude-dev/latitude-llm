@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react"
 
-import { type ZIndex, zIndex as globalZIndex } from "../../tokens/index.js"
-import { cn } from "../../utils/cn.js"
+import { type ZIndex, zIndex as globalZIndex } from "../../tokens/index.ts"
+import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
 import {
   Dialog,

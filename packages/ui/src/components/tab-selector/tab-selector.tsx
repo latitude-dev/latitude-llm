@@ -2,7 +2,7 @@
 
 import { Fragment, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useRef, useState } from "react"
 
-import { cn } from "../../utils/cn.js"
+import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
 import { Text } from "../text/text.tsx"
 

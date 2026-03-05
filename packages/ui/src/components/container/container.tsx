@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { cn } from "../../utils/cn.js"
+import { cn } from "../../utils/cn.ts"
 
 export type ContainerSize = "xl" | "2xl" | "full"
 

@@ -4,8 +4,8 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import type { ReactNode } from "react"
 import { forwardRef } from "react"
 
-import { zIndex } from "../../tokens/index.js"
-import { cn } from "../../utils/cn.js"
+import { zIndex } from "../../tokens/index.ts"
+import { cn } from "../../utils/cn.ts"
 
 const TooltipProvider = TooltipPrimitive.Provider
 

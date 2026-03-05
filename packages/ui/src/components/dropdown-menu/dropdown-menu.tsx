@@ -3,7 +3,7 @@
 import type { MouseEvent, ReactNode } from "react"
 import { useCallback, useState } from "react"
 
-import { cn } from "../../utils/cn.js"
+import { cn } from "../../utils/cn.ts"
 import { Button, type ButtonProps } from "../button/button.tsx"
 import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
