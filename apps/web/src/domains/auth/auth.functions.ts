@@ -16,6 +16,7 @@ import {
   completeAuthIntentInputSchema,
   createLoginIntentInputSchema,
   createSignupIntentInputSchema,
+  getAuthIntentInfoInputSchema,
 } from "./auth.types.ts"
 
 export const createLoginIntent = createServerFn({ method: "POST" })
@@ -62,6 +63,38 @@ export const createSignupIntent = createServerFn({ method: "POST" })
     }
   })
 
+export interface AuthIntentInfo {
+  readonly type: "login" | "signup" | "invite"
+  readonly needsName: boolean
+  readonly organizationName: string | null
+}
+
+export const getAuthIntentInfo = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(zodValidator(getAuthIntentInfoInputSchema))
+  .handler(async ({ data }): Promise<AuthIntentInfo> => {
+    const session = await ensureSession()
+    const { db } = getPostgresClient()
+
+    return runCommand(db)(async (txDb) => {
+      const intents = createAuthIntentPostgresRepository(txDb)
+      const intent = await Effect.runPromise(intents.findById(data.intentId))
+
+      if (!intent) {
+        return { type: "login" as const, needsName: false, organizationName: null }
+      }
+
+      const userHasName = !!session.user.name && session.user.name.trim().length > 0
+      const needsName = intent.type === "invite" && !intent.existingAccountAtRequest && !userHasName
+
+      return {
+        type: intent.type,
+        needsName,
+        organizationName: intent.data.invite?.organizationName ?? null,
+      }
+    })
+  })
+
 export const completeAuthIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(zodValidator(completeAuthIntentInputSchema))
@@ -71,7 +104,7 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
 
     const userId = session.user.id
     const email = session.user.email
-    const name = session.user.name ?? null
+    const name = data.name ?? session.user.name ?? null
 
     return runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)

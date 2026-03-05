@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useRef, useState } from "react"
+import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
 import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
@@ -43,7 +43,10 @@ function checkSelected<T extends string>({
   selected: T | null | undefined
   showSelectedOnSubroutes: boolean
 }) {
-  return showSelectedOnSubroutes ? (selected?.startsWith(option.value) ?? false) : selected === option.value
+  if (!showSelectedOnSubroutes) return selected === option.value
+  if (!selected) return false
+  if (option.value === "/") return selected === "/"
+  return selected.startsWith(option.value)
 }
 
 function ItemOption<T extends string>({
@@ -58,7 +61,7 @@ function ItemOption<T extends string>({
 }: {
   option: TabSelectorOption<T>
   showSelectedOnSubroutes: boolean
-  selectedOptionButtonRef: RefObject<HTMLElement | null>
+  selectedOptionButtonRef: (el: HTMLElement | null) => void
   selected?: T | null
   handleSelect: (option: TabSelectorOption<T>) => () => void
   fullWidth?: boolean
@@ -70,7 +73,7 @@ function ItemOption<T extends string>({
   return (
     <Wrapper className={cn("flex", fullWidth && "flex-1")} href={option.route as string}>
       <Button
-        ref={isSelected ? (selectedOptionButtonRef as unknown as Ref<HTMLButtonElement>) : null}
+        ref={isSelected ? selectedOptionButtonRef : null}
         type="button"
         variant="ghost"
         flat
@@ -105,8 +108,8 @@ function TabSelector<T extends string>({
   onSelect,
   linkWrapper,
 }: TabSelectorProps<T>) {
-  const selectedOptionButtonRef = useRef<HTMLElement>(null)
   const selectedOptionBackgroundRef = useRef<HTMLDivElement>(null)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
   const [selected, setSelected] = useState<T | null>(originalSelected ?? null)
 
   useEffect(() => {
@@ -123,17 +126,17 @@ function TabSelector<T extends string>({
     [onSelect],
   )
 
-  useEffect(() => {
-    if (!selectedOptionBackgroundRef.current) return
-
+  const selectedOptionButtonRef = useCallback((button: HTMLElement | null) => {
     const background = selectedOptionBackgroundRef.current
+    if (!background) return
 
-    if (!selectedOptionButtonRef.current) {
+    resizeObserverRef.current?.disconnect()
+    resizeObserverRef.current = null
+
+    if (!button) {
       background.style.display = "none"
       return
     }
-
-    const button = selectedOptionButtonRef.current
 
     const updateBackgroundPosition = () => {
       background.style.top = `${button.offsetTop}px`
@@ -144,10 +147,12 @@ function TabSelector<T extends string>({
 
     updateBackgroundPosition()
 
-    const resizeObserver = new ResizeObserver(updateBackgroundPosition)
-    resizeObserver.observe(button)
+    resizeObserverRef.current = new ResizeObserver(updateBackgroundPosition)
+    resizeObserverRef.current.observe(button)
+  }, [])
 
-    return () => resizeObserver.disconnect()
+  useEffect(() => {
+    return () => resizeObserverRef.current?.disconnect()
   }, [])
 
   return (

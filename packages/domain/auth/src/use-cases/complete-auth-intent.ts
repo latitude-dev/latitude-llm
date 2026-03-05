@@ -147,6 +147,13 @@ export const completeAuthIntentUseCase = (deps: {
           }),
         )
 
+        if (input.session.name && input.session.name.trim().length > 0) {
+          yield* deps.users.setNameIfMissing({
+            userId: input.session.userId,
+            name: input.session.name,
+          })
+        }
+
         yield* deps.intents.markConsumed({ intentId: intent.id })
 
         return { completed: true as const }
