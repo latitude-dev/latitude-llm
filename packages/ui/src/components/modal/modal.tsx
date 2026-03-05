@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { type ZIndex, zIndex as globalZIndex } from "../../tokens/index.ts"
+import { type ZIndex, zIndex as globalZIndex } from "../../tokens/zIndex.ts"
 import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
 import {

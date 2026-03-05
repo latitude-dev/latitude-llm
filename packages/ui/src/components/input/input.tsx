@@ -1,7 +1,7 @@
 import { type VariantProps, cva } from "class-variance-authority"
 import { type InputHTMLAttributes, forwardRef } from "react"
 
-import { font } from "../../tokens/index.ts"
+import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
 import { FormField } from "../form-field/form-field.tsx"
 
