@@ -22,6 +22,7 @@ import { processSpansBulk } from './processBulk'
 vi.mock('../../../lib/disk', () => ({
   diskFactory: vi.fn(() => ({
     put: vi.fn().mockResolvedValue({ unwrap: () => undefined }),
+    putBuffer: vi.fn().mockResolvedValue({ unwrap: () => undefined }),
   })),
 }))
 
@@ -32,7 +33,7 @@ vi.mock('../../../cache', () => ({
 }))
 
 vi.mock('../clickhouse/bulkCreate', () => ({
-  bulkCreate: vi.fn(),
+  bulkCreate: vi.fn().mockResolvedValue({ error: undefined, value: undefined }),
 }))
 
 vi.mock('../../../../queries/clickhouse/spans/findBySpanAndTraceIds', () => ({
