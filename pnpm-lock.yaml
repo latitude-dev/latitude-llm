@@ -252,6 +252,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@repo/ui':
         specifier: workspace:*
         version: link:../../packages/ui

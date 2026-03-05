@@ -6,10 +6,10 @@ import {
   createOrganizationPostgresRepository,
   runCommand,
 } from "@platform/db-postgres"
-import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { getPostgresClient } from "../../server/clients.ts"
+import { createServerFn } from "../../server/middleware.ts"
 import { ensureSession } from "../sessions/session.functions.ts"
 import {
   completeAuthIntentInputSchema,

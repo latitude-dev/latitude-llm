@@ -1,6 +1,6 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
 import { Link, createFileRoute, redirect } from "@tanstack/react-router"
-import { AlertCircle, Mail } from "lucide-react"
+import { AlertCircle, Info, Mail } from "lucide-react"
 import { useState } from "react"
 import { createSignupIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
@@ -37,6 +37,9 @@ const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
 )
 
 export const Route = createFileRoute("/signup")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    reason: (search.reason as string) || undefined,
+  }),
   beforeLoad: async () => {
     const session = await getSession()
 
@@ -48,6 +51,7 @@ export const Route = createFileRoute("/signup")({
 })
 
 function SignupPage() {
+  const { reason } = Route.useSearch()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
@@ -163,6 +167,13 @@ function SignupPage() {
             <Text.H3 align="center">Welcome to Latitude</Text.H3>
           </div>
         </div>
+
+        {reason === "no-account" && (
+          <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950">
+            <Icon icon={Info} className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <Text.H6 color="foregroundMuted">No account found for that email. Create one to get started.</Text.H6>
+          </div>
+        )}
 
         {/* Card container */}
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">

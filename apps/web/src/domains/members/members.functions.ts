@@ -1,12 +1,12 @@
 import { removeMemberUseCase } from "@domain/organizations"
 import { OrganizationId } from "@domain/shared"
 import { createMembershipPostgresRepository, runCommand } from "@platform/db-postgres"
-import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { createServerFn } from "../../server/middleware.ts"
 
 export interface MemberRecord {
   readonly id: string

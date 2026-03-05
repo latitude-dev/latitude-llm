@@ -2,12 +2,12 @@ import { createProjectUseCase, updateProjectUseCase } from "@domain/projects"
 import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
-import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { createServerFn } from "../../server/middleware.ts"
 
 export interface ProjectRecord {
   readonly id: string

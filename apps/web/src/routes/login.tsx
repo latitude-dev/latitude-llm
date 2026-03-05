@@ -1,5 +1,5 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
-import { Link, createFileRoute, redirect } from "@tanstack/react-router"
+import { Link, createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
 import { createLoginIntent } from "../domains/auth/auth.functions.ts"
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/login")({
 })
 
 function LoginPage() {
+  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
@@ -49,7 +50,12 @@ function LoginPage() {
 
       setIsSent(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      const message = err instanceof Error ? err.message : "An error occurred"
+      if (err instanceof Error && err.name === "LoginUserNotFoundError") {
+        navigate({ to: "/signup", search: { reason: "no-account" } })
+        return
+      }
+      setError(message)
     } finally {
       setIsLoading(false)
     }
