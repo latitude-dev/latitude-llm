@@ -576,13 +576,61 @@ export const Route = createFileRoute("/_authenticated")({
 ```tsx
 // ❌ Bad - using margins and space-y
 <div className="space-y-4 mt-4">
-  <div className="mb-2">Item 1</div>
-  <div className="mb-2">Item 2</div>
+ <div className="mb-2">Item 1</div>
+ <div className="mb-2">Item 2</div>
 </div>
 
 // ✅ Good - using flexbox with gap
 <div className="flex flex-col gap-4 pt-4">
-  <div>Item 1</div>
-  <div>Item 2</div>
+ <div>Item 1</div>
+ <div>Item 2</div>
 </div>
 ```
+
+## Cursor Cloud specific instructions
+
+### Infrastructure
+
+Docker is used for local infrastructure services. Start them before running apps:
+
+```bash
+sudo dockerd &>/dev/null &  # if Docker daemon not already running
+sudo docker compose up -d postgres clickhouse redis mailpit
+```
+
+### Database setup
+
+After infrastructure is up, run migrations (idempotent):
+
+```bash
+pnpm --filter @platform/db-postgres pg:migrate
+pnpm --filter @platform/db-clickhouse ch:up
+pnpm --filter @platform/db-postgres pg:seed       # optional: creates seed users owner@acme.com / admin@acme.com
+```
+
+### Running dev servers
+
+Start app services individually, matching the local `pnpm tmux` (tmuxinator) workflow:
+
+```bash
+pnpm --filter @app/web dev &
+pnpm --filter @app/api dev &
+pnpm --filter @app/ingest dev &
+pnpm --filter @app/workers dev &
+```
+
+| Service | Port | Health check |
+|---------|------|-------------|
+| Web | 3000 | `curl http://localhost:3000` (307 redirect to /login) |
+| API | 3001 | `curl http://localhost:3001/health` |
+| Ingest | 3002 | `curl http://localhost:3002/health` |
+| Workers | N/A | Logs "workers ready and outbox consumer started" |
+| Mailpit UI | 8025 | `curl http://localhost:8025` |
+
+### Auth for manual testing
+
+The app uses magic-link authentication. Emails are captured by Mailpit at `http://localhost:8025`. Sign up through the web UI at `http://localhost:3000/signup`, then retrieve the magic link from Mailpit to complete authentication.
+
+### Lint, typecheck, test commands
+
+Standard commands per `AGENTS.md` Commands section: `pnpm check`, `pnpm typecheck`, `pnpm test`. All run cleanly.
