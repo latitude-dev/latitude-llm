@@ -32,8 +32,8 @@ export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
 })
 
-function invalidateProjects(organizationId: string) {
-  void getQueryClient().invalidateQueries({ queryKey: ["projects", organizationId] })
+function invalidateProjects() {
+  void getQueryClient().invalidateQueries({ queryKey: ["projects"] })
 }
 
 function ProjectTitle({ name }: { name: string }) {
@@ -51,13 +51,7 @@ function ProjectTitle({ name }: { name: string }) {
   )
 }
 
-function ProjectsTable({
-  projects,
-  organizationId,
-}: {
-  projects: ProjectRecord[]
-  organizationId: string
-}) {
+function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
   const [projectToRename, setProjectToRename] = useState<ProjectRecord | null>(null)
 
   return (
@@ -106,7 +100,7 @@ function ProjectsTable({
                       },
                       onClick: () => {
                         void deleteProject({ data: { id: project.id } }).then(() => {
-                          invalidateProjects(organizationId)
+                          invalidateProjects()
                         })
                       },
                     },
@@ -125,11 +119,7 @@ function ProjectsTable({
       </Table>
 
       {projectToRename && (
-        <RenameProjectModal
-          project={projectToRename}
-          organizationId={organizationId}
-          onClose={() => setProjectToRename(null)}
-        />
+        <RenameProjectModal project={projectToRename} onClose={() => setProjectToRename(null)} />
       )}
     </>
   )
@@ -137,11 +127,9 @@ function ProjectsTable({
 
 function RenameProjectModal({
   project,
-  organizationId,
   onClose,
 }: {
   project: ProjectRecord
-  organizationId: string
   onClose: () => void
 }) {
   const { toast } = useToast()
@@ -152,7 +140,7 @@ function RenameProjectModal({
     },
     onSubmit: async ({ value }) => {
       await updateProject({ data: { id: project.id, name: value.name } })
-      invalidateProjects(organizationId)
+      invalidateProjects()
       toast({
         title: "Success",
         description: `Project renamed to "${value.name}".`,
@@ -210,11 +198,9 @@ function RenameProjectModal({
 function CreateProjectModal({
   open,
   onClose,
-  organizationId,
 }: {
   open: boolean
   onClose: () => void
-  organizationId: string
 }) {
   const form = useForm({
     defaultValues: {
@@ -222,7 +208,7 @@ function CreateProjectModal({
     },
     onSubmit: async ({ value }) => {
       await createProject({ data: { name: value.name } })
-      invalidateProjects(organizationId)
+      invalidateProjects()
       onClose()
     },
   })
@@ -275,25 +261,22 @@ function CreateProjectModal({
 
 function DashboardPage() {
   const [createOpen, setCreateOpen] = useState(false)
-  const { organizationId } = Route.useRouteContext()
-  const projectsCollection = useProjectsCollection(organizationId ?? "")
+  const projectsCollection = useProjectsCollection()
   const projects = projectsCollection.data ?? []
   const isLoading = !projectsCollection.data
 
   return (
     <Container>
       <AppTabs />
-      {organizationId && (
-        <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} organizationId={organizationId} />
-      )}
+      <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <TableWithHeader
         title="Projects"
         actions={<TableWithHeader.Button onClick={() => setCreateOpen(true)}>Add project</TableWithHeader.Button>}
         table={
           isLoading ? (
             <TableSkeleton cols={3} rows={3} />
-          ) : projects.length > 0 && organizationId ? (
-            <ProjectsTable projects={projects} organizationId={organizationId} />
+          ) : projects.length > 0 ? (
+            <ProjectsTable projects={projects} />
           ) : (
             <TableBlankSlate
               description="There are no projects yet. Create one to start adding your prompts."

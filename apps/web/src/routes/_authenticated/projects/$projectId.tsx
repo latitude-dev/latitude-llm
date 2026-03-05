@@ -9,8 +9,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
 
 function ProjectViewPage() {
   const { projectId } = Route.useParams()
-  const { organizationId } = Route.useRouteContext()
-  const projectsCollection = useProjectsCollection(organizationId ?? "")
+  const projectsCollection = useProjectsCollection()
   const project = projectsCollection.data?.find((p) => p.id === projectId)
 
   if (!project) {
@@ -42,7 +41,6 @@ function ProjectViewPage() {
         </div>
       </div>
 
-      {/* Placeholder: Project content (prompts, evaluations, etc.) will be added here */}
       <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-lg bg-gradient-to-b from-secondary to-transparent">
         <Text.H5 color="foregroundMuted">Project view is under construction</Text.H5>
         <Link to="/">

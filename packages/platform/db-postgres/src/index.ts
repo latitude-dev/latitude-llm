@@ -20,6 +20,4 @@ export {
   createSubscriptionPostgresRepository,
   createUnscopedApiKeyPostgresRepository,
   createUserPostgresRepository,
-  findMembersWithUser,
-  type MemberWithUser,
 } from "./repositories/index.ts"

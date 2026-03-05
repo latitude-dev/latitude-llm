@@ -1,7 +1,6 @@
 import { TabSelector } from "@repo/ui"
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router"
 import { Link, useRouterState } from "@tanstack/react-router"
-import { completeAuthIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 
 const NAV_LINKS = [
@@ -23,13 +22,6 @@ export const Route = createFileRoute("/_authenticated")({
 
     if (!session) {
       throw redirect({ to: "/login" })
-    }
-
-    const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "")
-    const authIntentId = searchParams.get("authIntentId")
-
-    if (authIntentId) {
-      await completeAuthIntent({ data: { intentId: authIntentId } })
     }
 
     const sessionData = session.session as Record<string, unknown>

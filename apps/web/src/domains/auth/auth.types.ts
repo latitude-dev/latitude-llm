@@ -9,7 +9,3 @@ export const createSignupIntentInputSchema = z.object({
   email: z.string(),
   organizationName: z.string(),
 })
-
-export const completeAuthIntentInputSchema = z.object({
-  intentId: z.string(),
-})

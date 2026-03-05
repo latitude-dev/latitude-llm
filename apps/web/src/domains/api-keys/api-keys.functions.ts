@@ -29,9 +29,7 @@ const toRecord = (apiKey: ApiKey): ApiKeyRecord => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-export const listApiKeys = createServerFn({ method: "GET" })
-  .inputValidator(zodValidator(z.object({})))
-  .handler(async (): Promise<ApiKeyRecord[]> => {
+export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): Promise<ApiKeyRecord[]> => {
     const { organizationId } = await requireSession()
     const { db } = getPostgresClient()
 

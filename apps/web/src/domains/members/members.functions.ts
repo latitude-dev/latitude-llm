@@ -1,6 +1,6 @@
 import { removeMemberUseCase } from "@domain/organizations"
 import { OrganizationId } from "@domain/shared"
-import { createMembershipPostgresRepository, findMembersWithUser, runCommand } from "@platform/db-postgres"
+import { createMembershipPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
@@ -18,26 +18,27 @@ export interface MemberRecord {
   readonly createdAt: string
 }
 
-export const listMembers = createServerFn({ method: "GET" })
-  .inputValidator(zodValidator(z.object({})))
-  .handler(async (): Promise<MemberRecord[]> => {
-    const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+export const listMembers = createServerFn({ method: "GET" }).handler(async (): Promise<MemberRecord[]> => {
+  const { organizationId } = await requireSession()
+  const { db } = getPostgresClient()
 
-    return runCommand(db)(async (txDb) => {
-      const members = await Effect.runPromise(findMembersWithUser(txDb, organizationId))
+  return runCommand(db, organizationId)(async (txDb) => {
+    const membershipRepo = createMembershipPostgresRepository(txDb)
+    const members = await Effect.runPromise(
+      membershipRepo.findMembersWithUser(OrganizationId(organizationId)),
+    )
 
-      return members.map((m) => ({
-        id: m.id,
-        userId: m.userId,
-        name: m.name,
-        email: m.email,
-        role: m.role,
-        confirmedAt: m.createdAt ? m.createdAt.toISOString() : null,
-        createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
-      }))
-    })
+    return members.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      name: m.name,
+      email: m.email,
+      role: m.role,
+      confirmedAt: m.createdAt ? m.createdAt.toISOString() : null,
+      createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
+    }))
   })
+})
 
 export const removeMember = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(z.object({ membershipId: z.string() })))
@@ -45,14 +46,13 @@ export const removeMember = createServerFn({ method: "POST" })
     const { userId, organizationId } = await requireSession()
     const { db } = getPostgresClient()
 
-    await runCommand(db)(async (txDb) => {
+    await runCommand(db, organizationId)(async (txDb) => {
       const membershipRepo = createMembershipPostgresRepository(txDb)
 
       await Effect.runPromise(
         removeMemberUseCase(membershipRepo)({
           membershipId: data.membershipId,
           requestingUserId: userId,
-          organizationId: OrganizationId(organizationId),
         }),
       )
     })

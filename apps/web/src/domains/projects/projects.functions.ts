@@ -31,9 +31,7 @@ const toRecord = (project: Project): ProjectRecord => ({
   updatedAt: project.updatedAt.toISOString(),
 })
 
-export const listProjects = createServerFn({ method: "GET" })
-  .inputValidator(zodValidator(z.object({})))
-  .handler(async (): Promise<ProjectRecord[]> => {
+export const listProjects = createServerFn({ method: "GET" }).handler(async (): Promise<ProjectRecord[]> => {
     const { organizationId } = await requireSession()
     const { db } = getPostgresClient()
 

@@ -36,12 +36,12 @@ export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
 
-function invalidateMembers(organizationId: string) {
-  void getQueryClient().invalidateQueries({ queryKey: ["members", organizationId] })
+function invalidateMembers() {
+  void getQueryClient().invalidateQueries({ queryKey: ["members"] })
 }
 
-function invalidateApiKeys(organizationId: string) {
-  void getQueryClient().invalidateQueries({ queryKey: ["apiKeys", organizationId] })
+function invalidateApiKeys() {
+  void getQueryClient().invalidateQueries({ queryKey: ["apiKeys"] })
 }
 
 // --- Workspace Members Section ---
@@ -123,13 +123,7 @@ function InviteMemberModal({
   )
 }
 
-function MembersTable({
-  members,
-  organizationId,
-}: {
-  members: MemberRecord[]
-  organizationId: string
-}) {
+function MembersTable({ members }: { members: MemberRecord[] }) {
   return (
     <Table>
       <TableHeader>
@@ -157,7 +151,7 @@ function MembersTable({
                 variant="ghost"
                 onClick={() => {
                   void removeMember({ data: { membershipId: member.id } }).then(() => {
-                    invalidateMembers(organizationId)
+                    invalidateMembers()
                   })
                 }}
               >
@@ -171,9 +165,9 @@ function MembersTable({
   )
 }
 
-function MembershipsSection({ organizationId }: { organizationId: string }) {
+function MembershipsSection() {
   const [inviteOpen, setInviteOpen] = useState(false)
-  const membersCollection = useMembersCollection(organizationId)
+  const membersCollection = useMembersCollection()
   const members = membersCollection.data ?? []
   const isLoading = !membersCollection.data
 
@@ -190,7 +184,7 @@ function MembershipsSection({ organizationId }: { organizationId: string }) {
       </div>
       <div className="flex flex-col gap-2">
         {isLoading && <TableSkeleton cols={4} rows={3} />}
-        {!isLoading && members.length > 0 && <MembersTable members={members} organizationId={organizationId} />}
+        {!isLoading && members.length > 0 && <MembersTable members={members} />}
       </div>
     </div>
   )
@@ -201,11 +195,9 @@ function MembershipsSection({ organizationId }: { organizationId: string }) {
 function CreateApiKeyModal({
   open,
   setOpen,
-  organizationId,
 }: {
   open: boolean
   setOpen: (open: boolean) => void
-  organizationId: string
 }) {
   const form = useForm({
     defaultValues: {
@@ -213,7 +205,7 @@ function CreateApiKeyModal({
     },
     onSubmit: async ({ value }) => {
       await createApiKey({ data: { name: value.name } })
-      invalidateApiKeys(organizationId)
+      invalidateApiKeys()
       setOpen(false)
     },
   })
@@ -268,11 +260,9 @@ function CreateApiKeyModal({
 function UpdateApiKeyModal({
   apiKey,
   onClose,
-  organizationId,
 }: {
   apiKey: ApiKeyRecord
   onClose: () => void
-  organizationId: string
 }) {
   const { toast } = useToast()
 
@@ -282,7 +272,7 @@ function UpdateApiKeyModal({
     },
     onSubmit: async ({ value }) => {
       await updateApiKey({ data: { id: apiKey.id, name: value.name } })
-      invalidateApiKeys(organizationId)
+      invalidateApiKeys()
       toast({
         title: "Success",
         description: "API key name updated.",
@@ -337,13 +327,7 @@ function UpdateApiKeyModal({
   )
 }
 
-function ApiKeysTable({
-  apiKeys,
-  organizationId,
-}: {
-  apiKeys: ApiKeyRecord[]
-  organizationId: string
-}) {
+function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
   const { toast } = useToast()
   const [apiKeyToEdit, setApiKeyToEdit] = useState<ApiKeyRecord | null>(null)
 
@@ -413,7 +397,7 @@ function ApiKeysTable({
                           variant="ghost"
                           onClick={() => {
                             void deleteApiKey({ data: { id: apiKey.id } }).then(() => {
-                              invalidateApiKeys(organizationId)
+                              invalidateApiKeys()
                             })
                           }}
                         >
@@ -431,26 +415,20 @@ function ApiKeysTable({
         </TableBody>
       </Table>
 
-      {apiKeyToEdit && (
-        <UpdateApiKeyModal
-          apiKey={apiKeyToEdit}
-          onClose={() => setApiKeyToEdit(null)}
-          organizationId={organizationId}
-        />
-      )}
+      {apiKeyToEdit && <UpdateApiKeyModal apiKey={apiKeyToEdit} onClose={() => setApiKeyToEdit(null)} />}
     </>
   )
 }
 
-function ApiKeysSection({ organizationId }: { organizationId: string }) {
+function ApiKeysSection() {
   const [createOpen, setCreateOpen] = useState(false)
-  const apiKeysCollection = useApiKeysCollection(organizationId)
+  const apiKeysCollection = useApiKeysCollection()
   const apiKeys = apiKeysCollection.data ?? []
   const isLoading = !apiKeysCollection.data
 
   return (
     <>
-      <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} organizationId={organizationId} />
+      <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
       <TableWithHeader
         title={
           <div className="flex flex-row items-center gap-2">
@@ -463,11 +441,7 @@ function ApiKeysSection({ organizationId }: { organizationId: string }) {
           </Button>
         }
         table={
-          isLoading ? (
-            <TableSkeleton cols={3} rows={3} />
-          ) : (
-            <ApiKeysTable apiKeys={apiKeys} organizationId={organizationId} />
-          )
+          isLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />
         }
       />
     </>
@@ -477,21 +451,11 @@ function ApiKeysSection({ organizationId }: { organizationId: string }) {
 // --- Settings Page ---
 
 function SettingsPage() {
-  const { organizationId } = Route.useRouteContext()
-
   return (
     <Container>
       <AppTabs />
-      {organizationId ? (
-        <>
-          <MembershipsSection organizationId={organizationId} />
-          <ApiKeysSection organizationId={organizationId} />
-        </>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Text.H5 color="foregroundMuted">Loading workspace...</Text.H5>
-        </div>
-      )}
+      <MembershipsSection />
+      <ApiKeysSection />
     </Container>
   )
 }
