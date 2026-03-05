@@ -15,5 +15,8 @@
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*"
+  },
+  "dependencies": {
+    "effect": "catalog:"
   }
 }

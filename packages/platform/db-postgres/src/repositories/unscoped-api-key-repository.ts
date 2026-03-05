@@ -1,5 +1,11 @@
 import type { ApiKey, UnscopedApiKeyRepository } from "@domain/api-keys"
-import { ApiKeyId, type ApiKeyId as ApiKeyIdType, OrganizationId, toRepositoryError } from "@domain/shared"
+import {
+  ApiKeyId,
+  type ApiKeyId as ApiKeyIdType,
+  OrganizationId,
+  type RepositoryError,
+  toRepositoryError,
+} from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { decrypt } from "@repo/utils"
 import { and, eq, inArray, isNull, sql } from "drizzle-orm"
@@ -21,17 +27,24 @@ const getEncryptionKey = (): Buffer => {
  * Maps a database API key row to a domain ApiKey entity.
  * Decrypts the token from its stored encrypted form.
  */
-const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
-  id: ApiKeyId(row.id),
-  organizationId: OrganizationId(row.organizationId),
-  token: decrypt(row.token, encryptionKey),
-  tokenHash: row.tokenHash,
-  name: row.name ?? "",
-  lastUsedAt: row.lastUsedAt,
-  deletedAt: row.deletedAt,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-})
+const toDomainApiKey = (
+  row: typeof apiKeys.$inferSelect,
+  encryptionKey: Buffer,
+): Effect.Effect<ApiKey, RepositoryError> =>
+  Effect.gen(function* () {
+    const token = yield* decrypt(row.token, encryptionKey).pipe(Effect.mapError((e) => toRepositoryError(e, "decrypt")))
+    return {
+      id: ApiKeyId(row.id),
+      organizationId: OrganizationId(row.organizationId),
+      token,
+      tokenHash: row.tokenHash,
+      name: row.name ?? "",
+      lastUsedAt: row.lastUsedAt,
+      deletedAt: row.deletedAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }
+  })
 
 /**
  * Creates a Postgres implementation of the UnscopedApiKeyRepository port.
@@ -59,7 +72,7 @@ export const createUnscopedApiKeyPostgresRepository = (db: PostgresDb): Unscoped
           catch: (error) => toRepositoryError(error, "findByTokenHash"),
         })
 
-        return result ? toDomainApiKey(result, encryptionKey) : null
+        return result ? yield* toDomainApiKey(result, encryptionKey) : null
       }),
 
     touchBatch: (ids: readonly ApiKeyIdType[]) =>
@@ -91,7 +104,7 @@ export const createUnscopedApiKeyPostgresRepository = (db: PostgresDb): Unscoped
           catch: (error) => toRepositoryError(error, "findAll"),
         })
 
-        return results.map((row) => toDomainApiKey(row, encryptionKey))
+        return yield* Effect.all(results.map((row) => toDomainApiKey(row, encryptionKey)))
       }),
 
     existsByTokenHash: (tokenHash: string) =>
