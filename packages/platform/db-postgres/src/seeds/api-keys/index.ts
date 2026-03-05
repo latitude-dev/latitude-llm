@@ -13,7 +13,10 @@ const seedApiKeys: Seeder = {
   name: "api-keys/default-key",
   run: (ctx: SeedContext) =>
     Effect.gen(function* () {
-      const tokenHash = yield* Effect.promise(() => hashToken(SEED_API_KEY_TOKEN))
+      const tokenHash = yield* Effect.tryPromise({
+        try: () => hashToken(SEED_API_KEY_TOKEN),
+        catch: (error) => (error instanceof Error ? error : new Error(`Failed to hash token: ${String(error)}`)),
+      })
       const apiKey = createApiKey({
         id: SEED_API_KEY_ID,
         organizationId: SEED_ORG_ID,

@@ -1,4 +1,4 @@
-import type { ApiKeyId, OrganizationId, RepositoryError, ValidationError } from "@domain/shared"
+import { type ApiKeyId, type OrganizationId, type RepositoryError, type ValidationError, toRepositoryError } from "@domain/shared"
 import { hashToken } from "@repo/utils"
 import { Data, Effect } from "effect"
 import { type ApiKey, createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
@@ -54,7 +54,10 @@ export const generateApiKeyUseCase =
 
       // Generate token and its hash
       const token = generateApiKeyToken()
-      const tokenHash = yield* Effect.promise(() => hashToken(token))
+      const tokenHash = yield* Effect.tryPromise({
+        try: () => hashToken(token),
+        catch: (error) => toRepositoryError(error, "hashToken"),
+      })
 
       // Create API key entity
       const apiKey = createApiKey({

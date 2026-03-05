@@ -4,6 +4,7 @@ import {
   type ApiKeyId as ApiKeyIdType,
   OrganizationId,
   type OrganizationId as OrganizationIdType,
+  type RepositoryError,
   toRepositoryError,
 } from "@domain/shared"
 import { parseEnv } from "@platform/env"
@@ -27,31 +28,45 @@ const getEncryptionKey = (): Buffer => {
  * Maps a database API key row to a domain ApiKey entity.
  * Decrypts the token from its stored encrypted form.
  */
-const toDomainApiKey = async (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): Promise<ApiKey> => ({
-  id: ApiKeyId(row.id),
-  organizationId: OrganizationId(row.organizationId),
-  token: await decrypt(row.token, encryptionKey),
-  tokenHash: row.tokenHash,
-  name: row.name ?? "",
-  lastUsedAt: row.lastUsedAt,
-  deletedAt: row.deletedAt,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-})
+const toDomainApiKey = (
+  row: typeof apiKeys.$inferSelect,
+  encryptionKey: Buffer,
+): Effect.Effect<ApiKey, RepositoryError> =>
+  Effect.tryPromise({
+    try: async () => ({
+      id: ApiKeyId(row.id),
+      organizationId: OrganizationId(row.organizationId),
+      token: await decrypt(row.token, encryptionKey),
+      tokenHash: row.tokenHash,
+      name: row.name ?? "",
+      lastUsedAt: row.lastUsedAt,
+      deletedAt: row.deletedAt,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }),
+    catch: (error) => toRepositoryError(error, "decrypt"),
+  })
 
 /**
  * Maps a domain ApiKey entity to a database insert row.
  * Encrypts the plaintext token before storage.
  */
-const toInsertRow = async (apiKey: ApiKey, encryptionKey: Buffer): Promise<typeof apiKeys.$inferInsert> => ({
-  id: apiKey.id,
-  organizationId: apiKey.organizationId,
-  token: await encrypt(apiKey.token, encryptionKey),
-  tokenHash: apiKey.tokenHash,
-  name: apiKey.name,
-  lastUsedAt: apiKey.lastUsedAt,
-  deletedAt: apiKey.deletedAt,
-})
+const toInsertRow = (
+  apiKey: ApiKey,
+  encryptionKey: Buffer,
+): Effect.Effect<typeof apiKeys.$inferInsert, RepositoryError> =>
+  Effect.tryPromise({
+    try: async () => ({
+      id: apiKey.id,
+      organizationId: apiKey.organizationId,
+      token: await encrypt(apiKey.token, encryptionKey),
+      tokenHash: apiKey.tokenHash,
+      name: apiKey.name,
+      lastUsedAt: apiKey.lastUsedAt,
+      deletedAt: apiKey.deletedAt,
+    }),
+    catch: (error) => toRepositoryError(error, "encrypt"),
+  })
 
 /**
  * Creates a Postgres implementation of the ApiKeyRepository port.
@@ -81,7 +96,7 @@ export const createApiKeyPostgresRepository = (
           catch: (error) => toRepositoryError(error, "findById"),
         })
 
-        return result ? yield* Effect.promise(() => toDomainApiKey(result, encryptionKey)) : null
+        return result ? yield* toDomainApiKey(result, encryptionKey) : null
       }),
 
     findAll: () =>
@@ -95,12 +110,12 @@ export const createApiKeyPostgresRepository = (
           catch: (error) => toRepositoryError(error, "findAll"),
         })
 
-        return yield* Effect.promise(() => Promise.all(results.map((row) => toDomainApiKey(row, encryptionKey))))
+        return yield* Effect.all(results.map((row) => toDomainApiKey(row, encryptionKey)))
       }),
 
     save: (apiKey: ApiKey) =>
       Effect.gen(function* () {
-        const row = yield* Effect.promise(() => toInsertRow(apiKey, encryptionKey))
+        const row = yield* toInsertRow(apiKey, encryptionKey)
 
         yield* Effect.tryPromise({
           try: () =>
