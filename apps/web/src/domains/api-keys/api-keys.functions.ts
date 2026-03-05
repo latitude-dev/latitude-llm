@@ -2,12 +2,12 @@ import { generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
 import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyId, OrganizationId, generateId } from "@domain/shared"
 import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
-import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { createServerFn } from "../../server/middleware.ts"
 
 export interface ApiKeyRecord {
   readonly id: string

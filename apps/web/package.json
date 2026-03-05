@@ -23,6 +23,7 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",
     "@tanstack/query-db-collection": "1.0.27",
