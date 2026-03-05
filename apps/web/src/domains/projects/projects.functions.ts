@@ -5,15 +5,20 @@ import { createProjectPostgresRepository, runCommand } from "@platform/db-postgr
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
-import { assertOrganizationMembership, requireSession } from "../../server/auth.ts"
+import { z } from "zod"
+import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
-import {
-  type ProjectRecord,
-  createProjectInputSchema,
-  deleteProjectInputSchema,
-  listProjectsInputSchema,
-  updateProjectInputSchema,
-} from "./projects.types.ts"
+
+export interface ProjectRecord {
+  readonly id: string
+  readonly organizationId: string
+  readonly name: string
+  readonly slug: string
+  readonly description: string | null
+  readonly deletedAt: string | null
+  readonly createdAt: string
+  readonly updatedAt: string
+}
 
 const toRecord = (project: Project): ProjectRecord => ({
   id: project.id,
@@ -26,29 +31,25 @@ const toRecord = (project: Project): ProjectRecord => ({
   updatedAt: project.updatedAt.toISOString(),
 })
 
-export const listProjects = createServerFn({ method: "GET" })
-  .inputValidator(zodValidator(listProjectsInputSchema))
-  .handler(async (): Promise<ProjectRecord[]> => {
-    const { userId, organizationId } = await requireSession()
-    await assertOrganizationMembership(organizationId, userId)
-    const { db } = getPostgresClient()
+export const listProjects = createServerFn({ method: "GET" }).handler(async (): Promise<ProjectRecord[]> => {
+  const { organizationId } = await requireSession()
+  const { db } = getPostgresClient()
 
-    const projects = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
-      return Effect.runPromise(projectsRepo.findAll())
-    })
-
-    return projects.map(toRecord)
+  const projects = await runCommand(
+    db,
+    organizationId,
+  )(async (txDb) => {
+    const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
+    return Effect.runPromise(projectsRepo.findAll())
   })
 
+  return projects.map(toRecord)
+})
+
 export const createProject = createServerFn({ method: "POST" })
-  .inputValidator(zodValidator(createProjectInputSchema))
+  .inputValidator(zodValidator(z.object({ name: z.string(), description: z.string().optional() })))
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { userId, organizationId } = await requireSession()
-    await assertOrganizationMembership(organizationId, userId)
     const { db } = getPostgresClient()
 
     const project = await runCommand(
@@ -72,11 +73,17 @@ export const createProject = createServerFn({ method: "POST" })
   })
 
 export const updateProject = createServerFn({ method: "POST" })
-  .inputValidator(zodValidator(updateProjectInputSchema))
+  .inputValidator(
+    zodValidator(
+      z.object({
+        id: z.string(),
+        name: z.string().optional(),
+        description: z.string().nullable().optional(),
+      }),
+    ),
+  )
   .handler(async ({ data }): Promise<ProjectRecord> => {
-    const { userId, organizationId } = await requireSession()
-
-    await assertOrganizationMembership(organizationId, userId)
+    const { organizationId } = await requireSession()
     const { db } = getPostgresClient()
 
     const updatedProject = await runCommand(
@@ -99,10 +106,9 @@ export const updateProject = createServerFn({ method: "POST" })
   })
 
 export const deleteProject = createServerFn({ method: "POST" })
-  .inputValidator(zodValidator(deleteProjectInputSchema))
+  .inputValidator(zodValidator(z.object({ id: z.string() })))
   .handler(async ({ data }): Promise<void> => {
-    const { userId, organizationId } = await requireSession()
-    await assertOrganizationMembership(organizationId, userId)
+    const { organizationId } = await requireSession()
     const { db } = getPostgresClient()
 
     await runCommand(

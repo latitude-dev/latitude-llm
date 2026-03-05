@@ -5,9 +5,6 @@ import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import * as schema from "../schema/index.ts"
 
-/**
- * Maps a database member row to a domain Membership entity.
- */
 const toDomainMembership = (memberRow: typeof schema.member.$inferSelect): Membership => ({
   id: MembershipId(memberRow.id),
   organizationId: OrganizationId(memberRow.organizationId),
@@ -83,6 +80,28 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
       })
 
       return result
+    }),
+
+  findMembersWithUser: (organizationId: OrganizationId) =>
+    Effect.tryPromise({
+      try: async () => {
+        const rows = await db
+          .select({
+            id: schema.member.id,
+            organizationId: schema.member.organizationId,
+            userId: schema.member.userId,
+            role: schema.member.role,
+            createdAt: schema.member.createdAt,
+            name: schema.user.name,
+            email: schema.user.email,
+          })
+          .from(schema.member)
+          .innerJoin(schema.user, eq(schema.member.userId, schema.user.id))
+          .where(eq(schema.member.organizationId, organizationId))
+
+        return rows
+      },
+      catch: (error) => toRepositoryError(error, "findMembersWithUser"),
     }),
 
   isMember: (organizationId: OrganizationId, userId: string) =>

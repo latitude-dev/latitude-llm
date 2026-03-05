@@ -1,9 +1,9 @@
 import { type VariantProps, cva } from "class-variance-authority"
 import { type InputHTMLAttributes, forwardRef } from "react"
 
-import { font } from "../../tokens/index.js"
-import { cn } from "../../utils/cn.js"
-import { FormField } from "../form-field/form-field.js"
+import { font } from "../../tokens/font.ts"
+import { cn } from "../../utils/cn.ts"
+import { FormField } from "../form-field/form-field.tsx"
 
 const inputVariants = cva(
   cn(

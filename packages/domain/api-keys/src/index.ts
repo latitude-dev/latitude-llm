@@ -28,3 +28,9 @@ export {
   type RevokeApiKeyDeps,
   type CacheInvalidator,
 } from "./use-cases/revoke-api-key.ts"
+
+export {
+  updateApiKeyUseCase,
+  type UpdateApiKeyInput,
+  type UpdateApiKeyError,
+} from "./use-cases/update-api-key.ts"

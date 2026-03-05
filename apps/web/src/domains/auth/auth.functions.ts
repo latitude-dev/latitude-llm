@@ -7,10 +7,10 @@ import {
   runCommand,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { getRequestHeaders } from "@tanstack/react-start/server"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
-import { getBetterAuth, getPostgresClient } from "../../server/clients.ts"
+import { getPostgresClient } from "../../server/clients.ts"
+import { ensureSession } from "../sessions/session.functions.ts"
 import {
   completeAuthIntentInputSchema,
   createLoginIntentInputSchema,
@@ -62,42 +62,24 @@ export const createSignupIntent = createServerFn({ method: "POST" })
 export const completeAuthIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(completeAuthIntentInputSchema))
   .handler(async ({ data }) => {
-    const headers = getRequestHeaders()
-    const authApi = getBetterAuth().api
-    const session = await authApi.getSession({ headers })
-
-    if (!session?.user) {
-      throw new Error("Unauthorized")
-    }
-
+    const session = await ensureSession()
     const { db } = getPostgresClient()
+
+    const userId = session.user.id
+    const email = session.user.email
+    const name = session.user.name ?? null
 
     return runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
-      const users = createAuthUserPostgresRepository(txDb)
-      const memberships = createMembershipPostgresRepository(txDb)
       const organizations = createOrganizationPostgresRepository(txDb)
-      const program = completeAuthIntentUseCase({
-        intents,
-        organizations,
-        memberships,
-        users,
-      })({
-        intentId: data.intentId,
-        session: {
-          userId: session.user.id,
-          email: session.user.email,
-          name: session.user.name ?? null,
-        },
-      })
+      const memberships = createMembershipPostgresRepository(txDb)
+      const users = createAuthUserPostgresRepository(txDb)
 
-      return Effect.runPromise(program)
+      return Effect.runPromise(
+        completeAuthIntentUseCase({ intents, organizations, memberships, users })({
+          intentId: data.intentId,
+          session: { userId, email, name },
+        }),
+      )
     })
   })
-
-export const signOut = createServerFn({ method: "POST" }).handler(async () => {
-  const authApi = getBetterAuth().api
-  const headers = getRequestHeaders()
-
-  await authApi.signOut({ headers })
-})
