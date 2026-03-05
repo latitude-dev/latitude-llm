@@ -2,15 +2,16 @@ import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { serve } from "@hono/node-server"
 import { parseEnv } from "@platform/env"
-import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { Hono } from "hono"
+import { logger as honoLogger } from "hono/logger"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "./clients.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
+import { logger } from "./utils/logger.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
@@ -18,12 +19,16 @@ if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 
 const app = new Hono()
 const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
-const logger = createLogger("api")
 
 // Register global error handler
+app.use(
+  honoLogger((message: string, ...rest: string[]) => {
+    console.log(message, ...rest)
+  }),
+)
 app.onError(honoErrorHandler)
 
-registerCorsMiddleware(app, { nodeEnv, logger })
+registerCorsMiddleware(app, { nodeEnv })
 
 registerRoutes({
   app,

@@ -1,15 +1,14 @@
 import { parseEnvOptional } from "@platform/env"
-import type { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { cors } from "hono/cors"
+import { logger } from "../utils/logger.ts"
 
 interface RegisterCorsMiddlewareOptions {
   readonly nodeEnv: string
-  readonly logger: ReturnType<typeof createLogger>
 }
 
-const parseAllowedOrigins = (nodeEnv: string, logger: ReturnType<typeof createLogger>): string[] => {
+const parseAllowedOrigins = (nodeEnv: string): string[] => {
   const originsEnv = Effect.runSync(parseEnvOptional("LAT_CORS_ALLOWED_ORIGINS", "string"))
 
   if (originsEnv) {
@@ -28,7 +27,7 @@ const parseAllowedOrigins = (nodeEnv: string, logger: ReturnType<typeof createLo
 }
 
 export const registerCorsMiddleware = (app: Hono, options: RegisterCorsMiddlewareOptions): void => {
-  const allowedOrigins = parseAllowedOrigins(options.nodeEnv, options.logger)
+  const allowedOrigins = parseAllowedOrigins(options.nodeEnv)
 
   app.use(
     cors({
@@ -39,7 +38,7 @@ export const registerCorsMiddleware = (app: Hono, options: RegisterCorsMiddlewar
           return origin
         }
 
-        options.logger.warn(`CORS rejected origin: ${origin} for path: ${c.req.path}`)
+        logger.warn(`CORS rejected origin: ${origin} for path: ${c.req.path}`)
         return null
       },
       allowMethods: ["GET", "POST", "PUT", "DELETE"],

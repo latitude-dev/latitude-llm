@@ -1,5 +1,6 @@
-import { isHttpError, toHttpResponse } from "@domain/shared"
+import { isHttpError, toHttpResponse } from "@repo/utils"
 import type { ErrorHandler } from "hono"
+import { logger } from "../utils/logger.ts"
 
 /**
  * Global error handler for Hono.
@@ -15,7 +16,7 @@ export const honoErrorHandler: ErrorHandler = (err, c) => {
   }
 
   // Log unexpected errors for debugging
-  console.error("Unexpected error:", err)
+  logger.error(err)
 
   // Return a generic 500 for unknown errors
   return c.json({ error: "Internal server error" }, 500)

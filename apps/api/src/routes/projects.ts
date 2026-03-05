@@ -1,6 +1,7 @@
 import { type CreateProjectInput, createProjectUseCase, updateProjectUseCase } from "@domain/projects"
-import { BadRequestError, ProjectId, generateId } from "@domain/shared"
+import { ProjectId, generateId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
+import { BadRequestError } from "@repo/utils"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import type { OrganizationScopedEnv } from "../types.ts"

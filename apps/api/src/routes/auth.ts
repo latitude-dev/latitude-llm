@@ -1,4 +1,4 @@
-import { BadRequestError } from "@domain/shared"
+import { BadRequestError } from "@repo/utils"
 import { Hono } from "hono"
 import { getBetterAuth } from "../clients.ts"
 import { createSignUpIpRateLimiter } from "../middleware/rate-limiter.ts"

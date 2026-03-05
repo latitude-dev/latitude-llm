@@ -40,12 +40,12 @@ export class ProjectAlreadyExistsError extends Data.TaggedError("ProjectAlreadyE
 }
 
 export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
-  readonly name: string
-  readonly reason: string
+  readonly field: string
+  readonly message: string
 }> {
   readonly httpStatus = 400
   get httpMessage() {
-    return this.reason
+    return this.message
   }
 }
 
@@ -65,15 +65,15 @@ export const createProjectUseCase =
       // Validate name
       if (!trimmedName || trimmedName.length === 0) {
         return yield* new InvalidProjectNameError({
-          name: input.name,
-          reason: "Name cannot be empty",
+          field: input.name,
+          message: "Name cannot be empty",
         })
       }
 
       if (trimmedName.length > 256) {
         return yield* new InvalidProjectNameError({
-          name: input.name,
-          reason: "Name exceeds 256 characters",
+          field: input.name,
+          message: "Name exceeds 256 characters",
         })
       }
 
@@ -82,15 +82,15 @@ export const createProjectUseCase =
       // Validate slug
       if (!trimmedSlug || trimmedSlug.length === 0) {
         return yield* new InvalidProjectNameError({
-          name: trimmedSlug,
-          reason: "Slug cannot be empty",
+          field: trimmedSlug,
+          message: "Slug cannot be empty",
         })
       }
 
       if (trimmedSlug.length > 256) {
         return yield* new InvalidProjectNameError({
-          name: trimmedSlug,
-          reason: "Slug exceeds 256 characters",
+          field: trimmedSlug,
+          message: "Slug exceeds 256 characters",
         })
       }
 

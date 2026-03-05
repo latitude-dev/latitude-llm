@@ -8,11 +8,21 @@ export class WorkspaceCreationError extends Data.TaggedError("WorkspaceCreationE
   readonly message: string
   readonly userId: string
   readonly cause?: unknown
-}> {}
+}> {
+  readonly httpStatus = 500
+  get httpMessage() {
+    return this.message
+  }
+}
 
 export class MembershipCreationError extends Data.TaggedError("MembershipCreationError")<{
   readonly message: string
   readonly userId: string
   readonly workspaceId: string
   readonly cause?: unknown
-}> {}
+}> {
+  readonly httpStatus = 500
+  get httpMessage() {
+    return this.message
+  }
+}
