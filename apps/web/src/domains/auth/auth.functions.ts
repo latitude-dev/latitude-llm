@@ -1,10 +1,21 @@
-import { createLoginIntentUseCase, createSignupIntentUseCase } from "@domain/auth"
-import { createAuthIntentPostgresRepository, createAuthUserPostgresRepository, runCommand } from "@platform/db-postgres"
+import { completeAuthIntentUseCase, createLoginIntentUseCase, createSignupIntentUseCase } from "@domain/auth"
+import {
+  createAuthIntentPostgresRepository,
+  createAuthUserPostgresRepository,
+  createMembershipPostgresRepository,
+  createOrganizationPostgresRepository,
+  runCommand,
+} from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
+import { ensureSession } from "../sessions/session.functions.ts"
 import { getPostgresClient } from "../../server/clients.ts"
-import { createLoginIntentInputSchema, createSignupIntentInputSchema } from "./auth.types.ts"
+import {
+  completeAuthIntentInputSchema,
+  createLoginIntentInputSchema,
+  createSignupIntentInputSchema,
+} from "./auth.types.ts"
 
 export const createLoginIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(createLoginIntentInputSchema))
@@ -46,4 +57,29 @@ export const createSignupIntent = createServerFn({ method: "POST" })
       intentId: intent.id,
       existingAccountAtRequest: intent.existingAccountAtRequest,
     }
+  })
+
+export const completeAuthIntent = createServerFn({ method: "POST" })
+  .inputValidator(zodValidator(completeAuthIntentInputSchema))
+  .handler(async ({ data }) => {
+    const session = await ensureSession()
+    const { db } = getPostgresClient()
+
+    const userId = (session.user as { id: string }).id
+    const email = (session.user as { email: string }).email
+    const name = (session.user as { name?: string | null }).name ?? null
+
+    return runCommand(db)(async (txDb) => {
+      const intents = createAuthIntentPostgresRepository(txDb)
+      const organizations = createOrganizationPostgresRepository(txDb)
+      const memberships = createMembershipPostgresRepository(txDb)
+      const users = createAuthUserPostgresRepository(txDb)
+
+      return Effect.runPromise(
+        completeAuthIntentUseCase({ intents, organizations, memberships, users })({
+          intentId: data.intentId,
+          session: { userId, email, name },
+        }),
+      )
+    })
   })

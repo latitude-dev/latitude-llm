@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
+import { Route as AuthConfirmRouteImport } from './routes/auth/confirm'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
@@ -35,6 +36,11 @@ const LoginRoute = LoginRouteImport.update({
 const DesignSystemRoute = DesignSystemRouteImport.update({
   id: '/design-system',
   path: '/design-system',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthConfirmRoute = AuthConfirmRouteImport.update({
+  id: '/auth/confirm',
+  path: '/auth/confirm',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
@@ -83,16 +91,17 @@ export interface FileRoutesById {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/auth/confirm': typeof AuthConfirmRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/design-system' | '/login' | '/signup' | '/api/auth/$' | '/settings' | '/projects/$projectId'
+  fullPaths: '/' | '/design-system' | '/login' | '/signup' | '/auth/confirm' | '/api/auth/$' | '/settings' | '/projects/$projectId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/design-system' | '/login' | '/signup' | '/api/auth/$' | '/settings' | '/projects/$projectId'
-  id: '__root__' | '/_authenticated' | '/' | '/design-system' | '/login' | '/signup' | '/api/auth/$' | '/settings' | '/projects/$projectId'
+  to: '/' | '/design-system' | '/login' | '/signup' | '/auth/confirm' | '/api/auth/$' | '/settings' | '/projects/$projectId'
+  id: '__root__' | '/_authenticated' | '/' | '/design-system' | '/login' | '/signup' | '/auth/confirm' | '/api/auth/$' | '/settings' | '/projects/$projectId'
   fileRoutesById: FileRoutesById
 }
 
@@ -113,6 +122,7 @@ export interface RootRouteChildren {
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  AuthConfirmRoute: typeof AuthConfirmRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -137,6 +147,13 @@ declare module '@tanstack/react-router' {
       path: '/design-system'
       fullPath: '/design-system'
       preLoaderRoute: typeof DesignSystemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/confirm': {
+      id: '/auth/confirm'
+      path: '/auth/confirm'
+      fullPath: '/auth/confirm'
+      preLoaderRoute: typeof AuthConfirmRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -182,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  AuthConfirmRoute: AuthConfirmRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

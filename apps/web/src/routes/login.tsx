@@ -40,7 +40,7 @@ function LoginPage() {
 
       const { error: signInError } = await authClient.signIn.magicLink({
         email,
-        callbackURL: `${WEB_BASE_URL}/?authIntentId=${intentId}`,
+        callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
       })
 
       if (signInError) {

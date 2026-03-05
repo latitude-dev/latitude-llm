@@ -6,7 +6,7 @@ import type { ProjectRecord } from "./projects.functions.ts"
 
 const queryClient = getQueryClient()
 
-const projectsCollection = createCollection(
+export const projectsCollection = createCollection(
   queryCollectionOptions({
     queryClient,
     queryKey: ["projects"],
