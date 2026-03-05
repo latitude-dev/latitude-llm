@@ -1,4 +1,5 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
+import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
@@ -51,6 +52,20 @@ export const projectsCollection = createCollection(
   }),
 )
 
-export const useProjectsCollection = () => {
-  return useLiveQuery((query) => query.from({ project: projectsCollection }))
+type ProjectsSource = { project: typeof projectsCollection }
+type ProjectsContext = {
+  baseSchema: SchemaFromSource<ProjectsSource>
+  schema: SchemaFromSource<ProjectsSource>
+  fromSourceName: "project"
+  hasJoins: false
+}
+
+export const useProjectsCollection = <TContext extends Context = ProjectsContext>(
+  queryFn?: (projects: QueryBuilder<ProjectsContext>) => QueryBuilder<TContext>,
+) => {
+  return useLiveQuery<TContext>((q) => {
+    const projects = q.from({ project: projectsCollection })
+    if (queryFn) return queryFn(projects)
+    return projects as unknown as QueryBuilder<TContext>
+  })
 }
