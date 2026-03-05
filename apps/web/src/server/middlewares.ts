@@ -1,10 +1,10 @@
 import { isHttpError } from "@domain/shared"
 import { createLogger } from "@repo/observability"
-import { createServerFn as baseCreateServerFn, createMiddleware } from "@tanstack/react-start"
+import { createMiddleware } from "@tanstack/react-start"
 
 const logger = createLogger("server-fn")
 
-const errorHandler = createMiddleware({ type: "function" }).server(async ({ next }) => {
+export const errorHandler = createMiddleware({ type: "function" }).server(async ({ next }) => {
   try {
     return await next()
   } catch (error) {
@@ -22,6 +22,3 @@ const errorHandler = createMiddleware({ type: "function" }).server(async ({ next
     throw error
   }
 })
-
-export const createServerFn = ((options: Parameters<typeof baseCreateServerFn>[0]) =>
-  baseCreateServerFn(options).middleware([errorHandler])) as unknown as typeof baseCreateServerFn

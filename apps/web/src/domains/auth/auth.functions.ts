@@ -6,10 +6,11 @@ import {
   createOrganizationPostgresRepository,
   runCommand,
 } from "@platform/db-postgres"
+import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { getPostgresClient } from "../../server/clients.ts"
-import { createServerFn } from "../../server/middleware.ts"
+import { errorHandler } from "../../server/middlewares.ts"
 import { ensureSession } from "../sessions/session.functions.ts"
 import {
   completeAuthIntentInputSchema,
@@ -18,6 +19,7 @@ import {
 } from "./auth.types.ts"
 
 export const createLoginIntent = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
   .inputValidator(zodValidator(createLoginIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
@@ -37,6 +39,7 @@ export const createLoginIntent = createServerFn({ method: "POST" })
   })
 
 export const createSignupIntent = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
   .inputValidator(zodValidator(createSignupIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
@@ -60,6 +63,7 @@ export const createSignupIntent = createServerFn({ method: "POST" })
   })
 
 export const completeAuthIntent = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
   .inputValidator(zodValidator(completeAuthIntentInputSchema))
   .handler(async ({ data }) => {
     const session = await ensureSession()
