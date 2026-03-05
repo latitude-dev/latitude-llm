@@ -1,5 +1,5 @@
 import type { ApiKeyId, OrganizationId, RepositoryError, ValidationError } from "@domain/shared"
-import { hashToken } from "@repo/utils"
+import { type CryptoError, hashToken } from "@repo/utils"
 import { Data, Effect } from "effect"
 import { type ApiKey, createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
 import type { ApiKeyRepository } from "../ports/api-key-repository.ts"
@@ -31,7 +31,7 @@ export class InvalidApiKeyNameError extends Data.TaggedError("InvalidApiKeyNameE
   }
 }
 
-export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError
+export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError | CryptoError
 
 export const generateApiKeyUseCase =
   (repository: ApiKeyRepository) =>
@@ -54,7 +54,7 @@ export const generateApiKeyUseCase =
 
       // Generate token and its hash
       const token = generateApiKeyToken()
-      const tokenHash = hashToken(token)
+      const tokenHash = yield* hashToken(token)
 
       // Create API key entity
       const apiKey = createApiKey({
