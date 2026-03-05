@@ -1,8 +1,8 @@
 import { Button, Container, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
+import { eq } from "@tanstack/react-db"
 import { Link, createFileRoute } from "@tanstack/react-router"
-import { eq, useLiveQuery } from "@tanstack/react-db"
-import { projectsCollection } from "../../../domains/projects/projects.collection.ts"
+import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   component: ProjectViewPage,
@@ -10,12 +10,8 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId")({
 
 function ProjectViewPage() {
   const { projectId } = Route.useParams()
-  const { data: project } = useLiveQuery(
-    (q) =>
-      q
-        .from({ project: projectsCollection })
-        .where(({ project }) => eq(project.id, projectId))
-        .findOne(),
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.id, projectId)).findOne(),
     [projectId],
   )
 

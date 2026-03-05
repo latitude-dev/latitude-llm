@@ -7,7 +7,7 @@ import type { ProjectRecord } from "./projects.functions.ts"
 
 const queryClient = getQueryClient()
 
-export const projectsCollection = createCollection(
+const projectsCollection = createCollection(
   queryCollectionOptions({
     queryClient,
     queryKey: ["projects"],
@@ -62,10 +62,11 @@ type ProjectsContext = {
 
 export const useProjectsCollection = <TContext extends Context = ProjectsContext>(
   queryFn?: (projects: QueryBuilder<ProjectsContext>) => QueryBuilder<TContext>,
+  deps?: Array<unknown>,
 ) => {
   return useLiveQuery<TContext>((q) => {
     const projects = q.from({ project: projectsCollection })
     if (queryFn) return queryFn(projects)
     return projects as unknown as QueryBuilder<TContext>
-  })
+  }, deps)
 }
