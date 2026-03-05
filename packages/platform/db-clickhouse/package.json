@@ -12,6 +12,10 @@
     "ch:down": "bash clickhouse/scripts/down.sh",
     "ch:status": "bash clickhouse/scripts/status.sh",
     "ch:drop": "bash clickhouse/scripts/drop.sh",
+    "ch:fix": "bash clickhouse/scripts/fix.sh",
+    "ch:reset": "bash clickhouse/scripts/reset.sh",
+    "ch:connect": "bash clickhouse/scripts/connect.sh",
+    "ch:seed": "node --import tsx src/seeds/run.ts",
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -22,5 +26,9 @@
     "@clickhouse/client": "catalog:",
     "@platform/env": "workspace:*",
     "effect": "catalog:"
+  },
+  "devDependencies": {
+    "dotenv": "catalog:",
+    "tsx": "catalog:"
   }
 }

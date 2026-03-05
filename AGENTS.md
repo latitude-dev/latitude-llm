@@ -288,31 +288,79 @@ export const projects = latitudeSchema.table(
 **Schema changes:**
 
 ```bash
-# Generate migration from schema changes (always provide --name)
-pnpm --filter @platform/db-postgres pg:generate --name=describe-the-change
+# Generate migration from schema changes
+pnpm --filter @platform/db-postgres pg:generate "<name>"
+
+# Create empty migration for custom SQL (RLS policies, seed data, etc.)
+pnpm --filter @platform/db-postgres pg:generate:custom "<name>"
 
 # Apply migrations
 pnpm --filter @platform/db-postgres pg:migrate
 ```
 
-**Custom SQL (RLS policies, seed data):**
-
-```bash
-# Create custom migration for DDL not supported by Drizzle
-pnpm --filter @platform/db-postgres pg:generate:custom --name=enable-rls
-
-# Edit the SQL file, then run:
-pnpm --filter @platform/db-postgres pg:migrate
-```
-
 **Key points:**
 
-- **Always pass `--name`** — use a short kebab-case description (e.g. `--name=add-projects-table`). Never let Drizzle auto-generate a random name.
-- Use `pg:generate --name=...` for schema changes (creates timestamped migration)
-- Use `pg:generate:custom --name=...` for custom SQL
+- Name is slugified automatically; always quote multi-word names (e.g. `"add users table"` → `add-users-table`)
 - Never manually create SQL files in the drizzle folder
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
+
+### ClickHouse Migrations (Goose)
+
+**Install goose** (if not already installed):
+
+```bash
+brew install goose
+```
+
+Migration files live in `packages/platform/db-clickhouse/clickhouse/migrations/`:
+- `unclustered/` — single-node deployments (local dev, default)
+- `clustered/` — distributed deployments (`CLICKHOUSE_CLUSTER_ENABLED=true`)
+
+Goose tracks applied migrations automatically in the `goose_db_version` table (no manual registry).
+
+**Commands (run from repo root):**
+
+```bash
+# Apply all pending migrations
+pnpm --filter @platform/db-clickhouse ch:up
+
+# Roll back last migration
+pnpm --filter @platform/db-clickhouse ch:down
+
+# Show migration status
+pnpm --filter @platform/db-clickhouse ch:status
+
+# Create a new migration (creates timestamp-named files in both unclustered/ and clustered/)
+pnpm --filter @platform/db-clickhouse ch:create <migration_name>
+
+# Convert timestamp migrations to sequential order (run before merging a PR)
+pnpm --filter @platform/db-clickhouse ch:fix
+
+# Roll back ALL migrations (equivalent to drop)
+pnpm --filter @platform/db-clickhouse ch:drop
+
+# Reset ClickHouse volume and re-migrate (nuclear option)
+pnpm --filter @platform/db-clickhouse ch:reset
+
+# Seed sample span data
+pnpm --filter @platform/db-clickhouse ch:seed
+```
+
+**Creating migrations (hybrid versioning):**
+
+Goose hybrid versioning lets developers create migrations independently using timestamps, then normalises them to sequential order before merging. This avoids version conflicts when multiple branches add migrations concurrently.
+
+Workflow:
+1. `ch:create <name>` — creates `20260305120000_name.sql` in both `unclustered/` and `clustered/`
+2. Fill in both files (see rules below)
+3. Before merging the PR, run `ch:fix` — renames timestamp files to the next sequential number (e.g. `00002_name.sql`) and commits the renamed files
+
+**Migration file rules:**
+- Each migration is a single `.sql` file with `-- +goose Up` and `-- +goose Down` sections
+- Always include `-- +goose NO TRANSACTION` (ClickHouse does not support transactions)
+- `unclustered/`: use standard table engines (e.g. `ReplacingMergeTree`)
+- `clustered/`: add `ON CLUSTER default` and use `Replicated*` engines
 
 ### Weaviate Collections and Migrations
 
@@ -628,6 +676,7 @@ After infrastructure is up, run migrations (idempotent):
 pnpm --filter @platform/db-postgres pg:migrate
 pnpm --filter @platform/db-clickhouse ch:up
 pnpm --filter @platform/db-postgres pg:seed       # optional: creates seed users owner@acme.com / admin@acme.com
+pnpm --filter @platform/db-clickhouse ch:seed     # optional: inserts sample span data
 ```
 
 ### Running dev servers
