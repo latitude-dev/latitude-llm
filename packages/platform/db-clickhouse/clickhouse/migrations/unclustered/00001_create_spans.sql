@@ -1,3 +1,5 @@
+-- +goose NO TRANSACTION
+-- +goose Up
 CREATE TABLE IF NOT EXISTS spans (
   workspace_id UInt64,
   trace_id FixedString(32),
@@ -35,3 +37,6 @@ ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(started_at)
 PRIMARY KEY (workspace_id, started_at)
 ORDER BY (workspace_id, started_at, trace_id, span_id);
+
+-- +goose Down
+DROP TABLE IF EXISTS spans;

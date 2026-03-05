@@ -7,8 +7,8 @@
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "pg:generate": "drizzle-kit generate --config=drizzle.config.ts",
-    "pg:generate:custom": "drizzle-kit generate --config=drizzle.config.ts --custom",
+    "pg:generate": "node --import tsx scripts/migration.ts auto",
+    "pg:generate:custom": "node --import tsx scripts/migration.ts custom",
     "pg:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
     "pg:push": "drizzle-kit push --config=drizzle.config.ts",
     "pg:check": "drizzle-kit check --config=drizzle.config.ts",

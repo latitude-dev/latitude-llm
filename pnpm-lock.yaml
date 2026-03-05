@@ -564,6 +564,13 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
+    devDependencies:
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.3.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   packages/platform/db-postgres:
     dependencies:
