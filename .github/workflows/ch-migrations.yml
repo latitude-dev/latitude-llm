@@ -1,0 +1,28 @@
+name: ClickHouse Migrations
+
+on:
+  pull_request:
+    branches:
+      - latitude-v2
+  workflow_call:
+
+jobs:
+  check-migration-versions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Fail if timestamp-named migrations exist
+        run: |
+          TIMESTAMP_FILES=$(find packages/platform/db-clickhouse/clickhouse/migrations \
+            -name '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_*.sql' \
+            2>/dev/null || true)
+          if [ -n "$TIMESTAMP_FILES" ]; then
+            echo "ERROR: Timestamp-named migration files found. Run 'pnpm --filter @platform/db-clickhouse ch:fix' and commit the renamed files before merging."
+            echo ""
+            echo "$TIMESTAMP_FILES"
+            exit 1
+          fi
+          echo "OK: All migration files use sequential versioning."

@@ -15,8 +15,8 @@ if [ -f "$ENV_FILE" ]; then
   set +a
 fi
 
-if [ -z "${CLICKHOUSE_URL+x}" ]; then
-  echo "Error: CLICKHOUSE_URL must be declared"
+if [ -z "${CLICKHOUSE_MIGRATION_URL+x}" ]; then
+  echo "Error: CLICKHOUSE_MIGRATION_URL must be declared"
   exit 1
 fi
 if [ -z "${CLICKHOUSE_USER+x}" ]; then
@@ -32,51 +32,20 @@ if [ -z "${CLICKHOUSE_DB+x}" ]; then
   exit 1
 fi
 
-CLICKHOUSE_URL="${CLICKHOUSE_URL}"
-CLICKHOUSE_USER="${CLICKHOUSE_USER}"
-CLICKHOUSE_PASSWORD="${CLICKHOUSE_PASSWORD}"
-CLICKHOUSE_DB="${CLICKHOUSE_DB}"
+if ! command -v goose &>/dev/null; then
+  echo "Error: goose is not installed or not in PATH."
+  echo "Install with: brew install goose"
+  exit 1
+fi
+
+# Strip scheme to get host:port
+CH_HOST_PORT="${CLICKHOUSE_MIGRATION_URL#clickhouse://}"
+DBSTRING="clickhouse://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${CLICKHOUSE_DB}"
 
 if [ "${CLICKHOUSE_CLUSTER_ENABLED:-false}" = "true" ]; then
   MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/clustered"
-  MODE="clustered"
 else
   MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/unclustered"
-  MODE="unclustered"
 fi
 
-CURRENT_VERSION=$(
-  curl -s "${CLICKHOUSE_URL}/?user=${CLICKHOUSE_USER}&password=${CLICKHOUSE_PASSWORD}&database=${CLICKHOUSE_DB}" \
-    --data "SELECT version FROM schema_migrations ORDER BY sequence DESC LIMIT 1" 2>/dev/null | tr -d '[:space:]'
-)
-
-if [ -z "$CURRENT_VERSION" ] || [ "$CURRENT_VERSION" = "-1" ]; then
-  CURRENT_VERSION="0"
-fi
-
-echo ""
-echo "ClickHouse Migrations Status"
-echo "============================"
-echo "Mode: $MODE"
-echo "Database: $CLICKHOUSE_DB"
-echo "Current version: $CURRENT_VERSION"
-echo ""
-echo "Migrations:"
-
-for f in $(ls "$MIGRATIONS_DIR"/*.up.sql 2>/dev/null | sort); do
-  filename=$(basename "$f")
-  version=$(echo "$filename" | sed 's/_.*//' | sed 's/^0*//')
-  name=$(echo "$filename" | sed 's/^[0-9]*_//' | sed 's/\.up\.sql$//')
-
-  if [ -z "$version" ]; then
-    version="0"
-  fi
-
-  if [ "$version" -le "$CURRENT_VERSION" ] 2>/dev/null; then
-    status="applied"
-  else
-    status="pending"
-  fi
-
-  echo "- $version $name ($status)"
-done
+goose -dir "$MIGRATIONS_DIR" clickhouse "$DBSTRING" status
