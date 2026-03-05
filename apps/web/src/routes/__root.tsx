@@ -2,6 +2,7 @@ import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-r
 import type { ReactNode } from "react"
 import { useEffect } from "react"
 import "@repo/ui/styles/globals.css"
+import { Toaster } from "@repo/ui"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
@@ -50,7 +51,8 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <body>
         <HostThemeSync />
         <AppQueryProvider>
-          <Outlet />
+          {children}
+          <Toaster />
         </AppQueryProvider>
         <Scripts />
       </body>

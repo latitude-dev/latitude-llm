@@ -64,6 +64,7 @@ const createDeps = ({
     findByOrganizationId: vi.fn(() => Effect.succeed([])),
     findByUserId: vi.fn(() => Effect.succeed([])),
     findByOrganizationAndUser: vi.fn(() => Effect.succeed(null)),
+    findMembersWithUser: vi.fn(() => Effect.succeed([])),
     isMember: vi.fn(() => Effect.succeed(false)),
     isAdmin: vi.fn(() => Effect.succeed(false)),
     save: saveMembership,

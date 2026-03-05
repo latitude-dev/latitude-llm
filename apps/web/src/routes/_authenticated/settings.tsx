@@ -1,0 +1,459 @@
+import {
+  Button,
+  CloseTrigger,
+  Container,
+  FormWrapper,
+  Input,
+  Modal,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+  TableWithHeader,
+  Text,
+  Tooltip,
+  useToast,
+} from "@repo/ui"
+import { Icon } from "@repo/ui"
+import { relativeTime } from "@repo/utils"
+import { useForm } from "@tanstack/react-form"
+import { createFileRoute } from "@tanstack/react-router"
+import { Clipboard, Pencil, Trash2 } from "lucide-react"
+import { useState } from "react"
+import { useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
+import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
+import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
+import { useMembersCollection } from "../../domains/members/members.collection.ts"
+import { removeMember } from "../../domains/members/members.functions.ts"
+import type { MemberRecord } from "../../domains/members/members.functions.ts"
+import { getQueryClient } from "../../lib/data/query-client.tsx"
+import { AppTabs } from "../_authenticated.tsx"
+
+export const Route = createFileRoute("/_authenticated/settings")({
+  component: SettingsPage,
+})
+
+function invalidateMembers() {
+  void getQueryClient().invalidateQueries({ queryKey: ["members"] })
+}
+
+function invalidateApiKeys() {
+  void getQueryClient().invalidateQueries({ queryKey: ["apiKeys"] })
+}
+
+// --- Workspace Members Section ---
+
+function InviteMemberModal({
+  open,
+  setOpen,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+}) {
+  const form = useForm({
+    defaultValues: {
+      name: "",
+      email: "",
+    },
+    onSubmit: async () => {
+      // TODO: Implement invite member server function
+      // For now this is a placeholder - invite flow requires Better Auth integration
+      setOpen(false)
+    },
+  })
+
+  return (
+    <Modal
+      dismissible
+      open={open}
+      onOpenChange={setOpen}
+      title="Add New Member"
+      description="Add a new member to this workspace."
+      footer={
+        <>
+          <CloseTrigger />
+          <Button
+            type="submit"
+            onClick={() => {
+              void form.handleSubmit()
+            }}
+          >
+            Send invite
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <FormWrapper>
+          <form.Field name="name">
+            {(field) => (
+              <Input
+                required
+                type="text"
+                label="Name"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="Jon Snow"
+              />
+            )}
+          </form.Field>
+          <form.Field name="email">
+            {(field) => (
+              <Input
+                required
+                type="email"
+                label="Email"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="jon@latitude.so"
+              />
+            )}
+          </form.Field>
+        </FormWrapper>
+      </form>
+    </Modal>
+  )
+}
+
+function MembersTable({ members }: { members: MemberRecord[] }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow verticalPadding>
+          <TableHead>Name</TableHead>
+          <TableHead>Email</TableHead>
+          <TableHead>Confirmed At</TableHead>
+          <TableHead />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {members.map((member) => (
+          <TableRow key={member.id} verticalPadding hoverable={false}>
+            <TableCell>
+              <Text.H5>{member.name ?? "Unnamed"}</Text.H5>
+            </TableCell>
+            <TableCell>
+              <Text.H5 color="foregroundMuted">{member.email}</Text.H5>
+            </TableCell>
+            <TableCell>
+              <Text.H5 color="foregroundMuted">{relativeTime(member.confirmedAt)}</Text.H5>
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  void removeMember({ data: { membershipId: member.id } }).then(() => {
+                    invalidateMembers()
+                  })
+                }}
+              >
+                <Icon icon={Trash2} size="sm" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  )
+}
+
+function MembershipsSection() {
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const membersCollection = useMembersCollection()
+  const members = membersCollection.data ?? []
+  const isLoading = !membersCollection.data
+
+  return (
+    <div className="flex flex-col gap-4">
+      <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
+      <div className="flex flex-row items-center justify-between">
+        <div className="flex flex-row items-center gap-2">
+          <Text.H4 weight="bold">Workspace Members</Text.H4>
+        </div>
+        <Button variant="outline" onClick={() => setInviteOpen(true)}>
+          Add Member
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2">
+        {isLoading && <TableSkeleton cols={4} rows={3} />}
+        {!isLoading && members.length > 0 && <MembersTable members={members} />}
+      </div>
+    </div>
+  )
+}
+
+// --- API Keys Section ---
+
+function CreateApiKeyModal({
+  open,
+  setOpen,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+}) {
+  const form = useForm({
+    defaultValues: {
+      name: "",
+    },
+    onSubmit: async ({ value }) => {
+      await createApiKey({ data: { name: value.name } })
+      invalidateApiKeys()
+      setOpen(false)
+    },
+  })
+
+  return (
+    <Modal
+      dismissible
+      open={open}
+      onOpenChange={setOpen}
+      title="Create API Key"
+      description="Create a new API key for your workspace to access the Latitude API."
+      footer={
+        <>
+          <CloseTrigger />
+          <Button
+            type="submit"
+            onClick={() => {
+              void form.handleSubmit()
+            }}
+          >
+            Create API Key
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <FormWrapper>
+          <form.Field name="name">
+            {(field) => (
+              <Input
+                required
+                type="text"
+                label="Name"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="My API Key"
+                description="A descriptive name for this API key"
+              />
+            )}
+          </form.Field>
+        </FormWrapper>
+      </form>
+    </Modal>
+  )
+}
+
+function UpdateApiKeyModal({
+  apiKey,
+  onClose,
+}: {
+  apiKey: ApiKeyRecord
+  onClose: () => void
+}) {
+  const { toast } = useToast()
+
+  const form = useForm({
+    defaultValues: {
+      name: apiKey.name ?? "",
+    },
+    onSubmit: async ({ value }) => {
+      await updateApiKey({ data: { id: apiKey.id, name: value.name } })
+      invalidateApiKeys()
+      toast({
+        title: "Success",
+        description: "API key name updated.",
+      })
+      onClose()
+    },
+  })
+
+  return (
+    <Modal
+      open
+      dismissible
+      onOpenChange={onClose}
+      title="Update API Key"
+      description="Update the name for your API key."
+      footer={
+        <>
+          <CloseTrigger />
+          <Button
+            type="submit"
+            onClick={() => {
+              void form.handleSubmit()
+            }}
+          >
+            Update API Key
+          </Button>
+        </>
+      }
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <FormWrapper>
+          <form.Field name="name">
+            {(field) => (
+              <Input
+                required
+                type="text"
+                label="Name"
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="API key name"
+              />
+            )}
+          </form.Field>
+        </FormWrapper>
+      </form>
+    </Modal>
+  )
+}
+
+function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
+  const { toast } = useToast()
+  const [apiKeyToEdit, setApiKeyToEdit] = useState<ApiKeyRecord | null>(null)
+
+  return (
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>API Key</TableHead>
+            <TableHead />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {apiKeys.map((apiKey) => (
+            <TableRow key={apiKey.id} verticalPadding hoverable={false}>
+              <TableCell>
+                <Text.H5>{apiKey.name || "Latitude API Key"}</Text.H5>
+              </TableCell>
+              <TableCell>
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        navigator.clipboard.writeText(apiKey.token)
+                        toast({
+                          title: "Copied to clipboard",
+                        })
+                      }}
+                    >
+                      <div className="flex flex-row items-center gap-2">
+                        <Text.H5 color="foregroundMuted">
+                          {apiKey.token.length > 7
+                            ? `${apiKey.token.slice(0, 3)}********${apiKey.token.slice(-4)}`
+                            : "********"}
+                        </Text.H5>
+                        <Icon icon={Clipboard} size="sm" color="foregroundMuted" />
+                      </div>
+                    </Button>
+                  }
+                >
+                  Click to copy
+                </Tooltip>
+              </TableCell>
+              <TableCell align="right">
+                <div className="flex flex-row items-center gap-1">
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <div className="px-2">
+                        <Button variant="ghost" onClick={() => setApiKeyToEdit(apiKey)}>
+                          <Icon icon={Pencil} size="sm" />
+                        </Button>
+                      </div>
+                    }
+                  >
+                    Edit API key name
+                  </Tooltip>
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <div className="px-2">
+                        <Button
+                          disabled={apiKeys.length === 1}
+                          variant="ghost"
+                          onClick={() => {
+                            void deleteApiKey({ data: { id: apiKey.id } }).then(() => {
+                              invalidateApiKeys()
+                            })
+                          }}
+                        >
+                          <Icon icon={Trash2} size="sm" />
+                        </Button>
+                      </div>
+                    }
+                  >
+                    {apiKeys.length === 1 ? "You can't delete the last API key" : "Delete API key"}
+                  </Tooltip>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {apiKeyToEdit && <UpdateApiKeyModal apiKey={apiKeyToEdit} onClose={() => setApiKeyToEdit(null)} />}
+    </>
+  )
+}
+
+function ApiKeysSection() {
+  const [createOpen, setCreateOpen] = useState(false)
+  const apiKeysCollection = useApiKeysCollection()
+  const apiKeys = apiKeysCollection.data ?? []
+  const isLoading = !apiKeysCollection.data
+
+  return (
+    <>
+      <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
+      <TableWithHeader
+        title={
+          <div className="flex flex-row items-center gap-2">
+            <Text.H4 weight="bold">API Keys</Text.H4>
+          </div>
+        }
+        actions={
+          <Button variant="outline" onClick={() => setCreateOpen(true)}>
+            Create API Key
+          </Button>
+        }
+        table={isLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
+      />
+    </>
+  )
+}
+
+// --- Settings Page ---
+
+function SettingsPage() {
+  return (
+    <Container>
+      <AppTabs />
+      <MembershipsSection />
+      <ApiKeysSection />
+    </Container>
+  )
+}

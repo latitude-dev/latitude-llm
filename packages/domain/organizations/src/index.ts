@@ -8,7 +8,7 @@ export {
   type Membership,
   type MembershipRole,
 } from "./entities/membership.ts"
-export type { MembershipRepository } from "./ports/membership-repository.ts"
+export type { MembershipRepository, MemberWithUser } from "./ports/membership-repository.ts"
 export type { OrganizationRepository } from "./ports/organization-repository.ts"
 export {
   createMemberJoinedEvent,
@@ -28,3 +28,10 @@ export {
   type CreateOrganizationError,
 } from "./use-cases/create-organization.ts"
 export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
+export {
+  removeMemberUseCase,
+  MembershipNotFoundError,
+  CannotRemoveSelfError,
+  type RemoveMemberInput,
+  type RemoveMemberError,
+} from "./use-cases/remove-member.ts"

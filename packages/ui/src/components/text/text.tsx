@@ -1,23 +1,13 @@
 import { Slot } from "@radix-ui/react-slot"
 import { type ReactNode, forwardRef, memo } from "react"
 
-import {
-  type FontSize,
-  type FontSpacing,
-  type FontWeight,
-  type Overflow,
-  type TextColor,
-  type TextOpacity,
-  type WhiteSpace,
-  type WordBreak,
-  colors,
-  font,
-  opacity,
-  overflow as overflowOptions,
-  whiteSpace as whiteSpaceOptions,
-  wordBreak as wordBreakOptions,
-} from "../../tokens/index.js"
-import { cn } from "../../utils/cn.js"
+import { type TextColor, colors } from "../../tokens/colors.ts"
+import { type FontSize, type FontSpacing, type FontWeight, font } from "../../tokens/font.ts"
+import { type TextOpacity, opacity } from "../../tokens/opacity.ts"
+import { type Overflow, overflow as overflowOptions } from "../../tokens/overflow.ts"
+import { type WhiteSpace, whiteSpace as whiteSpaceOptions } from "../../tokens/whiteSpace.ts"
+import { type WordBreak, wordBreak as wordBreakOptions } from "../../tokens/wordBreak.ts"
+import { cn } from "../../utils/cn.ts"
 
 // Define display sizes as const outside component for better performance
 const DISPLAY_SIZES = new Set<FontSize>(["h1", "h2", "h3", "h4"])

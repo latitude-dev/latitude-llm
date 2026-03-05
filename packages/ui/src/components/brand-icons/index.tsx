@@ -5,7 +5,7 @@
  * These have specific brand colors and designs not available in Lucide
  */
 
-import { cn } from "../../utils/cn.js"
+import { cn } from "../../utils/cn.ts"
 
 export interface BrandIconProps {
   className?: string
