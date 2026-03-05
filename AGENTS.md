@@ -576,13 +576,68 @@ export const Route = createFileRoute("/_authenticated")({
 ```tsx
 // ❌ Bad - using margins and space-y
 <div className="space-y-4 mt-4">
-  <div className="mb-2">Item 1</div>
-  <div className="mb-2">Item 2</div>
+ <div className="mb-2">Item 1</div>
+ <div className="mb-2">Item 2</div>
 </div>
 
 // ✅ Good - using flexbox with gap
 <div className="flex flex-col gap-4 pt-4">
-  <div>Item 1</div>
-  <div>Item 2</div>
+ <div>Item 1</div>
+ <div>Item 2</div>
 </div>
 ```
+
+## Cursor Cloud specific instructions
+
+### Infrastructure
+
+Docker is used for local infrastructure services. Start them before running apps:
+
+```bash
+sudo dockerd &>/dev/null &  # if Docker daemon not already running
+sudo docker compose up -d postgres clickhouse redis mailpit
+```
+
+### Database setup
+
+After infrastructure is up, run migrations (idempotent):
+
+```bash
+pnpm --filter @platform/db-postgres pg:migrate
+pnpm --filter @platform/db-clickhouse ch:up      # requires golang-migrate in PATH
+pnpm --filter @platform/db-postgres pg:seed       # optional: creates seed users owner@acme.com / admin@acme.com
+```
+
+`golang-migrate` must be installed for ClickHouse migrations (`curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.1/migrate.linux-amd64.tar.gz | sudo tar xvz -C /usr/local/bin`).
+
+### Running dev servers
+
+`pnpm dev` (turbo) currently fails because `@domain/email` dev requires the `react-email` CLI which is not installed. Start app services individually instead:
+
+```bash
+pnpm --filter @app/web dev &
+pnpm --filter @app/api dev &
+pnpm --filter @app/ingest dev &
+pnpm --filter @app/workers dev &
+```
+
+| Service | Port | Health check |
+|---------|------|-------------|
+| Web | 3000 | `curl http://localhost:3000` (307 redirect to /login) |
+| API | 3001 | `curl http://localhost:3001/health` |
+| Ingest | 3002 | `curl http://localhost:3002/health` |
+| Workers | N/A | Logs "workers ready and outbox consumer started" |
+| Mailpit UI | 8025 | `curl http://localhost:8025` |
+
+### Known issues
+
+- `pnpm build` fails for `@app/web` due to `node:crypto` being bundled as a browser external by Rollup/Vite. This is a pre-existing issue in the codebase — `pnpm dev` works fine for development.
+- `pnpm dev` (global turbo) fails because `@domain/email` dev script requires the `react-email` CLI (`email` command). Use per-app `--filter` dev commands instead.
+
+### Auth for manual testing
+
+The app uses magic-link authentication. Emails are captured by Mailpit at `http://localhost:8025`. Sign up through the web UI at `http://localhost:3000/signup`, then retrieve the magic link from Mailpit to complete authentication.
+
+### Lint, typecheck, test commands
+
+Standard commands per `AGENTS.md` Commands section: `pnpm check`, `pnpm typecheck`, `pnpm test`. All run cleanly.
