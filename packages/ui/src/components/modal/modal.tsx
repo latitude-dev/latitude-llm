@@ -1,5 +1,3 @@
-"use client"
-
 import type { ReactNode } from "react"
 
 import { type ZIndex, zIndex as globalZIndex } from "../../tokens/index.ts"

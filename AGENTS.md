@@ -83,6 +83,7 @@ When writing a utility function that is not specific to a single domain or packa
 - Cross-domain logic without clear ownership
 - New provider integrations without a core capability contract
 - Introducing application env vars without the `LAT_` prefix (see Environment Variables)
+- Using `"use client"` or `"use server"` directives — these are Next.js-specific; the web app uses TanStack Start
 
 ## Stack Conventions
 

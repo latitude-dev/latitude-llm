@@ -1,5 +1,3 @@
-"use client"
-
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "./toast.tsx"
 import { useToast } from "./useToast.ts"
 

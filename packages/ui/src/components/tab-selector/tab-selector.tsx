@@ -1,5 +1,3 @@
-"use client"
-
 import { Fragment, type ReactNode, type Ref, type RefObject, useCallback, useEffect, useRef, useState } from "react"
 
 import { cn } from "../../utils/cn.ts"

@@ -1,5 +1,3 @@
-"use client"
-
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { X } from "lucide-react"
 import type { ComponentPropsWithoutRef, ElementRef, ReactElement } from "react"
