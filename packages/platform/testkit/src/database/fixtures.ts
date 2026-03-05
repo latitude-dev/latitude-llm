@@ -254,8 +254,8 @@ export const createApiKeyFixture = (
     try: async () => {
       const apiKeyId = generateId()
       const plaintextToken = `lat_test_${generateId()}`
-      const tokenHash = hashToken(plaintextToken)
-      const encryptedToken = encrypt(plaintextToken, input.encryptionKey)
+      const tokenHash = await hashToken(plaintextToken)
+      const encryptedToken = await encrypt(plaintextToken, input.encryptionKey)
 
       const [apiKey] = await db
         .insert(schema.apiKeys)

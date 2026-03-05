@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto"
 import { generateId } from "@domain/shared"
 import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
@@ -54,7 +53,7 @@ const createApp = (db: PostgresDb): Hono => {
 const createTenantSetup = async (db: InMemoryPostgres["db"]): Promise<TenantSetup> => {
   const userId = generateId()
   const organizationId = generateId()
-  const apiKeyToken = randomUUID()
+  const apiKeyToken = crypto.randomUUID()
   const authApiKeyId = generateId()
 
   await db.insert(postgresSchema.user).values({
@@ -81,8 +80,8 @@ const createTenantSetup = async (db: InMemoryPostgres["db"]): Promise<TenantSetu
   await db.insert(postgresSchema.apiKeys).values({
     id: authApiKeyId,
     organizationId,
-    token: encrypt(apiKeyToken, TEST_ENCRYPTION_KEY),
-    tokenHash: hashToken(apiKeyToken),
+    token: await encrypt(apiKeyToken, TEST_ENCRYPTION_KEY),
+    tokenHash: await hashToken(apiKeyToken),
     name: "auth-key",
   })
 
@@ -94,14 +93,14 @@ const createTenantSetup = async (db: InMemoryPostgres["db"]): Promise<TenantSetu
 }
 
 const createApiKeyRecord = async (db: InMemoryPostgres["db"], organizationId: string, name: string) => {
-  const token = randomUUID()
+  const token = crypto.randomUUID()
   const id = generateId()
-  const tokenHash = hashToken(token)
+  const tokenHash = await hashToken(token)
 
   await db.insert(postgresSchema.apiKeys).values({
     id,
     organizationId,
-    token: encrypt(token, TEST_ENCRYPTION_KEY),
+    token: await encrypt(token, TEST_ENCRYPTION_KEY),
     tokenHash,
     name,
   })

@@ -102,7 +102,7 @@ const validateApiKey = (
 
   return Effect.gen(function* () {
     const startTime = Date.now()
-    const tokenHash = hashToken(token)
+    const tokenHash = yield* Effect.promise(() => hashToken(token))
 
     // Try cache first for consistent lookup time (keyed by hash)
     const cached = yield* getCachedApiKey(redis, tokenHash)

@@ -54,7 +54,7 @@ export const generateApiKeyUseCase =
 
       // Generate token and its hash
       const token = generateApiKeyToken()
-      const tokenHash = hashToken(token)
+      const tokenHash = yield* Effect.promise(() => hashToken(token))
 
       // Create API key entity
       const apiKey = createApiKey({

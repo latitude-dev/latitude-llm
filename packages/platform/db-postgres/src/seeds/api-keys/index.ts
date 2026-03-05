@@ -13,11 +13,12 @@ const seedApiKeys: Seeder = {
   name: "api-keys/default-key",
   run: (ctx: SeedContext) =>
     Effect.gen(function* () {
+      const tokenHash = yield* Effect.promise(() => hashToken(SEED_API_KEY_TOKEN))
       const apiKey = createApiKey({
         id: SEED_API_KEY_ID,
         organizationId: SEED_ORG_ID,
         token: SEED_API_KEY_TOKEN,
-        tokenHash: hashToken(SEED_API_KEY_TOKEN),
+        tokenHash,
         name: SEED_API_KEY_NAME,
       })
       yield* ctx.repositories.apiKey.save(apiKey)

@@ -27,10 +27,10 @@ const getEncryptionKey = (): Buffer => {
  * Maps a database API key row to a domain ApiKey entity.
  * Decrypts the token from its stored encrypted form.
  */
-const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
+const toDomainApiKey = async (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): Promise<ApiKey> => ({
   id: ApiKeyId(row.id),
   organizationId: OrganizationId(row.organizationId),
-  token: decrypt(row.token, encryptionKey),
+  token: await decrypt(row.token, encryptionKey),
   tokenHash: row.tokenHash,
   name: row.name ?? "",
   lastUsedAt: row.lastUsedAt,
@@ -43,10 +43,10 @@ const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer)
  * Maps a domain ApiKey entity to a database insert row.
  * Encrypts the plaintext token before storage.
  */
-const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer): typeof apiKeys.$inferInsert => ({
+const toInsertRow = async (apiKey: ApiKey, encryptionKey: Buffer): Promise<typeof apiKeys.$inferInsert> => ({
   id: apiKey.id,
   organizationId: apiKey.organizationId,
-  token: encrypt(apiKey.token, encryptionKey),
+  token: await encrypt(apiKey.token, encryptionKey),
   tokenHash: apiKey.tokenHash,
   name: apiKey.name,
   lastUsedAt: apiKey.lastUsedAt,
@@ -81,7 +81,7 @@ export const createApiKeyPostgresRepository = (
           catch: (error) => toRepositoryError(error, "findById"),
         })
 
-        return result ? toDomainApiKey(result, encryptionKey) : null
+        return result ? yield* Effect.promise(() => toDomainApiKey(result, encryptionKey)) : null
       }),
 
     findAll: () =>
@@ -95,12 +95,12 @@ export const createApiKeyPostgresRepository = (
           catch: (error) => toRepositoryError(error, "findAll"),
         })
 
-        return results.map((row) => toDomainApiKey(row, encryptionKey))
+        return yield* Effect.promise(() => Promise.all(results.map((row) => toDomainApiKey(row, encryptionKey))))
       }),
 
     save: (apiKey: ApiKey) =>
       Effect.gen(function* () {
-        const row = toInsertRow(apiKey, encryptionKey)
+        const row = yield* Effect.promise(() => toInsertRow(apiKey, encryptionKey))
 
         yield* Effect.tryPromise({
           try: () =>

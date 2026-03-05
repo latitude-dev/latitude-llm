@@ -21,10 +21,10 @@ const getEncryptionKey = (): Buffer => {
  * Maps a database API key row to a domain ApiKey entity.
  * Decrypts the token from its stored encrypted form.
  */
-const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): ApiKey => ({
+const toDomainApiKey = async (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer): Promise<ApiKey> => ({
   id: ApiKeyId(row.id),
   organizationId: OrganizationId(row.organizationId),
-  token: decrypt(row.token, encryptionKey),
+  token: await decrypt(row.token, encryptionKey),
   tokenHash: row.tokenHash,
   name: row.name ?? "",
   lastUsedAt: row.lastUsedAt,
@@ -59,7 +59,7 @@ export const createUnscopedApiKeyPostgresRepository = (db: PostgresDb): Unscoped
           catch: (error) => toRepositoryError(error, "findByTokenHash"),
         })
 
-        return result ? toDomainApiKey(result, encryptionKey) : null
+        return result ? yield* Effect.promise(() => toDomainApiKey(result, encryptionKey)) : null
       }),
 
     touchBatch: (ids: readonly ApiKeyIdType[]) =>
@@ -91,7 +91,7 @@ export const createUnscopedApiKeyPostgresRepository = (db: PostgresDb): Unscoped
           catch: (error) => toRepositoryError(error, "findAll"),
         })
 
-        return results.map((row) => toDomainApiKey(row, encryptionKey))
+        return yield* Effect.promise(() => Promise.all(results.map((row) => toDomainApiKey(row, encryptionKey))))
       }),
 
     existsByTokenHash: (tokenHash: string) =>
