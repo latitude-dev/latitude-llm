@@ -48,6 +48,7 @@ const createDeps = ({
   const intents: AuthIntentRepository = {
     save: vi.fn(() => Effect.succeed(undefined)),
     findById: vi.fn(() => Effect.succeed(intent)),
+    findPendingInvitesByOrganizationId: vi.fn(() => Effect.succeed([])),
     markConsumed,
   }
 

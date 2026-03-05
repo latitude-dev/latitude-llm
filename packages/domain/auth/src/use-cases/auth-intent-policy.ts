@@ -28,6 +28,28 @@ export const createSignupIntentData = ({
   } as const
 }
 
+export const createInviteIntentData = ({
+  organizationId,
+  organizationName,
+  inviterName,
+}: {
+  organizationId: string
+  organizationName: string
+  inviterName: string
+}) => {
+  if (!organizationId) {
+    throw new Error("Organization ID is required")
+  }
+
+  return {
+    invite: {
+      organizationId,
+      organizationName: organizationName.trim() || "a workspace",
+      inviterName: inviterName.trim() || "Someone",
+    },
+  } as const
+}
+
 export const assertIntentCanBeCompleted = ({
   intent,
   sessionEmail,
@@ -57,6 +79,10 @@ export const resolveMagicLinkEmailTemplateFromContext = ({
   type: AuthIntent["type"]
   existingAccountAtRequest: boolean
 }): MagicLinkEmailTemplate => {
+  if (type === "invite") {
+    return "invite"
+  }
+
   if (type === "signup" && existingAccountAtRequest) {
     return "signupExistingAccount"
   }

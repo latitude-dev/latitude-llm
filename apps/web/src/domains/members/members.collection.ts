@@ -26,6 +26,10 @@ const membersCollection = createCollection(
   }),
 )
 
+export function invalidateMembers() {
+  void queryClient.invalidateQueries({ queryKey: ["members"] })
+}
+
 export const useMembersCollection = () => {
   return useLiveQuery((query) => query.from({ member: membersCollection }))
 }

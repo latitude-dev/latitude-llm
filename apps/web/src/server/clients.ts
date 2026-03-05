@@ -1,5 +1,11 @@
 import { type AuthIntent, normalizeEmail, resolveMagicLinkEmailTemplateFromContext } from "@domain/auth"
-import { magicLinkTemplate, sendEmail, signupExistingAccountMagicLinkTemplate } from "@domain/email"
+import type { RenderedEmail } from "@domain/email"
+import {
+  inviteMagicLinkTemplate,
+  magicLinkTemplate,
+  sendEmail,
+  signupExistingAccountMagicLinkTemplate,
+} from "@domain/email"
 import { createBetterAuth } from "@platform/auth-better"
 import {
   type PostgresClient,
@@ -18,6 +24,8 @@ interface AuthIntentEmailContext {
   readonly type: AuthIntent["type"]
   readonly existingAccountAtRequest: boolean
   readonly signupName?: string
+  readonly inviterName?: string
+  readonly organizationName?: string
 }
 
 const getAuthIntentIdFromMagicLinkUrl = ({
@@ -96,6 +104,10 @@ export const getBetterAuth = () => {
               type: authIntent.type,
               existingAccountAtRequest: authIntent.existingAccountAtRequest,
               ...(authIntent.data.signup?.name ? { signupName: authIntent.data.signup.name } : {}),
+              ...(authIntent.data.invite?.inviterName ? { inviterName: authIntent.data.invite.inviterName } : {}),
+              ...(authIntent.data.invite?.organizationName
+                ? { organizationName: authIntent.data.invite.organizationName }
+                : {}),
             }
           }
         }
@@ -120,24 +132,26 @@ export const getBetterAuth = () => {
             })
           : "default"
 
-        const html =
-          template === "signupExistingAccount"
-            ? await signupExistingAccountMagicLinkTemplate({ userName, magicLinkUrl: url })
-            : await magicLinkTemplate({ userName, magicLinkUrl: url })
+        let rendered: RenderedEmail
 
-        const subject =
-          template === "signupExistingAccount" ? "Sign in to your Latitude account" : "Your Latitude magic link"
-        const text =
-          template === "signupExistingAccount"
-            ? `This email is already registered in Latitude. Use this secure link to sign in: ${url}`
-            : `Use this link to sign in: ${url}`
+        if (template === "invite") {
+          rendered = await inviteMagicLinkTemplate({
+            inviterName: authIntentContext?.inviterName ?? "Someone",
+            organizationName: authIntentContext?.organizationName ?? "a workspace",
+            magicLinkUrl: url,
+          })
+        } else if (template === "signupExistingAccount") {
+          rendered = await signupExistingAccountMagicLinkTemplate({ userName, magicLinkUrl: url })
+        } else {
+          rendered = await magicLinkTemplate({ userName, magicLinkUrl: url })
+        }
 
         await Effect.runPromise(
           sendEmailUseCase({
             to: normalizedEmail,
-            subject,
-            html,
-            text,
+            subject: rendered.subject,
+            html: rendered.html,
+            text: rendered.text,
           }),
         )
       },

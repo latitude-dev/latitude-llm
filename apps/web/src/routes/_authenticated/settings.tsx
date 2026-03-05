@@ -20,29 +20,22 @@ import {
 import { Icon } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute } from "@tanstack/react-router"
+import { ClientOnly, createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
+import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
 import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
 import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
-import { useMembersCollection } from "../../domains/members/members.collection.ts"
-import { removeMember } from "../../domains/members/members.functions.ts"
+import { invalidateMembers, useMembersCollection } from "../../domains/members/members.collection.ts"
+import { inviteMember, removeMember } from "../../domains/members/members.functions.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { getQueryClient } from "../../lib/data/query-client.tsx"
+import { authClient } from "../../lib/auth-client.ts"
+import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { AppTabs } from "../_authenticated.tsx"
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
-
-function invalidateMembers() {
-  void getQueryClient().invalidateQueries({ queryKey: ["members"] })
-}
-
-function invalidateApiKeys() {
-  void getQueryClient().invalidateQueries({ queryKey: ["apiKeys"] })
-}
 
 // --- Workspace Members Section ---
 
@@ -53,14 +46,25 @@ function InviteMemberModal({
   open: boolean
   setOpen: (open: boolean) => void
 }) {
+  const { toast } = useToast()
   const form = useForm({
     defaultValues: {
-      name: "",
       email: "",
     },
-    onSubmit: async () => {
-      // TODO: Implement invite member server function
-      // For now this is a placeholder - invite flow requires Better Auth integration
+    onSubmit: async ({ value }) => {
+      const { intentId } = await inviteMember({ data: { email: value.email } })
+
+      const { error } = await authClient.signIn.magicLink({
+        email: value.email,
+        callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
+      })
+
+      if (error) {
+        throw new Error(error.message ?? "Failed to send invitation email")
+      }
+
+      toast({ description: "Invitation sent" })
+      invalidateMembers()
       setOpen(false)
     },
   })
@@ -71,7 +75,7 @@ function InviteMemberModal({
       open={open}
       onOpenChange={setOpen}
       title="Add New Member"
-      description="Add a new member to this workspace."
+      description="Invite a new member to this workspace by email."
       footer={
         <>
           <CloseTrigger />
@@ -93,18 +97,6 @@ function InviteMemberModal({
         }}
       >
         <FormWrapper>
-          <form.Field name="name">
-            {(field) => (
-              <Input
-                required
-                type="text"
-                label="Name"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Jon Snow"
-              />
-            )}
-          </form.Field>
           <form.Field name="email">
             {(field) => (
               <Input
@@ -124,13 +116,15 @@ function InviteMemberModal({
 }
 
 function MembersTable({ members }: { members: MemberRecord[] }) {
+  const { toast } = useToast()
+
   return (
     <Table>
       <TableHeader>
         <TableRow verticalPadding>
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Confirmed At</TableHead>
+          <TableHead>Confirmed</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
@@ -138,25 +132,42 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
         {members.map((member) => (
           <TableRow key={member.id} verticalPadding hoverable={false}>
             <TableCell>
-              <Text.H5>{member.name ?? "Unnamed"}</Text.H5>
+              <Text.H5>{member.name ?? "-"}</Text.H5>
             </TableCell>
             <TableCell>
               <Text.H5 color="foregroundMuted">{member.email}</Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H5 color="foregroundMuted">{relativeTime(member.confirmedAt)}</Text.H5>
+              {member.status === "invited" ? (
+                <Text.H5 color="warningMutedForeground">Invited</Text.H5>
+              ) : (
+                <Text.H5 color="foregroundMuted">{relativeTime(member.confirmedAt)}</Text.H5>
+              )}
             </TableCell>
-            <TableCell>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  void removeMember({ data: { membershipId: member.id } }).then(() => {
-                    invalidateMembers()
-                  })
-                }}
-              >
-                <Icon icon={Trash2} size="sm" />
-              </Button>
+            <TableCell align="right">
+              {member.status === "active" && (
+                <Button
+                  flat
+                  variant="ghost"
+                  onClick={() => {
+                    void removeMember({ data: { membershipId: member.id } })
+                      .then(() => {
+                        invalidateMembers()
+                        toast({
+                          description: "Member removed",
+                        })
+                      })
+                      .catch((e) =>
+                        toast({
+                          variant: "destructive",
+                          description: JSON.parse(e.message).message,
+                        }),
+                      )
+                  }}
+                >
+                  <Icon icon={Trash2} size="sm" />
+                </Button>
+              )}
             </TableCell>
           </TableRow>
         ))}
@@ -352,6 +363,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   asChild
                   trigger={
                     <Button
+                      flat
                       variant="ghost"
                       onClick={() => {
                         navigator.clipboard.writeText(apiKey.token)
@@ -379,11 +391,9 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   <Tooltip
                     asChild
                     trigger={
-                      <div className="px-2">
-                        <Button variant="ghost" onClick={() => setApiKeyToEdit(apiKey)}>
-                          <Icon icon={Pencil} size="sm" />
-                        </Button>
-                      </div>
+                      <Button flat variant="ghost" onClick={() => setApiKeyToEdit(apiKey)}>
+                        <Icon icon={Pencil} size="sm" />
+                      </Button>
                     }
                   >
                     Edit API key name
@@ -391,19 +401,18 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   <Tooltip
                     asChild
                     trigger={
-                      <div className="px-2">
-                        <Button
-                          disabled={apiKeys.length === 1}
-                          variant="ghost"
-                          onClick={() => {
-                            void deleteApiKey({ data: { id: apiKey.id } }).then(() => {
-                              invalidateApiKeys()
-                            })
-                          }}
-                        >
-                          <Icon icon={Trash2} size="sm" />
-                        </Button>
-                      </div>
+                      <Button
+                        flat
+                        disabled={apiKeys.length === 1}
+                        variant="ghost"
+                        onClick={() => {
+                          void deleteApiKey({ data: { id: apiKey.id } }).then(() => {
+                            invalidateApiKeys()
+                          })
+                        }}
+                      >
+                        <Icon icon={Trash2} size="sm" />
+                      </Button>
                     }
                   >
                     {apiKeys.length === 1 ? "You can't delete the last API key" : "Delete API key"}
@@ -452,8 +461,10 @@ function SettingsPage() {
   return (
     <Container>
       <AppTabs />
-      <MembershipsSection />
-      <ApiKeysSection />
+      <ClientOnly fallback={<TableSkeleton cols={4} rows={3} />}>
+        <MembershipsSection />
+        <ApiKeysSection />
+      </ClientOnly>
     </Container>
   )
 }

@@ -1,6 +1,6 @@
 import type { AuthIntent, AuthIntentRepository } from "@domain/auth"
 import { toRepositoryError } from "@domain/shared"
-import { eq } from "drizzle-orm"
+import { and, eq, gt, isNull, sql } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import { authIntent } from "../schema/auth-intent.ts"
@@ -25,9 +25,11 @@ const parseAuthIntentData = (rawData: unknown): AuthIntent["data"] => {
       : undefined
 
   const invite =
-    typeof inviteRaw === "object" && inviteRaw !== null && typeof Reflect.get(inviteRaw, "invitationId") === "string"
+    typeof inviteRaw === "object" && inviteRaw !== null && typeof Reflect.get(inviteRaw, "organizationId") === "string"
       ? {
-          invitationId: Reflect.get(inviteRaw, "invitationId"),
+          organizationId: Reflect.get(inviteRaw, "organizationId") as string,
+          organizationName: (Reflect.get(inviteRaw, "organizationName") as string) ?? "a workspace",
+          inviterName: (Reflect.get(inviteRaw, "inviterName") as string) ?? "Someone",
         }
       : undefined
 
@@ -84,6 +86,30 @@ export const createAuthIntentPostgresRepository = (db: PostgresDb): AuthIntentRe
       })
 
       return row ? toDomainAuthIntent(row) : null
+    }),
+
+  findPendingInvitesByOrganizationId: (organizationId) =>
+    Effect.tryPromise({
+      try: async () => {
+        const rows = await db
+          .select({
+            id: authIntent.id,
+            email: authIntent.email,
+            createdAt: authIntent.createdAt,
+          })
+          .from(authIntent)
+          .where(
+            and(
+              eq(authIntent.type, "invite"),
+              isNull(authIntent.consumedAt),
+              gt(authIntent.expiresAt, new Date()),
+              sql`${authIntent.data}->'invite'->>'organizationId' = ${organizationId}`,
+            ),
+          )
+
+        return rows
+      },
+      catch: (error) => toRepositoryError(error, "findPendingInvitesByOrganizationId"),
     }),
 
   markConsumed: ({ intentId, createdOrganizationId }) =>

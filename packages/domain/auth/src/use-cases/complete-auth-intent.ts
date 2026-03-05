@@ -38,11 +38,19 @@ export class MissingSignupProvisioningDataError extends Data.TaggedError("Missin
   readonly httpMessage = "Missing signup details for organization provisioning"
 }
 
+export class MissingInviteDataError extends Data.TaggedError("MissingInviteDataError")<{
+  readonly intentId: string
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Missing invite details for membership provisioning"
+}
+
 export type CompleteAuthIntentError =
   | AuthIntentNotFoundError
   | AuthIntentExpiredError
   | AuthIntentEmailMismatchError
   | MissingSignupProvisioningDataError
+  | MissingInviteDataError
   | CreateOrganizationError
   | RepositoryError
 
@@ -118,6 +126,28 @@ export const completeAuthIntentUseCase = (deps: {
           intentId: intent.id,
           createdOrganizationId: organization.id,
         })
+
+        return { completed: true as const }
+      }
+
+      if (intent.type === "invite") {
+        const organizationId = intent.data.invite?.organizationId
+
+        if (!organizationId) {
+          return yield* new MissingInviteDataError({ intentId: intent.id })
+        }
+
+        yield* deps.memberships.save(
+          createMembership({
+            id: generateId(),
+            organizationId: OrganizationId(organizationId),
+            userId: UserId(input.session.userId),
+            role: "member",
+            confirmedAt: new Date(),
+          }),
+        )
+
+        yield* deps.intents.markConsumed({ intentId: intent.id })
 
         return { completed: true as const }
       }
