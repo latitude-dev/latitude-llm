@@ -1,49 +1,44 @@
 import { addDays, differenceInMilliseconds } from 'date-fns'
 import { cache as redis } from '../../../../cache'
-import { database } from '../../../../client'
 import {
   ATTRIBUTES,
-  BaseSpanMetadata,
+  type BaseSpanMetadata,
   Otlp,
-  Span,
   SPAN_METADATA_STORAGE_KEY,
-  SpanAttribute,
-  SpanEvent,
+  type SpanAttribute,
+  type SpanEvent,
   SpanKind,
-  SpanLink,
-  SpanMetadata,
+  type SpanLink,
+  type SpanMetadata,
   SpanStatus,
   SpanType,
 } from '../../../../constants'
-import { publishSpanCreated } from '../../publishSpanCreated'
-import { diskFactory, DiskWrapper } from '../../../../lib/disk'
+import { type DiskWrapper, diskFactory } from '../../../../lib/disk'
 import { compressString } from '../../../../lib/disk/compression'
 import { LatitudeError, UnprocessableEntityError } from '../../../../lib/errors'
-import { Result, TypedResult } from '../../../../lib/Result'
-import Transaction from '../../../../lib/Transaction'
-import { SpansRepository } from '../../../../repositories'
-import { type ApiKey } from '../../../../schema/models/types/ApiKey'
-import { type Workspace } from '../../../../schema/models/types/Workspace'
-import { convertTimestamp } from '../shared'
-import { SPAN_SPECIFICATIONS } from '../specifications'
-import { isFeatureEnabledByName } from '../../../workspaceFeatures/isFeatureEnabledByName'
-import { findWorkspaceSubscription } from '../../../subscriptions/data-access/find'
+import { Result, type TypedResult } from '../../../../lib/Result'
 import {
   DEFAULT_RETENTION_PERIOD_DAYS,
   SubscriptionPlans,
 } from '../../../../plans'
+import { findBySpanAndTraceIdPairs } from '../../../../queries/clickhouse/spans/findBySpanAndTraceIds'
+import type { ApiKey } from '../../../../schema/models/types/ApiKey'
+import type { Workspace } from '../../../../schema/models/types/Workspace'
 import {
   captureException,
   captureMessage,
 } from '../../../../utils/datadogCapture'
+import { findWorkspaceSubscription } from '../../../subscriptions/data-access/find'
+import { publishSpanCreated } from '../../publishSpanCreated'
+import { bulkCreate as bulkCreateClickHouseSpans } from '../clickhouse/bulkCreate'
+import { convertTimestamp } from '../shared'
+import { SPAN_SPECIFICATIONS } from '../specifications'
+import { resolveCaptureAttributes } from './captureReferences'
 import {
   convertSpanAttributes,
   convertSpanStatus,
   extractSpanType,
 } from './process'
-import { bulkCreate as bulkCreatePostgresSpans } from '../postgres/bulkCreate'
-import { bulkCreate as bulkCreateClickHouseSpans } from '../clickhouse/bulkCreate'
-import { resolveCaptureAttributes } from './captureReferences'
 
 type SpanIngestionInput = {
   span: Otlp.Span
@@ -57,7 +52,7 @@ type CaptureResolution = Awaited<ReturnType<typeof resolveCaptureAttributes>>
 
 /**
  * Converts a batch of OTLP spans into Latitude spans and persists them in
- * Postgres (always) and ClickHouse (feature-flagged).
+ * ClickHouse.
  */
 export async function processSpansBulk(
   {
@@ -69,16 +64,20 @@ export async function processSpansBulk(
     apiKey: ApiKey
     workspace: Workspace
   },
-  transaction = new Transaction(),
   disk: DiskWrapper = diskFactory('private'),
 ) {
   const captureResolutionCache = new Map<string, CaptureResolution>()
+  const existingSpanSet = await getExistingSpanSet({ spansData, workspace })
 
   // Pre-process all spans to extract basic information and filter out invalid ones
   const processedSpans: Array<{
     id: string
     traceId: string
     parentId?: string
+    commitUuid?: string
+    documentUuid?: string
+    documentLogUuid?: string
+    projectId?: number
     name: string
     kind: SpanKind
     type: SpanType
@@ -93,23 +92,12 @@ export async function processSpansBulk(
     metadata: SpanMetadata
   }> = []
 
-  // Batch check for existing spans to reduce database queries
-  const spanIds = spansData.map(({ span }) => ({
-    spanId: span.spanId,
-    traceId: span.traceId,
-  }))
-  const existingSpans = await getExistingBatch({ spanIds, workspace })
-  const existingSpanSet = new Set(
-    existingSpans.map((span) => `${span.traceId}-${span.id}`),
-  )
-
   // Process each span to extract basic information
   for (const spanData of spansData) {
     const { span, scope } = spanData
 
-    // Check if span already exists using the batch result
     if (existingSpanSet.has(`${span.traceId}-${span.spanId}`)) {
-      continue // Skip if already exists
+      continue
     }
 
     // Convert span attributes
@@ -303,6 +291,17 @@ export async function processSpansBulk(
       id,
       traceId,
       parentId,
+      commitUuid:
+        (attributes[ATTRIBUTES.LATITUDE.commitUuid] as string) ?? undefined,
+      documentUuid:
+        (attributes[ATTRIBUTES.LATITUDE.documentUuid] as string) ?? undefined,
+      documentLogUuid:
+        (attributes[ATTRIBUTES.LATITUDE.documentLogUuid] as string) ??
+        undefined,
+      projectId:
+        typeof attributes[ATTRIBUTES.LATITUDE.projectId] === 'number'
+          ? (attributes[ATTRIBUTES.LATITUDE.projectId] as number)
+          : Number(attributes[ATTRIBUTES.LATITUDE.projectId]) || undefined,
       name,
       kind,
       type: finalType,
@@ -320,116 +319,70 @@ export async function processSpansBulk(
 
   if (processedSpans.length === 0) return Result.nil()
 
-  // Bulk insert spans and save metadata
-  return await transaction.call(
-    async (tx) => {
-      const pgResult = await bulkCreatePostgresSpans(
-        processedSpans.map((s) => ({
-          ...s,
-          workspaceId: workspace.id,
-          apiKeyId: apiKey.id,
-        })),
-        tx,
-      )
-      if (pgResult.error) return pgResult
+  const subscriptionResult = await findWorkspaceSubscription({ workspace })
+  if (subscriptionResult.error) {
+    captureException(
+      new LatitudeError('Failed to resolve workspace subscription for spans'),
+      {
+        workspaceId: workspace.id,
+        apiKeyId: apiKey.id,
+        spansCount: processedSpans.length,
+        error: String(subscriptionResult.error),
+      },
+    )
+  }
 
-      const insertedSpans = pgResult.value
+  const retentionDays =
+    subscriptionResult.ok && subscriptionResult.value
+      ? SubscriptionPlans[subscriptionResult.value.plan].retention_period
+      : DEFAULT_RETENTION_PERIOD_DAYS
+  const retentionExpiresAt = addDays(new Date(), retentionDays)
 
-      await saveMetadataBatch(
-        {
-          metadatas: processedSpans.map((p) => p.metadata),
-          workspace,
-        },
-        disk,
-      )
+  const insertedSpans = processedSpans.map((s) => ({
+    ...s,
+    workspaceId: workspace.id,
+    apiKeyId: apiKey.id,
+  }))
 
-      const chEnabled = await isFeatureEnabledByName(
-        workspace.id,
-        'clickhouse-spans-write',
-        tx,
-      )
-      if (chEnabled.error) {
-        captureException(
-          new LatitudeError('Failed to resolve clickhouse-spans-write feature'),
-          {
-            workspaceId: workspace.id,
-            apiKeyId: apiKey.id,
-            spansCount: processedSpans.length,
-            error: String(chEnabled.error),
-          },
-        )
-      }
-
-      if (chEnabled.ok && chEnabled.value) {
-        const subscriptionResult = await findWorkspaceSubscription(
-          { workspace },
-          tx,
-        )
-        if (subscriptionResult.error) {
-          captureException(
-            new LatitudeError(
-              'Failed to resolve workspace subscription for spans',
-            ),
-            {
-              workspaceId: workspace.id,
-              apiKeyId: apiKey.id,
-              spansCount: processedSpans.length,
-              error: String(subscriptionResult.error),
-            },
-          )
-        }
-
-        const retentionDays =
-          subscriptionResult.ok && subscriptionResult.value
-            ? SubscriptionPlans[subscriptionResult.value.plan].retention_period
-            : DEFAULT_RETENTION_PERIOD_DAYS
-        const retentionExpiresAt = addDays(new Date(), retentionDays)
-
-        const clickhouseResult = await bulkCreateClickHouseSpans(
-          processedSpans.map((s) => ({
-            ...s,
-            workspaceId: workspace.id,
-            apiKeyId: apiKey.id,
-            retentionExpiresAt,
-          })),
-        )
-        if (clickhouseResult.error) {
-          captureException(
-            new LatitudeError('ClickHouse bulk span insertion failed'),
-            {
-              workspaceId: workspace.id,
-              apiKeyId: apiKey.id,
-              spansCount: processedSpans.length,
-              error: String(clickhouseResult.error),
-            },
-          )
-        } else {
-          captureMessage('ClickHouse bulk span insertion succeeded', 'info', {
-            workspaceId: workspace.id,
-            apiKeyId: apiKey.id,
-            spansCount: processedSpans.length,
-          })
-        }
-      }
-
-      return Result.ok({ spans: insertedSpans })
-    },
-    ({ spans: insertedSpans }) => {
-      insertedSpans.forEach((span) =>
-        publishSpanCreated({
-          spanId: span.id,
-          traceId: span.traceId,
-          apiKeyId: apiKey.id,
-          workspaceId: workspace.id,
-          commitUuid: span.commitUuid,
-          documentUuid: span.documentUuid,
-          spanType: span.type,
-          parentId: span.parentId,
-          projectId: span.projectId,
-        }),
-      )
-    },
+  const clickhouseResult = await bulkCreateClickHouseSpans(
+    insertedSpans.map((s) => ({
+      ...s,
+      retentionExpiresAt,
+    })),
   )
+  if (clickhouseResult.error) {
+    return Result.error(clickhouseResult.error)
+  }
+
+  await saveMetadataBatch(
+    {
+      metadatas: processedSpans.map((p) => p.metadata),
+      workspace,
+    },
+    disk,
+  )
+
+  captureMessage('ClickHouse bulk span insertion succeeded', 'info', {
+    workspaceId: workspace.id,
+    apiKeyId: apiKey.id,
+    spansCount: processedSpans.length,
+  })
+
+  for (const span of insertedSpans) {
+    publishSpanCreated({
+      spanId: span.id,
+      traceId: span.traceId,
+      apiKeyId: apiKey.id,
+      workspaceId: workspace.id,
+      commitUuid: span.commitUuid,
+      documentUuid: span.documentUuid,
+      spanType: span.type,
+      parentId: span.parentId,
+      projectId: span.projectId,
+    })
+  }
+
+  return Result.ok({ spans: insertedSpans })
 }
 
 /**
@@ -501,48 +454,41 @@ async function resolveCaptureReferences({
   return Result.ok(resolvedAttributes)
 }
 
-async function getExistingBatch(
-  {
-    spanIds,
-    workspace,
-  }: {
-    spanIds: Array<{ spanId: string; traceId: string }>
-    workspace: Workspace
-  },
-  db = database,
-): Promise<Span[]> {
-  if (spanIds.length === 0) {
-    return []
-  }
-
-  const spansRepository = new SpansRepository(workspace.id, db, {
-    useClickHouse: false,
-  })
-
-  // Use a more efficient batch query with IN clause
-  const conditions = spanIds.map(({ spanId, traceId }) => ({
-    spanId,
-    traceId,
+async function getExistingSpanSet({
+  spansData,
+  workspace,
+}: {
+  spansData: SpanIngestionInput[]
+  workspace: Workspace
+}) {
+  const pairs = spansData.map(({ span }) => ({
+    spanId: span.spanId,
+    traceId: span.traceId,
   }))
 
-  // For now, we'll use individual queries but in a more optimized way
-  // In the future, we could implement a proper batch query method in the repository
-  const existingSpans: Span[] = []
+  if (pairs.length === 0) return new Set<string>()
 
-  // Process in chunks to avoid overwhelming the database
-  const chunkSize = 50
-  for (let i = 0; i < conditions.length; i += chunkSize) {
-    const chunk = conditions.slice(i, i + chunkSize)
-    const chunkPromises = chunk.map(async ({ spanId, traceId }) => {
-      const finding = await spansRepository.get({ spanId, traceId })
-      return finding.error ? null : finding.value
-    })
+  const existingSpanSet = new Set<string>()
+  const chunkSize = 250
 
-    const chunkResults = await Promise.all(chunkPromises)
-    existingSpans.push(...(chunkResults.filter(Boolean) as Span[]))
+  for (let i = 0; i < pairs.length; i += chunkSize) {
+    const chunk = pairs.slice(i, i + chunkSize)
+
+    try {
+      const existing = await findBySpanAndTraceIdPairs({
+        workspaceId: workspace.id,
+        pairs: chunk,
+      })
+
+      for (const span of existing) {
+        existingSpanSet.add(`${span.traceId}-${span.id}`)
+      }
+    } catch (error) {
+      captureException(error as Error)
+    }
   }
 
-  return existingSpans
+  return existingSpanSet
 }
 
 async function saveMetadataBatch(

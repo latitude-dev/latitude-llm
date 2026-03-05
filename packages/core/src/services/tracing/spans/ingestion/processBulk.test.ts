@@ -1,3 +1,7 @@
+import {
+  GEN_AI_OPERATION_NAME_VALUE_CHAT,
+  GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
+} from '@opentelemetry/semantic-conventions/incubating'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   ATTRIBUTES,
@@ -7,17 +11,13 @@ import {
   SpanType,
 } from '../../../../constants'
 import {
-  GEN_AI_OPERATION_NAME_VALUE_CHAT,
-  GEN_AI_OPERATION_NAME_VALUE_EMBEDDINGS,
-} from '@opentelemetry/semantic-conventions/incubating'
-import { type ApiKey } from '../../../../schema/models/types/ApiKey'
-import { type Workspace } from '../../../../schema/models/types/Workspace'
-import * as factories from '../../../../tests/factories'
-import { processSpansBulk } from './processBulk'
-import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '../../../../repositories'
+import type { ApiKey } from '../../../../schema/models/types/ApiKey'
+import type { Workspace } from '../../../../schema/models/types/Workspace'
+import * as factories from '../../../../tests/factories'
+import { processSpansBulk } from './processBulk'
 
 vi.mock('../../../lib/disk', () => ({
   diskFactory: vi.fn(() => ({
@@ -33,6 +33,10 @@ vi.mock('../../../cache', () => ({
 
 vi.mock('../clickhouse/bulkCreate', () => ({
   bulkCreate: vi.fn(),
+}))
+
+vi.mock('../../../../queries/clickhouse/spans/findBySpanAndTraceIds', () => ({
+  findBySpanAndTraceIdPairs: vi.fn().mockResolvedValue([]),
 }))
 
 const publisherSpy = vi.spyOn(
@@ -361,11 +365,12 @@ describe('processSpansBulk', () => {
       const storedSpan = result.value?.spans[0]
       expect(storedSpan?.documentUuid).toBeDefined()
       expect(storedSpan?.commitUuid).toBeDefined()
+      if (!storedSpan?.commitUuid) throw new Error('Missing commitUuid')
 
       const commitsRepo = new CommitsRepository(testWorkspace.id)
       const commit = await commitsRepo
         .getCommitByUuid({
-          uuid: storedSpan!.commitUuid!,
+          uuid: storedSpan.commitUuid,
           projectId: testProject.id,
         })
         .then((r) => r.unwrap())
@@ -397,7 +402,11 @@ describe('processSpansBulk', () => {
       const existingDoc = await docsRepo
         .getDocumentsAtCommit(testCommit)
         .then((r) => r.unwrap())
-        .then((docs) => docs[0]!)
+        .then((docs) => {
+          const doc = docs[0]
+          if (!doc) throw new Error('Missing document')
+          return doc
+        })
 
       const documentLogUuid = crypto.randomUUID()
       const commonRefAttributes = [
@@ -520,28 +529,25 @@ describe('processSpansBulk', () => {
   })
 
   describe('handling duplicate submissions', () => {
-    it('skips spans that already exist', async () => {
+    it('processes duplicate spans within the same batch', async () => {
       const span = createOtlpSpan()
 
-      await processSpansBulk({
-        spans: [createSpanData(span, apiKey, workspace)],
-        apiKey,
-        workspace,
-      })
-
-      vi.clearAllMocks()
-
       const result = await processSpansBulk({
-        spans: [createSpanData(span, apiKey, workspace)],
+        spans: [
+          createSpanData(span, apiKey, workspace),
+          createSpanData(span, apiKey, workspace),
+        ],
         apiKey,
         workspace,
       })
 
-      expect(result.value).toBeUndefined()
-      expect(publisherSpy).not.toHaveBeenCalled()
+      expect(result.error).toBeUndefined()
+      expect(result.value?.spans).toHaveLength(2)
+      expect(result.value?.spans[0]?.id).toBe(span.spanId)
+      expect(result.value?.spans[1]?.id).toBe(span.spanId)
     })
 
-    it('returns nil when all spans are duplicates', async () => {
+    it('keeps processing on subsequent submissions', async () => {
       const span1 = createOtlpSpan()
       const span2 = createOtlpSpan()
 
@@ -554,8 +560,6 @@ describe('processSpansBulk', () => {
         workspace,
       })
 
-      vi.clearAllMocks()
-
       const result = await processSpansBulk({
         spans: [
           createSpanData(span1, apiKey, workspace),
@@ -565,24 +569,18 @@ describe('processSpansBulk', () => {
         workspace,
       })
 
-      expect(result.value).toBeUndefined()
+      expect(result.error).toBeUndefined()
+      expect(result.value?.spans).toHaveLength(2)
     })
 
-    it('persists only new spans in a mixed batch', async () => {
-      const existingSpan = createOtlpSpan()
-      const newSpan = createOtlpSpan({ traceId: existingSpan.traceId })
-
-      const firstResult = await processSpansBulk({
-        spans: [createSpanData(existingSpan, apiKey, workspace)],
-        apiKey,
-        workspace,
-      })
-      expect(firstResult.error).toBeUndefined()
-      expect(firstResult.value?.spans).toHaveLength(1)
+    it('persists all spans in a mixed batch', async () => {
+      const repeatedSpan = createOtlpSpan()
+      const newSpan = createOtlpSpan({ traceId: repeatedSpan.traceId })
 
       const result = await processSpansBulk({
         spans: [
-          createSpanData(existingSpan, apiKey, workspace),
+          createSpanData(repeatedSpan, apiKey, workspace),
+          createSpanData(repeatedSpan, apiKey, workspace),
           createSpanData(newSpan, apiKey, workspace),
         ],
         apiKey,
@@ -590,8 +588,11 @@ describe('processSpansBulk', () => {
       })
 
       expect(result.error).toBeUndefined()
-      expect(result.value?.spans).toHaveLength(1)
-      expect(result.value?.spans[0]?.id).toBe(newSpan.spanId)
+      expect(result.value?.spans).toHaveLength(3)
+      expect(result.value?.spans.map((s) => s.id)).toContain(newSpan.spanId)
+      expect(result.value?.spans.map((s) => s.id)).toContain(
+        repeatedSpan.spanId,
+      )
     })
   })
 

@@ -1,8 +1,13 @@
 import { database } from '../../../../client'
-import { ATTRIBUTES, Otlp, SpanStatus, SpanType } from '../../../../constants'
+import {
+  ATTRIBUTES,
+  type Otlp,
+  SpanStatus,
+  SpanType,
+} from '../../../../constants'
 import { Result } from '../../../../lib/Result'
-import { type ApiKey } from '../../../../schema/models/types/ApiKey'
-import { type Workspace } from '../../../../schema/models/types/Workspace'
+import type { ApiKey } from '../../../../schema/models/types/ApiKey'
+import type { Workspace } from '../../../../schema/models/types/Workspace'
 import { captureException } from '../../../../utils/datadogCapture'
 import {
   convertSpanAttributes,
@@ -24,6 +29,12 @@ export async function ingestSpans(
   },
   db = database,
 ) {
+  const identityCache = {
+    workspaces: new Map<number, Workspace>(),
+    apiKeysByWorkspaceAndId: new Map<string, ApiKey>(),
+    firstApiKeyByWorkspace: new Map<number, ApiKey>(),
+  }
+
   const workspaces: Record<number, Workspace> = {}
   const apiKeys: Record<number, ApiKey> = {}
   const processedSpans: Array<{
@@ -55,7 +66,7 @@ export async function ingestSpans(
         // Note: We no longer skip Unknown spans to preserve trace hierarchy
         // (e.g., DSPy CHAIN spans that parent LLM completion spans)
         const extractingApiKeyAndWorkspace = await extractApiKeyAndWorkspace(
-          { apiKeyId, workspaceId, attributes },
+          { apiKeyId, workspaceId, attributes, cache: identityCache },
           db,
         )
         if (extractingApiKeyAndWorkspace.error) {
@@ -96,26 +107,33 @@ export async function ingestSpans(
 
   for (const processedSpan of processedSpans) {
     const { workspace, apiKey } = processedSpan
-    if (!spansByWorkspace.has(workspace.id)) {
-      spansByWorkspace.set(workspace.id, new Map())
+    let workspaceSpans = spansByWorkspace.get(workspace.id)
+    if (!workspaceSpans) {
+      workspaceSpans = new Map()
+      spansByWorkspace.set(workspace.id, workspaceSpans)
     }
-    const workspaceSpans = spansByWorkspace.get(workspace.id)!
     if (!workspaceSpans.has(apiKey.id)) {
       workspaceSpans.set(apiKey.id, [])
     }
-    workspaceSpans.get(apiKey.id)!.push(processedSpan)
+    const groupedSpans = workspaceSpans.get(apiKey.id)
+    if (groupedSpans) {
+      groupedSpans.push(processedSpan)
+    }
   }
 
   // Process spans in bulk for each workspace/apiKey combination
   for (const [workspaceId, apiKeySpans] of spansByWorkspace) {
     for (const [apiKeyId, spans] of apiKeySpans) {
-      const apiKey = apiKeys[apiKeyId]!
-      const workspace = workspaces[workspaceId]!
+      const apiKey = apiKeys[apiKeyId]
+      const workspace = workspaces[workspaceId]
+      if (!apiKey || !workspace) {
+        continue
+      }
 
       const processing = await processSpansBulk({ spans, apiKey, workspace })
       if (processing.error) {
         captureException(processing.error)
-        continue
+        return Result.error(processing.error)
       }
     }
   }

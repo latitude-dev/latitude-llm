@@ -1,7 +1,7 @@
-import { Job } from 'bullmq'
+import type { Job } from 'bullmq'
 import {
   SPAN_INGESTION_STORAGE_KEY,
-  SpanIngestionData,
+  type SpanIngestionData,
 } from '../../../constants'
 import { diskFactory } from '../../../lib/disk'
 import { UnprocessableEntityError } from '../../../lib/errors'
@@ -23,7 +23,7 @@ export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
 
   const disk = diskFactory('private')
   const key = SPAN_INGESTION_STORAGE_KEY(ingestionId)
-  let data
+  let data: SpanIngestionData
   try {
     const payload = await disk.get(key)
     data = JSON.parse(payload) as SpanIngestionData
@@ -35,7 +35,6 @@ export const ingestSpansJob = async (job: Job<IngestSpansJobData>) => {
 
   const result = await ingestSpans({ spans, apiKeyId, workspaceId })
   if (result.error) {
-    // @ts-expect-error ingestSpans currently ignores all errors but leaving this for the future
     if (result.error instanceof UnprocessableEntityError) {
       captureException(result.error)
     } else throw result.error
