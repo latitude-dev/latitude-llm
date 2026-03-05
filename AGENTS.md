@@ -76,6 +76,28 @@ When writing a utility function that is not specific to a single domain or packa
 - Workspace membership checks happen at boundaries before domain execution
 - All telemetry persistence and query paths include `workspaceId`
 
+### Web Standards First
+
+Prefer Web Standard APIs over Node.js-specific modules in domain, utility, and shared packages. Code in these layers may run in browsers, edge runtimes (Cloudflare Workers, Deno Deploy), or embedded V8 isolates — not just Node.js. Using platform-agnostic APIs maximises the compatibility surface without sacrificing functionality.
+
+**Practical guidelines:**
+
+- Use `crypto.subtle` / `crypto.getRandomValues` instead of `node:crypto`
+- Use `fetch` instead of Node-specific HTTP clients
+- Use `TextEncoder` / `TextDecoder` instead of `Buffer.from(…, 'utf-8')`
+- Use `Uint8Array` for binary data in public interfaces; `Buffer` is acceptable inside Node-only adapters (`packages/platform/*`) that will never leave the server
+- Use `URL`, `URLSearchParams`, `Headers`, `Request`, `Response` from the global scope
+- Use `structuredClone` instead of JSON round-trips for deep cloning
+
+**Where Node-specific APIs are acceptable:**
+
+- Platform adapter packages (`packages/platform/*`) — these are server-only by definition
+- App entry points and server configuration (`apps/*/server.ts`, `apps/*/clients.ts`)
+- Build tooling, scripts, and CLI utilities
+- Test infrastructure (e.g. `node:test`, `node:child_process` in test helpers)
+
+When a Node-specific API is genuinely required outside these scopes, document the reason with a brief comment.
+
 ### Anti-patterns to Reject
 
 - Cross-domain logic without clear ownership
