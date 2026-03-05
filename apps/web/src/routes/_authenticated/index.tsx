@@ -20,7 +20,7 @@ import {
 } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 import { useProjectsCollection } from "../../domains/projects/projects.collection.ts"
 import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
@@ -247,15 +247,14 @@ function CreateProjectModal({
   )
 }
 
-function DashboardPage() {
+function DashboardPageContent() {
   const [createOpen, setCreateOpen] = useState(false)
   const projectsCollection = useProjectsCollection()
   const projects = projectsCollection.data ?? []
   const isLoading = !projectsCollection.data
 
   return (
-    <Container>
-      <AppTabs />
+    <>
       <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <TableWithHeader
         title="Projects"
@@ -277,6 +276,17 @@ function DashboardPage() {
           )
         }
       />
+    </>
+  )
+}
+
+function DashboardPage() {
+  return (
+    <Container>
+      <AppTabs />
+      <ClientOnly fallback={<TableSkeleton cols={3} rows={3} />}>
+        <DashboardPageContent />
+      </ClientOnly>
     </Container>
   )
 }

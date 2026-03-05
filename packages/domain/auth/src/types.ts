@@ -6,7 +6,9 @@ export interface SignupIntentData {
 }
 
 export interface InviteIntentData {
-  readonly invitationId: string
+  readonly organizationId: string
+  readonly organizationName: string
+  readonly inviterName: string
 }
 
 export interface AuthIntentData {
@@ -25,4 +27,4 @@ export interface AuthIntent {
   readonly createdOrganizationId: string | null
 }
 
-export type MagicLinkEmailTemplate = "default" | "signupExistingAccount"
+export type MagicLinkEmailTemplate = "default" | "signupExistingAccount" | "invite"

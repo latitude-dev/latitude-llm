@@ -49,6 +49,10 @@ const apiKeysCollection = createCollection(
   }),
 )
 
+export function invalidateApiKeys() {
+  void queryClient.invalidateQueries({ queryKey: ["apiKeys"] })
+}
+
 export const useApiKeysCollection = () => {
   return useLiveQuery((query) => query.from({ apiKey: apiKeysCollection }))
 }
