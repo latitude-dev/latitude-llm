@@ -604,15 +604,13 @@ After infrastructure is up, run migrations (idempotent):
 
 ```bash
 pnpm --filter @platform/db-postgres pg:migrate
-pnpm --filter @platform/db-clickhouse ch:up      # requires golang-migrate in PATH
+pnpm --filter @platform/db-clickhouse ch:up
 pnpm --filter @platform/db-postgres pg:seed       # optional: creates seed users owner@acme.com / admin@acme.com
 ```
 
-`golang-migrate` must be installed for ClickHouse migrations (`curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.1/migrate.linux-amd64.tar.gz | sudo tar xvz -C /usr/local/bin`).
-
 ### Running dev servers
 
-`pnpm dev` (turbo) currently fails because `@domain/email` dev requires the `react-email` CLI which is not installed. Start app services individually instead:
+Start app services individually, matching the local `pnpm tmux` (tmuxinator) workflow:
 
 ```bash
 pnpm --filter @app/web dev &
@@ -628,11 +626,6 @@ pnpm --filter @app/workers dev &
 | Ingest | 3002 | `curl http://localhost:3002/health` |
 | Workers | N/A | Logs "workers ready and outbox consumer started" |
 | Mailpit UI | 8025 | `curl http://localhost:8025` |
-
-### Known issues
-
-- `pnpm build` fails for `@app/web` due to `node:crypto` being bundled as a browser external by Rollup/Vite. This is a pre-existing issue in the codebase — `pnpm dev` works fine for development.
-- `pnpm dev` (global turbo) fails because `@domain/email` dev script requires the `react-email` CLI (`email` command). Use per-app `--filter` dev commands instead.
 
 ### Auth for manual testing
 
