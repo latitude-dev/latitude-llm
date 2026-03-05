@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 
-import { zIndex as globalZIndex, type ZIndex } from "../../tokens/index.js"
+import { type ZIndex, zIndex as globalZIndex } from "../../tokens/index.js"
 import { cn } from "../../utils/cn.js"
 import { Button } from "../button/button.tsx"
 import {
@@ -12,9 +12,9 @@ import {
   type DialogContentProps,
   DialogDescription,
   DialogFooter,
-  type FooterProps,
   DialogHeader,
   DialogTitle,
+  type FooterProps,
 } from "./primitives.tsx"
 
 export type ModalProps = {

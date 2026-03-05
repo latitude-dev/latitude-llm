@@ -9,8 +9,8 @@ import {
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
-import { ensureSession } from "../sessions/session.functions.ts"
 import { getPostgresClient } from "../../server/clients.ts"
+import { ensureSession } from "../sessions/session.functions.ts"
 import {
   completeAuthIntentInputSchema,
   createLoginIntentInputSchema,

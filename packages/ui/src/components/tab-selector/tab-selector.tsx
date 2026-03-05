@@ -45,9 +45,7 @@ function checkSelected<T extends string>({
   selected: T | null | undefined
   showSelectedOnSubroutes: boolean
 }) {
-  return showSelectedOnSubroutes
-    ? selected !== undefined && selected !== null && selected.startsWith(option.value)
-    : selected === option.value
+  return showSelectedOnSubroutes ? (selected?.startsWith(option.value) ?? false) : selected === option.value
 }
 
 function ItemOption<T extends string>({
@@ -152,7 +150,7 @@ function TabSelector<T extends string>({
     resizeObserver.observe(button)
 
     return () => resizeObserver.disconnect()
-  }, [selected])
+  }, [])
 
   return (
     <div
@@ -179,8 +177,8 @@ function TabSelector<T extends string>({
           )}
           ref={selectedOptionBackgroundRef}
         />
-        {options.map((option, idx) => (
-          <Fragment key={idx}>
+        {options.map((option) => (
+          <Fragment key={option.value}>
             <ItemOption
               showSelectedOnSubroutes={showSelectedOnSubroutes}
               option={option}

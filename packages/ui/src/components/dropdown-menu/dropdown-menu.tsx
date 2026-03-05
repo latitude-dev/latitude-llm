@@ -142,8 +142,8 @@ function DropdownMenu({
           )}
           {options
             .filter((option) => !option.hidden)
-            .map((option, index) => (
-              <DropdownItem key={index} {...option} closeDropdown={closeDropdown} />
+            .map((option) => (
+              <DropdownItem key={option.label} {...option} closeDropdown={closeDropdown} />
             ))}
         </DropdownMenuContent>
       </DropdownMenuPortal>

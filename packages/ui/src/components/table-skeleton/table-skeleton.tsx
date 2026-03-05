@@ -17,9 +17,8 @@ function TableSkeleton({
   animate?: boolean
 }) {
   const { data, headers } = useMemo(() => {
-    const rowList = Array.from(Array(rows).keys())
     const headers = typeof cols === "number" ? Array.from(Array(cols).keys()) : cols
-    const data = rowList.map((_) => headers)
+    const data = Array.from({ length: rows }, (_, i) => ({ id: `row-${i}`, cells: headers }))
     return { data, headers }
   }, [rows, cols])
 
@@ -35,9 +34,9 @@ function TableSkeleton({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {data.map((row, indexRow) => (
-          <TableRow key={indexRow} verticalPadding={verticalPadding} hoverable={false}>
-            {row.map((cell) => (
+        {data.map((row) => (
+          <TableRow key={row.id} verticalPadding={verticalPadding} hoverable={false}>
+            {row.cells.map((cell) => (
               <TableCell key={cell} className="py-2">
                 <Skeleton className="w-full h-4" animate={animate} />
               </TableCell>

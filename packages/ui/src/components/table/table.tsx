@@ -1,10 +1,10 @@
 import { type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes, forwardRef } from "react"
 
+import { Info } from "lucide-react"
 import { cn } from "../../utils/cn.js"
+import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
-import { Icon } from "../icons/icons.tsx"
-import { Info } from "lucide-react"
 
 type TableProps = HTMLAttributes<HTMLTableElement> & {
   maxHeight?: number | string

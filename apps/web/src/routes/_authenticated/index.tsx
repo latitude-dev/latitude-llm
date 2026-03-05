@@ -20,7 +20,7 @@ import {
 } from "@repo/ui"
 import { extractLeadingEmoji, relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 import { useProjectsCollection } from "../../domains/projects/projects.collection.ts"
 import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
@@ -66,21 +66,18 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
         </TableHeader>
         <TableBody>
           {projects.map((project) => (
-            <TableRow
-              key={project.id}
-              verticalPadding
-              className="cursor-pointer"
-              onClick={() => {
-                window.location.href = `/projects/${project.id}`
-              }}
-            >
+            <TableRow key={project.id} verticalPadding className="cursor-pointer">
               <TableCell>
-                <ProjectTitle name={project.name} />
+                <Link to="/projects/$projectId" params={{ projectId: project.id }} className="contents">
+                  <ProjectTitle name={project.name} />
+                </Link>
               </TableCell>
               <TableCell>
-                <Text.H5 color="foregroundMuted">{relativeTime(project.createdAt)}</Text.H5>
+                <Link to="/projects/$projectId" params={{ projectId: project.id }} className="contents">
+                  <Text.H5 color="foregroundMuted">{relativeTime(project.createdAt)}</Text.H5>
+                </Link>
               </TableCell>
-              <TableCell>
+              <TableCell preventDefault>
                 <DropdownMenu
                   options={[
                     {
@@ -88,16 +85,10 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
                       onClick: () => {
                         setProjectToRename(project)
                       },
-                      onElementClick: (e) => {
-                        e.stopPropagation()
-                      },
                     },
                     {
                       label: "Delete",
                       type: "destructive",
-                      onElementClick(e) {
-                        e.stopPropagation()
-                      },
                       onClick: () => {
                         void deleteProject({ data: { id: project.id } }).then(() => {
                           invalidateProjects()
@@ -109,7 +100,6 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
                   align="end"
                   triggerButtonProps={{
                     className: "border-none justify-end cursor-pointer",
-                    onClick: (e) => e.stopPropagation(),
                   }}
                 />
               </TableCell>
