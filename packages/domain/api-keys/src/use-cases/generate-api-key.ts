@@ -1,4 +1,10 @@
-import { type ApiKeyId, type OrganizationId, type RepositoryError, type ValidationError, toRepositoryError } from "@domain/shared"
+import {
+  type ApiKeyId,
+  type OrganizationId,
+  type RepositoryError,
+  type ValidationError,
+  toRepositoryError,
+} from "@domain/shared"
 import { hashToken } from "@repo/utils"
 import { Data, Effect } from "effect"
 import { type ApiKey, createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
