@@ -1,7 +1,7 @@
 import { generateId } from "@domain/shared"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema as schema } from "@platform/db-postgres"
-import { encrypt, hashToken } from "@repo/utils"
+import { type CryptoError, encrypt, hashToken } from "@repo/utils"
 import type { Effect as EffectType } from "effect"
 import { Effect } from "effect"
 import type { TestDatabase } from "./test-database.ts"
@@ -246,36 +246,37 @@ export interface ApiKeyFixture {
 export const createApiKeyFixture = (
   db: PostgresDb,
   input: ApiKeyFixtureInput,
-): EffectType.Effect<ApiKeyFixture, Error> => {
+): EffectType.Effect<ApiKeyFixture, Error | CryptoError> => {
   const testId = generateTestId()
   const name = input.name ?? `Test API Key ${testId}`
 
-  return Effect.tryPromise({
-    try: async () => {
-      const apiKeyId = generateId()
-      const plaintextToken = `lat_test_${generateId()}`
-      const tokenHash = await hashToken(plaintextToken)
-      const encryptedToken = await encrypt(plaintextToken, input.encryptionKey)
+  return Effect.gen(function* () {
+    const apiKeyId = generateId()
+    const plaintextToken = `lat_test_${generateId()}`
+    const tokenHash = yield* hashToken(plaintextToken)
+    const encryptedToken = yield* encrypt(plaintextToken, input.encryptionKey)
 
-      const [apiKey] = await db
-        .insert(schema.apiKeys)
-        .values({
-          id: apiKeyId,
-          token: encryptedToken,
-          tokenHash,
-          name,
-          organizationId: input.organizationId,
-        })
-        .returning({
-          id: schema.apiKeys.id,
-          name: schema.apiKeys.name,
-          organizationId: schema.apiKeys.organizationId,
-        })
+    const [apiKey] = yield* Effect.tryPromise({
+      try: () =>
+        db
+          .insert(schema.apiKeys)
+          .values({
+            id: apiKeyId,
+            token: encryptedToken,
+            tokenHash,
+            name,
+            organizationId: input.organizationId,
+          })
+          .returning({
+            id: schema.apiKeys.id,
+            name: schema.apiKeys.name,
+            organizationId: schema.apiKeys.organizationId,
+          }),
+      catch: (error) =>
+        error instanceof Error ? error : new Error(`Failed to create API key fixture: ${String(error)}`),
+    })
 
-      return { ...apiKey, token: plaintextToken }
-    },
-    catch: (error) =>
-      error instanceof Error ? error : new Error(`Failed to create API key fixture: ${String(error)}`),
+    return { ...apiKey, token: plaintextToken }
   })
 }
 

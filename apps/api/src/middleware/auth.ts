@@ -1,4 +1,4 @@
-import { OrganizationId, UnauthorizedError, UserId, toRepositoryError } from "@domain/shared"
+import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
 import { createMembershipPostgresRepository, createUnscopedApiKeyPostgresRepository } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
@@ -102,10 +102,7 @@ const validateApiKey = (
 
   return Effect.gen(function* () {
     const startTime = Date.now()
-    const tokenHash = yield* Effect.tryPromise({
-      try: () => hashToken(token),
-      catch: (error) => toRepositoryError(error, "hashToken"),
-    })
+    const tokenHash = yield* hashToken(token)
 
     // Try cache first for consistent lookup time (keyed by hash)
     const cached = yield* getCachedApiKey(redis, tokenHash)

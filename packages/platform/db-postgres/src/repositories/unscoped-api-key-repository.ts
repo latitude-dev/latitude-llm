@@ -31,19 +31,19 @@ const toDomainApiKey = (
   row: typeof apiKeys.$inferSelect,
   encryptionKey: Buffer,
 ): Effect.Effect<ApiKey, RepositoryError> =>
-  Effect.tryPromise({
-    try: async () => ({
+  Effect.gen(function* () {
+    const token = yield* decrypt(row.token, encryptionKey).pipe(Effect.mapError((e) => toRepositoryError(e, "decrypt")))
+    return {
       id: ApiKeyId(row.id),
       organizationId: OrganizationId(row.organizationId),
-      token: await decrypt(row.token, encryptionKey),
+      token,
       tokenHash: row.tokenHash,
       name: row.name ?? "",
       lastUsedAt: row.lastUsedAt,
       deletedAt: row.deletedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    }),
-    catch: (error) => toRepositoryError(error, "decrypt"),
+    }
   })
 
 /**

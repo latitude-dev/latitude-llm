@@ -1,3 +1,10 @@
+import { Data, Effect } from "effect"
+
+export class CryptoError extends Data.TaggedError("CryptoError")<{
+  readonly operation: string
+  readonly cause: unknown
+}> {}
+
 const ALGORITHM = "AES-GCM"
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
@@ -20,18 +27,24 @@ function hexDecode(hex: string): Uint8Array {
  * Hash a plaintext string using SHA-256.
  * Returns a hex-encoded hash suitable for indexed lookups.
  */
-export async function hashToken(plaintext: string): Promise<string> {
-  const data = new TextEncoder().encode(plaintext)
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data)
-  return hexEncode(new Uint8Array(hashBuffer))
-}
+export const hashToken = (plaintext: string): Effect.Effect<string, CryptoError> =>
+  Effect.tryPromise({
+    try: async () => {
+      const data = new TextEncoder().encode(plaintext)
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data)
+      return hexEncode(new Uint8Array(hashBuffer))
+    },
+    catch: (cause) => new CryptoError({ operation: "hashToken", cause }),
+  })
 
 /**
  * Import a raw key buffer for AES-GCM operations.
  */
-async function importKey(key: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", key, { name: ALGORITHM }, false, ["encrypt", "decrypt"])
-}
+const importKey = (key: Uint8Array): Effect.Effect<CryptoKey, CryptoError> =>
+  Effect.tryPromise({
+    try: () => crypto.subtle.importKey("raw", key, { name: ALGORITHM }, false, ["encrypt", "decrypt"]),
+    catch: (cause) => new CryptoError({ operation: "importKey", cause }),
+  })
 
 /**
  * Encrypt a plaintext string using AES-256-GCM.
@@ -40,24 +53,24 @@ async function importKey(key: Uint8Array): Promise<CryptoKey> {
  * @param key - 32-byte encryption key as Uint8Array or Buffer
  * @returns Encrypted string in format: iv:authTag:ciphertext (hex-encoded)
  */
-export async function encrypt(plaintext: string, key: Uint8Array): Promise<string> {
-  const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
-  const cryptoKey = await importKey(key)
-  const data = new TextEncoder().encode(plaintext)
+export const encrypt = (plaintext: string, key: Uint8Array): Effect.Effect<string, CryptoError> =>
+  Effect.gen(function* () {
+    const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH))
+    const cryptoKey = yield* importKey(key)
+    const data = new TextEncoder().encode(plaintext)
 
-  const encrypted = await crypto.subtle.encrypt(
-    { name: ALGORITHM, iv, tagLength: AUTH_TAG_LENGTH * 8 },
-    cryptoKey,
-    data,
-  )
+    const encrypted = yield* Effect.tryPromise({
+      try: () => crypto.subtle.encrypt({ name: ALGORITHM, iv, tagLength: AUTH_TAG_LENGTH * 8 }, cryptoKey, data),
+      catch: (cause) => new CryptoError({ operation: "encrypt", cause }),
+    })
 
-  const encryptedBytes = new Uint8Array(encrypted)
-  // Web Crypto appends the auth tag at the end of the ciphertext
-  const ciphertext = encryptedBytes.slice(0, encryptedBytes.length - AUTH_TAG_LENGTH)
-  const authTag = encryptedBytes.slice(encryptedBytes.length - AUTH_TAG_LENGTH)
+    const encryptedBytes = new Uint8Array(encrypted)
+    // Web Crypto appends the auth tag at the end of the ciphertext
+    const ciphertext = encryptedBytes.slice(0, encryptedBytes.length - AUTH_TAG_LENGTH)
+    const authTag = encryptedBytes.slice(encryptedBytes.length - AUTH_TAG_LENGTH)
 
-  return `${hexEncode(iv)}:${hexEncode(authTag)}:${hexEncode(ciphertext)}`
-}
+    return `${hexEncode(iv)}:${hexEncode(authTag)}:${hexEncode(ciphertext)}`
+  })
 
 /**
  * Decrypt a string encrypted with AES-256-GCM.
@@ -66,40 +79,40 @@ export async function encrypt(plaintext: string, key: Uint8Array): Promise<strin
  * @param key - 32-byte encryption key as Uint8Array or Buffer (same key used for encryption)
  * @returns The decrypted plaintext
  */
-export async function decrypt(ciphertext: string, key: Uint8Array): Promise<string> {
-  const parts = ciphertext.split(":")
-  if (parts.length !== 3) {
-    throw new Error("Invalid ciphertext format")
-  }
+export const decrypt = (ciphertext: string, key: Uint8Array): Effect.Effect<string, CryptoError> =>
+  Effect.gen(function* () {
+    const parts = ciphertext.split(":")
+    if (parts.length !== 3) {
+      return yield* new CryptoError({ operation: "decrypt", cause: "Invalid ciphertext format" })
+    }
 
-  const [ivHex, authTagHex, encryptedHex] = parts
-  if (ivHex === undefined || authTagHex === undefined || encryptedHex === undefined) {
-    throw new Error("Invalid ciphertext format")
-  }
+    const [ivHex, authTagHex, encryptedHex] = parts
+    if (ivHex === undefined || authTagHex === undefined || encryptedHex === undefined) {
+      return yield* new CryptoError({ operation: "decrypt", cause: "Invalid ciphertext format" })
+    }
 
-  const iv = hexDecode(ivHex)
-  const authTag = hexDecode(authTagHex)
-  const encrypted = hexDecode(encryptedHex)
+    const iv = hexDecode(ivHex)
+    const authTag = hexDecode(authTagHex)
+    const encrypted = hexDecode(encryptedHex)
 
-  if (iv.length !== IV_LENGTH) {
-    throw new Error("Invalid IV length")
-  }
-  if (authTag.length !== AUTH_TAG_LENGTH) {
-    throw new Error("Invalid auth tag length")
-  }
+    if (iv.length !== IV_LENGTH) {
+      return yield* new CryptoError({ operation: "decrypt", cause: "Invalid IV length" })
+    }
+    if (authTag.length !== AUTH_TAG_LENGTH) {
+      return yield* new CryptoError({ operation: "decrypt", cause: "Invalid auth tag length" })
+    }
 
-  const cryptoKey = await importKey(key)
+    const cryptoKey = yield* importKey(key)
 
-  // Web Crypto expects ciphertext + authTag concatenated
-  const combined = new Uint8Array(encrypted.length + authTag.length)
-  combined.set(encrypted)
-  combined.set(authTag, encrypted.length)
+    // Web Crypto expects ciphertext + authTag concatenated
+    const combined = new Uint8Array(encrypted.length + authTag.length)
+    combined.set(encrypted)
+    combined.set(authTag, encrypted.length)
 
-  const decrypted = await crypto.subtle.decrypt(
-    { name: ALGORITHM, iv, tagLength: AUTH_TAG_LENGTH * 8 },
-    cryptoKey,
-    combined,
-  )
+    const decrypted = yield* Effect.tryPromise({
+      try: () => crypto.subtle.decrypt({ name: ALGORITHM, iv, tagLength: AUTH_TAG_LENGTH * 8 }, cryptoKey, combined),
+      catch: (cause) => new CryptoError({ operation: "decrypt", cause }),
+    })
 
-  return new TextDecoder().decode(decrypted)
-}
+    return new TextDecoder().decode(decrypted)
+  })

@@ -3,6 +3,7 @@ import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
 import { eq } from "drizzle-orm"
+import { Effect } from "effect"
 import { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { getRedisClient } from "../clients.ts"
@@ -78,8 +79,8 @@ const createTenantSetup = async (db: InMemoryPostgres["db"]): Promise<TenantSetu
   await db.insert(postgresSchema.apiKeys).values({
     id: generateId(),
     organizationId,
-    token: await encrypt(apiKeyToken, TEST_ENCRYPTION_KEY),
-    tokenHash: await hashToken(apiKeyToken),
+    token: await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY)),
+    tokenHash: await Effect.runPromise(hashToken(apiKeyToken)),
     name: "auth-key",
   })
 
