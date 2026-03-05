@@ -78,31 +78,22 @@ When writing a utility function that is not specific to a single domain or packa
 
 ### Anti-patterns to Reject
 
-- Business logic inside handlers/controllers/jobs
-- Domain importing DB clients, Redis, BullMQ, or object storage SDKs
 - Cross-domain logic without clear ownership
 - New provider integrations without a core capability contract
 - Introducing application env vars without the `LAT_` prefix (see Environment Variables)
 - Using `"use client"` or `"use server"` directives — these are Next.js-specific; the web app uses TanStack Start
 
-## Stack Conventions
+## Stack and Toolchain
 
-- Effect TS primitives for core code
-- Drizzle ORM for Postgres adapters
-- Hono for API and ingest boundaries
-- TanStack Start + React for web
-- Biome for lint/format
-
-## Required Toolchain
-
-- Node.js: `>=25` (see root `package.json`)
-- Package manager: check `package.json` and `packageManager` field (e.g. `pnpm` 10.30.0)
-- Check if mise is installed and use mise to switch to found node version in
-  `package.json`. If Mise is not found ignore this.
-- Task runner: `turbo` via root scripts
-- Lint/format: Biome (`@biomejs/biome` 1.9.x)
-- Tests: Vitest 3.x
-- Install deps: `pnpm install`
+- **Runtime**: Node.js `>=25` (see root `package.json`). Check if mise is installed and use mise to switch to found node version. If Mise is not found ignore this.
+- **Package manager**: check `package.json` `packageManager` field (e.g. `pnpm` 10.30.0). Install deps: `pnpm install`
+- **Task runner**: `turbo` via root scripts
+- **Lint/format**: Biome (`@biomejs/biome` 1.9.x)
+- **Tests**: Vitest 3.x
+- **Core logic**: Effect TS primitives
+- **Postgres ORM**: Drizzle
+- **API/ingest boundaries**: Hono
+- **Web app**: TanStack Start + React
 
 ## Commands
 
@@ -196,7 +187,7 @@ Base config: `tsconfig.base.json`
 - Methods/functions with more than one argument should default to a single named-arguments object rather than positional arguments
 - Use `readonly` fields for immutable domain data shapes
 - Avoid `any`; use `unknown` + narrowing
-- Avoid unnecessary type assertions (`as { ... }`); prefer relying on inferred types from libraries (e.g., Better Auth's `session.user` already types `id`, `email`, `name`)
+- Avoid unnecessary type assertions (`as { ... }`); prefer relying on inferred types from libraries
 - Validate boundary inputs early (API input, queue payloads, external IO)
 
 ### General Principles
@@ -322,7 +313,6 @@ Rules:
 
 ## Effect Patterns
 
-- Core code uses Effect TS primitives consistently
 - Prefer `Effect.gen` for sequential effect composition
 - Wrap promise-based APIs with `Effect.tryPromise` and typed errors
 - Use `Data.TaggedError` for domain-specific error types
@@ -393,7 +383,7 @@ findById(id: WorkspaceId): Effect.Effect<Workspace, NotFoundError | RepositoryEr
 - Auth is configured via `@platform/auth-better` which wraps the `better-auth` library
 - `createBetterAuth()` in `packages/platform/auth-better/src/index.ts` is the factory
 - Sessions are retrieved via `auth.api.getSession({ headers })` — returns `{ user, session }` with typed fields
-- The `User` type from Better Auth includes `id`, `email`, `name` — no type assertions needed when accessing these fields
+- The `User` type from Better Auth includes `id`, `email`, `name` — access these fields directly without type assertions
 - Session helpers live in `apps/web/src/domains/sessions/session.functions.ts` (`getSession`, `ensureSession`)
 - Organization/workspace context is injected into sessions via the `customSession` plugin
 - Auth intent flow (login/signup) uses domain use-cases from `@domain/auth` composed with Postgres repositories
@@ -481,7 +471,6 @@ This provides working defaults for all services (Postgres, ClickHouse, Redis, et
 
 ## Testing Conventions
 
-- Test runner: Vitest
 - Shared default environment: Node with globals enabled (`packages/vitest-config/index.ts`)
 - Write tests, mostly e2e, some unit tests when logic is complex
 - **Unit tests**: domain entities/use-cases/policies with fakes
@@ -512,6 +501,68 @@ When working on `apps/web` or any frontend code:
 
 - When adding a new implemented UI component in `packages/ui` (or replacing a placeholder export with a real implementation), update `apps/web/src/routes/design-system.tsx` to include a usage example for that component in both light and dark mode previews.
 - Treat `apps/web/src/routes/design-system.tsx` as the canonical visual inventory for `@repo/ui` components.
+
+### State Management (TanStack)
+
+The web app uses a **server-centric, query-driven** architecture built on the TanStack ecosystem. No Zustand, Redux, or global stores.
+
+**Server Functions** — All data fetching and mutations use `createServerFn` from `@tanstack/react-start`:
+
+```typescript
+// Query (GET)
+export const listProjects = createServerFn({ method: "GET" }).handler(async () => {
+  const { organizationId } = await requireSession()
+  const { db } = getPostgresClient()
+  // compose domain use-cases...
+})
+
+// Mutation (POST) with Zod validation
+export const createProject = createServerFn({ method: "POST" })
+  .inputValidator(zodValidator(createProjectSchema))
+  .handler(async ({ data }) => { ... })
+```
+
+Server functions live in `apps/web/src/domains/*/functions.ts`.
+
+**Collections** — Client-side reactive state uses TanStack React DB + Query via `queryCollectionOptions`:
+
+```typescript
+const projectsCollection = createCollection(
+  queryCollectionOptions({
+    queryClient,
+    queryKey: ["projects"],
+    queryFn: () => listProjects(),
+    getKey: (item) => item.id,
+    onInsert: async ({ transaction }) => { /* optimistic insert */ },
+    onUpdate: async ({ transaction }) => { /* optimistic update */ },
+    onDelete: async ({ transaction }) => { /* optimistic delete */ },
+  }),
+)
+
+export const useProjectsCollection = (...) => useLiveQuery(...)
+```
+
+Collection files live in `apps/web/src/domains/*/collection.ts`.
+
+**Route Guards** — Use `beforeLoad` for auth checks and redirects:
+
+```typescript
+export const Route = createFileRoute("/_authenticated")({
+  beforeLoad: async () => {
+    const session = await getSession()
+    if (!session) throw redirect({ to: "/login" })
+    return { user: session.user }
+  },
+})
+```
+
+**Key rules:**
+
+- Server functions are the only data-fetching mechanism — no direct REST API calls from the client
+- Use collections for reactive, queryable client state with automatic server sync
+- Use `useState` for local UI state (modals, form visibility); no global stores
+- Invalidate query cache after mutations: `getQueryClient().invalidateQueries({ queryKey: [...] })`
+- Forms use TanStack React Form (`useForm` + `form.Field`)
 
 ### Layout & Spacing
 
