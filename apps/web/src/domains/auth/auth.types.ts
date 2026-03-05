@@ -12,4 +12,9 @@ export const createSignupIntentInputSchema = z.object({
 
 export const completeAuthIntentInputSchema = z.object({
   intentId: z.string(),
+  name: z.string().optional(),
+})
+
+export const getAuthIntentInfoInputSchema = z.object({
+  intentId: z.string(),
 })

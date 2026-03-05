@@ -1,6 +1,6 @@
 import type { AuthUser, AuthUserRepository } from "@domain/auth"
 import { toRepositoryError } from "@domain/shared"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, isNull, or, sql } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import { user } from "../schema/better-auth.ts"
@@ -41,7 +41,7 @@ export const createAuthUserPostgresRepository = (db: PostgresDb): AuthUserReposi
             name: name.trim(),
             updatedAt: new Date(),
           })
-          .where(and(eq(user.id, userId), isNull(user.name)))
+          .where(and(eq(user.id, userId), or(isNull(user.name), eq(user.name, ""), sql`trim(${user.name}) = ''`)))
       },
       catch: (error) => toRepositoryError(error, "setNameIfMissing"),
     }),

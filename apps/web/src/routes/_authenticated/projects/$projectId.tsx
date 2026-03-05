@@ -1,7 +1,7 @@
 import { Button, Container, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
@@ -55,9 +55,7 @@ function ProjectViewContent() {
 function ProjectViewPage() {
   return (
     <Container>
-      <ClientOnly>
-        <ProjectViewContent />
-      </ClientOnly>
+      <ProjectViewContent />
     </Container>
   )
 }
