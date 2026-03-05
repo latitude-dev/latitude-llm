@@ -440,9 +440,7 @@ function ApiKeysSection() {
             Create API Key
           </Button>
         }
-        table={
-          isLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />
-        }
+        table={isLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
       />
     </>
   )

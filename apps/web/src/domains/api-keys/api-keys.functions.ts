@@ -30,19 +30,19 @@ const toRecord = (apiKey: ApiKey): ApiKeyRecord => ({
 })
 
 export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): Promise<ApiKeyRecord[]> => {
-    const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+  const { organizationId } = await requireSession()
+  const { db } = getPostgresClient()
 
-    const apiKeys = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) => {
-      const apiKeysRepo = createApiKeyPostgresRepository(txDb, OrganizationId(organizationId))
-      return Effect.runPromise(apiKeysRepo.findAll())
-    })
-
-    return apiKeys.map(toRecord)
+  const apiKeys = await runCommand(
+    db,
+    organizationId,
+  )(async (txDb) => {
+    const apiKeysRepo = createApiKeyPostgresRepository(txDb, OrganizationId(organizationId))
+    return Effect.runPromise(apiKeysRepo.findAll())
   })
+
+  return apiKeys.map(toRecord)
+})
 
 export const createApiKey = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(z.object({ name: z.string().min(1).max(256) })))

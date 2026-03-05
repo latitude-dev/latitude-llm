@@ -118,9 +118,7 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
         </TableBody>
       </Table>
 
-      {projectToRename && (
-        <RenameProjectModal project={projectToRename} onClose={() => setProjectToRename(null)} />
-      )}
+      {projectToRename && <RenameProjectModal project={projectToRename} onClose={() => setProjectToRename(null)} />}
     </>
   )
 }

@@ -20,9 +20,7 @@ export interface MembershipRepository {
     organizationId: OrganizationId,
     userId: string,
   ): Effect.Effect<Membership | null, RepositoryError>
-  findMembersWithUser(
-    organizationId: OrganizationId,
-  ): Effect.Effect<readonly MemberWithUser[], RepositoryError>
+  findMembersWithUser(organizationId: OrganizationId): Effect.Effect<readonly MemberWithUser[], RepositoryError>
   isMember(organizationId: OrganizationId, userId: string): Effect.Effect<boolean, RepositoryError>
   isAdmin(organizationId: OrganizationId, userId: string): Effect.Effect<boolean, RepositoryError>
   save(membership: Membership): Effect.Effect<void, RepositoryError>

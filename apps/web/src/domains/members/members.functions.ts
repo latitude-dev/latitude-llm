@@ -22,11 +22,12 @@ export const listMembers = createServerFn({ method: "GET" }).handler(async (): P
   const { organizationId } = await requireSession()
   const { db } = getPostgresClient()
 
-  return runCommand(db, organizationId)(async (txDb) => {
+  return runCommand(
+    db,
+    organizationId,
+  )(async (txDb) => {
     const membershipRepo = createMembershipPostgresRepository(txDb)
-    const members = await Effect.runPromise(
-      membershipRepo.findMembersWithUser(OrganizationId(organizationId)),
-    )
+    const members = await Effect.runPromise(membershipRepo.findMembersWithUser(OrganizationId(organizationId)))
 
     return members.map((m) => ({
       id: m.id,
@@ -46,7 +47,10 @@ export const removeMember = createServerFn({ method: "POST" })
     const { userId, organizationId } = await requireSession()
     const { db } = getPostgresClient()
 
-    await runCommand(db, organizationId)(async (txDb) => {
+    await runCommand(
+      db,
+      organizationId,
+    )(async (txDb) => {
       const membershipRepo = createMembershipPostgresRepository(txDb)
 
       await Effect.runPromise(

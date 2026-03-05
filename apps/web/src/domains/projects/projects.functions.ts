@@ -32,19 +32,19 @@ const toRecord = (project: Project): ProjectRecord => ({
 })
 
 export const listProjects = createServerFn({ method: "GET" }).handler(async (): Promise<ProjectRecord[]> => {
-    const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+  const { organizationId } = await requireSession()
+  const { db } = getPostgresClient()
 
-    const projects = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
-      return Effect.runPromise(projectsRepo.findAll())
-    })
-
-    return projects.map(toRecord)
+  const projects = await runCommand(
+    db,
+    organizationId,
+  )(async (txDb) => {
+    const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
+    return Effect.runPromise(projectsRepo.findAll())
   })
+
+  return projects.map(toRecord)
+})
 
 export const createProject = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(z.object({ name: z.string(), description: z.string().optional() })))
