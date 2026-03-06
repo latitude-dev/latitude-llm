@@ -14,7 +14,7 @@ Apps only handle:
 
 - Input validation
 - Authentication and authorization
-- Workspace access enforcement
+- Organization access enforcement
 - Routing to domain use-cases
 
 No business logic in handlers, controllers, or jobs.
@@ -64,17 +64,18 @@ When writing a utility function that is not specific to a single domain or packa
 
 ### Data and Infrastructure
 
-- **Postgres**: Control-plane and relational data (users, workspaces, memberships, config)
+- **Postgres**: Control-plane and relational data (users, organizations, memberships, config)
 - **ClickHouse**: High-volume telemetry storage and analytical reads
+- **Weaviate**: Vector database for embeddings storage and semantic similarity search
 - **Redis**: Cache and BullMQ backend
 - **Object storage**: Durable raw ingest payload buffering
 
 ### Multi-tenancy
 
-- Every request is workspace-scoped
-- A user may belong to many workspaces
-- Workspace membership checks happen at boundaries before domain execution
-- All telemetry persistence and query paths include `workspaceId`
+- Every request is organization-scoped
+- A user may belong to many organizations
+- Organization membership checks happen at boundaries before domain execution
+- All telemetry persistence and query paths include `organizationId`
 
 ### Web Standards First
 
@@ -183,10 +184,10 @@ CI workflows (`check.yml`, `typecheck.yml`, `knip.yml`, `test.yml`) use Node 25 
 Biome config (`biome.json`) is the source of truth:
 
 - Indentation: 2 spaces
-- Max line width: 100
+- Max line width: 120
 - Strings: double quotes
-- Semicolons: always
-- Ignore generated/output dirs: `dist`, `coverage`, `.turbo`, `node_modules`
+- Semicolons: as needed
+- Ignore generated/output paths: `dist/**`, `coverage/**`, `.turbo/**`, `node_modules/**`, `**/*.gen.ts`, `**/models.dev.json`
 - Prefer package-local formatting: `pnpm --filter @app/api format`
 
 ### Imports
@@ -227,7 +228,7 @@ Base config: `tsconfig.base.json`
 
 ### Domain Design (DDD)
 
-- Organize by bounded context (e.g. telemetry, workspaces, identity, alerts)
+- Organize by bounded context (e.g. telemetry, organizations, identity, alerts)
 - Domains should be single-responsibility and focused on policy/rules
 - Use in-memory adapters for fast tests where possible
 
@@ -261,7 +262,7 @@ This runs `docker/reset-postgres.sh` which stops postgres, removes the `data-llm
 All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **must** follow these rules. Shared helpers live in `schemaHelpers.ts`.
 
 1. **Use `latitudeSchema`** — never create a local `pgSchema("latitude")`. Import `latitudeSchema` from `../schemaHelpers.ts`.
-2. **Use `cuid("id").primaryKey()`** — every table's primary key must use the `cuid()` helper (`varchar(128)` with auto-generated CUID2).
+2. **Use `cuid("id").primaryKey()`** — every table's primary key must use the `cuid()` helper (`varchar(24)` with auto-generated CUID2).
 3. **Use `tzTimestamp(name)`** — never use raw `timestamp(name, { withTimezone: true })`. Import `tzTimestamp` from the helpers.
 4. **Use `...timestamps()`** — every table that has `createdAt`/`updatedAt` must spread the `timestamps()` helper (includes `$onUpdateFn` on `updatedAt`).
 5. **Use `organizationRLSPolicy(tableName)`** — every table with an `organization_id` column must include this helper in its third argument to enable row-level security.
@@ -421,8 +422,8 @@ interface HttpError {
 **Example domain error:**
 
 ```typescript
-export class InvalidWorkspaceNameError extends Data.TaggedError(
-    "InvalidWorkspaceNameError",
+export class InvalidOrganizationNameError extends Data.TaggedError(
+    "InvalidOrganizationNameError",
 )<{
     readonly name: string;
     readonly reason: string;
@@ -437,7 +438,7 @@ export class InvalidWorkspaceNameError extends Data.TaggedError(
 **Example repository method:**
 
 ```typescript
-findById(id: WorkspaceId): Effect.Effect<Workspace, NotFoundError | RepositoryError>
+findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
 ```
 
 ## Side Effects and Eventing
@@ -458,7 +459,7 @@ findById(id: WorkspaceId): Effect.Effect<Workspace, NotFoundError | RepositoryEr
 - Sessions are retrieved via `auth.api.getSession({ headers })` — returns `{ user, session }` with typed fields
 - The `User` type from Better Auth includes `id`, `email`, `name` — access these fields directly without type assertions
 - Session helpers live in `apps/web/src/domains/sessions/session.functions.ts` (`getSession`, `ensureSession`)
-- Organization/workspace context is injected into sessions via the `customSession` plugin
+- Organization context is injected into sessions via the `customSession` plugin
 - Auth intent flow (login/signup) uses domain use-cases from `@domain/auth` composed with Postgres repositories
 
 ## Application Structure
@@ -549,7 +550,7 @@ This provides working defaults for all services (Postgres, ClickHouse, Redis, et
 - **Unit tests**: domain entities/use-cases/policies with fakes
 - **Contract tests**: adapter compliance against domain ports
 - **Integration tests**: infra-backed tests for Postgres/ClickHouse/Redis/BullMQ/object storage
-- **End-to-end tests**: ingest boundary to query boundary across workspace scoping
+- **End-to-end tests**: ingest boundary to query boundary across organization scoping
 - Keep tests deterministic and isolated
 - Prefer package-local runs during iteration; run full monorepo tests before PR
 
