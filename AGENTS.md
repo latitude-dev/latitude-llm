@@ -269,15 +269,15 @@ All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **m
 ```typescript
 // ✅ Good - follows all conventions
 export const projects = latitudeSchema.table(
-  "projects",
-  {
-    id: cuid("id").primaryKey(),
-    organizationId: text("organization_id").notNull(),
-    name: varchar("name", { length: 256 }).notNull(),
-    deletedAt: tzTimestamp("deleted_at"),
-    ...timestamps(),
-  },
-  () => [organizationRLSPolicy("projects")],
+    "projects",
+    {
+        id: cuid("id").primaryKey(),
+        organizationId: text("organization_id").notNull(),
+        name: varchar("name", { length: 256 }).notNull(),
+        deletedAt: tzTimestamp("deleted_at"),
+        ...timestamps(),
+    },
+    () => [organizationRLSPolicy("projects")],
 );
 ```
 
@@ -314,6 +314,7 @@ brew install goose
 ```
 
 Migration files live in `packages/platform/db-clickhouse/clickhouse/migrations/`:
+
 - `unclustered/` — single-node deployments (local dev, default)
 - `clustered/` — distributed deployments (`CLICKHOUSE_CLUSTER_ENABLED=true`)
 
@@ -352,11 +353,13 @@ pnpm --filter @platform/db-clickhouse ch:seed
 Goose hybrid versioning lets developers create migrations independently using timestamps, then normalises them to sequential order before merging. This avoids version conflicts when multiple branches add migrations concurrently.
 
 Workflow:
+
 1. `ch:create <name>` — creates `20260305120000_name.sql` in both `unclustered/` and `clustered/`
 2. Fill in both files (see rules below)
 3. Before merging the PR, run `ch:fix` — renames timestamp files to the next sequential number (e.g. `00002_name.sql`) and commits the renamed files
 
 **Migration file rules:**
+
 - Each migration is a single `.sql` file with `-- +goose Up` and `-- +goose Down` sections
 - Always include `-- +goose NO TRANSACTION` (ClickHouse does not support transactions)
 - `unclustered/`: use standard table engines (e.g. `ReplacingMergeTree`)
@@ -367,13 +370,13 @@ Workflow:
 Use the dedicated Weaviate package for connection and schema bootstrapping:
 
 - **Connection API:** `packages/platform/db-weaviate/src/client.ts`
-  - `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks.
+    - `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks.
 - **Collection definitions:** `packages/platform/db-weaviate/src/collections.ts`
-  - Define all collections in code via `defineWeaviateCollections([...])`.
+    - Define all collections in code via `defineWeaviateCollections([...])`.
 - **Migration logic:** `packages/platform/db-weaviate/src/migrations.ts`
-  - Migrations are idempotent: checks `collections.exists()` before create and tolerates "already exists" race conditions.
+    - Migrations are idempotent: checks `collections.exists()` before create and tolerates "already exists" race conditions.
 - **Manual migration command:** `pnpm --filter @platform/db-weaviate wv:migrate`
-  - Entrypoint is `packages/platform/db-weaviate/src/migrate.ts`.
+    - Entrypoint is `packages/platform/db-weaviate/src/migrate.ts`.
 
 Rules:
 
@@ -401,9 +404,9 @@ Domain errors that need specific HTTP responses implement the `HttpError` interf
 
 ```typescript
 interface HttpError {
-  readonly _tag: string;
-  readonly httpStatus: number;
-  readonly httpMessage: string;
+    readonly _tag: string;
+    readonly httpStatus: number;
+    readonly httpMessage: string;
 }
 ```
 
@@ -419,15 +422,15 @@ interface HttpError {
 
 ```typescript
 export class InvalidWorkspaceNameError extends Data.TaggedError(
-  "InvalidWorkspaceNameError",
+    "InvalidWorkspaceNameError",
 )<{
-  readonly name: string;
-  readonly reason: string;
+    readonly name: string;
+    readonly reason: string;
 }> {
-  readonly httpStatus = 400;
-  get httpMessage() {
-    return this.reason;
-  }
+    readonly httpStatus = 400;
+    get httpMessage() {
+        return this.reason;
+    }
 }
 ```
 
@@ -474,7 +477,7 @@ All application environment variables **must** be prefixed with `LAT_` to avoid 
 **What gets the `LAT_` prefix:**
 
 - Database connection strings and pool config (`LAT_DATABASE_URL`, `LAT_PG_POOL_MAX`, ...)
-- Service connection details our code reads (`LAT_CLICKHOUSE_URL`, `LAT_REDIS_HOST`, ...)
+- Service connection details our code reads (`CLICKHOUSE_URL`, `LAT_REDIS_HOST`, ...)
 - Application ports (`LAT_API_PORT`, `LAT_WEB_PORT`, `LAT_INGEST_PORT`)
 - Auth, email, OAuth, Stripe, CORS config (`LAT_BETTER_AUTH_SECRET`, `LAT_MAILPIT_HOST`, ...)
 - Any new env var introduced for Latitude application code
@@ -618,12 +621,12 @@ Collection files live in `apps/web/src/domains/*/collection.ts`.
 
 ```typescript
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
-    const session = await getSession()
-    if (!session) throw redirect({ to: "/login" })
-    return { user: session.user }
-  },
-})
+    beforeLoad: async () => {
+        const session = await getSession();
+        if (!session) throw redirect({ to: "/login" });
+        return { user: session.user };
+    },
+});
 ```
 
 **Key rules:**
@@ -690,13 +693,13 @@ pnpm --filter @app/ingest dev &
 pnpm --filter @app/workers dev &
 ```
 
-| Service | Port | Health check |
-|---------|------|-------------|
-| Web | 3000 | `curl http://localhost:3000` (307 redirect to /login) |
-| API | 3001 | `curl http://localhost:3001/health` |
-| Ingest | 3002 | `curl http://localhost:3002/health` |
-| Workers | N/A | Logs "workers ready and outbox consumer started" |
-| Mailpit UI | 8025 | `curl http://localhost:8025` |
+| Service    | Port | Health check                                          |
+| ---------- | ---- | ----------------------------------------------------- |
+| Web        | 3000 | `curl http://localhost:3000` (307 redirect to /login) |
+| API        | 3001 | `curl http://localhost:3001/health`                   |
+| Ingest     | 3002 | `curl http://localhost:3002/health`                   |
+| Workers    | N/A  | Logs "workers ready and outbox consumer started"      |
+| Mailpit UI | 8025 | `curl http://localhost:8025`                          |
 
 ### Auth for manual testing
 
