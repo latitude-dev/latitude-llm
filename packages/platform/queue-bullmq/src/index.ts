@@ -29,7 +29,7 @@ const publishEffect = (queue: Queue, envelope: EventEnvelope): Effect.Effect<voi
         envelope.event.name,
         {
           eventId: envelope.id,
-          workspaceId: envelope.event.workspaceId,
+          organizationId: envelope.event.organizationId,
           payload: envelope.event.payload,
           occurredAt: envelope.occurredAt.toISOString(),
         },

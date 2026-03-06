@@ -29,7 +29,7 @@ export const setupNewUser = (deps: SetupNewUserDeps) => {
       // Create membership as owner
       yield* deps.membershipRepo.create({
         userId: event.userId,
-        workspaceId: workspace.id,
+        organizationId: workspace.id,
         role: "owner",
       })
 

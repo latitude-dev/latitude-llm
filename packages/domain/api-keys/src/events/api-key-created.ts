@@ -22,7 +22,7 @@ export const createApiKeyCreatedEvent = (params: {
   name: string
 }): ApiKeyCreatedEvent => ({
   name: "ApiKeyCreated",
-  workspaceId: params.organizationId,
+  organizationId: params.organizationId,
   payload: {
     apiKeyId: params.apiKeyId,
     organizationId: params.organizationId,

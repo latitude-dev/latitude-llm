@@ -29,7 +29,7 @@ export const createGrantIssuedEvent = (params: {
   expiresAt: Date | null
 }): GrantIssuedEvent => ({
   name: "GrantIssued",
-  workspaceId: params.organizationId,
+  organizationId: params.organizationId,
   payload: {
     grantId: params.grantId,
     subscriptionId: params.subscriptionId,

@@ -22,7 +22,7 @@ export const createOrganizationContextMiddleware = (): MiddlewareHandler => {
     if (auth && auth.organizationId !== organizationIdParam) {
       throw new PermissionError({
         message: "You do not have access to this organization",
-        workspaceId: organizationIdParam,
+        organizationId: organizationIdParam,
       })
     }
 
