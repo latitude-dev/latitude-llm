@@ -220,7 +220,7 @@ describe("completeAuthIntentUseCase", () => {
   })
 
   it("marks intent as consumed without organization provisioning for non-signup flows", async () => {
-    const deps = createDeps({ intent: createIntent({ type: "invite" }) })
+    const deps = createDeps({ intent: createIntent({ type: "login" }) })
     const execute = completeAuthIntentUseCase(deps)
 
     const result = await Effect.runPromise(
