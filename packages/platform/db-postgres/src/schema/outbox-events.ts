@@ -11,7 +11,7 @@ export const outboxEvents = latitudeSchema.table("outbox_events", {
   id: cuid("id").primaryKey(),
   eventName: text("event_name").notNull(),
   aggregateId: text("aggregate_id").notNull(),
-  workspaceId: text("workspace_id").notNull(),
+  organizationId: text("workspace_id").notNull(),
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
   published: boolean("published").notNull().default(false),
   publishedAt: tzTimestamp("published_at"),

@@ -20,7 +20,7 @@ export const createMemberJoinedEvent = (params: {
   role: MembershipRole
 }): MemberJoinedEvent => ({
   name: "MemberJoined",
-  workspaceId: params.organizationId,
+  organizationId: params.organizationId,
   payload: {
     organizationId: params.organizationId,
     userId: params.userId,

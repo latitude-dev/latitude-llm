@@ -74,7 +74,7 @@ const processBatchEffect = (
         id: row.id,
         event: {
           name: row.event_name,
-          workspaceId: row.workspace_id,
+          organizationId: row.workspace_id,
           payload: row.payload,
         },
         occurredAt: row.occurred_at,

@@ -62,7 +62,7 @@ export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
 // RLS/Permission error
 export class PermissionError extends Data.TaggedError("PermissionError")<{
   readonly message: string
-  readonly workspaceId: string
+  readonly organizationId: string
 }> {
   readonly httpStatus = 403
   get httpMessage() {

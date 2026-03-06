@@ -21,7 +21,7 @@ export interface WorkspaceRepository {
 export interface MembershipRepository {
   readonly create: (params: {
     userId: string
-    workspaceId: string
+    organizationId: string
     role: "owner" | "admin" | "member"
   }) => Effect.Effect<{ id: string }, MembershipCreationError>
 }

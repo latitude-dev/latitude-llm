@@ -18,7 +18,7 @@ export class WorkspaceCreationError extends Data.TaggedError("WorkspaceCreationE
 export class MembershipCreationError extends Data.TaggedError("MembershipCreationError")<{
   readonly message: string
   readonly userId: string
-  readonly workspaceId: string
+  readonly organizationId: string
   readonly cause?: unknown
 }> {
   readonly httpStatus = 500

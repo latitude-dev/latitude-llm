@@ -25,7 +25,7 @@ export const createSubscriptionCreatedEvent = (params: {
   trialEndsAt: Date | null
 }): SubscriptionCreatedEvent => ({
   name: "SubscriptionCreated",
-  workspaceId: params.organizationId,
+  organizationId: params.organizationId,
   payload: {
     subscriptionId: params.subscriptionId,
     organizationId: params.organizationId,

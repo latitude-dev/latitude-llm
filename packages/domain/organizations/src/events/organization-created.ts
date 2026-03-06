@@ -21,7 +21,7 @@ export const createOrganizationCreatedEvent = (params: {
   creatorId: UserId
 }): OrganizationCreatedEvent => ({
   name: "OrganizationCreated",
-  workspaceId: params.organizationId,
+  organizationId: params.organizationId,
   payload: {
     organizationId: params.organizationId,
     name: params.name,
