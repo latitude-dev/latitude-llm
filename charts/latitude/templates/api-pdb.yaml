@@ -1,0 +1,13 @@
+{{- if and .Values.api.enabled .Values.api.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "latitude.fullname" . }}-api
+  labels:
+    {{- include "latitude.componentLabels" (merge (dict "componentName" "api") .) | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.api.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "latitude.selectorLabels" (merge (dict "componentName" "api") .) | nindent 6 }}
+{{- end }}

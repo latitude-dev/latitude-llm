@@ -1,0 +1,41 @@
+Latitude has been deployed!
+
+{{- if .Values.web.enabled }}
+
+Web UI:
+{{- if .Values.web.ingress.enabled }}
+  {{- range .Values.web.ingress.hosts }}
+  URL: http{{ if $.Values.web.ingress.tls }}s{{ end }}://{{ .host }}
+  {{- end }}
+{{- else }}
+  kubectl port-forward svc/{{ include "latitude.fullname" . }}-web {{ .Values.web.port }}:{{ .Values.web.service.port }}
+  Then open: http://localhost:{{ .Values.web.port }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.api.enabled }}
+
+API:
+{{- if .Values.api.ingress.enabled }}
+  {{- range .Values.api.ingress.hosts }}
+  URL: http{{ if $.Values.api.ingress.tls }}s{{ end }}://{{ .host }}
+  {{- end }}
+{{- else }}
+  kubectl port-forward svc/{{ include "latitude.fullname" . }}-api {{ .Values.api.port }}:{{ .Values.api.service.port }}
+  Health: curl http://localhost:{{ .Values.api.port }}/health
+{{- end }}
+{{- end }}
+
+{{- if .Values.workers.enabled }}
+
+Workers: Running as background job processor (no HTTP endpoint).
+  kubectl logs -f deploy/{{ include "latitude.fullname" . }}-workers
+{{- end }}
+
+Secret management:
+{{- if .Values.existingSecret }}
+  Using external secret: {{ .Values.existingSecret }}
+{{- else }}
+  Using chart-managed secret: {{ include "latitude.fullname" . }}
+  For production, create your own Secret and set existingSecret in values.
+{{- end }}

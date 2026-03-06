@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs"
+import { createServer } from "node:http"
 import { fileURLToPath } from "node:url"
 import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import { createBullmqEventsPublisher } from "@platform/queue-bullmq"
@@ -28,14 +29,34 @@ const outboxConsumer = createPollingOutboxConsumer(
 )
 
 const logger = createLogger("workers")
+let ready = false
+
+const healthPort = Number(process.env.LAT_WORKERS_HEALTH_PORT) || 9090
+const healthServer = createServer((req, res) => {
+  if (req.url === "/health" && req.method === "GET") {
+    const status = ready ? 200 : 503
+    res.writeHead(status, { "Content-Type": "application/json" })
+    res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
+  } else {
+    res.writeHead(404)
+    res.end()
+  }
+})
+
+healthServer.listen(healthPort, () => {
+  logger.info(`workers health check listening on :${healthPort}/health`)
+})
 
 eventsWorker.on("ready", () => {
   outboxConsumer.start()
+  ready = true
 
   logger.info("workers ready and outbox consumer started")
 })
 
 process.on("SIGINT", async () => {
+  ready = false
+  healthServer.close()
   await outboxConsumer.stop()
   await pgPool.end()
   await eventsQueue.close()

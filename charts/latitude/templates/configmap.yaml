@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "latitude.configmapName" . }}
+  labels:
+    {{- include "latitude.labels" . | nindent 4 }}
+data:
+  NODE_ENV: {{ .Values.global.nodeEnv | quote }}
+
+  # Service ports
+  LAT_WEB_PORT: {{ .Values.web.port | quote }}
+  LAT_API_PORT: {{ .Values.api.port | quote }}
+
+  # Service URLs
+  LAT_WEB_URL: {{ .Values.global.urls.web | quote }}
+  LAT_API_URL: {{ .Values.global.urls.api | quote }}
+  LAT_INGEST_URL: {{ .Values.global.urls.ingest | quote }}
+
+  # Postgres pool
+  LAT_PG_POOL_MAX: {{ .Values.config.pgPoolMax | quote }}
+  LAT_PG_IDLE_TIMEOUT_MS: {{ .Values.config.pgIdleTimeoutMs | quote }}
+  LAT_PG_CONNECT_TIMEOUT_MS: {{ .Values.config.pgConnectTimeoutMs | quote }}
+
+  # ClickHouse
+  LAT_CLICKHOUSE_URL: {{ .Values.config.clickhouseUrl | quote }}
+  LAT_CLICKHOUSE_USER: {{ .Values.config.clickhouseUser | quote }}
+  LAT_CLICKHOUSE_DB: {{ .Values.config.clickhouseDb | quote }}
+
+  # Weaviate
+  LAT_WEAVIATE_HOST: {{ .Values.config.weaviateHost | quote }}
+  LAT_WEAVIATE_HTTP_PORT: {{ .Values.config.weaviateHttpPort | quote }}
+  LAT_WEAVIATE_GRPC_PORT: {{ .Values.config.weaviateGrpcPort | quote }}
+  {{- if .Values.config.weaviateUrl }}
+  LAT_WEAVIATE_URL: {{ .Values.config.weaviateUrl | quote }}
+  {{- end }}
+
+  # Auth
+  LAT_BETTER_AUTH_URL: {{ default .Values.global.urls.api .Values.config.betterAuthUrl | quote }}
+
+  # CORS / trusted origins
+  LAT_TRUSTED_ORIGINS: {{ default .Values.global.urls.web .Values.config.trustedOrigins | quote }}
+  LAT_CORS_ALLOWED_ORIGINS: {{ default .Values.global.urls.web .Values.config.corsAllowedOrigins | quote }}
+
+  # Frontend (Vite build-time vars baked into the web image; included here for
+  # reference and for any SSR runtime that reads them)
+  VITE_LAT_API_URL: {{ printf "%s/v1" .Values.global.urls.api | quote }}
+  VITE_LAT_WEB_URL: {{ .Values.global.urls.web | quote }}
+
+  # Email: Mailgun
+  {{- if .Values.config.mailgunDomain }}
+  LAT_MAILGUN_DOMAIN: {{ .Values.config.mailgunDomain | quote }}
+  LAT_MAILGUN_FROM: {{ .Values.config.mailgunFrom | quote }}
+  LAT_MAILGUN_REGION: {{ .Values.config.mailgunRegion | quote }}
+  LAT_MAILGUN_SMTP_HOST: {{ .Values.config.mailgunSmtpHost | quote }}
+  LAT_MAILGUN_SMTP_PORT: {{ .Values.config.mailgunSmtpPort | quote }}
+  LAT_MAILGUN_SMTP_USER: {{ .Values.config.mailgunSmtpUser | quote }}
+  {{- end }}
+
+  # Email: SMTP
+  {{- if .Values.config.smtpHost }}
+  LAT_SMTP_HOST: {{ .Values.config.smtpHost | quote }}
+  LAT_SMTP_PORT: {{ .Values.config.smtpPort | quote }}
+  LAT_SMTP_USER: {{ .Values.config.smtpUser | quote }}
+  LAT_SMTP_FROM: {{ .Values.config.smtpFrom | quote }}
+  {{- end }}
+
+  # Email: SendGrid
+  {{- if .Values.config.sendgridFrom }}
+  LAT_SENDGRID_FROM: {{ .Values.config.sendgridFrom | quote }}
+  {{- end }}
+
+  # OAuth client IDs (non-secret)
+  {{- if .Values.config.googleClientId }}
+  LAT_GOOGLE_CLIENT_ID: {{ .Values.config.googleClientId | quote }}
+  {{- end }}
+  {{- if .Values.config.githubClientId }}
+  LAT_GITHUB_CLIENT_ID: {{ .Values.config.githubClientId | quote }}
+  {{- end }}

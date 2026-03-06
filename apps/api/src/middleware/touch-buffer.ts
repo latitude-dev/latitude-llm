@@ -1,9 +1,6 @@
 import { ApiKeyId } from "@domain/shared"
 import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
-import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
-
-const logger = createLogger("touch-buffer")
 
 /**
  * Configuration options for TouchBuffer.
@@ -48,8 +45,6 @@ class TouchBuffer {
     this.maxBufferSize = config.maxBufferSize ?? 10000
 
     this.startFlushInterval()
-
-    logger.info(`TouchBuffer initialized with ${this.intervalMs}ms interval, max buffer size ${this.maxBufferSize}`)
   }
 
   /**
@@ -65,7 +60,6 @@ class TouchBuffer {
 
     // Force flush if buffer exceeds max size
     if (this.buffer.size >= this.maxBufferSize) {
-      logger.warn(`Buffer size ${this.buffer.size} exceeded max ${this.maxBufferSize}, forcing flush`)
       void this.flush()
     }
   }
@@ -104,10 +98,8 @@ class TouchBuffer {
       await Effect.runPromise(repo.touchBatch(keyIds))
 
       const duration = Date.now() - startTime
-      logger.info(`Flushed ${keyIds.length} touch updates in ${duration}ms`)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
-      logger.error(`Failed to flush touch updates: ${errorMessage}`)
 
       // Re-add failed keys to buffer for retry (with limit to prevent unbounded growth)
       for (const [keyId, timestamp] of batch) {
@@ -125,7 +117,6 @@ class TouchBuffer {
         for (let i = 0; i < entriesToRemove; i++) {
           this.buffer.delete(entries[i][0])
         }
-        logger.warn(`Trimmed ${entriesToRemove} oldest entries from buffer after flush failure`)
       }
     }
   }
@@ -137,8 +128,6 @@ class TouchBuffer {
    * touch updates are persisted.
    */
   async destroy(): Promise<void> {
-    logger.info(`Destroying TouchBuffer with ${this.buffer.size} pending updates`)
-
     if (this.flushInterval) {
       clearInterval(this.flushInterval)
       this.flushInterval = null
@@ -146,8 +135,6 @@ class TouchBuffer {
 
     // Final flush
     await this.flush()
-
-    logger.info("TouchBuffer destroyed")
   }
 
   private startFlushInterval(): void {
