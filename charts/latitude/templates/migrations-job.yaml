@@ -1,0 +1,48 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "latitude.fullname" . }}-migrations-{{ .Release.Revision }}
+  labels:
+    {{- include "latitude.componentLabels" (merge (dict "componentName" "migrations") .) | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.migrations.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "latitude.selectorLabels" (merge (dict "componentName" "migrations") .) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "latitude.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ include "latitude.image" (dict "component" .Values.migrations "global" .Values.global "chart" .Chart) }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "Running Postgres migrations..."
+              pnpm --filter @platform/db-postgres pg:migrate
+              echo "Running ClickHouse migrations..."
+              pnpm --filter @platform/db-clickhouse ch:up
+              echo "Running Weaviate migrations..."
+              pnpm --filter @platform/db-weaviate wv:migrate
+              echo "All migrations complete."
+          envFrom:
+            - configMapRef:
+                name: {{ include "latitude.configmapName" . }}
+            - secretRef:
+                name: {{ include "latitude.secretName" . }}
+          resources:
+            {{- toYaml .Values.migrations.resources | nindent 12 }}
+{{- end }}

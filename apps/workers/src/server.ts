@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs"
+import { createServer } from "node:http"
 import { fileURLToPath } from "node:url"
 import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import {
@@ -22,8 +23,24 @@ if (existsSync(envFilePath)) {
 
 const pgPool = getPostgresPool(10)
 const logger = createLogger("workers")
+let ready = false
 
-// Simple event handler that logs events (placeholder for actual side effect processing)
+const healthPort = Number(process.env.LAT_WORKERS_HEALTH_PORT) || 9090
+const healthServer = createServer((req, res) => {
+  if (req.url === "/health" && req.method === "GET") {
+    const status = ready ? 200 : 503
+    res.writeHead(status, { "Content-Type": "application/json" })
+    res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
+  } else {
+    res.writeHead(404)
+    res.end()
+  }
+})
+
+healthServer.listen(healthPort, () => {
+  logger.info(`workers health check listening on :${healthPort}/health`)
+})
+
 const eventHandler = {
   handle: (event: {
     id: string
@@ -36,18 +53,14 @@ const eventHandler = {
     }),
 }
 
-// Initialize workers asynchronously
 const initializeWorkers = async () => {
-  // Load Redpanda configuration
   const kafkaConfig = Effect.runSync(loadKafkaConfig())
   const kafkaClient = createKafkaClient(kafkaConfig)
 
-  // Create Redpanda publisher (async initialization)
   const eventsPublisher = await createRedpandaEventsPublisher({
     kafka: kafkaClient,
   })
 
-  // Create outbox consumer (polls Postgres outbox and publishes to Redpanda)
   const outboxConsumer = createPollingOutboxConsumer(
     {
       pool: pgPool,
@@ -57,19 +70,18 @@ const initializeWorkers = async () => {
     eventsPublisher,
   )
 
-  // Create Redpanda event consumer (consumes from Redpanda and processes events)
   const redpandaConsumer = createRedpandaEventsConsumer({
     kafka: kafkaClient,
     groupId: kafkaConfig.groupId,
   })
 
-  // Create span ingestion worker (consumes from span-ingestion topic and writes to ClickHouse)
   const spanIngestionWorker = createSpanIngestionWorker(kafkaClient, `${kafkaConfig.groupId}-span-ingestion`)
 
-  // Start consumers
   outboxConsumer.start()
   await redpandaConsumer.start(eventHandler)
   await spanIngestionWorker.start()
+
+  ready = true
   logger.info("workers ready - outbox consumer and Redpanda consumer started")
 
   return { outboxConsumer, redpandaConsumer, spanIngestionWorker }
@@ -80,9 +92,11 @@ const workersPromise = initializeWorkers().catch((error) => {
   process.exit(1)
 })
 
-// Graceful shutdown
 process.on("SIGINT", async () => {
   logger.info("shutting down workers...")
+  ready = false
+  healthServer.close()
+
   try {
     const { outboxConsumer, redpandaConsumer, spanIngestionWorker } = await workersPromise
     await outboxConsumer.stop()
@@ -91,7 +105,7 @@ process.on("SIGINT", async () => {
   } catch (error) {
     logger.error("Error during shutdown (workers may not have started)", error)
   }
-  await pgPool.end()
 
+  await pgPool.end()
   process.exit(0)
 })

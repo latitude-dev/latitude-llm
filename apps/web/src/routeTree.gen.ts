@@ -16,6 +16,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthConfirmRouteImport } from './routes/auth/confirm'
 import { Route as AuthCliRouteImport } from './routes/auth/cli'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects/$projectId'
@@ -58,6 +59,11 @@ const AuthConfirmRoute = AuthConfirmRouteImport.update({
 const AuthCliRoute = AuthCliRouteImport.update({
   id: '/auth/cli',
   path: '/auth/cli',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -121,6 +127,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/cli': typeof AuthCliRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/cli': typeof AuthCliRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/': typeof AuthenticatedIndexRoute
@@ -155,6 +163,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/auth/cli': typeof AuthCliRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -175,6 +184,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/settings'
+    | '/api/health'
     | '/auth/cli'
     | '/auth/confirm'
     | '/projects/$projectId'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/settings'
+    | '/api/health'
     | '/auth/cli'
     | '/auth/confirm'
     | '/'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_authenticated/settings'
+    | '/api/health'
     | '/auth/cli'
     | '/auth/confirm'
     | '/_authenticated/'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   AuthCliRoute: typeof AuthCliRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/cli'
       fullPath: '/auth/cli'
       preLoaderRoute: typeof AuthCliRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/settings': {
@@ -400,6 +420,7 @@ const rootRouteChildren: RootRouteChildren = {
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiHealthRoute: ApiHealthRoute,
   AuthCliRoute: AuthCliRoute,
   AuthConfirmRoute: AuthConfirmRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

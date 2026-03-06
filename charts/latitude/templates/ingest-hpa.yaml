@@ -1,0 +1,22 @@
+{{- if and .Values.ingest.enabled .Values.ingest.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "latitude.fullname" . }}-ingest
+  labels:
+    {{- include "latitude.componentLabels" (merge (dict "componentName" "ingest") .) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "latitude.fullname" . }}-ingest
+  minReplicas: {{ .Values.ingest.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.ingest.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ingest.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

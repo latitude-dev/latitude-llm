@@ -1,0 +1,525 @@
+# -- Global settings shared across all services
+global:
+  # -- Node environment (production, staging, development)
+  nodeEnv: production
+
+  # -- Docker image settings.
+  # The Dockerfile uses multi-stage targets: api, web, ingest, workers, migrations.
+  # Build per-service images like:
+  #   docker build --target api -t latitude-llm-api:latest .
+  #   docker build --target web --build-arg VITE_LAT_API_URL=... -t latitude-llm-web:latest .
+  image:
+    # -- Container image registry
+    registry: ""
+    # -- Default container image repository (override per-service via <service>.image.repository)
+    repository: latitude-llm
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+    # -- Image tag (defaults to Chart appVersion)
+    tag: ""
+  # -- Image pull secrets for private registries
+  imagePullSecrets: []
+
+  # -- Service URLs (used for inter-service communication and CORS)
+  urls:
+    # -- Public URL for the web frontend
+    web: "https://app.latitude.example.com"
+    # -- Public URL for the API
+    api: "https://api.latitude.example.com"
+    # -- Public URL for the ingest service
+    ingest: "https://ingest.latitude.example.com"
+
+# =============================================================================
+# Secret Management
+# =============================================================================
+# Secrets can be provided in two ways:
+#
+# 1. Inline values (for development/testing only):
+#    Set values directly under `secrets.*`. A Kubernetes Secret will be created
+#    from these values.
+#
+# 2. External secret (recommended for production):
+#    Set `existingSecret` to the name of a pre-existing Kubernetes Secret.
+#    When set, all inline secret values are ignored.
+#    The external secret must contain the keys listed in each section below.
+# =============================================================================
+
+# -- Name of an existing Kubernetes Secret containing ALL secret values.
+# When set, inline secret values are ignored entirely.
+# Required keys: LAT_DATABASE_URL, LAT_ADMIN_DATABASE_URL,
+#   LAT_CLICKHOUSE_PASSWORD, CLICKHOUSE_PASSWORD (same value, used by goose),
+#   LAT_REDIS_HOST, LAT_REDIS_PORT,
+#   LAT_API_KEY_ENCRYPTION_KEY, LAT_BETTER_AUTH_SECRET
+# Optional keys (depending on features enabled): LAT_WEAVIATE_API_KEY,
+#   LAT_KAFKA_SASL_USERNAME, LAT_KAFKA_SASL_PASSWORD,
+#   LAT_STORAGE_S3_ACCESS_KEY_ID, LAT_STORAGE_S3_SECRET_ACCESS_KEY,
+#   LAT_MAILGUN_API_KEY, LAT_MAILGUN_SMTP_PASS, LAT_SMTP_PASS,
+#   LAT_SENDGRID_API_KEY, LAT_GOOGLE_CLIENT_SECRET,
+#   LAT_GITHUB_CLIENT_SECRET, LAT_STRIPE_SECRET_KEY, LAT_STRIPE_WEBHOOK_SECRET
+existingSecret: ""
+
+# -- Inline secret values (ignored when existingSecret is set)
+secrets:
+  # -- Postgres connection string (runtime user, subject to RLS)
+  databaseUrl: ""
+  # -- Postgres admin connection string (superuser, bypasses RLS; used by migrations and cross-org queries)
+  adminDatabaseUrl: ""
+  # -- ClickHouse password
+  clickhousePassword: ""
+  # -- Redis host
+  redisHost: ""
+  # -- Redis port
+  redisPort: "6379"
+  # -- 32-byte hex key for AES-256-GCM API key encryption
+  apiKeyEncryptionKey: ""
+  # -- Better Auth secret (random 32+ byte hex)
+  betterAuthSecret: ""
+  # -- Weaviate API key
+  weaviateApiKey: ""
+
+  # -- Kafka/Redpanda SASL credentials (optional, required when SASL is enabled)
+  kafkaSaslUsername: ""
+  kafkaSaslPassword: ""
+
+  # -- Object storage S3 credentials (required when config.storageDriver is "s3")
+  storageS3AccessKeyId: ""
+  storageS3SecretAccessKey: ""
+
+  # -- Email provider secrets (set the ones matching your provider)
+  mailgunApiKey: ""
+  mailgunSmtpPass: ""
+  smtpPass: ""
+  sendgridApiKey: ""
+
+  # -- OAuth provider secrets
+  googleClientSecret: ""
+  githubClientSecret: ""
+
+  # -- Stripe secrets
+  stripeSecretKey: ""
+  stripeWebhookSecret: ""
+
+# =============================================================================
+# Non-secret configuration
+# =============================================================================
+config:
+  # -- Postgres connection pool settings
+  pgPoolMax: "20"
+  pgIdleTimeoutMs: "30000"
+  pgConnectTimeoutMs: "10000"
+
+  # -- ClickHouse connection
+  clickhouseUrl: "http://clickhouse:8123"
+  clickhouseUser: "latitude"
+  clickhouseDb: "latitude"
+
+  # -- Weaviate connection
+  weaviateHost: "weaviate"
+  weaviateHttpPort: "8099"
+  weaviateGrpcPort: "50051"
+  weaviateUrl: ""
+
+  # -- Kafka/Redpanda connection
+  kafkaBrokers: "redpanda:9092"
+  kafkaClientId: "latitude-app"
+  kafkaConsumerGroupId: "latitude-event-processors-v1"
+  kafkaSsl: "false"
+
+  # -- Object storage
+  # Driver: "fs" for local filesystem (needs a PVC), "s3" for S3-compatible storage
+  storageDriver: "s3"
+  storageS3Bucket: ""
+  storageS3Region: ""
+  storageS3Endpoint: ""
+  # Only used when storageDriver is "fs" (not recommended in K8s without a PVC)
+  storageFsRoot: ""
+
+  # -- ClickHouse migration connection (native protocol, used by goose)
+  clickhouseMigrationUrl: "clickhouse://clickhouse:9000"
+  clickhouseClusterEnabled: "false"
+
+  # -- Trusted origins (comma-separated, for CSRF protection)
+  trustedOrigins: ""
+  # -- CORS allowed origins (comma-separated)
+  corsAllowedOrigins: ""
+
+  # -- Better Auth URL (typically the API URL)
+  betterAuthUrl: ""
+
+  # -- Email: Mailgun settings
+  mailgunDomain: ""
+  mailgunFrom: ""
+  mailgunRegion: "us"
+  mailgunSmtpHost: ""
+  mailgunSmtpPort: ""
+  mailgunSmtpUser: ""
+
+  # -- Email: SMTP settings
+  smtpHost: ""
+  smtpPort: ""
+  smtpUser: ""
+  smtpFrom: ""
+
+  # -- Email: SendGrid settings
+  sendgridFrom: ""
+
+  # -- OAuth provider client IDs
+  googleClientId: ""
+  githubClientId: ""
+
+# =============================================================================
+# Web service (TanStack Start SSR frontend)
+# =============================================================================
+web:
+  # -- Enable the web service
+  enabled: true
+  # -- Number of replicas
+  replicaCount: 2
+
+  # -- Override image settings for web (falls back to global.image)
+  image:
+    repository: ""
+    tag: ""
+
+  # -- Container port
+  port: 3000
+
+  # -- Resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # -- Liveness probe configuration
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Readiness probe configuration
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+
+  # -- Ingress configuration
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: app.latitude.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod labels
+  podLabels: {}
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Additional environment variables (list of {name, value} or {name, valueFrom})
+  extraEnv: []
+
+  # -- Pod disruption budget
+  pdb:
+    enabled: false
+    minAvailable: 1
+
+  # -- Autoscaling (HPA)
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+# =============================================================================
+# API service (Hono HTTP server)
+# =============================================================================
+api:
+  # -- Enable the API service
+  enabled: true
+  # -- Number of replicas
+  replicaCount: 2
+
+  # -- Override image settings for api (falls back to global.image)
+  image:
+    repository: ""
+    tag: ""
+
+  # -- Container port
+  port: 3001
+
+  # -- Resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # -- Liveness probe configuration
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Readiness probe configuration
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+
+  # -- Ingress configuration
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: api.latitude.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod labels
+  podLabels: {}
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Additional environment variables
+  extraEnv: []
+
+  # -- Pod disruption budget
+  pdb:
+    enabled: false
+    minAvailable: 1
+
+  # -- Autoscaling (HPA)
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+# =============================================================================
+# Workers service (Redpanda/Kafka background job processor)
+# =============================================================================
+workers:
+  # -- Enable the workers service
+  enabled: true
+  # -- Number of replicas
+  replicaCount: 1
+
+  # -- Override image settings for workers (falls back to global.image)
+  image:
+    repository: ""
+    tag: ""
+
+  # -- Health check port (lightweight HTTP server inside the workers process)
+  healthPort: 9090
+
+  # -- Resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  # -- Liveness probe configuration
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: health
+    initialDelaySeconds: 15
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Readiness probe configuration (returns 503 until worker is ready)
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: health
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod labels
+  podLabels: {}
+  # -- Additional environment variables
+  extraEnv: []
+
+# =============================================================================
+# Ingest service (Hono HTTP server for telemetry ingestion)
+# =============================================================================
+ingest:
+  # -- Enable the ingest service
+  enabled: true
+  # -- Number of replicas
+  replicaCount: 2
+
+  # -- Override image settings for ingest (falls back to global.image)
+  image:
+    repository: ""
+    tag: ""
+
+  # -- Container port
+  port: 3002
+
+  # -- Resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # -- Liveness probe configuration
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Readiness probe configuration
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+
+  # -- Ingress configuration
+  ingress:
+    enabled: false
+    className: ""
+    annotations: {}
+    hosts:
+      - host: ingest.latitude.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  # -- Pod annotations
+  podAnnotations: {}
+  # -- Pod labels
+  podLabels: {}
+  # -- Node selector
+  nodeSelector: {}
+  # -- Tolerations
+  tolerations: []
+  # -- Affinity rules
+  affinity: {}
+  # -- Additional environment variables
+  extraEnv: []
+
+  # -- Pod disruption budget
+  pdb:
+    enabled: false
+    minAvailable: 1
+
+  # -- Autoscaling (HPA)
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+
+# =============================================================================
+# Database migrations (run as a Kubernetes Job before deployment)
+# =============================================================================
+migrations:
+  # -- Enable the migration job (runs on install/upgrade)
+  enabled: true
+  # -- Override image for migrations (falls back to global.image)
+  image:
+    repository: ""
+    tag: ""
+  # -- Backoff limit for the migration job
+  backoffLimit: 3
+  # -- Time-to-live after completion (seconds). Set 0 to clean up immediately.
+  ttlSecondsAfterFinished: 300
+  # -- Resource requests and limits
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# =============================================================================
+# Service account
+# =============================================================================
+serviceAccount:
+  # -- Create a service account
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- Name override (defaults to release fullname)
+  name: ""

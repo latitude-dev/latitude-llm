@@ -1,0 +1,17 @@
+{{- if .Values.ingest.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "latitude.fullname" . }}-ingest
+  labels:
+    {{- include "latitude.componentLabels" (merge (dict "componentName" "ingest") .) | nindent 4 }}
+spec:
+  type: {{ .Values.ingest.service.type }}
+  ports:
+    - port: {{ .Values.ingest.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "latitude.selectorLabels" (merge (dict "componentName" "ingest") .) | nindent 4 }}
+{{- end }}
