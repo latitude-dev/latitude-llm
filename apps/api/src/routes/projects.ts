@@ -1,5 +1,5 @@
 import { type CreateProjectInput, createProjectUseCase, updateProjectUseCase } from "@domain/projects"
-import { ProjectId, generateId } from "@domain/shared"
+import { ProjectId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { BadRequestError } from "@repo/utils"
 import { Effect } from "effect"
@@ -40,7 +40,6 @@ export const createProjectsRoutes = () => {
     const description = typeof body.description === "string" ? body.description : undefined
 
     const input: CreateProjectInput = {
-      id: ProjectId(generateId()),
       organizationId,
       name: body.name,
       ...(description !== undefined && { description }),

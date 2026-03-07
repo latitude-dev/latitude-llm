@@ -2,7 +2,7 @@ import { createMembership, createOrganizationUseCase } from "@domain/organizatio
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { CreateOrganizationError } from "@domain/organizations"
 import type { RepositoryError } from "@domain/shared"
-import { OrganizationId, UserId, generateId } from "@domain/shared"
+import { OrganizationId, UserId } from "@domain/shared"
 import { Data, Effect } from "effect"
 import type { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import type { AuthUserRepository } from "../ports/auth-user-repository.ts"
@@ -100,14 +100,12 @@ export const completeAuthIntentUseCase = (deps: {
         }
 
         const organization = yield* createOrganizationUseCase(deps.organizations)({
-          id: OrganizationId(generateId()),
           name: organizationName,
           creatorId: UserId(input.session.userId),
         })
 
         yield* deps.memberships.save(
           createMembership({
-            id: generateId(),
             organizationId: organization.id,
             userId: UserId(input.session.userId),
             role: "owner",
@@ -139,7 +137,6 @@ export const completeAuthIntentUseCase = (deps: {
 
         yield* deps.memberships.save(
           createMembership({
-            id: generateId(),
             organizationId: OrganizationId(organizationId),
             userId: UserId(input.session.userId),
             role: "member",

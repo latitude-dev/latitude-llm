@@ -1,4 +1,4 @@
-import type { OrganizationId, SubscriptionId, UserId } from "@domain/shared"
+import { OrganizationId, type SubscriptionId, type UserId, generateId } from "@domain/shared"
 
 /**
  * Organization entity - represents a tenant/workspace.
@@ -23,7 +23,7 @@ export interface Organization {
  * Factory function to create a new Organization.
  */
 export const createOrganization = (params: {
-  id: OrganizationId
+  id?: OrganizationId | undefined
   name: string
   slug: string
   logo?: string | null
@@ -36,7 +36,7 @@ export const createOrganization = (params: {
 }): Organization => {
   const now = new Date()
   return {
-    id: params.id,
+    id: params.id ?? OrganizationId(generateId()),
     name: params.name,
     slug: params.slug,
     logo: params.logo ?? null,

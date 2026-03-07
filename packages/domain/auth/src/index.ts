@@ -7,6 +7,8 @@ export type {
   SignupIntentData,
 } from "./types.ts"
 
+export { createAuthIntent } from "./entities/auth-intent.ts"
+
 export {
   assertIntentCanBeCompleted,
   createInviteIntentData,

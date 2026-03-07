@@ -1,6 +1,6 @@
 import { createProjectUseCase, updateProjectUseCase } from "@domain/projects"
 import type { Project } from "@domain/projects"
-import { OrganizationId, ProjectId, UserId, generateId } from "@domain/shared"
+import { OrganizationId, ProjectId, UserId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
@@ -64,7 +64,6 @@ export const createProject = createServerFn({ method: "POST" })
 
       return Effect.runPromise(
         createProjectUseCase(projectsRepo)({
-          id: ProjectId(generateId()),
           organizationId: OrganizationId(organizationId),
           name: data.name,
           ...(data.description !== undefined ? { description: data.description } : {}),

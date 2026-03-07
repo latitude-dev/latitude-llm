@@ -5,7 +5,7 @@ import {
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
-import { ApiKeyId, generateId } from "@domain/shared"
+import { ApiKeyId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
 import { BadRequestError } from "@repo/utils"
@@ -57,7 +57,6 @@ export const createApiKeysRoutes = () => {
     }
 
     const input: GenerateApiKeyInput = {
-      id: ApiKeyId(generateId()),
       organizationId,
       name: body.name,
     }
