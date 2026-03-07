@@ -219,8 +219,19 @@ describe("completeAuthIntentUseCase", () => {
     expect(markConsumedArg.createdOrganizationId).toBeTypeOf("string")
   })
 
-  it("marks intent as consumed without organization provisioning for non-signup flows", async () => {
-    const deps = createDeps({ intent: createIntent({ type: "invite" }) })
+  it("marks intent as consumed with membership provisioning for invite flows", async () => {
+    const deps = createDeps({
+      intent: createIntent({
+        type: "invite",
+        data: {
+          invite: {
+            organizationId: "org-1",
+            organizationName: "Test Org",
+            inviterName: "Test User",
+          },
+        },
+      }),
+    })
     const execute = completeAuthIntentUseCase(deps)
 
     const result = await Effect.runPromise(
@@ -236,7 +247,7 @@ describe("completeAuthIntentUseCase", () => {
     expect(result).toEqual({ completed: true })
     expect(deps.markConsumed).toHaveBeenCalledWith({ intentId: "intent-1" })
     expect(deps.saveOrganization).not.toHaveBeenCalled()
-    expect(deps.saveMembership).not.toHaveBeenCalled()
-    expect(deps.setNameIfMissing).not.toHaveBeenCalled()
+    expect(deps.saveMembership).toHaveBeenCalled()
+    expect(deps.setNameIfMissing).toHaveBeenCalled()
   })
 })

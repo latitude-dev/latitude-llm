@@ -16,7 +16,7 @@ import type { ApiKeyRepository } from "../ports/api-key-repository.ts"
  * 6. Returns the created API key (with plaintext token for the caller to show once)
  */
 export interface GenerateApiKeyInput {
-  readonly id: ApiKeyId
+  readonly id?: ApiKeyId
   readonly organizationId: OrganizationId
   readonly name: string
 }

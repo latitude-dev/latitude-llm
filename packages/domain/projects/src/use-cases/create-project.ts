@@ -14,7 +14,7 @@ import type { ProjectRepository } from "../ports/project-repository.ts"
  * 5. Returns the created project
  */
 export interface CreateProjectInput {
-  readonly id: ProjectId
+  readonly id?: ProjectId
   readonly organizationId: OrganizationId
   readonly name: string
   readonly description?: string

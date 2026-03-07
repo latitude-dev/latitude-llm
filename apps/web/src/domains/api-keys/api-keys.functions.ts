@@ -1,6 +1,6 @@
 import { generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
 import type { ApiKey } from "@domain/api-keys"
-import { ApiKeyId, OrganizationId, generateId } from "@domain/shared"
+import { ApiKeyId, OrganizationId } from "@domain/shared"
 import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
@@ -62,7 +62,6 @@ export const createApiKey = createServerFn({ method: "POST" })
 
       return Effect.runPromise(
         generateApiKeyUseCase(apiKeysRepo)({
-          id: ApiKeyId(generateId()),
           organizationId: OrganizationId(organizationId),
           name: data.name,
         }),

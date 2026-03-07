@@ -1,5 +1,5 @@
-import { generateId } from "@domain/shared"
 import { Effect } from "effect"
+import { createAuthIntent } from "../entities/auth-intent.ts"
 import type { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import type { AuthUserRepository } from "../ports/auth-user-repository.ts"
 import type { AuthIntent } from "../types.ts"
@@ -18,16 +18,13 @@ export const createSignupIntentUseCase = (deps: {
       })
       const existingUser = yield* deps.users.findByEmail(email)
 
-      const intent: AuthIntent = {
-        id: generateId(),
+      const intent = createAuthIntent({
         type: "signup",
         email,
         data: signupData,
         existingAccountAtRequest: existingUser !== null,
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        consumedAt: null,
-        createdOrganizationId: null,
-      }
+      })
 
       yield* deps.intents.save(intent)
 

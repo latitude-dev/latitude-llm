@@ -15,7 +15,7 @@ import { generateUniqueOrganizationSlugUseCase } from "./generate-unique-organiz
  * 5. Returns the created organization
  */
 export interface CreateOrganizationInput {
-  readonly id: OrganizationId
+  readonly id?: OrganizationId
   readonly name: string
   readonly creatorId: UserId
 }

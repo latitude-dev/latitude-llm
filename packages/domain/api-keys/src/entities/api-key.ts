@@ -1,4 +1,4 @@
-import type { ApiKeyId, OrganizationId } from "@domain/shared"
+import { ApiKeyId, type OrganizationId, generateId } from "@domain/shared"
 
 /**
  * API Key entity - authenticates organization-bound requests.
@@ -27,7 +27,7 @@ export interface ApiKey {
  * Factory function to create a new API Key.
  */
 export const createApiKey = (params: {
-  id: ApiKeyId
+  id?: ApiKeyId | undefined
   organizationId: OrganizationId
   token: string
   tokenHash: string
@@ -39,7 +39,7 @@ export const createApiKey = (params: {
 }): ApiKey => {
   const now = new Date()
   return {
-    id: params.id,
+    id: params.id ?? ApiKeyId(generateId()),
     organizationId: params.organizationId,
     token: params.token,
     tokenHash: params.tokenHash,

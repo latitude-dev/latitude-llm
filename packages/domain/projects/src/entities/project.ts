@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, UserId } from "@domain/shared"
+import { type OrganizationId, ProjectId, type UserId, generateId } from "@domain/shared"
 
 /**
  * Project entity - represents a project within an organization.
@@ -22,7 +22,7 @@ export interface Project {
  * Factory function to create a new Project.
  */
 export const createProject = (params: {
-  id: ProjectId
+  id?: ProjectId | undefined
   organizationId: OrganizationId
   name: string
   slug: string
@@ -34,7 +34,7 @@ export const createProject = (params: {
 }): Project => {
   const now = new Date()
   return {
-    id: params.id,
+    id: params.id ?? ProjectId(generateId()),
     organizationId: params.organizationId,
     name: params.name,
     slug: params.slug,

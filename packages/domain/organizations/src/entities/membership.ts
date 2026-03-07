@@ -1,3 +1,4 @@
+import { generateId } from "@domain/shared"
 import type { OrganizationId, UserId } from "@domain/shared"
 
 /**
@@ -27,7 +28,7 @@ export const isAdminRole = (role: MembershipRole): boolean => role === "owner" |
  * Factory function to create a Membership.
  */
 export const createMembership = (params: {
-  id: string
+  id?: string | undefined
   organizationId: OrganizationId
   userId: UserId
   role: MembershipRole
@@ -36,7 +37,7 @@ export const createMembership = (params: {
   createdAt?: Date
 }): Membership => {
   return {
-    id: params.id,
+    id: params.id ?? generateId(),
     organizationId: params.organizationId,
     userId: params.userId,
     role: params.role,
