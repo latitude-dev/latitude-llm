@@ -42,7 +42,7 @@ const SELECT_UNPUBLISHED_EVENTS = `
     published_at,
     occurred_at,
     created_at
-  FROM outbox_events
+  FROM latitude.outbox_events
   WHERE published = false
   ORDER BY created_at ASC
   LIMIT $1
@@ -50,7 +50,7 @@ const SELECT_UNPUBLISHED_EVENTS = `
 `
 
 const MARK_EVENTS_PUBLISHED = `
-  UPDATE outbox_events
+  UPDATE latitude.outbox_events
   SET published = true, published_at = NOW()
   WHERE id = ANY($1::text[])
 `
