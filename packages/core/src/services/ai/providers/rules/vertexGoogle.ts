@@ -1,4 +1,5 @@
 import { enforceAllSystemMessagesFirst } from './helpers/enforceAllSystemMessagesFirst'
+import { mergeConsecutiveToolMessages } from './helpers/mergeConsecutiveToolMessages'
 import { AppliedRules, ProviderRules } from './types'
 
 export function applyVertexGoogleRules(
@@ -9,10 +10,11 @@ export function applyVertexGoogleRules(
     message:
       'Google Vertex only supports system messages at the beggining of the conversation. All other system messages have been converted to user messages.',
   })
+  const messages = mergeConsecutiveToolMessages(rule.messages)
 
-  const roles = rule.messages.map((m) => m.role)
+  const roles = messages.map((m) => m.role)
   const onlySystemMessages = roles.every((r) => r === 'system')
-  if (!onlySystemMessages) return rule
+  if (!onlySystemMessages) return { ...rule, messages }
 
   const rules = [
     ...rule.rules,
@@ -24,6 +26,7 @@ export function applyVertexGoogleRules(
   ]
   return {
     ...rule,
+    messages,
     rules,
   }
 }
