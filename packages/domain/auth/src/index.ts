@@ -10,7 +10,6 @@ export type {
 export { createAuthIntent } from "./entities/auth-intent.ts"
 
 export {
-  assertIntentCanBeCompleted,
   createInviteIntentData,
   createSignupIntentData,
   normalizeEmail,
@@ -27,7 +26,6 @@ export { createInviteIntentUseCase } from "./use-cases/create-invite-intent.ts"
 export { createSignupIntentUseCase } from "./use-cases/create-signup-intent.ts"
 export {
   completeAuthIntentUseCase,
-  AuthIntentNotFoundError,
   AuthIntentExpiredError,
   AuthIntentEmailMismatchError,
   MissingSignupProvisioningDataError,

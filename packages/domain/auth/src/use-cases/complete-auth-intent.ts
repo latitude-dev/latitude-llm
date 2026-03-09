@@ -1,19 +1,13 @@
 import { createMembership, createOrganizationUseCase } from "@domain/organizations"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { CreateOrganizationError } from "@domain/organizations"
-import type { RepositoryError } from "@domain/shared"
+import type { NotFoundError, RepositoryError } from "@domain/shared"
 import { OrganizationId, UserId } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Data, Effect, Match } from "effect"
 import type { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import type { AuthUserRepository } from "../ports/auth-user-repository.ts"
+import type { AuthIntent, AuthIntentType } from "../types.ts"
 import { normalizeEmail, shouldCreateOrganizationForIntent } from "./auth-intent-policy.ts"
-
-export class AuthIntentNotFoundError extends Data.TaggedError("AuthIntentNotFoundError")<{
-  readonly intentId: string
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Invalid authentication intent"
-}
 
 export class AuthIntentExpiredError extends Data.TaggedError("AuthIntentExpiredError")<{
   readonly intentId: string
@@ -46,13 +40,19 @@ export class MissingInviteDataError extends Data.TaggedError("MissingInviteDataE
 }
 
 export type CompleteAuthIntentError =
-  | AuthIntentNotFoundError
+  | NotFoundError
   | AuthIntentExpiredError
   | AuthIntentEmailMismatchError
   | MissingSignupProvisioningDataError
   | MissingInviteDataError
   | CreateOrganizationError
   | RepositoryError
+
+interface SessionInput {
+  readonly userId: string
+  readonly email: string
+  readonly name: string | null
+}
 
 export const completeAuthIntentUseCase = (deps: {
   readonly intents: AuthIntentRepository
@@ -62,20 +62,14 @@ export const completeAuthIntentUseCase = (deps: {
 }) => {
   return (input: {
     intentId: string
-    session: {
-      userId: string
-      email: string
-      name: string | null
-    }
-  }): Effect.Effect<{ completed: true }, CompleteAuthIntentError> => {
+    session: SessionInput
+    now?: Date
+  }): Effect.Effect<void, CompleteAuthIntentError> => {
     return Effect.gen(function* () {
+      const now = input.now ?? new Date()
       const intent = yield* deps.intents.findById(input.intentId)
 
-      if (!intent) {
-        return yield* new AuthIntentNotFoundError({ intentId: input.intentId })
-      }
-
-      if (intent.expiresAt.getTime() < Date.now()) {
+      if (intent.expiresAt.getTime() < now.getTime()) {
         return yield* new AuthIntentExpiredError({ intentId: intent.id })
       }
 
@@ -88,77 +82,115 @@ export const completeAuthIntentUseCase = (deps: {
       }
 
       if (intent.consumedAt) {
-        return { completed: true as const }
+        return
       }
 
-      if (shouldCreateOrganizationForIntent(intent)) {
-        const signupName = intent.data.signup?.name
-        const organizationName = intent.data.signup?.organizationName
-
-        if (!signupName || !organizationName) {
-          return yield* new MissingSignupProvisioningDataError({ intentId: intent.id })
-        }
-
-        const organization = yield* createOrganizationUseCase(deps.organizations)({
-          name: organizationName,
-          creatorId: UserId(input.session.userId),
-        })
-
-        yield* deps.memberships.save(
-          createMembership({
-            organizationId: organization.id,
-            userId: UserId(input.session.userId),
-            role: "owner",
-            confirmedAt: new Date(),
-          }),
-        )
-
-        if ((!input.session.name || input.session.name.trim().length === 0) && signupName.trim().length > 0) {
-          yield* deps.users.setNameIfMissing({
-            userId: input.session.userId,
-            name: signupName,
-          })
-        }
-
-        yield* deps.intents.markConsumed({
-          intentId: intent.id,
-          createdOrganizationId: organization.id,
-        })
-
-        return { completed: true as const }
-      }
-
-      if (intent.type === "invite") {
-        const organizationId = intent.data.invite?.organizationId
-
-        if (!organizationId) {
-          return yield* new MissingInviteDataError({ intentId: intent.id })
-        }
-
-        yield* deps.memberships.save(
-          createMembership({
-            organizationId: OrganizationId(organizationId),
-            userId: UserId(input.session.userId),
-            role: "member",
-            confirmedAt: new Date(),
-          }),
-        )
-
-        if (input.session.name && input.session.name.trim().length > 0) {
-          yield* deps.users.setNameIfMissing({
-            userId: input.session.userId,
-            name: input.session.name,
-          })
-        }
-
-        yield* deps.intents.markConsumed({ intentId: intent.id })
-
-        return { completed: true as const }
-      }
-
-      yield* deps.intents.markConsumed({ intentId: intent.id })
-
-      return { completed: true as const }
+      yield* handleIntentByType(deps, intent, input.session)
     })
   }
 }
+
+const handleIntentByType = (
+  deps: {
+    readonly intents: AuthIntentRepository
+    readonly organizations: OrganizationRepository
+    readonly memberships: MembershipRepository
+    readonly users: AuthUserRepository
+  },
+  intent: AuthIntent,
+  session: SessionInput,
+): Effect.Effect<void, CompleteAuthIntentError> => {
+  const type: AuthIntentType = intent.type
+
+  return Match.value(type).pipe(
+    Match.when("signup", () => handleSignup(deps, intent, session)),
+    Match.when("invite", () => handleInvite(deps, intent, session)),
+    Match.when("login", () => deps.intents.markConsumed({ intentId: intent.id })),
+    Match.exhaustive,
+  )
+}
+
+const handleSignup = (
+  deps: {
+    readonly intents: AuthIntentRepository
+    readonly organizations: OrganizationRepository
+    readonly memberships: MembershipRepository
+    readonly users: AuthUserRepository
+  },
+  intent: AuthIntent,
+  session: SessionInput,
+): Effect.Effect<void, CompleteAuthIntentError> =>
+  Effect.gen(function* () {
+    if (!shouldCreateOrganizationForIntent(intent)) {
+      yield* deps.intents.markConsumed({ intentId: intent.id })
+      return
+    }
+
+    const signupName = intent.data.signup?.name
+    const organizationName = intent.data.signup?.organizationName
+
+    if (!signupName || !organizationName) {
+      return yield* new MissingSignupProvisioningDataError({ intentId: intent.id })
+    }
+
+    const organization = yield* createOrganizationUseCase(deps.organizations)({
+      name: organizationName,
+      creatorId: UserId(session.userId),
+    })
+
+    yield* deps.memberships.save(
+      createMembership({
+        organizationId: organization.id,
+        userId: UserId(session.userId),
+        role: "owner",
+        confirmedAt: new Date(),
+      }),
+    )
+
+    if ((!session.name || session.name.trim().length === 0) && signupName.trim().length > 0) {
+      yield* deps.users.setNameIfMissing({
+        userId: session.userId,
+        name: signupName,
+      })
+    }
+
+    yield* deps.intents.markConsumed({
+      intentId: intent.id,
+      createdOrganizationId: organization.id,
+    })
+  })
+
+const handleInvite = (
+  deps: {
+    readonly intents: AuthIntentRepository
+    readonly memberships: MembershipRepository
+    readonly users: AuthUserRepository
+  },
+  intent: AuthIntent,
+  session: SessionInput,
+): Effect.Effect<void, MissingInviteDataError | RepositoryError> =>
+  Effect.gen(function* () {
+    const organizationId = intent.data.invite?.organizationId
+
+    if (!organizationId) {
+      return yield* new MissingInviteDataError({ intentId: intent.id })
+    }
+
+    yield* deps.memberships.save(
+      createMembership({
+        organizationId: OrganizationId(organizationId),
+        userId: UserId(session.userId),
+        role: "member",
+        confirmedAt: new Date(),
+      }),
+    )
+
+    if (session.name && session.name.trim().length > 0) {
+      yield* deps.users.setNameIfMissing({
+        userId: session.userId,
+        name: session.name,
+      })
+    }
+
+    yield* deps.intents.markConsumed({ intentId: intent.id })
+  })

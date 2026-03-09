@@ -78,7 +78,9 @@ export const getAuthIntentInfo = createServerFn({ method: "POST" })
 
     return runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
-      const intent = await Effect.runPromise(intents.findById(data.intentId))
+      const intent = await Effect.runPromise(
+        intents.findById(data.intentId).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+      )
 
       if (!intent) {
         return { type: "login" as const, needsName: false, organizationName: null }
