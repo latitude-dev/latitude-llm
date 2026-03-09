@@ -1,5 +1,5 @@
 import type { AuthIntent, AuthIntentRepository } from "@domain/auth"
-import { toRepositoryError } from "@domain/shared"
+import { NotFoundError, toRepositoryError } from "@domain/shared"
 import { and, eq, gt, isNull, sql } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -85,7 +85,11 @@ export const createAuthIntentPostgresRepository = (db: PostgresDb): AuthIntentRe
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
-      return row ? toDomainAuthIntent(row) : null
+      if (!row) {
+        return yield* new NotFoundError({ entity: "AuthIntent", id })
+      }
+
+      return toDomainAuthIntent(row)
     }),
 
   findPendingInvitesByOrganizationId: (organizationId) =>

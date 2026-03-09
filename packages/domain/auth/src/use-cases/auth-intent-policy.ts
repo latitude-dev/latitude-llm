@@ -50,24 +50,6 @@ export const createInviteIntentData = ({
   } as const
 }
 
-export const assertIntentCanBeCompleted = ({
-  intent,
-  sessionEmail,
-  now,
-}: {
-  intent: AuthIntent
-  sessionEmail: string
-  now: Date
-}) => {
-  if (intent.expiresAt.getTime() < now.getTime()) {
-    throw new Error("Authentication intent has expired")
-  }
-
-  if (normalizeEmail(intent.email) !== normalizeEmail(sessionEmail)) {
-    throw new Error("Authentication intent email mismatch")
-  }
-}
-
 export const shouldCreateOrganizationForIntent = (intent: AuthIntent) => {
   return intent.type === "signup" && !intent.existingAccountAtRequest
 }

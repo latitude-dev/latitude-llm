@@ -1,4 +1,5 @@
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
+import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import type { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
@@ -7,10 +8,11 @@ import type { AuthIntent } from "../types.ts"
 import {
   AuthIntentEmailMismatchError,
   AuthIntentExpiredError,
-  AuthIntentNotFoundError,
   MissingSignupProvisioningDataError,
   completeAuthIntentUseCase,
 } from "./complete-auth-intent.ts"
+
+const NOW = new Date("2025-01-01T00:00:00Z")
 
 const createIntent = (overrides: Partial<AuthIntent> = {}): AuthIntent => {
   return {
@@ -19,7 +21,7 @@ const createIntent = (overrides: Partial<AuthIntent> = {}): AuthIntent => {
     email: "user@example.com",
     data: {},
     existingAccountAtRequest: true,
-    expiresAt: new Date(Date.now() + 60_000),
+    expiresAt: new Date(NOW.getTime() + 60_000),
     consumedAt: null,
     createdOrganizationId: null,
     ...overrides,
@@ -47,7 +49,9 @@ const createDeps = ({
 
   const intents: AuthIntentRepository = {
     save: vi.fn(() => Effect.succeed(undefined)),
-    findById: vi.fn(() => Effect.succeed(intent)),
+    findById: vi.fn((id: string) =>
+      intent ? Effect.succeed(intent) : Effect.fail(new NotFoundError({ entity: "AuthIntent", id })),
+    ),
     findPendingInvitesByOrganizationId: vi.fn(() => Effect.succeed([])),
     markConsumed,
   }
@@ -96,7 +100,7 @@ describe("completeAuthIntentUseCase", () => {
     name: "Alice",
   }
 
-  it("returns AuthIntentNotFoundError when intent does not exist", async () => {
+  it("returns NotFoundError when intent does not exist", async () => {
     const deps = createDeps({ intent: null })
     const execute = completeAuthIntentUseCase(deps)
 
@@ -105,14 +109,15 @@ describe("completeAuthIntentUseCase", () => {
         execute({
           intentId: "missing-intent",
           session: baseSession,
+          now: NOW,
         }),
       ),
-    ).rejects.toBeInstanceOf(AuthIntentNotFoundError)
+    ).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it("returns AuthIntentExpiredError for expired intents", async () => {
     const deps = createDeps({
-      intent: createIntent({ expiresAt: new Date(Date.now() - 1_000) }),
+      intent: createIntent({ expiresAt: new Date(NOW.getTime() - 1_000) }),
     })
     const execute = completeAuthIntentUseCase(deps)
 
@@ -121,6 +126,7 @@ describe("completeAuthIntentUseCase", () => {
         execute({
           intentId: "intent-1",
           session: baseSession,
+          now: NOW,
         }),
       ),
     ).rejects.toBeInstanceOf(AuthIntentExpiredError)
@@ -138,25 +144,26 @@ describe("completeAuthIntentUseCase", () => {
             ...baseSession,
             email: "different@example.com",
           },
+          now: NOW,
         }),
       ),
     ).rejects.toBeInstanceOf(AuthIntentEmailMismatchError)
   })
 
-  it("returns completed without side effects when intent is already consumed", async () => {
+  it("returns without side effects when intent is already consumed", async () => {
     const deps = createDeps({
       intent: createIntent({ consumedAt: new Date() }),
     })
     const execute = completeAuthIntentUseCase(deps)
 
-    const result = await Effect.runPromise(
+    await Effect.runPromise(
       execute({
         intentId: "intent-1",
         session: baseSession,
+        now: NOW,
       }),
     )
 
-    expect(result).toEqual({ completed: true })
     expect(deps.markConsumed).not.toHaveBeenCalled()
     expect(deps.saveMembership).not.toHaveBeenCalled()
     expect(deps.saveOrganization).not.toHaveBeenCalled()
@@ -177,6 +184,7 @@ describe("completeAuthIntentUseCase", () => {
         execute({
           intentId: "intent-1",
           session: baseSession,
+          now: NOW,
         }),
       ),
     ).rejects.toBeInstanceOf(MissingSignupProvisioningDataError)
@@ -192,17 +200,17 @@ describe("completeAuthIntentUseCase", () => {
     })
     const execute = completeAuthIntentUseCase(deps)
 
-    const result = await Effect.runPromise(
+    await Effect.runPromise(
       execute({
         intentId: "intent-1",
         session: {
           ...baseSession,
           name: null,
         },
+        now: NOW,
       }),
     )
 
-    expect(result).toEqual({ completed: true })
     expect(deps.saveOrganization).toHaveBeenCalledTimes(1)
     expect(deps.saveMembership).toHaveBeenCalledTimes(1)
     expect(deps.setNameIfMissing).toHaveBeenCalledWith({
@@ -234,20 +242,63 @@ describe("completeAuthIntentUseCase", () => {
     })
     const execute = completeAuthIntentUseCase(deps)
 
-    const result = await Effect.runPromise(
+    await Effect.runPromise(
       execute({
         intentId: "intent-1",
         session: {
           ...baseSession,
           email: " User@Example.com ",
         },
+        now: NOW,
       }),
     )
 
-    expect(result).toEqual({ completed: true })
     expect(deps.markConsumed).toHaveBeenCalledWith({ intentId: "intent-1" })
     expect(deps.saveOrganization).not.toHaveBeenCalled()
     expect(deps.saveMembership).toHaveBeenCalled()
     expect(deps.setNameIfMissing).toHaveBeenCalled()
+  })
+
+  it("only marks intent as consumed for login flows", async () => {
+    const deps = createDeps({
+      intent: createIntent({ type: "login" }),
+    })
+    const execute = completeAuthIntentUseCase(deps)
+
+    await Effect.runPromise(
+      execute({
+        intentId: "intent-1",
+        session: baseSession,
+        now: NOW,
+      }),
+    )
+
+    expect(deps.markConsumed).toHaveBeenCalledWith({ intentId: "intent-1" })
+    expect(deps.saveOrganization).not.toHaveBeenCalled()
+    expect(deps.saveMembership).not.toHaveBeenCalled()
+    expect(deps.setNameIfMissing).not.toHaveBeenCalled()
+  })
+
+  it("only marks intent as consumed for signup with existing account", async () => {
+    const deps = createDeps({
+      intent: createIntent({
+        type: "signup",
+        existingAccountAtRequest: true,
+        data: { signup: { name: "Alice", organizationName: "Acme" } },
+      }),
+    })
+    const execute = completeAuthIntentUseCase(deps)
+
+    await Effect.runPromise(
+      execute({
+        intentId: "intent-1",
+        session: baseSession,
+        now: NOW,
+      }),
+    )
+
+    expect(deps.markConsumed).toHaveBeenCalledWith({ intentId: "intent-1" })
+    expect(deps.saveOrganization).not.toHaveBeenCalled()
+    expect(deps.saveMembership).not.toHaveBeenCalled()
   })
 })
