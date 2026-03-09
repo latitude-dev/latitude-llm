@@ -1,36 +1,14 @@
 import type { NotFoundError, OrganizationId, RepositoryError, UserId } from "@domain/shared"
-import type { Effect } from "effect"
+import { type Effect, ServiceMap } from "effect"
 import type { Organization } from "../entities/organization.ts"
 
-/**
- * Repository port for Organization entities.
- *
- * This interface defines the contract for organization persistence operations.
- * Implementations are provided in the platform layer (e.g., Postgres adapter).
- */
-export interface OrganizationRepository {
-  /**
-   * Find an organization by its unique ID.
-   */
-  findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
-
-  /**
-   * Find organizations where the given user is a member.
-   */
-  findByUserId(userId: UserId): Effect.Effect<readonly Organization[], RepositoryError>
-
-  /**
-   * Save an organization (create or update).
-   */
-  save(organization: Organization): Effect.Effect<void, RepositoryError>
-
-  /**
-   * Delete an organization by ID.
-   */
-  delete(id: OrganizationId): Effect.Effect<void, RepositoryError>
-
-  /**
-   * Check if an organization exists with the given slug.
-   */
-  existsBySlug(slug: string): Effect.Effect<boolean, RepositoryError>
-}
+export class OrganizationRepository extends ServiceMap.Service<
+  OrganizationRepository,
+  {
+    findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
+    findByUserId(userId: UserId): Effect.Effect<readonly Organization[], RepositoryError>
+    save(organization: Organization): Effect.Effect<void, RepositoryError>
+    delete(id: OrganizationId): Effect.Effect<void, RepositoryError>
+    existsBySlug(slug: string): Effect.Effect<boolean, RepositoryError>
+  }
+>()("@domain/organizations/OrganizationRepository") {}

@@ -1,4 +1,4 @@
-import { createProjectUseCase, updateProjectUseCase } from "@domain/projects"
+import { ProjectRepository, createProjectUseCase, updateProjectUseCase } from "@domain/projects"
 import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId, UserId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
@@ -41,10 +41,14 @@ export const listProjects = createServerFn({ method: "GET" })
     const projects = await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
-      return Effect.runPromise(projectsRepo.findAll())
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ProjectRepository
+          return yield* repo.findAll()
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
 
     return projects.map(toRecord)
   })
@@ -59,18 +63,16 @@ export const createProject = createServerFn({ method: "POST" })
     const project = await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
-
-      return Effect.runPromise(
-        createProjectUseCase(projectsRepo)({
+    )(async (txDb) =>
+      Effect.runPromise(
+        createProjectUseCase({
           organizationId: OrganizationId(organizationId),
           name: data.name,
           ...(data.description !== undefined ? { description: data.description } : {}),
           createdById: UserId(userId),
-        }),
-      )
-    })
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
 
     return toRecord(project)
   })
@@ -93,18 +95,16 @@ export const updateProject = createServerFn({ method: "POST" })
     const updatedProject = await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
-
-      return Effect.runPromise(
-        updateProjectUseCase(projectsRepo)({
+    )(async (txDb) =>
+      Effect.runPromise(
+        updateProjectUseCase({
           id: ProjectId(data.id),
           organizationId: OrganizationId(organizationId),
           ...(data.name !== undefined ? { name: data.name } : {}),
           ...(data.description !== undefined ? { description: data.description } : {}),
-        }),
-      )
-    })
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
 
     return toRecord(updatedProject)
   })
@@ -119,9 +119,12 @@ export const deleteProject = createServerFn({ method: "POST" })
     await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const projectsRepo = createProjectPostgresRepository(txDb, OrganizationId(organizationId))
-
-      return Effect.runPromise(projectsRepo.softDelete(ProjectId(data.id)))
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ProjectRepository
+          return yield* repo.softDelete(ProjectId(data.id))
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
   })

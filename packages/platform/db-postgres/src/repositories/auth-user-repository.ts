@@ -1,5 +1,5 @@
-import type { AuthUser, AuthUserRepository } from "@domain/auth"
-import { toRepositoryError } from "@domain/shared"
+import type { AuthUser } from "@domain/auth"
+import { NotFoundError, toRepositoryError } from "@domain/shared"
 import { and, eq, isNull, or, sql } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -11,24 +11,22 @@ const toAuthUser = (row: typeof user.$inferSelect): AuthUser => ({
   name: row.name,
 })
 
-export const createAuthUserPostgresRepository = (db: PostgresDb): AuthUserRepository => ({
-  findByEmail: (email) =>
+export const createAuthUserPostgresRepository = (db: PostgresDb) => ({
+  findByEmail: (email: string) =>
     Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select()
-            .from(user)
-            .where(eq(user.email, email))
-            .limit(1)
-            .then((rows) => rows[0]),
+      const [result] = yield* Effect.tryPromise({
+        try: () => db.select().from(user).where(eq(user.email, email)).limit(1),
         catch: (error) => toRepositoryError(error, "findByEmail"),
       })
 
-      return result ? toAuthUser(result) : null
+      if (!result) {
+        return yield* new NotFoundError({ entity: "AuthUser", id: email })
+      }
+
+      return toAuthUser(result)
     }),
 
-  setNameIfMissing: ({ userId, name }) =>
+  setNameIfMissing: ({ userId, name }: { userId: string; name: string }) =>
     Effect.tryPromise({
       try: async () => {
         if (!name.trim()) {

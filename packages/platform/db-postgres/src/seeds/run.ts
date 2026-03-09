@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { OrganizationId } from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
@@ -25,15 +24,16 @@ if (existsSync(envFilePath)) {
 }
 
 const main = async () => {
-  const { pool, db } = createPostgresClient()
-  const systemOrgId = OrganizationId("000000000000000000000000") // Placeholder for seeders
+  // Seeds need full access to bypass RLS, so use the admin database URL.
+  const adminUrl = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
+  const { pool, db } = createPostgresClient({ databaseUrl: adminUrl })
   const repositories = {
-    apiKey: createApiKeyPostgresRepository(db, systemOrgId),
-    grant: createGrantPostgresRepository(db, systemOrgId),
+    apiKey: createApiKeyPostgresRepository(db),
+    grant: createGrantPostgresRepository(db),
     membership: createMembershipPostgresRepository(db),
     organization: createOrganizationPostgresRepository(db),
-    project: createProjectPostgresRepository(db, systemOrgId),
-    subscription: createSubscriptionPostgresRepository(db, systemOrgId),
+    project: createProjectPostgresRepository(db),
+    subscription: createSubscriptionPostgresRepository(db),
     user: createUserPostgresRepository(db),
   }
 

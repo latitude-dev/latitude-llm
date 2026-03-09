@@ -8,7 +8,7 @@ import type {
 } from "@domain/shared"
 import { Data, Effect } from "effect"
 import type { Project } from "../entities/project.ts"
-import type { ProjectRepository } from "../ports/project-repository.ts"
+import { ProjectRepository } from "../ports/project-repository.ts"
 
 export interface UpdateProjectInput {
   readonly id: ProjectId
@@ -43,60 +43,60 @@ export type UpdateProjectError =
   | ProjectNotFoundError
   | InvalidProjectNameError
 
-export const updateProjectUseCase =
-  (repository: ProjectRepository) =>
-  (input: UpdateProjectInput): Effect.Effect<Project, UpdateProjectError> => {
-    return Effect.gen(function* () {
-      const existingProject = yield* repository.findById(input.id)
+export const updateProjectUseCase = (
+  input: UpdateProjectInput,
+): Effect.Effect<Project, UpdateProjectError, ProjectRepository> => {
+  return Effect.gen(function* () {
+    const repository = yield* ProjectRepository
+    const existingProject = yield* repository
+      .findById(input.id)
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId: input.organizationId })),
+        ),
+      )
 
-      if (!existingProject) {
-        return yield* new ProjectNotFoundError({
-          id: input.id,
-          organizationId: input.organizationId,
+    let nextName = existingProject.name
+
+    if (input.name !== undefined) {
+      const trimmedName = input.name.trim()
+
+      if (!trimmedName) {
+        return yield* new InvalidProjectNameError({
+          name: input.name,
+          reason: "Name cannot be empty",
         })
       }
 
-      let nextName = existingProject.name
-
-      if (input.name !== undefined) {
-        const trimmedName = input.name.trim()
-
-        if (!trimmedName) {
-          return yield* new InvalidProjectNameError({
-            name: input.name,
-            reason: "Name cannot be empty",
-          })
-        }
-
-        if (trimmedName.length > 256) {
-          return yield* new InvalidProjectNameError({
-            name: input.name,
-            reason: "Name exceeds 256 characters",
-          })
-        }
-
-        if (trimmedName !== existingProject.name) {
-          const nameExists = yield* repository.existsByName(trimmedName)
-          if (nameExists) {
-            return yield* new InvalidProjectNameError({
-              name: trimmedName,
-              reason: "Project name already exists in this organization",
-            })
-          }
-        }
-
-        nextName = trimmedName
+      if (trimmedName.length > 256) {
+        return yield* new InvalidProjectNameError({
+          name: input.name,
+          reason: "Name exceeds 256 characters",
+        })
       }
 
-      const updatedProject: Project = {
-        ...existingProject,
-        name: nextName,
-        description: input.description !== undefined ? input.description : existingProject.description,
-        updatedAt: new Date(),
+      if (trimmedName !== existingProject.name) {
+        const nameExists = yield* repository.existsByName(trimmedName)
+        if (nameExists) {
+          return yield* new InvalidProjectNameError({
+            name: trimmedName,
+            reason: "Project name already exists in this organization",
+          })
+        }
       }
 
-      yield* repository.save(updatedProject)
+      nextName = trimmedName
+    }
 
-      return updatedProject
-    })
-  }
+    const updatedProject: Project = {
+      ...existingProject,
+      name: nextName,
+      description: input.description !== undefined ? input.description : existingProject.description,
+      updatedAt: new Date(),
+    }
+
+    yield* repository.save(updatedProject)
+
+    return updatedProject
+  })
+}

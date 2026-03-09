@@ -1,15 +1,15 @@
-import type { ApiKey, ApiKeyRepository } from "@domain/api-keys"
+import type { ApiKey } from "@domain/api-keys"
 import {
   ApiKeyId,
   type ApiKeyId as ApiKeyIdType,
+  NotFoundError,
   OrganizationId,
-  type OrganizationId as OrganizationIdType,
   type RepositoryError,
   toRepositoryError,
 } from "@domain/shared"
 import { parseEnv } from "@platform/env"
 import { decrypt, encrypt } from "@repo/utils"
-import { and, eq, isNull } from "drizzle-orm"
+import { eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
 import { apiKeys } from "../schema/index.ts"
@@ -72,43 +72,30 @@ const toInsertRow = (
 
 /**
  * Creates a Postgres implementation of the ApiKeyRepository port.
- * All operations are scoped to the provided organization ID.
- *
- * @param db - Drizzle database instance
- * @param organizationId - The organization ID this repository is scoped to
+ * Org-level isolation is enforced by the RLS context set via runCommand.
  */
-export const createApiKeyPostgresRepository = (
-  db: PostgresDb,
-  organizationId: OrganizationIdType,
-): ApiKeyRepository => {
+export const createApiKeyPostgresRepository = (db: PostgresDb) => {
   const encryptionKey = getEncryptionKey()
 
   return {
-    organizationId,
-
     findById: (id: ApiKeyIdType) =>
       Effect.gen(function* () {
         const [result] = yield* Effect.tryPromise({
-          try: () =>
-            db
-              .select()
-              .from(apiKeys)
-              .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId)))
-              .limit(1),
+          try: () => db.select().from(apiKeys).where(eq(apiKeys.id, id)).limit(1),
           catch: (error) => toRepositoryError(error, "findById"),
         })
 
-        return result ? yield* toDomainApiKey(result, encryptionKey) : null
+        if (!result) {
+          return yield* new NotFoundError({ entity: "ApiKey", id })
+        }
+
+        return yield* toDomainApiKey(result, encryptionKey)
       }),
 
     findAll: () =>
       Effect.gen(function* () {
         const results = yield* Effect.tryPromise({
-          try: () =>
-            db
-              .select()
-              .from(apiKeys)
-              .where(and(eq(apiKeys.organizationId, organizationId), isNull(apiKeys.deletedAt))),
+          try: () => db.select().from(apiKeys).where(isNull(apiKeys.deletedAt)),
           catch: (error) => toRepositoryError(error, "findAll"),
         })
 
@@ -139,21 +126,41 @@ export const createApiKeyPostgresRepository = (
 
     delete: (id: ApiKeyIdType) =>
       Effect.tryPromise({
-        try: () => db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
+        try: () => db.delete(apiKeys).where(eq(apiKeys.id, id)),
         catch: (error) => toRepositoryError(error, "delete"),
       }),
 
     touch: (id: ApiKeyIdType) =>
       Effect.tryPromise({
+        try: () => db.update(apiKeys).set({ lastUsedAt: new Date(), updatedAt: new Date() }).where(eq(apiKeys.id, id)),
+        catch: (error) => toRepositoryError(error, "touch"),
+      }),
+
+    // Cross-org lookup — only safe when the underlying connection bypasses RLS
+    // (i.e. use the admin database connection, not the runtime one).
+    findByTokenHash: (tokenHash: string) =>
+      Effect.gen(function* () {
+        const [result] = yield* Effect.tryPromise({
+          try: () => db.select().from(apiKeys).where(eq(apiKeys.tokenHash, tokenHash)).limit(1),
+          catch: (error) => toRepositoryError(error, "findByTokenHash"),
+        })
+
+        if (!result) {
+          return yield* new NotFoundError({ entity: "ApiKey", id: tokenHash })
+        }
+
+        return yield* toDomainApiKey(result, encryptionKey)
+      }),
+
+    // Cross-org batch update — only safe when the underlying connection bypasses RLS.
+    touchBatch: (ids: readonly ApiKeyIdType[]) =>
+      Effect.tryPromise({
         try: () =>
           db
             .update(apiKeys)
-            .set({
-              lastUsedAt: new Date(),
-              updatedAt: new Date(),
-            })
-            .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
-        catch: (error) => toRepositoryError(error, "touch"),
+            .set({ lastUsedAt: new Date(), updatedAt: new Date() })
+            .where(inArray(apiKeys.id, ids as ApiKeyIdType[])),
+        catch: (error) => toRepositoryError(error, "touchBatch"),
       }),
   }
 }

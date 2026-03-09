@@ -27,8 +27,8 @@ export {
 } from "./entities/plan.ts"
 
 // Port exports
-export type { SubscriptionRepository } from "./ports/subscription-repository.ts"
-export type { GrantRepository } from "./ports/grant-repository.ts"
+export { SubscriptionRepository } from "./ports/subscription-repository.ts"
+export { GrantRepository } from "./ports/grant-repository.ts"
 
 // Use case exports
 export {

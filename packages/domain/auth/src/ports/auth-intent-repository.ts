@@ -1,5 +1,5 @@
 import type { NotFoundError, RepositoryError } from "@domain/shared"
-import type { Effect } from "effect"
+import { type Effect, ServiceMap } from "effect"
 import type { AuthIntent } from "../types.ts"
 
 export interface PendingInvite {
@@ -8,12 +8,12 @@ export interface PendingInvite {
   readonly createdAt: Date
 }
 
-export interface AuthIntentRepository {
-  save(intent: AuthIntent): Effect.Effect<void, RepositoryError>
-  findById(id: string): Effect.Effect<AuthIntent, NotFoundError | RepositoryError>
-  findPendingInvitesByOrganizationId(organizationId: string): Effect.Effect<readonly PendingInvite[], RepositoryError>
-  markConsumed(input: {
-    intentId: string
-    createdOrganizationId?: string
-  }): Effect.Effect<void, RepositoryError>
-}
+export class AuthIntentRepository extends ServiceMap.Service<
+  AuthIntentRepository,
+  {
+    save(intent: AuthIntent): Effect.Effect<void, RepositoryError>
+    findById(id: string): Effect.Effect<AuthIntent, NotFoundError | RepositoryError>
+    findPendingInvitesByOrganizationId(organizationId: string): Effect.Effect<readonly PendingInvite[], RepositoryError>
+    markConsumed(input: { intentId: string; createdOrganizationId?: string }): Effect.Effect<void, RepositoryError>
+  }
+>()("@domain/auth/AuthIntentRepository") {}

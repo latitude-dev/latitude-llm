@@ -31,7 +31,8 @@ export {
   MissingSignupProvisioningDataError,
   MissingInviteDataError,
   type CompleteAuthIntentError,
+  type CompleteAuthIntentRequirements,
 } from "./use-cases/complete-auth-intent.ts"
 
-export type { AuthIntentRepository, PendingInvite } from "./ports/auth-intent-repository.ts"
-export type { AuthUser, AuthUserRepository } from "./ports/auth-user-repository.ts"
+export { AuthIntentRepository, type PendingInvite } from "./ports/auth-intent-repository.ts"
+export { AuthUserRepository, type AuthUser } from "./ports/auth-user-repository.ts"

@@ -1,13 +1,13 @@
 import {
   GrantId,
   type GrantId as GrantIdType,
+  NotFoundError,
   OrganizationId,
-  type OrganizationId as OrganizationIdType,
   SubscriptionId,
   type SubscriptionId as SubscriptionIdType,
   toRepositoryError,
 } from "@domain/shared"
-import type { Grant, GrantRepository, GrantType } from "@domain/subscriptions"
+import type { Grant, GrantType } from "@domain/subscriptions"
 import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -59,39 +59,32 @@ const toInsertRow = (grant: Grant): typeof schema.grants.$inferInsert => ({
   amount: grant.amount,
   balance: grant.balance,
   expiresAt: grant.expiresAt,
-  // createdAt and updatedAt are set by defaultNow()
-  // source is required in schema, defaulting to "subscription"
   source: "subscription",
 })
 
 /**
  * Creates a Postgres implementation of the GrantRepository port.
- *
- * @param db - The database connection
- * @param organizationId - The organization ID this repository is scoped to
+ * Org-level isolation is enforced by the RLS context set via runCommand.
  */
-export const createGrantPostgresRepository = (db: PostgresDb, organizationId: OrganizationIdType): GrantRepository => ({
-  organizationId,
-
+export const createGrantPostgresRepository = (db: PostgresDb) => ({
   findById: (id: GrantIdType) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select()
-            .from(schema.grants)
-            .where(and(eq(schema.grants.id, id), eq(schema.grants.organizationId, organizationId)))
-            .limit(1),
+        try: () => db.select().from(schema.grants).where(eq(schema.grants.id, id)).limit(1),
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
-      return result ? toDomainGrant(result) : null
+      if (!result) {
+        return yield* new NotFoundError({ entity: "Grant", id })
+      }
+
+      return toDomainGrant(result)
     }),
 
   findAll: () =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
-        try: () => db.select().from(schema.grants).where(eq(schema.grants.organizationId, organizationId)),
+        try: () => db.select().from(schema.grants),
         catch: (error) => toRepositoryError(error, "findAll"),
       })
 
@@ -101,13 +94,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
   findBySubscriptionId: (subscriptionId: SubscriptionIdType) =>
     Effect.gen(function* () {
       const results = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select()
-            .from(schema.grants)
-            .where(
-              and(eq(schema.grants.subscriptionId, subscriptionId), eq(schema.grants.organizationId, organizationId)),
-            ),
+        try: () => db.select().from(schema.grants).where(eq(schema.grants.subscriptionId, subscriptionId)),
         catch: (error) => toRepositoryError(error, "findBySubscriptionId"),
       })
 
@@ -124,7 +111,6 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
             .from(schema.grants)
             .where(
               and(
-                eq(schema.grants.organizationId, organizationId),
                 eq(schema.grants.type, toDbGrantType(type)),
                 gt(schema.grants.balance, 0),
                 or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now)),
@@ -145,11 +131,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
             .select()
             .from(schema.grants)
             .where(
-              and(
-                eq(schema.grants.organizationId, organizationId),
-                gt(schema.grants.balance, 0),
-                or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now)),
-              ),
+              and(gt(schema.grants.balance, 0), or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now))),
             ),
         catch: (error) => toRepositoryError(error, "findAllActive"),
       })
@@ -198,13 +180,8 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
         try: () =>
           db
             .update(schema.grants)
-            .set({
-              balance: 0,
-              updatedAt: new Date(),
-            })
-            .where(
-              and(eq(schema.grants.subscriptionId, subscriptionId), eq(schema.grants.organizationId, organizationId)),
-            ),
+            .set({ balance: 0, updatedAt: new Date() })
+            .where(eq(schema.grants.subscriptionId, subscriptionId)),
         catch: (error) => toRepositoryError(error, "revokeBySubscription"),
       })
     }),
@@ -212,10 +189,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
   delete: (id: GrantIdType) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
-        try: () =>
-          db
-            .delete(schema.grants)
-            .where(and(eq(schema.grants.id, id), eq(schema.grants.organizationId, organizationId))),
+        try: () => db.delete(schema.grants).where(eq(schema.grants.id, id)),
         catch: (error) => toRepositoryError(error, "delete"),
       })
     }),
@@ -223,12 +197,7 @@ export const createGrantPostgresRepository = (db: PostgresDb, organizationId: Or
   deleteBySubscription: (subscriptionId: SubscriptionIdType) =>
     Effect.gen(function* () {
       yield* Effect.tryPromise({
-        try: () =>
-          db
-            .delete(schema.grants)
-            .where(
-              and(eq(schema.grants.subscriptionId, subscriptionId), eq(schema.grants.organizationId, organizationId)),
-            ),
+        try: () => db.delete(schema.grants).where(eq(schema.grants.subscriptionId, subscriptionId)),
         catch: (error) => toRepositoryError(error, "deleteBySubscription"),
       })
     }),

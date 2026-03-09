@@ -1,6 +1,6 @@
 import type { RepositoryError } from "@domain/shared"
 import { Data, Effect } from "effect"
-import type { MembershipRepository } from "../ports/membership-repository.ts"
+import { MembershipRepository } from "../ports/membership-repository.ts"
 
 export interface RemoveMemberInput {
   readonly membershipId: string
@@ -23,20 +23,23 @@ export class CannotRemoveSelfError extends Data.TaggedError("CannotRemoveSelfErr
 
 export type RemoveMemberError = RepositoryError | MembershipNotFoundError | CannotRemoveSelfError
 
-export const removeMemberUseCase =
-  (repository: MembershipRepository) =>
-  (input: RemoveMemberInput): Effect.Effect<void, RemoveMemberError> => {
-    return Effect.gen(function* () {
-      const membership = yield* repository.findById(input.membershipId)
+export const removeMemberUseCase = (
+  input: RemoveMemberInput,
+): Effect.Effect<void, RemoveMemberError, MembershipRepository> =>
+  Effect.gen(function* () {
+    const repository = yield* MembershipRepository
 
-      if (!membership) {
-        return yield* new MembershipNotFoundError({ membershipId: input.membershipId })
-      }
+    const membership = yield* repository
+      .findById(input.membershipId)
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new MembershipNotFoundError({ membershipId: input.membershipId })),
+        ),
+      )
 
-      if (membership.userId === input.requestingUserId) {
-        return yield* new CannotRemoveSelfError({ userId: input.requestingUserId })
-      }
+    if (membership.userId === input.requestingUserId) {
+      return yield* new CannotRemoveSelfError({ userId: input.requestingUserId })
+    }
 
-      yield* repository.delete(input.membershipId)
-    })
-  }
+    yield* repository.delete(input.membershipId)
+  })

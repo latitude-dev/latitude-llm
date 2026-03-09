@@ -1,4 +1,4 @@
-import { generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
+import { ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
 import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyId, OrganizationId } from "@domain/shared"
 import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
@@ -39,10 +39,14 @@ export const listApiKeys = createServerFn({ method: "GET" })
     const apiKeys = await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const apiKeysRepo = createApiKeyPostgresRepository(txDb, OrganizationId(organizationId))
-      return Effect.runPromise(apiKeysRepo.findAll())
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ApiKeyRepository
+          return yield* repo.findAll()
+        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
+      ),
+    )
 
     return apiKeys.map(toRecord)
   })
@@ -57,16 +61,14 @@ export const createApiKey = createServerFn({ method: "POST" })
     const apiKey = await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const apiKeysRepo = createApiKeyPostgresRepository(txDb, OrganizationId(organizationId))
-
-      return Effect.runPromise(
-        generateApiKeyUseCase(apiKeysRepo)({
+    )(async (txDb) =>
+      Effect.runPromise(
+        generateApiKeyUseCase({
           organizationId: OrganizationId(organizationId),
           name: data.name,
-        }),
-      )
-    })
+        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
+      ),
+    )
 
     return toRecord(apiKey)
   })
@@ -81,16 +83,14 @@ export const updateApiKey = createServerFn({ method: "POST" })
     const apiKey = await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const apiKeysRepo = createApiKeyPostgresRepository(txDb, OrganizationId(organizationId))
-
-      return Effect.runPromise(
-        updateApiKeyUseCase(apiKeysRepo)({
+    )(async (txDb) =>
+      Effect.runPromise(
+        updateApiKeyUseCase({
           id: ApiKeyId(data.id),
           name: data.name,
-        }),
-      )
-    })
+        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
+      ),
+    )
 
     return toRecord(apiKey)
   })
@@ -105,8 +105,12 @@ export const deleteApiKey = createServerFn({ method: "POST" })
     await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const apiKeysRepo = createApiKeyPostgresRepository(txDb, OrganizationId(organizationId))
-      return Effect.runPromise(apiKeysRepo.delete(ApiKeyId(data.id)))
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ApiKeyRepository
+          return yield* repo.delete(ApiKeyId(data.id))
+        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
+      ),
+    )
   })

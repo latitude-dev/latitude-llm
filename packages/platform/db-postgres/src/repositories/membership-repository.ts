@@ -1,5 +1,5 @@
-import type { Membership, MembershipRepository } from "@domain/organizations"
-import { MembershipId, OrganizationId, UserId, toRepositoryError } from "@domain/shared"
+import type { Membership } from "@domain/organizations"
+import { MembershipId, NotFoundError, OrganizationId, UserId, toRepositoryError } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -21,19 +21,19 @@ const toDomainMembership = (memberRow: typeof schema.member.$inferSelect): Membe
  * Queries Better Auth's member table directly using organizationId.
  * RLS policies enforce access control.
  */
-export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRepository => ({
+export const createMembershipPostgresRepository = (db: PostgresDb) => ({
   findById: (id: string) =>
     Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: async () => {
-          const [member] = await db.select().from(schema.member).where(eq(schema.member.id, id)).limit(1)
-
-          return member ? toDomainMembership(member) : null
-        },
+      const [result] = yield* Effect.tryPromise({
+        try: () => db.select().from(schema.member).where(eq(schema.member.id, id)).limit(1),
         catch: (error) => toRepositoryError(error, "findById"),
       })
 
-      return result
+      if (!result) {
+        return yield* new NotFoundError({ entity: "Membership", id })
+      }
+
+      return toDomainMembership(result)
     }),
 
   findByOrganizationId: (organizationId: OrganizationId) =>
@@ -66,20 +66,21 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
 
   findByOrganizationAndUser: (organizationId: OrganizationId, userId: string) =>
     Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: async () => {
-          const [member] = await db
+      const [result] = yield* Effect.tryPromise({
+        try: () =>
+          db
             .select()
             .from(schema.member)
             .where(and(eq(schema.member.organizationId, organizationId), eq(schema.member.userId, userId)))
-            .limit(1)
-
-          return member ? toDomainMembership(member) : null
-        },
+            .limit(1),
         catch: (error) => toRepositoryError(error, "findByOrganizationAndUser"),
       })
 
-      return result
+      if (!result) {
+        return yield* new NotFoundError({ entity: "Membership", id: `${organizationId}:${userId}` })
+      }
+
+      return toDomainMembership(result)
     }),
 
   findMembersWithUser: (organizationId: OrganizationId) =>
@@ -144,27 +145,23 @@ export const createMembershipPostgresRepository = (db: PostgresDb): MembershipRe
     }),
 
   save: (membership: Membership) =>
-    Effect.gen(function* () {
-      // Insert or update in Better Auth's member table
-      // organizationId comes from the membership.organizationId field
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insert(schema.member)
-            .values({
-              id: membership.id,
-              organizationId: membership.organizationId,
-              userId: membership.userId,
+    Effect.tryPromise({
+      try: () =>
+        db
+          .insert(schema.member)
+          .values({
+            id: membership.id,
+            organizationId: membership.organizationId,
+            userId: membership.userId,
+            role: membership.role,
+          })
+          .onConflictDoUpdate({
+            target: schema.member.id,
+            set: {
               role: membership.role,
-            })
-            .onConflictDoUpdate({
-              target: schema.member.id,
-              set: {
-                role: membership.role,
-              },
-            }),
-        catch: (error) => toRepositoryError(error, "save"),
-      })
+            },
+          }),
+      catch: (error) => toRepositoryError(error, "save"),
     }),
 
   delete: (id: string) =>

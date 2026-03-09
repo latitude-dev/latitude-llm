@@ -1,5 +1,5 @@
 import { ApiKeyId } from "@domain/shared"
-import { type PostgresDb, createUnscopedApiKeyPostgresRepository } from "@platform/db-postgres"
+import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -97,11 +97,11 @@ class TouchBuffer {
 
     const startTime = Date.now()
 
-    // Use unscoped repository for cross-organization batch touch operations
-    const unscopedApiKeyRepository = createUnscopedApiKeyPostgresRepository(this.db)
+    // Use the admin db connection (bypasses RLS) for cross-org batch updates.
+    const repo = createApiKeyPostgresRepository(this.db)
 
     try {
-      await Effect.runPromise(unscopedApiKeyRepository.touchBatch(keyIds))
+      await Effect.runPromise(repo.touchBatch(keyIds))
 
       const duration = Date.now() - startTime
       logger.info(`Flushed ${keyIds.length} touch updates in ${duration}ms`)

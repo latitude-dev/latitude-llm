@@ -8,8 +8,8 @@ export {
   type Membership,
   type MembershipRole,
 } from "./entities/membership.ts"
-export type { MembershipRepository, MemberWithUser } from "./ports/membership-repository.ts"
-export type { OrganizationRepository } from "./ports/organization-repository.ts"
+export { MembershipRepository, type MemberWithUser } from "./ports/membership-repository.ts"
+export { OrganizationRepository } from "./ports/organization-repository.ts"
 export {
   createMemberJoinedEvent,
   type MemberJoinedEvent,

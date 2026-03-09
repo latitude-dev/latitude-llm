@@ -1,4 +1,4 @@
-import type { Organization, OrganizationRepository } from "@domain/organizations"
+import type { Organization } from "@domain/organizations"
 import {
   NotFoundError,
   OrganizationId,
@@ -47,7 +47,7 @@ const toInsertRow = (org: Organization): typeof schema.organization.$inferInsert
 /**
  * Creates a Postgres implementation of the OrganizationRepository port.
  */
-export const createOrganizationPostgresRepository = (db: PostgresDb): OrganizationRepository => ({
+export const createOrganizationPostgresRepository = (db: PostgresDb) => ({
   findById: (id: OrganizationIdType) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({

@@ -6,7 +6,7 @@ export {
   type Project,
 } from "./entities/project.ts"
 
-export type { ProjectRepository } from "./ports/project-repository.ts"
+export { ProjectRepository } from "./ports/project-repository.ts"
 
 export {
   createProjectUseCase,

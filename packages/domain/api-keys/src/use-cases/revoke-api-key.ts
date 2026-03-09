@@ -1,7 +1,7 @@
 import type { ApiKeyId, NotFoundError, RepositoryError } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Data, Effect, ServiceMap } from "effect"
 import { type ApiKey, revoke } from "../entities/api-key.ts"
-import type { ApiKeyRepository } from "../ports/api-key-repository.ts"
+import { ApiKeyRepository } from "../ports/api-key-repository.ts"
 
 /**
  * Revoke (soft delete) an API key.
@@ -33,49 +33,33 @@ export class ApiKeyAlreadyRevokedError extends Data.TaggedError("ApiKeyAlreadyRe
 
 export type RevokeApiKeyError = RepositoryError | NotFoundError | ApiKeyNotFoundError | ApiKeyAlreadyRevokedError
 
-/**
- * Port for cache invalidation operations.
- * Implemented by platform layer (e.g., Redis adapter).
- */
-export interface CacheInvalidator {
-  /**
-   * Delete a cached API key entry by its token hash.
-   * @param tokenHash The SHA-256 hash of the API key token to invalidate
-   */
-  readonly delete: (tokenHash: string) => Effect.Effect<void, never>
-}
-
-export interface RevokeApiKeyDeps {
-  readonly repository: ApiKeyRepository
-  readonly cacheInvalidator: CacheInvalidator
-}
-
-export const revokeApiKeyUseCase =
-  (deps: RevokeApiKeyDeps) =>
-  (input: RevokeApiKeyInput): Effect.Effect<ApiKey, RevokeApiKeyError> => {
-    return Effect.gen(function* () {
-      // Find the API key
-      const apiKey = yield* deps.repository.findById(input.id)
-
-      if (!apiKey) {
-        return yield* new ApiKeyNotFoundError({ id: input.id })
-      }
-
-      // Check if already revoked
-      if (apiKey.deletedAt !== null) {
-        return yield* new ApiKeyAlreadyRevokedError({ id: input.id })
-      }
-
-      // Revoke (soft delete)
-      const revokedApiKey = revoke(apiKey)
-
-      // Persist
-      yield* deps.repository.save(revokedApiKey)
-
-      // Invalidate cache entry (security-critical)
-      // This ensures revoked keys are immediately rejected
-      yield* deps.cacheInvalidator.delete(apiKey.tokenHash)
-
-      return revokedApiKey
-    })
+export class ApiKeyCacheInvalidator extends ServiceMap.Service<
+  ApiKeyCacheInvalidator,
+  {
+    delete(tokenHash: string): Effect.Effect<void, never>
   }
+>()("@domain/api-keys/ApiKeyCacheInvalidator") {}
+
+export const revokeApiKeyUseCase = (
+  input: RevokeApiKeyInput,
+): Effect.Effect<ApiKey, RevokeApiKeyError, ApiKeyRepository | ApiKeyCacheInvalidator> => {
+  return Effect.gen(function* () {
+    const repository = yield* ApiKeyRepository
+    const cacheInvalidator = yield* ApiKeyCacheInvalidator
+    const apiKey = yield* repository
+      .findById(input.id)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new ApiKeyNotFoundError({ id: input.id }))))
+
+    if (apiKey.deletedAt !== null) {
+      return yield* new ApiKeyAlreadyRevokedError({ id: input.id })
+    }
+
+    const revokedApiKey = revoke(apiKey)
+
+    yield* repository.save(revokedApiKey)
+
+    yield* cacheInvalidator.delete(apiKey.tokenHash)
+
+    return revokedApiKey
+  })
+}

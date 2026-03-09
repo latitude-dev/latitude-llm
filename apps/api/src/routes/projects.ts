@@ -1,4 +1,9 @@
-import { type CreateProjectInput, createProjectUseCase, updateProjectUseCase } from "@domain/projects"
+import {
+  type CreateProjectInput,
+  ProjectRepository,
+  createProjectUseCase,
+  updateProjectUseCase,
+} from "@domain/projects"
 import { ProjectId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { BadRequestError } from "@repo/utils"
@@ -49,11 +54,13 @@ export const createProjectsRoutes = () => {
     const project = await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
-
-      return Effect.runPromise(createProjectUseCase(projectRepository)(input))
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        createProjectUseCase(input).pipe(
+          Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb)),
+        ),
+      ),
+    )
     return c.json(project, 201)
   })
 
@@ -64,10 +71,15 @@ export const createProjectsRoutes = () => {
     const projects = await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const scopedRepo = createProjectPostgresRepository(txDb, organizationId)
-      return Effect.runPromise(scopedRepo.findAll())
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ProjectRepository
+          return yield* repo.findAll()
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
+
     return c.json({ projects }, 200)
   })
 
@@ -85,14 +97,14 @@ export const createProjectsRoutes = () => {
     const project = await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
-      return Effect.runPromise(projectRepository.findById(id))
-    })
-
-    if (!project) {
-      throw new BadRequestError({ httpMessage: "Project not found" })
-    }
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ProjectRepository
+          return yield* repo.findById(id)
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
 
     return c.json(project, 200)
   })
@@ -128,18 +140,16 @@ export const createProjectsRoutes = () => {
     const updatedProject = await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
-
-      return Effect.runPromise(
-        updateProjectUseCase(projectRepository)({
+    )(async (txDb) =>
+      Effect.runPromise(
+        updateProjectUseCase({
           id,
           organizationId,
           ...(name !== undefined ? { name } : {}),
           ...(description !== undefined ? { description } : {}),
-        }),
-      )
-    })
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
 
     return c.json(updatedProject, 200)
   })
@@ -158,11 +168,14 @@ export const createProjectsRoutes = () => {
     await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const projectRepository = createProjectPostgresRepository(txDb, organizationId)
-
-      return Effect.runPromise(projectRepository.softDelete(id))
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ProjectRepository
+          return yield* repo.softDelete(id)
+        }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
+      ),
+    )
     return c.body(null, 204)
   })
 
