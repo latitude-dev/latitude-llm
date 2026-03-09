@@ -1,6 +1,6 @@
 import {
-  ApiKeyNotFoundError,
-  type CacheInvalidator,
+  ApiKeyCacheInvalidator,
+  ApiKeyRepository,
   type GenerateApiKeyInput,
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
@@ -12,29 +12,16 @@ import { BadRequestError } from "@repo/utils"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import type { OrganizationScopedEnv } from "../types.ts"
-/**
- * API Key routes
- *
- * - POST /organizations/:organizationId/api-keys - Generate API key
- * - GET /organizations/:organizationId/api-keys - List API keys
- * - DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
- */
 
-/**
- * Create a cache invalidator for API keys using Redis.
- * Keys are cached by token hash, so invalidation uses the hash.
- */
-const createApiKeyCacheInvalidator = (redis: RedisClient): CacheInvalidator => {
-  return {
-    delete: (tokenHash: string) =>
-      Effect.tryPromise({
-        try: () => redis.del(`apikey:${tokenHash}`),
-        catch: () => {
-          // Silently ignore - DB is source of truth
-        },
-      }).pipe(Effect.orDie),
-  }
-}
+const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
+  delete: (tokenHash: string) =>
+    Effect.tryPromise({
+      try: () => redis.del(`apikey:${tokenHash}`),
+      catch: () => {
+        // Silently ignore - DB is source of truth
+      },
+    }).pipe(Effect.orDie),
+})
 
 export const createApiKeysRoutes = () => {
   const app = new Hono<OrganizationScopedEnv>()
@@ -64,11 +51,13 @@ export const createApiKeysRoutes = () => {
     const apiKey = await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const apiKeyRepository = createApiKeyPostgresRepository(txDb, organizationId)
-
-      return Effect.runPromise(generateApiKeyUseCase(apiKeyRepository)(input))
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        generateApiKeyUseCase(input).pipe(
+          Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb)),
+        ),
+      ),
+    )
     return c.json(apiKey, 201)
   })
 
@@ -79,16 +68,19 @@ export const createApiKeysRoutes = () => {
     const apiKeys = await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const apiKeyRepository = createApiKeyPostgresRepository(txDb, organizationId)
-      return Effect.runPromise(apiKeyRepository.findAll())
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ApiKeyRepository
+          return yield* repo.findAll()
+        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
+      ),
+    )
     return c.json({ apiKeys }, 200)
   })
 
   // DELETE /organizations/:organizationId/api-keys/:id - Revoke API key
   app.delete("/:id", async (c) => {
-    const cacheInvalidator = createApiKeyCacheInvalidator(c.var.redis)
     const organizationId = c.var.organization.id
     const idParam = c.req.param("id")
     const id = idParam ? ApiKeyId(idParam) : null
@@ -99,20 +91,14 @@ export const createApiKeysRoutes = () => {
     await runCommand(
       c.var.db,
       organizationId,
-    )(async (txDb) => {
-      const apiKeyRepository = createApiKeyPostgresRepository(txDb, organizationId)
-
-      const apiKey = await Effect.runPromise(apiKeyRepository.findById(id))
-      if (!apiKey || apiKey.organizationId !== organizationId) {
-        throw new ApiKeyNotFoundError({ id })
-      }
-
-      return Effect.runPromise(
-        revokeApiKeyUseCase({ repository: apiKeyRepository, cacheInvalidator })({
-          id,
-        }),
-      )
-    })
+    )(async (txDb) =>
+      Effect.runPromise(
+        revokeApiKeyUseCase({ id }).pipe(
+          Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb)),
+          Effect.provideService(ApiKeyCacheInvalidator, createApiKeyCacheInvalidator(c.var.redis)),
+        ),
+      ),
+    )
     return c.body(null, 204)
   })
 

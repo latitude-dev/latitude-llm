@@ -1,5 +1,5 @@
-import { createInviteIntentUseCase } from "@domain/auth"
-import { removeMemberUseCase } from "@domain/organizations"
+import { AuthIntentRepository, AuthUserRepository, createInviteIntentUseCase } from "@domain/auth"
+import { MembershipRepository, removeMemberUseCase } from "@domain/organizations"
 import { OrganizationId } from "@domain/shared"
 import {
   createAuthIntentPostgresRepository,
@@ -92,20 +92,20 @@ export const inviteMember = createServerFn({ method: "POST" })
       db,
       organizationId,
     )(async (txDb) => {
-      const intents = createAuthIntentPostgresRepository(txDb)
-      const users = createAuthUserPostgresRepository(txDb)
       const orgs = createOrganizationPostgresRepository(txDb)
-
       const org = await Effect.runPromise(orgs.findById(OrganizationId(organizationId)))
-      const organizationName = org?.name ?? "a workspace"
+      const organizationName = org.name
 
       return Effect.runPromise(
-        createInviteIntentUseCase({ intents, users })({
+        createInviteIntentUseCase({
           email: data.email,
           organizationId,
           organizationName,
           inviterName,
-        }),
+        }).pipe(
+          Effect.provideService(AuthIntentRepository, createAuthIntentPostgresRepository(txDb)),
+          Effect.provideService(AuthUserRepository, createAuthUserPostgresRepository(txDb)),
+        ),
       )
     })
 
@@ -122,14 +122,12 @@ export const removeMember = createServerFn({ method: "POST" })
     await runCommand(
       db,
       organizationId,
-    )(async (txDb) => {
-      const membershipRepo = createMembershipPostgresRepository(txDb)
-
-      await Effect.runPromise(
-        removeMemberUseCase(membershipRepo)({
+    )(async (txDb) =>
+      Effect.runPromise(
+        removeMemberUseCase({
           membershipId: data.membershipId,
           requestingUserId: userId,
-        }),
-      )
-    })
+        }).pipe(Effect.provideService(MembershipRepository, createMembershipPostgresRepository(txDb))),
+      ),
+    )
   })

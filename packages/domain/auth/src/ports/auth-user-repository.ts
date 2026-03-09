@@ -1,5 +1,5 @@
-import type { RepositoryError } from "@domain/shared"
-import type { Effect } from "effect"
+import type { NotFoundError, RepositoryError } from "@domain/shared"
+import { type Effect, ServiceMap } from "effect"
 
 export interface AuthUser {
   readonly id: string
@@ -7,7 +7,10 @@ export interface AuthUser {
   readonly name: string | null
 }
 
-export interface AuthUserRepository {
-  findByEmail(email: string): Effect.Effect<AuthUser | null, RepositoryError>
-  setNameIfMissing(input: { userId: string; name: string }): Effect.Effect<void, RepositoryError>
-}
+export class AuthUserRepository extends ServiceMap.Service<
+  AuthUserRepository,
+  {
+    findByEmail(email: string): Effect.Effect<AuthUser, NotFoundError | RepositoryError>
+    setNameIfMissing(input: { userId: string; name: string }): Effect.Effect<void, RepositoryError>
+  }
+>()("@domain/auth/AuthUserRepository") {}

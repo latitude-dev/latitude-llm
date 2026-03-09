@@ -2,8 +2,8 @@ import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/sha
 import { Effect } from "effect"
 import type { Grant, GrantType } from "../entities/grant.ts"
 import type { Plan } from "../entities/plan.ts"
-import type { GrantRepository } from "../ports/grant-repository.ts"
-import type { SubscriptionRepository } from "../ports/subscription-repository.ts"
+import { GrantRepository } from "../ports/grant-repository.ts"
+import { SubscriptionRepository } from "../ports/subscription-repository.ts"
 
 /**
  * Quota information for a specific resource type.
@@ -56,63 +56,61 @@ const calculateQuota = (grants: readonly Grant[]): { total: number; used: number
  * 3. Calculates total, used, and remaining quotas
  * 4. Returns comprehensive quota information
  */
-export const getOrganizationQuota =
-  (deps: {
-    subscriptionRepository: SubscriptionRepository
-    grantRepository: GrantRepository
-  }) =>
-  (organizationId: OrganizationId): Effect.Effect<OrganizationQuota, GetOrganizationQuotaError> => {
-    return Effect.gen(function* () {
-      // Find active subscription
-      const subscription = yield* deps.subscriptionRepository.findActive()
+export const getOrganizationQuota = (
+  organizationId: OrganizationId,
+): Effect.Effect<OrganizationQuota, GetOrganizationQuotaError, SubscriptionRepository | GrantRepository> =>
+  Effect.gen(function* () {
+    const subscriptionRepository = yield* SubscriptionRepository
+    const grantRepository = yield* GrantRepository
 
-      const hasActiveSubscription = subscription !== null
-      const isInTrial = subscription?.trialEndsAt ? new Date() < subscription.trialEndsAt : false
+    const subscription = yield* subscriptionRepository
+      .findActive()
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
-      // Get active grants for each type
-      const [seatsGrants, runsGrants, creditsGrants] = yield* Effect.all(
-        [
-          deps.grantRepository.findActiveByType("seats"),
-          deps.grantRepository.findActiveByType("runs"),
-          deps.grantRepository.findActiveByType("credits"),
-        ],
-        { concurrency: "unbounded" },
-      )
+    const hasActiveSubscription = subscription !== null
+    const isInTrial = subscription?.trialEndsAt ? new Date() < subscription.trialEndsAt : false
 
-      // Calculate quotas
-      const seatsQuota = calculateQuota(seatsGrants)
-      const runsQuota = calculateQuota(runsGrants)
-      const creditsQuota = calculateQuota(creditsGrants)
+    const [seatsGrants, runsGrants, creditsGrants] = yield* Effect.all(
+      [
+        grantRepository.findActiveByType("seats"),
+        grantRepository.findActiveByType("runs"),
+        grantRepository.findActiveByType("credits"),
+      ],
+      { concurrency: "unbounded" },
+    )
 
-      return {
-        organizationId,
-        plan: subscription?.plan ?? null,
-        quotas: {
-          seats: {
-            type: "seats",
-            total: seatsQuota.total,
-            used: seatsQuota.used,
-            remaining: seatsQuota.remaining,
-            grants: seatsGrants,
-          },
-          runs: {
-            type: "runs",
-            total: runsQuota.total,
-            used: runsQuota.used,
-            remaining: runsQuota.remaining,
-            grants: runsGrants,
-          },
-          credits: {
-            type: "credits",
-            total: creditsQuota.total,
-            used: creditsQuota.used,
-            remaining: creditsQuota.remaining,
-            grants: creditsGrants,
-          },
+    const seatsQuota = calculateQuota(seatsGrants)
+    const runsQuota = calculateQuota(runsGrants)
+    const creditsQuota = calculateQuota(creditsGrants)
+
+    return {
+      organizationId,
+      plan: subscription?.plan ?? null,
+      quotas: {
+        seats: {
+          type: "seats",
+          total: seatsQuota.total,
+          used: seatsQuota.used,
+          remaining: seatsQuota.remaining,
+          grants: seatsGrants,
         },
-        hasActiveSubscription,
-        isInTrial,
-        trialEndsAt: subscription?.trialEndsAt ?? null,
-      }
-    })
-  }
+        runs: {
+          type: "runs",
+          total: runsQuota.total,
+          used: runsQuota.used,
+          remaining: runsQuota.remaining,
+          grants: runsGrants,
+        },
+        credits: {
+          type: "credits",
+          total: creditsQuota.total,
+          used: creditsQuota.used,
+          remaining: creditsQuota.remaining,
+          grants: creditsGrants,
+        },
+      },
+      hasActiveSubscription,
+      isInTrial,
+      trialEndsAt: subscription?.trialEndsAt ?? null,
+    }
+  })

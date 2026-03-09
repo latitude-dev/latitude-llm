@@ -8,6 +8,7 @@ import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
+let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
@@ -17,6 +18,20 @@ export const getPostgresClient = (): PostgresClient => {
     postgresClientInstance = createPostgresClient()
   }
   return postgresClientInstance
+}
+
+/**
+ * Postgres client using the admin (superuser) connection.
+ * Use this only for cross-org operations that must bypass RLS:
+ * - API key auth lookups (token hash → org mapping)
+ * - Touch buffer batch updates
+ */
+export const getAdminPostgresClient = (): PostgresClient => {
+  if (!adminPostgresClientInstance) {
+    const adminUrl = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
+    adminPostgresClientInstance = createPostgresClient({ databaseUrl: adminUrl })
+  }
+  return adminPostgresClientInstance
 }
 
 export const getClickhouseClient = (): ClickHouseClient => {

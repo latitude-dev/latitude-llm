@@ -1,8 +1,8 @@
 import type { RepositoryError } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { createAuthIntent } from "../entities/auth-intent.ts"
-import type { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
-import type { AuthUserRepository } from "../ports/auth-user-repository.ts"
+import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
+import { AuthUserRepository } from "../ports/auth-user-repository.ts"
 import type { AuthIntent } from "../types.ts"
 import { normalizeEmail } from "./auth-intent-policy.ts"
 
@@ -15,30 +15,28 @@ export class LoginUserNotFoundError extends Data.TaggedError("LoginUserNotFoundE
 
 export type CreateLoginIntentError = LoginUserNotFoundError | RepositoryError
 
-export const createLoginIntentUseCase = (deps: {
-  readonly users: AuthUserRepository
-  readonly intents: AuthIntentRepository
-}) => {
-  return (input: { email: string }): Effect.Effect<AuthIntent, CreateLoginIntentError> => {
-    return Effect.gen(function* () {
-      const email = normalizeEmail(input.email)
-      const existingUser = yield* deps.users.findByEmail(email)
+export const createLoginIntentUseCase = (input: {
+  email: string
+}): Effect.Effect<AuthIntent, CreateLoginIntentError, AuthIntentRepository | AuthUserRepository> =>
+  Effect.gen(function* () {
+    const users = yield* AuthUserRepository
+    const intents = yield* AuthIntentRepository
 
-      if (!existingUser) {
-        return yield* new LoginUserNotFoundError({ email })
-      }
+    const email = normalizeEmail(input.email)
 
-      const intent = createAuthIntent({
-        type: "login",
-        email,
-        data: {},
-        existingAccountAtRequest: true,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      })
+    yield* users
+      .findByEmail(email)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new LoginUserNotFoundError({ email }))))
 
-      yield* deps.intents.save(intent)
-
-      return intent
+    const intent = createAuthIntent({
+      type: "login",
+      email,
+      data: {},
+      existingAccountAtRequest: true,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     })
-  }
-}
+
+    yield* intents.save(intent)
+
+    return intent
+  })

@@ -1,7 +1,7 @@
 import type { ConflictError, OrganizationId, ProjectId, RepositoryError, UserId, ValidationError } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { type Project, createProject } from "../entities/project.ts"
-import type { ProjectRepository } from "../ports/project-repository.ts"
+import { ProjectRepository } from "../ports/project-repository.ts"
 
 /**
  * Create a new project use case.
@@ -56,77 +56,72 @@ export type CreateProjectError =
   | ProjectAlreadyExistsError
   | InvalidProjectNameError
 
-export const createProjectUseCase =
-  (repository: ProjectRepository) =>
-  (input: CreateProjectInput): Effect.Effect<Project, CreateProjectError> => {
-    return Effect.gen(function* () {
-      const trimmedName = input.name.trim()
+export const createProjectUseCase = (
+  input: CreateProjectInput,
+): Effect.Effect<Project, CreateProjectError, ProjectRepository> => {
+  return Effect.gen(function* () {
+    const repository = yield* ProjectRepository
+    const trimmedName = input.name.trim()
 
-      // Validate name
-      if (!trimmedName || trimmedName.length === 0) {
-        return yield* new InvalidProjectNameError({
-          field: input.name,
-          message: "Name cannot be empty",
-        })
-      }
+    if (!trimmedName || trimmedName.length === 0) {
+      return yield* new InvalidProjectNameError({
+        field: input.name,
+        message: "Name cannot be empty",
+      })
+    }
 
-      if (trimmedName.length > 256) {
-        return yield* new InvalidProjectNameError({
-          field: input.name,
-          message: "Name exceeds 256 characters",
-        })
-      }
+    if (trimmedName.length > 256) {
+      return yield* new InvalidProjectNameError({
+        field: input.name,
+        message: "Name exceeds 256 characters",
+      })
+    }
 
-      const trimmedSlug = toSlug(trimmedName)
+    const trimmedSlug = toSlug(trimmedName)
 
-      // Validate slug
-      if (!trimmedSlug || trimmedSlug.length === 0) {
-        return yield* new InvalidProjectNameError({
-          field: trimmedSlug,
-          message: "Slug cannot be empty",
-        })
-      }
+    if (!trimmedSlug || trimmedSlug.length === 0) {
+      return yield* new InvalidProjectNameError({
+        field: trimmedSlug,
+        message: "Slug cannot be empty",
+      })
+    }
 
-      if (trimmedSlug.length > 256) {
-        return yield* new InvalidProjectNameError({
-          field: trimmedSlug,
-          message: "Slug exceeds 256 characters",
-        })
-      }
+    if (trimmedSlug.length > 256) {
+      return yield* new InvalidProjectNameError({
+        field: trimmedSlug,
+        message: "Slug exceeds 256 characters",
+      })
+    }
 
-      // Check if name already exists in organization
-      const nameExists = yield* repository.existsByName(trimmedName)
-      if (nameExists) {
-        return yield* new ProjectAlreadyExistsError({
-          name: trimmedName,
-          slug: trimmedSlug,
-          organizationId: input.organizationId,
-        })
-      }
-
-      // Check if slug already exists in organization
-      const slugExists = yield* repository.existsBySlug(trimmedSlug)
-      if (slugExists) {
-        return yield* new ProjectAlreadyExistsError({
-          name: trimmedName,
-          slug: trimmedSlug,
-          organizationId: input.organizationId,
-        })
-      }
-
-      // Create project entity
-      const project = createProject({
-        id: input.id,
-        organizationId: input.organizationId,
+    const nameExists = yield* repository.existsByName(trimmedName)
+    if (nameExists) {
+      return yield* new ProjectAlreadyExistsError({
         name: trimmedName,
         slug: trimmedSlug,
-        ...(input.description !== undefined && { description: input.description }),
-        ...(input.createdById !== undefined && { createdById: input.createdById }),
+        organizationId: input.organizationId,
       })
+    }
 
-      // Persist
-      yield* repository.save(project)
+    const slugExists = yield* repository.existsBySlug(trimmedSlug)
+    if (slugExists) {
+      return yield* new ProjectAlreadyExistsError({
+        name: trimmedName,
+        slug: trimmedSlug,
+        organizationId: input.organizationId,
+      })
+    }
 
-      return project
+    const project = createProject({
+      id: input.id,
+      organizationId: input.organizationId,
+      name: trimmedName,
+      slug: trimmedSlug,
+      ...(input.description !== undefined && { description: input.description }),
+      ...(input.createdById !== undefined && { createdById: input.createdById }),
     })
-  }
+
+    yield* repository.save(project)
+
+    return project
+  })
+}

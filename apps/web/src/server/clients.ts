@@ -97,7 +97,9 @@ export const getBetterAuth = () => {
         let authIntentContext: AuthIntentEmailContext | undefined
 
         if (authIntentId) {
-          const authIntent = await Effect.runPromise(authIntents.findById(authIntentId))
+          const authIntent = await Effect.runPromise(
+            authIntents.findById(authIntentId).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+          )
 
           if (authIntent) {
             authIntentContext = {
@@ -114,7 +116,9 @@ export const getBetterAuth = () => {
 
         const normalizedEmail = normalizeEmail(email)
 
-        const user = await Effect.runPromise(users.findByEmail(normalizedEmail))
+        const user = await Effect.runPromise(
+          users.findByEmail(normalizedEmail).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+        )
 
         const allowsUnknownUser = authIntentContext
           ? authIntentContext.type === "signup" || authIntentContext.type === "invite"

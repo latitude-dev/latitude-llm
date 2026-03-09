@@ -18,6 +18,5 @@ export {
   createOrganizationPostgresRepository,
   createProjectPostgresRepository,
   createSubscriptionPostgresRepository,
-  createUnscopedApiKeyPostgresRepository,
   createUserPostgresRepository,
 } from "./repositories/index.ts"

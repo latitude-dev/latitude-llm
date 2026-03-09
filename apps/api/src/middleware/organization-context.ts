@@ -29,10 +29,6 @@ export const createOrganizationContextMiddleware = (): MiddlewareHandler => {
     const organizationRepository = createOrganizationPostgresRepository(c.var.db)
     const organization = await Effect.runPromise(organizationRepository.findById(OrganizationId(organizationIdParam)))
 
-    if (!organization) {
-      throw new BadRequestError({ httpMessage: "Organization not found" })
-    }
-
     c.set("organization", organization)
     await next()
   }

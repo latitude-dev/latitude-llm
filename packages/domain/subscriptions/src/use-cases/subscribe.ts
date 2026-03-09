@@ -5,8 +5,8 @@ import { createGrant } from "../entities/grant.ts"
 import type { GrantType } from "../entities/grant.ts"
 import { type Plan, getAvailablePlans } from "../entities/plan.ts"
 import { type Subscription, createSubscription } from "../entities/subscription.ts"
-import type { GrantRepository } from "../ports/grant-repository.ts"
-import type { SubscriptionRepository } from "../ports/subscription-repository.ts"
+import { GrantRepository } from "../ports/grant-repository.ts"
+import { SubscriptionRepository } from "../ports/subscription-repository.ts"
 
 /**
  * Input for subscribing to a plan.
@@ -56,64 +56,57 @@ export type SubscribeError = RepositoryError | SubscriptionAlreadyExistsError | 
  * 5. Persists subscription and grants
  * 6. Returns the created subscription
  */
-export const subscribe =
-  (deps: {
-    subscriptionRepository: SubscriptionRepository
-    grantRepository: GrantRepository
-  }) =>
-  (input: SubscribeInput): Effect.Effect<Subscription, SubscribeError> => {
-    return Effect.gen(function* () {
-      // Validate plan
-      const validPlans = getAvailablePlans()
-      if (!validPlans.includes(input.plan)) {
-        return yield* new InvalidPlanError({ plan: input.plan, reason: "Unknown plan" })
-      }
+export const subscribe = (
+  input: SubscribeInput,
+): Effect.Effect<Subscription, SubscribeError, SubscriptionRepository | GrantRepository> =>
+  Effect.gen(function* () {
+    const subscriptionRepository = yield* SubscriptionRepository
+    const grantRepository = yield* GrantRepository
 
-      // Check for existing subscription
-      const existing = yield* deps.subscriptionRepository.exists()
-      if (existing) {
-        return yield* new SubscriptionAlreadyExistsError({ organizationId: input.organizationId })
-      }
+    const validPlans = getAvailablePlans()
+    if (!validPlans.includes(input.plan)) {
+      return yield* new InvalidPlanError({ plan: input.plan, reason: "Unknown plan" })
+    }
 
-      // Create subscription with optional trial
-      const trialEndsAt = input.trialDays ? new Date(Date.now() + input.trialDays * 24 * 60 * 60 * 1000) : null
+    const existing = yield* subscriptionRepository.exists()
+    if (existing) {
+      return yield* new SubscriptionAlreadyExistsError({ organizationId: input.organizationId })
+    }
 
-      const subscription = createSubscription({
-        id: input.subscriptionId,
-        organizationId: input.organizationId,
-        plan: input.plan,
-        trialEndsAt,
-      })
+    const trialEndsAt = input.trialDays ? new Date(Date.now() + input.trialDays * 24 * 60 * 60 * 1000) : null
 
-      // Create grants based on plan (would normally look up plan config)
-      const grantConfigs: Array<{ type: GrantType; amount: number }> = [
-        { type: "seats", amount: 10 },
-        { type: "runs", amount: 1000 },
-        { type: "credits", amount: 500 },
-      ]
-
-      const grantIdByType: Record<GrantType, GrantId> = {
-        seats: input.grantIds.seats,
-        runs: input.grantIds.runs,
-        credits: input.grantIds.credits,
-      }
-
-      const grants = grantConfigs.map((config) =>
-        createGrant({
-          id: grantIdByType[config.type],
-          organizationId: input.organizationId,
-          subscriptionId: input.subscriptionId,
-          type: config.type,
-          amount: config.amount,
-        }),
-      )
-
-      // Persist subscription
-      yield* deps.subscriptionRepository.save(subscription)
-
-      // Persist grants
-      yield* deps.grantRepository.saveMany(grants)
-
-      return subscription
+    const subscription = createSubscription({
+      id: input.subscriptionId,
+      organizationId: input.organizationId,
+      plan: input.plan,
+      trialEndsAt,
     })
-  }
+
+    const grantConfigs: Array<{ type: GrantType; amount: number }> = [
+      { type: "seats", amount: 10 },
+      { type: "runs", amount: 1000 },
+      { type: "credits", amount: 500 },
+    ]
+
+    const grantIdByType: Record<GrantType, GrantId> = {
+      seats: input.grantIds.seats,
+      runs: input.grantIds.runs,
+      credits: input.grantIds.credits,
+    }
+
+    const grants = grantConfigs.map((config) =>
+      createGrant({
+        id: grantIdByType[config.type],
+        organizationId: input.organizationId,
+        subscriptionId: input.subscriptionId,
+        type: config.type,
+        amount: config.amount,
+      }),
+    )
+
+    yield* subscriptionRepository.save(subscription)
+
+    yield* grantRepository.saveMany(grants)
+
+    return subscription
+  })

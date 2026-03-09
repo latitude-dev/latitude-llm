@@ -1,4 +1,11 @@
-import { completeAuthIntentUseCase, createLoginIntentUseCase, createSignupIntentUseCase } from "@domain/auth"
+import {
+  AuthIntentRepository,
+  AuthUserRepository,
+  completeAuthIntentUseCase,
+  createLoginIntentUseCase,
+  createSignupIntentUseCase,
+} from "@domain/auth"
+import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import {
   createAuthIntentPostgresRepository,
   createAuthUserPostgresRepository,
@@ -19,22 +26,24 @@ import {
   getAuthIntentInfoInputSchema,
 } from "./auth.types.ts"
 
+const provideAuthServices = <A, E>(
+  effect: Effect.Effect<A, E, AuthIntentRepository | AuthUserRepository>,
+  txDb: Parameters<typeof createAuthIntentPostgresRepository>[0],
+) =>
+  effect.pipe(
+    Effect.provideService(AuthIntentRepository, createAuthIntentPostgresRepository(txDb)),
+    Effect.provideService(AuthUserRepository, createAuthUserPostgresRepository(txDb)),
+  )
+
 export const createLoginIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(zodValidator(createLoginIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
 
-    const intent = await runCommand(db)(async (txDb) => {
-      const intents = createAuthIntentPostgresRepository(txDb)
-      const users = createAuthUserPostgresRepository(txDb)
-
-      return Effect.runPromise(
-        createLoginIntentUseCase({ intents, users })({
-          email: data.email,
-        }),
-      )
-    })
+    const intent = await runCommand(db)(async (txDb) =>
+      Effect.runPromise(provideAuthServices(createLoginIntentUseCase({ email: data.email }), txDb)),
+    )
 
     return { intentId: intent.id }
   })
@@ -44,18 +53,19 @@ export const createSignupIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(createSignupIntentInputSchema))
   .handler(async ({ data }) => {
     const { db } = getPostgresClient()
-    const intent = await runCommand(db)(async (txDb) => {
-      const intents = createAuthIntentPostgresRepository(txDb)
-      const users = createAuthUserPostgresRepository(txDb)
 
-      return Effect.runPromise(
-        createSignupIntentUseCase({ intents, users })({
-          name: data.name,
-          email: data.email,
-          organizationName: data.organizationName,
-        }),
-      )
-    })
+    const intent = await runCommand(db)(async (txDb) =>
+      Effect.runPromise(
+        provideAuthServices(
+          createSignupIntentUseCase({
+            name: data.name,
+            email: data.email,
+            organizationName: data.organizationName,
+          }),
+          txDb,
+        ),
+      ),
+    )
 
     return {
       intentId: intent.id,
@@ -108,17 +118,17 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
     const email = session.user.email
     const name = data.name ?? session.user.name ?? null
 
-    return runCommand(db)(async (txDb) => {
-      const intents = createAuthIntentPostgresRepository(txDb)
-      const organizations = createOrganizationPostgresRepository(txDb)
-      const memberships = createMembershipPostgresRepository(txDb)
-      const users = createAuthUserPostgresRepository(txDb)
-
-      return Effect.runPromise(
-        completeAuthIntentUseCase({ intents, organizations, memberships, users })({
+    return runCommand(db)(async (txDb) =>
+      Effect.runPromise(
+        completeAuthIntentUseCase({
           intentId: data.intentId,
           session: { userId, email, name },
-        }),
-      )
-    })
+        }).pipe(
+          Effect.provideService(AuthIntentRepository, createAuthIntentPostgresRepository(txDb)),
+          Effect.provideService(AuthUserRepository, createAuthUserPostgresRepository(txDb)),
+          Effect.provideService(MembershipRepository, createMembershipPostgresRepository(txDb)),
+          Effect.provideService(OrganizationRepository, createOrganizationPostgresRepository(txDb)),
+        ),
+      ),
+    )
   })

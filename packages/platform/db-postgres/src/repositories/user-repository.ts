@@ -1,5 +1,5 @@
-import { UserId, toRepositoryError } from "@domain/shared"
-import type { User, UserRepository } from "@domain/users"
+import { NotFoundError, UserId, toRepositoryError } from "@domain/shared"
+import type { User } from "@domain/users"
 import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -22,7 +22,7 @@ const toDomainUser = (row: typeof user.$inferSelect): User => ({
 /**
  * Creates a Postgres implementation of the UserRepository port.
  */
-export const createUserPostgresRepository = (db: PostgresDb): UserRepository => ({
+export const createUserPostgresRepository = (db: PostgresDb) => ({
   findByEmail: (email: string) =>
     Effect.gen(function* () {
       const [result] = yield* Effect.tryPromise({
@@ -30,6 +30,10 @@ export const createUserPostgresRepository = (db: PostgresDb): UserRepository => 
         catch: (error) => toRepositoryError(error, "findByEmail"),
       })
 
-      return result ? toDomainUser(result) : null
+      if (!result) {
+        return yield* new NotFoundError({ entity: "User", id: email })
+      }
+
+      return toDomainUser(result)
     }),
 })

@@ -1,4 +1,4 @@
-import type { AuthIntent, AuthIntentRepository } from "@domain/auth"
+import type { AuthIntent } from "@domain/auth"
 import { NotFoundError, toRepositoryError } from "@domain/shared"
 import { and, eq, gt, isNull, sql } from "drizzle-orm"
 import { Effect } from "effect"
@@ -54,8 +54,8 @@ const toDomainAuthIntent = (row: typeof authIntent.$inferSelect): AuthIntent => 
   }
 }
 
-export const createAuthIntentPostgresRepository = (db: PostgresDb): AuthIntentRepository => ({
-  save: (intent) =>
+export const createAuthIntentPostgresRepository = (db: PostgresDb) => ({
+  save: (intent: AuthIntent) =>
     Effect.tryPromise({
       try: async () => {
         await db.insert(authIntent).values({
@@ -72,7 +72,7 @@ export const createAuthIntentPostgresRepository = (db: PostgresDb): AuthIntentRe
       catch: (error) => toRepositoryError(error, "save"),
     }),
 
-  findById: (id) =>
+  findById: (id: string) =>
     Effect.gen(function* () {
       const row = yield* Effect.tryPromise({
         try: () =>
@@ -92,7 +92,7 @@ export const createAuthIntentPostgresRepository = (db: PostgresDb): AuthIntentRe
       return toDomainAuthIntent(row)
     }),
 
-  findPendingInvitesByOrganizationId: (organizationId) =>
+  findPendingInvitesByOrganizationId: (organizationId: string) =>
     Effect.tryPromise({
       try: async () => {
         const rows = await db
@@ -116,7 +116,7 @@ export const createAuthIntentPostgresRepository = (db: PostgresDb): AuthIntentRe
       catch: (error) => toRepositoryError(error, "findPendingInvitesByOrganizationId"),
     }),
 
-  markConsumed: ({ intentId, createdOrganizationId }) =>
+  markConsumed: ({ intentId, createdOrganizationId }: { intentId: string; createdOrganizationId?: string }) =>
     Effect.tryPromise({
       try: async () => {
         await db
