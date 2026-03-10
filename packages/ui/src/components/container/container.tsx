@@ -7,15 +7,17 @@ export type ContainerSize = "xl" | "2xl" | "full"
 function Container({
   size = "xl",
   limitMaxHeight = false,
+  className,
   children,
 }: {
   size?: ContainerSize
   limitMaxHeight?: boolean
+  className?: string
   children: ReactNode
 }) {
   return (
     <div
-      className={cn("mx-auto w-full py-6 px-4 flex flex-col gap-6", {
+      className={cn("mx-auto w-full py-6 px-4 flex flex-col gap-6", className, {
         "max-h-full": limitMaxHeight,
         "max-w-screen-xl": size === "xl",
         "max-w-screen-2xl": size === "2xl",

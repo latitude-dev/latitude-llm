@@ -1,60 +1,98 @@
-import { Button, Container, Text } from "@repo/ui"
-import { extractLeadingEmoji } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
+import {
+  Container,
+  Table,
+  TableBlankSlate,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableSkeleton,
+  TableWithHeader,
+  Text,
+} from "@repo/ui"
 import { Link, createFileRoute } from "@tanstack/react-router"
-import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
+import { useSpansCollection } from "../../../../domains/spans/spans.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
-  component: ProjectViewPage,
+  component: TracesPage,
 })
 
-function ProjectViewContent() {
+function TracesPage() {
   const { projectId } = Route.useParams()
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.id, projectId)).findOne(),
-    [projectId],
-  )
-
-  if (!project) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <Text.H4 color="foregroundMuted">Project not found</Text.H4>
-        <Link to="/">
-          <Button variant="outline">Back to Dashboard</Button>
-        </Link>
-      </div>
-    )
-  }
-
-  const [emoji, title] = extractLeadingEmoji(project.name)
+  const { data: spans } = useSpansCollection(projectId)
 
   return (
-    <>
-      <div className="flex flex-col items-center gap-6 py-16">
-        {emoji && (
-          <div className="min-w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-            <Text.H1>{emoji}</Text.H1>
-          </div>
-        )}
-        <div className="flex flex-col items-center gap-2 max-w-md">
-          <Text.H3 weight="medium">{title}</Text.H3>
-          {project.description && <Text.H5 color="foregroundMuted">{project.description}</Text.H5>}
-        </div>
-      </div>
-
-      <div className="flex flex-col items-center justify-center py-20 gap-4 rounded-lg bg-linear-to-b from-secondary to-transparent">
-        <Link to="/projects/$projectId/spans" params={{ projectId }}>
-          <Button variant="outline">View Spans</Button>
-        </Link>
-      </div>
-    </>
-  )
-}
-
-function ProjectViewPage() {
-  return (
-    <Container>
-      <ProjectViewContent />
+    <Container className="pt-14">
+      <TableWithHeader
+        title="Traces"
+        table={
+          !spans ? (
+            <TableSkeleton cols={8} rows={5} />
+          ) : spans.length === 0 ? (
+            <TableBlankSlate description="No traces found for this project." />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Trace ID</TableHead>
+                  <TableHead>Kind</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Provider</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Tokens (in/out)</TableHead>
+                  <TableHead>Start Time</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {spans.map((span) => (
+                  <TableRow key={`${span.traceId}-${span.spanId}`}>
+                    <TableCell>
+                      <Link
+                        to="/projects/$projectId/traces/$traceId/$spanId"
+                        params={{
+                          projectId,
+                          traceId: span.traceId,
+                          spanId: span.spanId,
+                        }}
+                        className="underline"
+                      >
+                        <Text.H5>{span.name}</Text.H5>
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Text.H5 color="foregroundMuted">{span.traceId.slice(0, 8)}...</Text.H5>
+                    </TableCell>
+                    <TableCell>
+                      <Text.H5>{span.kind.toUpperCase()}</Text.H5>
+                    </TableCell>
+                    <TableCell>
+                      <Text.H5 color={span.statusCode === "error" ? "destructive" : "foregroundMuted"}>
+                        {span.statusCode.toUpperCase()}
+                      </Text.H5>
+                    </TableCell>
+                    <TableCell>
+                      <Text.H5>{span.provider || "—"}</Text.H5>
+                    </TableCell>
+                    <TableCell>
+                      <Text.H5>{span.model || "—"}</Text.H5>
+                    </TableCell>
+                    <TableCell>
+                      <Text.H5>
+                        {span.tokensInput} / {span.tokensOutput}
+                      </Text.H5>
+                    </TableCell>
+                    <TableCell>
+                      <Text.H5 color="foregroundMuted">{new Date(span.startTime).toLocaleString()}</Text.H5>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )
+        }
+      />
     </Container>
   )
 }

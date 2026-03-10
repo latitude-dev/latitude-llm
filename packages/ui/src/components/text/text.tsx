@@ -142,6 +142,11 @@ namespace Text {
   })
   H5.displayName = "Text.H5"
 
+  export const H5M = forwardRef<HTMLHeadingElement, Common>(function H5M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h5" weight="medium" {...props} />
+  })
+  H5M.displayName = "Text.H5M"
+
   export const H6 = forwardRef<HTMLHeadingElement, Common>(function H6(props, ref) {
     return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" {...props} />
   })

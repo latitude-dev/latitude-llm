@@ -1,8 +1,9 @@
+import { Toaster } from "@repo/ui"
+import "@repo/ui/styles/globals.css"
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router"
+import { Agentation } from "agentation"
 import type { ReactNode } from "react"
 import { useEffect } from "react"
-import "@repo/ui/styles/globals.css"
-import { Toaster } from "@repo/ui"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
@@ -53,6 +54,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <AppQueryProvider>
           {children}
           <Toaster />
+          {process.env.NODE_ENV === "development" && <Agentation />}
         </AppQueryProvider>
         <Scripts />
       </body>
