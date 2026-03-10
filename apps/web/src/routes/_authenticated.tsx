@@ -86,18 +86,13 @@ function ThemeToggle() {
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains("dark"))
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains("dark"))
-    })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
-    return () => observer.disconnect()
   }, [])
 
   const toggle = () => {
-    const root = document.documentElement
-    const next = !root.classList.contains("dark")
-    root.classList.toggle("dark", next)
-    root.style.colorScheme = next ? "dark" : "light"
+    const next = !isDark
+    document.documentElement.classList.toggle("dark", next)
+    document.documentElement.style.colorScheme = next ? "dark" : "light"
+    setIsDark(next)
   }
 
   return (
