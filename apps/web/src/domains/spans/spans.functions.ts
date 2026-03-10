@@ -1,6 +1,10 @@
-import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
-import type { Span, SpanDetail, SpanRepository } from "@domain/spans"
-import { createClickhouseClient, createSpanClickhouseRepository } from "@platform/db-clickhouse"
+import { NotFoundError, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
+import type { Span, SpanDetail, SpanRepository, Trace, TraceRepository } from "@domain/spans"
+import {
+  createClickhouseClient,
+  createSpanClickhouseRepository,
+  createTraceClickhouseRepository,
+} from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
@@ -24,6 +28,7 @@ export interface SpanRecord {
   readonly model: string
   readonly tokensInput: number
   readonly tokensOutput: number
+  readonly costTotalMicrocents: number
   readonly startTime: string
   readonly endTime: string
   readonly ingestedAt: string
@@ -61,12 +66,20 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly toolDefinitions: string
 }
 
-let repoInstance: SpanRepository | undefined
+let spanRepoInstance: SpanRepository | undefined
 const getSpanRepository = () => {
-  if (!repoInstance) {
-    repoInstance = createSpanClickhouseRepository(createClickhouseClient())
+  if (!spanRepoInstance) {
+    spanRepoInstance = createSpanClickhouseRepository(createClickhouseClient())
   }
-  return repoInstance
+  return spanRepoInstance
+}
+
+let traceRepoInstance: TraceRepository | undefined
+const getTraceRepository = () => {
+  if (!traceRepoInstance) {
+    traceRepoInstance = createTraceClickhouseRepository(createClickhouseClient())
+  }
+  return traceRepoInstance
 }
 
 const serializeSpan = (span: Span): SpanRecord => ({
@@ -85,6 +98,7 @@ const serializeSpan = (span: Span): SpanRecord => ({
   model: span.model,
   tokensInput: span.tokensInput,
   tokensOutput: span.tokensOutput,
+  costTotalMicrocents: span.costTotalMicrocents,
   startTime: span.startTime.toISOString(),
   endTime: span.endTime.toISOString(),
   ingestedAt: span.ingestedAt.toISOString(),
@@ -123,16 +137,14 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   toolDefinitions: span.toolDefinitions,
 })
 
-export const listSpansByProject = createServerFn({ method: "GET" })
+export const listSpansByTrace = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ projectId: z.string() })))
+  .inputValidator(zodValidator(z.object({ traceId: z.string() })))
   .handler(async ({ data }): Promise<SpanRecord[]> => {
     const { organizationId } = await requireSession()
     const repo = getSpanRepository()
     const spans = await Effect.runPromise(
-      repo.findByProjectId(OrganizationId(organizationId), ProjectId(data.projectId), {
-        limit: 200,
-      }),
+      repo.findByTraceId({ organizationId: OrganizationId(organizationId), traceId: TraceId(data.traceId) }),
     )
     return spans.map(serializeSpan)
   })
@@ -144,10 +156,84 @@ export const getSpanDetail = createServerFn({ method: "GET" })
     const { organizationId } = await requireSession()
     const repo = getSpanRepository()
     const span = await Effect.runPromise(
-      repo.findBySpanId(OrganizationId(organizationId), TraceId(data.traceId), SpanId(data.spanId)),
+      repo.findBySpanId({
+        organizationId: OrganizationId(organizationId),
+        traceId: TraceId(data.traceId),
+        spanId: SpanId(data.spanId),
+      }),
     )
     if (!span) {
-      throw new Error("Span not found")
+      throw new NotFoundError({ entity: "Span", id: data.spanId })
     }
     return serializeSpanDetail(span)
+  })
+
+export interface TraceRecord {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly spanCount: number
+  readonly errorCount: number
+  readonly startTime: string
+  readonly endTime: string
+  readonly durationNs: number
+  readonly status: string
+  readonly tokensInput: number
+  readonly tokensOutput: number
+  readonly tokensCacheRead: number
+  readonly tokensCacheCreate: number
+  readonly tokensReasoning: number
+  readonly tokensTotal: number
+  readonly costInputMicrocents: number
+  readonly costOutputMicrocents: number
+  readonly costTotalMicrocents: number
+  readonly tags: readonly string[]
+  readonly models: readonly string[]
+  readonly providers: readonly string[]
+  readonly serviceNames: readonly string[]
+  readonly rootSpanId: string
+  readonly rootSpanName: string
+}
+
+const serializeTrace = (trace: Trace): TraceRecord => ({
+  organizationId: trace.organizationId,
+  projectId: trace.projectId,
+  traceId: trace.traceId,
+  spanCount: trace.spanCount,
+  errorCount: trace.errorCount,
+  startTime: trace.startTime.toISOString(),
+  endTime: trace.endTime.toISOString(),
+  durationNs: trace.durationNs,
+  status: trace.status,
+  tokensInput: trace.tokensInput,
+  tokensOutput: trace.tokensOutput,
+  tokensCacheRead: trace.tokensCacheRead,
+  tokensCacheCreate: trace.tokensCacheCreate,
+  tokensReasoning: trace.tokensReasoning,
+  tokensTotal: trace.tokensTotal,
+  costInputMicrocents: trace.costInputMicrocents,
+  costOutputMicrocents: trace.costOutputMicrocents,
+  costTotalMicrocents: trace.costTotalMicrocents,
+  tags: trace.tags,
+  models: trace.models,
+  providers: trace.providers,
+  serviceNames: trace.serviceNames,
+  rootSpanId: trace.rootSpanId,
+  rootSpanName: trace.rootSpanName,
+})
+
+export const listTracesByProject = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(zodValidator(z.object({ projectId: z.string() })))
+  .handler(async ({ data }): Promise<TraceRecord[]> => {
+    const { organizationId } = await requireSession()
+    const repo = getTraceRepository()
+    const traces = await Effect.runPromise(
+      repo.findByProjectId({
+        organizationId: OrganizationId(organizationId),
+        projectId: ProjectId(data.projectId),
+        options: { limit: 200 },
+      }),
+    )
+    return traces.map(serializeTrace)
   })

@@ -153,7 +153,10 @@ function ProjectSidebar({
     [projectId],
   )
 
-  const isTracesActive = pathname === `/projects/${projectId}` || pathname === `/projects/${projectId}/`
+  const isTracesActive =
+    pathname === `/projects/${projectId}` ||
+    pathname === `/projects/${projectId}/` ||
+    pathname.startsWith(`/projects/${projectId}/traces`)
   const isIssuesActive = pathname.startsWith(`/projects/${projectId}/issues`)
   const isDatasetsActive = pathname.startsWith(`/projects/${projectId}/datasets`)
 

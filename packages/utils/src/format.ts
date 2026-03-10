@@ -30,3 +30,14 @@ export function formatPrice(price: number): string {
   if (price < 0.01) return `$${price.toFixed(3)}`
   return `$${price.toFixed(2)}`
 }
+
+/**
+ * Format a nanosecond duration into a human-readable string.
+ *
+ * Examples: `500_000` -> `"500.0µs"`, `12_300_000` -> `"12.3ms"`, `1_500_000_000` -> `"1.50s"`
+ */
+export function formatDuration(ns: number): string {
+  if (ns < 1_000_000) return `${(ns / 1_000).toFixed(1)}µs`
+  if (ns < 1_000_000_000) return `${(ns / 1_000_000).toFixed(1)}ms`
+  return `${(ns / 1_000_000_000).toFixed(2)}s`
+}

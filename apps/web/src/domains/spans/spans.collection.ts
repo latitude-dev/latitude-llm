@@ -2,32 +2,39 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { type SpanDetailRecord, type SpanRecord, getSpanDetail, listSpansByProject } from "./spans.functions.ts"
+import {
+  type SpanDetailRecord,
+  type SpanRecord,
+  type TraceRecord,
+  getSpanDetail,
+  listSpansByTrace,
+  listTracesByProject,
+} from "./spans.functions.ts"
 
 const queryClient = getQueryClient()
 
-const makeSpansCollection = (projectId: string) =>
+const makeSpansByTraceCollection = (traceId: string) =>
   createCollection(
     queryCollectionOptions({
       queryClient,
-      queryKey: ["spans", projectId],
-      queryFn: () => listSpansByProject({ data: { projectId } }),
+      queryKey: ["spans", "trace", traceId],
+      queryFn: () => listSpansByTrace({ data: { traceId } }),
       getKey: (item: SpanRecord): string => `${item.traceId}-${item.spanId}`,
     }),
   )
 
-type SpansCollection = ReturnType<typeof makeSpansCollection>
-const collectionsCache: Record<string, SpansCollection> = {}
+type SpansByTraceCollection = ReturnType<typeof makeSpansByTraceCollection>
+const traceCollectionsCache: Record<string, SpansByTraceCollection> = {}
 
-const getSpansCollection = (projectId: string): SpansCollection => {
-  if (!collectionsCache[projectId]) {
-    collectionsCache[projectId] = makeSpansCollection(projectId)
+const getSpansByTraceCollection = (traceId: string): SpansByTraceCollection => {
+  if (!traceCollectionsCache[traceId]) {
+    traceCollectionsCache[traceId] = makeSpansByTraceCollection(traceId)
   }
-  return collectionsCache[projectId]
+  return traceCollectionsCache[traceId]
 }
 
-export const useSpansCollection = (projectId: string) => {
-  const collection = getSpansCollection(projectId)
+export const useSpansByTraceCollection = (traceId: string) => {
+  const collection = getSpansByTraceCollection(traceId)
   return useLiveQuery((q) => q.from({ span: collection }))
 }
 
@@ -36,4 +43,29 @@ export const useSpanDetail = ({ traceId, spanId }: { traceId: string; spanId: st
     queryKey: ["spanDetail", traceId, spanId],
     queryFn: () => getSpanDetail({ data: { traceId, spanId } }),
   })
+}
+
+const makeTracesCollection = (projectId: string) =>
+  createCollection(
+    queryCollectionOptions({
+      queryClient,
+      queryKey: ["traces", projectId],
+      queryFn: () => listTracesByProject({ data: { projectId } }),
+      getKey: (item: TraceRecord): string => item.traceId,
+    }),
+  )
+
+type TracesCollection = ReturnType<typeof makeTracesCollection>
+const projectCollectionsCache: Record<string, TracesCollection> = {}
+
+const getTracesCollection = (projectId: string): TracesCollection => {
+  if (!projectCollectionsCache[projectId]) {
+    projectCollectionsCache[projectId] = makeTracesCollection(projectId)
+  }
+  return projectCollectionsCache[projectId]
+}
+
+export const useTracesCollection = (projectId: string) => {
+  const collection = getTracesCollection(projectId)
+  return useLiveQuery((q) => q.from({ trace: collection }))
 }
