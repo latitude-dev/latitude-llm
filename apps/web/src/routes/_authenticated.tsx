@@ -11,6 +11,7 @@ import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 
 export const Route = createFileRoute("/_authenticated")({
+  ssr: "data-only",
   beforeLoad: async () => {
     const session = await getSession()
 
