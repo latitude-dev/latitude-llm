@@ -18,6 +18,7 @@ import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
+let adminPostgresClientInstance: PostgresClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 
 interface AuthIntentEmailContext {
@@ -61,6 +62,19 @@ export const getPostgresClient = (): PostgresClient => {
   return postgresClient
 }
 
+/**
+ * Postgres client using the admin (superuser) connection.
+ * Bypasses RLS — use only for cross-org operations like session
+ * bootstrap and auth intent completion.
+ */
+export const getAdminPostgresClient = (): PostgresClient => {
+  if (!adminPostgresClientInstance) {
+    const adminUrl = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
+    adminPostgresClientInstance = createPostgresClient({ databaseUrl: adminUrl })
+  }
+  return adminPostgresClientInstance
+}
+
 export const getBetterAuth = () => {
   if (!betterAuthInstance) {
     const { db } = getPostgresClient()
@@ -82,7 +96,7 @@ export const getBetterAuth = () => {
     const users = createAuthUserPostgresRepository(db)
 
     betterAuthInstance = createBetterAuth({
-      db,
+      db: getAdminPostgresClient().db,
       secret: betterAuthSecret,
       baseUrl: webUrl,
       basePath: "/api/auth",

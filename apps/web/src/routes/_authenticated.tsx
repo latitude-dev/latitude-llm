@@ -17,6 +17,7 @@ const NAV_LINKS = [
 ]
 
 export const Route = createFileRoute("/_authenticated")({
+  ssr: "data-only",
   beforeLoad: async () => {
     const session = await getSession()
 

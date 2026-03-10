@@ -16,7 +16,7 @@ import {
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 import { ensureSession } from "../sessions/session.functions.ts"
 import {
@@ -112,7 +112,7 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(completeAuthIntentInputSchema))
   .handler(async ({ data }) => {
     const session = await ensureSession()
-    const { db } = getPostgresClient()
+    const { db } = getAdminPostgresClient()
 
     const userId = session.user.id
     const email = session.user.email

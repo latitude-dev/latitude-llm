@@ -63,7 +63,6 @@ export const getRedisClient = (): RedisClient => {
  */
 export const getBetterAuth = () => {
   if (!betterAuthInstance) {
-    const { db } = getPostgresClient()
     const baseUrl = Effect.runSync(parseEnv("LAT_BETTER_AUTH_URL", "string"))
     const betterAuthSecret = Effect.runSync(parseEnv("LAT_BETTER_AUTH_SECRET", "string"))
     const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
@@ -78,7 +77,7 @@ export const getBetterAuth = () => {
       : [webUrl]
 
     betterAuthInstance = createBetterAuth({
-      db,
+      db: getAdminPostgresClient().db,
       secret: betterAuthSecret,
       baseUrl,
       trustedOrigins,
