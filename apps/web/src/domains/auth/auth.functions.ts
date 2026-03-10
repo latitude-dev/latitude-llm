@@ -16,7 +16,7 @@ import {
 import { createServerFn } from "@tanstack/react-start"
 import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
-import { getPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 import { ensureSession } from "../sessions/session.functions.ts"
 import {
@@ -39,7 +39,7 @@ export const createLoginIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(zodValidator(createLoginIntentInputSchema))
   .handler(async ({ data }) => {
-    const { db } = getPostgresClient()
+    const { db } = getAdminPostgresClient()
 
     const intent = await runCommand(db)(async (txDb) =>
       Effect.runPromise(provideAuthServices(createLoginIntentUseCase({ email: data.email }), txDb)),
@@ -52,7 +52,7 @@ export const createSignupIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(zodValidator(createSignupIntentInputSchema))
   .handler(async ({ data }) => {
-    const { db } = getPostgresClient()
+    const { db } = getAdminPostgresClient()
 
     const intent = await runCommand(db)(async (txDb) =>
       Effect.runPromise(
@@ -84,7 +84,7 @@ export const getAuthIntentInfo = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(getAuthIntentInfoInputSchema))
   .handler(async ({ data }): Promise<AuthIntentInfo> => {
     const session = await ensureSession()
-    const { db } = getPostgresClient()
+    const { db } = getAdminPostgresClient()
 
     return runCommand(db)(async (txDb) => {
       const intents = createAuthIntentPostgresRepository(txDb)
@@ -112,7 +112,7 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
   .inputValidator(zodValidator(completeAuthIntentInputSchema))
   .handler(async ({ data }) => {
     const session = await ensureSession()
-    const { db } = getPostgresClient()
+    const { db } = getAdminPostgresClient()
 
     const userId = session.user.id
     const email = session.user.email
