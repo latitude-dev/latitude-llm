@@ -8,19 +8,22 @@ import type { Span, SpanDetail } from "../entities/span.ts"
 export interface SpanRepository {
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError>
 
-  findByTraceId(organizationId: OrganizationId, traceId: TraceId): Effect.Effect<readonly Span[], RepositoryError>
+  findByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly traceId: TraceId
+  }): Effect.Effect<readonly Span[], RepositoryError>
 
-  findByProjectId(
-    organizationId: OrganizationId,
-    projectId: ProjectId,
-    options: SpanListOptions,
-  ): Effect.Effect<readonly Span[], RepositoryError>
+  findByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly options: SpanListOptions
+  }): Effect.Effect<readonly Span[], RepositoryError>
 
-  findBySpanId(
-    organizationId: OrganizationId,
-    traceId: TraceId,
-    spanId: SpanId,
-  ): Effect.Effect<SpanDetail | null, RepositoryError>
+  findBySpanId(input: {
+    readonly organizationId: OrganizationId
+    readonly traceId: TraceId
+    readonly spanId: SpanId
+  }): Effect.Effect<SpanDetail | null, RepositoryError>
 }
 
 export interface SpanListOptions {

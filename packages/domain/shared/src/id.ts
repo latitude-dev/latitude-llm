@@ -28,7 +28,7 @@ export type ApiKeyId = Branded<string, "ApiKeyId">
 export type SubscriptionId = Branded<string, "SubscriptionId">
 export type GrantId = Branded<string, "GrantId">
 
-// Telemetry-related IDs
+// Telemetry-related IDs (ClickHouse — externally generated, not CUIDs)
 export type TraceId = Branded<string, "TraceId">
 export type SpanId = Branded<string, "SpanId">
 export type SessionId = Branded<string, "SessionId">
@@ -41,10 +41,10 @@ export const OrganizationId = (value: string): OrganizationId => value as Organi
 export const MembershipId = (value: string): MembershipId => value as MembershipId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
-export const SubscriptionId = (value: string): SubscriptionId => value as SubscriptionId
-export const GrantId = (value: string): GrantId => value as GrantId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
+export const SubscriptionId = (value: string): SubscriptionId => value as SubscriptionId
+export const GrantId = (value: string): GrantId => value as GrantId
 
 /**
  * Generate a unique ID using CUID2.
