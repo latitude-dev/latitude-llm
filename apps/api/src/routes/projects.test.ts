@@ -1,16 +1,11 @@
 import { generateId } from "@domain/shared"
-import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
+import { postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
-import { encrypt, hashToken } from "@repo/utils"
 import { eq } from "drizzle-orm"
-import { Effect } from "effect"
-import { Hono } from "hono"
+import type { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
-import { getRedisClient } from "../clients.ts"
-import { createAuthMiddleware } from "../middleware/auth.ts"
-import { honoErrorHandler } from "../middleware/error-handler.ts"
-import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
+import { TEST_ENCRYPTION_KEY_HEX, createProtectedApp, createTenantSetup } from "../test-utils/create-test-app.ts"
 import {
   type InMemoryPostgres,
   closeInMemoryPostgres,
@@ -18,76 +13,9 @@ import {
 } from "../test-utils/in-memory-postgres.ts"
 import { createProjectsRoutes } from "./projects.ts"
 
-interface TenantSetup {
-  readonly organizationId: string
-  readonly apiKeyToken: string
-}
-
 interface ProjectsRoutesTestContext extends TestContext {
   app: Hono
   database: InMemoryPostgres
-}
-
-const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
-const TEST_ENCRYPTION_KEY = Buffer.from(TEST_ENCRYPTION_KEY_HEX, "hex")
-
-const createApp = (db: PostgresDb): Hono => {
-  const app = new Hono()
-  app.onError(honoErrorHandler)
-  const protectedRoutes = new Hono()
-
-  protectedRoutes.use("*", async (c, next) => {
-    c.set("db", db)
-    c.set("redis", getRedisClient())
-    await next()
-  })
-
-  protectedRoutes.use("*", createAuthMiddleware())
-  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
-  protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
-
-  app.route("/v1/organizations", protectedRoutes)
-  return app
-}
-
-const createTenantSetup = async (db: InMemoryPostgres["db"]): Promise<TenantSetup> => {
-  const userId = generateId()
-  const organizationId = generateId()
-  const apiKeyToken = crypto.randomUUID()
-
-  await db.insert(postgresSchema.user).values({
-    id: userId,
-    email: `${userId}@example.com`,
-    name: "Test User",
-    emailVerified: true,
-  })
-
-  await db.insert(postgresSchema.organization).values({
-    id: organizationId,
-    name: `Organization ${organizationId}`,
-    slug: `org-${organizationId}`,
-    creatorId: userId,
-  })
-
-  await db.insert(postgresSchema.member).values({
-    id: generateId(),
-    organizationId,
-    userId,
-    role: "owner",
-  })
-
-  await db.insert(postgresSchema.apiKeys).values({
-    id: generateId(),
-    organizationId,
-    token: await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY)),
-    tokenHash: await Effect.runPromise(hashToken(apiKeyToken)),
-    name: "auth-key",
-  })
-
-  return {
-    organizationId,
-    apiKeyToken,
-  }
 }
 
 const createProjectRecord = async (db: InMemoryPostgres["db"], organizationId: string, name: string) => {
@@ -111,7 +39,11 @@ describe("Projects Routes Integration", () => {
   beforeAll(async () => {
     process.env.LAT_API_KEY_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
     database = await createInMemoryPostgres()
-    app = createApp(database.postgresDb)
+
+    const { app: root, protectedRoutes } = createProtectedApp(database)
+    protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
+    root.route("/v1/organizations", protectedRoutes)
+    app = root
   })
 
   beforeEach<ProjectsRoutesTestContext>((context) => {

@@ -186,9 +186,6 @@ importers:
       '@repo/vitest-config':
         specifier: workspace:*
         version: link:../../packages/vitest-config
-      drizzle-kit:
-        specifier: 'catalog:'
-        version: 1.0.0-beta.15-859cf75
 
   apps/ingest:
     dependencies:
