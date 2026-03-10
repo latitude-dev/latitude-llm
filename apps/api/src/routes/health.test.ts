@@ -1,14 +1,14 @@
-import { Hono } from "hono"
+import { OpenAPIHono } from "@hono/zod-openapi"
 import { beforeAll, describe, expect, it } from "vitest"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 import { registerHealthRoute } from "./health.ts"
 
 describe("GET /health", () => {
-  let app: Hono
+  let app: OpenAPIHono
 
   beforeAll(() => {
-    // Create fresh Hono app for each test suite
-    app = new Hono()
+    // Create fresh OpenAPIHono app for each test suite
+    app = new OpenAPIHono()
     registerHealthRoute({
       app,
       database: getPostgresClient(),
