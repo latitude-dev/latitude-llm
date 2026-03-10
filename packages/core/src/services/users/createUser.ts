@@ -4,6 +4,8 @@ import { Result } from '../../lib/Result'
 import Transaction from '../../lib/Transaction'
 import { users } from '../../schema/models/users'
 import { LatitudeGoal, UserTitle } from '@latitude-data/constants/users'
+import { BadRequestError } from '../../lib/errors'
+import { containsUrl } from '../../lib/containsUrl'
 
 export async function createUser(
   {
@@ -25,6 +27,10 @@ export async function createUser(
   },
   transaction = new Transaction(),
 ) {
+  if (containsUrl(name)) {
+    return Result.error(new BadRequestError('Name must not contain URLs'))
+  }
+
   const result = await transaction.call<User>(async (trx) => {
     const inserts = await trx
       .insert(users)
