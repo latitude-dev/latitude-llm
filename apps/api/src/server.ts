@@ -1,10 +1,12 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { serve } from "@hono/node-server"
+import { swaggerUI } from "@hono/swagger-ui"
+import { OpenAPIHono } from "@hono/zod-openapi"
 import { parseEnv } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
-import { Hono } from "hono"
+import type { Hono } from "hono"
 import { logger as honoLogger } from "hono/logger"
 import { getClickhouseClient, getPostgresClient, getRedisClient } from "./clients.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
@@ -17,7 +19,7 @@ const nodeEnv = process.env.NODE_ENV || "development"
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
 if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 
-const app = new Hono()
+const app = new OpenAPIHono()
 const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
 
 // Register global error handler
@@ -28,7 +30,8 @@ app.use(
 )
 app.onError(honoErrorHandler)
 
-registerCorsMiddleware(app, { nodeEnv })
+// OpenAPIHono extends Hono — the cast is safe
+registerCorsMiddleware(app as unknown as Hono, { nodeEnv })
 
 registerRoutes({
   app,
@@ -36,6 +39,28 @@ registerRoutes({
   clickhouse: getClickhouseClient(),
   redis: getRedisClient(),
 })
+
+// Register security scheme via the OpenAPI registry
+app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", {
+  type: "apiKey",
+  in: "header",
+  name: "X-API-Key",
+  description: "Organization-scoped API key",
+})
+
+// OpenAPI spec
+app.doc("/openapi.json", {
+  openapi: "3.1.0",
+  info: {
+    title: "Latitude API",
+    version: "1.0.0",
+    description: "The Latitude public API. Authenticate using an API key via the `X-API-Key` header.",
+  },
+  servers: [{ url: `http://localhost:${port}`, description: "Local development" }],
+})
+
+// Swagger UI
+app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
 // Graceful shutdown handler
 const handleShutdown = async (signal: string) => {
@@ -64,5 +89,7 @@ serve(
   },
   (info) => {
     logger.info(`api listening on http://localhost:${info.port}`)
+    logger.info(`OpenAPI spec: http://localhost:${info.port}/openapi.json`)
+    logger.info(`Swagger UI:   http://localhost:${info.port}/docs`)
   },
 )

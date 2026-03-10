@@ -1,53 +1,222 @@
 import {
   type CreateProjectInput,
+  type Project,
   ProjectRepository,
   createProjectUseCase,
   updateProjectUseCase,
 } from "@domain/projects"
 import { ProjectId } from "@domain/shared"
+import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
-import { BadRequestError } from "@repo/utils"
 import { Effect } from "effect"
-import { Hono } from "hono"
+import { ErrorSchema, OrgAndIdParamsSchema, OrgParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-/**
- * Project routes
- *
- * - POST /organizations/:organizationId/projects - Create project
- * - GET /organizations/:organizationId/projects - List projects
- * - GET /organizations/:organizationId/projects/:id - Get project
- * - PATCH /organizations/:organizationId/projects/:id - Update project
- * - DELETE /organizations/:organizationId/projects/:id - Soft delete project
- */
+const ProjectSchema = z
+  .object({
+    id: z.string(),
+    organizationId: z.string(),
+    name: z.string(),
+    slug: z.string(),
+    description: z.string().nullable(),
+    createdById: z.string().nullable(),
+    deletedAt: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi("Project")
+
+const CreateProjectBodySchema = z
+  .object({
+    name: z.string().min(1).openapi({ description: "Project name" }),
+    description: z.string().optional().openapi({ description: "Project description" }),
+  })
+  .openapi("CreateProjectBody")
+
+const UpdateProjectBodySchema = z
+  .object({
+    name: z.string().min(1).optional().openapi({ description: "New project name" }),
+    description: z
+      .string()
+      .nullable()
+      .optional()
+      .openapi({ description: "New project description; send null to clear" }),
+  })
+  .openapi("UpdateProjectBody")
+
+/** Serialize a Project domain object to match the API response schema. */
+const toProjectResponse = (project: Project) => ({
+  id: project.id as string,
+  organizationId: project.organizationId as string,
+  name: project.name,
+  slug: project.slug,
+  description: project.description,
+  createdById: (project.createdById as string | null) ?? null,
+  deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
+  createdAt: project.createdAt.toISOString(),
+  updatedAt: project.updatedAt.toISOString(),
+})
+
+const createProjectRoute = createRoute({
+  method: "post",
+  path: "/",
+  tags: ["Projects"],
+  summary: "Create project",
+  description: "Creates a new project within the organization.",
+  security: PROTECTED_SECURITY,
+  request: {
+    params: OrgParamsSchema,
+    body: {
+      content: { "application/json": { schema: CreateProjectBodySchema } },
+      required: true,
+    },
+  },
+  responses: {
+    201: {
+      content: { "application/json": { schema: ProjectSchema } },
+      description: "Project created successfully",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Validation error",
+    },
+    401: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Unauthorized",
+    },
+  },
+})
+
+const listProjectsRoute = createRoute({
+  method: "get",
+  path: "/",
+  tags: ["Projects"],
+  summary: "List projects",
+  description: "Returns all projects in the organization.",
+  security: PROTECTED_SECURITY,
+  request: {
+    params: OrgParamsSchema,
+  },
+  responses: {
+    200: {
+      content: {
+        "application/json": {
+          schema: z.object({ projects: z.array(ProjectSchema) }).openapi("ProjectList"),
+        },
+      },
+      description: "List of projects",
+    },
+    401: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Unauthorized",
+    },
+  },
+})
+
+const getProjectRoute = createRoute({
+  method: "get",
+  path: "/{id}",
+  tags: ["Projects"],
+  summary: "Get project",
+  description: "Returns a single project by ID.",
+  security: PROTECTED_SECURITY,
+  request: {
+    params: OrgAndIdParamsSchema,
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: ProjectSchema } },
+      description: "Project details",
+    },
+    401: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Unauthorized",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Project not found",
+    },
+  },
+})
+
+const updateProjectRoute = createRoute({
+  method: "patch",
+  path: "/{id}",
+  tags: ["Projects"],
+  summary: "Update project",
+  description: "Updates a project's name and/or description.",
+  security: PROTECTED_SECURITY,
+  request: {
+    params: OrgAndIdParamsSchema,
+    body: {
+      content: { "application/json": { schema: UpdateProjectBodySchema } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: ProjectSchema } },
+      description: "Updated project",
+    },
+    400: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Validation error",
+    },
+    401: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Unauthorized",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Project not found",
+    },
+  },
+})
+
+const deleteProjectRoute = createRoute({
+  method: "delete",
+  path: "/{id}",
+  tags: ["Projects"],
+  summary: "Delete project",
+  description: "Soft-deletes a project by ID.",
+  security: PROTECTED_SECURITY,
+  request: {
+    params: OrgAndIdParamsSchema,
+  },
+  responses: {
+    204: {
+      description: "Project deleted successfully",
+    },
+    401: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Unauthorized",
+    },
+    404: {
+      content: { "application/json": { schema: ErrorSchema } },
+      description: "Project not found",
+    },
+  },
+})
 
 export const createProjectsRoutes = () => {
-  const app = new Hono<OrganizationScopedEnv>()
+  const app = new OpenAPIHono<OrganizationScopedEnv>({
+    defaultHook(result, c) {
+      if (!result.success) {
+        const error = result.error.issues.map((i) => i.message).join(", ")
+        return c.json({ error }, 400)
+      }
+    },
+  })
 
-  const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
-    return typeof value === "object" && value !== null
-  }
-
-  // POST /organizations/:organizationId/projects - Create project
-  app.post("/", async (c) => {
+  app.openapi(createProjectRoute, async (c) => {
     const organizationId = c.var.organization.id
     const auth = c.var.auth
-    const body = await c.req.json()
-
-    if (!isObjectRecord(body)) {
-      throw new BadRequestError({ httpMessage: "Invalid request body" })
-    }
-
-    if (typeof body.name !== "string") {
-      throw new BadRequestError({ httpMessage: "Project name is required", field: "name" })
-    }
-
-    const description = typeof body.description === "string" ? body.description : undefined
+    const body = c.req.valid("json")
 
     const input: CreateProjectInput = {
       organizationId,
       name: body.name,
-      ...(description !== undefined && { description }),
+      ...(body.description !== undefined && { description: body.description }),
       createdById: auth.userId,
     }
 
@@ -61,11 +230,10 @@ export const createProjectsRoutes = () => {
         ),
       ),
     )
-    return c.json(project, 201)
+    return c.json(toProjectResponse(project), 201)
   })
 
-  // GET /organizations/:organizationId/projects - List projects
-  app.get("/", async (c) => {
+  app.openapi(listProjectsRoute, async (c) => {
     const organizationId = c.var.organization.id
 
     const projects = await runCommand(
@@ -80,19 +248,13 @@ export const createProjectsRoutes = () => {
       ),
     )
 
-    return c.json({ projects }, 200)
+    return c.json({ projects: projects.map(toProjectResponse) }, 200)
   })
 
-  // GET /organizations/:organizationId/projects/:id - Get project
-  app.get("/:id", async (c) => {
+  app.openapi(getProjectRoute, async (c) => {
     const organizationId = c.var.organization.id
-    const idParam = c.req.param("id")
-    const id = idParam ? ProjectId(idParam) : null
-    if (!id) {
-      throw new BadRequestError({
-        httpMessage: "Project ID is required",
-      })
-    }
+    const { id: idParam } = c.req.valid("param")
+    const id = ProjectId(idParam)
 
     const project = await runCommand(
       c.var.db,
@@ -106,36 +268,14 @@ export const createProjectsRoutes = () => {
       ),
     )
 
-    return c.json(project, 200)
+    return c.json(toProjectResponse(project), 200)
   })
 
-  // PATCH /organizations/:organizationId/projects/:id - Update project
-  app.patch("/:id", async (c) => {
+  app.openapi(updateProjectRoute, async (c) => {
     const organizationId = c.var.organization.id
-    const idParam = c.req.param("id")
-    const id = idParam ? ProjectId(idParam) : null
-    if (!id) {
-      throw new BadRequestError({
-        httpMessage: "Project ID is required",
-      })
-    }
-
-    const body = await c.req.json()
-
-    if (!isObjectRecord(body)) {
-      throw new BadRequestError({ httpMessage: "Invalid request body" })
-    }
-
-    if (body.name !== undefined && typeof body.name !== "string") {
-      throw new BadRequestError({ httpMessage: "Invalid project name", field: "name" })
-    }
-
-    if (body.description !== undefined && body.description !== null && typeof body.description !== "string") {
-      throw new BadRequestError({ httpMessage: "Invalid project description", field: "description" })
-    }
-
-    const name = typeof body.name === "string" ? body.name : undefined
-    const description = typeof body.description === "string" || body.description === null ? body.description : undefined
+    const { id: idParam } = c.req.valid("param")
+    const id = ProjectId(idParam)
+    const body = c.req.valid("json")
 
     const updatedProject = await runCommand(
       c.var.db,
@@ -145,25 +285,19 @@ export const createProjectsRoutes = () => {
         updateProjectUseCase({
           id,
           organizationId,
-          ...(name !== undefined ? { name } : {}),
-          ...(description !== undefined ? { description } : {}),
+          ...(body.name !== undefined ? { name: body.name } : {}),
+          ...(body.description !== undefined ? { description: body.description } : {}),
         }).pipe(Effect.provideService(ProjectRepository, createProjectPostgresRepository(txDb))),
       ),
     )
 
-    return c.json(updatedProject, 200)
+    return c.json(toProjectResponse(updatedProject), 200)
   })
 
-  // DELETE /organizations/:organizationId/projects/:id - Soft delete project
-  app.delete("/:id", async (c) => {
+  app.openapi(deleteProjectRoute, async (c) => {
     const organizationId = c.var.organization.id
-    const idParam = c.req.param("id")
-    const id = idParam ? ProjectId(idParam) : null
-    if (!id) {
-      throw new BadRequestError({
-        httpMessage: "Project ID is required",
-      })
-    }
+    const { id: idParam } = c.req.valid("param")
+    const id = ProjectId(idParam)
 
     await runCommand(
       c.var.db,
