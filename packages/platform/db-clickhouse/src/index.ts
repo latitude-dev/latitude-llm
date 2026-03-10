@@ -7,3 +7,4 @@ export {
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 export { healthcheckClickhouse } from "./health.ts"
 export { commandClickhouse, insertJsonEachRow, queryClickhouse } from "./sql.ts"
+export { createSpanClickhouseRepository } from "./repositories/span-repository.ts"

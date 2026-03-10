@@ -24,8 +24,11 @@
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
+    "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "@platform/env": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "rosetta-ai": "catalog:"
   },
   "devDependencies": {
     "dotenv": "catalog:",

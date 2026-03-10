@@ -18,6 +18,9 @@ import { Route as AuthConfirmRouteImport } from './routes/auth/confirm'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects/$projectId'
+import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/index'
+import { Route as AuthenticatedProjectsProjectIdSpansIndexRouteImport } from './routes/_authenticated/projects/$projectId/spans/index'
+import { Route as AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/spans/$traceId/$spanId/index'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -64,6 +67,24 @@ const AuthenticatedProjectsProjectIdRoute =
     path: '/projects/$projectId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedProjectsProjectIdIndexRoute =
+  AuthenticatedProjectsProjectIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdSpansIndexRoute =
+  AuthenticatedProjectsProjectIdSpansIndexRouteImport.update({
+    id: '/spans/',
+    path: '/spans/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute =
+  AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRouteImport.update({
+    id: '/spans/$traceId/$spanId/',
+    path: '/spans/$traceId/$spanId/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -72,8 +93,11 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/confirm': typeof AuthConfirmRoute
-  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/spans/': typeof AuthenticatedProjectsProjectIdSpansIndexRoute
+  '/projects/$projectId/spans/$traceId/$spanId/': typeof AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/design-system': typeof DesignSystemRoute
@@ -82,8 +106,10 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/': typeof AuthenticatedIndexRoute
-  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/spans': typeof AuthenticatedProjectsProjectIdSpansIndexRoute
+  '/projects/$projectId/spans/$traceId/$spanId': typeof AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,8 +120,11 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/auth/confirm': typeof AuthConfirmRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRoute
+  '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/_authenticated/projects/$projectId/spans/': typeof AuthenticatedProjectsProjectIdSpansIndexRoute
+  '/_authenticated/projects/$projectId/spans/$traceId/$spanId/': typeof AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,6 +137,9 @@ export interface FileRouteTypes {
     | '/auth/confirm'
     | '/projects/$projectId'
     | '/api/auth/$'
+    | '/projects/$projectId/'
+    | '/projects/$projectId/spans/'
+    | '/projects/$projectId/spans/$traceId/$spanId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/design-system'
@@ -116,8 +148,10 @@ export interface FileRouteTypes {
     | '/settings'
     | '/auth/confirm'
     | '/'
-    | '/projects/$projectId'
     | '/api/auth/$'
+    | '/projects/$projectId'
+    | '/projects/$projectId/spans'
+    | '/projects/$projectId/spans/$traceId/$spanId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -129,6 +163,9 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/projects/$projectId'
     | '/api/auth/$'
+    | '/_authenticated/projects/$projectId/'
+    | '/_authenticated/projects/$projectId/spans/'
+    | '/_authenticated/projects/$projectId/spans/$traceId/$spanId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -205,19 +242,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/projects/$projectId/': {
+      id: '/_authenticated/projects/$projectId/'
+      path: '/'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/spans/': {
+      id: '/_authenticated/projects/$projectId/spans/'
+      path: '/spans'
+      fullPath: '/projects/$projectId/spans/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSpansIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
+    '/_authenticated/projects/$projectId/spans/$traceId/$spanId/': {
+      id: '/_authenticated/projects/$projectId/spans/$traceId/$spanId/'
+      path: '/spans/$traceId/$spanId'
+      fullPath: '/projects/$projectId/spans/$traceId/$spanId/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
   }
 }
+
+interface AuthenticatedProjectsProjectIdRouteChildren {
+  AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
+  AuthenticatedProjectsProjectIdSpansIndexRoute: typeof AuthenticatedProjectsProjectIdSpansIndexRoute
+  AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute: typeof AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute
+}
+
+const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectIdRouteChildren =
+  {
+    AuthenticatedProjectsProjectIdIndexRoute:
+      AuthenticatedProjectsProjectIdIndexRoute,
+    AuthenticatedProjectsProjectIdSpansIndexRoute:
+      AuthenticatedProjectsProjectIdSpansIndexRoute,
+    AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute:
+      AuthenticatedProjectsProjectIdSpansTraceIdSpanIdIndexRoute,
+  }
+
+const AuthenticatedProjectsProjectIdRouteWithChildren =
+  AuthenticatedProjectsProjectIdRoute._addFileChildren(
+    AuthenticatedProjectsProjectIdRouteChildren,
+  )
 
 interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRoute
+  AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedProjectsProjectIdRoute: AuthenticatedProjectsProjectIdRoute,
+  AuthenticatedProjectsProjectIdRoute:
+    AuthenticatedProjectsProjectIdRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
