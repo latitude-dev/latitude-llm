@@ -1,8 +1,8 @@
 import { Button, Container, Text } from "@repo/ui"
 import { Link, createFileRoute } from "@tanstack/react-router"
-import { useSpanDetail } from "../../../../../../../domains/spans/spans.collection.ts"
+import { useSpanDetail } from "../../../../../../../../domains/spans/spans.collection.ts"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/traces/$traceId/$spanId/")({
+export const Route = createFileRoute("/_authenticated/projects/$projectId/traces/$traceId/spans/$spanId/")({
   component: SpanDetailPage,
 })
 
@@ -60,8 +60,8 @@ function SpanDetailPage() {
       <Container>
         <div className="flex flex-col gap-4 py-8">
           <Text.H4 color="destructive">{error instanceof Error ? error.message : String(error)}</Text.H4>
-          <Link to="/projects/$projectId/traces" params={{ projectId }}>
-            <Button variant="outline">Back to traces</Button>
+          <Link to="/projects/$projectId/traces/$traceId/spans" params={{ projectId, traceId }}>
+            <Button variant="outline">Back to spans</Button>
           </Link>
         </div>
       </Container>
@@ -81,7 +81,14 @@ function SpanDetailPage() {
   return (
     <Container>
       <div className="flex flex-col gap-6 py-8">
-        <Text.H2>{span.name}</Text.H2>
+        <div className="flex flex-row items-center gap-4">
+          <Link to="/projects/$projectId/traces/$traceId/spans" params={{ projectId, traceId }}>
+            <Button variant="ghost" size="sm">
+              <Text.H5>Back to spans</Text.H5>
+            </Button>
+          </Link>
+          <Text.H2>{span.name}</Text.H2>
+        </div>
 
         <div className="flex flex-col gap-6">
           <Text.H3>Identity</Text.H3>

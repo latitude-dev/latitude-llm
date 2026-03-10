@@ -1,16 +1,13 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
-  type OrganizationId,
-  type ProjectId,
   SessionId,
   SpanId,
-  type TraceId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Span, SpanDetail, SpanKind, SpanListOptions, SpanRepository, SpanStatusCode } from "@domain/spans"
+import type { Span, SpanDetail, SpanKind, SpanRepository, SpanStatusCode } from "@domain/spans"
 import { Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { insertJsonEachRow, queryClickhouse } from "../sql.ts"
@@ -241,7 +238,7 @@ export const createSpanClickhouseRepository = (client: ClickHouseClient): SpanRe
       Effect.mapError((error) => toRepositoryError(error, "insert")),
     ),
 
-  findByTraceId: (organizationId: OrganizationId, traceId: TraceId) =>
+  findByTraceId: ({ organizationId, traceId }) =>
     queryClickhouse<SpanListRow>(
       client,
       `SELECT ${LIST_COLUMNS} FROM spans FINAL
@@ -254,7 +251,7 @@ export const createSpanClickhouseRepository = (client: ClickHouseClient): SpanRe
       Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
     ),
 
-  findByProjectId: (organizationId: OrganizationId, projectId: ProjectId, options: SpanListOptions) =>
+  findByProjectId: ({ organizationId, projectId, options }) =>
     queryClickhouse<SpanListRow>(
       client,
       `SELECT ${LIST_COLUMNS} FROM spans FINAL
@@ -280,7 +277,7 @@ export const createSpanClickhouseRepository = (client: ClickHouseClient): SpanRe
       Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
     ),
 
-  findBySpanId: (organizationId: OrganizationId, traceId: TraceId, spanId: SpanId) =>
+  findBySpanId: ({ organizationId, traceId, spanId }) =>
     queryClickhouse<SpanDetailRow>(
       client,
       `SELECT * FROM spans FINAL
