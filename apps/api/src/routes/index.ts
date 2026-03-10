@@ -1,18 +1,18 @@
 import type { ClickHouseClient } from "@clickhouse/client"
+import { OpenAPIHono } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient } from "@platform/db-postgres"
-import { Hono } from "hono"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
 import type { ProtectedEnv } from "../types.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
-import { createAuthRoutes } from "./auth.ts"
+import { createCliAuthRoutes } from "./cli-auth.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
 
 interface RoutesContext {
-  app: Hono
+  app: OpenAPIHono
   database: PostgresClient
   clickhouse: ClickHouseClient
   redis: RedisClient
@@ -24,8 +24,8 @@ interface RoutesContext {
 export const registerRoutes = (context: RoutesContext) => {
   const { app } = context
 
-  const v1 = new Hono()
-  const protectedRoutes = new Hono<ProtectedEnv>()
+  const v1 = new OpenAPIHono()
+  const protectedRoutes = new OpenAPIHono<ProtectedEnv>()
 
   registerHealthRoute(context)
 
@@ -38,8 +38,8 @@ export const registerRoutes = (context: RoutesContext) => {
     await next()
   }) // available via c.var.*
 
-  // Auth routes (Better Auth) - PUBLIC, no auth required
-  v1.route("/auth", createAuthRoutes())
+  // CLI auth routes - PUBLIC, no auth required
+  v1.route("/auth/cli", createCliAuthRoutes())
 
   protectedRoutes.use("*", createAuthRateLimiter()) // Rate limiting before auth prevents brute force attacks
   protectedRoutes.use("*", createAuthMiddleware())

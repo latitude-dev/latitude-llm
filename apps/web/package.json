@@ -21,6 +21,7 @@
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/auth-better": "workspace:*",
+    "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",
@@ -40,7 +41,7 @@
     "lucide-react": "^0.481.0",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "zod": "^3.24.2"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
