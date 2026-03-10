@@ -5,7 +5,6 @@ import {
   createSafeActionClient,
   DEFAULT_SERVER_ERROR_MESSAGE,
 } from 'next-safe-action'
-import { ReplyError } from 'ioredis'
 import { headers } from 'next/headers'
 
 import { getUnsafeIp } from '$/helpers/ip'
@@ -281,22 +280,19 @@ export function withRateLimit({
 }) {
   return createMiddleware<{ ctx: RateLimitCtx }>().define(
     async ({ ctx, next }) => {
-      const rateLimiter = new RateLimiterRedis({
-        storeClient: await cache(),
-        points: limit,
-        duration: period,
-      })
-
-      const key = ctx.user?.id || getUnsafeIp(await headers()) || 'unknown'
-
       try {
+        const rateLimiter = new RateLimiterRedis({
+          storeClient: await cache(),
+          points: limit,
+          duration: period,
+        })
+
+        const key = ctx.user?.id || getUnsafeIp(await headers()) || 'unknown'
+
         await rateLimiter.consume(key)
       } catch (error) {
         if (error instanceof RateLimiterRes) {
           throw new RateLimitError('Too many requests')
-        }
-        if (!(error instanceof ReplyError)) {
-          throw error
         }
       }
 
