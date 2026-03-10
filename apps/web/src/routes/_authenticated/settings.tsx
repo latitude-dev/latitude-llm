@@ -20,7 +20,7 @@ import {
 import { Icon } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute } from "@tanstack/react-router"
+import { ClientOnly, createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
@@ -176,9 +176,8 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
 
 function MembershipsSection() {
   const [inviteOpen, setInviteOpen] = useState(false)
-  const membersCollection = useMembersCollection()
-  const members = membersCollection.data ?? []
-  const isLoading = !membersCollection.data
+  const { data, isLoading } = useMembersCollection()
+  const members = data ?? []
 
   return (
     <div className="flex flex-col gap-4">
@@ -429,9 +428,8 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
 
 function ApiKeysSection() {
   const [createOpen, setCreateOpen] = useState(false)
-  const apiKeysCollection = useApiKeysCollection()
-  const apiKeys = apiKeysCollection.data ?? []
-  const isLoading = !apiKeysCollection.data
+  const { data, isLoading } = useApiKeysCollection()
+  const apiKeys = data ?? []
 
   return (
     <>
@@ -458,8 +456,12 @@ function ApiKeysSection() {
 function SettingsPage() {
   return (
     <Container className="pt-14">
-      <MembershipsSection />
-      <ApiKeysSection />
+      <ClientOnly fallback={<TableSkeleton cols={4} rows={3} />}>
+        <MembershipsSection />
+      </ClientOnly>
+      <ClientOnly fallback={<TableSkeleton cols={3} rows={3} />}>
+        <ApiKeysSection />
+      </ClientOnly>
     </Container>
   )
 }
