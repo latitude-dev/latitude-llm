@@ -284,6 +284,13 @@ export const projects = latitudeSchema.table(
 
 ### Database Migrations (Drizzle Kit)
 
+### Migration Execution Safety (Agents)
+
+- Agents must not run migration commands on their own.
+- Only run migration-related commands when the user explicitly requests them in the current conversation.
+- This includes generation and apply commands for Postgres, ClickHouse, and Weaviate (`pg:generate`, `pg:generate:custom`, `pg:migrate`, `ch:create`, `ch:up`, `ch:down`, `ch:drop`, `ch:reset`, `ch:fix`, `wv:migrate`).
+- If migration work seems necessary but was not explicitly requested, explain the need and wait for user confirmation.
+
 **Always use drizzle-kit for migrations.** Never create manual SQL files in the drizzle folder.
 
 **Schema changes:**

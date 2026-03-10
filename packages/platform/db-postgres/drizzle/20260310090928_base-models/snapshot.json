@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "0aea8141-6ab3-4698-8402-fc5cce7479a3",
+  "id": "164e387c-ea42-4e67-b875-693339a380b7",
   "prevIds": [
-    "06ad3b58-dde2-4a1e-b537-e0ed03500f17"
+    "d1994433-3308-45c3-b2bc-56ac3dc6d4e5"
   ],
   "ddl": [
     {
@@ -124,7 +124,7 @@
       "table": "account"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -267,7 +267,7 @@
       "table": "invitation"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -332,7 +332,7 @@
       "table": "invitation"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -358,7 +358,7 @@
       "table": "member"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -371,7 +371,7 @@
       "table": "member"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -475,7 +475,7 @@
       "table": "organization"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -488,7 +488,7 @@
       "table": "organization"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -605,7 +605,7 @@
       "table": "session"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -930,7 +930,7 @@
       "table": "auth_intent"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
@@ -1021,7 +1021,7 @@
       "table": "subscription"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1229,7 +1229,7 @@
       "table": "projects"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1359,7 +1359,7 @@
       "table": "api_keys"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1450,7 +1450,7 @@
       "table": "grants"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1463,7 +1463,7 @@
       "table": "grants"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1593,7 +1593,7 @@
       "table": "outbox_events"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
@@ -1606,7 +1606,7 @@
       "table": "outbox_events"
     },
     {
-      "type": "text",
+      "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,

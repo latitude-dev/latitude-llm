@@ -10,7 +10,7 @@ export const authIntent = latitudeSchema.table("auth_intent", {
   email: text("email").notNull(),
   data: jsonb("data").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
   existingAccountAtRequest: boolean("existing_account_at_request").notNull().default(false),
-  createdOrganizationId: text("created_organization_id"),
+  createdOrganizationId: cuid("created_organization_id"),
   expiresAt: tzTimestamp("expires_at").notNull(),
   consumedAt: tzTimestamp("consumed_at"),
   ...timestamps(),
