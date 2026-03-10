@@ -51,7 +51,7 @@ export const session = latitudeSchema.table("session", {
   token: text("token").notNull().unique(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  userId: text("user_id")
+  userId: cuid("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   ...timestamps(),
@@ -64,7 +64,7 @@ export const account = latitudeSchema.table("account", {
   id: cuid("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
-  userId: text("user_id")
+  userId: cuid("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
@@ -100,8 +100,8 @@ export const organization = latitudeSchema.table("organization", {
   slug: text("slug").unique().notNull(),
   logo: text("logo"),
   metadata: text("metadata"),
-  creatorId: text("creator_id").references(() => user.id),
-  currentSubscriptionId: text("current_subscription_id"),
+  creatorId: cuid("creator_id").references(() => user.id),
+  currentSubscriptionId: cuid("current_subscription_id"),
   stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
   ...timestamps(),
 })
@@ -115,10 +115,10 @@ export const member = latitudeSchema.table(
   "member",
   {
     id: cuid("id").primaryKey(),
-    organizationId: text("organization_id")
+    organizationId: cuid("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    userId: text("user_id")
+    userId: cuid("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     role: varchar("role", { length: 50 }).notNull().default("member").$type<MemberRole>(),
@@ -136,14 +136,14 @@ export const invitation = latitudeSchema.table(
   "invitation",
   {
     id: cuid("id").primaryKey(),
-    organizationId: text("organization_id")
+    organizationId: cuid("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
     role: varchar("role", { length: 50 }).$type<MemberRole>(),
     status: varchar("status", { length: 50 }).notNull().default("pending"),
     expiresAt: tzTimestamp("expires_at").notNull(),
-    inviterId: text("inviter_id")
+    inviterId: cuid("inviter_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },

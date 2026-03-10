@@ -20,7 +20,7 @@ export const subscription = latitudeSchema.table(
   {
     id: cuid("id").primaryKey(),
     plan: text("plan").notNull(),
-    referenceId: text("reference_id").notNull(),
+    referenceId: cuid("reference_id").notNull(),
     stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
     stripeSubscriptionId: varchar("stripe_subscription_id", { length: 256 }),
     status: text("status").notNull(),
