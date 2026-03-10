@@ -1,7 +1,7 @@
 import { Button, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router"
+import { ClientOnly, Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router"
 import {
   ChevronDown,
   ChevronRight,
@@ -53,6 +53,14 @@ function NavItem({
   const [expanded, setExpanded] = useState(defaultExpanded)
   const hasChildren = !!children && !collapsed
 
+  const chevron = hasChildren ? (
+    expanded ? (
+      <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+    ) : (
+      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+    )
+  ) : null
+
   const rowContent = (
     <div
       className={`flex items-center gap-2 rounded-lg cursor-pointer transition-colors ${
@@ -74,7 +82,7 @@ function NavItem({
               </Text.H6>
             </span>
           )}
-          {hasChildren && (
+          {to ? (
             <button
               type="button"
               onClick={(e) => {
@@ -84,12 +92,10 @@ function NavItem({
               }}
               className="shrink-0"
             >
-              {expanded ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              )}
+              {chevron}
             </button>
+          ) : (
+            chevron
           )}
         </>
       )}
@@ -217,11 +223,13 @@ function ProjectLayout() {
 
   return (
     <div className="flex h-full">
-      <ProjectSidebar
-        projectId={projectId}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
-      />
+      <ClientOnly>
+        <ProjectSidebar
+          projectId={projectId}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+        />
+      </ClientOnly>
       <main className="flex-1 min-w-0 overflow-y-auto">
         <Outlet />
       </main>

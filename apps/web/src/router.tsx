@@ -6,7 +6,7 @@ export function getRouter() {
     routeTree,
     defaultNotFoundComponent: () => {
       const currentPath = typeof window !== "undefined" ? window.location.pathname : ""
-      console.error(`[Router 404] Path not found: ${currentPath}`)
+      if (currentPath) console.error(`[Router 404] Path not found: ${currentPath}`)
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
           <h1 className="text-2xl font-bold">404 - Page Not Found</h1>

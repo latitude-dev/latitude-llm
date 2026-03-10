@@ -2,7 +2,7 @@ import { DropdownMenu, DropdownMenuTrigger } from "@repo/ui"
 import { LatitudeLogo } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { Link, Outlet, createFileRoute, redirect, useRouter, useRouterState } from "@tanstack/react-router"
+import { ClientOnly, Link, Outlet, createFileRoute, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
 import { useEffect, useState } from "react"
 import { countUserOrganizations, getOrganization } from "../domains/organizations/organizations.functions.ts"
@@ -130,7 +130,11 @@ function NavHeader() {
         ) : (
           <span className="text-sm font-medium text-foreground px-2 py-1">{organizationName}</span>
         )}
-        {currentProjectId && <ProjectBreadcrumb projectId={currentProjectId} />}
+        {currentProjectId && (
+          <ClientOnly>
+            <ProjectBreadcrumb projectId={currentProjectId} />
+          </ClientOnly>
+        )}
       </div>
       <div className="flex items-center gap-4">
         {import.meta.env.DEV && <ThemeToggle />}

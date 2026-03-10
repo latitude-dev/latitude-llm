@@ -20,7 +20,7 @@ import {
 } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
+import { ClientOnly, Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { useProjectsCollection } from "../../domains/projects/projects.collection.ts"
 import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
@@ -261,9 +261,8 @@ function CreateProjectModal({
 function DashboardPageContent() {
   const [createOpen, setCreateOpen] = useState(false)
   const { organizationName } = Route.useRouteContext()
-  const projectsCollection = useProjectsCollection()
-  const projects = projectsCollection.data ?? []
-  const isLoading = !projectsCollection.data
+  const { data, isLoading } = useProjectsCollection()
+  const projects = data ?? []
 
   return (
     <>
@@ -308,7 +307,9 @@ function DashboardPageContent() {
 function DashboardPage() {
   return (
     <Container className="pt-14">
-      <DashboardPageContent />
+      <ClientOnly fallback={<TableSkeleton cols={5} rows={3} />}>
+        <DashboardPageContent />
+      </ClientOnly>
     </Container>
   )
 }
