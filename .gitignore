@@ -131,3 +131,6 @@ packages/cli/prompts
 docs/plans
 todos/
 compound-engineering.*
+
+.mcp.json
+opencode.json
