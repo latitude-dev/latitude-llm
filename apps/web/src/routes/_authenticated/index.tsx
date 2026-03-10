@@ -18,15 +18,14 @@ import {
   Text,
   useToast,
 } from "@repo/ui"
-import { extractLeadingEmoji, relativeTime } from "@repo/utils"
+import { extractLeadingEmoji } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { useProjectsCollection } from "../../domains/projects/projects.collection.ts"
 import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { AppTabs } from "../_authenticated.tsx"
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
@@ -36,7 +35,7 @@ function invalidateProjects() {
   void getQueryClient().invalidateQueries({ queryKey: ["projects"] })
 }
 
-function ProjectTitle({ name }: { name: string }) {
+function ProjectTitle({ name, projectId }: { name: string; projectId: string }) {
   const [emoji, title] = extractLeadingEmoji(name)
 
   return (
@@ -46,13 +45,16 @@ function ProjectTitle({ name }: { name: string }) {
           <Text.H3>{emoji}</Text.H3>
         </div>
       )}
-      <Text.H5>{title}</Text.H5>
+      <Link to="/projects/$projectId" params={{ projectId }}>
+        <Text.H5 weight="medium">{title}</Text.H5>
+      </Link>
     </div>
   )
 }
 
 function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
   const [projectToRename, setProjectToRename] = useState<ProjectRecord | null>(null)
+  const router = useRouter()
 
   return (
     <>
@@ -60,22 +62,31 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
         <TableHeader>
           <TableRow verticalPadding>
             <TableHead>Name</TableHead>
-            <TableHead>Created</TableHead>
+            <TableHead className="w-44">Issues</TableHead>
+            <TableHead className="w-44">Datasets</TableHead>
+            <TableHead className="w-44">Traces (7D)</TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.map((project) => (
-            <TableRow key={project.id} verticalPadding className="cursor-pointer">
+            <TableRow
+              key={project.id}
+              verticalPadding
+              className="cursor-pointer"
+              onClick={() => void router.navigate({ to: "/projects/$projectId", params: { projectId: project.id } })}
+            >
               <TableCell>
-                <Link to="/projects/$projectId" params={{ projectId: project.id }} className="contents">
-                  <ProjectTitle name={project.name} />
-                </Link>
+                <ProjectTitle name={project.name} projectId={project.id} />
               </TableCell>
-              <TableCell>
-                <Link to="/projects/$projectId" params={{ projectId: project.id }} className="contents">
-                  <Text.H5 color="foregroundMuted">{relativeTime(project.createdAt)}</Text.H5>
-                </Link>
+              <TableCell className="w-44">
+                <Text.H5 color="foregroundMuted">—</Text.H5>
+              </TableCell>
+              <TableCell className="w-44">
+                <Text.H5 color="foregroundMuted">—</Text.H5>
+              </TableCell>
+              <TableCell className="w-44">
+                <Text.H5 color="foregroundMuted">—</Text.H5>
               </TableCell>
               <TableCell preventDefault>
                 <DropdownMenu
@@ -249,6 +260,7 @@ function CreateProjectModal({
 
 function DashboardPageContent() {
   const [createOpen, setCreateOpen] = useState(false)
+  const { organizationName } = Route.useRouteContext()
   const projectsCollection = useProjectsCollection()
   const projects = projectsCollection.data ?? []
   const isLoading = !projectsCollection.data
@@ -257,11 +269,24 @@ function DashboardPageContent() {
     <>
       <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />
       <TableWithHeader
-        title="Projects"
-        actions={<TableWithHeader.Button onClick={() => setCreateOpen(true)}>Add project</TableWithHeader.Button>}
+        title={
+          <span>
+            <Text.H4 color="foregroundMuted" display="inline">
+              Projects in{" "}
+            </Text.H4>
+            <Text.H4 weight="bold" display="inline">
+              {organizationName}
+            </Text.H4>
+          </span>
+        }
+        actions={
+          <TableWithHeader.Button flat onClick={() => setCreateOpen(true)}>
+            New project
+          </TableWithHeader.Button>
+        }
         table={
           isLoading ? (
-            <TableSkeleton cols={3} rows={3} />
+            <TableSkeleton cols={5} rows={3} />
           ) : projects.length > 0 ? (
             <ProjectsTable projects={projects} />
           ) : (
@@ -282,8 +307,7 @@ function DashboardPageContent() {
 
 function DashboardPage() {
   return (
-    <Container>
-      <AppTabs />
+    <Container className="pt-14">
       <DashboardPageContent />
     </Container>
   )

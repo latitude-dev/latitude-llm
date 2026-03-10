@@ -48,6 +48,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "agentation": "^2.3.2",
     "dotenv": "catalog:",
     "postcss": "^8.5.3",
     "vite": "catalog:"

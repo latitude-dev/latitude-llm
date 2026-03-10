@@ -31,8 +31,6 @@ import { inviteMember, removeMember } from "../../domains/members/members.functi
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
-import { AppTabs } from "../_authenticated.tsx"
-
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
@@ -460,7 +458,6 @@ function ApiKeysSection() {
 function SettingsPage() {
   return (
     <Container>
-      <AppTabs />
       <MembershipsSection />
       <ApiKeysSection />
     </Container>
