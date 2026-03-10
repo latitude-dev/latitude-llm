@@ -1,4 +1,5 @@
 import { enforceAllSystemMessagesFirst } from './helpers/enforceAllSystemMessagesFirst'
+import { mergeConsecutiveToolMessages } from './helpers/mergeConsecutiveToolMessages'
 import { AppliedRules, ProviderRules } from './types'
 
 export function applyGoogleRules(appliedRule: AppliedRules): AppliedRules {
@@ -8,11 +9,13 @@ export function applyGoogleRules(appliedRule: AppliedRules): AppliedRules {
       'Google only supports system messages at the beggining of the conversation. All other system messages have been converted to user messages.',
   })
 
-  const minOneUserMessage = rules.messages.some((m) => m.role === 'user')
-  if (minOneUserMessage) return rules
+  const messages = mergeConsecutiveToolMessages(rules.messages)
+  const minOneUserMessage = messages.some((m) => m.role === 'user')
+  if (minOneUserMessage) return { ...rules, messages }
 
   return {
     ...rules,
+    messages,
     rules: [
       ...rules.rules,
       {

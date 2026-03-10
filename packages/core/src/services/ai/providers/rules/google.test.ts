@@ -102,4 +102,79 @@ describe('applyGoogleRules', () => {
       })
     })
   })
+
+  describe('with multiple tool messages for one assistant turn', () => {
+    it('merges consecutive tool messages into one tool turn', () => {
+      const toolMessages = [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Use both tools' }],
+        },
+        {
+          role: 'assistant',
+          content: [
+            {
+              type: 'tool-call',
+              toolCallId: 'call-1',
+              toolName: 'toolA',
+              args: { x: 1 },
+            },
+            {
+              type: 'tool-call',
+              toolCallId: 'call-2',
+              toolName: 'toolB',
+              args: { y: 2 },
+            },
+          ],
+        },
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'call-1',
+              toolName: 'toolA',
+              result: { ok: true },
+            },
+          ],
+        },
+        {
+          role: 'tool',
+          content: [
+            {
+              type: 'tool-result',
+              toolCallId: 'call-2',
+              toolName: 'toolB',
+              result: { ok: true },
+            },
+          ],
+        },
+      ] as Message[]
+
+      const rules = applyProviderRules({
+        providerType,
+        messages: toolMessages,
+        config,
+      })
+
+      expect(rules.messages).toHaveLength(3)
+      expect(rules.messages[2]).toEqual({
+        role: 'tool',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'call-1',
+            toolName: 'toolA',
+            result: { ok: true },
+          },
+          {
+            type: 'tool-result',
+            toolCallId: 'call-2',
+            toolName: 'toolB',
+            result: { ok: true },
+          },
+        ],
+      })
+    })
+  })
 })

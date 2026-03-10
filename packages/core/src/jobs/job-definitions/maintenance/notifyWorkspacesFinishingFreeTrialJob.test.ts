@@ -26,6 +26,10 @@ vi.mock('../../../events/publisher', () => ({
   },
 }))
 
+vi.mock('../../../utils/datadogCapture', () => ({
+  captureException: vi.fn(),
+}))
+
 const mockHasAtLeastOneExternalSpan = vi.fn()
 vi.mock('../../../queries/clickhouse/spans/hasAtLeastOneExternalSpan', () => ({
   hasAtLeastOneExternalSpan: (...args: unknown[]) =>
@@ -61,8 +65,8 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
     mockCreateInstantlyLead.mockResolvedValue(undefined)
   })
 
-  describe('publishes workspaceFinishingFreeTrial for workspaces in 10-day window', () => {
-    it('publishes event for workspace whose trial ends exactly 10 days from now', async () => {
+  describe('publishes workspaceFinishingFreeTrial for workspaces in 6-day window', () => {
+    it('publishes event for workspace whose trial ends exactly 6 days from now', async () => {
       const creator = await createUser({
         email: 'test@test.com',
         name: 'Test User',
@@ -73,11 +77,21 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         subscriptionPlan: SubscriptionPlan.HobbyV3,
         creator,
       })
-      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
+        {
+          email: userData.email,
+          name: 'Test User',
+          latitudeGoal: LatitudeGoal.ObservingTraces,
+        },
+        'test-instantly-key',
+        true,
+      )
       expect(publisher.publishLater).toHaveBeenCalledTimes(1)
       expect(publisher.publishLater).toHaveBeenCalledWith({
         type: 'workspaceFinishingFreeTrial',
@@ -89,19 +103,31 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
     })
 
     it('publishes event once per workspace when multiple workspaces in window', async () => {
+      const creator1 = await createUser({
+        email: 'user1@test.com',
+        name: 'User One',
+        latitudeGoal: LatitudeGoal.ObservingTraces,
+      })
+      const creator2 = await createUser({
+        email: 'user2@test.com',
+        name: 'User Two',
+        latitudeGoal: LatitudeGoal.ImprovingAccuracy,
+      })
       const { workspace: workspace1, userData: userData1 } =
         await createWorkspace({
           subscriptionPlan: SubscriptionPlan.HobbyV3,
           name: 'Workspace One',
+          creator: creator1,
         })
       const { workspace: workspace2, userData: userData2 } =
         await createWorkspace({
           subscriptionPlan: SubscriptionPlan.HobbyV3,
           name: 'Workspace Two',
+          creator: creator2,
         })
-      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(workspace1.currentSubscriptionId!, trialEndInTenDays)
-      await setTrialEndsAt(workspace2.currentSubscriptionId!, trialEndInTenDays)
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace1.currentSubscriptionId!, trialEnd)
+      await setTrialEndsAt(workspace2.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
@@ -110,14 +136,14 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         type: 'workspaceFinishingFreeTrial',
         data: {
           userEmail: userData1.email,
-          userGoal: null,
+          userGoal: LatitudeGoal.ObservingTraces,
         },
       })
       expect(publisher.publishLater).toHaveBeenCalledWith({
         type: 'workspaceFinishingFreeTrial',
         data: {
           userEmail: userData2.email,
-          userGoal: null,
+          userGoal: LatitudeGoal.ImprovingAccuracy,
         },
       })
     })
@@ -133,11 +159,20 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         creator,
         subscriptionPlan: SubscriptionPlan.HobbyV3,
       })
-      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
+        {
+          email: userData.email,
+          name: 'Test User',
+          latitudeGoal: 'My custom goal',
+        },
+        'test-instantly-key',
+        true,
+      )
       expect(publisher.publishLater).toHaveBeenCalledWith({
         type: 'workspaceFinishingFreeTrial',
         data: {
@@ -153,26 +188,28 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
       mockHasAtLeastOneExternalSpan.mockResolvedValue(false)
       const creator = await createUser({
         email: 'no-span@test.com',
+        name: 'No Span User',
         latitudeGoal: LatitudeGoal.JustExploring,
       })
       const { workspace, userData } = await createWorkspace({
         subscriptionPlan: SubscriptionPlan.HobbyV3,
         creator,
       })
-      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
       expect(publisher.publishLater).not.toHaveBeenCalled()
       expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
       expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
-        { email: userData.email },
-        'test-instantly-key',
         {
-          campaignContext: 'trial_finishing',
-          goalForCampaign: LatitudeGoal.JustExploring,
+          email: userData.email,
+          name: 'No Span User',
+          latitudeGoal: LatitudeGoal.JustExploring,
         },
+        'test-instantly-key',
+        true,
       )
     })
 
@@ -180,14 +217,15 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
       mockHasAtLeastOneExternalSpan.mockResolvedValue(true)
       const creator = await createUser({
         email: 'icp@test.com',
+        name: 'ICP User',
         latitudeGoal: LatitudeGoal.ObservingTraces,
       })
       const { workspace, userData } = await createWorkspace({
         subscriptionPlan: SubscriptionPlan.HobbyV3,
         creator,
       })
-      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
@@ -202,74 +240,93 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
     })
   })
 
-  describe('creates Instantly lead for every workspace in 10-day window', () => {
+  describe('creates Instantly lead for every workspace in 6-day window', () => {
     it('calls createInstantlyLead for each workspace in window', async () => {
       mockHasAtLeastOneExternalSpan.mockResolvedValue(false)
+      const creator1 = await createUser({
+        email: 'user1@test.com',
+        name: 'User One',
+        latitudeGoal: LatitudeGoal.ManagingPromptVersions,
+      })
+      const creator2 = await createUser({
+        email: 'user2@test.com',
+        name: 'User Two',
+        latitudeGoal: LatitudeGoal.SettingUpEvaluations,
+      })
       const { workspace: workspace1, userData: userData1 } =
         await createWorkspace({
           subscriptionPlan: SubscriptionPlan.HobbyV3,
           name: 'Workspace One',
+          creator: creator1,
         })
       const { workspace: workspace2, userData: userData2 } =
         await createWorkspace({
           subscriptionPlan: SubscriptionPlan.HobbyV3,
           name: 'Workspace Two',
+          creator: creator2,
         })
-      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(workspace1.currentSubscriptionId!, trialEndInTenDays)
-      await setTrialEndsAt(workspace2.currentSubscriptionId!, trialEndInTenDays)
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace1.currentSubscriptionId!, trialEnd)
+      await setTrialEndsAt(workspace2.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
       expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(2)
       expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
-        { email: userData1.email },
-        'test-instantly-key',
         {
-          campaignContext: 'trial_finishing',
-          goalForCampaign: null,
+          email: userData1.email,
+          name: 'User One',
+          latitudeGoal: LatitudeGoal.ManagingPromptVersions,
         },
+        'test-instantly-key',
+        true,
       )
       expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
-        { email: userData2.email },
-        'test-instantly-key',
         {
-          campaignContext: 'trial_finishing',
-          goalForCampaign: null,
+          email: userData2.email,
+          name: 'User Two',
+          latitudeGoal: LatitudeGoal.SettingUpEvaluations,
         },
+        'test-instantly-key',
+        true,
       )
     })
   })
 
-  describe('does not publish for workspaces outside the exact 10-day window', () => {
-    it('does not publish when trial ends 9 days from now', async () => {
+  describe('does not publish for workspaces outside the exact 6-day window', () => {
+    it('does not publish when trial ends 5 days from now', async () => {
+      const creator = await createUser({
+        latitudeGoal: LatitudeGoal.JustExploring,
+      })
       const { workspace } = await createWorkspace({
         subscriptionPlan: SubscriptionPlan.HobbyV3,
+        creator,
       })
-      const trialEndInNineDays = startOfDay(addDays(new Date(), 9))
-      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInNineDays)
+      const trialEnd = startOfDay(addDays(new Date(), 5))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
       expect(publisher.publishLater).not.toHaveBeenCalled()
     })
 
-    it('does not publish when trial ends 11 days from now', async () => {
+    it('does not publish when trial ends 7 days from now', async () => {
+      const creator = await createUser({
+        latitudeGoal: LatitudeGoal.JustExploring,
+      })
       const { workspace } = await createWorkspace({
         subscriptionPlan: SubscriptionPlan.HobbyV3,
+        creator,
       })
-      const trialEndInElevenDays = startOfDay(addDays(new Date(), 11))
-      await setTrialEndsAt(
-        workspace.currentSubscriptionId!,
-        trialEndInElevenDays,
-      )
+      const trialEnd = startOfDay(addDays(new Date(), 7))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
       expect(publisher.publishLater).not.toHaveBeenCalled()
     })
 
-    it('does not publish when no workspaces have trial in 10-day window', async () => {
+    it('does not publish when no workspaces have trial in 6-day window', async () => {
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
       expect(publisher.publishLater).not.toHaveBeenCalled()
@@ -283,11 +340,30 @@ describe('notifyWorkspacesFinishingFreeTrialJob', () => {
         .update(workspaces)
         .set({ creatorId: null })
         .where(eq(workspaces.id, workspace.id))
-      const trialEndInTenDays = startOfDay(addDays(new Date(), 10))
-      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEndInTenDays)
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
 
       await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
 
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
+      expect(publisher.publishLater).not.toHaveBeenCalled()
+    })
+
+    it('does not publish when creator has no latitude goal', async () => {
+      const creator = await createUser({
+        email: 'no-goal@test.com',
+        name: 'No Goal User',
+      })
+      const { workspace } = await createWorkspace({
+        subscriptionPlan: SubscriptionPlan.HobbyV3,
+        creator,
+      })
+      const trialEnd = startOfDay(addDays(new Date(), 6))
+      await setTrialEndsAt(workspace.currentSubscriptionId!, trialEnd)
+
+      await notifyWorkspacesFinishingFreeTrialJob(createMockJob())
+
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
       expect(publisher.publishLater).not.toHaveBeenCalled()
     })
   })

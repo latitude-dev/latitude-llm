@@ -8,9 +8,9 @@ import { SubscriptionPlan } from '../../plans'
 import { createInstantlyLeadHandler } from './createInstantlyLeadHandler'
 import { type UserOnboardingInfoUpdatedEvent } from '../events'
 
-const mockFetch = vi.fn()
 const mockUnsafeFindWorkspacesFromUser = vi.fn()
 const mockCaptureException = vi.fn()
+const mockCreateInstantlyLead = vi.fn()
 
 vi.mock('@latitude-data/env', () => ({
   env: {
@@ -27,6 +27,10 @@ vi.mock('../../data-access/workspaces', () => ({
 
 vi.mock('../../utils/datadogCapture', () => ({
   captureException: (...args: unknown[]) => mockCaptureException(...args),
+}))
+
+vi.mock('../../services/instantly/createLead', () => ({
+  createInstantlyLead: (...args: unknown[]) => mockCreateInstantlyLead(...args),
 }))
 
 function makeEvent(
@@ -65,12 +69,11 @@ function paidWorkspace(id = 2, plan = SubscriptionPlan.TeamV4) {
 describe('createInstantlyLeadHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.stubGlobal('fetch', mockFetch)
-    mockFetch.mockResolvedValue({ ok: true })
+    mockCreateInstantlyLead.mockResolvedValue(undefined)
   })
 
   describe('happy path', () => {
-    it('POSTs to Instantly with correct campaign, email, first_name and skip_if_in_campaign', async () => {
+    it('calls createInstantlyLead with correct email, name, and goal', async () => {
       mockUnsafeFindWorkspacesFromUser.mockResolvedValue([freeWorkspace()])
 
       const event = makeEvent({
@@ -80,27 +83,19 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).toHaveBeenCalledTimes(1)
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://api.instantly.ai/api/v2/leads',
-        expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer test-instantly-key',
-          },
-          body: JSON.stringify({
-            campaign: 'ef299a4f-99df-4bea-b5a4-581e09010adc',
-            email: 'free@test.com',
-            first_name: 'Free',
-            skip_if_in_campaign: true,
-          }),
-        }),
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
+        {
+          email: 'free@test.com',
+          name: 'Free First',
+          latitudeGoal: LatitudeGoal.SettingUpEvaluations,
+        },
+        'test-instantly-key',
       )
       expect(mockCaptureException).not.toHaveBeenCalled()
     })
 
-    it('sends campaign id from latitude goal when mapped', async () => {
+    it('passes latitude goal to service when mapped', async () => {
       mockUnsafeFindWorkspacesFromUser.mockResolvedValue([freeWorkspace()])
 
       const event = makeEvent({
@@ -111,12 +106,16 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).toHaveBeenCalledTimes(1)
-      const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
-      expect(body.campaign).toBe('df56b6eb-a71b-4be9-99d9-75d5b0cb5ce3')
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
+        expect.objectContaining({
+          latitudeGoal: LatitudeGoal.ImprovingAccuracy,
+        }),
+        'test-instantly-key',
+      )
     })
 
-    it('sends single-word name as first_name', async () => {
+    it('passes name to service', async () => {
       mockUnsafeFindWorkspacesFromUser.mockResolvedValue([freeWorkspace()])
 
       const event = makeEvent({
@@ -126,9 +125,29 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).toHaveBeenCalledTimes(1)
-      const body = JSON.parse(mockFetch.mock.calls[0]![1].body as string)
-      expect(body.first_name).toBe('McGregor')
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'McGregor' }),
+        'test-instantly-key',
+      )
+    })
+
+    it('passes latitudeGoalOther when latitudeGoal is absent', async () => {
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([freeWorkspace()])
+
+      const event = makeEvent({
+        userEmail: 'other-goal@test.com',
+        latitudeGoal: null,
+        latitudeGoalOther: 'My custom goal',
+      })
+
+      await createInstantlyLeadHandler({ data: event })
+
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
+      expect(mockCreateInstantlyLead).toHaveBeenCalledWith(
+        expect.objectContaining({ latitudeGoal: 'My custom goal' }),
+        'test-instantly-key',
+      )
     })
   })
 
@@ -140,7 +159,7 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
       expect(mockCaptureException).toHaveBeenCalledOnce()
       expect(mockCaptureException.mock.calls[0]![0].message).toContain(
         'no workspaces found',
@@ -156,7 +175,7 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
       expect(mockCaptureException).toHaveBeenCalledOnce()
       expect(mockCaptureException.mock.calls[0]![0].message).toContain(
         'no subscription',
@@ -170,11 +189,26 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
       expect(mockCaptureException).toHaveBeenCalledOnce()
       expect(mockCaptureException.mock.calls[0]![0].message).toContain(
         'empty email',
       )
+    })
+
+    it('skips silently when latitude goal is missing', async () => {
+      mockUnsafeFindWorkspacesFromUser.mockResolvedValue([freeWorkspace()])
+
+      const event = makeEvent({
+        userEmail: 'no-goal@test.com',
+        latitudeGoal: null,
+        latitudeGoalOther: null,
+      })
+
+      await createInstantlyLeadHandler({ data: event })
+
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
+      expect(mockCaptureException).not.toHaveBeenCalled()
     })
   })
 
@@ -186,7 +220,7 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
     })
 
     it('skips when any workspace has a paid plan even if first is free', async () => {
@@ -199,7 +233,7 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(mockCreateInstantlyLead).not.toHaveBeenCalled()
     })
 
     it('proceeds when all workspaces are on free plans', async () => {
@@ -212,7 +246,7 @@ describe('createInstantlyLeadHandler', () => {
 
       await createInstantlyLeadHandler({ data: event })
 
-      expect(mockFetch).toHaveBeenCalledTimes(1)
+      expect(mockCreateInstantlyLead).toHaveBeenCalledTimes(1)
     })
   })
 })

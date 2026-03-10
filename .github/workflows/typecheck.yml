@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - latitude-v1
   workflow_call:
     inputs:
       workflow_call:
