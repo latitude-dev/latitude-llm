@@ -6,6 +6,7 @@ import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
 import { isCloneActionUrl } from '@latitude-data/constants'
 import { unsafelyFindUserByEmail } from '@latitude-data/core/queries/users/findByEmail'
+import { containsUrl } from '@latitude-data/core/lib/containsUrl'
 
 import { errorHandlingProcedure } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
@@ -16,7 +17,13 @@ export const setupAction = errorHandlingProcedure
     z.object({
       returnTo: z.string().optional(),
       source: z.string().optional(),
-      name: z.string().min(1, { error: 'Name is a required field' }),
+      name: z
+        .string()
+        .min(1, { error: 'Name is a required field' })
+        .max(200, { error: 'Name is too long' })
+        .refine((name) => !containsUrl(name), {
+          error: 'Name must not contain URLs',
+        }),
       email: z
         .string()
         .pipe(z.email())
@@ -35,7 +42,11 @@ export const setupAction = errorHandlingProcedure
         ),
       companyName: z
         .string()
-        .min(1, { error: 'Workspace name is a required field' }),
+        .min(1, { error: 'Workspace name is a required field' })
+        .max(200, { error: 'Workspace name is too long' })
+        .refine((name) => !containsUrl(name), {
+          error: 'Workspace name must not contain URLs',
+        }),
       title: z.enum(UserTitle).optional(),
     }),
   )

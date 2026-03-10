@@ -2,6 +2,12 @@ import { unsafelyFindUserById } from '../../queries/users/findById'
 import { NotFoundError } from '../../lib/errors'
 import { InvitationMailer } from '../../mailer/mailers/invitations/InvitationMailer'
 import { MembershipCreatedEvent } from '../events'
+import { containsUrl } from '../../lib/containsUrl'
+
+function sanitizeName(name: string | null): string {
+  if (!name || containsUrl(name)) return 'there'
+  return name
+}
 
 export const sendInvitationToUserJob = async ({
   data: event,
@@ -16,13 +22,16 @@ export const sendInvitationToUserJob = async ({
   const invitee = await unsafelyFindUserById({ id: event.data.authorId })
   if (!invitee) throw new NotFoundError('Invitee user not found')
 
+  const sanitizedInvited = { ...invited, name: sanitizeName(invited.name) }
+  const sanitizedInvitee = { ...invitee, name: sanitizeName(invitee.name) }
+
   const mailer = new InvitationMailer(
     {
       to: invited.email,
     },
     {
-      invited,
-      invitee,
+      invited: sanitizedInvited,
+      invitee: sanitizedInvitee,
       invitationToken: event.data.invitationToken,
     },
   )
