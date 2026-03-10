@@ -2,7 +2,7 @@ CREATE TABLE "latitude"."account" (
 	"id" varchar(24) PRIMARY KEY,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
-	"user_id" text NOT NULL,
+	"user_id" varchar(24) NOT NULL,
 	"access_token" text,
 	"refresh_token" text,
 	"id_token" text,
@@ -16,19 +16,19 @@ CREATE TABLE "latitude"."account" (
 --> statement-breakpoint
 CREATE TABLE "latitude"."invitation" (
 	"id" varchar(24) PRIMARY KEY,
-	"organization_id" text NOT NULL,
+	"organization_id" varchar(24) NOT NULL,
 	"email" text NOT NULL,
 	"role" varchar(50),
 	"status" varchar(50) DEFAULT 'pending' NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
-	"inviter_id" text NOT NULL
+	"inviter_id" varchar(24) NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "latitude"."invitation" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."member" (
 	"id" varchar(24) PRIMARY KEY,
-	"organization_id" text NOT NULL,
-	"user_id" text NOT NULL,
+	"organization_id" varchar(24) NOT NULL,
+	"user_id" varchar(24) NOT NULL,
 	"role" varchar(50) DEFAULT 'member' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -40,8 +40,8 @@ CREATE TABLE "latitude"."organization" (
 	"slug" text NOT NULL UNIQUE,
 	"logo" text,
 	"metadata" text,
-	"creator_id" text,
-	"current_subscription_id" text,
+	"creator_id" varchar(24),
+	"current_subscription_id" varchar(24),
 	"stripe_customer_id" varchar(256),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -53,7 +53,7 @@ CREATE TABLE "latitude"."session" (
 	"token" text NOT NULL UNIQUE,
 	"ip_address" text,
 	"user_agent" text,
-	"user_id" text NOT NULL,
+	"user_id" varchar(24) NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -87,7 +87,7 @@ CREATE TABLE "latitude"."auth_intent" (
 	"email" text NOT NULL,
 	"data" jsonb DEFAULT '{}' NOT NULL,
 	"existing_account_at_request" boolean DEFAULT false NOT NULL,
-	"created_organization_id" text,
+	"created_organization_id" varchar(24),
 	"expires_at" timestamp with time zone NOT NULL,
 	"consumed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE "latitude"."auth_intent" (
 CREATE TABLE "latitude"."subscription" (
 	"id" varchar(24) PRIMARY KEY,
 	"plan" text NOT NULL,
-	"reference_id" text NOT NULL,
+	"reference_id" varchar(24) NOT NULL,
 	"stripe_customer_id" varchar(256),
 	"stripe_subscription_id" varchar(256),
 	"status" text NOT NULL,
@@ -117,7 +117,7 @@ CREATE TABLE "latitude"."subscription" (
 ALTER TABLE "latitude"."subscription" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."projects" (
 	"id" varchar(24) PRIMARY KEY,
-	"organization_id" text NOT NULL,
+	"organization_id" varchar(24) NOT NULL,
 	"name" varchar(256) NOT NULL,
 	"slug" varchar(256) NOT NULL,
 	"deleted_at" timestamp with time zone,
@@ -131,7 +131,7 @@ CREATE TABLE "latitude"."api_keys" (
 	"id" varchar(24) PRIMARY KEY,
 	"token" text NOT NULL,
 	"token_hash" text NOT NULL UNIQUE,
-	"organization_id" text NOT NULL,
+	"organization_id" varchar(24) NOT NULL,
 	"name" varchar(256),
 	"last_used_at" timestamp with time zone,
 	"deleted_at" timestamp with time zone,
@@ -142,8 +142,8 @@ CREATE TABLE "latitude"."api_keys" (
 ALTER TABLE "latitude"."api_keys" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "latitude"."grants" (
 	"id" varchar(24) PRIMARY KEY,
-	"organization_id" text NOT NULL,
-	"subscription_id" text NOT NULL,
+	"organization_id" varchar(24) NOT NULL,
+	"subscription_id" varchar(24) NOT NULL,
 	"source" varchar(50) NOT NULL,
 	"type" varchar(50) NOT NULL,
 	"amount" bigint,
@@ -157,8 +157,8 @@ ALTER TABLE "latitude"."grants" ENABLE ROW LEVEL SECURITY;--> statement-breakpoi
 CREATE TABLE "latitude"."outbox_events" (
 	"id" varchar(24) PRIMARY KEY,
 	"event_name" text NOT NULL,
-	"aggregate_id" text NOT NULL,
-	"workspace_id" text NOT NULL,
+	"aggregate_id" varchar(24) NOT NULL,
+	"workspace_id" varchar(24) NOT NULL,
 	"payload" jsonb NOT NULL,
 	"published" boolean DEFAULT false NOT NULL,
 	"published_at" timestamp with time zone,

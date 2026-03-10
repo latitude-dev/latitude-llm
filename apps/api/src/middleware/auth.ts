@@ -3,7 +3,7 @@ import { createApiKeyPostgresRepository, createMembershipPostgresRepository } fr
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
-import { getBetterAuth, getAdminPostgresClient } from "../clients.ts"
+import { getAdminPostgresClient, getBetterAuth } from "../clients.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
 
