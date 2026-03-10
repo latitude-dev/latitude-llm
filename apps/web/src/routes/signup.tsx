@@ -39,11 +39,15 @@ const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
 export const Route = createFileRoute("/signup")({
   validateSearch: (search: Record<string, unknown>) => ({
     reason: (search.reason as string) || undefined,
+    cliSession: (search.cliSession as string) || undefined,
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const session = await getSession()
 
     if (session) {
+      if (search.cliSession) {
+        throw redirect({ to: "/auth/cli", search: { session: search.cliSession } })
+      }
       throw redirect({ to: "/" })
     }
   },
@@ -51,7 +55,7 @@ export const Route = createFileRoute("/signup")({
 })
 
 function SignupPage() {
-  const { reason } = Route.useSearch()
+  const { reason, cliSession } = Route.useSearch()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
@@ -79,9 +83,13 @@ function SignupPage() {
         },
       })
 
+      const callbackURL = cliSession
+        ? `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}&cliSession=${encodeURIComponent(cliSession)}`
+        : `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`
+
       const { error: signInError } = await authClient.signIn.magicLink({
         email: emailValue,
-        callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
+        callbackURL,
       })
 
       if (signInError) {

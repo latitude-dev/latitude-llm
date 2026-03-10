@@ -9,6 +9,7 @@ import { getSession } from "../../domains/sessions/session.functions.ts"
 export const Route = createFileRoute("/auth/confirm")({
   validateSearch: (search: Record<string, unknown>) => ({
     authIntentId: (search.authIntentId as string) ?? "",
+    cliSession: (search.cliSession as string) || undefined,
   }),
   beforeLoad: async () => {
     const session = await getSession()
@@ -27,7 +28,7 @@ type ConfirmState =
   | { step: "error"; message: string }
 
 function AuthConfirmPage() {
-  const { authIntentId } = Route.useSearch()
+  const { authIntentId, cliSession } = Route.useSearch()
   const navigate = useNavigate()
   const [state, setState] = useState<ConfirmState>({ step: "loading" })
   const [name, setName] = useState("")
@@ -56,9 +57,13 @@ function AuthConfirmPage() {
     return completeAuthIntent({ data: { intentId: authIntentId, name: userName } })
       .then(() => {
         setState({ step: "completed" })
-        setTimeout(() => {
-          void navigate({ to: "/" })
-        }, 2000)
+        if (cliSession) {
+          void navigate({ to: "/auth/cli", search: { session: cliSession } })
+        } else {
+          setTimeout(() => {
+            void navigate({ to: "/" })
+          }, 2000)
+        }
       })
       .catch((err) => {
         setState({
@@ -97,7 +102,9 @@ function AuthConfirmPage() {
             </div>
             <Text.H3 align="center">You're in!</Text.H3>
             <Text.H5 color="foregroundMuted" align="center">
-              In a few seconds you will be redirected to your workspace.
+              {cliSession
+                ? "Redirecting to CLI authorization..."
+                : "In a few seconds you will be redirected to your workspace."}
             </Text.H5>
           </div>
         ) : state.step === "name-form" ? (

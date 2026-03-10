@@ -7,6 +7,8 @@ import {
   signupExistingAccountMagicLinkTemplate,
 } from "@domain/email"
 import { createBetterAuth } from "@platform/auth-better"
+import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
+import type { RedisClient } from "@platform/cache-redis"
 import {
   type PostgresClient,
   createAuthIntentPostgresRepository,
@@ -19,6 +21,7 @@ import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
+let redisClientInstance: RedisClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 
 interface AuthIntentEmailContext {
@@ -74,6 +77,14 @@ export const getPostgresClient = (): PostgresClient => {
   }
 
   return postgresClient
+}
+
+export const getRedisClient = (): RedisClient => {
+  if (!redisClientInstance) {
+    const connection = createRedisConnection()
+    redisClientInstance = createRedisClient(connection)
+  }
+  return redisClientInstance
 }
 
 export const getBetterAuth = () => {

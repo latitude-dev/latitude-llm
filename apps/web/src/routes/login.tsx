@@ -9,10 +9,16 @@ import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
 import { parseServerError } from "../server/middlewares.ts"
 
 export const Route = createFileRoute("/login")({
-  beforeLoad: async () => {
+  validateSearch: (search: Record<string, unknown>) => ({
+    cliSession: (search.cliSession as string) || undefined,
+  }),
+  beforeLoad: async ({ search }) => {
     const session = await getSession()
 
     if (session) {
+      if (search.cliSession) {
+        throw redirect({ to: "/auth/cli", search: { session: search.cliSession } })
+      }
       throw redirect({ to: "/" })
     }
   },
@@ -20,6 +26,7 @@ export const Route = createFileRoute("/login")({
 })
 
 function LoginPage() {
+  const { cliSession } = Route.useSearch()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
@@ -40,9 +47,13 @@ function LoginPage() {
     try {
       const { intentId } = await createLoginIntent({ data: { email } })
 
+      const callbackURL = cliSession
+        ? `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}&cliSession=${encodeURIComponent(cliSession)}`
+        : `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`
+
       const { error: signInError } = await authClient.signIn.magicLink({
         email,
-        callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
+        callbackURL,
       })
 
       if (signInError) {
@@ -53,7 +64,7 @@ function LoginPage() {
     } catch (err) {
       const { _tag, message } = parseServerError(err)
       if (_tag === "LoginUserNotFoundError") {
-        navigate({ to: "/signup", search: { reason: "no-account" } })
+        navigate({ to: "/signup", search: { reason: "no-account", cliSession } })
         return
       }
       setError(message)
@@ -232,6 +243,7 @@ function LoginPage() {
             Do not have an account yet?{" "}
             <Link
               to="/signup"
+              search={cliSession ? { cliSession } : {}}
               className="text-accent-foreground underline hover:no-underline inline-flex items-center gap-1"
             >
               Sign up
