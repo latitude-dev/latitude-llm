@@ -8,11 +8,12 @@ import { isCloneActionUrl } from '@latitude-data/constants'
 import { unsafelyFindUserByEmail } from '@latitude-data/core/queries/users/findByEmail'
 import { containsUrl } from '@latitude-data/core/lib/containsUrl'
 
-import { errorHandlingProcedure } from '../procedures'
+import { errorHandlingProcedure, withRateLimit } from '../procedures'
 import { frontendRedirect } from '$/lib/frontendRedirect'
 import { UserTitle } from '@latitude-data/constants/users'
 
 export const setupAction = errorHandlingProcedure
+  .use(withRateLimit({ limit: 3, period: 60 }))
   .inputSchema(
     z.object({
       returnTo: z.string().optional(),
