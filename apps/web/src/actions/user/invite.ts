@@ -3,11 +3,11 @@
 import { inviteUser } from '@latitude-data/core/services/users/invite'
 import { z } from 'zod'
 import { applyUserPlanLimit } from '@latitude-data/core/services/subscriptions/limits/applyUserPlanLimit'
-import { authProcedure } from '../procedures'
-import { INVITATIONS_DISABLED } from '$/lib/constants'
+import { authProcedure, withRateLimit } from '../procedures'
 import { containsUrl } from '@latitude-data/core/lib/containsUrl'
 
 export const inviteUserAction = authProcedure
+  .use(withRateLimit({ limit: 3, period: 60 }))
   .inputSchema(
     z.object({
       email: z.email(),
@@ -20,10 +20,6 @@ export const inviteUserAction = authProcedure
     }),
   )
   .action(async ({ parsedInput, ctx }) => {
-    if (INVITATIONS_DISABLED) {
-      throw new Error('Workspace invitations are temporarily disabled')
-    }
-
     await applyUserPlanLimit({ workspace: ctx.workspace }).then((r) =>
       r.unwrap(),
     )

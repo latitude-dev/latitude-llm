@@ -12,7 +12,6 @@ import {
 } from '@latitude-data/web-ui/atoms/Table'
 import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import { Text } from '@latitude-data/web-ui/atoms/Text'
-import { Tooltip } from '@latitude-data/web-ui/atoms/Tooltip'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
@@ -22,7 +21,6 @@ import { User } from '@latitude-data/core/schema/models/types/User'
 import NewUser from './New'
 import { OpenInDocsButton } from '$/components/Documentation/OpenInDocsButton'
 import { DocsRoute } from '$/components/Documentation/routes'
-import { INVITATIONS_DISABLED } from '$/lib/constants'
 
 export default function Memberships() {
   const [open, setOpen] = useState(false)
@@ -30,29 +28,15 @@ export default function Memberships() {
 
   return (
     <div className='flex flex-col gap-4'>
-      {!INVITATIONS_DISABLED && <NewUser open={open} setOpen={setOpen} />}
+      <NewUser open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
         <div className='flex flex-row items-center gap-2'>
           <Text.H4B>Workspace Members</Text.H4B>
           <OpenInDocsButton route={DocsRoute.Invite} />
         </div>
-        <Tooltip
-          asChild
-          trigger={
-            <Button
-              fancy
-              variant='outline'
-              disabled={INVITATIONS_DISABLED}
-              onClick={() => setOpen(true)}
-            >
-              Add Member
-            </Button>
-          }
-        >
-          {INVITATIONS_DISABLED
-            ? 'Invitations are temporarily disabled'
-            : 'Invite a new member'}
-        </Tooltip>
+        <Button fancy variant='outline' onClick={() => setOpen(true)}>
+          Add Member
+        </Button>
       </div>
       <div className='flex flex-col gap-2'>
         {users.length > 0 && <UsersTable users={users} />}

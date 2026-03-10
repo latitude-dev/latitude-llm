@@ -17,7 +17,6 @@ import { TableSkeleton } from '@latitude-data/web-ui/molecules/TableSkeleton'
 import useUsers from '$/stores/users'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useCallback, useState } from 'react'
-import { INVITATIONS_DISABLED } from '$/lib/constants'
 
 type PendingInvite = {
   id: string
@@ -185,11 +184,7 @@ export function InviteMembersModal({
       onOpenChange={setOpen}
       size='large'
       title={`Invite others to ${workspace?.name ?? 'this workspace'}`}
-      description={
-        INVITATIONS_DISABLED
-          ? 'Invitations are temporarily disabled.'
-          : 'Invite a developer to help integrate Latitude into your project.'
-      }
+      description='Invite a developer to help integrate Latitude into your project.'
       footer={footer}
     >
       <div className='flex flex-col gap-6'>
@@ -213,17 +208,10 @@ export function InviteMembersModal({
                   </TableCell>
                 </TableRow>
               ))}
-              {!INVITATIONS_DISABLED && (
-                <>
-                  {visiblePendingInvites.map((invite) => (
-                    <PendingInviteRow key={invite.id} invite={invite} />
-                  ))}
-                  <NewUserRow
-                    onInviteUser={onInviteUser}
-                    isInviting={isInviting}
-                  />
-                </>
-              )}
+              {visiblePendingInvites.map((invite) => (
+                <PendingInviteRow key={invite.id} invite={invite} />
+              ))}
+              <NewUserRow onInviteUser={onInviteUser} isInviting={isInviting} />
             </TableBody>
           </Table>
         )}

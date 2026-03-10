@@ -6,7 +6,6 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { inviteUserAction } from './invite'
-import { INVITATIONS_DISABLED } from '$/lib/constants'
 
 const mocks = vi.hoisted(() => {
   return {
@@ -31,7 +30,7 @@ vi.mock('@latitude-data/core/services/users/invite', () => ({
   inviteUser: mocks.inviteUser,
 }))
 
-describe.skipIf(INVITATIONS_DISABLED)('inviteUserAction', () => {
+describe('inviteUserAction', () => {
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
       mocks.getSession.mockResolvedValue(null)
