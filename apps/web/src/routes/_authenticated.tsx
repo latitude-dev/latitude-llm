@@ -2,7 +2,7 @@ import { DropdownMenu, DropdownMenuTrigger } from "@repo/ui"
 import { LatitudeLogo } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { ClientOnly, Link, Outlet, createFileRoute, redirect, useRouter, useRouterState } from "@tanstack/react-router"
+import { Link, Outlet, createFileRoute, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
 import { useEffect, useState } from "react"
 import { countUserOrganizations, getOrganization } from "../domains/organizations/organizations.functions.ts"
@@ -11,6 +11,7 @@ import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 
 export const Route = createFileRoute("/_authenticated")({
+  ssr: "data-only",
   beforeLoad: async () => {
     const session = await getSession()
 
@@ -130,11 +131,7 @@ function NavHeader() {
         ) : (
           <span className="text-sm font-medium text-foreground px-2 py-1">{organizationName}</span>
         )}
-        {currentProjectId && (
-          <ClientOnly>
-            <ProjectBreadcrumb projectId={currentProjectId} />
-          </ClientOnly>
-        )}
+        {currentProjectId && <ProjectBreadcrumb projectId={currentProjectId} />}
       </div>
       <div className="flex items-center gap-4">
         {import.meta.env.DEV && <ThemeToggle />}

@@ -11,7 +11,7 @@ import {
   TableWithHeader,
   Text,
 } from "@repo/ui"
-import { ClientOnly, Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute } from "@tanstack/react-router"
 import { useSpansCollection } from "../../../../domains/spans/spans.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
@@ -21,9 +21,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
 function TracesPage() {
   return (
     <Container className="pt-14">
-      <ClientOnly fallback={<TableSkeleton cols={8} rows={5} />}>
-        <TracesPageContent />
-      </ClientOnly>
+      <TracesPageContent />
     </Container>
   )
 }
