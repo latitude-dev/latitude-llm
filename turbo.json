@@ -23,7 +23,7 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "outputs": []
     }
   }
 }

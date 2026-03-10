@@ -1,5 +1,9 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
-import { createApiKeyPostgresRepository, createMembershipPostgresRepository } from "@platform/db-postgres"
+import {
+  type PostgresDb,
+  createApiKeyPostgresRepository,
+  createMembershipPostgresRepository,
+} from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
@@ -93,10 +97,10 @@ const cacheApiKeyResult = (
 const validateApiKey = (
   c: Context,
   token: string,
+  options?: AuthMiddlewareOptions,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const redis = c.get("redis")
-  // Use admin db (bypasses RLS) for the cross-org token-hash → org-id lookup.
-  const { db: adminDb } = getAdminPostgresClient()
+  const adminDb = options?.adminDb ?? getAdminPostgresClient().db
   const unscopedApiKeyRepository = createApiKeyPostgresRepository(adminDb)
   const touchBuffer = createTouchBuffer(adminDb)
 
@@ -189,9 +193,13 @@ const extractBearerToken = (c: Context): string | undefined => {
 /**
  * Authenticate via API key.
  */
-const authenticateWithApiKey = (c: Context, token: string): Effect.Effect<AuthContext | null, never> => {
+const authenticateWithApiKey = (
+  c: Context,
+  token: string,
+  options?: AuthMiddlewareOptions,
+): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
-    const result = yield* validateApiKey(c, token)
+    const result = yield* validateApiKey(c, token, options)
 
     if (result) {
       const authContext: AuthContext = {
@@ -248,7 +256,7 @@ const authenticateWithJwt = (c: Context, token: string): Effect.Effect<AuthConte
 /**
  * Main authentication effect that tries all authentication methods.
  */
-const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError> => {
+const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
     const apiKeyToken = extractApiKeyToken(c)
     const bearerToken = extractBearerToken(c)
@@ -256,7 +264,7 @@ const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError>
     let authContext: AuthContext | null = null
 
     if (apiKeyToken) {
-      authContext = yield* authenticateWithApiKey(c, apiKeyToken)
+      authContext = yield* authenticateWithApiKey(c, apiKeyToken, options)
     } else if (bearerToken) {
       authContext = yield* authenticateWithJwt(c, bearerToken)
     }
@@ -281,15 +289,14 @@ const authenticate = (c: Context): Effect.Effect<AuthContext, UnauthorizedError>
  * The middleware sets auth context on the Hono context for downstream handlers.
  * Public routes should be excluded from this middleware.
  */
-export const createAuthMiddleware = (): MiddlewareHandler => {
+interface AuthMiddlewareOptions {
+  readonly adminDb?: PostgresDb
+}
+
+export const createAuthMiddleware = (options?: AuthMiddlewareOptions): MiddlewareHandler => {
   return async (c: Context, next: Next) => {
-    // Build and run the authentication program
-    // Errors will propagate to the global error handler
-    const authContext = await Effect.runPromise(authenticate(c))
-
-    // Set auth context on Hono context - type-safe via module augmentation
+    const authContext = await Effect.runPromise(authenticate(c, options))
     c.set("auth", authContext)
-
     await next()
   }
 }
