@@ -20,7 +20,7 @@ import {
 } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { ClientOnly, Link, createFileRoute, useRouter } from "@tanstack/react-router"
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { useProjectsCollection } from "../../domains/projects/projects.collection.ts"
 import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
@@ -307,9 +307,7 @@ function DashboardPageContent() {
 function DashboardPage() {
   return (
     <Container className="pt-14">
-      <ClientOnly fallback={<TableSkeleton cols={5} rows={3} />}>
-        <DashboardPageContent />
-      </ClientOnly>
+      <DashboardPageContent />
     </Container>
   )
 }

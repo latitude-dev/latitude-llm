@@ -20,7 +20,7 @@ import {
 import { Icon } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { ClientOnly, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
@@ -456,12 +456,8 @@ function ApiKeysSection() {
 function SettingsPage() {
   return (
     <Container className="pt-14">
-      <ClientOnly fallback={<TableSkeleton cols={4} rows={3} />}>
-        <MembershipsSection />
-      </ClientOnly>
-      <ClientOnly fallback={<TableSkeleton cols={3} rows={3} />}>
-        <ApiKeysSection />
-      </ClientOnly>
+      <MembershipsSection />
+      <ApiKeysSection />
     </Container>
   )
 }

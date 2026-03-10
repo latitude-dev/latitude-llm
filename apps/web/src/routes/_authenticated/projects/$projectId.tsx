@@ -1,7 +1,7 @@
 import { Button, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { ClientOnly, Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router"
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router"
 import {
   ChevronDown,
   ChevronRight,
@@ -223,13 +223,11 @@ function ProjectLayout() {
 
   return (
     <div className="flex h-full">
-      <ClientOnly>
-        <ProjectSidebar
-          projectId={projectId}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
-        />
-      </ClientOnly>
+      <ProjectSidebar
+        projectId={projectId}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+      />
       <main className="flex-1 min-w-0 overflow-y-auto">
         <Outlet />
       </main>
