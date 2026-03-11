@@ -15,7 +15,7 @@ export interface TestAuthContext {
  */
 export const createApiKeyAuthHeaders = (apiKeyToken: string): Record<string, string> => {
   return {
-    "X-API-Key": apiKeyToken,
+    Authorization: `Bearer ${apiKeyToken}`,
   }
 }
 

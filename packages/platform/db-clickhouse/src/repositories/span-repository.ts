@@ -190,8 +190,8 @@ const toInsertRow = (span: SpanDetail) => ({
   span_id: span.spanId as string,
   parent_span_id: span.parentSpanId,
   api_key_id: span.apiKeyId,
-  start_time: span.startTime.toISOString(),
-  end_time: span.endTime.toISOString(),
+  start_time: toClickhouseDateTime(span.startTime),
+  end_time: toClickhouseDateTime(span.endTime),
   name: span.name,
   service_name: span.serviceName,
   kind: SPAN_KIND_TO_INT[span.kind],
@@ -229,7 +229,7 @@ const toInsertRow = (span: SpanDetail) => ({
   output_messages: JSON.stringify(span.outputMessages),
   system_instructions: span.systemInstructions,
   tool_definitions: span.toolDefinitions,
-  ingested_at: span.ingestedAt.toISOString(),
+  ingested_at: toClickhouseDateTime(span.ingestedAt),
 })
 
 export const createSpanClickhouseRepository = (client: ClickHouseClient): SpanRepository => ({

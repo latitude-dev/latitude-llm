@@ -23,7 +23,7 @@ export interface AuthContext {
   /** The organization ID for this request (from URL param or API key) */
   readonly organizationId: OrganizationId
   /** The authentication method that was used */
-  readonly method: "jwt" | "api-key"
+  readonly method: "api-key"
 }
 
 /**

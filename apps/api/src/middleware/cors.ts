@@ -42,7 +42,7 @@ export const registerCorsMiddleware = (app: Hono, options: RegisterCorsMiddlewar
         return null
       },
       allowMethods: ["GET", "POST", "PUT", "DELETE"],
-      allowHeaders: ["Content-Type", "Authorization", "X-API-Key"],
+      allowHeaders: ["Content-Type", "Authorization"],
       credentials: true,
       maxAge: 86400,
       exposeHeaders: ["X-RateLimit-Limit", "X-RateLimit-Remaining"],

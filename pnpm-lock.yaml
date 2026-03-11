@@ -60,6 +60,9 @@ catalogs:
     pg:
       specifier: 8.16.0
       version: 8.16.0
+    protobufjs:
+      specifier: 7.5.4
+      version: 7.5.4
     react:
       specifier: 19.2.4
       version: 19.2.4
@@ -143,9 +146,6 @@ importers:
       '@hono/zod-openapi':
         specifier: ^1.0.0
         version: 1.2.2(hono@4.9.12)(zod@4.3.6)
-      '@platform/auth-better':
-        specifier: workspace:*
-        version: link:../../packages/platform/auth-better
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
@@ -204,9 +204,18 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.17.0
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../packages/domain/shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../../packages/domain/spans
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.6(hono@4.9.12)
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../../packages/platform/cache-redis
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
@@ -219,6 +228,9 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -228,6 +240,9 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.9.12
+      protobufjs:
+        specifier: 'catalog:'
+        version: 7.5.4
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
