@@ -24,6 +24,7 @@
   "dependencies": {
     "@domain/auth": "workspace:*",
     "@domain/api-keys": "workspace:^",
+    "@domain/datasets": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/subscriptions": "workspace:*",

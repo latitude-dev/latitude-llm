@@ -13,6 +13,7 @@ export {
   createApiKeyPostgresRepository,
   createAuthIntentPostgresRepository,
   createAuthUserPostgresRepository,
+  createDatasetPostgresRepository,
   createGrantPostgresRepository,
   createMembershipPostgresRepository,
   createOrganizationPostgresRepository,
