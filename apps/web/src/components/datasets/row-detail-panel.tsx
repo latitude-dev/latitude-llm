@@ -1,7 +1,7 @@
 import { Button, Text } from "@repo/ui"
 import { X } from "lucide-react"
 import { useState } from "react"
-import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
+import type { DatasetRowRecord } from "../../domains/datasets/datasets.functions.ts"
 
 function JsonView({ data }: { data: Record<string, unknown> }) {
   const formatted = JSON.stringify(data, null, 2)

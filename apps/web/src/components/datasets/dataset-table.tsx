@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
+import type { DatasetRowRecord } from "../../domains/datasets/datasets.functions.ts"
 
 function truncateJson(data: Record<string, unknown>, maxLen = 30): string {
   const values = Object.values(data)

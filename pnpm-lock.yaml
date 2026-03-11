@@ -276,6 +276,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/storage-object':
+        specifier: workspace:*
+        version: link:../../packages/platform/storage-object
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -312,6 +315,9 @@ importers:
       lucide-react:
         specifier: ^0.481.0
         version: 0.481.0(react@19.2.4)
+      papaparse:
+        specifier: ^5.5.3
+        version: 5.5.3
       react:
         specifier: 'catalog:'
         version: 19.2.4
@@ -328,6 +334,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.0.0
         version: 4.2.1(vite@7.3.1(@types/node@24.10.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2))
+      '@types/papaparse':
+        specifier: ^5.5.2
+        version: 5.5.2
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
@@ -3448,6 +3457,9 @@ packages:
   '@types/nodemailer@6.4.23':
     resolution: {integrity: sha512-aFV3/NsYFLSx9mbb5gtirBSXJnAlrusoKNuPbxsASWc7vrKLmIrTQRpdcxNcSFL3VW2A2XpeLEavwb2qMi6nlQ==}
 
+  '@types/papaparse@5.5.2':
+    resolution: {integrity: sha512-gFnFp/JMzLHCwRf7tQHrNnfhN4eYBVYYI897CGX4MY1tzY9l2aLkVyx2IlKZ/SAqDbB3I1AOZW5gTMGGsqWliA==}
+
   '@types/pg@8.16.0':
     resolution: {integrity: sha512-RmhMd/wD+CF8Dfo+cVIy3RR5cl8CyfXQ0tGgW6XBL8L4LM/UTEbNXYRbLwU6w+CgrKBNbrQWt4FUtTfaU5jSYQ==}
 
@@ -4858,6 +4870,9 @@ packages:
 
   oxc-resolver@11.19.1:
     resolution: {integrity: sha512-qE/CIg/spwrTBFt5aKmwe3ifeDdLfA2NESN30E42X/lII5ClF8V7Wt6WIJhcGZjp0/Q+nQ+9vgxGk//xZNX2hg==}
+
+  papaparse@5.5.3:
+    resolution: {integrity: sha512-5QvjGxYVjxO59MGU2lHVYpRWBBtKHnlIAcSe1uNFCkkptUh63NFRj0FJQm7nR67puEruUci/ZkjmEFrjCAyP4A==}
 
   parse5-htmlparser2-tree-adapter@7.1.0:
     resolution: {integrity: sha512-ruw5xyKs6lrpo9x9rCZqZZnIUntICjQAd0Wsmp396Ul9lN/h+ifgVV1x1gZHi8euej6wTfpqX8j+BFQxF0NS/g==}
@@ -8597,6 +8612,10 @@ snapshots:
     dependencies:
       '@types/node': 24.10.3
 
+  '@types/papaparse@5.5.2':
+    dependencies:
+      '@types/node': 24.10.3
+
   '@types/pg@8.16.0':
     dependencies:
       '@types/node': 24.10.3
@@ -10028,6 +10047,8 @@ snapshots:
       '@oxc-resolver/binding-win32-arm64-msvc': 11.19.1
       '@oxc-resolver/binding-win32-ia32-msvc': 11.19.1
       '@oxc-resolver/binding-win32-x64-msvc': 11.19.1
+
+  papaparse@5.5.3: {}
 
   parse5-htmlparser2-tree-adapter@7.1.0:
     dependencies:
