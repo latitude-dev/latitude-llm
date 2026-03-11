@@ -1,13 +1,21 @@
 import type { Dataset, DatasetRow } from "@domain/datasets"
-import { DatasetRepository, DatasetRowRepository, listDatasets, listRows } from "@domain/datasets"
-import { DatasetId, DatasetVersionId, OrganizationId, ProjectId } from "@domain/shared"
+import {
+  DatasetRepository,
+  DatasetRowRepository,
+  createDataset,
+  insertRows,
+  listDatasets,
+  listRows,
+} from "@domain/datasets"
+import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, putInDisk } from "@domain/shared"
 import { createDatasetRowClickHouseRepository } from "@platform/db-clickhouse"
 import { createDatasetPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
+import Papa from "papaparse"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getStorageDisk } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
 export interface DatasetRecord {
@@ -16,6 +24,7 @@ export interface DatasetRecord {
   readonly projectId: string
   readonly name: string
   readonly description: string | null
+  readonly fileKey: string | null
   readonly currentVersion: number
   readonly latestVersionId: string | null
   readonly createdAt: string
@@ -34,12 +43,24 @@ export interface DatasetRowRecord {
   readonly version: number
 }
 
+export interface ColumnMapping {
+  readonly input: string[]
+  readonly output: string[]
+  readonly metadata: string[]
+}
+
+export interface CsvTransformOptions {
+  readonly flattenSingleColumn: boolean
+  readonly autoParseJson: boolean
+}
+
 const toDatasetRecord = (d: Dataset): DatasetRecord => ({
   id: d.id,
   organizationId: d.organizationId,
   projectId: d.projectId,
   name: d.name,
   description: d.description,
+  fileKey: d.fileKey,
   currentVersion: d.currentVersion,
   latestVersionId: d.latestVersionId,
   createdAt: d.createdAt.toISOString(),
@@ -55,6 +76,58 @@ const toRowRecord = (r: DatasetRow): DatasetRowRecord => ({
   createdAt: r.createdAt.toISOString(),
   version: r.version,
 })
+
+/**
+ * Apply column mapping and transforms to a single CSV row.
+ * Shared between client-side preview and server-side processing.
+ */
+export function applyMapping(
+  row: Record<string, string>,
+  mapping: ColumnMapping,
+  options: CsvTransformOptions,
+): { input: Record<string, unknown>; output: Record<string, unknown>; metadata: Record<string, unknown> } {
+  const pick = (columns: string[]): Record<string, unknown> => {
+    const result: Record<string, unknown> = {}
+    for (const col of columns) {
+      if (!(col in row)) continue
+      const raw = row[col] as string
+      result[col] = options.autoParseJson ? tryParseJson(raw) : raw
+    }
+
+    const firstCol = columns[0]
+    if (options.flattenSingleColumn && columns.length === 1 && firstCol && firstCol in result) {
+      return { value: result[firstCol] }
+    }
+
+    return result
+  }
+
+  return {
+    input: pick(mapping.input),
+    output: pick(mapping.output),
+    metadata: pick(mapping.metadata),
+  }
+}
+
+function tryParseJson(value: string): unknown {
+  const trimmed = value.trim()
+  if (trimmed === "") return value
+  if (trimmed === "null") return null
+  if (trimmed === "true") return true
+  if (trimmed === "false") return false
+
+  const asNumber = Number(trimmed)
+  if (trimmed !== "" && !Number.isNaN(asNumber)) return asNumber
+
+  if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+    try {
+      return JSON.parse(trimmed)
+    } catch {
+      return value
+    }
+  }
+  return value
+}
 
 export const listDatasetsQuery = createServerFn({ method: "GET" })
   .middleware([errorHandler])
@@ -113,4 +186,103 @@ export const listRowsQuery = createServerFn({ method: "GET" })
     )
 
     return { rows: result.rows.map(toRowRecord), total: result.total }
+  })
+
+export const createDatasetMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ projectId: z.string(), name: z.string().min(1) }))
+  .handler(async ({ data }): Promise<DatasetRecord> => {
+    const { organizationId } = await requireSession()
+    const { db } = getPostgresClient()
+
+    const dataset = await runCommand(
+      db,
+      organizationId,
+    )(async (txDb) =>
+      Effect.runPromise(
+        createDataset({
+          organizationId: OrganizationId(organizationId),
+          projectId: ProjectId(data.projectId),
+          name: data.name,
+        }).pipe(Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb))),
+      ),
+    )
+
+    return toDatasetRecord(dataset)
+  })
+
+export const saveDatasetCsv = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator((input: unknown) => {
+    if (!(input instanceof FormData)) throw new Error("Expected FormData")
+    return input
+  })
+  .handler(async ({ data: formData }): Promise<{ version: number; rowCount: number }> => {
+    const { organizationId } = await requireSession()
+
+    const file = formData.get("file")
+    const datasetId = formData.get("datasetId")
+    const projectId = formData.get("projectId")
+    const mappingRaw = formData.get("mapping")
+    const optionsRaw = formData.get("options")
+
+    if (!(file instanceof File)) throw new Error("No file provided")
+    if (typeof datasetId !== "string" || !datasetId) throw new Error("No datasetId provided")
+    if (typeof projectId !== "string" || !projectId) throw new Error("No projectId provided")
+    if (typeof mappingRaw !== "string") throw new Error("No mapping provided")
+    if (typeof optionsRaw !== "string") throw new Error("No options provided")
+
+    const mapping: ColumnMapping = JSON.parse(mappingRaw)
+    const options: CsvTransformOptions = JSON.parse(optionsRaw)
+
+    const content = await file.text()
+
+    const fileKey = await Effect.runPromise(
+      putInDisk(getStorageDisk(), {
+        namespace: "datasets",
+        organizationId: OrganizationId(organizationId),
+        projectId: ProjectId(projectId),
+        content,
+      }),
+    )
+
+    const { db } = getPostgresClient()
+
+    await runCommand(
+      db,
+      organizationId,
+    )(async (txDb) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* DatasetRepository
+          return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
+        }).pipe(Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb))),
+      ),
+    )
+
+    const parsed = Papa.parse<Record<string, string>>(content, { header: true, skipEmptyLines: true })
+    const mappedRows = parsed.data.map((row) => applyMapping(row, mapping, options))
+
+    if (mappedRows.length === 0) {
+      return { version: 0, rowCount: 0 }
+    }
+
+    const result = await runCommand(
+      db,
+      organizationId,
+    )(async (txDb) =>
+      Effect.runPromise(
+        insertRows({
+          organizationId: OrganizationId(organizationId),
+          datasetId: DatasetId(datasetId),
+          rows: mappedRows,
+          source: "csv",
+        }).pipe(
+          Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb)),
+          Effect.provideService(DatasetRowRepository, createDatasetRowClickHouseRepository(getClickhouseClient())),
+        ),
+      ),
+    )
+
+    return { version: result.version, rowCount: mappedRows.length }
   })

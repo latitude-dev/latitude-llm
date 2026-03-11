@@ -27,6 +27,7 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
+    "@platform/storage-object": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/utils": "workspace:*",
@@ -39,6 +40,7 @@
     "better-auth": "catalog:",
     "effect": "catalog:",
     "lucide-react": "^0.481.0",
+    "papaparse": "^5.5.3",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "catalog:"
@@ -46,6 +48,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",

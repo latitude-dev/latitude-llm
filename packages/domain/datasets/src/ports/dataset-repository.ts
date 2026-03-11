@@ -10,6 +10,7 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly projectId: ProjectId
       readonly name: string
       readonly description?: string
+      readonly fileKey?: string
     }): Effect.Effect<Dataset, RepositoryError>
 
     findById(id: DatasetId): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
@@ -20,6 +21,11 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly limit?: number
       readonly offset?: number
     }): Effect.Effect<{ readonly datasets: readonly Dataset[]; readonly total: number }, RepositoryError>
+
+    updateFileKey(args: {
+      readonly id: DatasetId
+      readonly fileKey: string
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
 
     softDelete(id: DatasetId): Effect.Effect<void, DatasetNotFoundError | RepositoryError>
 

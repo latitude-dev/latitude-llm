@@ -32,7 +32,7 @@ export const createStorageDiskEffect = (): Effect.Effect<StorageDisk> =>
         return new Disk(s3Driver)
       }
 
-      const location = yield* parseEnv("LAT_STORAGE_FS_ROOT", "string", "./storage")
+      const location = yield* parseEnv("LAT_STORAGE_FS_ROOT", "string")
 
       const fsDriver = new FSDriver({
         location,
