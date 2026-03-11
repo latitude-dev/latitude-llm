@@ -18,6 +18,7 @@ import {
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
+import { type StorageDisk, createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
@@ -25,6 +26,7 @@ let adminPostgresClientInstance: PostgresClient | undefined
 let redisClientInstance: RedisClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
+let storageDiskInstance: StorageDisk | undefined
 
 interface AuthIntentEmailContext {
   readonly type: AuthIntent["type"]
@@ -94,6 +96,13 @@ export const getClickhouseClient = (): ClickHouseClient => {
     clickhouseClientInstance = createClickhouseClient()
   }
   return clickhouseClientInstance
+}
+
+export const getStorageDisk = (): StorageDisk => {
+  if (!storageDiskInstance) {
+    storageDiskInstance = createStorageDisk()
+  }
+  return storageDiskInstance
 }
 
 export const getBetterAuth = () => {

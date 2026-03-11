@@ -7,6 +7,7 @@ export function createDataset(args: {
   readonly projectId: ProjectId
   readonly name: string
   readonly description?: string
+  readonly fileKey?: string
 }) {
   return Effect.gen(function* () {
     const repo = yield* DatasetRepository

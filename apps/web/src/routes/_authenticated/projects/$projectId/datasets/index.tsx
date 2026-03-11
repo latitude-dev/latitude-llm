@@ -1,4 +1,5 @@
 import {
+  Button,
   Container,
   Table,
   TableBlankSlate,
@@ -12,15 +13,24 @@ import {
   Text,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useCallback, useState } from "react"
 import { useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
+import { createDatasetMutation } from "../../../../../domains/datasets/datasets.functions.ts"
+import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
   component: DatasetsPage,
 })
 
-function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; projectId: string }) {
+function DatasetsTable({
+  datasets,
+  projectId,
+}: {
+  datasets: DatasetRecord[]
+  projectId: string
+}) {
   return (
     <Table>
       <TableHeader>
@@ -69,14 +79,36 @@ function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; pro
 
 function DatasetsPage() {
   const { projectId } = Route.useParams()
+  const navigate = useNavigate()
   const datasetsCollection = useDatasetsCollection(projectId)
   const datasets = datasetsCollection.data ?? []
   const isLoading = !datasetsCollection.data
+  const [creating, setCreating] = useState(false)
+  const handleCreate = useCallback(async () => {
+    setCreating(true)
+    try {
+      const dataset = await createDatasetMutation({
+        data: { projectId, name: `Dataset ${new Date().toLocaleString()}` },
+      })
+      getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
+      navigate({
+        to: "/projects/$projectId/datasets/$datasetId",
+        params: { projectId, datasetId: dataset.id },
+      })
+    } finally {
+      setCreating(false)
+    }
+  }, [projectId, navigate])
 
   return (
     <Container className="pt-14">
       <TableWithHeader
         title="Datasets"
+        actions={
+          <Button variant="outline" onClick={handleCreate} disabled={creating} isLoading={creating}>
+            + Dataset
+          </Button>
+        }
         table={
           isLoading ? (
             <TableSkeleton cols={3} rows={3} />

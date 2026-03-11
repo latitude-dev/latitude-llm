@@ -12,6 +12,7 @@ const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: st
   projectId: ProjectId(row.projectId),
   name: row.name,
   description: row.description ?? null,
+  fileKey: row.fileKey ?? null,
   currentVersion: Number(row.currentVersion),
   latestVersionId: latestVersionId ? DatasetVersionId(latestVersionId) : null,
   createdAt: row.createdAt,
@@ -31,7 +32,7 @@ const toDomainVersion = (row: typeof datasetVersions.$inferSelect): DatasetVersi
 })
 
 export const createDatasetPostgresRepository = (db: PostgresDb) => ({
-  create: (args: { organizationId: string; projectId: string; name: string; description?: string }) =>
+  create: (args: { organizationId: string; projectId: string; name: string; description?: string; fileKey?: string }) =>
     Effect.gen(function* () {
       const rows = yield* Effect.tryPromise({
         try: () =>
@@ -42,6 +43,7 @@ export const createDatasetPostgresRepository = (db: PostgresDb) => ({
               projectId: args.projectId,
               name: args.name,
               description: args.description ?? null,
+              fileKey: args.fileKey ?? null,
             })
             .returning(),
         catch: (error) => toRepositoryError(error, "create"),
@@ -108,6 +110,25 @@ export const createDatasetPostgresRepository = (db: PostgresDb) => ({
         datasets: rows.map((r) => toDomainDataset(r, r.latestVersionId)),
         total: totalResult[0]?.total ?? 0,
       } as const
+    }),
+
+  updateFileKey: (args: { id: string; fileKey: string }) =>
+    Effect.gen(function* () {
+      const [updated] = yield* Effect.tryPromise({
+        try: () =>
+          db
+            .update(datasets)
+            .set({ fileKey: args.fileKey })
+            .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+            .returning(),
+        catch: (error) => toRepositoryError(error, "updateFileKey"),
+      })
+
+      if (!updated) {
+        return yield* new DatasetNotFoundError({ datasetId: args.id })
+      }
+
+      return toDomainDataset(updated)
     }),
 
   softDelete: (id: string) =>

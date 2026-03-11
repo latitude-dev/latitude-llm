@@ -7,6 +7,7 @@ export interface Dataset {
   readonly projectId: ProjectId
   readonly name: string
   readonly description: string | null
+  readonly fileKey: string | null
   readonly currentVersion: number
   readonly latestVersionId: DatasetVersionId | null
   readonly createdAt: Date
