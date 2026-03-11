@@ -3,7 +3,6 @@ import type { Project } from "@domain/projects"
 import { OrganizationId, ProjectId, UserId } from "@domain/shared"
 import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
@@ -55,7 +54,7 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ name: z.string(), description: z.string().optional() })))
+  .inputValidator(z.object({ name: z.string(), description: z.string().optional() }))
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { userId, organizationId } = await requireSession()
     const { db } = getPostgresClient()
@@ -80,13 +79,11 @@ export const createProject = createServerFn({ method: "POST" })
 export const updateProject = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
-    zodValidator(
-      z.object({
-        id: z.string(),
-        name: z.string().optional(),
-        description: z.string().nullable().optional(),
-      }),
-    ),
+    z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      description: z.string().nullable().optional(),
+    }),
   )
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { organizationId } = await requireSession()
@@ -111,7 +108,7 @@ export const updateProject = createServerFn({ method: "POST" })
 
 export const deleteProject = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ id: z.string() })))
+  .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
     const { db } = getPostgresClient()

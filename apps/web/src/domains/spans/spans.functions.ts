@@ -1,15 +1,11 @@
 import { NotFoundError, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Span, SpanDetail, SpanRepository, Trace, TraceRepository } from "@domain/spans"
-import {
-  createClickhouseClient,
-  createSpanClickhouseRepository,
-  createTraceClickhouseRepository,
-} from "@platform/db-clickhouse"
+import { createSpanClickhouseRepository, createTraceClickhouseRepository } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
-import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
+import { getClickhouseClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
 export interface SpanRecord {
@@ -69,7 +65,7 @@ export interface SpanDetailRecord extends SpanRecord {
 let spanRepoInstance: SpanRepository | undefined
 const getSpanRepository = () => {
   if (!spanRepoInstance) {
-    spanRepoInstance = createSpanClickhouseRepository(createClickhouseClient())
+    spanRepoInstance = createSpanClickhouseRepository(getClickhouseClient())
   }
   return spanRepoInstance
 }
@@ -77,7 +73,7 @@ const getSpanRepository = () => {
 let traceRepoInstance: TraceRepository | undefined
 const getTraceRepository = () => {
   if (!traceRepoInstance) {
-    traceRepoInstance = createTraceClickhouseRepository(createClickhouseClient())
+    traceRepoInstance = createTraceClickhouseRepository(getClickhouseClient())
   }
   return traceRepoInstance
 }
@@ -139,7 +135,7 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
 
 export const listSpansByTrace = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ traceId: z.string() })))
+  .inputValidator(z.object({ traceId: z.string() }))
   .handler(async ({ data }): Promise<SpanRecord[]> => {
     const { organizationId } = await requireSession()
     const repo = getSpanRepository()
@@ -151,7 +147,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
 
 export const getSpanDetail = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ traceId: z.string(), spanId: z.string() })))
+  .inputValidator(z.object({ traceId: z.string(), spanId: z.string() }))
   .handler(async ({ data }): Promise<SpanDetailRecord> => {
     const { organizationId } = await requireSession()
     const repo = getSpanRepository()
@@ -224,7 +220,7 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
 
 export const listTracesByProject = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ projectId: z.string() })))
+  .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<TraceRecord[]> => {
     const { organizationId } = await requireSession()
     const repo = getTraceRepository()

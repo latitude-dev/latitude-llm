@@ -224,6 +224,7 @@ Base config: `tsconfig.base.json`
 - Variables/functions/methods: `camelCase`
 - Constants: `UPPER_SNAKE_CASE` only for true constants; otherwise `camelCase` + `as const`
 - File names favor concise module roots (`src/index.ts`, `src/server.ts`, `src/main.tsx`)
+- React component files use **kebab-case**: `my-component.tsx` or `my-component/index.tsx` — never `PascalCase` file names (e.g. `MyComponent.tsx`). This matches the `@repo/ui` convention (`table-skeleton.tsx`, `form-field.tsx`, etc.)
 - Package names follow scoped workspace style (`@app/*`, `@domain/*`, etc.)
 
 ### Domain Design (DDD)
@@ -235,7 +236,7 @@ Base config: `tsconfig.base.json`
 ## Database Patterns
 
 - Postgres adapter stack uses Drizzle ORM in `packages/platform/db-postgres`
-- ClickHouse adapter stack remains SQL-oriented in `packages/platform/db-clickhouse`
+- ClickHouse adapter stack remains SQL-oriented in `packages/platform/db-clickhouse`. **All ClickHouse queries must use parameterized bindings** (`{name:Type}` syntax with `query_params`) — never interpolate user-supplied values directly into SQL strings. **All ClickHouse queries must use parameterized bindings** (`{name:Type}` syntax with `query_params`) — never interpolate user-supplied values directly into SQL strings
 - Weaviate adapter stack lives in `packages/platform/db-weaviate`
 - Domain models are independent from table/row shapes
 - Mapping from DB rows to domain objects belongs in platform adapters
@@ -252,7 +253,7 @@ docker compose exec postgres psql -U latitude -d latitude_development
 To reset only the Postgres volume and start fresh (without affecting other services):
 
 ```bash
-pnpm --filter @platform/db-postgres pg:reset_db
+pnpm --filter @platform/db-postgres pg:reset
 ```
 
 This runs `docker/reset-postgres.sh` which stops postgres, removes the `data-llm_postgres_data` volume, restarts postgres, waits for it to be ready, runs migrations, and seeds the database.
@@ -266,6 +267,7 @@ All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **m
 3. **Use `tzTimestamp(name)`** — never use raw `timestamp(name, { withTimezone: true })`. Import `tzTimestamp` from the helpers.
 4. **Use `...timestamps()`** — every table that has `createdAt`/`updatedAt` must spread the `timestamps()` helper (includes `$onUpdateFn` on `updatedAt`).
 5. **Use `organizationRLSPolicy(tableName)`** — every table with an `organization_id` column must include this helper in its third argument to enable row-level security.
+6. **No foreign keys** — do not use `.references()` or manually create `FOREIGN KEY` constraints. Referential integrity is enforced at the application/domain layer. FK constraints cause lock contention on high-write tables, complicate zero-downtime migrations, and conflict with soft-delete patterns. Use indexes on relationship columns instead (e.g. `index().on(t.datasetId)` rather than `.references(() => datasets.id)`).
 
 ```typescript
 // ✅ Good - follows all conventions
@@ -578,6 +580,24 @@ When working on `apps/web` or any frontend code:
 - **Always** use `Button` component from `@repo/ui` for all buttons
 - **Always** use `GoogleIcon` and `GitHubIcon` from `@repo/ui` for OAuth provider icons
 
+### Route-Level Component Organization
+
+Place React components close to the routes that use them, inside a `components/` subfolder within the route directory. This keeps route files (which TanStack Router auto-discovers) clearly separated from supporting components.
+
+```
+routes/_authenticated/projects/$projectId/datasets/
+├── index.tsx                       # route file
+├── $datasetId.tsx                  # route file
+└── components/                     # supporting components for these routes
+    ├── dataset-table.tsx
+    ├── row-detail-panel.tsx
+    └── version-badge.tsx
+```
+
+- Route files live directly in the route directory — TanStack Router discovers them
+- Components that support those routes live in an adjacent `components/` folder
+- `domains/` directories (`apps/web/src/domains/`) are for state management only: server functions (writes) and collections/queries (reads) — **not** UI components
+
 ### Design System Showcase
 
 - When adding a new implemented UI component in `packages/ui` (or replacing a placeholder export with a real implementation), update `apps/web/src/routes/design-system.tsx` to include a usage example for that component in both light and dark mode previews.
@@ -599,7 +619,7 @@ export const listProjects = createServerFn({ method: "GET" }).handler(async () =
 
 // Mutation (POST) with Zod validation
 export const createProject = createServerFn({ method: "POST" })
-  .inputValidator(zodValidator(createProjectSchema))
+  .inputValidator(z.object({ name: z.string().min(1) }))
   .handler(async ({ data }) => { ... })
 ```
 

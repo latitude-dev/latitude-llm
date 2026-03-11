@@ -9,7 +9,6 @@ import {
   runCommand,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { zodValidator } from "@tanstack/zod-adapter"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
@@ -80,7 +79,7 @@ export const listMembers = createServerFn({ method: "GET" })
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ email: z.string().email() })))
+  .inputValidator(z.object({ email: z.string().email() }))
   .handler(async ({ data }): Promise<{ intentId: string }> => {
     const session = await ensureSession()
     const { organizationId } = await requireSession()
@@ -114,7 +113,7 @@ export const inviteMember = createServerFn({ method: "POST" })
 
 export const removeMember = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(zodValidator(z.object({ membershipId: z.string() })))
+  .inputValidator(z.object({ membershipId: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { userId, organizationId } = await requireSession()
     const { db } = getPostgresClient()

@@ -1,11 +1,9 @@
 import { createApiKey } from "@domain/api-keys"
-import { ApiKeyId } from "@domain/shared"
+import { SEED_API_KEY_ID, SEED_ORG_ID } from "@domain/shared"
 import { hashToken } from "@repo/utils"
 import { Effect } from "effect"
-import { SEED_ORG_ID } from "../organizations/index.ts"
 import type { SeedContext, Seeder } from "../types.ts"
 
-const SEED_API_KEY_ID = ApiKeyId("v42lqe92hgq2hpvilg91brnt")
 const SEED_API_KEY_TOKEN = "lat_seed_default_api_key_token"
 const SEED_API_KEY_NAME = "Default API Key"
 
