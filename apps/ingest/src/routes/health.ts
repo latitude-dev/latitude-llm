@@ -3,7 +3,8 @@ import { healthcheckPostgres } from "@platform/db-postgres"
 import type { Effect as EffectType } from "effect"
 import { Effect } from "effect"
 import type { Hono } from "hono"
-import { getClickhouseClient, getPostgresPool } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../clients.ts"
+import type { IngestEnv } from "../types.ts"
 
 type HealthcheckFailure = {
   readonly ok: false
@@ -20,14 +21,14 @@ const withFailure = <TSuccess extends { readonly ok: boolean }>(
 }
 
 interface HealthRouteContext {
-  app: Hono
+  app: Hono<IngestEnv>
 }
 
 export const registerHealthRoute = (context: HealthRouteContext) => {
   context.app.get("/health", async (c) => {
     const health = await Effect.runPromise(
       Effect.all({
-        postgres: withFailure(healthcheckPostgres(getPostgresPool())),
+        postgres: withFailure(healthcheckPostgres(getPostgresClient().pool)),
         clickhouse: withFailure(healthcheckClickhouse(getClickhouseClient())),
       }),
     )

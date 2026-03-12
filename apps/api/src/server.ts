@@ -42,9 +42,8 @@ registerRoutes({
 
 // Register security scheme via the OpenAPI registry
 app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", {
-  type: "apiKey",
-  in: "header",
-  name: "X-API-Key",
+  type: "http",
+  scheme: "bearer",
   description: "Organization-scoped API key",
 })
 
@@ -54,7 +53,7 @@ app.doc("/openapi.json", {
   info: {
     title: "Latitude API",
     version: "1.0.0",
-    description: "The Latitude public API. Authenticate using an API key via the `X-API-Key` header.",
+    description: "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header.",
   },
   servers: [{ url: `http://localhost:${port}`, description: "Local development" }],
 })

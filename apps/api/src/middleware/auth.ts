@@ -1,13 +1,9 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
-import {
-  type PostgresDb,
-  createApiKeyPostgresRepository,
-  createMembershipPostgresRepository,
-} from "@platform/db-postgres"
+import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
-import { getAdminPostgresClient, getBetterAuth } from "../clients.ts"
+import { getAdminPostgresClient } from "../clients.ts"
 import type { AuthContext } from "../types.ts"
 import { createTouchBuffer } from "./touch-buffer.ts"
 
@@ -160,27 +156,6 @@ const enforceMinimumTime = (startTime: number, minMs: number): Effect.Effect<voi
   return Effect.void
 }
 
-/**
- * Validate that a user is a member of the specified organization.
- * Returns true if membership is valid, false otherwise.
- */
-const validateOrganizationMembership = (
-  c: Context,
-  userId: string,
-  organizationId: string,
-): Effect.Effect<boolean, never> => {
-  const membershipRepository = createMembershipPostgresRepository(c.get("db"))
-  return membershipRepository.isMember(OrganizationId(organizationId), userId).pipe(Effect.orDie)
-}
-
-/**
- * Extract API key token from request headers.
- */
-const extractApiKeyToken = (c: Context): string | undefined => {
-  const apiKeyHeader = c.req.header("X-API-Key")
-  return apiKeyHeader || undefined
-}
-
 const extractBearerToken = (c: Context): string | undefined => {
   const authHeader = c.req.header("Authorization")
   if (!authHeader?.startsWith("Bearer ")) {
@@ -216,77 +191,31 @@ const authenticateWithApiKey = (
 }
 
 /**
- * Authenticate via JWT bearer token.
- */
-const authenticateWithJwt = (c: Context, token: string): Effect.Effect<AuthContext | null, never> => {
-  return Effect.gen(function* () {
-    const auth = getBetterAuth()
-    const headers = new Headers(c.req.raw.headers)
-    headers.set("authorization", `Bearer ${token}`)
-
-    const session = yield* Effect.tryPromise({
-      try: () => auth.api.getSession({ headers }),
-      catch: () => null,
-    }).pipe(Effect.orDie)
-
-    if (!session?.user) {
-      return null
-    }
-
-    const orgId = c.req.param("organizationId")
-    if (!orgId) {
-      return null
-    }
-
-    const isMember = yield* validateOrganizationMembership(c, session.user.id, orgId)
-    if (!isMember) {
-      return null
-    }
-
-    const authContext: AuthContext = {
-      userId: UserId(session.user.id),
-      organizationId: OrganizationId(orgId),
-      method: "jwt",
-    }
-
-    return authContext
-  }).pipe(Effect.orDie)
-}
-
-/**
- * Main authentication effect that tries all authentication methods.
+ * Authenticate via API key from the Authorization: Bearer header.
  */
 const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
-    const apiKeyToken = extractApiKeyToken(c)
     const bearerToken = extractBearerToken(c)
 
-    let authContext: AuthContext | null = null
-
-    if (apiKeyToken) {
-      authContext = yield* authenticateWithApiKey(c, apiKeyToken, options)
-    } else if (bearerToken) {
-      authContext = yield* authenticateWithJwt(c, bearerToken)
-    }
-
-    if (!authContext) {
+    if (!bearerToken) {
       return yield* new UnauthorizedError({
         message: "Authentication required",
       })
     }
 
-    return authContext
+    const authContext = yield* authenticateWithApiKey(c, bearerToken, options)
+    if (authContext) return authContext
+
+    return yield* new UnauthorizedError({
+      message: "Invalid API key",
+    })
   })
 }
 
 /**
  * Create authentication middleware.
  *
- * This middleware validates requests using one of two methods:
- * 1. JWT Bearer token (Better Auth)
- * 2. API Key
- *
- * The middleware sets auth context on the Hono context for downstream handlers.
+ * Validates API keys sent via the Authorization: Bearer header.
  * Public routes should be excluded from this middleware.
  */
 interface AuthMiddlewareOptions {

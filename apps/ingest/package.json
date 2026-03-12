@@ -14,14 +14,19 @@
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
+    "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",
+    "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@repo/utils": "workspace:*",
     "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
+    "protobufjs": "catalog:",
     "tsx": "catalog:"
   }
 }

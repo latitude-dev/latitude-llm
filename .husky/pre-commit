@@ -2,4 +2,5 @@
 set -e
 
 pnpm format
+pnpm check:fix
 pnpm knip
