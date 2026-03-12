@@ -5,6 +5,7 @@ import {
   createLoginIntentUseCase,
   createSignupIntentUseCase,
 } from "@domain/auth"
+import { OrganizationId } from "@domain/shared"
 import {
   ApiKeyRepositoryLive,
   AuthIntentRepositoryLive,
@@ -159,7 +160,7 @@ export const exchangeCliSession = createServerFn({ method: "POST" })
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({ name: `CLI (${createdAt})` }).pipe(
         Effect.provide(ApiKeyRepositoryLive),
-        Effect.provide(SqlClientLive(adminClient)),
+        Effect.provide(SqlClientLive(adminClient, OrganizationId(activeOrganizationId))),
       ),
     )
 

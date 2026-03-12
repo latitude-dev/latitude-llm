@@ -65,7 +65,7 @@ const createFakeAuthIntentRepository = (fake: FakeAuthIntentRepo) => ({
       }
     }),
 
-  findPendingInvitesByOrganizationId: () => Effect.succeed([]),
+  findPendingInvitesByOrganizationId: () => Effect.succeed([] as const),
 })
 
 interface FakeUserRepo {
@@ -312,7 +312,7 @@ describe("completeAuthIntentUseCase", () => {
   })
 
   it("skips organization creation for signup when existingAccountAtRequest is true", async () => {
-    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const { fakeAuthIntents, fakeOrganizations, testLayers } = createTestLayers()
     const signupIntent = createTestAuthIntent({
       type: "signup",
       existingAccountAtRequest: true,
@@ -326,13 +326,11 @@ describe("completeAuthIntentUseCase", () => {
       session,
     }).pipe(Effect.provide(testLayers))
 
-    // This will fail because createOrganizationUseCase uses unscoped repo that needs real DB
-    // But the early return for existingAccountAtRequest should have prevented that
-    try {
-      await Effect.runPromise(program)
-    } catch {
-      // Expected to fail due to mock DB
-    }
+    await Effect.runPromise(program)
+
+    expect(fakeOrganizations.saved).toHaveLength(0)
+    expect(fakeAuthIntents.consumed.size).toBe(1)
+    expect(fakeAuthIntents.consumed.get(signupIntent.id)?.intentId).toBe(signupIntent.id)
   })
 
   it("returns MissingInviteDataError when invite data is missing", async () => {

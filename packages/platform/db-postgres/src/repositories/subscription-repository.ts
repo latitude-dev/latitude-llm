@@ -97,7 +97,7 @@ export const SubscriptionRepositoryLive = Layer.effect(
       exists: () =>
         sqlClient
           .query((db) => db.select({ id: subscription.id }).from(subscription).limit(1))
-          .pipe(Effect.map((result) => result !== undefined)),
+          .pipe(Effect.map((results) => results.length > 0)),
     }
   }),
 )

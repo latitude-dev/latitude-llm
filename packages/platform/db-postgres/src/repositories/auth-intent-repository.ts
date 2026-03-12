@@ -1,6 +1,6 @@
 import { AuthIntentRepository } from "@domain/auth"
-import { NotFoundError, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
-import { and, eq, gt, isNull } from "drizzle-orm"
+import { NotFoundError, type OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { and, eq, gt, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { authIntent } from "../schema/index.ts"
@@ -84,20 +84,18 @@ export const AuthIntentRepositoryLive = Layer.effect(
 
     return {
       save: (intent: AuthIntent) =>
-        sqlClient
-          .query((db) =>
-            db.insert(authIntent).values({
-              id: intent.id,
-              type: intent.type,
-              email: intent.email,
-              data: { ...intent.data },
-              existingAccountAtRequest: intent.existingAccountAtRequest,
-              expiresAt: intent.expiresAt,
-              consumedAt: intent.consumedAt,
-              createdOrganizationId: intent.createdOrganizationId,
-            }),
-          )
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "save"))),
+        sqlClient.query((db) =>
+          db.insert(authIntent).values({
+            id: intent.id,
+            type: intent.type,
+            email: intent.email,
+            data: { ...intent.data },
+            existingAccountAtRequest: intent.existingAccountAtRequest,
+            expiresAt: intent.expiresAt,
+            consumedAt: intent.consumedAt,
+            createdOrganizationId: intent.createdOrganizationId,
+          }),
+        ),
 
       findById: (id: string) =>
         sqlClient
@@ -110,38 +108,38 @@ export const AuthIntentRepositoryLive = Layer.effect(
               }
               return Effect.succeed(toDomainAuthIntent(result))
             }),
-            Effect.mapError((error) => (error._tag === "NotFoundError" ? error : toRepositoryError(error, "findById"))),
           ),
 
       markConsumed: ({ intentId, createdOrganizationId }: { intentId: string; createdOrganizationId?: string }) =>
-        sqlClient
-          .query((db) =>
-            db
-              .update(authIntent)
-              .set({
-                consumedAt: new Date(),
-                ...(createdOrganizationId ? { createdOrganizationId } : {}),
-                updatedAt: new Date(),
-              })
-              .where(eq(authIntent.id, intentId)),
-          )
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "markConsumed"))),
+        sqlClient.query((db) =>
+          db
+            .update(authIntent)
+            .set({
+              consumedAt: new Date(),
+              ...(createdOrganizationId ? { createdOrganizationId } : {}),
+              updatedAt: new Date(),
+            })
+            .where(eq(authIntent.id, intentId)),
+        ),
 
-      findPendingInvitesByOrganizationId: () =>
-        sqlClient
-          .query((db) =>
-            db
-              .select({
-                id: authIntent.id,
-                email: authIntent.email,
-                createdAt: authIntent.createdAt,
-              })
-              .from(authIntent)
-              .where(
-                and(eq(authIntent.type, "invite"), isNull(authIntent.consumedAt), gt(authIntent.expiresAt, new Date())),
+      findPendingInvitesByOrganizationId: (organizationId: OrganizationId) =>
+        sqlClient.query((db) =>
+          db
+            .select({
+              id: authIntent.id,
+              email: authIntent.email,
+              createdAt: authIntent.createdAt,
+            })
+            .from(authIntent)
+            .where(
+              and(
+                eq(authIntent.type, "invite"),
+                isNull(authIntent.consumedAt),
+                gt(authIntent.expiresAt, new Date()),
+                sql`${authIntent.data}->'invite'->>'organizationId' = ${organizationId}`,
               ),
-          )
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "findPendingInvitesByOrganizationId"))),
+            ),
+        ),
     }
   }),
 )

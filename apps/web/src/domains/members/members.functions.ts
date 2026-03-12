@@ -39,7 +39,7 @@ export const listMembers = createServerFn({ method: "GET" })
         const membershipRepo = yield* MembershipRepository
         const intentRepo = yield* AuthIntentRepository
         const members = yield* membershipRepo.findMembersWithUser(organizationId)
-        const pendingInvites = yield* intentRepo.findPendingInvitesByOrganizationId()
+        const pendingInvites = yield* intentRepo.findPendingInvitesByOrganizationId(organizationId)
 
         return [members, pendingInvites] as const
       }).pipe(

@@ -1,13 +1,5 @@
 import { type MemberWithUser, MembershipRepository } from "@domain/organizations"
-import {
-  MembershipId,
-  NotFoundError,
-  OrganizationId,
-  type RepositoryError,
-  SqlClient,
-  type SqlClientShape,
-  UserId,
-} from "@domain/shared"
+import { MembershipId, NotFoundError, OrganizationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -75,21 +67,23 @@ export const MembershipRepositoryLive = Layer.effect(
           ),
 
       findMembersWithUser: (organizationId: OrganizationId) =>
-        sqlClient.query((db) =>
-          db
-            .select({
-              id: member.id,
-              organizationId: member.organizationId,
-              userId: member.userId,
-              role: member.role,
-              createdAt: member.createdAt,
-              name: user.name,
-              email: user.email,
-            })
-            .from(member)
-            .innerJoin(user, eq(member.userId, user.id))
-            .where(eq(member.organizationId, organizationId)),
-        ) as Effect.Effect<MemberWithUser[], RepositoryError, never>,
+        sqlClient
+          .query((db) =>
+            db
+              .select({
+                id: member.id,
+                organizationId: member.organizationId,
+                userId: member.userId,
+                role: member.role,
+                createdAt: member.createdAt,
+                name: user.name,
+                email: user.email,
+              })
+              .from(member)
+              .innerJoin(user, eq(member.userId, user.id))
+              .where(eq(member.organizationId, organizationId)),
+          )
+          .pipe(Effect.map((rows) => rows as MemberWithUser[])),
 
       isMember: (organizationId: OrganizationId, userId: string) =>
         sqlClient

@@ -45,7 +45,7 @@ const main = async () => {
       ProjectRepositoryLive,
       SubscriptionRepositoryLive,
       UserRepositoryLive,
-    ).pipe(Layer.provide(SqlClientLive(client, undefined)))
+    ).pipe(Layer.provide(SqlClientLive(client)))
 
     // Create the seed context
     const buildContext = Effect.gen(function* () {

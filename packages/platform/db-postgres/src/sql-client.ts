@@ -4,6 +4,14 @@ import { Cause, Effect, Exit, Layer } from "effect"
 import type { Operator, PostgresClient } from "./client.ts"
 import { isTransactionDb } from "./client.ts"
 
+class DomainErrorWrapper extends Error {
+  readonly domainError: unknown
+  constructor(domainError: unknown) {
+    super("_domain_error_wrapper_")
+    this.domainError = domainError
+  }
+}
+
 /**
  * Helper to create a transaction SqlClient for nested effects.
  *
@@ -53,12 +61,16 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
                 // We must throw here to trigger transaction rollback.
                 const failReasons = exit.cause.reasons.filter(Cause.isFailReason)
                 if (failReasons.length > 0) {
-                  throw failReasons[0].error
+                  throw new DomainErrorWrapper(failReasons[0].error)
                 }
                 throw new Error("_transaction_domain_failure_")
               })
               .then((value: A) => resume(Effect.succeed(value)))
               .catch((e: unknown) => {
+                if (e instanceof DomainErrorWrapper) {
+                  resume(Effect.fail(e.domainError as E))
+                  return
+                }
                 resume(Effect.fail(toRepositoryError(e, "transaction")))
               })
           }),

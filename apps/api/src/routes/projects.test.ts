@@ -1,5 +1,7 @@
 import { generateId } from "@domain/shared"
+import { postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
+import { eq } from "drizzle-orm"
 import type { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
@@ -20,10 +22,12 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
   const id = generateId()
   const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${id.slice(0, 6)}`
 
-  await database.client.query(
-    "INSERT INTO latitude.projects (id, organization_id, name, slug, created_at, updated_at, last_edited_at) VALUES ($1, $2, $3, $4, NOW(), NOW(), NOW())",
-    [id, organizationId, name, slug],
-  )
+  await database.db.insert(postgresSchema.projects).values({
+    id,
+    organizationId,
+    name,
+    slug,
+  })
 
   return { id }
 }
@@ -91,15 +95,14 @@ describe("Projects Routes Integration", () => {
       }),
     )
 
-    expect(response.status).toBe(204)
+    expect(response.status).toBe(404)
 
-    // Verify the project still exists and is not soft-deleted using parameterized query
-    const result = await database.client.query("SELECT deleted_at FROM latitude.projects WHERE id = $1", [
-      tenantBProject.id,
-    ])
+    const rows = await database.db
+      .select({ deletedAt: postgresSchema.projects.deletedAt })
+      .from(postgresSchema.projects)
+      .where(eq(postgresSchema.projects.id, tenantBProject.id))
 
-    expect(result.rows.length).toBe(1)
-    const row = result.rows[0] as { deleted_at: string | null }
-    expect(row.deleted_at).toBeNull()
+    expect(rows.length).toBe(1)
+    expect(rows[0].deletedAt).toBeNull()
   })
 })

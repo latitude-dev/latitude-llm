@@ -4,7 +4,7 @@ import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, putInDisk } fro
 import { DatasetRowRepositoryLive } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import Papa from "papaparse"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
@@ -122,27 +122,23 @@ function tryParseJson(value: string): unknown {
   return value
 }
 
-// Helper to create the combined layer with both repositories
-const createDatasetLayers = (organizationId: string) => {
-  const client = getPostgresClient()
-  const chClient = getClickhouseClient()
-
-  return Layer.merge(DatasetRepositoryLive, DatasetRowRepositoryLive(chClient)).pipe(
-    Layer.provide(SqlClientLive(client, OrganizationId(organizationId))),
-  )
-}
-
 export const listDatasetsQuery = createServerFn({ method: "GET" })
   .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<{ datasets: DatasetRecord[]; total: number }> => {
     const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const chClient = getClickhouseClient()
 
     const result = await Effect.runPromise(
       listDatasets({
         organizationId: OrganizationId(organizationId),
         projectId: ProjectId(data.projectId),
-      }).pipe(Effect.provide(createDatasetLayers(organizationId))),
+      }).pipe(
+        Effect.provide(DatasetRepositoryLive),
+        Effect.provide(DatasetRowRepositoryLive(chClient)),
+        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+      ),
     )
 
     return { datasets: result.datasets.map(toDatasetRecord), total: result.total }
@@ -161,6 +157,8 @@ export const listRowsQuery = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<{ rows: DatasetRowRecord[]; total: number }> => {
     const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const chClient = getClickhouseClient()
 
     const result = await Effect.runPromise(
       listRows({
@@ -170,7 +168,11 @@ export const listRowsQuery = createServerFn({ method: "GET" })
         ...(data.search ? { search: data.search } : {}),
         limit: data.limit,
         offset: data.offset,
-      }).pipe(Effect.provide(createDatasetLayers(organizationId))),
+      }).pipe(
+        Effect.provide(DatasetRepositoryLive),
+        Effect.provide(DatasetRowRepositoryLive(chClient)),
+        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+      ),
     )
 
     return { rows: result.rows.map(toRowRecord), total: result.total }
@@ -181,13 +183,19 @@ export const createDatasetMutation = createServerFn({ method: "POST" })
   .inputValidator(z.object({ projectId: z.string(), name: z.string().min(1) }))
   .handler(async ({ data }): Promise<DatasetRecord> => {
     const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const chClient = getClickhouseClient()
 
     const dataset = await Effect.runPromise(
       createDataset({
         organizationId: OrganizationId(organizationId),
         projectId: ProjectId(data.projectId),
         name: data.name,
-      }).pipe(Effect.provide(createDatasetLayers(organizationId))),
+      }).pipe(
+        Effect.provide(DatasetRepositoryLive),
+        Effect.provide(DatasetRowRepositoryLive(chClient)),
+        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+      ),
     )
 
     return toDatasetRecord(dataset)
@@ -201,6 +209,8 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
   })
   .handler(async ({ data: formData }): Promise<{ version: number; rowCount: number }> => {
     const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const chClient = getClickhouseClient()
 
     const file = formData.get("file")
     const datasetId = formData.get("datasetId")
@@ -228,12 +238,15 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
       }),
     )
 
-    // Update file key using DatasetRepository directly
     await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* DatasetRepository
         return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
-      }).pipe(Effect.provide(createDatasetLayers(organizationId))),
+      }).pipe(
+        Effect.provide(DatasetRepositoryLive),
+        Effect.provide(DatasetRowRepositoryLive(chClient)),
+        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+      ),
     )
 
     const parsed = Papa.parse<Record<string, string>>(content, { header: true, skipEmptyLines: true })
@@ -249,7 +262,11 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
         datasetId: DatasetId(datasetId),
         rows: mappedRows,
         source: "csv",
-      }).pipe(Effect.provide(createDatasetLayers(organizationId))),
+      }).pipe(
+        Effect.provide(DatasetRepositoryLive),
+        Effect.provide(DatasetRowRepositoryLive(chClient)),
+        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+      ),
     )
 
     return { version: result.version, rowCount: mappedRows.length }

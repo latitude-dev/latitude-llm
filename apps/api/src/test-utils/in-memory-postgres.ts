@@ -50,6 +50,10 @@ export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
  */
 export const createRlsMiddleware = (client: PGlite) => {
   return async (_c: unknown, next: () => Promise<void>) => {
+    const result = await client.query("SELECT 1 FROM pg_roles WHERE rolname = 'latitude_app'")
+    if (result.rows.length === 0) {
+      throw new Error("Role 'latitude_app' does not exist. Ensure migrations have run.")
+    }
     await client.exec("SET ROLE latitude_app")
     try {
       await next()

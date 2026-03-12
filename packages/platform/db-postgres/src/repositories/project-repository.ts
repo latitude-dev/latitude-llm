@@ -90,9 +90,22 @@ export const ProjectRepositoryLive = Layer.effect(
         }),
 
       softDelete: (id: ProjectIdType) =>
-        sqlClient.query((db) =>
-          db.update(projects).set({ deletedAt: new Date(), updatedAt: new Date() }).where(eq(projects.id, id)),
-        ),
+        sqlClient
+          .query((db) =>
+            db
+              .update(projects)
+              .set({ deletedAt: new Date(), updatedAt: new Date() })
+              .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
+              .returning({ id: projects.id }),
+          )
+          .pipe(
+            Effect.flatMap((results) => {
+              if (results.length === 0) {
+                return Effect.fail(new NotFoundError({ entity: "Project", id }))
+              }
+              return Effect.void
+            }),
+          ),
 
       hardDelete: (id: ProjectIdType) => sqlClient.query((db) => db.delete(projects).where(eq(projects.id, id))),
 
