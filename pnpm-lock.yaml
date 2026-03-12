@@ -715,6 +715,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.3)(jiti@2.6.1)(jsdom@24.1.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(lightningcss@1.31.1)(msw@2.12.7(@types/node@24.10.3)(typescript@5.8.3))(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/platform/db-weaviate:
     dependencies:
@@ -8707,7 +8710,6 @@ snapshots:
     optionalDependencies:
       msw: 2.12.7(@types/node@24.10.3)(typescript@5.8.3)
       vite: 7.3.1(@types/node@24.10.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2)
-    optional: true
 
   '@vitest/pretty-format@3.2.4':
     dependencies:
@@ -10750,7 +10752,6 @@ snapshots:
       - terser
       - tsx
       - yaml
-    optional: true
 
   vite@7.3.1(@types/node@22.14.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
@@ -10875,7 +10876,6 @@ snapshots:
       - terser
       - tsx
       - yaml
-    optional: true
 
   w3c-xmlserializer@5.0.0:
     dependencies:
