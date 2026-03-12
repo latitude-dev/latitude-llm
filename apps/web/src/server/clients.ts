@@ -109,7 +109,7 @@ export const getStorageDisk = (): StorageDisk => {
 
 export const getBetterAuth = () => {
   if (!betterAuthInstance) {
-    const { db } = getAdminPostgresClient()
+    const adminClient = getAdminPostgresClient()
     const webUrl = Effect.runSync(parseEnv("LAT_WEB_URL", "string", "http://localhost:3000"))
     const betterAuthSecret = Effect.runSync(parseEnv("LAT_BETTER_AUTH_SECRET", "string"))
     const trustedOriginsEnv = Effect.runSync(parseEnvOptional("LAT_TRUSTED_ORIGINS", "string"))
@@ -124,7 +124,7 @@ export const getBetterAuth = () => {
     const sendEmailUseCase = sendEmail({ emailSender })
 
     betterAuthInstance = createBetterAuth({
-      db,
+      client: adminClient,
       secret: betterAuthSecret,
       baseUrl: webUrl,
       basePath: "/api/auth",

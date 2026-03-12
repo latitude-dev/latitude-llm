@@ -2,7 +2,7 @@ import { stripe } from "@better-auth/stripe"
 import { MembershipRepository } from "@domain/organizations"
 import { UserId, generateId } from "@domain/shared"
 import { MembershipRepositoryLive, SqlClientLive } from "@platform/db-postgres"
-import { type PostgresClient, type PostgresDb, postgresSchema } from "@platform/db-postgres"
+import { type PostgresClient, postgresSchema } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
@@ -26,7 +26,7 @@ import Stripe from "stripe"
  */
 
 export interface BetterAuthConfig {
-  readonly db: PostgresDb
+  readonly client: PostgresClient
   readonly baseUrl?: string
   readonly secret?: string
   readonly googleClientId?: string
@@ -102,12 +102,11 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
       const activeOrganizationIdInSession = "activeOrganizationId" in session ? session.activeOrganizationId : null
       if (activeOrganizationIdInSession) return { user, session }
 
-      const mockClient = { db: config.db } as PostgresClient
       const memberships = await Effect.runPromise(
         Effect.gen(function* () {
           const repo = yield* MembershipRepository
           return yield* repo.findByUserId(UserId(user.id))
-        }).pipe(Effect.provide(MembershipRepositoryLive), Effect.provide(SqlClientLive(mockClient))),
+        }).pipe(Effect.provide(MembershipRepositoryLive), Effect.provide(SqlClientLive(config.client))),
       )
       const activeOrganizationId = memberships[0]?.organizationId
 
@@ -177,7 +176,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   }
 
   return betterAuth({
-    database: drizzleAdapter(config.db, {
+    database: drizzleAdapter(config.client.db, {
       provider: "pg",
       schema: {
         user: postgresSchema.user,
@@ -212,6 +211,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
           },
         }),
     },
+    // TODO: review
     // Email/password enabled for CLI authentication
     // Note: Email verification disabled for MVP - will be enabled in Phase 2
     emailAndPassword: {
