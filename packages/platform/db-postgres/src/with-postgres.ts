@@ -1,10 +1,11 @@
-import type { OrganizationId, SqlClient } from "@domain/shared"
-import { Layer } from "effect"
+import { OrganizationId } from "@domain/shared"
+import { Effect, Layer } from "effect"
 import type { PostgresClient } from "./client.ts"
 import { SqlClientLive } from "./sql-client.ts"
 
 /**
- * Bundle one or more Postgres repository layers with their SqlClient dependency.
+ * Bundle one or more Postgres repository layers with their SqlClient dependency,
+ * returning a pipe-compatible provider function.
  *
  * All repos share the same SqlClient instance, so `sqlClient.transaction()`
  * correctly wraps all repo operations in a single DB transaction.
@@ -12,15 +13,12 @@ import { SqlClientLive } from "./sql-client.ts"
  * @example
  * ```ts
  * effect.pipe(
- *   Effect.provide(withPostgres(client, orgId, ProjectRepositoryLive, DatasetRepositoryLive)),
+ *   withPostgres(Layer.mergeAll(ProjectRepositoryLive, DatasetRepositoryLive), client, orgId),
  * )
  * ```
  */
-export const withPostgres = (
+export const withPostgres = <A, E, R>(
+  layer: Layer.Layer<A, E, R>,
   client: PostgresClient,
-  organizationId: OrganizationId,
-  // biome-ignore lint/suspicious/noExplicitAny: Layer type variance requires any for repo union
-  first: Layer.Layer<any, any, SqlClient>,
-  // biome-ignore lint/suspicious/noExplicitAny: Layer type variance requires any for repo union
-  ...rest: Layer.Layer<any, any, SqlClient>[]
-) => Layer.mergeAll(first, ...rest).pipe(Layer.provideMerge(SqlClientLive(client, organizationId)))
+  organizationId: OrganizationId = OrganizationId("system"),
+) => Effect.provide(layer.pipe(Layer.provideMerge(SqlClientLive(client, organizationId))))

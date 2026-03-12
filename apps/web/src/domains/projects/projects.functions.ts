@@ -41,7 +41,7 @@ export const listProjects = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findAll()
-      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     )
 
     return projects.map(toRecord)
@@ -59,7 +59,7 @@ export const createProject = createServerFn({ method: "POST" })
         name: data.name,
         ...(data.description !== undefined ? { description: data.description } : {}),
         createdById: UserId(userId),
-      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     )
 
     return toRecord(project)
@@ -83,7 +83,7 @@ export const updateProject = createServerFn({ method: "POST" })
         id: ProjectId(data.id),
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
-      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     )
 
     return toRecord(updatedProject)
@@ -100,6 +100,6 @@ export const deleteProject = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.softDelete(ProjectId(data.id))
-      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     )
   })

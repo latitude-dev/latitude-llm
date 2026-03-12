@@ -175,7 +175,7 @@ export const createApiKeysRoutes = () => {
 
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({ name }).pipe(
-        Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ApiKeyRepositoryLive)),
+        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
       ),
     )
     return c.json(toApiKeyResponse(apiKey), 201)
@@ -186,7 +186,7 @@ export const createApiKeysRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         return yield* repo.findAll()
-      }).pipe(Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ApiKeyRepositoryLive))),
+      }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
     return c.json({ apiKeys: apiKeys.map(toApiKeyListItemResponse) }, 200)
   })
@@ -197,7 +197,7 @@ export const createApiKeysRoutes = () => {
     await Effect.runPromise(
       revokeApiKeyUseCase({ id: ApiKeyId(idParam) }).pipe(
         Effect.provideService(ApiKeyCacheInvalidator, createApiKeyCacheInvalidator(c.var.redis)),
-        Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ApiKeyRepositoryLive)),
+        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
       ),
     )
     return c.body(null, 204)

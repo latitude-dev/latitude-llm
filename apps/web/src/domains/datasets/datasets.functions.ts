@@ -134,8 +134,8 @@ export const listDatasetsQuery = createServerFn({ method: "GET" })
         organizationId: orgId,
         projectId: ProjectId(data.projectId),
       }).pipe(
-        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
-        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 
@@ -166,8 +166,8 @@ export const listRowsQuery = createServerFn({ method: "GET" })
         limit: data.limit,
         offset: data.offset,
       }).pipe(
-        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
-        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 
@@ -187,8 +187,8 @@ export const createDatasetMutation = createServerFn({ method: "POST" })
         projectId: ProjectId(data.projectId),
         name: data.name,
       }).pipe(
-        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
-        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 
@@ -235,7 +235,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* DatasetRepository
         return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
-      }).pipe(Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive))),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
     )
 
     const parsed = Papa.parse<Record<string, string>>(content, { header: true, skipEmptyLines: true })
@@ -252,8 +252,8 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
         rows: mappedRows,
         source: "csv",
       }).pipe(
-        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
-        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 

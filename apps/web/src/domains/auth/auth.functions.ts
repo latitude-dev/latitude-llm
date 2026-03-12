@@ -11,14 +11,13 @@ import {
   AuthIntentRepositoryLive,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
-  SqlClientLive,
   UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { getAdminPostgresClient, getRedisClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 import { ensureSession } from "../sessions/session.functions.ts"
 import {
@@ -39,9 +38,7 @@ export const createLoginIntent = createServerFn({ method: "POST" })
 
     const intent = await Effect.runPromise(
       createLoginIntentUseCase({ email: data.email }).pipe(
-        Effect.provide(UserRepositoryLive),
-        Effect.provide(AuthIntentRepositoryLive),
-        Effect.provide(SqlClientLive(adminClient)),
+        withPostgres(Layer.mergeAll(UserRepositoryLive, AuthIntentRepositoryLive), adminClient),
       ),
     )
 
@@ -59,11 +56,7 @@ export const createSignupIntent = createServerFn({ method: "POST" })
         name: data.name,
         email: data.email,
         organizationName: data.organizationName,
-      }).pipe(
-        Effect.provide(UserRepositoryLive),
-        Effect.provide(AuthIntentRepositoryLive),
-        Effect.provide(SqlClientLive(adminClient)),
-      ),
+      }).pipe(withPostgres(Layer.mergeAll(UserRepositoryLive, AuthIntentRepositoryLive), adminClient)),
     )
 
     return {
@@ -89,7 +82,7 @@ export const getAuthIntentInfo = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* AuthIntentRepository
         return yield* repo.findById(data.intentId).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-      }).pipe(Effect.provide(AuthIntentRepositoryLive), Effect.provide(SqlClientLive(adminClient))),
+      }).pipe(withPostgres(AuthIntentRepositoryLive, adminClient)),
     )
 
     if (!intent) {
@@ -121,11 +114,15 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
         intentId: data.intentId,
         session: { userId, email, name },
       }).pipe(
-        Effect.provide(AuthIntentRepositoryLive),
-        Effect.provide(MembershipRepositoryLive),
-        Effect.provide(UserRepositoryLive),
-        Effect.provide(OrganizationRepositoryLive),
-        Effect.provide(SqlClientLive(adminClient)),
+        withPostgres(
+          Layer.mergeAll(
+            AuthIntentRepositoryLive,
+            MembershipRepositoryLive,
+            UserRepositoryLive,
+            OrganizationRepositoryLive,
+          ),
+          adminClient,
+        ),
       ),
     )
   })
@@ -151,16 +148,15 @@ export const exchangeCliSession = createServerFn({ method: "POST" })
 
     const sessionData = session.session as Record<string, unknown>
     const activeOrganizationId = sessionData.activeOrganizationId as string | undefined
-
     if (!activeOrganizationId) {
       throw new Error("No active organization. Please complete your account setup first.")
     }
 
-    const adminClient = getAdminPostgresClient()
+    const client = getPostgresClient()
     const createdAt = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({ name: `CLI (${createdAt})` }).pipe(
-        Effect.provide(withPostgres(adminClient, OrganizationId(activeOrganizationId), ApiKeyRepositoryLive)),
+        withPostgres(ApiKeyRepositoryLive, client, OrganizationId(activeOrganizationId)),
       ),
     )
 

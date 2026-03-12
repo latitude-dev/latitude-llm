@@ -38,7 +38,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         return yield* repo.findAll()
-      }).pipe(Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive))),
+      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
     )
 
     return apiKeys.map(toRecord)
@@ -52,9 +52,7 @@ export const createApiKey = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const apiKey = await Effect.runPromise(
-      generateApiKeyUseCase({ name: data.name }).pipe(
-        Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive)),
-      ),
+      generateApiKeyUseCase({ name: data.name }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
     )
 
     return toRecord(apiKey)
@@ -69,7 +67,7 @@ export const updateApiKey = createServerFn({ method: "POST" })
 
     const apiKey = await Effect.runPromise(
       updateApiKeyUseCase({ id: ApiKeyId(data.id), name: data.name }).pipe(
-        Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive)),
+        withPostgres(ApiKeyRepositoryLive, client, organizationId),
       ),
     )
 
@@ -87,6 +85,6 @@ export const deleteApiKey = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         yield* repo.delete(ApiKeyId(data.id))
-      }).pipe(Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive))),
+      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
     )
   })

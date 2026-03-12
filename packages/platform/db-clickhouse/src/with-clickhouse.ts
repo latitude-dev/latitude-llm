@@ -1,23 +1,21 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import type { ChSqlClient, OrganizationId } from "@domain/shared"
-import { Layer } from "effect"
+import { OrganizationId, type OrganizationId as OrganizationIdType } from "@domain/shared"
+import { Effect, Layer } from "effect"
 import { ChSqlClientLive } from "./ch-sql-client.ts"
 
 /**
- * Bundle one or more ClickHouse repository layers with their ChSqlClient dependency.
+ * Bundle one or more ClickHouse repository layers with their ChSqlClient dependency,
+ * returning a pipe-compatible provider function.
  *
  * @example
  * ```ts
  * effect.pipe(
- *   Effect.provide(withClickHouse(chClient, orgId, DatasetRowRepositoryLive)),
+ *   withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
  * )
  * ```
  */
-export const withClickHouse = (
+export const withClickHouse = <A, E, R>(
+  layer: Layer.Layer<A, E, R>,
   client: ClickHouseClient,
-  organizationId: OrganizationId,
-  // biome-ignore lint/suspicious/noExplicitAny: Layer type variance requires any for repo union
-  first: Layer.Layer<any, any, ChSqlClient>,
-  // biome-ignore lint/suspicious/noExplicitAny: Layer type variance requires any for repo union
-  ...rest: Layer.Layer<any, any, ChSqlClient>[]
-) => Layer.mergeAll(first, ...rest).pipe(Layer.provideMerge(ChSqlClientLive(client, organizationId)))
+  organizationId: OrganizationIdType = OrganizationId("system"),
+) => Effect.provide(layer.pipe(Layer.provideMerge(ChSqlClientLive(client, organizationId))))

@@ -8,7 +8,7 @@ import {
   withPostgres,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
@@ -42,7 +42,7 @@ export const listMembers = createServerFn({ method: "GET" })
         const pendingInvites = yield* intentRepo.findPendingInvitesByOrganizationId(organizationId)
 
         return [members, pendingInvites] as const
-      }).pipe(Effect.provide(withPostgres(client, organizationId, MembershipRepositoryLive, AuthIntentRepositoryLive))),
+      }).pipe(withPostgres(Layer.mergeAll(MembershipRepositoryLive, AuthIntentRepositoryLive), client, organizationId)),
     )
 
     const activeMembers: MemberRecord[] = members.map((m) => ({
@@ -86,7 +86,7 @@ export const inviteMember = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* OrganizationRepository
         return yield* repo.findById(organizationId)
-      }).pipe(Effect.provide(withPostgres(client, organizationId, OrganizationRepositoryLive))),
+      }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
     )
     const organizationName = org.name
 
@@ -96,7 +96,7 @@ export const inviteMember = createServerFn({ method: "POST" })
         organizationId,
         organizationName,
         inviterName,
-      }).pipe(Effect.provide(withPostgres(client, organizationId, AuthIntentRepositoryLive, UserRepositoryLive))),
+      }).pipe(withPostgres(Layer.mergeAll(AuthIntentRepositoryLive, UserRepositoryLive), client, organizationId)),
     )
 
     return { intentId: intent.id }
@@ -113,6 +113,6 @@ export const removeMember = createServerFn({ method: "POST" })
       removeMemberUseCase({
         membershipId: data.membershipId,
         requestingUserId: userId,
-      }).pipe(Effect.provide(withPostgres(client, organizationId, MembershipRepositoryLive))),
+      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
     )
   })
