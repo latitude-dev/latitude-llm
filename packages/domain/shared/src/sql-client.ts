@@ -6,7 +6,7 @@ import type { OrganizationId } from "./id.ts"
 /**
  * SqlClient provides database access and transaction management.
  *
- * This is a domain-level service that abstracts the database client,
+ * This is a domain-level service that abstracts the Postgres database client,
  * allowing it to be mocked in tests. The generic parameter X allows
  * platforms to specify their concrete database/transaction type.
  */
