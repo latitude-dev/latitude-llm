@@ -15,7 +15,18 @@ import type { Operator, PostgresClient } from "./client.ts"
  * The inner effect runs in the parent fiber (via `Effect.exit`) so all
  * provided services (repositories, etc.) remain available inside the
  * transaction scope.
+ *
+ * **Concurrent transactions**: do NOT run two `transaction()` calls
+ * concurrently on the same SqlClient instance (e.g. via `Effect.all` with
+ * concurrency > 1). `activeTx` has no fiber identity, so concurrent
+ * transactions will overwrite each other's operator and corrupt both
+ * connections. Use separate `SqlClientLive` layer instances instead.
  */
+const setRlsContext = (tx: Operator, organizationId: OrganizationId) => {
+  if (organizationId === "system") return Promise.resolve()
+  return tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
+}
+
 export const SqlClientLive = (client: PostgresClient, organizationId: OrganizationId = OrganizationId("system")) =>
   Layer.effect(
     SqlClient,
@@ -42,7 +53,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
             })
 
             const txPromise = client.transaction(async (tx) => {
-              await tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
+              await setRlsContext(tx as Operator, organizationId)
               resolveTxReady(tx as Operator)
               const result = await effectDone
               if (!result.ok) throw result.error
@@ -89,7 +100,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
             return yield* Effect.tryPromise({
               try: () =>
                 client.transaction(async (tx) => {
-                  await tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
+                  await setRlsContext(tx as Operator, organizationId)
                   return fn(tx as Operator, organizationId)
                 }),
               catch: (error) => toRepositoryError(error, "query"),

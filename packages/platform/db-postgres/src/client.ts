@@ -53,16 +53,6 @@ export const closePostgres = async (pool: Pool): Promise<void> => {
   await pool.end()
 }
 
-/**
- * Check if a database operator is a transaction database.
- *
- * @param db The database operator to check
- * @returns True if the database is a transaction database, false otherwise
- */
-export const isTransactionDb = (db: Operator): boolean => transactionDbs.has(db as object)
-
-const transactionDbs = new WeakSet<object>()
-
 const parsePostgresPoolConfig = (config: PostgresConfig = {}) =>
   Effect.all({
     connectionString: config.databaseUrl ? Effect.succeed(config.databaseUrl) : parseEnv("LAT_DATABASE_URL", "string"),
@@ -77,11 +67,7 @@ const parsePostgresPoolConfig = (config: PostgresConfig = {}) =>
 
 const buildPostgresClient = (pool: Pool): PostgresClient => {
   const db = drizzle({ client: pool })
-  const transaction = <T>(fn: (tx: TransactionDb) => Promise<T>): Promise<T> =>
-    db.transaction(async (tx) => {
-      transactionDbs.add(tx)
-      return fn(tx)
-    })
+  const transaction = <T>(fn: (tx: TransactionDb) => Promise<T>): Promise<T> => db.transaction(async (tx) => fn(tx))
 
   return { db, pool, transaction }
 }

@@ -3,7 +3,6 @@ export {
   closePostgres,
   createPostgresClient,
   createPostgresPool,
-  isTransactionDb,
 } from "./client.ts"
 
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
