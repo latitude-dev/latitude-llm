@@ -1,9 +1,11 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { type OrganizationId, SPAN_INGESTION_QUEUE, type StorageDiskPort } from "@domain/shared"
-import type { OtlpExportTraceServiceRequest, TransformContext } from "@domain/spans"
-import { SpanRepository, transformOtlpToSpans } from "@domain/spans"
+import { SPAN_INGESTION_QUEUE } from "@domain/shared"
+import type { StorageDiskPort } from "@domain/shared"
+import type { TransformContext } from "@domain/spans"
+import { transformOtlpToSpans } from "@domain/spans"
+import type { OtlpExportTraceServiceRequest } from "@domain/spans"
 import type { RedisConnection } from "@platform/cache-redis"
-import { ChSqlClientLive, SpanRepositoryLive } from "@platform/db-clickhouse"
+import { createSpanClickhouseRepository } from "@platform/db-clickhouse"
 import { type Job, Queue, Worker } from "bullmq"
 import { Effect } from "effect"
 
@@ -33,15 +35,8 @@ const createProcessor =
     })
 
     if (spans.length > 0) {
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* SpanRepository
-          yield* repo.insert(spans)
-        }).pipe(
-          Effect.provide(SpanRepositoryLive),
-          Effect.provide(ChSqlClientLive(clickhouseClient, context.organizationId as OrganizationId)),
-        ),
-      )
+      const spanRepository = createSpanClickhouseRepository(clickhouseClient)
+      await Effect.runPromise(spanRepository.insert(spans))
     }
 
     await storageDisk.delete(storageKey)

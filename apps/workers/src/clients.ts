@@ -3,8 +3,8 @@ import type { RedisConnection } from "@platform/cache-redis"
 import { createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresPool } from "@platform/db-postgres"
-import type { StorageDisk } from "@platform/storage-object"
 import { createStorageDisk } from "@platform/storage-object"
+import type { StorageDisk } from "@platform/storage-object"
 import type { Pool } from "pg"
 
 let redisConnectionInstance: RedisConnection | undefined
