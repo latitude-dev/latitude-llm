@@ -16,6 +16,7 @@
     "@clickhouse/client": "catalog:",
     "@domain/api-keys": "workspace:^",
     "@domain/projects": "workspace:^",
+    "@domain/spans": "workspace:^",
     "@domain/shared": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/cache-redis": "workspace:*",

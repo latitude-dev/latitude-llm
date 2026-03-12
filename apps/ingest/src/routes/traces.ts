@@ -1,3 +1,5 @@
+import type { OtlpExportTraceServiceRequest } from "@domain/spans"
+import { decodeOtlpProtobuf, validateOtlpCompliance } from "@domain/spans"
 import { Topics } from "@platform/queue-redpanda"
 import { createLogger } from "@repo/observability"
 import type { Hono } from "hono"
@@ -8,6 +10,18 @@ import type { IngestEnv } from "../types.ts"
 
 const logger = createLogger("ingest:traces")
 
+function decodeRequest(body: ArrayBuffer, contentType: string): OtlpExportTraceServiceRequest | null {
+  try {
+    if (contentType.includes("application/x-protobuf")) {
+      return decodeOtlpProtobuf(new Uint8Array(body))
+    }
+    const text = new TextDecoder().decode(body)
+    return JSON.parse(text) as OtlpExportTraceServiceRequest
+  } catch {
+    return null
+  }
+}
+
 interface TracesRouteContext {
   app: Hono<IngestEnv>
 }
@@ -17,6 +31,16 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     const contentType = c.req.header("Content-Type") ?? "application/json"
     const body = await c.req.arrayBuffer()
     if (!body.byteLength) return c.json({}, 202)
+
+    const request = decodeRequest(body, contentType)
+    if (!request) {
+      return c.json({ error: "Failed to decode trace payload" }, 400)
+    }
+
+    const validationError = validateOtlpCompliance(request)
+    if (validationError) {
+      return c.json({ error: validationError }, 400)
+    }
 
     const organizationId = c.get("organizationId")
     const projectId = c.get("projectId")
