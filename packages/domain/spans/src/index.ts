@@ -1,5 +1,8 @@
 export type { Span, SpanDetail, SpanKind, SpanStatusCode } from "./entities/span.ts"
 export type { Trace, TraceDetail, TraceStatus } from "./entities/trace.ts"
+export type { TransformContext } from "./otlp/transform.ts"
+export { transformOtlpToSpans } from "./otlp/transform.ts"
+export type { OtlpExportTraceServiceRequest } from "./otlp/types.ts"
 export type { SpanListOptions, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type { TraceListOptions, TraceRepositoryShape } from "./ports/trace-repository.ts"
