@@ -248,9 +248,7 @@ describe("SqlClientLive", () => {
       const result = await Effect.runPromise(effect)
 
       expect(result).toBe(defaultOrgId)
-      expect(state.executedStatements.length).toBe(1)
-      const orgFromStmt = extractSetConfigOrgId(state.executedStatements[0])
-      if (orgFromStmt !== null) expect(orgFromStmt).toBe("system")
+      expect(state.executedStatements.length).toBe(0)
     })
   })
 
