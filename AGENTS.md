@@ -240,7 +240,109 @@ Base config: `tsconfig.base.json`
 - Weaviate adapter stack lives in `packages/platform/db-weaviate`
 - Domain models are independent from table/row shapes
 - Mapping from DB rows to domain objects belongs in platform adapters
-- **Apps use pool-based connections**: Use `createPostgresPool()` in `apps/*/clients.ts` for direct pool access
+- **Apps use SqlClient for all DB access**: Boundaries provide `SqlClientLive` layer with organization context for RLS enforcement
+
+### SqlClient and Row-Level Security (RLS)
+
+All Postgres access flows through `SqlClient`—a domain-level service that abstracts database operations and enforces organization scoping via RLS.
+
+**Architecture:**
+- **Domain Layer** (`@domain/shared`): `SqlClient` interface with `transaction()` and `query()` methods
+- **Platform Layer** (`@platform/db-postgres`): `SqlClientLive` implementation with automatic RLS context setting
+- **App Layer** (`apps/*`): Boundaries provide `SqlClientLive` with the request's organization context
+
+**Key behaviors:**
+- Every transaction automatically sets `app.current_organization_id` session variable
+- RLS policies filter all queries by this organization ID at the database level
+- Nested transactions share the same connection (pass-through proxy—no nested transaction overhead)
+- Domain errors propagate through Effect error channel; database errors become `RepositoryError`
+
+**Usage in boundaries (apps):**
+
+```typescript
+// apps/api/src/routes/projects.ts
+import { SqlClientLive } from "@platform/db-postgres"
+import { ProjectRepositoryLive } from "@platform/db-postgres"
+
+app.openapi(createProjectRoute, async (c) => {
+  const project = await Effect.runPromise(
+    createProjectUseCase(input).pipe(
+      Effect.provide(ProjectRepositoryLive),
+      Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
+    ),
+  )
+  return c.json(toProjectResponse(project), 201)
+})
+```
+
+```typescript
+// apps/web/src/domains/projects/projects.functions.ts
+import { getPostgresClient } from "../../server/clients.ts"
+
+export const createProject = createServerFn({ method: "POST" })
+  .handler(async ({ data }) => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    
+    const project = await Effect.runPromise(
+      createProjectUseCase({...}).pipe(
+        Effect.provide(ProjectRepositoryLive),
+        Effect.provide(SqlClientLive(client, organizationId)),
+      )
+    )
+    return toRecord(project)
+  })
+```
+
+**Usage in use-cases (multi-operation transactions):**
+
+```typescript
+// packages/domain/auth/src/use-cases/complete-auth-intent.ts
+export const completeAuthIntentUseCase = (input) =>
+  Effect.gen(function* () {
+    const sqlClient = yield* SqlClient
+    
+    // Wraps multi-step operation in single transaction with RLS
+    yield* sqlClient.transaction(handleIntentByType(intent, input.session))
+  })
+
+const handleSignup = (intent, session) =>
+  Effect.gen(function* () {
+    const users = yield* UserRepository
+    const memberships = yield* MembershipRepository
+    
+    // All operations share the same transaction + RLS context
+    const organization = yield* createOrganizationUseCase({...})
+    yield* memberships.save(createMembership({...}))
+    yield* users.setNameIfMissing({...})
+  })
+```
+
+**Usage in repositories (single operations):**
+
+```typescript
+// packages/platform/db-postgres/src/repositories/project-repository.ts
+export const ProjectRepositoryLive = Layer.effect(
+  ProjectRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    
+    return {
+      findById: (id) =>
+        sqlClient
+          .query((db) => db.select().from(projects).where(eq(projects.id, id)))
+          .pipe(Effect.flatMap(...)),
+          
+      save: (project) =>
+        Effect.gen(function* () {
+          yield* sqlClient.query((db) =>
+            db.insert(projects).values(row).onConflictDoUpdate({...})
+          )
+        }),
+    }
+  })
+)
+```
 
 ### Postgres Management
 
@@ -610,17 +712,41 @@ The web app uses a **server-centric, query-driven** architecture built on the Ta
 **Server Functions** — All data fetching and mutations use `createServerFn` from `@tanstack/react-start`:
 
 ```typescript
+import { Effect } from "effect"
+import { ProjectRepository, createProjectUseCase } from "@domain/projects"
+import { ProjectRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { getPostgresClient } from "../../server/clients.ts"
+
 // Query (GET)
 export const listProjects = createServerFn({ method: "GET" }).handler(async () => {
   const { organizationId } = await requireSession()
-  const { db } = getPostgresClient()
-  // compose domain use-cases...
+  const client = getPostgresClient()
+  
+  return await Effect.runPromise(
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      return yield* repo.findAll()
+    }).pipe(
+      Effect.provide(ProjectRepositoryLive),
+      Effect.provide(SqlClientLive(client, organizationId))
+    )
+  )
 })
 
 // Mutation (POST) with Zod validation
 export const createProject = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ name: z.string().min(1) }))
-  .handler(async ({ data }) => { ... })
+  .inputValidator(createProjectSchema)
+  .handler(async ({ data }) => {
+    const { userId, organizationId } = await requireSession()
+    const client = getPostgresClient()
+    
+    return await Effect.runPromise(
+      createProjectUseCase({...}).pipe(
+        Effect.provide(ProjectRepositoryLive),
+        Effect.provide(SqlClientLive(client, organizationId))
+      )
+    )
+  })
 ```
 
 Server functions live in `apps/web/src/domains/*/functions.ts`.

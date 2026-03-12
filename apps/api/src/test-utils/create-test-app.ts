@@ -19,20 +19,21 @@ export const TEST_ENCRYPTION_KEY = Buffer.from(TEST_ENCRYPTION_KEY_HEX, "hex")
  * auth middleware (using the same db as admin), and RLS enforcement.
  * Callers mount their own route handlers on the returned sub-app.
  */
-export const createProtectedApp = ({ postgresDb, client }: InMemoryPostgres) => {
+export const createProtectedApp = (database: InMemoryPostgres) => {
   const app = new Hono()
   app.onError(honoErrorHandler)
 
   const protectedRoutes = new Hono<OrganizationScopedEnv>()
 
   protectedRoutes.use("*", async (c, next) => {
-    c.set("db", postgresDb)
+    c.set("db", database.postgresDb)
+    c.set("postgresClient", database.postgresClient)
     c.set("redis", getRedisClient())
     await next()
   })
 
-  protectedRoutes.use("*", createAuthMiddleware({ adminDb: postgresDb }))
-  protectedRoutes.use("*", createRlsMiddleware(client))
+  protectedRoutes.use("*", createAuthMiddleware({ adminClient: database.postgresClient }))
+  protectedRoutes.use("*", createRlsMiddleware(database.client))
   protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
 
   return { app, protectedRoutes }
@@ -44,38 +45,44 @@ interface TenantSetup {
   readonly authApiKeyId: string
 }
 
-export const createTenantSetup = async (db: InMemoryPostgres["db"]): Promise<TenantSetup> => {
+export const createTenantSetup = async (database: InMemoryPostgres): Promise<TenantSetup> => {
   const userId = generateId()
   const organizationId = generateId()
   const apiKeyToken = crypto.randomUUID()
   const authApiKeyId = generateId()
+  const memberId = generateId()
 
-  await db.insert(postgresSchema.user).values({
+  await database.db.insert(postgresSchema.user).values({
     id: userId,
     email: `${userId}@example.com`,
     name: "Test User",
     emailVerified: true,
+    role: "user",
+    banned: false,
   })
 
-  await db.insert(postgresSchema.organization).values({
+  await database.db.insert(postgresSchema.organization).values({
     id: organizationId,
     name: `Organization ${organizationId}`,
     slug: `org-${organizationId}`,
     creatorId: userId,
   })
 
-  await db.insert(postgresSchema.member).values({
-    id: generateId(),
+  await database.db.insert(postgresSchema.member).values({
+    id: memberId,
     organizationId,
     userId,
     role: "owner",
   })
 
-  await db.insert(postgresSchema.apiKeys).values({
+  const encryptedToken = await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY))
+  const tokenHash = await Effect.runPromise(hashToken(apiKeyToken))
+
+  await database.db.insert(postgresSchema.apiKeys).values({
     id: authApiKeyId,
     organizationId,
-    token: await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY)),
-    tokenHash: await Effect.runPromise(hashToken(apiKeyToken)),
+    token: encryptedToken,
+    tokenHash,
     name: "auth-key",
   })
 

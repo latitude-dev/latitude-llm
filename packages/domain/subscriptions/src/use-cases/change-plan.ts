@@ -1,5 +1,4 @@
-import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
-import type { GrantId } from "@domain/shared"
+import { type GrantId, type NotFoundError, type OrganizationId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { type Grant, type GrantType, createGrant } from "../entities/grant.ts"
 import type { Plan } from "../entities/plan.ts"
@@ -76,67 +75,71 @@ export interface ChangePlanResult {
  * 5. Updates the subscription with new plan
  * 6. Returns the updated subscription and grant changes
  */
-export const changePlan = (
-  input: ChangePlanInput,
-): Effect.Effect<ChangePlanResult, ChangePlanError, SubscriptionRepository | GrantRepository> =>
+export const changePlan = (input: ChangePlanInput) =>
   Effect.gen(function* () {
-    const subscriptionRepository = yield* SubscriptionRepository
-    const grantRepository = yield* GrantRepository
+    const sqlClient = yield* SqlClient
 
-    const subscription = yield* subscriptionRepository
-      .findActive()
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new NoActiveSubscriptionError({ organizationId: input.organizationId })),
-        ),
-      )
+    return yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const subscriptionRepository = yield* SubscriptionRepository
+        const grantRepository = yield* GrantRepository
 
-    if (subscription.plan === input.newPlan) {
-      return yield* new SamePlanError({
-        currentPlan: subscription.plan,
-        requestedPlan: input.newPlan,
-      })
-    }
+        const subscription = yield* subscriptionRepository
+          .findActive()
+          .pipe(
+            Effect.catchTag("NotFoundError", () =>
+              Effect.fail(new NoActiveSubscriptionError({ organizationId: input.organizationId })),
+            ),
+          )
 
-    const previousGrants = yield* grantRepository.findBySubscriptionId(subscription.id)
+        if (subscription.plan === input.newPlan) {
+          return yield* new SamePlanError({
+            currentPlan: subscription.plan,
+            requestedPlan: input.newPlan,
+          })
+        }
 
-    yield* grantRepository.revokeBySubscription(subscription.id)
+        const previousGrants = yield* grantRepository.findBySubscriptionId(subscription.id)
 
-    const grantConfigs: Array<{ type: GrantType; amount: number }> = [
-      { type: "seats", amount: 10 },
-      { type: "runs", amount: 1000 },
-      { type: "credits", amount: 500 },
-    ]
+        yield* grantRepository.revokeBySubscription(subscription.id)
 
-    const grantIdByType: Record<GrantType, GrantId> = {
-      seats: input.grantIds.seats,
-      runs: input.grantIds.runs,
-      credits: input.grantIds.credits,
-    }
+        const grantConfigs: Array<{ type: GrantType; amount: number }> = [
+          { type: "seats", amount: 10 },
+          { type: "runs", amount: 1000 },
+          { type: "credits", amount: 500 },
+        ]
 
-    const newGrants = grantConfigs.map((config) =>
-      createGrant({
-        id: grantIdByType[config.type],
-        organizationId: input.organizationId,
-        subscriptionId: subscription.id,
-        type: config.type,
-        amount: config.amount,
+        const grantIdByType: Record<GrantType, GrantId> = {
+          seats: input.grantIds.seats,
+          runs: input.grantIds.runs,
+          credits: input.grantIds.credits,
+        }
+
+        const newGrants = grantConfigs.map((config) =>
+          createGrant({
+            id: grantIdByType[config.type],
+            organizationId: input.organizationId,
+            subscriptionId: subscription.id,
+            type: config.type,
+            amount: config.amount,
+          }),
+        )
+
+        yield* grantRepository.saveMany(newGrants)
+
+        const updatedSubscription: Subscription = {
+          ...subscription,
+          plan: input.newPlan,
+          updatedAt: new Date(),
+        }
+
+        yield* subscriptionRepository.save(updatedSubscription)
+
+        return {
+          subscription: updatedSubscription,
+          previousGrants,
+          newGrants,
+        }
       }),
     )
-
-    yield* grantRepository.saveMany(newGrants)
-
-    const updatedSubscription: Subscription = {
-      ...subscription,
-      plan: input.newPlan,
-      updatedAt: new Date(),
-    }
-
-    yield* subscriptionRepository.save(updatedSubscription)
-
-    return {
-      subscription: updatedSubscription,
-      previousGrants,
-      newGrants,
-    }
   })

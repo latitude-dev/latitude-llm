@@ -2,14 +2,13 @@ import {
   type ApiKey,
   ApiKeyCacheInvalidator,
   ApiKeyRepository,
-  type GenerateApiKeyInput,
   generateApiKeyUseCase,
   revokeApiKeyUseCase,
 } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
-import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { ErrorSchema, OrgAndIdParamsSchema, OrgParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -48,7 +47,6 @@ const CreateApiKeyBodySchema = z
   })
   .openapi("CreateApiKeyBody")
 
-/** Serialize an ApiKey domain object to the creation response (includes token). */
 const toApiKeyResponse = (apiKey: ApiKey) => ({
   id: apiKey.id as string,
   organizationId: apiKey.organizationId as string,
@@ -61,7 +59,6 @@ const toApiKeyResponse = (apiKey: ApiKey) => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-/** Serialize an ApiKey domain object to the list response (token omitted). */
 const toApiKeyListItemResponse = (apiKey: ApiKey) => ({
   id: apiKey.id as string,
   organizationId: apiKey.organizationId as string,
@@ -174,55 +171,33 @@ export const createApiKeysRoutes = () => {
   })
 
   app.openapi(generateApiKeyRoute, async (c) => {
-    const organizationId = c.var.organization.id
     const { name } = c.req.valid("json")
 
-    const input: GenerateApiKeyInput = { organizationId, name }
-
-    const apiKey = await runCommand(
-      c.var.db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        generateApiKeyUseCase(input).pipe(
-          Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb)),
-        ),
+    const apiKey = await Effect.runPromise(
+      generateApiKeyUseCase({ name }).pipe(
+        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
       ),
     )
     return c.json(toApiKeyResponse(apiKey), 201)
   })
 
   app.openapi(listApiKeysRoute, async (c) => {
-    const organizationId = c.var.organization.id
-
-    const apiKeys = await runCommand(
-      c.var.db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* ApiKeyRepository
-          return yield* repo.findAll()
-        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
-      ),
+    const apiKeys = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ApiKeyRepository
+        return yield* repo.findAll()
+      }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
     return c.json({ apiKeys: apiKeys.map(toApiKeyListItemResponse) }, 200)
   })
 
   app.openapi(revokeApiKeyRoute, async (c) => {
-    const organizationId = c.var.organization.id
     const { id: idParam } = c.req.valid("param")
-    const id = ApiKeyId(idParam)
 
-    await runCommand(
-      c.var.db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        revokeApiKeyUseCase({ id }).pipe(
-          Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb)),
-          Effect.provideService(ApiKeyCacheInvalidator, createApiKeyCacheInvalidator(c.var.redis)),
-        ),
+    await Effect.runPromise(
+      revokeApiKeyUseCase({ id: ApiKeyId(idParam) }).pipe(
+        Effect.provideService(ApiKeyCacheInvalidator, createApiKeyCacheInvalidator(c.var.redis)),
+        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
       ),
     )
     return c.body(null, 204)

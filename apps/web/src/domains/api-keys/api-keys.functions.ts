@@ -1,7 +1,6 @@
-import { ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
-import type { ApiKey } from "@domain/api-keys"
-import { ApiKeyId, OrganizationId } from "@domain/shared"
-import { createApiKeyPostgresRepository, runCommand } from "@platform/db-postgres"
+import { type ApiKey, ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
+import { ApiKeyId } from "@domain/shared"
+import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -33,18 +32,13 @@ export const listApiKeys = createServerFn({ method: "GET" })
   .middleware([errorHandler])
   .handler(async (): Promise<ApiKeyRecord[]> => {
     const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+    const client = getPostgresClient()
 
-    const apiKeys = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* ApiKeyRepository
-          return yield* repo.findAll()
-        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
-      ),
+    const apiKeys = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ApiKeyRepository
+        return yield* repo.findAll()
+      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
     )
 
     return apiKeys.map(toRecord)
@@ -55,18 +49,10 @@ export const createApiKey = createServerFn({ method: "POST" })
   .inputValidator(z.object({ name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
     const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+    const client = getPostgresClient()
 
-    const apiKey = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        generateApiKeyUseCase({
-          organizationId: OrganizationId(organizationId),
-          name: data.name,
-        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
-      ),
+    const apiKey = await Effect.runPromise(
+      generateApiKeyUseCase({ name: data.name }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
     )
 
     return toRecord(apiKey)
@@ -77,17 +63,11 @@ export const updateApiKey = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string(), name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
     const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+    const client = getPostgresClient()
 
-    const apiKey = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        updateApiKeyUseCase({
-          id: ApiKeyId(data.id),
-          name: data.name,
-        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
+    const apiKey = await Effect.runPromise(
+      updateApiKeyUseCase({ id: ApiKeyId(data.id), name: data.name }).pipe(
+        withPostgres(ApiKeyRepositoryLive, client, organizationId),
       ),
     )
 
@@ -99,17 +79,12 @@ export const deleteApiKey = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+    const client = getPostgresClient()
 
-    await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* ApiKeyRepository
-          return yield* repo.delete(ApiKeyId(data.id))
-        }).pipe(Effect.provideService(ApiKeyRepository, createApiKeyPostgresRepository(txDb))),
-      ),
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ApiKeyRepository
+        yield* repo.delete(ApiKeyId(data.id))
+      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
     )
   })

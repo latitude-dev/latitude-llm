@@ -8,8 +8,6 @@ export {
   type Membership,
   type MembershipRole,
 } from "./entities/membership.ts"
-export { MembershipRepository, type MemberWithUser } from "./ports/membership-repository.ts"
-export { OrganizationRepository } from "./ports/organization-repository.ts"
 export {
   createMemberJoinedEvent,
   type MemberJoinedEvent,
@@ -18,6 +16,10 @@ export {
   createOrganizationCreatedEvent,
   type OrganizationCreatedEvent,
 } from "./events/organization-created.ts"
+
+// Repositories - Service definitions (implementations in @platform/db-postgres)
+export { MembershipRepository, type MemberWithUser } from "./ports/membership-repository.ts"
+export { OrganizationRepository } from "./ports/organization-repository.ts"
 
 // Use cases
 export {

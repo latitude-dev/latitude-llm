@@ -3,20 +3,18 @@ import {
   type GrantId as GrantIdType,
   NotFoundError,
   OrganizationId,
+  SqlClient,
+  type SqlClientShape,
   SubscriptionId,
   type SubscriptionId as SubscriptionIdType,
-  toRepositoryError,
 } from "@domain/shared"
+import { GrantRepository } from "@domain/subscriptions"
 import type { Grant, GrantType } from "@domain/subscriptions"
 import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
-import { Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
-import type { QuotaType } from "../schema/grants.ts"
-import * as schema from "../schema/index.ts"
+import { Effect, Layer } from "effect"
+import type { Operator } from "../client.ts"
+import { grants } from "../schema/index.ts"
 
-/**
- * Maps database quota type enum value to domain GrantType.
- */
 const toDomainGrantType = (type: string): GrantType => {
   const typeMap: Record<string, GrantType> = {
     seats: "seats",
@@ -26,17 +24,9 @@ const toDomainGrantType = (type: string): GrantType => {
   return typeMap[type] ?? "credits"
 }
 
-/**
- * Maps domain GrantType to database quota type enum value.
- */
-const toDbGrantType = (type: GrantType): QuotaType => {
-  return type
-}
+const toDbGrantType = (type: GrantType) => type
 
-/**
- * Maps a database grant row to a domain Grant entity.
- */
-const toDomainGrant = (row: typeof schema.grants.$inferSelect): Grant => ({
+const toDomainGrant = (row: typeof grants.$inferSelect): Grant => ({
   id: GrantId(row.id),
   organizationId: OrganizationId(row.organizationId),
   subscriptionId: SubscriptionId(row.subscriptionId),
@@ -48,10 +38,7 @@ const toDomainGrant = (row: typeof schema.grants.$inferSelect): Grant => ({
   updatedAt: row.updatedAt,
 })
 
-/**
- * Maps a domain Grant entity to a database insert row.
- */
-const toInsertRow = (grant: Grant): typeof schema.grants.$inferInsert => ({
+const toGrantInsertRow = (grant: Grant): typeof grants.$inferInsert => ({
   id: grant.id,
   organizationId: grant.organizationId,
   subscriptionId: grant.subscriptionId,
@@ -62,143 +49,102 @@ const toInsertRow = (grant: Grant): typeof schema.grants.$inferInsert => ({
   source: "subscription",
 })
 
-/**
- * Creates a Postgres implementation of the GrantRepository port.
- * Org-level isolation is enforced by the RLS context set via runCommand.
- */
-export const createGrantPostgresRepository = (db: PostgresDb) => ({
-  findById: (id: GrantIdType) =>
-    Effect.gen(function* () {
-      const [result] = yield* Effect.tryPromise({
-        try: () => db.select().from(schema.grants).where(eq(schema.grants.id, id)).limit(1),
-        catch: (error) => toRepositoryError(error, "findById"),
-      })
+export const GrantRepositoryLive = Layer.effect(
+  GrantRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-      if (!result) {
-        return yield* new NotFoundError({ entity: "Grant", id })
-      }
-
-      return toDomainGrant(result)
-    }),
-
-  findAll: () =>
-    Effect.gen(function* () {
-      const results = yield* Effect.tryPromise({
-        try: () => db.select().from(schema.grants),
-        catch: (error) => toRepositoryError(error, "findAll"),
-      })
-
-      return results.map(toDomainGrant)
-    }),
-
-  findBySubscriptionId: (subscriptionId: SubscriptionIdType) =>
-    Effect.gen(function* () {
-      const results = yield* Effect.tryPromise({
-        try: () => db.select().from(schema.grants).where(eq(schema.grants.subscriptionId, subscriptionId)),
-        catch: (error) => toRepositoryError(error, "findBySubscriptionId"),
-      })
-
-      return results.map(toDomainGrant)
-    }),
-
-  findActiveByType: (type: GrantType) =>
-    Effect.gen(function* () {
-      const now = new Date()
-      const results = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select()
-            .from(schema.grants)
-            .where(
-              and(
-                eq(schema.grants.type, toDbGrantType(type)),
-                gt(schema.grants.balance, 0),
-                or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now)),
-              ),
-            ),
-        catch: (error) => toRepositoryError(error, "findActiveByType"),
-      })
-
-      return results.map(toDomainGrant)
-    }),
-
-  findAllActive: () =>
-    Effect.gen(function* () {
-      const now = new Date()
-      const results = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select()
-            .from(schema.grants)
-            .where(
-              and(gt(schema.grants.balance, 0), or(isNull(schema.grants.expiresAt), gte(schema.grants.expiresAt, now))),
-            ),
-        catch: (error) => toRepositoryError(error, "findAllActive"),
-      })
-
-      return results.map(toDomainGrant)
-    }),
-
-  save: (grant: Grant) =>
-    Effect.gen(function* () {
-      const row = toInsertRow(grant)
-
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insert(schema.grants)
-            .values(row)
-            .onConflictDoUpdate({
-              target: schema.grants.id,
-              set: {
-                balance: row.balance,
-                expiresAt: row.expiresAt,
-                updatedAt: new Date(),
-              },
+    return {
+      findById: (id: GrantIdType) =>
+        sqlClient
+          .query((db) => db.select().from(grants).where(eq(grants.id, id)).limit(1))
+          .pipe(
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "Grant", id }))
+              }
+              return Effect.succeed(toDomainGrant(result))
             }),
-        catch: (error) => toRepositoryError(error, "save"),
-      })
-    }),
+          ),
 
-  saveMany: (grants: readonly Grant[]) =>
-    Effect.gen(function* () {
-      if (grants.length === 0) {
-        return
-      }
+      findAll: () =>
+        sqlClient.query((db) => db.select().from(grants)).pipe(Effect.map((results) => results.map(toDomainGrant))),
 
-      const rows = grants.map(toInsertRow)
+      findBySubscriptionId: (subscriptionId: SubscriptionIdType) =>
+        sqlClient
+          .query((db) => db.select().from(grants).where(eq(grants.subscriptionId, subscriptionId)))
+          .pipe(Effect.map((results) => results.map(toDomainGrant))),
 
-      yield* Effect.tryPromise({
-        try: () => db.insert(schema.grants).values(rows),
-        catch: (error) => toRepositoryError(error, "saveMany"),
-      })
-    }),
+      findActiveByType: (type: GrantType) =>
+        Effect.gen(function* () {
+          const now = new Date()
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .select()
+                .from(grants)
+                .where(
+                  and(
+                    eq(grants.type, toDbGrantType(type)),
+                    gt(grants.balance, 0),
+                    or(isNull(grants.expiresAt), gte(grants.expiresAt, now)),
+                  ),
+                ),
+            )
+            .pipe(Effect.map((results) => results.map(toDomainGrant)))
+        }),
 
-  revokeBySubscription: (subscriptionId: SubscriptionIdType) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .update(schema.grants)
-            .set({ balance: 0, updatedAt: new Date() })
-            .where(eq(schema.grants.subscriptionId, subscriptionId)),
-        catch: (error) => toRepositoryError(error, "revokeBySubscription"),
-      })
-    }),
+      findAllActive: () =>
+        Effect.gen(function* () {
+          const now = new Date()
+          return yield* sqlClient
+            .query((db) =>
+              db
+                .select()
+                .from(grants)
+                .where(and(gt(grants.balance, 0), or(isNull(grants.expiresAt), gte(grants.expiresAt, now)))),
+            )
+            .pipe(Effect.map((results) => results.map(toDomainGrant)))
+        }),
 
-  delete: (id: GrantIdType) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () => db.delete(schema.grants).where(eq(schema.grants.id, id)),
-        catch: (error) => toRepositoryError(error, "delete"),
-      })
-    }),
+      save: (grant: Grant) =>
+        Effect.gen(function* () {
+          const row = toGrantInsertRow(grant)
 
-  deleteBySubscription: (subscriptionId: SubscriptionIdType) =>
-    Effect.gen(function* () {
-      yield* Effect.tryPromise({
-        try: () => db.delete(schema.grants).where(eq(schema.grants.subscriptionId, subscriptionId)),
-        catch: (error) => toRepositoryError(error, "deleteBySubscription"),
-      })
-    }),
-})
+          yield* sqlClient.query((db) =>
+            db
+              .insert(grants)
+              .values(row)
+              .onConflictDoUpdate({
+                target: grants.id,
+                set: {
+                  balance: row.balance,
+                  expiresAt: row.expiresAt,
+                  updatedAt: new Date(),
+                },
+              }),
+          )
+        }),
+
+      saveMany: (grants_: readonly Grant[]) =>
+        Effect.gen(function* () {
+          if (grants_.length === 0) return
+
+          const rows = grants_.map(toGrantInsertRow)
+
+          yield* sqlClient.query((db) => db.insert(grants).values(rows))
+        }),
+
+      revokeBySubscription: (subscriptionId: SubscriptionIdType) =>
+        sqlClient.query((db) =>
+          db.update(grants).set({ balance: 0, updatedAt: new Date() }).where(eq(grants.subscriptionId, subscriptionId)),
+        ),
+
+      delete: (id: GrantIdType) => sqlClient.query((db) => db.delete(grants).where(eq(grants.id, id))),
+
+      deleteBySubscription: (subscriptionId: SubscriptionIdType) =>
+        sqlClient.query((db) => db.delete(grants).where(eq(grants.subscriptionId, subscriptionId))),
+    }
+  }),
+)

@@ -32,6 +32,7 @@ export const registerRoutes = (context: RoutesContext) => {
   // Make shared dependencies available via request context.
   v1.use("*", async (c, next) => {
     c.set("db", context.database.db)
+    c.set("postgresClient", context.database)
     c.set("redis", context.redis)
     c.set("clickhouse", context.clickhouse)
 

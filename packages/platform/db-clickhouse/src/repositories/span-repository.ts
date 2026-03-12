@@ -1,5 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
+  ChSqlClient,
+  type ChSqlClientShape,
   SessionId,
   SpanId,
   OrganizationId as toOrganizationId,
@@ -7,10 +9,10 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Span, SpanDetail, SpanKind, SpanRepository, SpanStatusCode } from "@domain/spans"
-import { Effect } from "effect"
+import type { Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
+import { SpanRepository } from "@domain/spans"
+import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
-import { insertJsonEachRow, queryClickhouse } from "../sql.ts"
 
 // ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
@@ -232,69 +234,94 @@ const toInsertRow = (span: SpanDetail) => ({
   ingested_at: toClickhouseDateTime(span.ingestedAt),
 })
 
-export const createSpanClickhouseRepository = (client: ClickHouseClient): SpanRepository => ({
-  insert: (spans: readonly SpanDetail[]) =>
-    insertJsonEachRow(client, "spans", spans.map(toInsertRow)).pipe(
-      Effect.mapError((error) => toRepositoryError(error, "insert")),
-    ),
+export const SpanRepositoryLive = Layer.effect(
+  SpanRepository,
+  Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
-  findByTraceId: ({ organizationId, traceId }) =>
-    queryClickhouse<SpanListRow>(
-      client,
-      `SELECT ${LIST_COLUMNS} FROM spans FINAL
-       WHERE organization_id = {organizationId:String}
-         AND trace_id = {traceId:FixedString(32)}
-       ORDER BY start_time ASC`,
-      { organizationId: organizationId as string, traceId },
-    ).pipe(
-      Effect.map((rows) => rows.map(toDomainSpan)),
-      Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
-    ),
+    return {
+      insert: (spans: readonly SpanDetail[]) =>
+        chSqlClient
+          .query(async (client) => {
+            if (spans.length === 0) return
+            await client.insert({ table: "spans", values: spans.map(toInsertRow), format: "JSONEachRow" })
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "insert"))),
 
-  findByProjectId: ({ organizationId, projectId, options }) =>
-    queryClickhouse<SpanListRow>(
-      client,
-      `SELECT ${LIST_COLUMNS} FROM spans FINAL
-       WHERE organization_id = {organizationId:String}
-         AND project_id = {projectId:String}
-         AND ({hasStartFrom:Bool} = false OR start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
-         AND ({hasStartTo:Bool} = false OR start_time <= {startTimeTo:DateTime64(9, 'UTC')})
-       ORDER BY start_time DESC
-       LIMIT {limit:UInt32}
-       OFFSET {offset:UInt32}`,
-      {
-        organizationId: organizationId as string,
-        projectId: projectId as string,
-        hasStartFrom: options.startTimeFrom !== undefined,
-        startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
-        hasStartTo: options.startTimeTo !== undefined,
-        startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
-        limit: options.limit ?? 50,
-        offset: options.offset ?? 0,
-      },
-    ).pipe(
-      Effect.map((rows) => rows.map(toDomainSpan)),
-      Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
-    ),
+      findByTraceId: ({ organizationId, traceId }) =>
+        chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
+                      WHERE organization_id = {organizationId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                      ORDER BY start_time ASC`,
+              query_params: { organizationId: organizationId as string, traceId },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanListRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
+          ),
 
-  findBySpanId: ({ organizationId, traceId, spanId }) =>
-    queryClickhouse<SpanDetailRow>(
-      client,
-      `SELECT * FROM spans FINAL
-       WHERE organization_id = {organizationId:String}
-         AND trace_id = {traceId:FixedString(32)}
-         AND span_id = {spanId:FixedString(16)}
-       LIMIT 1`,
-      {
-        organizationId: organizationId as string,
-        traceId,
-        spanId,
-      },
-    ).pipe(
-      Effect.map((rows) => {
-        const first = rows[0]
-        return first ? toDomainSpanDetail(first) : null
-      }),
-      Effect.mapError((error) => toRepositoryError(error, "findBySpanId")),
-    ),
-})
+      findByProjectId: ({ organizationId, projectId, options }) =>
+        chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_COLUMNS} FROM spans FINAL
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND ({hasStartFrom:Bool} = false OR start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
+                        AND ({hasStartTo:Bool} = false OR start_time <= {startTimeTo:DateTime64(9, 'UTC')})
+                      ORDER BY start_time DESC
+                      LIMIT {limit:UInt32}
+                      OFFSET {offset:UInt32}`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                hasStartFrom: options.startTimeFrom !== undefined,
+                startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
+                hasStartTo: options.startTimeTo !== undefined,
+                startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
+                limit: options.limit ?? 50,
+                offset: options.offset ?? 0,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanListRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainSpan)),
+            Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
+          ),
+
+      findBySpanId: ({ organizationId, traceId, spanId }) =>
+        chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT * FROM spans FINAL
+                      WHERE organization_id = {organizationId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                        AND span_id = {spanId:FixedString(16)}
+                      LIMIT 1`,
+              query_params: {
+                organizationId: organizationId as string,
+                traceId,
+                spanId,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanDetailRow>()
+          })
+          .pipe(
+            Effect.map((rows) => {
+              const first = rows[0]
+              return first ? toDomainSpanDetail(first) : null
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "findBySpanId")),
+          ),
+    }
+  }),
+)

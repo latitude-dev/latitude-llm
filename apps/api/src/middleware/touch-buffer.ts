@@ -1,5 +1,7 @@
+import { ApiKeyRepository } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
-import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import type { PostgresClient } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -40,10 +42,10 @@ class TouchBuffer {
   private flushInterval: NodeJS.Timeout | null = null
   private readonly intervalMs: number
   private readonly maxBufferSize: number
-  private readonly db: PostgresDb
+  private readonly client: PostgresClient
 
-  constructor(db: PostgresDb, config: TouchBufferConfig = {}) {
-    this.db = db
+  constructor(client: PostgresClient, config: TouchBufferConfig = {}) {
+    this.client = client
     this.intervalMs = config.intervalMs ?? 30000
     this.maxBufferSize = config.maxBufferSize ?? 10000
 
@@ -97,11 +99,17 @@ class TouchBuffer {
 
     const startTime = Date.now()
 
-    // Use the admin db connection (bypasses RLS) for cross-org batch updates.
-    const repo = createApiKeyPostgresRepository(this.db)
+    // Use the live layer pattern for cross-org batch updates (bypasses RLS)
+    const sqlClientLayer = SqlClientLive(this.client)
+    const apiKeyRepoLayer = ApiKeyRepositoryLive
 
     try {
-      await Effect.runPromise(repo.touchBatch(keyIds))
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* ApiKeyRepository
+          return yield* repo.touchBatch(keyIds)
+        }).pipe(Effect.provide(apiKeyRepoLayer), Effect.provide(sqlClientLayer)),
+      )
 
       const duration = Date.now() - startTime
       logger.info(`Flushed ${keyIds.length} touch updates in ${duration}ms`)
@@ -169,9 +177,9 @@ class TouchBuffer {
  */
 let touchBufferInstance: TouchBuffer | null = null
 
-export const createTouchBuffer = (db: PostgresDb, config?: TouchBufferConfig): TouchBuffer => {
+export const createTouchBuffer = (client: PostgresClient, config?: TouchBufferConfig): TouchBuffer => {
   if (!touchBufferInstance) {
-    touchBufferInstance = new TouchBuffer(db, config)
+    touchBufferInstance = new TouchBuffer(client, config)
   }
   return touchBufferInstance
 }

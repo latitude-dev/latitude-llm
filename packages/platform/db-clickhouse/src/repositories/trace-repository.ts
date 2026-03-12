@@ -1,15 +1,17 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import {
+  ChSqlClient,
+  type ChSqlClientShape,
   SpanId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Trace, TraceDetail, TraceRepository, TraceStatus } from "@domain/spans"
-import { Effect } from "effect"
+import type { Trace, TraceDetail, TraceStatus } from "@domain/spans"
+import { TraceRepository } from "@domain/spans"
+import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
-import { queryClickhouse } from "../sql.ts"
 
 const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
   date ? date.toISOString().replace("Z", "") : undefined
@@ -127,55 +129,72 @@ const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => ({
   outputMessages: parseMessages(row.output_messages),
 })
 
-export const createTraceClickhouseRepository = (client: ClickHouseClient): TraceRepository => ({
-  findByProjectId: ({ organizationId, projectId, options }) =>
-    queryClickhouse<TraceListRow>(
-      client,
-      `SELECT ${LIST_SELECT}
-       FROM traces
-       WHERE organization_id = {organizationId:String}
-         AND project_id = {projectId:String}
-         AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
-         AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
-       GROUP BY organization_id, project_id, trace_id
-       ORDER BY start_time DESC
-       LIMIT {limit:UInt32}
-       OFFSET {offset:UInt32}`,
-      {
-        organizationId: organizationId as string,
-        projectId: projectId as string,
-        hasStartFrom: options.startTimeFrom !== undefined,
-        startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
-        hasStartTo: options.startTimeTo !== undefined,
-        startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
-        limit: options.limit ?? 50,
-        offset: options.offset ?? 0,
-      },
-    ).pipe(
-      Effect.map((rows) => rows.map(toBaseFields)),
-      Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
-    ),
+export const TraceRepositoryLive = Layer.effect(
+  TraceRepository,
+  Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
-  findByTraceId: ({ organizationId, projectId, traceId }) =>
-    queryClickhouse<TraceDetailRow>(
-      client,
-      `SELECT ${DETAIL_SELECT}
-       FROM traces
-       WHERE organization_id = {organizationId:String}
-         AND project_id = {projectId:String}
-         AND trace_id = {traceId:FixedString(32)}
-       GROUP BY organization_id, project_id, trace_id
-       LIMIT 1`,
-      {
-        organizationId: organizationId as string,
-        projectId: projectId as string,
-        traceId,
-      },
-    ).pipe(
-      Effect.map((rows) => {
-        const first = rows[0]
-        return first ? toDomainTraceDetail(first) : null
-      }),
-      Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
-    ),
-})
+    return {
+      findByProjectId: ({ organizationId, projectId, options }) =>
+        chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${LIST_SELECT}
+                      FROM traces
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
+                        AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
+                      GROUP BY organization_id, project_id, trace_id
+                      ORDER BY start_time DESC
+                      LIMIT {limit:UInt32}
+                      OFFSET {offset:UInt32}`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                hasStartFrom: options.startTimeFrom !== undefined,
+                startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
+                hasStartTo: options.startTimeTo !== undefined,
+                startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
+                limit: options.limit ?? 50,
+                offset: options.offset ?? 0,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceListRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toBaseFields)),
+            Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
+          ),
+
+      findByTraceId: ({ organizationId, projectId, traceId }) =>
+        chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${DETAIL_SELECT}
+                      FROM traces
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                      GROUP BY organization_id, project_id, trace_id
+                      LIMIT 1`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceId,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceDetailRow>()
+          })
+          .pipe(
+            Effect.map((rows) => {
+              const first = rows[0]
+              return first ? toDomainTraceDetail(first) : null
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
+          ),
+    }
+  }),
+)

@@ -16,15 +16,3 @@ export interface EventEnvelope<TEvent extends DomainEvent = DomainEvent> {
 export interface EventsPublisher {
   publish(envelope: EventEnvelope): Promise<void>
 }
-
-export const createEventEnvelope = <TEvent extends DomainEvent>(params: {
-  event: TEvent
-  id: string
-  occurredAt?: Date
-}): EventEnvelope<TEvent> => {
-  return {
-    id: params.id,
-    event: params.event,
-    occurredAt: params.occurredAt ?? new Date(),
-  }
-}

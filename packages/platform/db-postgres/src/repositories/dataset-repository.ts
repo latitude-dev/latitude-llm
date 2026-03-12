@@ -1,9 +1,9 @@
 import type { Dataset, DatasetVersion } from "@domain/datasets"
-import { DatasetNotFoundError } from "@domain/datasets"
-import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, toRepositoryError } from "@domain/shared"
-import { and, count, eq, getTableColumns, isNull, sql } from "drizzle-orm"
-import { Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
+import { DatasetNotFoundError, DatasetRepository } from "@domain/datasets"
+import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { and, count, eq, getColumns, isNull, sql } from "drizzle-orm"
+import { Effect, Layer } from "effect"
+import type { Operator } from "../client.ts"
 import { datasetVersions, datasets } from "../schema/index.ts"
 
 const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: string | null): Dataset => ({
@@ -31,65 +31,36 @@ const toDomainVersion = (row: typeof datasetVersions.$inferSelect): DatasetVersi
   updatedAt: row.updatedAt,
 })
 
-export const createDatasetPostgresRepository = (db: PostgresDb) => ({
-  create: (args: { organizationId: string; projectId: string; name: string; description?: string; fileKey?: string }) =>
-    Effect.gen(function* () {
-      const rows = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insert(datasets)
-            .values({
-              organizationId: args.organizationId,
-              projectId: args.projectId,
-              name: args.name,
-              description: args.description ?? null,
-              fileKey: args.fileKey ?? null,
-            })
-            .returning(),
-        catch: (error) => toRepositoryError(error, "create"),
-      })
-      return toDomainDataset(rows[0] as typeof datasets.$inferSelect)
-    }),
+/**
+ * Live layer that pulls db from SqlClient
+ */
+export const DatasetRepositoryLive = Layer.effect(
+  DatasetRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-  findById: (id: string) =>
-    Effect.gen(function* () {
-      const datasetCols = getTableColumns(datasets)
-      const [row] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select({ ...datasetCols, latestVersionId: datasetVersions.id })
-            .from(datasets)
-            .leftJoin(
-              datasetVersions,
-              and(eq(datasetVersions.datasetId, datasets.id), eq(datasetVersions.version, datasets.currentVersion)),
-            )
-            .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)))
-            .limit(1),
-        catch: (error) => toRepositoryError(error, "findById"),
-      })
+    return {
+      create: (args) =>
+        Effect.gen(function* () {
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .insert(datasets)
+              .values({
+                organizationId: args.organizationId,
+                projectId: args.projectId,
+                name: args.name,
+                description: args.description ?? null,
+                fileKey: args.fileKey ?? null,
+              })
+              .returning(),
+          )
+          return toDomainDataset(rows[0] as typeof datasets.$inferSelect)
+        }),
 
-      if (!row) {
-        return yield* new DatasetNotFoundError({ datasetId: id })
-      }
-
-      return toDomainDataset(row, row.latestVersionId)
-    }),
-
-  listByProject: (args: { organizationId: string; projectId: string; limit?: number; offset?: number }) =>
-    Effect.gen(function* () {
-      const limit = args.limit ?? 50
-      const offset = args.offset ?? 0
-      const datasetCols = getTableColumns(datasets)
-
-      const projectFilter = and(
-        eq(datasets.organizationId, args.organizationId),
-        eq(datasets.projectId, args.projectId),
-        isNull(datasets.deletedAt),
-      )
-
-      const [rows, totalResult] = yield* Effect.tryPromise({
-        try: () =>
-          Promise.all([
+      findById: (id) =>
+        Effect.gen(function* () {
+          const datasetCols = getColumns(datasets)
+          const [row] = yield* sqlClient.query((db) =>
             db
               .select({ ...datasetCols, latestVersionId: datasetVersions.id })
               .from(datasets)
@@ -97,109 +68,132 @@ export const createDatasetPostgresRepository = (db: PostgresDb) => ({
                 datasetVersions,
                 and(eq(datasetVersions.datasetId, datasets.id), eq(datasetVersions.version, datasets.currentVersion)),
               )
-              .where(projectFilter)
-              .orderBy(datasets.createdAt)
-              .limit(limit)
-              .offset(offset),
-            db.select({ total: count() }).from(datasets).where(projectFilter),
-          ]),
-        catch: (error) => toRepositoryError(error, "listByProject"),
-      })
+              .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)))
+              .limit(1),
+          )
 
-      return {
-        datasets: rows.map((r) => toDomainDataset(r, r.latestVersionId)),
-        total: totalResult[0]?.total ?? 0,
-      } as const
-    }),
+          if (!row) {
+            return yield* new DatasetNotFoundError({ datasetId: id })
+          }
 
-  updateFileKey: (args: { id: string; fileKey: string }) =>
-    Effect.gen(function* () {
-      const [updated] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .update(datasets)
-            .set({ fileKey: args.fileKey })
-            .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
-            .returning(),
-        catch: (error) => toRepositoryError(error, "updateFileKey"),
-      })
+          return toDomainDataset(row, row.latestVersionId)
+        }),
 
-      if (!updated) {
-        return yield* new DatasetNotFoundError({ datasetId: args.id })
-      }
+      listByProject: (args) =>
+        Effect.gen(function* () {
+          const limit = args.limit ?? 50
+          const offset = args.offset ?? 0
+          const datasetCols = getColumns(datasets)
 
-      return toDomainDataset(updated)
-    }),
+          const projectFilter = and(
+            eq(datasets.organizationId, args.organizationId),
+            eq(datasets.projectId, args.projectId),
+            isNull(datasets.deletedAt),
+          )
 
-  softDelete: (id: string) =>
-    Effect.gen(function* () {
-      const [updated] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .update(datasets)
-            .set({ deletedAt: new Date() })
-            .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)))
-            .returning({ id: datasets.id }),
-        catch: (error) => toRepositoryError(error, "softDelete"),
-      })
+          const [rows, totalResult] = yield* sqlClient.query((db) =>
+            Promise.all([
+              db
+                .select({ ...datasetCols, latestVersionId: datasetVersions.id })
+                .from(datasets)
+                .leftJoin(
+                  datasetVersions,
+                  and(eq(datasetVersions.datasetId, datasets.id), eq(datasetVersions.version, datasets.currentVersion)),
+                )
+                .where(projectFilter)
+                .orderBy(datasets.createdAt)
+                .limit(limit)
+                .offset(offset),
+              db.select({ total: count() }).from(datasets).where(projectFilter),
+            ]),
+          )
 
-      if (!updated) {
-        return yield* new DatasetNotFoundError({ datasetId: id })
-      }
-    }),
+          return {
+            datasets: rows.map((r) => toDomainDataset(r, r.latestVersionId)),
+            total: totalResult[0]?.total ?? 0,
+          } as const
+        }),
 
-  incrementVersion: (args: { organizationId: string; id: string; rowsInserted: number; source?: string }) =>
-    Effect.gen(function* () {
-      const [updated] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .update(datasets)
-            .set({ currentVersion: sql`${datasets.currentVersion} + 1` })
-            .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
-            .returning({ currentVersion: datasets.currentVersion }),
-        catch: (error) => toRepositoryError(error, "incrementVersion"),
-      })
+      updateFileKey: (args) =>
+        Effect.gen(function* () {
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ fileKey: args.fileKey })
+              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .returning(),
+          )
 
-      if (!updated) {
-        return yield* new DatasetNotFoundError({ datasetId: args.id })
-      }
+          if (!updated) {
+            return yield* new DatasetNotFoundError({ datasetId: args.id })
+          }
 
-      const newVersion = Number(updated.currentVersion)
+          return toDomainDataset(updated)
+        }),
 
-      const [versionRow] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insert(datasetVersions)
-            .values({
-              organizationId: args.organizationId,
-              datasetId: args.id,
-              version: newVersion,
-              rowsInserted: args.rowsInserted,
-              source: args.source ?? "api",
-            })
-            .returning(),
-        catch: (error) => toRepositoryError(error, "incrementVersion:insertVersion"),
-      })
+      softDelete: (id) =>
+        Effect.gen(function* () {
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ deletedAt: new Date() })
+              .where(and(eq(datasets.id, id), isNull(datasets.deletedAt)))
+              .returning({ id: datasets.id }),
+          )
 
-      return toDomainVersion(versionRow as typeof datasetVersions.$inferSelect)
-    }),
+          if (!updated) {
+            return yield* new DatasetNotFoundError({ datasetId: id })
+          }
+        }),
 
-  resolveVersion: (args: { datasetId: string; versionId: string }) =>
-    Effect.gen(function* () {
-      const [row] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select({ version: datasetVersions.version })
-            .from(datasetVersions)
-            .where(and(eq(datasetVersions.id, args.versionId), eq(datasetVersions.datasetId, args.datasetId)))
-            .limit(1),
-        catch: (error) => toRepositoryError(error, "resolveVersion"),
-      })
+      incrementVersion: (args) =>
+        Effect.gen(function* () {
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ currentVersion: sql`${datasets.currentVersion} + 1` })
+              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .returning({ currentVersion: datasets.currentVersion }),
+          )
 
-      if (!row) {
-        return yield* new DatasetNotFoundError({ datasetId: args.datasetId })
-      }
+          if (!updated) {
+            return yield* new DatasetNotFoundError({ datasetId: args.id })
+          }
 
-      return Number(row.version)
-    }),
-})
+          const newVersion = Number(updated.currentVersion)
+
+          const [versionRow] = yield* sqlClient.query((db) =>
+            db
+              .insert(datasetVersions)
+              .values({
+                organizationId: args.organizationId,
+                datasetId: args.id,
+                version: newVersion,
+                rowsInserted: args.rowsInserted,
+                source: args.source ?? "api",
+              })
+              .returning(),
+          )
+
+          return toDomainVersion(versionRow as typeof datasetVersions.$inferSelect)
+        }),
+
+      resolveVersion: (args) =>
+        Effect.gen(function* () {
+          const [row] = yield* sqlClient.query((db) =>
+            db
+              .select({ version: datasetVersions.version })
+              .from(datasetVersions)
+              .where(and(eq(datasetVersions.id, args.versionId), eq(datasetVersions.datasetId, args.datasetId)))
+              .limit(1),
+          )
+
+          if (!row) {
+            return yield* new DatasetNotFoundError({ datasetId: args.datasetId })
+          }
+
+          return Number(row.version)
+        }),
+    }
+  }),
+)

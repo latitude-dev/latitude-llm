@@ -16,6 +16,7 @@
   "dependencies": {
     "@domain/organizations": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/users": "workspace:*",
     "effect": "catalog:"
   }
 }

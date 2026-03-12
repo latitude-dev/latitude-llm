@@ -1,9 +1,8 @@
 import type { RepositoryError } from "@domain/shared"
+import { UserRepository } from "@domain/users"
 import { Data, Effect } from "effect"
 import { createAuthIntent } from "../entities/auth-intent.ts"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
-import { AuthUserRepository } from "../ports/auth-user-repository.ts"
-import type { AuthIntent } from "../types.ts"
 import { normalizeEmail } from "./auth-intent-policy.ts"
 
 export class LoginUserNotFoundError extends Data.TaggedError("LoginUserNotFoundError")<{
@@ -17,9 +16,9 @@ export type CreateLoginIntentError = LoginUserNotFoundError | RepositoryError
 
 export const createLoginIntentUseCase = (input: {
   email: string
-}): Effect.Effect<AuthIntent, CreateLoginIntentError, AuthIntentRepository | AuthUserRepository> =>
+}) =>
   Effect.gen(function* () {
-    const users = yield* AuthUserRepository
+    const users = yield* UserRepository
     const intents = yield* AuthIntentRepository
 
     const email = normalizeEmail(input.email)

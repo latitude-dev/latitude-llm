@@ -1,8 +1,7 @@
+import { UserRepository } from "@domain/users"
 import { Effect } from "effect"
 import { createAuthIntent } from "../entities/auth-intent.ts"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
-import { AuthUserRepository } from "../ports/auth-user-repository.ts"
-import type { AuthIntent } from "../types.ts"
 import { createInviteIntentData, normalizeEmail } from "./auth-intent-policy.ts"
 
 export const createInviteIntentUseCase = (input: {
@@ -10,9 +9,9 @@ export const createInviteIntentUseCase = (input: {
   organizationId: string
   organizationName: string
   inviterName: string
-}): Effect.Effect<AuthIntent, Error, AuthIntentRepository | AuthUserRepository> =>
+}) =>
   Effect.gen(function* () {
-    const users = yield* AuthUserRepository
+    const users = yield* UserRepository
     const intents = yield* AuthIntentRepository
 
     const email = normalizeEmail(input.email)

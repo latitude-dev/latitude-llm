@@ -1,15 +1,13 @@
-import { NotFoundError, UserId, toRepositoryError } from "@domain/shared"
+import { NotFoundError, SqlClient, type SqlClientShape, type UserId } from "@domain/shared"
+import { UserRepository } from "@domain/users"
 import type { User } from "@domain/users"
-import { eq } from "drizzle-orm"
-import { Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
+import { and, eq, isNull, or, sql } from "drizzle-orm"
+import { Effect, Layer } from "effect"
+import type { Operator } from "../client.ts"
 import { user } from "../schema/index.ts"
 
-/**
- * Maps a database user row to a domain User entity.
- */
 const toDomainUser = (row: typeof user.$inferSelect): User => ({
-  id: UserId(row.id),
+  id: row.id as UserId,
   email: row.email,
   name: row.name ?? null,
   emailVerified: row.emailVerified,
@@ -20,20 +18,41 @@ const toDomainUser = (row: typeof user.$inferSelect): User => ({
 })
 
 /**
- * Creates a Postgres implementation of the UserRepository port.
+ * Live layer that pulls db from SqlClient
  */
-export const createUserPostgresRepository = (db: PostgresDb) => ({
-  findByEmail: (email: string) =>
-    Effect.gen(function* () {
-      const [result] = yield* Effect.tryPromise({
-        try: () => db.select().from(user).where(eq(user.email, email)).limit(1),
-        catch: (error) => toRepositoryError(error, "findByEmail"),
-      })
+export const UserRepositoryLive = Layer.effect(
+  UserRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-      if (!result) {
-        return yield* new NotFoundError({ entity: "User", id: email })
-      }
+    return {
+      findByEmail: (email: string) =>
+        sqlClient
+          .query((db) => db.select().from(user).where(eq(user.email, email)).limit(1))
+          .pipe(
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "User", id: email }))
+              }
+              return Effect.succeed(toDomainUser(result))
+            }),
+          ),
 
-      return toDomainUser(result)
-    }),
-})
+      setNameIfMissing: ({ userId, name }: { userId: string; name: string }) =>
+        Effect.gen(function* () {
+          if (!name.trim()) return
+
+          yield* sqlClient.query((db) =>
+            db
+              .update(user)
+              .set({
+                name: name.trim(),
+                updatedAt: new Date(),
+              })
+              .where(and(eq(user.id, userId), or(isNull(user.name), eq(user.name, ""), sql`trim(${user.name}) = ''`))),
+          )
+        }),
+    }
+  }),
+)
