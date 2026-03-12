@@ -11,6 +11,7 @@ export { healthcheckPostgres } from "./health.ts"
 
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
+export { withPostgres } from "./with-postgres.ts"
 
 // Repository implementations
 export { AuthIntentRepositoryLive } from "./repositories/auth-intent-repository.ts"

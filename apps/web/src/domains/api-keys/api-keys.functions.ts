@@ -1,6 +1,6 @@
 import { type ApiKey, ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
-import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -38,7 +38,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         return yield* repo.findAll()
-      }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive))),
     )
 
     return apiKeys.map(toRecord)
@@ -53,8 +53,7 @@ export const createApiKey = createServerFn({ method: "POST" })
 
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({ name: data.name }).pipe(
-        Effect.provide(ApiKeyRepositoryLive),
-        Effect.provide(SqlClientLive(client, organizationId)),
+        Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive)),
       ),
     )
 
@@ -70,8 +69,7 @@ export const updateApiKey = createServerFn({ method: "POST" })
 
     const apiKey = await Effect.runPromise(
       updateApiKeyUseCase({ id: ApiKeyId(data.id), name: data.name }).pipe(
-        Effect.provide(ApiKeyRepositoryLive),
-        Effect.provide(SqlClientLive(client, organizationId)),
+        Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive)),
       ),
     )
 
@@ -89,6 +87,6 @@ export const deleteApiKey = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         yield* repo.delete(ApiKeyId(data.id))
-      }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, ApiKeyRepositoryLive))),
     )
   })

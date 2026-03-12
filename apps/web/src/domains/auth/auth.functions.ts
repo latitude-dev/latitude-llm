@@ -13,6 +13,7 @@ import {
   OrganizationRepositoryLive,
   SqlClientLive,
   UserRepositoryLive,
+  withPostgres,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -159,8 +160,7 @@ export const exchangeCliSession = createServerFn({ method: "POST" })
     const createdAt = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({ name: `CLI (${createdAt})` }).pipe(
-        Effect.provide(ApiKeyRepositoryLive),
-        Effect.provide(SqlClientLive(adminClient, OrganizationId(activeOrganizationId))),
+        Effect.provide(withPostgres(adminClient, OrganizationId(activeOrganizationId), ApiKeyRepositoryLive)),
       ),
     )
 

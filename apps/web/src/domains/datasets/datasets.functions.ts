@@ -1,8 +1,8 @@
 import type { Dataset, DatasetRow } from "@domain/datasets"
 import { DatasetRepository, createDataset, insertRows, listDatasets, listRows } from "@domain/datasets"
 import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, putInDisk } from "@domain/shared"
-import { DatasetRowRepositoryLive } from "@platform/db-clickhouse"
-import { DatasetRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import Papa from "papaparse"
@@ -127,17 +127,15 @@ export const listDatasetsQuery = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<{ datasets: DatasetRecord[]; total: number }> => {
     const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-    const chClient = getClickhouseClient()
+    const orgId = OrganizationId(organizationId)
 
     const result = await Effect.runPromise(
       listDatasets({
-        organizationId: OrganizationId(organizationId),
+        organizationId: orgId,
         projectId: ProjectId(data.projectId),
       }).pipe(
-        Effect.provide(DatasetRepositoryLive),
-        Effect.provide(DatasetRowRepositoryLive(chClient)),
-        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
+        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
       ),
     )
 
@@ -157,21 +155,19 @@ export const listRowsQuery = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<{ rows: DatasetRowRecord[]; total: number }> => {
     const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-    const chClient = getClickhouseClient()
+    const orgId = OrganizationId(organizationId)
 
     const result = await Effect.runPromise(
       listRows({
-        organizationId: OrganizationId(organizationId),
+        organizationId: orgId,
         datasetId: DatasetId(data.datasetId),
         ...(data.versionId ? { versionId: DatasetVersionId(data.versionId) } : {}),
         ...(data.search ? { search: data.search } : {}),
         limit: data.limit,
         offset: data.offset,
       }).pipe(
-        Effect.provide(DatasetRepositoryLive),
-        Effect.provide(DatasetRowRepositoryLive(chClient)),
-        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
+        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
       ),
     )
 
@@ -183,18 +179,16 @@ export const createDatasetMutation = createServerFn({ method: "POST" })
   .inputValidator(z.object({ projectId: z.string(), name: z.string().min(1) }))
   .handler(async ({ data }): Promise<DatasetRecord> => {
     const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-    const chClient = getClickhouseClient()
+    const orgId = OrganizationId(organizationId)
 
     const dataset = await Effect.runPromise(
       createDataset({
-        organizationId: OrganizationId(organizationId),
+        organizationId: orgId,
         projectId: ProjectId(data.projectId),
         name: data.name,
       }).pipe(
-        Effect.provide(DatasetRepositoryLive),
-        Effect.provide(DatasetRowRepositoryLive(chClient)),
-        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
+        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
       ),
     )
 
@@ -209,8 +203,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
   })
   .handler(async ({ data: formData }): Promise<{ version: number; rowCount: number }> => {
     const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-    const chClient = getClickhouseClient()
+    const orgId = OrganizationId(organizationId)
 
     const file = formData.get("file")
     const datasetId = formData.get("datasetId")
@@ -232,7 +225,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
     const fileKey = await Effect.runPromise(
       putInDisk(getStorageDisk(), {
         namespace: "datasets",
-        organizationId: OrganizationId(organizationId),
+        organizationId: orgId,
         projectId: ProjectId(projectId),
         content,
       }),
@@ -242,11 +235,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* DatasetRepository
         return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
-      }).pipe(
-        Effect.provide(DatasetRepositoryLive),
-        Effect.provide(DatasetRowRepositoryLive(chClient)),
-        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
-      ),
+      }).pipe(Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive))),
     )
 
     const parsed = Papa.parse<Record<string, string>>(content, { header: true, skipEmptyLines: true })
@@ -258,14 +247,13 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
 
     const result = await Effect.runPromise(
       insertRows({
-        organizationId: OrganizationId(organizationId),
+        organizationId: orgId,
         datasetId: DatasetId(datasetId),
         rows: mappedRows,
         source: "csv",
       }).pipe(
-        Effect.provide(DatasetRepositoryLive),
-        Effect.provide(DatasetRowRepositoryLive(chClient)),
-        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+        Effect.provide(withPostgres(getPostgresClient(), orgId, DatasetRepositoryLive)),
+        Effect.provide(withClickHouse(getClickhouseClient(), orgId, DatasetRowRepositoryLive)),
       ),
     )
 

@@ -7,7 +7,7 @@ import {
 } from "@domain/projects"
 import { ProjectId } from "@domain/shared"
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi"
-import { ProjectRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { ErrorSchema, OrgAndIdParamsSchema, OrgParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -220,8 +220,7 @@ export const createProjectsRoutes = () => {
 
     const project = await Effect.runPromise(
       createProjectUseCase(input).pipe(
-        Effect.provide(ProjectRepositoryLive),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
+        Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ProjectRepositoryLive)),
       ),
     )
     return c.json(toProjectResponse(project), 201)
@@ -232,10 +231,7 @@ export const createProjectsRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findAll()
-      }).pipe(
-        Effect.provide(ProjectRepositoryLive),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
-      ),
+      }).pipe(Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ProjectRepositoryLive))),
     )
 
     return c.json({ projects: projects.map(toProjectResponse) }, 200)
@@ -249,10 +245,7 @@ export const createProjectsRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findById(id)
-      }).pipe(
-        Effect.provide(ProjectRepositoryLive),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
-      ),
+      }).pipe(Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ProjectRepositoryLive))),
     )
 
     return c.json(toProjectResponse(project), 200)
@@ -268,10 +261,7 @@ export const createProjectsRoutes = () => {
         id,
         ...(body.name !== undefined ? { name: body.name } : {}),
         ...(body.description !== undefined ? { description: body.description } : {}),
-      }).pipe(
-        Effect.provide(ProjectRepositoryLive),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
-      ),
+      }).pipe(Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ProjectRepositoryLive))),
     )
 
     return c.json(toProjectResponse(updatedProject), 200)
@@ -285,10 +275,7 @@ export const createProjectsRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.softDelete(id)
-      }).pipe(
-        Effect.provide(ProjectRepositoryLive),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
-      ),
+      }).pipe(Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ProjectRepositoryLive))),
     )
     return c.body(null, 204)
   })

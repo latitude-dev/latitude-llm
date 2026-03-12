@@ -8,6 +8,8 @@ export {
 export { InvalidEnvValueError, MissingEnvValueError } from "@platform/env"
 export { healthcheckClickhouse } from "./health.ts"
 export { commandClickhouse, insertJsonEachRow, queryClickhouse } from "./sql.ts"
+export { ChSqlClientLive } from "./ch-sql-client.ts"
+export { withClickHouse } from "./with-clickhouse.ts"
 export {
   createDatasetRowClickHouseRepository,
   DatasetRowRepositoryLive,

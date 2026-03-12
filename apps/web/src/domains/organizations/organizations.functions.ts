@@ -1,5 +1,10 @@
 import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
-import { MembershipRepositoryLive, OrganizationRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import {
+  MembershipRepositoryLive,
+  OrganizationRepositoryLive,
+  SqlClientLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { requireSession } from "../../server/auth.ts"
@@ -36,7 +41,7 @@ export const getOrganization = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* OrganizationRepository
         return yield* repo.findById(organizationId)
-      }).pipe(Effect.provide(OrganizationRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, OrganizationRepositoryLive))),
     )
     return { id: org.id, name: org.name }
   })

@@ -4,8 +4,8 @@ import {
   AuthIntentRepositoryLive,
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
-  SqlClientLive,
   UserRepositoryLive,
+  withPostgres,
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -42,11 +42,7 @@ export const listMembers = createServerFn({ method: "GET" })
         const pendingInvites = yield* intentRepo.findPendingInvitesByOrganizationId(organizationId)
 
         return [members, pendingInvites] as const
-      }).pipe(
-        Effect.provide(MembershipRepositoryLive),
-        Effect.provide(AuthIntentRepositoryLive),
-        Effect.provide(SqlClientLive(client, organizationId)),
-      ),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, MembershipRepositoryLive, AuthIntentRepositoryLive))),
     )
 
     const activeMembers: MemberRecord[] = members.map((m) => ({
@@ -90,7 +86,7 @@ export const inviteMember = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* OrganizationRepository
         return yield* repo.findById(organizationId)
-      }).pipe(Effect.provide(OrganizationRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, OrganizationRepositoryLive))),
     )
     const organizationName = org.name
 
@@ -100,11 +96,7 @@ export const inviteMember = createServerFn({ method: "POST" })
         organizationId,
         organizationName,
         inviterName,
-      }).pipe(
-        Effect.provide(AuthIntentRepositoryLive),
-        Effect.provide(UserRepositoryLive),
-        Effect.provide(SqlClientLive(client, organizationId)),
-      ),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, AuthIntentRepositoryLive, UserRepositoryLive))),
     )
 
     return { intentId: intent.id }
@@ -121,6 +113,6 @@ export const removeMember = createServerFn({ method: "POST" })
       removeMemberUseCase({
         membershipId: data.membershipId,
         requestingUserId: userId,
-      }).pipe(Effect.provide(MembershipRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, MembershipRepositoryLive))),
     )
   })

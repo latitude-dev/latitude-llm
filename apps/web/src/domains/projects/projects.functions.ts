@@ -1,7 +1,7 @@
 import { ProjectRepository, createProjectUseCase, updateProjectUseCase } from "@domain/projects"
 import type { Project } from "@domain/projects"
 import { ProjectId, UserId } from "@domain/shared"
-import { ProjectRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -41,7 +41,7 @@ export const listProjects = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findAll()
-      }).pipe(Effect.provide(ProjectRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
     )
 
     return projects.map(toRecord)
@@ -59,7 +59,7 @@ export const createProject = createServerFn({ method: "POST" })
         name: data.name,
         ...(data.description !== undefined ? { description: data.description } : {}),
         createdById: UserId(userId),
-      }).pipe(Effect.provide(ProjectRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
     )
 
     return toRecord(project)
@@ -83,7 +83,7 @@ export const updateProject = createServerFn({ method: "POST" })
         id: ProjectId(data.id),
         ...(data.name !== undefined ? { name: data.name } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
-      }).pipe(Effect.provide(ProjectRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
     )
 
     return toRecord(updatedProject)
@@ -100,6 +100,6 @@ export const deleteProject = createServerFn({ method: "POST" })
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.softDelete(ProjectId(data.id))
-      }).pipe(Effect.provide(ProjectRepositoryLive), Effect.provide(SqlClientLive(client, organizationId))),
+      }).pipe(Effect.provide(withPostgres(client, organizationId, ProjectRepositoryLive))),
     )
   })

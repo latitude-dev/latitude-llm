@@ -8,7 +8,7 @@ import {
 import { ApiKeyId } from "@domain/shared"
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
-import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect } from "effect"
 import { ErrorSchema, OrgAndIdParamsSchema, OrgParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -175,8 +175,7 @@ export const createApiKeysRoutes = () => {
 
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({ name }).pipe(
-        Effect.provide(ApiKeyRepositoryLive),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
+        Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ApiKeyRepositoryLive)),
       ),
     )
     return c.json(toApiKeyResponse(apiKey), 201)
@@ -187,10 +186,7 @@ export const createApiKeysRoutes = () => {
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         return yield* repo.findAll()
-      }).pipe(
-        Effect.provide(ApiKeyRepositoryLive),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
-      ),
+      }).pipe(Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ApiKeyRepositoryLive))),
     )
     return c.json({ apiKeys: apiKeys.map(toApiKeyListItemResponse) }, 200)
   })
@@ -200,9 +196,8 @@ export const createApiKeysRoutes = () => {
 
     await Effect.runPromise(
       revokeApiKeyUseCase({ id: ApiKeyId(idParam) }).pipe(
-        Effect.provide(ApiKeyRepositoryLive),
         Effect.provideService(ApiKeyCacheInvalidator, createApiKeyCacheInvalidator(c.var.redis)),
-        Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
+        Effect.provide(withPostgres(c.var.postgresClient, c.var.organization.id, ApiKeyRepositoryLive)),
       ),
     )
     return c.body(null, 204)
