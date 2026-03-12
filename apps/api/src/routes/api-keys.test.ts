@@ -1,6 +1,8 @@
 import { generateId } from "@domain/shared"
+import { postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -29,10 +31,13 @@ const createApiKeyRecord = async (database: InMemoryPostgres, organizationId: st
   const tokenHash = await Effect.runPromise(hashToken(token))
   const encryptedToken = await Effect.runPromise(encrypt(token, TEST_ENCRYPTION_KEY))
 
-  await database.client.query(
-    "INSERT INTO latitude.api_keys (id, organization_id, token, token_hash, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
-    [id, organizationId, encryptedToken, tokenHash, name],
-  )
+  await database.db.insert(postgresSchema.apiKeys).values({
+    id,
+    organizationId,
+    token: encryptedToken,
+    tokenHash,
+    name,
+  })
 
   return { id }
 }
@@ -104,13 +109,12 @@ describe("API Keys Routes Integration", () => {
 
     expect(response.status).toBe(404)
 
-    // Verify the key still exists and is not soft-deleted using parameterized query
-    const result = await database.client.query("SELECT deleted_at FROM latitude.api_keys WHERE id = $1", [
-      tenantBKey.id,
-    ])
+    const rows = await database.db
+      .select({ deletedAt: postgresSchema.apiKeys.deletedAt })
+      .from(postgresSchema.apiKeys)
+      .where(eq(postgresSchema.apiKeys.id, tenantBKey.id))
 
-    expect(result.rows.length).toBe(1)
-    const row = result.rows[0] as { deleted_at: string | null }
-    expect(row.deleted_at).toBeNull()
+    expect(rows.length).toBe(1)
+    expect(rows[0].deletedAt).toBeNull()
   })
 })

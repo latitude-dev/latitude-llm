@@ -96,53 +96,51 @@ const validateApiKey = (
   c: Context,
   token: string,
   options?: AuthMiddlewareOptions,
-): Promise<{ organizationId: string; keyId: string } | null> => {
+): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const redis = c.get("redis")
   const adminClient = options?.adminClient ?? getAdminPostgresClient()
   const touchBuffer = createTouchBuffer(adminClient)
 
-  return Effect.runPromise(
-    Effect.gen(function* () {
-      const startTime = Date.now()
-      const tokenHash = yield* hashToken(token)
+  return Effect.gen(function* () {
+    const startTime = Date.now()
+    const tokenHash = yield* hashToken(token)
 
-      // Try cache first for consistent lookup time (keyed by hash)
-      const cached = yield* getCachedApiKey(redis, tokenHash)
+    // Try cache first for consistent lookup time (keyed by hash)
+    const cached = yield* getCachedApiKey(redis, tokenHash)
 
-      if (cached !== undefined) {
-        // Cache hit - enforce minimum time and return
-        yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-        return cached
-      }
-
-      const apiKeyRepository = yield* ApiKeyRepository
-      const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
-
-      if (Option.isNone(apiKeyOption)) {
-        yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
-        yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-        return null
-      }
-
-      const apiKey = apiKeyOption.value
-
-      const result = {
-        organizationId: apiKey.organizationId,
-        keyId: apiKey.id,
-      }
-
-      // Cache successful validation for 5 minutes (keyed by hash)
-      yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)
-
-      // Use TouchBuffer for batched updates instead of fire-and-forget
-      // This reduces database writes by 90%+ by batching updates
-      touchBuffer.touch(apiKey.id)
-
-      // Enforce minimum time before returning
+    if (cached !== undefined) {
+      // Cache hit - enforce minimum time and return
       yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-      return result
-    }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(adminClient)), Effect.orDie),
-  )
+      return cached
+    }
+
+    const apiKeyRepository = yield* ApiKeyRepository
+    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
+
+    if (Option.isNone(apiKeyOption)) {
+      yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
+      yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+      return null
+    }
+
+    const apiKey = apiKeyOption.value
+
+    const result = {
+      organizationId: apiKey.organizationId,
+      keyId: apiKey.id,
+    }
+
+    // Cache successful validation for 5 minutes (keyed by hash)
+    yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)
+
+    // Use TouchBuffer for batched updates instead of fire-and-forget
+    // This reduces database writes by 90%+ by batching updates
+    touchBuffer.touch(apiKey.id)
+
+    // Enforce minimum time before returning
+    yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+    return result
+  }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(adminClient)), Effect.orDie)
 }
 
 /**
@@ -178,7 +176,7 @@ const authenticateWithApiKey = (
   options?: AuthMiddlewareOptions,
 ): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
-    const result = yield* Effect.promise(() => validateApiKey(c, token, options))
+    const result = yield* validateApiKey(c, token, options)
 
     if (result) {
       const authContext: AuthContext = {

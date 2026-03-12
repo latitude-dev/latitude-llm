@@ -1,4 +1,5 @@
 import { generateId } from "@domain/shared"
+import { postgresSchema } from "@platform/db-postgres"
 import { encrypt, hashToken } from "@repo/utils"
 import { Effect } from "effect"
 import { Hono } from "hono"
@@ -51,31 +52,39 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
   const authApiKeyId = generateId()
   const memberId = generateId()
 
-  // Insert user using parameterized query
-  await database.client.query(
-    "INSERT INTO latitude.user (id, email, name, email_verified, role, banned, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())",
-    [userId, `${userId}@example.com`, "Test User", true, "user", false],
-  )
+  await database.db.insert(postgresSchema.user).values({
+    id: userId,
+    email: `${userId}@example.com`,
+    name: "Test User",
+    emailVerified: true,
+    role: "user",
+    banned: false,
+  })
 
-  // Insert organization using parameterized query
-  await database.client.query(
-    "INSERT INTO latitude.organization (id, name, slug, creator_id, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())",
-    [organizationId, `Organization ${organizationId}`, `org-${organizationId}`, userId],
-  )
+  await database.db.insert(postgresSchema.organization).values({
+    id: organizationId,
+    name: `Organization ${organizationId}`,
+    slug: `org-${organizationId}`,
+    creatorId: userId,
+  })
 
-  // Insert member using parameterized query
-  await database.client.query(
-    "INSERT INTO latitude.member (id, organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4, NOW())",
-    [memberId, organizationId, userId, "owner"],
-  )
+  await database.db.insert(postgresSchema.member).values({
+    id: memberId,
+    organizationId,
+    userId,
+    role: "owner",
+  })
 
-  // Insert API key using parameterized query
   const encryptedToken = await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY))
   const tokenHash = await Effect.runPromise(hashToken(apiKeyToken))
-  await database.client.query(
-    "INSERT INTO latitude.api_keys (id, organization_id, token, token_hash, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
-    [authApiKeyId, organizationId, encryptedToken, tokenHash, "auth-key"],
-  )
+
+  await database.db.insert(postgresSchema.apiKeys).values({
+    id: authApiKeyId,
+    organizationId,
+    token: encryptedToken,
+    tokenHash,
+    name: "auth-key",
+  })
 
   return { organizationId, apiKeyToken, authApiKeyId }
 }

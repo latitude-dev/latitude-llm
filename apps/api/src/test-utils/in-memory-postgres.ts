@@ -1,5 +1,4 @@
 import { fileURLToPath } from "node:url"
-import type { OrganizationId } from "@domain/shared"
 import { PGlite } from "@electric-sql/pglite"
 import { type PostgresClient, type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { drizzle } from "drizzle-orm/pglite"
@@ -22,16 +21,7 @@ const createInMemoryPostgresClient = (postgresDb: PostgresDb): PostgresClient =>
       async (tx) => fn(tx as PostgresDb),
     )
 
-  const withRls = <T>(organizationId: OrganizationId, fn: (txDb: PostgresDb) => Promise<T>): Promise<T> =>
-    transaction(async (txDb) => {
-      if (typeof txDb.execute === "function") {
-        const orgIdStr = organizationId
-        await txDb.execute(`select set_config('app.current_organization_id', '${orgIdStr}', true)`)
-      }
-      return fn(txDb)
-    })
-
-  return unsafeCast<PostgresClient>({ db: postgresDb, transaction, withRls })
+  return unsafeCast<PostgresClient>({ db: postgresDb, transaction })
 }
 
 export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
