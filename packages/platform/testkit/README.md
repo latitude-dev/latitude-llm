@@ -153,7 +153,7 @@ Generates headers for API key authentication.
 
 ```typescript
 const headers = createApiKeyAuthHeaders(apiKey.token);
-// { "X-API-Key": "abc-123-xyz" }
+// { "Authorization": "Bearer abc-123-xyz" }
 ```
 
 #### `createBearerAuthHeaders(token)`
