@@ -1,7 +1,7 @@
 import type { ConflictError, RepositoryError, ValidationError } from "@domain/shared"
 import type { OrganizationId, UserId } from "@domain/shared"
 import { Data, Effect } from "effect"
-import { type Organization, createOrganization } from "../entities/organization.ts"
+import { createOrganization } from "../entities/organization.ts"
 import { OrganizationRepository } from "../ports/organization-repository.ts"
 import { generateUniqueOrganizationSlugUseCase } from "./generate-unique-organization-slug.ts"
 
@@ -35,9 +35,7 @@ export type CreateOrganizationError =
   | OrganizationAlreadyExistsError
   | InvalidOrganizationNameError
 
-export const createOrganizationUseCase = (
-  input: CreateOrganizationInput,
-): Effect.Effect<Organization, CreateOrganizationError, OrganizationRepository> =>
+export const createOrganizationUseCase = (input: CreateOrganizationInput) =>
   Effect.gen(function* () {
     const repository = yield* OrganizationRepository
 

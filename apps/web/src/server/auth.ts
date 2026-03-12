@@ -1,9 +1,10 @@
+import { OrganizationId, UserId } from "@domain/shared"
 import { UnauthorizedError } from "@repo/utils"
 import { ensureSession } from "../domains/sessions/session.functions.ts"
 
 interface AuthenticatedSession {
-  readonly userId: string
-  readonly organizationId: string
+  readonly userId: UserId
+  readonly organizationId: OrganizationId
 }
 
 const getSessionUserId = (session: unknown): string | null => {
@@ -47,5 +48,5 @@ export const requireSession = async (): Promise<AuthenticatedSession> => {
     throw new UnauthorizedError({ httpMessage: "No active organization in session" })
   }
 
-  return { userId, organizationId }
+  return { userId: UserId(userId), organizationId: OrganizationId(organizationId) }
 }

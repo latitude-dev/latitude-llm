@@ -2,10 +2,11 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type { Organization } from "@domain/organizations"
 import type { OrganizationId, UserId } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
-import type { PostgresDb } from "@platform/db-postgres"
+import type { PostgresClient, PostgresDb } from "@platform/db-postgres"
 
 type SharedContextVariables = {
   db: PostgresDb
+  postgresClient: PostgresClient
   redis: RedisClient
   clickhouse: ClickHouseClient
 }
@@ -38,6 +39,7 @@ declare module "hono" {
   interface ContextVariableMap {
     auth?: AuthContext
     db: SharedContextVariables["db"]
+    postgresClient: SharedContextVariables["postgresClient"]
     redis: SharedContextVariables["redis"]
     clickhouse: SharedContextVariables["clickhouse"]
     organization?: Organization

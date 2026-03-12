@@ -1,15 +1,8 @@
 import type { Dataset, DatasetRow } from "@domain/datasets"
-import {
-  DatasetRepository,
-  DatasetRowRepository,
-  createDataset,
-  insertRows,
-  listDatasets,
-  listRows,
-} from "@domain/datasets"
+import { DatasetRepository, createDataset, insertRows, listDatasets, listRows } from "@domain/datasets"
 import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, putInDisk } from "@domain/shared"
-import { createDatasetRowClickHouseRepository } from "@platform/db-clickhouse"
-import { createDatasetPostgresRepository, runCommand } from "@platform/db-postgres"
+import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import Papa from "papaparse"
@@ -134,17 +127,15 @@ export const listDatasetsQuery = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<{ datasets: DatasetRecord[]; total: number }> => {
     const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+    const orgId = OrganizationId(organizationId)
 
-    const result = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        listDatasets({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
-        }).pipe(Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb))),
+    const result = await Effect.runPromise(
+      listDatasets({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 
@@ -164,24 +155,19 @@ export const listRowsQuery = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }): Promise<{ rows: DatasetRowRecord[]; total: number }> => {
     const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+    const orgId = OrganizationId(organizationId)
 
-    const result = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        listRows({
-          organizationId: OrganizationId(organizationId),
-          datasetId: DatasetId(data.datasetId),
-          ...(data.versionId ? { versionId: DatasetVersionId(data.versionId) } : {}),
-          ...(data.search ? { search: data.search } : {}),
-          limit: data.limit,
-          offset: data.offset,
-        }).pipe(
-          Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb)),
-          Effect.provideService(DatasetRowRepository, createDatasetRowClickHouseRepository(getClickhouseClient())),
-        ),
+    const result = await Effect.runPromise(
+      listRows({
+        organizationId: orgId,
+        datasetId: DatasetId(data.datasetId),
+        ...(data.versionId ? { versionId: DatasetVersionId(data.versionId) } : {}),
+        ...(data.search ? { search: data.search } : {}),
+        limit: data.limit,
+        offset: data.offset,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 
@@ -193,18 +179,16 @@ export const createDatasetMutation = createServerFn({ method: "POST" })
   .inputValidator(z.object({ projectId: z.string(), name: z.string().min(1) }))
   .handler(async ({ data }): Promise<DatasetRecord> => {
     const { organizationId } = await requireSession()
-    const { db } = getPostgresClient()
+    const orgId = OrganizationId(organizationId)
 
-    const dataset = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        createDataset({
-          organizationId: OrganizationId(organizationId),
-          projectId: ProjectId(data.projectId),
-          name: data.name,
-        }).pipe(Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb))),
+    const dataset = await Effect.runPromise(
+      createDataset({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        name: data.name,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 
@@ -219,6 +203,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
   })
   .handler(async ({ data: formData }): Promise<{ version: number; rowCount: number }> => {
     const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
 
     const file = formData.get("file")
     const datasetId = formData.get("datasetId")
@@ -240,24 +225,17 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
     const fileKey = await Effect.runPromise(
       putInDisk(getStorageDisk(), {
         namespace: "datasets",
-        organizationId: OrganizationId(organizationId),
+        organizationId: orgId,
         projectId: ProjectId(projectId),
         content,
       }),
     )
 
-    const { db } = getPostgresClient()
-
-    await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* DatasetRepository
-          return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
-        }).pipe(Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb))),
-      ),
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DatasetRepository
+        return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
     )
 
     const parsed = Papa.parse<Record<string, string>>(content, { header: true, skipEmptyLines: true })
@@ -267,20 +245,15 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
       return { version: 0, rowCount: 0 }
     }
 
-    const result = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) =>
-      Effect.runPromise(
-        insertRows({
-          organizationId: OrganizationId(organizationId),
-          datasetId: DatasetId(datasetId),
-          rows: mappedRows,
-          source: "csv",
-        }).pipe(
-          Effect.provideService(DatasetRepository, createDatasetPostgresRepository(txDb)),
-          Effect.provideService(DatasetRowRepository, createDatasetRowClickHouseRepository(getClickhouseClient())),
-        ),
+    const result = await Effect.runPromise(
+      insertRows({
+        organizationId: orgId,
+        datasetId: DatasetId(datasetId),
+        rows: mappedRows,
+        source: "csv",
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 

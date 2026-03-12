@@ -1,22 +1,20 @@
-import type { Organization } from "@domain/organizations"
+import { OrganizationRepository } from "@domain/organizations"
 import {
   NotFoundError,
   OrganizationId,
   type OrganizationId as OrganizationIdType,
+  SqlClient,
+  type SqlClientShape,
   SubscriptionId,
   UserId,
   type UserId as UserIdType,
-  toRepositoryError,
 } from "@domain/shared"
 import { eq } from "drizzle-orm"
-import { Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
-import * as schema from "../schema/index.ts"
+import { Effect, Layer } from "effect"
+import type { Operator } from "../client.ts"
+import { member, organization } from "../schema/index.ts"
 
-/**
- * Maps a database organization row to a domain Organization entity.
- */
-const toDomainOrganization = (row: typeof schema.organization.$inferSelect): Organization => ({
+const toDomainOrganization = (row: typeof organization.$inferSelect) => ({
   id: OrganizationId(row.id),
   name: row.name,
   slug: row.slug,
@@ -29,10 +27,16 @@ const toDomainOrganization = (row: typeof schema.organization.$inferSelect): Org
   updatedAt: row.updatedAt,
 })
 
-/**
- * Maps a domain Organization entity to a database insert row.
- */
-const toInsertRow = (org: Organization): typeof schema.organization.$inferInsert => ({
+const toOrganizationInsertRow = (org: {
+  id: string
+  name: string
+  slug: string
+  logo: string | null
+  metadata: string | null
+  creatorId: string | null
+  currentSubscriptionId: string | null
+  stripeCustomerId: string | null
+}) => ({
   id: org.id,
   name: org.name,
   slug: org.slug,
@@ -41,87 +45,84 @@ const toInsertRow = (org: Organization): typeof schema.organization.$inferInsert
   creatorId: org.creatorId,
   currentSubscriptionId: org.currentSubscriptionId,
   stripeCustomerId: org.stripeCustomerId,
-  // createdAt and updatedAt are set by defaultNow()
 })
 
 /**
- * Creates a Postgres implementation of the OrganizationRepository port.
+ * Live layer that pulls db from SqlClient
+ * Organization table doesn't have organization_id field, so it doesn't need RLS
  */
-export const createOrganizationPostgresRepository = (db: PostgresDb) => ({
-  findById: (id: OrganizationIdType) =>
-    Effect.gen(function* () {
-      const [result] = yield* Effect.tryPromise({
-        try: () => db.select().from(schema.organization).where(eq(schema.organization.id, id)).limit(1),
-        catch: (error) => toRepositoryError(error, "findById"),
-      })
+export const OrganizationRepositoryLive = Layer.effect(
+  OrganizationRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-      if (!result) {
-        return yield* new NotFoundError({ entity: "Organization", id })
-      }
-
-      return toDomainOrganization(result)
-    }),
-
-  findByUserId: (userId: UserIdType) =>
-    Effect.gen(function* () {
-      const results = yield* Effect.tryPromise({
-        try: async () => {
-          return db
-            .select({ organization: schema.organization })
-            .from(schema.organization)
-            .innerJoin(schema.member, eq(schema.member.organizationId, schema.organization.id))
-            .where(eq(schema.member.userId, userId))
-        },
-        catch: (error) => toRepositoryError(error, "findByUserId"),
-      })
-
-      return results.map(({ organization }) => toDomainOrganization(organization))
-    }),
-
-  save: (organization: Organization) =>
-    Effect.gen(function* () {
-      const row = toInsertRow(organization)
-
-      yield* Effect.tryPromise({
-        try: () =>
-          db
-            .insert(schema.organization)
-            .values(row)
-            .onConflictDoUpdate({
-              target: schema.organization.id,
-              set: {
-                name: row.name,
-                slug: row.slug,
-                logo: row.logo,
-                metadata: row.metadata,
-                creatorId: row.creatorId,
-                currentSubscriptionId: row.currentSubscriptionId,
-                stripeCustomerId: row.stripeCustomerId,
-                updatedAt: new Date(),
-              },
+    return {
+      findById: (id: OrganizationIdType) =>
+        sqlClient
+          .query((db) => db.select().from(organization).where(eq(organization.id, id)).limit(1))
+          .pipe(
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "Organization", id }))
+              }
+              return Effect.succeed(toDomainOrganization(result))
             }),
-        catch: (error) => toRepositoryError(error, "save"),
-      })
-    }),
+          ),
 
-  delete: (id: OrganizationIdType) =>
-    Effect.tryPromise({
-      try: () => db.delete(schema.organization).where(eq(schema.organization.id, id)),
-      catch: (error) => toRepositoryError(error, "delete"),
-    }),
+      findByUserId: (userId: UserIdType) =>
+        sqlClient
+          .query((db) =>
+            db
+              .select({ organization })
+              .from(organization)
+              .innerJoin(member, eq(member.organizationId, organization.id))
+              .where(eq(member.userId, userId)),
+          )
+          .pipe(Effect.map((results) => results.map(({ organization: org }) => toDomainOrganization(org)))),
 
-  existsBySlug: (slug: string) =>
-    Effect.gen(function* () {
-      const [result] = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select({ id: schema.organization.id })
-            .from(schema.organization)
-            .where(eq(schema.organization.slug, slug))
-            .limit(1),
-        catch: (error) => toRepositoryError(error, "existsBySlug"),
-      })
+      save: (org: {
+        id: string
+        name: string
+        slug: string
+        logo: string | null
+        metadata: string | null
+        creatorId: string | null
+        currentSubscriptionId: string | null
+        stripeCustomerId: string | null
+      }) =>
+        Effect.gen(function* () {
+          const row = toOrganizationInsertRow(org)
 
-      return result !== undefined
-    }),
-})
+          yield* sqlClient.query((db) =>
+            db
+              .insert(organization)
+              .values(row)
+              .onConflictDoUpdate({
+                target: organization.id,
+                set: {
+                  name: row.name,
+                  slug: row.slug,
+                  logo: row.logo,
+                  metadata: row.metadata,
+                  creatorId: row.creatorId,
+                  currentSubscriptionId: row.currentSubscriptionId,
+                  stripeCustomerId: row.stripeCustomerId,
+                  updatedAt: new Date(),
+                },
+              }),
+          )
+        }),
+
+      delete: (id: OrganizationIdType) =>
+        sqlClient.query((db) => db.delete(organization).where(eq(organization.id, id))),
+
+      existsBySlug: (slug: string) =>
+        sqlClient
+          .query((db) =>
+            db.select({ id: organization.id }).from(organization).where(eq(organization.slug, slug)).limit(1),
+          )
+          .pipe(Effect.map((results) => results.length > 0)),
+    }
+  }),
+)

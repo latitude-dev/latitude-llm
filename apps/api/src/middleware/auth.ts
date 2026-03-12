@@ -1,5 +1,7 @@
+import { ApiKeyRepository } from "@domain/api-keys"
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
-import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import type { PostgresClient } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
@@ -96,9 +98,8 @@ const validateApiKey = (
   options?: AuthMiddlewareOptions,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const redis = c.get("redis")
-  const adminDb = options?.adminDb ?? getAdminPostgresClient().db
-  const unscopedApiKeyRepository = createApiKeyPostgresRepository(adminDb)
-  const touchBuffer = createTouchBuffer(adminDb)
+  const adminClient = options?.adminClient ?? getAdminPostgresClient()
+  const touchBuffer = createTouchBuffer(adminClient)
 
   return Effect.gen(function* () {
     const startTime = Date.now()
@@ -113,7 +114,8 @@ const validateApiKey = (
       return cached
     }
 
-    const apiKeyOption = yield* Effect.option(unscopedApiKeyRepository.findByTokenHash(tokenHash))
+    const apiKeyRepository = yield* ApiKeyRepository
+    const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
 
     if (Option.isNone(apiKeyOption)) {
       yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
@@ -138,7 +140,7 @@ const validateApiKey = (
     // Enforce minimum time before returning
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
     return result
-  }).pipe(Effect.orDie)
+  }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(adminClient)), Effect.orDie)
 }
 
 /**
@@ -191,7 +193,7 @@ const authenticateWithApiKey = (
 }
 
 /**
- * Authenticate via API key from the Authorization: Bearer header.
+ * Main authentication effect that validates API key from Authorization header.
  */
 const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
@@ -219,7 +221,7 @@ const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effec
  * Public routes should be excluded from this middleware.
  */
 interface AuthMiddlewareOptions {
-  readonly adminDb?: PostgresDb
+  readonly adminClient?: PostgresClient
 }
 
 export const createAuthMiddleware = (options?: AuthMiddlewareOptions): MiddlewareHandler => {

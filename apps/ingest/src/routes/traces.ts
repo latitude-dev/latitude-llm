@@ -1,4 +1,6 @@
-import { createSpanClickhouseRepository } from "@platform/db-clickhouse"
+import { OrganizationId } from "@domain/shared"
+import { SpanRepository } from "@domain/spans"
+import { ChSqlClientLive, SpanRepositoryLive } from "@platform/db-clickhouse"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { getClickhouseClient } from "../clients.ts"
@@ -36,8 +38,13 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     })
 
     if (spans.length > 0) {
-      const spanRepository = createSpanClickhouseRepository(getClickhouseClient())
-      await Effect.runPromise(spanRepository.insert(spans))
+      const orgId = OrganizationId(c.get("organizationId"))
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* SpanRepository
+          yield* repo.insert(spans)
+        }).pipe(Effect.provide(SpanRepositoryLive), Effect.provide(ChSqlClientLive(getClickhouseClient(), orgId))),
+      )
     }
 
     return c.json({})

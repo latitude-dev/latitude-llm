@@ -21,6 +21,7 @@
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@domain/users": "workspace:*",
     "@platform/auth-better": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
@@ -46,6 +47,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
     "@tailwindcss/postcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/papaparse": "^5.5.2",

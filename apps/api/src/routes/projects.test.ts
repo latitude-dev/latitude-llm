@@ -18,11 +18,11 @@ interface ProjectsRoutesTestContext extends TestContext {
   database: InMemoryPostgres
 }
 
-const createProjectRecord = async (db: InMemoryPostgres["db"], organizationId: string, name: string) => {
+const createProjectRecord = async (database: InMemoryPostgres, organizationId: string, name: string) => {
   const id = generateId()
   const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${id.slice(0, 6)}`
 
-  await db.insert(postgresSchema.projects).values({
+  await database.db.insert(postgresSchema.projects).values({
     id,
     organizationId,
     name,
@@ -60,11 +60,11 @@ describe("Projects Routes Integration", () => {
     app,
     database,
   }) => {
-    const tenantA = await createTenantSetup(database.db)
-    const tenantB = await createTenantSetup(database.db)
+    const tenantA = await createTenantSetup(database)
+    const tenantB = await createTenantSetup(database)
 
-    const tenantAProject = await createProjectRecord(database.db, tenantA.organizationId, "Tenant A Project")
-    const tenantBProject = await createProjectRecord(database.db, tenantB.organizationId, "Tenant B Project")
+    const tenantAProject = await createProjectRecord(database, tenantA.organizationId, "Tenant A Project")
+    const tenantBProject = await createProjectRecord(database, tenantB.organizationId, "Tenant B Project")
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/projects`, {
@@ -84,9 +84,9 @@ describe("Projects Routes Integration", () => {
     app,
     database,
   }) => {
-    const tenantA = await createTenantSetup(database.db)
-    const tenantB = await createTenantSetup(database.db)
-    const tenantBProject = await createProjectRecord(database.db, tenantB.organizationId, "Tenant B Project")
+    const tenantA = await createTenantSetup(database)
+    const tenantB = await createTenantSetup(database)
+    const tenantBProject = await createProjectRecord(database, tenantB.organizationId, "Tenant B Project")
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/projects/${tenantBProject.id}`, {
@@ -95,15 +95,14 @@ describe("Projects Routes Integration", () => {
       }),
     )
 
-    expect(response.status).toBe(204)
+    expect(response.status).toBe(404)
 
-    const [projectAfterDelete] = await database.db
+    const rows = await database.db
       .select({ deletedAt: postgresSchema.projects.deletedAt })
       .from(postgresSchema.projects)
       .where(eq(postgresSchema.projects.id, tenantBProject.id))
-      .limit(1)
 
-    expect(projectAfterDelete).toBeDefined()
-    expect(projectAfterDelete?.deletedAt).toBeNull()
+    expect(rows.length).toBe(1)
+    expect(rows[0].deletedAt).toBeNull()
   })
 })

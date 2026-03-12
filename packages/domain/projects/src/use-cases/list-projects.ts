@@ -12,9 +12,8 @@ export const listAllProjectsUseCase = (
   input: ListAllProjectsInput,
 ): Effect.Effect<readonly Project[], RepositoryError, ProjectRepository> =>
   Effect.gen(function* () {
-    const repository = yield* ProjectRepository
-    if (input.includeDeleted) {
-      return yield* repository.findAllIncludingDeleted()
-    }
-    return yield* repository.findAll()
+    const repo = yield* ProjectRepository
+    if (input.includeDeleted) return yield* repo.findAllIncludingDeleted()
+
+    return yield* repo.findAll()
   })

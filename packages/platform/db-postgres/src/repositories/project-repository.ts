@@ -1,17 +1,19 @@
+import { ProjectRepository } from "@domain/projects"
 import type { Project } from "@domain/projects"
 import {
   NotFoundError,
   OrganizationId,
   ProjectId,
   type ProjectId as ProjectIdType,
-  toRepositoryError,
+  SqlClient,
+  type SqlClientShape,
 } from "@domain/shared"
 import { and, eq, isNull } from "drizzle-orm"
-import { Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
-import * as schema from "../schema/index.ts"
+import { Effect, Layer } from "effect"
+import type { Operator } from "../client.ts"
+import { projects } from "../schema/index.ts"
 
-const toDomainProject = (row: typeof schema.projects.$inferSelect): Project => ({
+const toDomainProject = (row: typeof projects.$inferSelect): Project => ({
   id: ProjectId(row.id),
   organizationId: OrganizationId(row.organizationId),
   name: row.name,
@@ -23,7 +25,7 @@ const toDomainProject = (row: typeof schema.projects.$inferSelect): Project => (
   updatedAt: row.updatedAt,
 })
 
-const toInsertRow = (project: Project): typeof schema.projects.$inferInsert => ({
+const toInsertRow = (project: Project): typeof projects.$inferInsert => ({
   id: project.id,
   organizationId: project.organizationId,
   name: project.name,
@@ -32,61 +34,51 @@ const toInsertRow = (project: Project): typeof schema.projects.$inferInsert => (
 })
 
 /**
- * Expects a db handle that already has RLS context set (via runCommand at the call site).
- * Callers own the transaction boundary to preserve atomicity across multiple repo ops.
+ * Live layer that pulls db from SqlClient
  */
-export const createProjectPostgresRepository = (db: PostgresDb) => {
-  return {
-    findById: (id: ProjectIdType) =>
-      Effect.gen(function* () {
-        const [result] = yield* Effect.tryPromise({
-          try: () =>
+export const ProjectRepositoryLive = Layer.effect(
+  ProjectRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+
+    return {
+      findById: (id: ProjectIdType) =>
+        sqlClient
+          .query((db) =>
             db
               .select()
-              .from(schema.projects)
-              .where(and(eq(schema.projects.id, id), isNull(schema.projects.deletedAt)))
+              .from(projects)
+              .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
               .limit(1),
-          catch: (error) => toRepositoryError(error, "findById"),
-        })
+          )
+          .pipe(
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "Project", id }))
+              }
+              return Effect.succeed(toDomainProject(result))
+            }),
+          ),
 
-        if (!result) {
-          return yield* new NotFoundError({ entity: "Project", id })
-        }
+      findAll: () =>
+        sqlClient
+          .query((db) => db.select().from(projects).where(isNull(projects.deletedAt)))
+          .pipe(Effect.map((results) => results.map(toDomainProject))),
 
-        return toDomainProject(result)
-      }),
+      findAllIncludingDeleted: () =>
+        sqlClient.query((db) => db.select().from(projects)).pipe(Effect.map((results) => results.map(toDomainProject))),
 
-    findAll: () =>
-      Effect.gen(function* () {
-        const results = yield* Effect.tryPromise({
-          try: () => db.select().from(schema.projects).where(isNull(schema.projects.deletedAt)),
-          catch: (error) => toRepositoryError(error, "findAll"),
-        })
+      save: (project: Project) =>
+        Effect.gen(function* () {
+          const row = toInsertRow(project)
 
-        return results.map(toDomainProject)
-      }),
-
-    findAllIncludingDeleted: () =>
-      Effect.gen(function* () {
-        const results = yield* Effect.tryPromise({
-          try: () => db.select().from(schema.projects),
-          catch: (error) => toRepositoryError(error, "findAllIncludingDeleted"),
-        })
-
-        return results.map(toDomainProject)
-      }),
-
-    save: (project: Project) =>
-      Effect.gen(function* () {
-        const row = toInsertRow(project)
-
-        yield* Effect.tryPromise({
-          try: () =>
+          yield* sqlClient.query((db) =>
             db
-              .insert(schema.projects)
+              .insert(projects)
               .values(row)
               .onConflictDoUpdate({
-                target: schema.projects.id,
+                target: projects.id,
                 set: {
                   name: row.name,
                   slug: row.slug,
@@ -94,54 +86,50 @@ export const createProjectPostgresRepository = (db: PostgresDb) => {
                   updatedAt: new Date(),
                 },
               }),
-          catch: (error) => toRepositoryError(error, "save"),
-        })
-      }),
+          )
+        }),
 
-    softDelete: (id: ProjectIdType) =>
-      Effect.tryPromise({
-        try: () =>
-          db
-            .update(schema.projects)
-            .set({ deletedAt: new Date(), updatedAt: new Date() })
-            .where(eq(schema.projects.id, id)),
-        catch: (error) => toRepositoryError(error, "softDelete"),
-      }),
-
-    hardDelete: (id: ProjectIdType) =>
-      Effect.tryPromise({
-        try: () => db.delete(schema.projects).where(eq(schema.projects.id, id)),
-        catch: (error) => toRepositoryError(error, "hardDelete"),
-      }),
-
-    existsByName: (name: string) =>
-      Effect.gen(function* () {
-        const [result] = yield* Effect.tryPromise({
-          try: () =>
+      softDelete: (id: ProjectIdType) =>
+        sqlClient
+          .query((db) =>
             db
-              .select({ id: schema.projects.id })
-              .from(schema.projects)
-              .where(and(eq(schema.projects.name, name), isNull(schema.projects.deletedAt)))
-              .limit(1),
-          catch: (error) => toRepositoryError(error, "existsByName"),
-        })
+              .update(projects)
+              .set({ deletedAt: new Date(), updatedAt: new Date() })
+              .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
+              .returning({ id: projects.id }),
+          )
+          .pipe(
+            Effect.flatMap((results) => {
+              if (results.length === 0) {
+                return Effect.fail(new NotFoundError({ entity: "Project", id }))
+              }
+              return Effect.void
+            }),
+          ),
 
-        return result !== undefined
-      }),
+      hardDelete: (id: ProjectIdType) => sqlClient.query((db) => db.delete(projects).where(eq(projects.id, id))),
 
-    existsBySlug: (slug: string) =>
-      Effect.gen(function* () {
-        const [result] = yield* Effect.tryPromise({
-          try: () =>
+      existsByName: (name: string) =>
+        sqlClient
+          .query((db) =>
             db
-              .select({ id: schema.projects.id })
-              .from(schema.projects)
-              .where(and(eq(schema.projects.slug, slug), isNull(schema.projects.deletedAt)))
+              .select({ id: projects.id })
+              .from(projects)
+              .where(and(eq(projects.name, name), isNull(projects.deletedAt)))
               .limit(1),
-          catch: (error) => toRepositoryError(error, "existsBySlug"),
-        })
+          )
+          .pipe(Effect.map((results) => results[0] !== undefined)),
 
-        return result !== undefined
-      }),
-  }
-}
+      existsBySlug: (slug: string) =>
+        sqlClient
+          .query((db) =>
+            db
+              .select({ id: projects.id })
+              .from(projects)
+              .where(and(eq(projects.slug, slug), isNull(projects.deletedAt)))
+              .limit(1),
+          )
+          .pipe(Effect.map((results) => results[0] !== undefined)),
+    }
+  }),
+)

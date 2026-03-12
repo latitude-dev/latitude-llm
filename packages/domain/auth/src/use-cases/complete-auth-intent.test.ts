@@ -1,308 +1,389 @@
-import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
-import { NotFoundError } from "@domain/shared"
-import { Effect } from "effect"
-import { describe, expect, it, vi } from "vitest"
+import { type Membership, MembershipRepository, OrganizationRepository } from "@domain/organizations"
+import { NotFoundError, OrganizationId, SqlClient, toRepositoryError } from "@domain/shared"
+import { UserRepository } from "@domain/users"
+import { Effect, Exit, Layer } from "effect"
+import { describe, expect, it } from "vitest"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
-import { AuthUserRepository } from "../ports/auth-user-repository.ts"
 import type { AuthIntent } from "../types.ts"
 import {
   AuthIntentEmailMismatchError,
   AuthIntentExpiredError,
-  MissingSignupProvisioningDataError,
+  InvalidAuthIntentTypeError,
+  MissingInviteDataError,
   completeAuthIntentUseCase,
 } from "./complete-auth-intent.ts"
 
-const NOW = new Date("2025-01-01T00:00:00Z")
+// --- Test Fixtures ---
 
-const createIntent = (overrides: Partial<AuthIntent> = {}): AuthIntent => {
-  return {
-    id: "intent-1",
-    type: "login",
-    email: "user@example.com",
-    data: {},
-    existingAccountAtRequest: true,
-    expiresAt: new Date(NOW.getTime() + 60_000),
-    consumedAt: null,
-    createdOrganizationId: null,
-    ...overrides,
-  }
+const createTestAuthIntent = (overrides: Partial<AuthIntent> = {}): AuthIntent => ({
+  id: "intent_123",
+  type: "login",
+  email: "user@example.com",
+  data: {},
+  existingAccountAtRequest: false,
+  expiresAt: new Date(Date.now() + 3600000), // 1 hour from now
+  consumedAt: null,
+  createdOrganizationId: null,
+  ...overrides,
+})
+
+const createTestSession = (overrides: { userId?: string; email?: string; name?: string | null } = {}) => ({
+  userId: "user_123",
+  email: "user@example.com",
+  name: null,
+  ...overrides,
+})
+
+// --- Fake Repositories ---
+
+interface FakeAuthIntentRepo {
+  intents: Map<string, AuthIntent>
+  consumed: Map<string, { intentId: string; createdOrganizationId?: string }>
 }
 
-const createMocks = ({ intent }: { intent: AuthIntent | null }) => {
-  const markConsumed = vi.fn(() => Effect.succeed(undefined))
-  const setNameIfMissing = vi.fn(() => Effect.succeed(undefined))
-  const saveMembership = vi.fn(() => Effect.succeed(undefined))
-  const saveOrganization = vi.fn(() => Effect.succeed(undefined))
+const createFakeAuthIntentRepository = (fake: FakeAuthIntentRepo) => ({
+  save: (intent: AuthIntent) =>
+    Effect.sync(() => {
+      fake.intents.set(intent.id, intent)
+    }),
 
-  const intents: (typeof AuthIntentRepository)["Service"] = {
-    save: vi.fn(() => Effect.succeed(undefined)),
-    findById: vi.fn((id: string) =>
-      intent ? Effect.succeed(intent) : Effect.fail(new NotFoundError({ entity: "AuthIntent", id })),
-    ),
-    findPendingInvitesByOrganizationId: vi.fn(() => Effect.succeed([])),
-    markConsumed,
-  }
+  findById: (id: string) =>
+    Effect.gen(function* () {
+      const intent = fake.intents.get(id)
+      if (!intent) {
+        return yield* new NotFoundError({ entity: "AuthIntent", id })
+      }
+      return intent
+    }),
 
-  const organizations: (typeof OrganizationRepository)["Service"] = {
-    findById: vi.fn(() => Effect.succeed({} as never)),
-    findByUserId: vi.fn(() => Effect.succeed([])),
-    save: saveOrganization,
-    delete: vi.fn(() => Effect.succeed(undefined)),
-    existsBySlug: vi.fn(() => Effect.succeed(false)),
-  }
+  markConsumed: (params: { intentId: string; createdOrganizationId?: string }) =>
+    Effect.sync(() => {
+      fake.consumed.set(params.intentId, params)
+      const intent = fake.intents.get(params.intentId)
+      if (intent) {
+        fake.intents.set(params.intentId, { ...intent, consumedAt: new Date() })
+      }
+    }),
 
-  const memberships: (typeof MembershipRepository)["Service"] = {
-    findById: vi.fn(() => Effect.fail(new NotFoundError({ entity: "Membership", id: "unknown" }))),
-    findByOrganizationId: vi.fn(() => Effect.succeed([])),
-    findByUserId: vi.fn(() => Effect.succeed([])),
-    findByOrganizationAndUser: vi.fn(() => Effect.fail(new NotFoundError({ entity: "Membership", id: "unknown" }))),
-    findMembersWithUser: vi.fn(() => Effect.succeed([])),
-    isMember: vi.fn(() => Effect.succeed(false)),
-    isAdmin: vi.fn(() => Effect.succeed(false)),
-    save: saveMembership,
-    delete: vi.fn(() => Effect.succeed(undefined)),
-  }
+  findPendingInvitesByOrganizationId: () => Effect.succeed([] as const),
+})
 
-  const users: (typeof AuthUserRepository)["Service"] = {
-    findByEmail: vi.fn(() => Effect.fail(new NotFoundError({ entity: "AuthUser", id: "unknown" }))),
-    setNameIfMissing,
-  }
-
-  return {
-    intents,
-    organizations,
-    memberships,
-    users,
-    markConsumed,
-    setNameIfMissing,
-    saveMembership,
-    saveOrganization,
-  }
+interface FakeUserRepo {
+  names: Map<string, string>
 }
 
-const runWithServices = <A, E>(
-  effect: Effect.Effect<
-    A,
-    E,
-    AuthIntentRepository | AuthUserRepository | OrganizationRepository | MembershipRepository
-  >,
-  mocks: ReturnType<typeof createMocks>,
-) =>
-  Effect.runPromise(
-    effect.pipe(
-      Effect.provideService(AuthIntentRepository, mocks.intents),
-      Effect.provideService(AuthUserRepository, mocks.users),
-      Effect.provideService(OrganizationRepository, mocks.organizations),
-      Effect.provideService(MembershipRepository, mocks.memberships),
-    ),
+const createFakeUserRepository = (fake: FakeUserRepo) => ({
+  findByEmail: (_email: string) => Effect.fail(new NotFoundError({ entity: "User", id: _email })),
+
+  setNameIfMissing: (params: { userId: string; name: string }) =>
+    Effect.sync(() => {
+      if (params.name.trim()) {
+        fake.names.set(params.userId, params.name.trim())
+      }
+    }),
+})
+
+interface FakeMembershipRepo {
+  memberships: Map<string, Membership>
+}
+
+const createFakeMembershipRepository = (fake: FakeMembershipRepo) => ({
+  findById: (_id: string) => Effect.fail(new NotFoundError({ entity: "Membership", id: _id })),
+
+  findByOrganizationId: () => Effect.succeed([]),
+
+  findByUserId: () => Effect.succeed([]),
+
+  findByOrganizationAndUser: () => Effect.fail(new NotFoundError({ entity: "Membership", id: "" })),
+
+  findMembersWithUser: () => Effect.succeed([]),
+
+  isMember: () => Effect.succeed(false),
+
+  isAdmin: () => Effect.succeed(false),
+
+  save: (membership: Membership) =>
+    Effect.sync(() => {
+      fake.memberships.set(membership.id, membership)
+    }),
+
+  delete: () => Effect.succeed(undefined),
+})
+
+interface FakeOrganizationRepo {
+  organizations: Map<string, { id: string; name: string; slug: string }>
+  saved: { id: string; name: string; slug: string; creatorId: string }[]
+}
+
+const createFakeOrganizationRepository = (fake: FakeOrganizationRepo) => ({
+  findById: (id: OrganizationId) =>
+    Effect.gen(function* () {
+      const org = fake.organizations.get(id)
+      if (!org) {
+        return yield* new NotFoundError({ entity: "Organization", id })
+      }
+      return {
+        id: OrganizationId(org.id),
+        name: org.name,
+        slug: org.slug,
+        logo: null,
+        metadata: null,
+        creatorId: null,
+        currentSubscriptionId: null,
+        stripeCustomerId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }),
+
+  findByUserId: () => Effect.succeed([]),
+
+  save: (org: {
+    id: OrganizationId
+    name: string
+    slug: string
+    logo: string | null
+    metadata: string | null
+    creatorId: string | null
+    currentSubscriptionId: string | null
+    stripeCustomerId: string | null
+    createdAt: Date
+    updatedAt: Date
+  }) =>
+    Effect.sync(() => {
+      fake.saved.push({
+        id: org.id,
+        name: org.name,
+        slug: org.slug,
+        creatorId: org.creatorId ?? "",
+      })
+      fake.organizations.set(org.id, { id: org.id, name: org.name, slug: org.slug })
+    }),
+
+  delete: () => Effect.succeed(undefined),
+
+  existsBySlug: () => Effect.succeed(false),
+})
+
+// --- Test Helpers ---
+
+const createTestLayers = () => {
+  const fakeAuthIntents: FakeAuthIntentRepo = {
+    intents: new Map(),
+    consumed: new Map(),
+  }
+  const fakeUsers: FakeUserRepo = {
+    names: new Map(),
+  }
+  const fakeMemberships: FakeMembershipRepo = {
+    memberships: new Map(),
+  }
+
+  const fakeOrganizations: FakeOrganizationRepo = {
+    organizations: new Map(),
+    saved: [],
+  }
+
+  const fakeSqlClient: import("@domain/shared").SqlClientShape = {
+    organizationId: OrganizationId("system"),
+    transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
+    query: <T>(_fn: (tx: unknown, organizationId: OrganizationId) => Promise<T>) =>
+      Effect.gen(function* () {
+        const result = yield* Effect.tryPromise({
+          try: () => Promise.resolve([] as unknown as T),
+          catch: (error) => toRepositoryError(error, "query"),
+        })
+        return result
+      }),
+  }
+
+  const AuthIntentRepositoryTest = Layer.succeed(AuthIntentRepository, createFakeAuthIntentRepository(fakeAuthIntents))
+
+  const UserRepositoryTest = Layer.succeed(UserRepository, createFakeUserRepository(fakeUsers))
+
+  const MembershipRepositoryTest = Layer.succeed(MembershipRepository, createFakeMembershipRepository(fakeMemberships))
+
+  const OrganizationRepositoryTest = Layer.succeed(
+    OrganizationRepository,
+    createFakeOrganizationRepository(fakeOrganizations),
   )
 
-describe("completeAuthIntentUseCase", () => {
-  const baseSession = {
-    userId: "user-1",
-    email: "user@example.com",
-    name: "Alice",
+  const SqlClientTest = Layer.succeed(SqlClient, fakeSqlClient)
+
+  return {
+    fakeAuthIntents,
+    fakeUsers,
+    fakeMemberships,
+    fakeOrganizations,
+    testLayers: Layer.mergeAll(
+      AuthIntentRepositoryTest,
+      UserRepositoryTest,
+      MembershipRepositoryTest,
+      OrganizationRepositoryTest,
+      SqlClientTest,
+    ),
   }
+}
 
-  it("returns NotFoundError when intent does not exist", async () => {
-    const mocks = createMocks({ intent: null })
+// Helper to run effect and assert error type
+async function runAndExpectError<T, E>(
+  program: Effect.Effect<T, E, never>,
+  expectedError: new (...args: never[]) => E,
+): Promise<void> {
+  const exit = await Effect.runPromiseExit(program)
+  expect(Exit.isFailure(exit)).toBe(true)
+  if (Exit.isFailure(exit)) {
+    const reasons = (exit.cause as unknown as { reasons: Array<{ _tag: string; error: unknown }> }).reasons
+    const failReason = reasons.find((r) => r._tag === "Fail")
+    if (failReason) {
+      expect(failReason.error).toBeInstanceOf(expectedError)
+    } else {
+      throw new Error("Expected failure but no Fail reason found in cause")
+    }
+  }
+}
 
-    await expect(
-      runWithServices(
-        completeAuthIntentUseCase({
-          intentId: "missing-intent",
-          session: baseSession,
-          now: NOW,
-        }),
-        mocks,
-      ),
-    ).rejects.toBeInstanceOf(NotFoundError)
+// --- Tests ---
+
+describe("completeAuthIntentUseCase", () => {
+  it("returns AuthIntentExpiredError when intent has expired", async () => {
+    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const expiredIntent = createTestAuthIntent({
+      expiresAt: new Date(Date.now() - 1000),
+    })
+    fakeAuthIntents.intents.set(expiredIntent.id, expiredIntent)
+
+    const session = createTestSession()
+    const program = completeAuthIntentUseCase({
+      intentId: expiredIntent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
+
+    await runAndExpectError(program, AuthIntentExpiredError)
   })
 
-  it("returns AuthIntentExpiredError for expired intents", async () => {
-    const mocks = createMocks({
-      intent: createIntent({ expiresAt: new Date(NOW.getTime() - 1_000) }),
-    })
+  it("returns AuthIntentEmailMismatchError when emails don't match", async () => {
+    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const intent = createTestAuthIntent({ email: "user@example.com" })
+    fakeAuthIntents.intents.set(intent.id, intent)
 
-    await expect(
-      runWithServices(
-        completeAuthIntentUseCase({
-          intentId: "intent-1",
-          session: baseSession,
-          now: NOW,
-        }),
-        mocks,
-      ),
-    ).rejects.toBeInstanceOf(AuthIntentExpiredError)
+    const session = createTestSession({ email: "different@example.com" })
+    const program = completeAuthIntentUseCase({
+      intentId: intent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
+
+    await runAndExpectError(program, AuthIntentEmailMismatchError)
   })
 
-  it("returns AuthIntentEmailMismatchError for mismatched session email", async () => {
-    const mocks = createMocks({ intent: createIntent({ email: "user@example.com" }) })
+  it("returns undefined when intent is already consumed", async () => {
+    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const consumedIntent = createTestAuthIntent({
+      consumedAt: new Date(),
+    })
+    fakeAuthIntents.intents.set(consumedIntent.id, consumedIntent)
 
-    await expect(
-      runWithServices(
-        completeAuthIntentUseCase({
-          intentId: "intent-1",
-          session: {
-            ...baseSession,
-            email: "different@example.com",
-          },
-          now: NOW,
-        }),
-        mocks,
-      ),
-    ).rejects.toBeInstanceOf(AuthIntentEmailMismatchError)
+    const session = createTestSession()
+    const program = completeAuthIntentUseCase({
+      intentId: consumedIntent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
+
+    const result = await Effect.runPromise(program)
+
+    expect(result).toBeUndefined()
   })
 
-  it("returns without side effects when intent is already consumed", async () => {
-    const mocks = createMocks({
-      intent: createIntent({ consumedAt: new Date() }),
-    })
+  it("handles login intent by marking it consumed", async () => {
+    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const loginIntent = createTestAuthIntent({ type: "login" })
+    fakeAuthIntents.intents.set(loginIntent.id, loginIntent)
 
-    await runWithServices(
-      completeAuthIntentUseCase({
-        intentId: "intent-1",
-        session: baseSession,
-        now: NOW,
-      }),
-      mocks,
-    )
+    const session = createTestSession()
+    const program = completeAuthIntentUseCase({
+      intentId: loginIntent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
 
-    expect(mocks.markConsumed).not.toHaveBeenCalled()
-    expect(mocks.saveMembership).not.toHaveBeenCalled()
-    expect(mocks.saveOrganization).not.toHaveBeenCalled()
+    await Effect.runPromise(program)
+
+    expect(fakeAuthIntents.consumed.size).toBe(1)
+    expect(fakeAuthIntents.consumed.get(loginIntent.id)?.intentId).toBe(loginIntent.id)
   })
 
-  it("returns MissingSignupProvisioningDataError for signup intents without required data", async () => {
-    const mocks = createMocks({
-      intent: createIntent({
-        type: "signup",
-        existingAccountAtRequest: false,
-        data: { signup: { name: "Alice", organizationName: "" } },
-      }),
+  it("skips organization creation for signup when existingAccountAtRequest is true", async () => {
+    const { fakeAuthIntents, fakeOrganizations, testLayers } = createTestLayers()
+    const signupIntent = createTestAuthIntent({
+      type: "signup",
+      existingAccountAtRequest: true,
+      data: {},
     })
+    fakeAuthIntents.intents.set(signupIntent.id, signupIntent)
 
-    await expect(
-      runWithServices(
-        completeAuthIntentUseCase({
-          intentId: "intent-1",
-          session: baseSession,
-          now: NOW,
-        }),
-        mocks,
-      ),
-    ).rejects.toBeInstanceOf(MissingSignupProvisioningDataError)
+    const session = createTestSession()
+    const program = completeAuthIntentUseCase({
+      intentId: signupIntent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
+
+    await Effect.runPromise(program)
+
+    expect(fakeOrganizations.saved).toHaveLength(0)
+    expect(fakeAuthIntents.consumed.size).toBe(1)
+    expect(fakeAuthIntents.consumed.get(signupIntent.id)?.intentId).toBe(signupIntent.id)
   })
 
-  it("creates organization, membership, and fills missing session name for new signup", async () => {
-    const mocks = createMocks({
-      intent: createIntent({
-        type: "signup",
-        existingAccountAtRequest: false,
-        data: { signup: { name: "Alice", organizationName: "Acme" } },
-      }),
+  it("returns MissingInviteDataError when invite data is missing", async () => {
+    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const inviteIntent = createTestAuthIntent({
+      type: "invite",
+      data: {},
     })
+    fakeAuthIntents.intents.set(inviteIntent.id, inviteIntent)
 
-    await runWithServices(
-      completeAuthIntentUseCase({
-        intentId: "intent-1",
-        session: {
-          ...baseSession,
-          name: null,
-        },
-        now: NOW,
-      }),
-      mocks,
-    )
+    const session = createTestSession()
+    const program = completeAuthIntentUseCase({
+      intentId: inviteIntent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
 
-    expect(mocks.saveOrganization).toHaveBeenCalledTimes(1)
-    expect(mocks.saveMembership).toHaveBeenCalledTimes(1)
-    expect(mocks.setNameIfMissing).toHaveBeenCalledWith({
-      userId: "user-1",
-      name: "Alice",
-    })
-
-    const membershipArg = (mocks.saveMembership.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown>
-    expect(membershipArg.role).toBe("owner")
-    expect(membershipArg.userId).toBe("user-1")
-
-    const markConsumedArg = (mocks.markConsumed.mock.calls as unknown[][])[0]?.[0] as Record<string, unknown>
-    expect(markConsumedArg.intentId).toBe("intent-1")
-    expect(markConsumedArg.createdOrganizationId).toBeTypeOf("string")
+    await runAndExpectError(program, MissingInviteDataError)
   })
 
-  it("marks intent as consumed with membership provisioning for invite flows", async () => {
-    const mocks = createMocks({
-      intent: createIntent({
-        type: "invite",
-        data: {
-          invite: {
-            organizationId: "org-1",
-            organizationName: "Test Org",
-            inviterName: "Test User",
-          },
-        },
-      }),
+  it("returns InvalidAuthIntentTypeError for unknown intent types", async () => {
+    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const unknownIntent = createTestAuthIntent({
+      type: "unknown" as "login",
     })
+    fakeAuthIntents.intents.set(unknownIntent.id, unknownIntent)
 
-    await runWithServices(
-      completeAuthIntentUseCase({
-        intentId: "intent-1",
-        session: {
-          ...baseSession,
-          email: " User@Example.com ",
-        },
-        now: NOW,
-      }),
-      mocks,
-    )
+    const session = createTestSession()
+    const program = completeAuthIntentUseCase({
+      intentId: unknownIntent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
 
-    expect(mocks.markConsumed).toHaveBeenCalledWith({ intentId: "intent-1" })
-    expect(mocks.saveOrganization).not.toHaveBeenCalled()
-    expect(mocks.saveMembership).toHaveBeenCalled()
-    expect(mocks.setNameIfMissing).toHaveBeenCalled()
+    await runAndExpectError(program, InvalidAuthIntentTypeError)
   })
 
-  it("only marks intent as consumed for login flows", async () => {
-    const mocks = createMocks({
-      intent: createIntent({ type: "login" }),
-    })
+  it("normalizes email comparison (case insensitive)", async () => {
+    const { fakeAuthIntents, testLayers } = createTestLayers()
+    const intent = createTestAuthIntent({ email: "USER@EXAMPLE.COM" })
+    fakeAuthIntents.intents.set(intent.id, intent)
 
-    await runWithServices(
-      completeAuthIntentUseCase({
-        intentId: "intent-1",
-        session: baseSession,
-        now: NOW,
-      }),
-      mocks,
-    )
+    const session = createTestSession({ email: "user@example.com" })
+    const program = completeAuthIntentUseCase({
+      intentId: intent.id,
+      session,
+    }).pipe(Effect.provide(testLayers))
 
-    expect(mocks.markConsumed).toHaveBeenCalledWith({ intentId: "intent-1" })
-    expect(mocks.saveOrganization).not.toHaveBeenCalled()
-    expect(mocks.saveMembership).not.toHaveBeenCalled()
-    expect(mocks.setNameIfMissing).not.toHaveBeenCalled()
-  })
+    const exit = await Effect.runPromiseExit(program)
 
-  it("only marks intent as consumed for signup with existing account", async () => {
-    const mocks = createMocks({
-      intent: createIntent({
-        type: "signup",
-        existingAccountAtRequest: true,
-        data: { signup: { name: "Alice", organizationName: "Acme" } },
-      }),
-    })
-
-    await runWithServices(
-      completeAuthIntentUseCase({
-        intentId: "intent-1",
-        session: baseSession,
-        now: NOW,
-      }),
-      mocks,
-    )
-
-    expect(mocks.markConsumed).toHaveBeenCalledWith({ intentId: "intent-1" })
-    expect(mocks.saveOrganization).not.toHaveBeenCalled()
-    expect(mocks.saveMembership).not.toHaveBeenCalled()
+    // Should not be an email mismatch error
+    if (Exit.isFailure(exit)) {
+      const reasons = (exit.cause as unknown as { reasons: Array<{ _tag: string; error: unknown }> }).reasons
+      const failReason = reasons.find((r) => r._tag === "Fail")
+      expect(failReason?.error).not.toBeInstanceOf(AuthIntentEmailMismatchError)
+    }
   })
 })

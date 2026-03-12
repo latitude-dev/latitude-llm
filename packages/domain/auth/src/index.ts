@@ -28,11 +28,10 @@ export {
   completeAuthIntentUseCase,
   AuthIntentExpiredError,
   AuthIntentEmailMismatchError,
+  InvalidAuthIntentTypeError,
   MissingSignupProvisioningDataError,
   MissingInviteDataError,
-  type CompleteAuthIntentError,
-  type CompleteAuthIntentRequirements,
 } from "./use-cases/complete-auth-intent.ts"
 
-export { AuthIntentRepository, type PendingInvite } from "./ports/auth-intent-repository.ts"
-export { AuthUserRepository, type AuthUser } from "./ports/auth-user-repository.ts"
+// Repositories
+export { AuthIntentRepository } from "./ports/auth-intent-repository.ts"

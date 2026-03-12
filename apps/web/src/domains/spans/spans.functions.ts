@@ -1,6 +1,7 @@
 import { NotFoundError, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
-import type { Span, SpanDetail, SpanRepository, Trace, TraceRepository } from "@domain/spans"
-import { createSpanClickhouseRepository, createTraceClickhouseRepository } from "@platform/db-clickhouse"
+import type { Span, SpanDetail, Trace } from "@domain/spans"
+import { SpanRepository, TraceRepository } from "@domain/spans"
+import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -60,22 +61,6 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly outputMessages: readonly object[]
   readonly systemInstructions: string
   readonly toolDefinitions: string
-}
-
-let spanRepoInstance: SpanRepository | undefined
-const getSpanRepository = () => {
-  if (!spanRepoInstance) {
-    spanRepoInstance = createSpanClickhouseRepository(getClickhouseClient())
-  }
-  return spanRepoInstance
-}
-
-let traceRepoInstance: TraceRepository | undefined
-const getTraceRepository = () => {
-  if (!traceRepoInstance) {
-    traceRepoInstance = createTraceClickhouseRepository(getClickhouseClient())
-  }
-  return traceRepoInstance
 }
 
 const serializeSpan = (span: Span): SpanRecord => ({
@@ -138,9 +123,12 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
   .inputValidator(z.object({ traceId: z.string() }))
   .handler(async ({ data }): Promise<SpanRecord[]> => {
     const { organizationId } = await requireSession()
-    const repo = getSpanRepository()
+    const orgId = OrganizationId(organizationId)
     const spans = await Effect.runPromise(
-      repo.findByTraceId({ organizationId: OrganizationId(organizationId), traceId: TraceId(data.traceId) }),
+      Effect.gen(function* () {
+        const repo = yield* SpanRepository
+        return yield* repo.findByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
+      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
     )
     return spans.map(serializeSpan)
   })
@@ -150,13 +138,16 @@ export const getSpanDetail = createServerFn({ method: "GET" })
   .inputValidator(z.object({ traceId: z.string(), spanId: z.string() }))
   .handler(async ({ data }): Promise<SpanDetailRecord> => {
     const { organizationId } = await requireSession()
-    const repo = getSpanRepository()
+    const orgId = OrganizationId(organizationId)
     const span = await Effect.runPromise(
-      repo.findBySpanId({
-        organizationId: OrganizationId(organizationId),
-        traceId: TraceId(data.traceId),
-        spanId: SpanId(data.spanId),
-      }),
+      Effect.gen(function* () {
+        const repo = yield* SpanRepository
+        return yield* repo.findBySpanId({
+          organizationId: orgId,
+          traceId: TraceId(data.traceId),
+          spanId: SpanId(data.spanId),
+        })
+      }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
     )
     if (!span) {
       throw new NotFoundError({ entity: "Span", id: data.spanId })
@@ -223,13 +214,17 @@ export const listTracesByProject = createServerFn({ method: "GET" })
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<TraceRecord[]> => {
     const { organizationId } = await requireSession()
-    const repo = getTraceRepository()
+    const orgId = OrganizationId(organizationId)
     const traces = await Effect.runPromise(
-      repo.findByProjectId({
-        organizationId: OrganizationId(organizationId),
-        projectId: ProjectId(data.projectId),
-        options: { limit: 200 },
-      }),
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.findByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          options: { limit: 200 },
+        })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )
+
     return traces.map(serializeTrace)
   })

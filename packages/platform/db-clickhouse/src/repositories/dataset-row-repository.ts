@@ -1,10 +1,9 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type { DatasetRow } from "@domain/datasets"
-import { RowNotFoundError } from "@domain/datasets"
-import { DatasetId, DatasetRowId, toRepositoryError } from "@domain/shared"
+import { DatasetRowRepository, RowNotFoundError } from "@domain/datasets"
+import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId } from "@domain/shared"
 import { safeParseJson, safeStringifyJson } from "@repo/utils"
-import { Effect } from "effect"
-import { insertJsonEachRow, queryClickhouse } from "../sql.ts"
+import { Effect, Layer } from "effect"
 
 type DatasetRowCH = {
   row_id: string
@@ -25,7 +24,6 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   version: Number(row.latest_xact_id),
 })
 
-// Searches raw JSON strings — may match keys/syntax, not just values
 const buildSearchClause = (search: string | undefined) =>
   search
     ? "AND (positionCaseInsensitive(input, {search:String}) > 0 OR positionCaseInsensitive(output, {search:String}) > 0)"
@@ -36,156 +34,143 @@ const buildVersionClause = (version: number | undefined) =>
 
 const INSERT_BATCH_SIZE = 500
 
-export const createDatasetRowClickHouseRepository = (client: ClickHouseClient) => ({
-  insertBatch: (args: {
-    organizationId: string
-    datasetId: string
-    version: number
-    rows: readonly {
-      readonly id: DatasetRowId
-      readonly input: Record<string, unknown>
-      readonly output?: Record<string, unknown>
-      readonly metadata?: Record<string, unknown>
-    }[]
-  }) =>
-    Effect.gen(function* () {
-      const values = args.rows.map((row) => ({
-        organization_id: args.organizationId,
-        dataset_id: args.datasetId,
-        row_id: row.id,
-        xact_id: args.version,
-        input: safeStringifyJson(row.input),
-        output: safeStringifyJson(row.output ?? {}),
-        metadata: safeStringifyJson(row.metadata ?? {}),
-      }))
+export const DatasetRowRepositoryLive = Layer.effect(
+  DatasetRowRepository,
+  Effect.gen(function* () {
+    const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
-      for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
-        const batch = values.slice(i, i + INSERT_BATCH_SIZE)
-        yield* insertJsonEachRow(client, "dataset_rows", batch).pipe(
-          Effect.mapError((e) => toRepositoryError(e, "insertBatch")),
-        )
-      }
+    return {
+      insertBatch: (args) =>
+        chSqlClient.query(async (client) => {
+          const values = args.rows.map((row) => ({
+            organization_id: args.organizationId,
+            dataset_id: args.datasetId,
+            row_id: row.id,
+            xact_id: args.version,
+            input: safeStringifyJson(row.input),
+            output: safeStringifyJson(row.output ?? {}),
+            metadata: safeStringifyJson(row.metadata ?? {}),
+          }))
 
-      return args.rows.map((r) => r.id)
-    }),
+          for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
+            const batch = values.slice(i, i + INSERT_BATCH_SIZE)
+            await client.insert({ table: "dataset_rows", values: batch, format: "JSONEachRow" })
+          }
 
-  list: (args: {
-    organizationId: string
-    datasetId: string
-    version?: number
-    search?: string
-    limit?: number
-    offset?: number
-  }) =>
-    Effect.gen(function* () {
-      const limit = args.limit ?? 50
-      const offset = args.offset ?? 0
-      const params: Record<string, unknown> = {
-        organizationId: args.organizationId,
-        datasetId: args.datasetId,
-        limit,
-        offset,
-      }
+          return args.rows.map((r) => r.id)
+        }),
 
-      if (args.version !== undefined) params.version = args.version
-      if (args.search) params.search = args.search
+      list: (args) =>
+        chSqlClient.query(async (client) => {
+          const limit = args.limit ?? 50
+          const offset = args.offset ?? 0
+          const params: Record<string, unknown> = {
+            organizationId: args.organizationId,
+            datasetId: args.datasetId,
+            limit,
+            offset,
+          }
 
-      const versionClause = buildVersionClause(args.version)
-      const searchClause = buildSearchClause(args.search)
+          if (args.version !== undefined) params.version = args.version
+          if (args.search) params.search = args.search
 
-      const dataQuery = `
-        SELECT
-          row_id,
-          argMax(input, xact_id) AS input,
-          argMax(output, xact_id) AS output,
-          argMax(metadata, xact_id) AS metadata,
-          min(created_at) AS created_at,
-          max(xact_id) AS latest_xact_id
-        FROM dataset_rows
-        WHERE organization_id = {organizationId:String}
-          AND dataset_id = {datasetId:String}
-          ${versionClause}
-        GROUP BY row_id
-        HAVING argMax(_object_delete, xact_id) = false
-          ${searchClause}
-        ORDER BY created_at DESC
-        LIMIT {limit:UInt32} OFFSET {offset:UInt32}
-      `
+          const versionClause = buildVersionClause(args.version)
+          const searchClause = buildSearchClause(args.search)
 
-      const countQuery = `
-        SELECT count() AS total FROM (
-          SELECT
-            row_id,
-            argMax(input, xact_id) AS input,
-            argMax(output, xact_id) AS output
-          FROM dataset_rows
-          WHERE organization_id = {organizationId:String}
-            AND dataset_id = {datasetId:String}
-            ${versionClause}
-          GROUP BY row_id
-          HAVING argMax(_object_delete, xact_id) = false
-            ${searchClause}
-        )
-      `
+          const dataQuery = `
+            SELECT
+              row_id,
+              argMax(input, xact_id) AS input,
+              argMax(output, xact_id) AS output,
+              argMax(metadata, xact_id) AS metadata,
+              min(created_at) AS created_at,
+              max(xact_id) AS latest_xact_id
+            FROM dataset_rows
+            WHERE organization_id = {organizationId:String}
+              AND dataset_id = {datasetId:String}
+              ${versionClause}
+            GROUP BY row_id
+            HAVING argMax(_object_delete, xact_id) = false
+              ${searchClause}
+            ORDER BY created_at DESC
+            LIMIT {limit:UInt32} OFFSET {offset:UInt32}
+          `
 
-      const [rows, countResult] = yield* Effect.all([
-        queryClickhouse<DatasetRowCH>(client, dataQuery, params).pipe(
-          Effect.mapError((e) => toRepositoryError(e, "list")),
-        ),
-        queryClickhouse<{ total: string }>(client, countQuery, params).pipe(
-          Effect.mapError((e) => toRepositoryError(e, "list:count")),
-        ),
-      ])
+          const countQuery = `
+            SELECT count() AS total FROM (
+              SELECT
+                row_id,
+                argMax(input, xact_id) AS input,
+                argMax(output, xact_id) AS output
+              FROM dataset_rows
+              WHERE organization_id = {organizationId:String}
+                AND dataset_id = {datasetId:String}
+                ${versionClause}
+              GROUP BY row_id
+              HAVING argMax(_object_delete, xact_id) = false
+                ${searchClause}
+            )
+          `
 
-      return {
-        rows: rows.map((row) => toDomainRow(row, args.datasetId)),
-        total: Number(countResult[0]?.total ?? 0),
-      } as const
-    }),
+          const [dataResult, countResult] = await Promise.all([
+            client
+              .query({ query: dataQuery, query_params: params, format: "JSONEachRow" })
+              .then((r) => r.json<DatasetRowCH>()),
+            client
+              .query({ query: countQuery, query_params: params, format: "JSONEachRow" })
+              .then((r) => r.json<{ total: string }>()),
+          ])
 
-  findById: (args: {
-    organizationId: string
-    datasetId: string
-    rowId: string
-    version?: number
-  }) =>
-    Effect.gen(function* () {
-      const params: Record<string, unknown> = {
-        organizationId: args.organizationId,
-        datasetId: args.datasetId,
-        rowId: args.rowId,
-      }
+          return {
+            rows: dataResult.map((row) => toDomainRow(row, args.datasetId)),
+            total: Number(countResult[0]?.total ?? 0),
+          } as const
+        }),
 
-      if (args.version !== undefined) params.version = args.version
+      findById: (args) =>
+        Effect.gen(function* () {
+          const result = yield* chSqlClient.query(async (client) => {
+            const params: Record<string, unknown> = {
+              organizationId: args.organizationId,
+              datasetId: args.datasetId,
+              rowId: args.rowId,
+            }
 
-      const versionClause = buildVersionClause(args.version)
+            if (args.version !== undefined) params.version = args.version
 
-      const query = `
-        SELECT
-          row_id,
-          argMax(input, xact_id) AS input,
-          argMax(output, xact_id) AS output,
-          argMax(metadata, xact_id) AS metadata,
-          min(created_at) AS created_at,
-          max(xact_id) AS latest_xact_id
-        FROM dataset_rows
-        WHERE organization_id = {organizationId:String}
-          AND dataset_id = {datasetId:String}
-          AND row_id = {rowId:String}
-          ${versionClause}
-        GROUP BY row_id
-        HAVING argMax(_object_delete, xact_id) = false
-        LIMIT 1
-      `
+            const versionClause = buildVersionClause(args.version)
 
-      const rows = yield* queryClickhouse<DatasetRowCH>(client, query, params).pipe(
-        Effect.mapError((e) => toRepositoryError(e, "findById")),
-      )
+            const query = `
+              SELECT
+                row_id,
+                argMax(input, xact_id) AS input,
+                argMax(output, xact_id) AS output,
+                argMax(metadata, xact_id) AS metadata,
+                min(created_at) AS created_at,
+                max(xact_id) AS latest_xact_id
+              FROM dataset_rows
+              WHERE organization_id = {organizationId:String}
+                AND dataset_id = {datasetId:String}
+                AND row_id = {rowId:String}
+                ${versionClause}
+              GROUP BY row_id
+              HAVING argMax(_object_delete, xact_id) = false
+              LIMIT 1
+            `
 
-      if (rows.length === 0) {
-        return yield* new RowNotFoundError({ rowId: args.rowId })
-      }
+            const rows = await client
+              .query({ query, query_params: params, format: "JSONEachRow" })
+              .then((r) => r.json<DatasetRowCH>())
 
-      return toDomainRow(rows[0] ?? [], args.datasetId)
-    }),
-})
+            return rows.length > 0 ? toDomainRow(rows[0], args.datasetId) : null
+          })
+
+          if (!result) {
+            return yield* new RowNotFoundError({ rowId: args.rowId })
+          }
+
+          return result
+        }),
+    }
+  }),
+)
