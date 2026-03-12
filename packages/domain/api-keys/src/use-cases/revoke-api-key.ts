@@ -1,4 +1,4 @@
-import type { ApiKeyId, NotFoundError, RepositoryError } from "@domain/shared"
+import { type ApiKeyId, type NotFoundError, type RepositoryError, SqlClient } from "@domain/shared"
 import { Data, Effect, ServiceMap } from "effect"
 import { revoke } from "../entities/api-key.ts"
 import { ApiKeyRepository } from "../ports/api-key-repository.ts"
@@ -32,16 +32,22 @@ export class ApiKeyCacheInvalidator extends ServiceMap.Service<
 
 export const revokeApiKeyUseCase = (input: RevokeApiKeyInput) =>
   Effect.gen(function* () {
+    const sqlClient = yield* SqlClient
     const cacheInvalidator = yield* ApiKeyCacheInvalidator
-    const repo = yield* ApiKeyRepository
 
-    const apiKey = yield* repo.findById(input.id)
-    if (apiKey.deletedAt !== null) return yield* new ApiKeyAlreadyRevokedError({ id: input.id })
+    return yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const repo = yield* ApiKeyRepository
 
-    const revokedApiKey = revoke(apiKey)
-    yield* repo.save(revokedApiKey)
+        const apiKey = yield* repo.findById(input.id)
+        if (apiKey.deletedAt !== null) return yield* new ApiKeyAlreadyRevokedError({ id: input.id })
 
-    yield* cacheInvalidator.delete(revokedApiKey.tokenHash)
+        const revokedApiKey = revoke(apiKey)
+        yield* repo.save(revokedApiKey)
 
-    return revokedApiKey
+        yield* cacheInvalidator.delete(revokedApiKey.tokenHash)
+
+        return revokedApiKey
+      }),
+    )
   })

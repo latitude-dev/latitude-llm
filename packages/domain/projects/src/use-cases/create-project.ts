@@ -66,7 +66,8 @@ export type CreateProjectError =
 export const createProjectUseCase = (input: CreateProjectInput) =>
   Effect.gen(function* () {
     const trimmedName = input.name.trim()
-    const { organizationId } = yield* SqlClient
+    const sqlClient = yield* SqlClient
+    const { organizationId } = sqlClient
 
     if (!trimmedName || trimmedName.length === 0) {
       return yield* new InvalidProjectNameError({
@@ -107,27 +108,31 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
       ...(input.createdById !== undefined && { createdById: input.createdById }),
     })
 
-    const repo = yield* ProjectRepository
+    return yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const repo = yield* ProjectRepository
 
-    const nameExists = yield* repo.existsByName(trimmedName)
-    if (nameExists) {
-      return yield* new ProjectAlreadyExistsError({
-        name: trimmedName,
-        slug: trimmedSlug,
-        organizationId,
-      })
-    }
+        const nameExists = yield* repo.existsByName(trimmedName)
+        if (nameExists) {
+          return yield* new ProjectAlreadyExistsError({
+            name: trimmedName,
+            slug: trimmedSlug,
+            organizationId,
+          })
+        }
 
-    const slugExists = yield* repo.existsBySlug(trimmedSlug)
-    if (slugExists) {
-      return yield* new ProjectAlreadyExistsError({
-        name: trimmedName,
-        slug: trimmedSlug,
-        organizationId,
-      })
-    }
+        const slugExists = yield* repo.existsBySlug(trimmedSlug)
+        if (slugExists) {
+          return yield* new ProjectAlreadyExistsError({
+            name: trimmedName,
+            slug: trimmedSlug,
+            organizationId,
+          })
+        }
 
-    yield* repo.save(project)
+        yield* repo.save(project)
 
-    return project
+        return project
+      }),
+    )
   })

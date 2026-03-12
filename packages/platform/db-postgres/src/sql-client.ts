@@ -1,101 +1,100 @@
-import { OrganizationId, type RepositoryError, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
+import { OrganizationId, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
 import { sql } from "drizzle-orm"
-import { Cause, Effect, Exit, Layer } from "effect"
+import { Effect, Exit, Layer } from "effect"
 import type { Operator, PostgresClient } from "./client.ts"
-import { isTransactionDb } from "./client.ts"
-
-class DomainErrorWrapper extends Error {
-  readonly domainError: unknown
-  constructor(domainError: unknown) {
-    super("_domain_error_wrapper_")
-    this.domainError = domainError
-  }
-}
 
 /**
- * Helper to create a transaction SqlClient for nested effects.
+ * Live layer for SqlClient with closure-scoped transaction tracking.
  *
- * When already inside a transaction:
- * - transaction() calls just pass through (no nested transaction needed)
- */
-const createTxSqlClient = (tx: Operator, organizationId: OrganizationId): SqlClientShape => ({
-  organizationId,
-  transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => effect,
-  query: <T>(fn: (tx: Operator, organizationId: OrganizationId) => Promise<T>) =>
-    Effect.gen(function* () {
-      const result = yield* Effect.tryPromise({
-        try: () => fn(tx, organizationId),
-        catch: (error) => toRepositoryError(error, "query"),
-      })
-      return result
-    }),
-})
-
-/**
- * Live layer for SqlClient that creates an RLS-enabled transaction.
+ * Each Layer.effect invocation creates a fresh SqlClient with its own
+ * `activeTx` slot. When `transaction()` opens a real DB transaction it
+ * stores the operator in `activeTx` so that every `query()` call within
+ * that scope reuses the same connection — regardless of whether the
+ * repository was constructed inside or outside the transaction.
+ *
+ * The inner effect runs in the parent fiber (via `Effect.exit`) so all
+ * provided services (repositories, etc.) remain available inside the
+ * transaction scope.
  */
 export const SqlClientLive = (client: PostgresClient, organizationId: OrganizationId = OrganizationId("system")) =>
   Layer.effect(
     SqlClient,
     Effect.gen(function* () {
+      let activeTx: Operator | null = null
+
       return {
         organizationId,
-        transaction: Effect.fn(<A, E, R>(effect: Effect.Effect<A, E, R>) =>
-          Effect.callback<A, E | RepositoryError, R | SqlClient>((resume) => {
-            client
-              .transaction(async (tx) => {
-                await tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
 
-                const txClient = createTxSqlClient(tx, organizationId)
+        transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => {
+          if (activeTx) {
+            return effect
+          }
 
-                // Run the effect with the transaction db
-                const exit = await Effect.runPromiseExit(
-                  Effect.provideService(effect, SqlClient, txClient) as Effect.Effect<A, E, never>,
-                )
+          return Effect.gen(function* () {
+            let resolveTxReady!: (tx: Operator) => void
+            let resolveEffectDone!: (result: { ok: true; value: A } | { ok: false; error: unknown }) => void
 
-                if (Exit.isSuccess(exit)) {
-                  return exit.value
-                }
+            const txReady = new Promise<Operator>((resolve) => {
+              resolveTxReady = resolve
+            })
+            const effectDone = new Promise<{ ok: true; value: A } | { ok: false; error: unknown }>((resolve) => {
+              resolveEffectDone = resolve
+            })
 
-                // Capture domain error so we can re-surface it after the Promise boundary.
-                // We must throw here to trigger transaction rollback.
-                const failReasons = exit.cause.reasons.filter(Cause.isFailReason)
-                if (failReasons.length > 0) {
-                  throw new DomainErrorWrapper(failReasons[0].error)
-                }
-                throw new Error("_transaction_domain_failure_")
+            const txPromise = client.transaction(async (tx) => {
+              await tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
+              resolveTxReady(tx as Operator)
+              const result = await effectDone
+              if (!result.ok) throw result.error
+              return result.value
+            })
+
+            const tx = yield* Effect.tryPromise({
+              try: () => txReady,
+              catch: (e) => toRepositoryError(e, "transaction"),
+            })
+
+            activeTx = tx
+            const exit = yield* Effect.exit(effect)
+            activeTx = null
+
+            if (Exit.isSuccess(exit)) {
+              resolveEffectDone({ ok: true, value: exit.value })
+              yield* Effect.tryPromise({
+                try: () => txPromise,
+                catch: (e) => toRepositoryError(e, "transaction"),
               })
-              .then((value: A) => resume(Effect.succeed(value)))
-              .catch((e: unknown) => {
-                if (e instanceof DomainErrorWrapper) {
-                  resume(Effect.fail(e.domainError as E))
-                  return
-                }
-                resume(Effect.fail(toRepositoryError(e, "transaction")))
-              })
-          }),
-        ),
+              return exit.value
+            }
+
+            resolveEffectDone({ ok: false, error: exit.cause })
+            yield* Effect.tryPromise({
+              try: () => txPromise.catch(() => {}),
+              catch: (e) => toRepositoryError(e, "transaction"),
+            })
+            return yield* exit
+          })
+        },
 
         query: <T>(fn: (tx: Operator, organizationId: OrganizationId) => Promise<T>) =>
           Effect.gen(function* () {
-            if (isTransactionDb(client.db)) {
-              const result = yield* Effect.tryPromise({
-                try: () => fn(client.db as Operator, organizationId),
-                catch: (error) => toRepositoryError(error, "withRLS"),
+            const currentTx = activeTx
+            if (currentTx) {
+              return yield* Effect.tryPromise({
+                try: () => fn(currentTx, organizationId),
+                catch: (error) => toRepositoryError(error, "query"),
               })
-              return result
             }
 
             return yield* Effect.tryPromise({
-              try: async () => {
-                return await client.transaction(async (tx) => {
+              try: () =>
+                client.transaction(async (tx) => {
                   await tx.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
                   return fn(tx as Operator, organizationId)
-                })
-              },
-              catch: (error) => toRepositoryError(error, "withRLS"),
+                }),
+              catch: (error) => toRepositoryError(error, "query"),
             })
           }),
-      }
+      } satisfies SqlClientShape<Operator>
     }),
   )

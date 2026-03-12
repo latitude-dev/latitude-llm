@@ -45,54 +45,62 @@ export type UpdateProjectError =
 
 export const updateProjectUseCase = (input: UpdateProjectInput) =>
   Effect.gen(function* () {
-    const { organizationId } = yield* SqlClient
-    const repo = yield* ProjectRepository
-    const existingProject = yield* repo
-      .findById(input.id)
-      .pipe(
-        Effect.catchTag("NotFoundError", () => Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId }))),
-      )
+    const sqlClient = yield* SqlClient
+    const { organizationId } = sqlClient
 
-    let nextName = existingProject.name
+    return yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const repo = yield* ProjectRepository
+        const existingProject = yield* repo
+          .findById(input.id)
+          .pipe(
+            Effect.catchTag("NotFoundError", () =>
+              Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId })),
+            ),
+          )
 
-    if (input.name !== undefined) {
-      const trimmedName = input.name.trim()
+        let nextName = existingProject.name
 
-      if (!trimmedName) {
-        return yield* new InvalidProjectNameError({
-          name: input.name,
-          reason: "Name cannot be empty",
-        })
-      }
+        if (input.name !== undefined) {
+          const trimmedName = input.name.trim()
 
-      if (trimmedName.length > 256) {
-        return yield* new InvalidProjectNameError({
-          name: input.name,
-          reason: "Name exceeds 256 characters",
-        })
-      }
+          if (!trimmedName) {
+            return yield* new InvalidProjectNameError({
+              name: input.name,
+              reason: "Name cannot be empty",
+            })
+          }
 
-      if (trimmedName !== existingProject.name) {
-        const nameExists = yield* repo.existsByName(trimmedName)
-        if (nameExists) {
-          return yield* new InvalidProjectNameError({
-            name: trimmedName,
-            reason: "Project name already exists in this organization",
-          })
+          if (trimmedName.length > 256) {
+            return yield* new InvalidProjectNameError({
+              name: input.name,
+              reason: "Name exceeds 256 characters",
+            })
+          }
+
+          if (trimmedName !== existingProject.name) {
+            const nameExists = yield* repo.existsByName(trimmedName)
+            if (nameExists) {
+              return yield* new InvalidProjectNameError({
+                name: trimmedName,
+                reason: "Project name already exists in this organization",
+              })
+            }
+          }
+
+          nextName = trimmedName
         }
-      }
 
-      nextName = trimmedName
-    }
+        const updatedProject: Project = {
+          ...existingProject,
+          name: nextName,
+          description: input.description !== undefined ? input.description : existingProject.description,
+          updatedAt: new Date(),
+        }
 
-    const updatedProject: Project = {
-      ...existingProject,
-      name: nextName,
-      description: input.description !== undefined ? input.description : existingProject.description,
-      updatedAt: new Date(),
-    }
+        yield* repo.save(updatedProject)
 
-    yield* repo.save(updatedProject)
-
-    return updatedProject
+        return updatedProject
+      }),
+    )
   })
