@@ -1,11 +1,11 @@
-import { type InvalidEnvValueError, type MissingEnvValueError, parseEnv, parseEnvOptional } from "@platform/env"
-import { sql } from "drizzle-orm"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import { drizzle } from "drizzle-orm/node-postgres"
-import { Data, Effect } from "effect"
-import { Pool, type PoolConfig } from "pg"
+import { Effect } from "effect"
+import { Pool } from "pg"
 
-const createPostgresDb = (pool: Pool) => drizzle({ client: pool })
-export type PostgresDb = ReturnType<typeof createPostgresDb>
+export type PostgresDb = ReturnType<typeof drizzle>
+type TransactionDb = Parameters<Parameters<PostgresDb["transaction"]>[0]>[0]
+export type Operator = PostgresDb | TransactionDb
 
 export interface PostgresConfig {
   readonly databaseUrl?: string
@@ -17,21 +17,54 @@ export interface PostgresConfig {
 export interface PostgresClient {
   readonly pool: Pool
   readonly db: PostgresDb
+  /**
+   * Run a callback inside a Postgres transaction.
+   * Commits on success, rolls back on any thrown error.
+   */
+  transaction<T>(fn: (txDb: TransactionDb) => Promise<T>): Promise<T>
 }
 
-class InvalidSqlParameterTypeError extends Data.TaggedError("InvalidSqlParameterTypeError")<{
-  readonly type: string
-}> {}
+/**
+ * Create a Postgres connection pool with environment-based configuration.
+ *
+ * @param config Optional overrides for pool configuration
+ * @returns A pg.Pool instance
+ */
+export const createPostgresPool = (config: PostgresConfig = {}): Pool => {
+  const poolConfig = Effect.runSync(parsePostgresPoolConfig(config))
+  return new Pool(poolConfig)
+}
 
-class DatabaseExecuteNotSupportedError extends Data.TaggedError("DatabaseExecuteNotSupportedError")<
-  Record<string, never>
-> {}
+/**
+ * Create a Postgres client with connection pool and transaction support.
+ *
+ * @param config Optional configuration for pool creation
+ * @returns A PostgresClient with pool, db, transaction, and withRLS methods
+ */
+export const createPostgresClient = (config: PostgresConfig = {}): PostgresClient =>
+  buildPostgresClient(createPostgresPool(config))
 
-type CreatePostgresPoolError = MissingEnvValueError | InvalidEnvValueError
-type CreatePostgresClientError = CreatePostgresPoolError
+/**
+ * Close a Postgres pool and release all connections.
+ *
+ * @param pool The Pool instance to close
+ */
+export const closePostgres = async (pool: Pool): Promise<void> => {
+  await pool.end()
+}
 
-const createPostgresPoolEffect = (config: PostgresConfig = {}): Effect.Effect<Pool, CreatePostgresPoolError> => {
-  return Effect.all({
+/**
+ * Check if a database operator is a transaction database.
+ *
+ * @param db The database operator to check
+ * @returns True if the database is a transaction database, false otherwise
+ */
+export const isTransactionDb = (db: Operator): boolean => transactionDbs.has(db as object)
+
+const transactionDbs = new WeakSet<object>()
+
+const parsePostgresPoolConfig = (config: PostgresConfig = {}) =>
+  Effect.all({
     connectionString: config.databaseUrl ? Effect.succeed(config.databaseUrl) : parseEnv("LAT_DATABASE_URL", "string"),
     max: config.maxConnections ? Effect.succeed(config.maxConnections) : parseEnvOptional("LAT_PG_POOL_MAX", "number"),
     idleTimeoutMillis: config.idleTimeoutMs
@@ -40,69 +73,15 @@ const createPostgresPoolEffect = (config: PostgresConfig = {}): Effect.Effect<Po
     connectionTimeoutMillis: config.connectionTimeoutMs
       ? Effect.succeed(config.connectionTimeoutMs)
       : parseEnvOptional("LAT_PG_CONNECT_TIMEOUT_MS", "number"),
-  }).pipe(
-    Effect.map((poolConfig) => {
-      const configWithTypes: PoolConfig = poolConfig
-
-      return new Pool(configWithTypes)
-    }),
-  )
-}
-
-export const createPostgresPool = (config: PostgresConfig = {}): Pool => {
-  return Effect.runSync(createPostgresPoolEffect(config))
-}
-
-const createPostgresClientEffect = (
-  config: PostgresConfig = {},
-): Effect.Effect<PostgresClient, CreatePostgresClientError> => {
-  return createPostgresPoolEffect(config).pipe(
-    Effect.map((pool) => {
-      const db = createPostgresDb(pool)
-
-      return { db, pool }
-    }),
-  )
-}
-
-export const createPostgresClient = (config: PostgresConfig = {}): PostgresClient => {
-  return Effect.runSync(createPostgresClientEffect(config))
-}
-
-export const closePostgres = async (pool: Pool): Promise<void> => {
-  await pool.end()
-}
-
-const withPostgresTransaction = async <T>(db: PostgresDb, callback: (txDb: PostgresDb) => Promise<T>): Promise<T> => {
-  return (db as { transaction: (fn: (tx: unknown) => Promise<T>) => Promise<T> }).transaction(async (tx) => {
-    return callback(tx as PostgresDb)
   })
-}
 
-/**
- * Execute a database command within a transaction.
- * Optionally sets organization context for RLS policies.
- *
- * @param db - The database connection
- * @param organizationId - Optional organization ID to set as RLS context
- * @returns Curried function that takes the execute callback
- */
-export const runCommand =
-  (db: PostgresDb, organizationId?: string) =>
-  async <T>(execute: (txDb: PostgresDb) => Promise<T>): Promise<T> => {
-    return withPostgresTransaction(db, async (txDb) => {
-      if (organizationId) {
-        if (typeof organizationId !== "string") {
-          throw new InvalidSqlParameterTypeError({ type: typeof organizationId })
-        }
-
-        if (typeof txDb.execute === "function") {
-          await txDb.execute(sql`select set_config('app.current_organization_id', ${organizationId}, true)`)
-        } else {
-          throw new DatabaseExecuteNotSupportedError({})
-        }
-      }
-
-      return execute(txDb)
+const buildPostgresClient = (pool: Pool): PostgresClient => {
+  const db = drizzle({ client: pool })
+  const transaction = <T>(fn: (tx: TransactionDb) => Promise<T>): Promise<T> =>
+    db.transaction(async (tx) => {
+      transactionDbs.add(tx)
+      return fn(tx)
     })
-  }
+
+  return { db, pool, transaction }
+}

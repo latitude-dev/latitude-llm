@@ -204,6 +204,12 @@ importers:
       '@clickhouse/client':
         specifier: 'catalog:'
         version: 1.17.0
+      '@domain/api-keys':
+        specifier: workspace:^
+        version: link:../../packages/domain/api-keys
+      '@domain/projects':
+        specifier: workspace:^
+        version: link:../../packages/domain/projects
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -273,6 +279,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../../packages/domain/users
       '@platform/auth-better':
         specifier: workspace:*
         version: link:../../packages/platform/auth-better
@@ -451,6 +460,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../users
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
@@ -500,19 +512,6 @@ importers:
       '@repo/vitest-config':
         specifier: workspace:*
         version: link:../../vitest-config
-
-  packages/domain/onboarding:
-    dependencies:
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0-beta.0
-    devDependencies:
-      '@biomejs/biome':
-        specifier: 1.9.4
-        version: 1.9.4
-      typescript:
-        specifier: ^5.7.0
-        version: 5.8.3
 
   packages/domain/organizations:
     dependencies:
@@ -591,6 +590,9 @@ importers:
       '@better-auth/stripe':
         specifier: ^1.5.0
         version: 1.5.0(@better-auth/core@1.5.0(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(better-call@1.3.2(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.1))(better-auth@1.5.0(9a1c8e5a13e2f7a47ac96fa05c69e1a9))(better-call@1.3.2(zod@4.3.6))(stripe@20.4.0(@types/node@24.10.3))
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../../domain/organizations
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
@@ -659,7 +661,7 @@ importers:
   packages/platform/db-postgres:
     dependencies:
       '@domain/api-keys':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../domain/api-keys
       '@domain/auth':
         specifier: workspace:*

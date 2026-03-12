@@ -1,11 +1,11 @@
-import type { AuthIntent } from "@domain/auth"
-import { NotFoundError, toRepositoryError } from "@domain/shared"
-import { and, eq, gt, isNull, sql } from "drizzle-orm"
-import { Effect } from "effect"
-import type { PostgresDb } from "../client.ts"
-import { authIntent } from "../schema/auth-intent.ts"
+import { AuthIntentRepository } from "@domain/auth"
+import { NotFoundError, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
+import { and, eq, gt, isNull } from "drizzle-orm"
+import { Effect, Layer } from "effect"
+import type { Operator } from "../client.ts"
+import { authIntent } from "../schema/index.ts"
 
-const parseAuthIntentData = (rawData: unknown): AuthIntent["data"] => {
+const parseAuthIntentData = (rawData: unknown): Record<string, unknown> => {
   if (typeof rawData !== "object" || rawData === null) {
     return {}
   }
@@ -39,6 +39,29 @@ const parseAuthIntentData = (rawData: unknown): AuthIntent["data"] => {
   }
 }
 
+interface AuthIntentData {
+  readonly signup?: {
+    readonly name: string
+    readonly organizationName: string
+  }
+  readonly invite?: {
+    readonly organizationId: string
+    readonly organizationName: string
+    readonly inviterName: string
+  }
+}
+
+interface AuthIntent {
+  readonly id: string
+  readonly type: "login" | "signup" | "invite"
+  readonly email: string
+  readonly data: AuthIntentData
+  readonly existingAccountAtRequest: boolean
+  readonly expiresAt: Date
+  readonly consumedAt: Date | null
+  readonly createdOrganizationId: string | null
+}
+
 const toDomainAuthIntent = (row: typeof authIntent.$inferSelect): AuthIntent => {
   const parsedData = parseAuthIntentData(row.data)
 
@@ -46,7 +69,7 @@ const toDomainAuthIntent = (row: typeof authIntent.$inferSelect): AuthIntent => 
     id: row.id,
     type: row.type,
     email: row.email,
-    data: parsedData,
+    data: parsedData as AuthIntentData,
     existingAccountAtRequest: row.existingAccountAtRequest,
     expiresAt: row.expiresAt,
     consumedAt: row.consumedAt,
@@ -54,80 +77,71 @@ const toDomainAuthIntent = (row: typeof authIntent.$inferSelect): AuthIntent => 
   }
 }
 
-export const createAuthIntentPostgresRepository = (db: PostgresDb) => ({
-  save: (intent: AuthIntent) =>
-    Effect.tryPromise({
-      try: async () => {
-        await db.insert(authIntent).values({
-          id: intent.id,
-          type: intent.type,
-          email: intent.email,
-          data: { ...intent.data },
-          existingAccountAtRequest: intent.existingAccountAtRequest,
-          expiresAt: intent.expiresAt,
-          consumedAt: intent.consumedAt,
-          createdOrganizationId: intent.createdOrganizationId,
-        })
-      },
-      catch: (error) => toRepositoryError(error, "save"),
-    }),
+export const AuthIntentRepositoryLive = Layer.effect(
+  AuthIntentRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
-  findById: (id: string) =>
-    Effect.gen(function* () {
-      const row = yield* Effect.tryPromise({
-        try: () =>
-          db
-            .select()
-            .from(authIntent)
-            .where(eq(authIntent.id, id))
-            .limit(1)
-            .then((rows) => rows[0]),
-        catch: (error) => toRepositoryError(error, "findById"),
-      })
-
-      if (!row) {
-        return yield* new NotFoundError({ entity: "AuthIntent", id })
-      }
-
-      return toDomainAuthIntent(row)
-    }),
-
-  findPendingInvitesByOrganizationId: (organizationId: string) =>
-    Effect.tryPromise({
-      try: async () => {
-        const rows = await db
-          .select({
-            id: authIntent.id,
-            email: authIntent.email,
-            createdAt: authIntent.createdAt,
-          })
-          .from(authIntent)
-          .where(
-            and(
-              eq(authIntent.type, "invite"),
-              isNull(authIntent.consumedAt),
-              gt(authIntent.expiresAt, new Date()),
-              sql`${authIntent.data}->'invite'->>'organizationId' = ${organizationId}`,
-            ),
+    return {
+      save: (intent: AuthIntent) =>
+        sqlClient
+          .query((db) =>
+            db.insert(authIntent).values({
+              id: intent.id,
+              type: intent.type,
+              email: intent.email,
+              data: { ...intent.data },
+              existingAccountAtRequest: intent.existingAccountAtRequest,
+              expiresAt: intent.expiresAt,
+              consumedAt: intent.consumedAt,
+              createdOrganizationId: intent.createdOrganizationId,
+            }),
           )
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "save"))),
 
-        return rows
-      },
-      catch: (error) => toRepositoryError(error, "findPendingInvitesByOrganizationId"),
-    }),
+      findById: (id: string) =>
+        sqlClient
+          .query((db) => db.select().from(authIntent).where(eq(authIntent.id, id)).limit(1))
+          .pipe(
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "AuthIntent", id }))
+              }
+              return Effect.succeed(toDomainAuthIntent(result))
+            }),
+            Effect.mapError((error) => (error._tag === "NotFoundError" ? error : toRepositoryError(error, "findById"))),
+          ),
 
-  markConsumed: ({ intentId, createdOrganizationId }: { intentId: string; createdOrganizationId?: string }) =>
-    Effect.tryPromise({
-      try: async () => {
-        await db
-          .update(authIntent)
-          .set({
-            consumedAt: new Date(),
-            ...(createdOrganizationId ? { createdOrganizationId } : {}),
-            updatedAt: new Date(),
-          })
-          .where(eq(authIntent.id, intentId))
-      },
-      catch: (error) => toRepositoryError(error, "markConsumed"),
-    }),
-})
+      markConsumed: ({ intentId, createdOrganizationId }: { intentId: string; createdOrganizationId?: string }) =>
+        sqlClient
+          .query((db) =>
+            db
+              .update(authIntent)
+              .set({
+                consumedAt: new Date(),
+                ...(createdOrganizationId ? { createdOrganizationId } : {}),
+                updatedAt: new Date(),
+              })
+              .where(eq(authIntent.id, intentId)),
+          )
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "markConsumed"))),
+
+      findPendingInvitesByOrganizationId: () =>
+        sqlClient
+          .query((db) =>
+            db
+              .select({
+                id: authIntent.id,
+                email: authIntent.email,
+                createdAt: authIntent.createdAt,
+              })
+              .from(authIntent)
+              .where(
+                and(eq(authIntent.type, "invite"), isNull(authIntent.consumedAt), gt(authIntent.expiresAt, new Date())),
+              ),
+          )
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "findPendingInvitesByOrganizationId"))),
+    }
+  }),
+)

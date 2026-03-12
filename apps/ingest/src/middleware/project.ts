@@ -1,5 +1,6 @@
-import { ProjectId, isNotFoundError } from "@domain/shared"
-import { createProjectPostgresRepository, runCommand } from "@platform/db-postgres"
+import { ProjectRepository } from "@domain/projects"
+import { OrganizationId, ProjectId, isNotFoundError } from "@domain/shared"
+import { ProjectRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { Effect } from "effect"
 import type { MiddlewareHandler } from "hono"
 import { getPostgresClient } from "../clients.ts"
@@ -16,16 +17,18 @@ export const projectMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) =
   }
 
   const organizationId = c.get("organizationId")
-  const { db } = getPostgresClient()
+  const client = getPostgresClient()
 
   try {
-    const project = await runCommand(
-      db,
-      organizationId,
-    )(async (txDb) => {
-      const repo = createProjectPostgresRepository(txDb)
-      return Effect.runPromise(repo.findById(ProjectId(projectId)))
-    })
+    const project = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* ProjectRepository
+        return yield* repo.findById(ProjectId(projectId))
+      }).pipe(
+        Effect.provide(ProjectRepositoryLive),
+        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
+      ),
+    )
 
     c.set("projectId", project.id as string)
     await next()

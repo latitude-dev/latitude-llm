@@ -1,17 +1,17 @@
-import {
-  MembershipRepository,
-  type OrganizationRepository,
-  createMembership,
-  createOrganizationUseCase,
-} from "@domain/organizations"
-import type { CreateOrganizationError } from "@domain/organizations"
-import type { NotFoundError, RepositoryError } from "@domain/shared"
-import { OrganizationId, UserId } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { MembershipRepository, createMembership, createOrganizationUseCase } from "@domain/organizations"
+import { OrganizationId, SqlClient, UserId } from "@domain/shared"
+import { UserRepository } from "@domain/users"
+import { Data, Effect, Match } from "effect"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
-import { AuthUserRepository } from "../ports/auth-user-repository.ts"
 import type { AuthIntent, AuthIntentType } from "../types.ts"
 import { normalizeEmail, shouldCreateOrganizationForIntent } from "./auth-intent-policy.ts"
+
+export class InvalidAuthIntentTypeError extends Data.TaggedError("InvalidAuthIntentTypeError")<{
+  readonly intentId: string
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Invalid authentication intent type"
+}
 
 export class AuthIntentExpiredError extends Data.TaggedError("AuthIntentExpiredError")<{
   readonly intentId: string
@@ -38,19 +38,11 @@ export class MissingSignupProvisioningDataError extends Data.TaggedError("Missin
 
 export class MissingInviteDataError extends Data.TaggedError("MissingInviteDataError")<{
   readonly intentId: string
+  readonly reason?: never
 }> {
   readonly httpStatus = 400
   readonly httpMessage = "Missing invite details for membership provisioning"
 }
-
-export type CompleteAuthIntentError =
-  | NotFoundError
-  | AuthIntentExpiredError
-  | AuthIntentEmailMismatchError
-  | MissingSignupProvisioningDataError
-  | MissingInviteDataError
-  | CreateOrganizationError
-  | RepositoryError
 
 interface SessionInput {
   readonly userId: string
@@ -58,19 +50,14 @@ interface SessionInput {
   readonly name: string | null
 }
 
-export type CompleteAuthIntentRequirements =
-  | AuthIntentRepository
-  | AuthUserRepository
-  | OrganizationRepository
-  | MembershipRepository
-
 export const completeAuthIntentUseCase = (input: {
   intentId: string
   session: SessionInput
   now?: Date
-}): Effect.Effect<void, CompleteAuthIntentError, CompleteAuthIntentRequirements> =>
+}) =>
   Effect.gen(function* () {
     const intents = yield* AuthIntentRepository
+
     const now = input.now ?? new Date()
     const intent = yield* intents.findById(input.intentId)
 
@@ -90,40 +77,34 @@ export const completeAuthIntentUseCase = (input: {
       return
     }
 
-    yield* handleIntentByType(intent, input.session)
+    const sqlClient = yield* SqlClient
+
+    yield* sqlClient.transaction(handleIntentByType(intent, input.session))
   })
 
-const handleIntentByType = (
-  intent: AuthIntent,
-  session: SessionInput,
-): Effect.Effect<void, CompleteAuthIntentError, CompleteAuthIntentRequirements> => {
-  const type: AuthIntentType = intent.type
+const handleIntentByType = (intent: AuthIntent, session: SessionInput) =>
+  Effect.gen(function* () {
+    const type: AuthIntentType = intent.type
 
-  switch (type) {
-    case "signup":
-      return handleSignup(intent, session)
-    case "invite":
-      return handleInvite(intent, session)
-    case "login":
-      return Effect.gen(function* () {
-        const intents = yield* AuthIntentRepository
-        yield* intents.markConsumed({ intentId: intent.id })
-      })
-    default: {
-      const _exhaustive: never = type
-      return _exhaustive
-    }
-  }
-}
+    return yield* Match.value(type).pipe(
+      Match.when("signup", () => handleSignup(intent, session)),
+      Match.when("invite", () => handleInvite(intent, session)),
+      Match.when("login", () =>
+        Effect.gen(function* () {
+          const intents = yield* AuthIntentRepository
+          yield* intents.markConsumed({ intentId: intent.id })
+          return undefined
+        }),
+      ),
+      Match.orElse(() => Effect.fail(new InvalidAuthIntentTypeError({ intentId: intent.id }))),
+    )
+  })
 
-const handleSignup = (
-  intent: AuthIntent,
-  session: SessionInput,
-): Effect.Effect<void, CompleteAuthIntentError, CompleteAuthIntentRequirements> =>
+const handleSignup = (intent: AuthIntent, session: SessionInput) =>
   Effect.gen(function* () {
     const intents = yield* AuthIntentRepository
+    const users = yield* UserRepository
     const memberships = yield* MembershipRepository
-    const users = yield* AuthUserRepository
 
     if (!shouldCreateOrganizationForIntent(intent)) {
       yield* intents.markConsumed({ intentId: intent.id })
@@ -164,18 +145,11 @@ const handleSignup = (
     })
   })
 
-const handleInvite = (
-  intent: AuthIntent,
-  session: SessionInput,
-): Effect.Effect<
-  void,
-  MissingInviteDataError | RepositoryError,
-  AuthIntentRepository | AuthUserRepository | MembershipRepository
-> =>
+const handleInvite = (intent: AuthIntent, session: SessionInput) =>
   Effect.gen(function* () {
     const intents = yield* AuthIntentRepository
+    const users = yield* UserRepository
     const memberships = yield* MembershipRepository
-    const users = yield* AuthUserRepository
 
     const organizationId = intent.data.invite?.organizationId
 

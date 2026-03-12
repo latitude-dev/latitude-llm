@@ -1,5 +1,6 @@
+import { OrganizationRepository } from "@domain/organizations"
 import { OrganizationId, PermissionError } from "@domain/shared"
-import { createOrganizationPostgresRepository } from "@platform/db-postgres"
+import { OrganizationRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { BadRequestError } from "@repo/utils"
 import { Effect } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
@@ -26,8 +27,16 @@ export const createOrganizationContextMiddleware = (): MiddlewareHandler => {
       })
     }
 
-    const organizationRepository = createOrganizationPostgresRepository(c.var.db)
-    const organization = await Effect.runPromise(organizationRepository.findById(OrganizationId(organizationIdParam)))
+    const organizationId = OrganizationId(organizationIdParam)
+    const organization = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* OrganizationRepository
+        return yield* repo.findById(organizationId)
+      }).pipe(
+        Effect.provide(OrganizationRepositoryLive),
+        Effect.provide(SqlClientLive(c.var.postgresClient, organizationId)),
+      ),
+    )
 
     c.set("organization", organization)
     await next()

@@ -1,6 +1,14 @@
-import type { ConflictError, OrganizationId, ProjectId, RepositoryError, UserId, ValidationError } from "@domain/shared"
+import {
+  type ConflictError,
+  type OrganizationId,
+  type ProjectId,
+  type RepositoryError,
+  SqlClient,
+  type UserId,
+  type ValidationError,
+} from "@domain/shared"
 import { Data, Effect } from "effect"
-import { type Project, createProject } from "../entities/project.ts"
+import { createProject } from "../entities/project.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
 /**
@@ -15,7 +23,6 @@ import { ProjectRepository } from "../ports/project-repository.ts"
  */
 export interface CreateProjectInput {
   readonly id?: ProjectId
-  readonly organizationId: OrganizationId
   readonly name: string
   readonly description?: string
   readonly createdById?: UserId
@@ -56,12 +63,10 @@ export type CreateProjectError =
   | ProjectAlreadyExistsError
   | InvalidProjectNameError
 
-export const createProjectUseCase = (
-  input: CreateProjectInput,
-): Effect.Effect<Project, CreateProjectError, ProjectRepository> => {
-  return Effect.gen(function* () {
-    const repository = yield* ProjectRepository
+export const createProjectUseCase = (input: CreateProjectInput) =>
+  Effect.gen(function* () {
     const trimmedName = input.name.trim()
+    const { organizationId } = yield* SqlClient
 
     if (!trimmedName || trimmedName.length === 0) {
       return yield* new InvalidProjectNameError({
@@ -93,35 +98,36 @@ export const createProjectUseCase = (
       })
     }
 
-    const nameExists = yield* repository.existsByName(trimmedName)
-    if (nameExists) {
-      return yield* new ProjectAlreadyExistsError({
-        name: trimmedName,
-        slug: trimmedSlug,
-        organizationId: input.organizationId,
-      })
-    }
-
-    const slugExists = yield* repository.existsBySlug(trimmedSlug)
-    if (slugExists) {
-      return yield* new ProjectAlreadyExistsError({
-        name: trimmedName,
-        slug: trimmedSlug,
-        organizationId: input.organizationId,
-      })
-    }
-
     const project = createProject({
       id: input.id,
-      organizationId: input.organizationId,
+      organizationId,
       name: trimmedName,
       slug: trimmedSlug,
       ...(input.description !== undefined && { description: input.description }),
       ...(input.createdById !== undefined && { createdById: input.createdById }),
     })
 
-    yield* repository.save(project)
+    const repo = yield* ProjectRepository
+
+    const nameExists = yield* repo.existsByName(trimmedName)
+    if (nameExists) {
+      return yield* new ProjectAlreadyExistsError({
+        name: trimmedName,
+        slug: trimmedSlug,
+        organizationId,
+      })
+    }
+
+    const slugExists = yield* repo.existsBySlug(trimmedSlug)
+    if (slugExists) {
+      return yield* new ProjectAlreadyExistsError({
+        name: trimmedName,
+        slug: trimmedSlug,
+        organizationId,
+      })
+    }
+
+    yield* repo.save(project)
 
     return project
   })
-}

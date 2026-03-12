@@ -1,4 +1,3 @@
-import type { RepositoryError } from "@domain/shared"
 import { generateId } from "@domain/shared"
 import { Effect } from "effect"
 import { OrganizationRepository } from "../ports/organization-repository.ts"
@@ -14,7 +13,7 @@ const toSlug = (value: string) =>
 
 export const generateUniqueOrganizationSlugUseCase = (input: {
   name: string
-}): Effect.Effect<string, RepositoryError, OrganizationRepository> =>
+}) =>
   Effect.gen(function* () {
     const repository = yield* OrganizationRepository
 

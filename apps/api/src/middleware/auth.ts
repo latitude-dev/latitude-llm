@@ -1,5 +1,7 @@
+import { ApiKeyRepository } from "@domain/api-keys"
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
-import { type PostgresDb, createApiKeyPostgresRepository } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import type { PostgresClient } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
@@ -94,51 +96,53 @@ const validateApiKey = (
   c: Context,
   token: string,
   options?: AuthMiddlewareOptions,
-): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
+): Promise<{ organizationId: string; keyId: string } | null> => {
   const redis = c.get("redis")
-  const adminDb = options?.adminDb ?? getAdminPostgresClient().db
-  const unscopedApiKeyRepository = createApiKeyPostgresRepository(adminDb)
-  const touchBuffer = createTouchBuffer(adminDb)
+  const adminClient = options?.adminClient ?? getAdminPostgresClient()
+  const touchBuffer = createTouchBuffer(adminClient)
 
-  return Effect.gen(function* () {
-    const startTime = Date.now()
-    const tokenHash = yield* hashToken(token)
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const startTime = Date.now()
+      const tokenHash = yield* hashToken(token)
 
-    // Try cache first for consistent lookup time (keyed by hash)
-    const cached = yield* getCachedApiKey(redis, tokenHash)
+      // Try cache first for consistent lookup time (keyed by hash)
+      const cached = yield* getCachedApiKey(redis, tokenHash)
 
-    if (cached !== undefined) {
-      // Cache hit - enforce minimum time and return
+      if (cached !== undefined) {
+        // Cache hit - enforce minimum time and return
+        yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+        return cached
+      }
+
+      const apiKeyRepository = yield* ApiKeyRepository
+      const apiKeyOption = yield* Effect.option(apiKeyRepository.findByTokenHash(tokenHash))
+
+      if (Option.isNone(apiKeyOption)) {
+        yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
+        yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
+        return null
+      }
+
+      const apiKey = apiKeyOption.value
+
+      const result = {
+        organizationId: apiKey.organizationId,
+        keyId: apiKey.id,
+      }
+
+      // Cache successful validation for 5 minutes (keyed by hash)
+      yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)
+
+      // Use TouchBuffer for batched updates instead of fire-and-forget
+      // This reduces database writes by 90%+ by batching updates
+      touchBuffer.touch(apiKey.id)
+
+      // Enforce minimum time before returning
       yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-      return cached
-    }
-
-    const apiKeyOption = yield* Effect.option(unscopedApiKeyRepository.findByTokenHash(tokenHash))
-
-    if (Option.isNone(apiKeyOption)) {
-      yield* cacheApiKeyResult(redis, tokenHash, null, INVALID_KEY_TTL_SECONDS)
-      yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-      return null
-    }
-
-    const apiKey = apiKeyOption.value
-
-    const result = {
-      organizationId: apiKey.organizationId,
-      keyId: apiKey.id,
-    }
-
-    // Cache successful validation for 5 minutes (keyed by hash)
-    yield* cacheApiKeyResult(redis, tokenHash, result, VALID_KEY_TTL_SECONDS)
-
-    // Use TouchBuffer for batched updates instead of fire-and-forget
-    // This reduces database writes by 90%+ by batching updates
-    touchBuffer.touch(apiKey.id)
-
-    // Enforce minimum time before returning
-    yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
-    return result
-  }).pipe(Effect.orDie)
+      return result
+    }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(adminClient)), Effect.orDie),
+  )
 }
 
 /**
@@ -174,7 +178,7 @@ const authenticateWithApiKey = (
   options?: AuthMiddlewareOptions,
 ): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
-    const result = yield* validateApiKey(c, token, options)
+    const result = yield* Effect.promise(() => validateApiKey(c, token, options))
 
     if (result) {
       const authContext: AuthContext = {
@@ -191,7 +195,7 @@ const authenticateWithApiKey = (
 }
 
 /**
- * Authenticate via API key from the Authorization: Bearer header.
+ * Main authentication effect that validates API key from Authorization header.
  */
 const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
@@ -219,7 +223,7 @@ const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effec
  * Public routes should be excluded from this middleware.
  */
 interface AuthMiddlewareOptions {
-  readonly adminDb?: PostgresDb
+  readonly adminClient?: PostgresClient
 }
 
 export const createAuthMiddleware = (options?: AuthMiddlewareOptions): MiddlewareHandler => {

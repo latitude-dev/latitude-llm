@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@better-auth/stripe": "^1.5.0",
+    "@domain/organizations": "workspace:*",
     "@domain/shared": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",

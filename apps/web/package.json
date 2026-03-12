@@ -21,6 +21,7 @@
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@domain/users": "workspace:*",
     "@platform/auth-better": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",

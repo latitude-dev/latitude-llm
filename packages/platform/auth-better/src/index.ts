@@ -1,7 +1,8 @@
 import { stripe } from "@better-auth/stripe"
+import { MembershipRepository } from "@domain/organizations"
 import { UserId, generateId } from "@domain/shared"
-import type { PostgresDb } from "@platform/db-postgres"
-import { createMembershipPostgresRepository, postgresSchema } from "@platform/db-postgres"
+import { MembershipRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { type PostgresClient, type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
@@ -96,14 +97,18 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   // Build plugins array
   const plugins: BetterAuthPlugin[] = [orgPlugin]
 
-  const membershipRepository = createMembershipPostgresRepository(config.db)
-
   plugins.push(
     customSession(async ({ user, session }) => {
       const activeOrganizationIdInSession = "activeOrganizationId" in session ? session.activeOrganizationId : null
       if (activeOrganizationIdInSession) return { user, session }
 
-      const memberships = await Effect.runPromise(membershipRepository.findByUserId(UserId(user.id)))
+      const mockClient = { db: config.db } as PostgresClient
+      const memberships = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* MembershipRepository
+          return yield* repo.findByUserId(UserId(user.id))
+        }).pipe(Effect.provide(MembershipRepositoryLive), Effect.provide(SqlClientLive(mockClient))),
+      )
       const activeOrganizationId = memberships[0]?.organizationId
 
       return {

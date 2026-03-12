@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url"
+import type { OrganizationId } from "@domain/shared"
 import { PGlite } from "@electric-sql/pglite"
-import { type PostgresDb, postgresSchema } from "@platform/db-postgres"
+import { type PostgresClient, type PostgresDb, postgresSchema } from "@platform/db-postgres"
 import { drizzle } from "drizzle-orm/pglite"
 import { migrate } from "drizzle-orm/pglite/migrator"
 
@@ -10,9 +11,28 @@ export interface InMemoryPostgres {
   readonly client: PGlite
   readonly db: ReturnType<typeof drizzle>
   readonly postgresDb: PostgresDb
+  readonly postgresClient: PostgresClient
 }
 
 const unsafeCast = <T>(value: unknown): T => value as T
+
+const createInMemoryPostgresClient = (postgresDb: PostgresDb): PostgresClient => {
+  const transaction = <T>(fn: (txDb: PostgresDb) => Promise<T>): Promise<T> =>
+    (postgresDb as unknown as { transaction: (fn: (tx: unknown) => Promise<T>) => Promise<T> }).transaction(
+      async (tx) => fn(tx as PostgresDb),
+    )
+
+  const withRls = <T>(organizationId: OrganizationId, fn: (txDb: PostgresDb) => Promise<T>): Promise<T> =>
+    transaction(async (txDb) => {
+      if (typeof txDb.execute === "function") {
+        const orgIdStr = organizationId
+        await txDb.execute(`select set_config('app.current_organization_id', '${orgIdStr}', true)`)
+      }
+      return fn(txDb)
+    })
+
+  return unsafeCast<PostgresClient>({ db: postgresDb, transaction, withRls })
+}
 
 export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
   const client = new PGlite()
@@ -23,10 +43,13 @@ export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
   const db = drizzle({ client, schema: postgresSchema })
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
 
+  const postgresDb = unsafeCast<PostgresDb>(db)
+
   return {
     client,
     db,
-    postgresDb: unsafeCast<PostgresDb>(db),
+    postgresDb,
+    postgresClient: createInMemoryPostgresClient(postgresDb),
   }
 }
 

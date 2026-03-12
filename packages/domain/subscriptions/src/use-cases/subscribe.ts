@@ -1,10 +1,9 @@
-import type { OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared"
-import type { GrantId } from "@domain/shared"
+import type { GrantId, OrganizationId, RepositoryError, SubscriptionId } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { createGrant } from "../entities/grant.ts"
 import type { GrantType } from "../entities/grant.ts"
 import { type Plan, getAvailablePlans } from "../entities/plan.ts"
-import { type Subscription, createSubscription } from "../entities/subscription.ts"
+import { createSubscription } from "../entities/subscription.ts"
 import { GrantRepository } from "../ports/grant-repository.ts"
 import { SubscriptionRepository } from "../ports/subscription-repository.ts"
 
@@ -56,9 +55,7 @@ export type SubscribeError = RepositoryError | SubscriptionAlreadyExistsError | 
  * 5. Persists subscription and grants
  * 6. Returns the created subscription
  */
-export const subscribe = (
-  input: SubscribeInput,
-): Effect.Effect<Subscription, SubscribeError, SubscriptionRepository | GrantRepository> =>
+export const subscribe = (input: SubscribeInput) =>
   Effect.gen(function* () {
     const subscriptionRepository = yield* SubscriptionRepository
     const grantRepository = yield* GrantRepository

@@ -1,5 +1,4 @@
 import { generateId } from "@domain/shared"
-import { postgresSchema } from "@platform/db-postgres"
 import { encrypt, hashToken } from "@repo/utils"
 import { Effect } from "effect"
 import { Hono } from "hono"
@@ -19,20 +18,21 @@ export const TEST_ENCRYPTION_KEY = Buffer.from(TEST_ENCRYPTION_KEY_HEX, "hex")
  * auth middleware (using the same db as admin), and RLS enforcement.
  * Callers mount their own route handlers on the returned sub-app.
  */
-export const createProtectedApp = ({ postgresDb, client }: InMemoryPostgres) => {
+export const createProtectedApp = (database: InMemoryPostgres) => {
   const app = new Hono()
   app.onError(honoErrorHandler)
 
   const protectedRoutes = new Hono<OrganizationScopedEnv>()
 
   protectedRoutes.use("*", async (c, next) => {
-    c.set("db", postgresDb)
+    c.set("db", database.postgresDb)
+    c.set("postgresClient", database.postgresClient)
     c.set("redis", getRedisClient())
     await next()
   })
 
-  protectedRoutes.use("*", createAuthMiddleware({ adminDb: postgresDb }))
-  protectedRoutes.use("*", createRlsMiddleware(client))
+  protectedRoutes.use("*", createAuthMiddleware({ adminClient: database.postgresClient }))
+  protectedRoutes.use("*", createRlsMiddleware(database.client))
   protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
 
   return { app, protectedRoutes }
@@ -44,40 +44,38 @@ interface TenantSetup {
   readonly authApiKeyId: string
 }
 
-export const createTenantSetup = async (db: InMemoryPostgres["db"]): Promise<TenantSetup> => {
+export const createTenantSetup = async (database: InMemoryPostgres): Promise<TenantSetup> => {
   const userId = generateId()
   const organizationId = generateId()
   const apiKeyToken = crypto.randomUUID()
   const authApiKeyId = generateId()
+  const memberId = generateId()
 
-  await db.insert(postgresSchema.user).values({
-    id: userId,
-    email: `${userId}@example.com`,
-    name: "Test User",
-    emailVerified: true,
-  })
+  // Insert user using parameterized query
+  await database.client.query(
+    "INSERT INTO latitude.user (id, email, name, email_verified, role, banned, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())",
+    [userId, `${userId}@example.com`, "Test User", true, "user", false],
+  )
 
-  await db.insert(postgresSchema.organization).values({
-    id: organizationId,
-    name: `Organization ${organizationId}`,
-    slug: `org-${organizationId}`,
-    creatorId: userId,
-  })
+  // Insert organization using parameterized query
+  await database.client.query(
+    "INSERT INTO latitude.organization (id, name, slug, creator_id, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())",
+    [organizationId, `Organization ${organizationId}`, `org-${organizationId}`, userId],
+  )
 
-  await db.insert(postgresSchema.member).values({
-    id: generateId(),
-    organizationId,
-    userId,
-    role: "owner",
-  })
+  // Insert member using parameterized query
+  await database.client.query(
+    "INSERT INTO latitude.member (id, organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4, NOW())",
+    [memberId, organizationId, userId, "owner"],
+  )
 
-  await db.insert(postgresSchema.apiKeys).values({
-    id: authApiKeyId,
-    organizationId,
-    token: await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY)),
-    tokenHash: await Effect.runPromise(hashToken(apiKeyToken)),
-    name: "auth-key",
-  })
+  // Insert API key using parameterized query
+  const encryptedToken = await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY))
+  const tokenHash = await Effect.runPromise(hashToken(apiKeyToken))
+  await database.client.query(
+    "INSERT INTO latitude.api_keys (id, organization_id, token, token_hash, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
+    [authApiKeyId, organizationId, encryptedToken, tokenHash, "auth-key"],
+  )
 
   return { organizationId, apiKeyToken, authApiKeyId }
 }

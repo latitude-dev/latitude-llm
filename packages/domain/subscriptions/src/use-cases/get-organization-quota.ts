@@ -56,9 +56,7 @@ const calculateQuota = (grants: readonly Grant[]): { total: number; used: number
  * 3. Calculates total, used, and remaining quotas
  * 4. Returns comprehensive quota information
  */
-export const getOrganizationQuota = (
-  organizationId: OrganizationId,
-): Effect.Effect<OrganizationQuota, GetOrganizationQuotaError, SubscriptionRepository | GrantRepository> =>
+export const getOrganizationQuota = (organizationId: OrganizationId) =>
   Effect.gen(function* () {
     const subscriptionRepository = yield* SubscriptionRepository
     const grantRepository = yield* GrantRepository

@@ -1,4 +1,5 @@
-import { createApiKeyPostgresRepository } from "@platform/db-postgres"
+import { ApiKeyRepository } from "@domain/api-keys"
+import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { MiddlewareHandler } from "hono"
@@ -66,9 +67,8 @@ const enforceMinimumTime = (startTime: number, minMs: number): Effect.Effect<voi
   return Effect.void
 }
 
-const validateApiKey = (token: string): Effect.Effect<ApiKeyResult | null> => {
-  const adminDb = getAdminPostgresClient().db
-  const apiKeyRepo = createApiKeyPostgresRepository(adminDb)
+const validateApiKey = (token: string) => {
+  const client = getAdminPostgresClient()
 
   return Effect.gen(function* () {
     const startTime = Date.now()
@@ -80,7 +80,8 @@ const validateApiKey = (token: string): Effect.Effect<ApiKeyResult | null> => {
       return cached
     }
 
-    const apiKeyOption = yield* Effect.option(apiKeyRepo.findByTokenHash(tokenHash))
+    const repo = yield* ApiKeyRepository
+    const apiKeyOption = yield* Effect.option(repo.findByTokenHash(tokenHash))
 
     if (Option.isNone(apiKeyOption)) {
       yield* cacheApiKeyResult(tokenHash, null, INVALID_KEY_TTL_SECONDS)
@@ -94,20 +95,18 @@ const validateApiKey = (token: string): Effect.Effect<ApiKeyResult | null> => {
     yield* cacheApiKeyResult(tokenHash, result, VALID_KEY_TTL_SECONDS)
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
     return result
-  }).pipe(Effect.orDie)
+  }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(client)), Effect.orDie)
 }
 
 export const authMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {
   const authHeader = c.req.header("Authorization")
   if (!authHeader?.startsWith("Bearer ")) {
-    return c.json({ error: "Authentication required. Use Authorization: Bearer <api-key>" }, 401)
-  }
-  const token = authHeader.slice(7)
-  if (!token) {
-    return c.json({ error: "Authentication required" }, 401)
+    return c.json({ error: "Authorization header with Bearer token is required" }, 401)
   }
 
+  const token = authHeader.slice(7)
   const result = await Effect.runPromise(validateApiKey(token))
+
   if (!result) {
     return c.json({ error: "Invalid API key" }, 401)
   }

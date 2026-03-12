@@ -23,9 +23,7 @@ export class CannotRemoveSelfError extends Data.TaggedError("CannotRemoveSelfErr
 
 export type RemoveMemberError = RepositoryError | MembershipNotFoundError | CannotRemoveSelfError
 
-export const removeMemberUseCase = (
-  input: RemoveMemberInput,
-): Effect.Effect<void, RemoveMemberError, MembershipRepository> =>
+export const removeMemberUseCase = (input: RemoveMemberInput) =>
   Effect.gen(function* () {
     const repository = yield* MembershipRepository
 

@@ -1,5 +1,4 @@
-import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
-import type { GrantId } from "@domain/shared"
+import type { GrantId, NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { type Grant, type GrantType, createGrant } from "../entities/grant.ts"
 import type { Plan } from "../entities/plan.ts"
@@ -76,9 +75,7 @@ export interface ChangePlanResult {
  * 5. Updates the subscription with new plan
  * 6. Returns the updated subscription and grant changes
  */
-export const changePlan = (
-  input: ChangePlanInput,
-): Effect.Effect<ChangePlanResult, ChangePlanError, SubscriptionRepository | GrantRepository> =>
+export const changePlan = (input: ChangePlanInput) =>
   Effect.gen(function* () {
     const subscriptionRepository = yield* SubscriptionRepository
     const grantRepository = yield* GrantRepository

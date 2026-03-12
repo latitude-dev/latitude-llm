@@ -1,8 +1,6 @@
 import { generateId } from "@domain/shared"
-import { postgresSchema } from "@platform/db-postgres"
 import { createApiKeyAuthHeaders } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
-import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { type TestContext, afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -25,18 +23,16 @@ interface ApiKeysRoutesTestContext extends TestContext {
   database: InMemoryPostgres
 }
 
-const createApiKeyRecord = async (db: InMemoryPostgres["db"], organizationId: string, name: string) => {
+const createApiKeyRecord = async (database: InMemoryPostgres, organizationId: string, name: string) => {
   const token = crypto.randomUUID()
   const id = generateId()
   const tokenHash = await Effect.runPromise(hashToken(token))
+  const encryptedToken = await Effect.runPromise(encrypt(token, TEST_ENCRYPTION_KEY))
 
-  await db.insert(postgresSchema.apiKeys).values({
-    id,
-    organizationId,
-    token: await Effect.runPromise(encrypt(token, TEST_ENCRYPTION_KEY)),
-    tokenHash,
-    name,
-  })
+  await database.client.query(
+    "INSERT INTO latitude.api_keys (id, organization_id, token, token_hash, name, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())",
+    [id, organizationId, encryptedToken, tokenHash, name],
+  )
 
   return { id }
 }
@@ -69,11 +65,11 @@ describe("API Keys Routes Integration", () => {
     app,
     database,
   }) => {
-    const tenantA = await createTenantSetup(database.db)
-    const tenantB = await createTenantSetup(database.db)
+    const tenantA = await createTenantSetup(database)
+    const tenantB = await createTenantSetup(database)
 
-    const tenantAKey = await createApiKeyRecord(database.db, tenantA.organizationId, "tenant-a-key")
-    const tenantBKey = await createApiKeyRecord(database.db, tenantB.organizationId, "tenant-b-key")
+    const tenantAKey = await createApiKeyRecord(database, tenantA.organizationId, "tenant-a-key")
+    const tenantBKey = await createApiKeyRecord(database, tenantB.organizationId, "tenant-b-key")
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/api-keys`, {
@@ -95,9 +91,9 @@ describe("API Keys Routes Integration", () => {
     app,
     database,
   }) => {
-    const tenantA = await createTenantSetup(database.db)
-    const tenantB = await createTenantSetup(database.db)
-    const tenantBKey = await createApiKeyRecord(database.db, tenantB.organizationId, "tenant-b-key")
+    const tenantA = await createTenantSetup(database)
+    const tenantB = await createTenantSetup(database)
+    const tenantBKey = await createApiKeyRecord(database, tenantB.organizationId, "tenant-b-key")
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/organizations/${tenantA.organizationId}/api-keys/${tenantBKey.id}`, {
@@ -108,13 +104,13 @@ describe("API Keys Routes Integration", () => {
 
     expect(response.status).toBe(404)
 
-    const [stillActive] = await database.db
-      .select({ deletedAt: postgresSchema.apiKeys.deletedAt })
-      .from(postgresSchema.apiKeys)
-      .where(eq(postgresSchema.apiKeys.id, tenantBKey.id))
-      .limit(1)
+    // Verify the key still exists and is not soft-deleted using parameterized query
+    const result = await database.client.query("SELECT deleted_at FROM latitude.api_keys WHERE id = $1", [
+      tenantBKey.id,
+    ])
 
-    expect(stillActive).toBeDefined()
-    expect(stillActive?.deletedAt).toBeNull()
+    expect(result.rows.length).toBe(1)
+    const row = result.rows[0] as { deleted_at: string | null }
+    expect(row.deleted_at).toBeNull()
   })
 })

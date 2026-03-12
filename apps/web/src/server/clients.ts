@@ -1,4 +1,9 @@
-import { type AuthIntent, normalizeEmail, resolveMagicLinkEmailTemplateFromContext } from "@domain/auth"
+import {
+  type AuthIntent,
+  AuthIntentRepository,
+  normalizeEmail,
+  resolveMagicLinkEmailTemplateFromContext,
+} from "@domain/auth"
 import type { RenderedEmail } from "@domain/email"
 import {
   inviteMagicLinkTemplate,
@@ -6,16 +11,13 @@ import {
   sendEmail,
   signupExistingAccountMagicLinkTemplate,
 } from "@domain/email"
+import { UserRepository } from "@domain/users"
 import { createBetterAuth } from "@platform/auth-better"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import type { RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import {
-  type PostgresClient,
-  createAuthIntentPostgresRepository,
-  createAuthUserPostgresRepository,
-  createPostgresClient,
-} from "@platform/db-postgres"
+import { AuthIntentRepositoryLive, SqlClientLive, UserRepositoryLive } from "@platform/db-postgres"
+import { type PostgresClient, createPostgresClient } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { type StorageDisk, createStorageDisk } from "@platform/storage-object"
@@ -120,8 +122,6 @@ export const getBetterAuth = () => {
 
     const emailSender = createEmailTransportSender()
     const sendEmailUseCase = sendEmail({ emailSender })
-    const authIntents = createAuthIntentPostgresRepository(db)
-    const users = createAuthUserPostgresRepository(db)
 
     betterAuthInstance = createBetterAuth({
       db,
@@ -137,10 +137,16 @@ export const getBetterAuth = () => {
         })
 
         let authIntentContext: AuthIntentEmailContext | undefined
+        const adminClient = getAdminPostgresClient()
 
         if (authIntentId) {
           const authIntent = await Effect.runPromise(
-            authIntents.findById(authIntentId).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+            Effect.gen(function* () {
+              const repo = yield* AuthIntentRepository
+              return yield* repo
+                .findById(authIntentId)
+                .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+            }).pipe(Effect.provide(AuthIntentRepositoryLive), Effect.provide(SqlClientLive(adminClient))),
           )
 
           if (authIntent) {
@@ -159,7 +165,12 @@ export const getBetterAuth = () => {
         const normalizedEmail = normalizeEmail(email)
 
         const user = await Effect.runPromise(
-          users.findByEmail(normalizedEmail).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
+          Effect.gen(function* () {
+            const repo = yield* UserRepository
+            return yield* repo
+              .findByEmail(normalizedEmail)
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+          }).pipe(Effect.provide(UserRepositoryLive), Effect.provide(SqlClientLive(adminClient))),
         )
 
         const allowsUnknownUser = authIntentContext

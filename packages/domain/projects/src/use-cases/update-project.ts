@@ -1,10 +1,11 @@
-import type {
-  ConflictError,
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
-  ValidationError,
+import {
+  type ConflictError,
+  type NotFoundError,
+  type OrganizationId,
+  type ProjectId,
+  type RepositoryError,
+  SqlClient,
+  type ValidationError,
 } from "@domain/shared"
 import { Data, Effect } from "effect"
 import type { Project } from "../entities/project.ts"
@@ -12,7 +13,6 @@ import { ProjectRepository } from "../ports/project-repository.ts"
 
 export interface UpdateProjectInput {
   readonly id: ProjectId
-  readonly organizationId: OrganizationId
   readonly name?: string
   readonly description?: string | null
 }
@@ -43,17 +43,14 @@ export type UpdateProjectError =
   | ProjectNotFoundError
   | InvalidProjectNameError
 
-export const updateProjectUseCase = (
-  input: UpdateProjectInput,
-): Effect.Effect<Project, UpdateProjectError, ProjectRepository> => {
-  return Effect.gen(function* () {
-    const repository = yield* ProjectRepository
-    const existingProject = yield* repository
+export const updateProjectUseCase = (input: UpdateProjectInput) =>
+  Effect.gen(function* () {
+    const { organizationId } = yield* SqlClient
+    const repo = yield* ProjectRepository
+    const existingProject = yield* repo
       .findById(input.id)
       .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId: input.organizationId })),
-        ),
+        Effect.catchTag("NotFoundError", () => Effect.fail(new ProjectNotFoundError({ id: input.id, organizationId }))),
       )
 
     let nextName = existingProject.name
@@ -76,7 +73,7 @@ export const updateProjectUseCase = (
       }
 
       if (trimmedName !== existingProject.name) {
-        const nameExists = yield* repository.existsByName(trimmedName)
+        const nameExists = yield* repo.existsByName(trimmedName)
         if (nameExists) {
           return yield* new InvalidProjectNameError({
             name: trimmedName,
@@ -95,8 +92,7 @@ export const updateProjectUseCase = (
       updatedAt: new Date(),
     }
 
-    yield* repository.save(updatedProject)
+    yield* repo.save(updatedProject)
 
     return updatedProject
   })
-}
