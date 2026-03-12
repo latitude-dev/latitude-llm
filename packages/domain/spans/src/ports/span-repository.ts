@@ -1,11 +1,11 @@
 import type { OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
-import type { Effect } from "effect"
+import { type Effect, ServiceMap } from "effect"
 import type { Span, SpanDetail } from "../entities/span.ts"
 
 /**
  * Repository port for spans (ClickHouse).
  */
-export interface SpanRepository {
+export interface SpanRepositoryShape {
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError>
 
   findByTraceId(input: {
@@ -32,3 +32,7 @@ export interface SpanListOptions {
   readonly limit?: number
   readonly offset?: number
 }
+
+export class SpanRepository extends ServiceMap.Service<SpanRepository, SpanRepositoryShape>()(
+  "@domain/spans/SpanRepository",
+) {}

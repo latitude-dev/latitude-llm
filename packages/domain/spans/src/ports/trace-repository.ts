@@ -1,5 +1,5 @@
 import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
-import type { Effect } from "effect"
+import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 
 /**
@@ -8,7 +8,7 @@ import type { Trace, TraceDetail } from "../entities/trace.ts"
  * No insert method — the traces table is populated automatically
  * by a materialized view on each insert into spans.
  */
-export interface TraceRepository {
+export interface TraceRepositoryShape {
   findByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -28,3 +28,7 @@ export interface TraceListOptions {
   readonly limit?: number
   readonly offset?: number
 }
+
+export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(
+  "@domain/spans/TraceRepository",
+) {}

@@ -10,9 +10,6 @@ export { healthcheckClickhouse } from "./health.ts"
 export { commandClickhouse, insertJsonEachRow, queryClickhouse } from "./sql.ts"
 export { ChSqlClientLive } from "./ch-sql-client.ts"
 export { withClickHouse } from "./with-clickhouse.ts"
-export {
-  createDatasetRowClickHouseRepository,
-  DatasetRowRepositoryLive,
-} from "./repositories/dataset-row-repository.ts"
-export { createSpanClickhouseRepository } from "./repositories/span-repository.ts"
-export { createTraceClickhouseRepository } from "./repositories/trace-repository.ts"
+export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
+export { SpanRepositoryLive } from "./repositories/span-repository.ts"
+export { TraceRepositoryLive } from "./repositories/trace-repository.ts"
