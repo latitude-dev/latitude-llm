@@ -252,6 +252,46 @@ describe("SqlClientLive", () => {
     })
   })
 
+  describe("concurrent transaction detection", () => {
+    it("dies when two transaction() calls are started concurrently on the same SqlClient", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-concurrent")
+
+      // Run two transaction() calls with concurrency: 2 on the same SqlClient.
+      // The second fiber sees txOpening === true and should die.
+      const layer = SqlClientLive(client, orgId)
+      const effect = Effect.gen(function* () {
+        const sqlClient = yield* SqlClient
+        const shape = sqlClient as import("@domain/shared").SqlClientShape<Operator>
+        return yield* Effect.all([shape.transaction(Effect.succeed("a")), shape.transaction(Effect.succeed("b"))], {
+          concurrency: 2,
+        })
+      }).pipe(Effect.provide(layer))
+
+      await expect(Effect.runPromise(effect)).rejects.toThrow("concurrent transaction() calls detected")
+    })
+
+    it("allows sequential transaction() calls on the same SqlClient after one completes", async () => {
+      const client = createMockPostgresClient(state)
+      const orgId = OrganizationId("org-sequential")
+
+      // Run two transactions sequentially — this is fine; txOpening is cleared
+      // after each transaction completes.
+      const layer = SqlClientLive(client, orgId)
+      const effect = Effect.gen(function* () {
+        const sqlClient = yield* SqlClient
+        const shape = sqlClient as import("@domain/shared").SqlClientShape<Operator>
+        const a = yield* shape.transaction(Effect.succeed(1))
+        const b = yield* shape.transaction(Effect.succeed(2))
+        return a + b
+      }).pipe(Effect.provide(layer))
+
+      const result = await Effect.runPromise(effect)
+      expect(result).toBe(3)
+      expect(state.transactionCallCount).toBe(2)
+    })
+  })
+
   describe("failure and rollback", () => {
     it("propagates failure from inner effect and does not commit", async () => {
       const client = createMockPostgresClient(state)

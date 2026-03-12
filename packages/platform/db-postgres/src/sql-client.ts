@@ -21,6 +21,7 @@ import type { Operator, PostgresClient } from "./client.ts"
  * concurrency > 1). `activeTx` has no fiber identity, so concurrent
  * transactions will overwrite each other's operator and corrupt both
  * connections. Use separate `SqlClientLive` layer instances instead.
+ * A concurrent call is detected at runtime and killed with Effect.die.
  */
 const setRlsContext = (tx: Operator, organizationId: OrganizationId) => {
   if (organizationId === "system") return Promise.resolve()
@@ -32,14 +33,23 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
     SqlClient,
     Effect.gen(function* () {
       let activeTx: Operator | null = null
+      let txOpening = false
 
       return {
         organizationId,
 
         transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => {
-          if (activeTx) {
-            return effect
+          if (activeTx) return effect
+          if (txOpening) {
+            return Effect.die(
+              new Error(
+                "SqlClient: concurrent transaction() calls detected on the same instance. " +
+                  "Use separate SqlClientLive layer instances for parallel transactions.",
+              ),
+            )
           }
+
+          txOpening = true
 
           return Effect.gen(function* () {
             let resolveTxReady!: (tx: Operator) => void
@@ -62,10 +72,17 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
 
             const tx = yield* Effect.tryPromise({
               try: () => txReady,
-              catch: (e) => toRepositoryError(e, "transaction"),
+              catch: (e) => {
+                txOpening = false
+                return toRepositoryError(e, "transaction")
+              },
             })
 
+            // activeTx is set — nested transaction() calls now use pass-through.
+            // Release txOpening so that sequential (non-concurrent) calls after
+            // this transaction completes can open their own transactions.
             activeTx = tx
+            txOpening = false
             const exit = yield* Effect.exit(effect)
             activeTx = null
 

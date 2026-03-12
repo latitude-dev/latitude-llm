@@ -15,9 +15,11 @@
   },
   "dependencies": {
     "@domain/shared": "workspace:*",
+    "@electric-sql/pglite": "0.3.15",
     "@platform/db-postgres": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@repo/utils": "workspace:*",
+    "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
     "ioredis": "catalog:"

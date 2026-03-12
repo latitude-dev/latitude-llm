@@ -1,3 +1,10 @@
+// In-memory PGlite exports
+export {
+  closeInMemoryPostgres,
+  createInMemoryPostgres,
+  type InMemoryPostgres,
+} from "./database/pglite.ts"
+
 // Database exports
 export {
   closeTestDatabase,
