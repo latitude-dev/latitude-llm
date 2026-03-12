@@ -1,7 +1,7 @@
 import { type EmailMessage, EmailSendError, type EmailSender } from "@domain/email"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
-import { type Transporter, createTransport } from "nodemailer"
+import { createTransport, type Transporter } from "nodemailer"
 
 interface MailgunSmtpConfig {
   readonly host: string | undefined

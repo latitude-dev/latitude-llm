@@ -37,9 +37,11 @@ coverage
 # Build/cache outputs
 .turbo
 .tsbuildinfo
+**/*.tsbuildinfo
+**/*.localstorage
+**/*.localstorage-shm
+**/*.localstorage-wal
 **/*/tsconfig.tsbuildinfo
-.cache
-.eslintcache
 
 # Build Outputs
 out

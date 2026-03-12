@@ -1,9 +1,9 @@
 import { Slot } from "@radix-ui/react-slot"
-import { type ReactNode, forwardRef, memo } from "react"
+import { forwardRef, memo, type ReactNode } from "react"
 
-import { type TextColor, colors } from "../../tokens/colors.ts"
+import { colors, type TextColor } from "../../tokens/colors.ts"
 import { type FontSize, type FontSpacing, type FontWeight, font } from "../../tokens/font.ts"
-import { type TextOpacity, opacity } from "../../tokens/opacity.ts"
+import { opacity, type TextOpacity } from "../../tokens/opacity.ts"
 import { type Overflow, overflow as overflowOptions } from "../../tokens/overflow.ts"
 import { type WhiteSpace, whiteSpace as whiteSpaceOptions } from "../../tokens/whiteSpace.ts"
 import { type WordBreak, wordBreak as wordBreakOptions } from "../../tokens/wordBreak.ts"

@@ -1,6 +1,6 @@
 import type { DatasetId, DatasetRowId, OrganizationId, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
-import type { DatasetRow, RowNotFoundError } from "../entities/dataset-row.ts"
+import type { DatasetRow, RowFieldValue, RowNotFoundError } from "../entities/dataset-row.ts"
 
 export interface DatasetRowRepositoryShape {
   insertBatch(args: {
@@ -30,6 +30,23 @@ export interface DatasetRowRepositoryShape {
     readonly rowId: DatasetRowId
     readonly version?: number
   }): Effect.Effect<DatasetRow, RowNotFoundError | RepositoryError>
+
+  updateRow(args: {
+    readonly organizationId: OrganizationId
+    readonly datasetId: DatasetId
+    readonly rowId: DatasetRowId
+    readonly version: number
+    readonly input: RowFieldValue
+    readonly output: RowFieldValue
+    readonly metadata: RowFieldValue
+  }): Effect.Effect<void, RepositoryError>
+
+  deleteBatch(args: {
+    readonly organizationId: OrganizationId
+    readonly datasetId: DatasetId
+    readonly rowIds: readonly DatasetRowId[]
+    readonly version: number
+  }): Effect.Effect<void, RepositoryError>
 }
 
 export class DatasetRowRepository extends ServiceMap.Service<DatasetRowRepository, DatasetRowRepositoryShape>()(

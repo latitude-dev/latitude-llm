@@ -1,5 +1,5 @@
-import { generateId } from "@domain/shared"
 import type { OrganizationId, UserId } from "@domain/shared"
+import { generateId } from "@domain/shared"
 
 /**
  * Membership entity - represents a user's membership in an organization.

@@ -1,6 +1,5 @@
-import { type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes, forwardRef } from "react"
-
 import { Info } from "lucide-react"
+import { forwardRef, type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes } from "react"
 import { cn } from "../../utils/cn.ts"
 import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
@@ -120,6 +119,13 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
         e.preventDefault()
         e.stopPropagation()
         onClick?.(e)
+      }}
+      onKeyDown={(e) => {
+        if (!preventDefault || !onClick) return
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          onClick(e as unknown as React.MouseEvent<HTMLTableCellElement>)
+        }
       }}
     >
       <div

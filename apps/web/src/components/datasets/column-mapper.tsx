@@ -1,7 +1,7 @@
 import { Button, Text } from "@repo/ui"
 import { ArrowDown, GripVertical } from "lucide-react"
 import { useCallback, useState } from "react"
-import type { ColumnMapping, CsvTransformOptions } from "../../domains/datasets/datasets.functions.ts"
+import type { ColumnMapping, CsvTransformOptions } from "../../domains/datasets/column-mapping.ts"
 
 type Bucket = keyof ColumnMapping
 
@@ -146,13 +146,7 @@ export function ColumnMapper({
   )
 }
 
-function UnmappedSection({
-  headers,
-  onMove,
-}: {
-  headers: string[]
-  onMove: (header: string, target: Bucket) => void
-}) {
+function UnmappedSection({ headers, onMove }: { headers: string[]; onMove: (header: string, target: Bucket) => void }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-row items-center gap-2">
@@ -219,6 +213,7 @@ function BucketSection({
 
   return (
     <div
+      role="listbox"
       className={`flex flex-col gap-2 rounded-lg border p-3 transition-colors ${dragOver ? meta.dropHighlight : `${meta.border} ${meta.bg}`}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -267,6 +262,8 @@ function DraggableHeaderItem({ header, children }: { header: string; children: R
 
   return (
     <div
+      role="option"
+      tabIndex={0}
       draggable
       onDragStart={handleDragStart}
       className="flex flex-row items-center justify-between gap-2 rounded-md border bg-background px-3 py-2 cursor-grab active:cursor-grabbing hover:bg-secondary/50 transition-colors"

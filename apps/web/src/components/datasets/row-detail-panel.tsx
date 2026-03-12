@@ -1,33 +1,18 @@
-import { Button, Text } from "@repo/ui"
-import { X } from "lucide-react"
-import { useState } from "react"
+import { Button, RichTextEditor, Text } from "@repo/ui"
+import { safeStringifyJson } from "@repo/utils"
+import { Loader2, Save, X } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
 import type { DatasetRowRecord } from "../../domains/datasets/datasets.functions.ts"
 
-function JsonView({ data }: { data: Record<string, unknown> }) {
-  const formatted = JSON.stringify(data, null, 2)
-  const lineCount = formatted.split("\n").length
-
-  return (
-    <div className="flex flex-row rounded-md border bg-muted/50 overflow-x-auto">
-      <div className="flex flex-col items-end px-2 py-3 border-r bg-muted/80 select-none">
-        {Array.from({ length: lineCount }, (_, i) => `line-${i + 1}`).map((key, i) => (
-          <Text.H6 key={key} color="foregroundMuted" className="leading-5 font-mono">
-            {i + 1}
-          </Text.H6>
-        ))}
-      </div>
-      <pre className="flex-1 px-3 py-3 text-sm font-mono leading-5 whitespace-pre overflow-x-auto">{formatted}</pre>
-    </div>
-  )
-}
-
-function CollapsibleSection({
+function EditableSection({
   title,
-  data,
+  value,
+  onChange,
   defaultOpen = true,
 }: {
   title: string
-  data: Record<string, unknown>
+  value: string
+  onChange: (value: string) => void
   defaultOpen?: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -38,7 +23,11 @@ function CollapsibleSection({
         <Text.H6 color="foregroundMuted">{open ? "▾" : "▸"}</Text.H6>
         <Text.H5 weight="bold">{title}</Text.H5>
       </button>
-      {open && <JsonView data={data} />}
+      {open && (
+        <div className="flex flex-col gap-1">
+          <RichTextEditor value={value} onChange={onChange} />
+        </div>
+      )}
     </div>
   )
 }
@@ -46,24 +35,50 @@ function CollapsibleSection({
 export function RowDetailPanel({
   row,
   onClose,
+  onSave,
+  saving = false,
 }: {
   row: DatasetRowRecord
   onClose: () => void
+  onSave?: (data: { input: string; output: string; metadata: string }) => void
+  saving?: boolean
 }) {
+  const [inputText, setInputText] = useState(() => safeStringifyJson(row.input))
+  const [outputText, setOutputText] = useState(() => safeStringifyJson(row.output))
+  const [metadataText, setMetadataText] = useState(() => safeStringifyJson(row.metadata))
+
+  useEffect(() => {
+    setInputText(safeStringifyJson(row.input))
+    setOutputText(safeStringifyJson(row.output))
+    setMetadataText(safeStringifyJson(row.metadata))
+  }, [row.input, row.output, row.metadata])
+
+  const handleSave = useCallback(() => {
+    onSave?.({ input: inputText, output: outputText, metadata: metadataText })
+  }, [inputText, outputText, metadataText, onSave])
+
   return (
     <div className="flex flex-col h-full border-l">
       <div className="flex flex-row items-center justify-between px-4 py-3 border-b">
         <Text.H5 color="foregroundMuted" className="font-mono truncate">
           {row.rowId}
         </Text.H5>
-        <Button flat variant="ghost" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
+        <div className="flex flex-row items-center gap-2">
+          {onSave && (
+            <Button onClick={handleSave} disabled={saving} size="sm">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <Text.H6 color="white">Save Data</Text.H6>
+            </Button>
+          )}
+          <Button flat variant="ghost" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
       <div className="flex flex-col gap-4 p-4 overflow-y-auto flex-1">
-        <CollapsibleSection title="Input" data={row.input} />
-        <CollapsibleSection title="Output" data={row.output} />
-        <CollapsibleSection title="Metadata" data={row.metadata} />
+        <EditableSection title="Input" value={inputText} onChange={setInputText} />
+        <EditableSection title="Output" value={outputText} onChange={setOutputText} />
+        <EditableSection title="Metadata" value={metadataText} onChange={setMetadataText} />
       </div>
     </div>
   )

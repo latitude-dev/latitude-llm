@@ -1,4 +1,4 @@
-import { MembershipRepository, createMembership, createOrganizationUseCase } from "@domain/organizations"
+import { createMembership, createOrganizationUseCase, MembershipRepository } from "@domain/organizations"
 import { OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { Data, Effect, Match } from "effect"
@@ -50,11 +50,7 @@ interface SessionInput {
   readonly name: string | null
 }
 
-export const completeAuthIntentUseCase = (input: {
-  intentId: string
-  session: SessionInput
-  now?: Date
-}) =>
+export const completeAuthIntentUseCase = (input: { intentId: string; session: SessionInput; now?: Date }) =>
   Effect.gen(function* () {
     const intents = yield* AuthIntentRepository
 

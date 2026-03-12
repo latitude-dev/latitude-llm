@@ -1,5 +1,6 @@
 import { generateId } from "@domain/shared"
 import { postgresSchema } from "@platform/db-postgres"
+import { createRlsMiddleware, type InMemoryPostgres } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
 import { Effect } from "effect"
 import { Hono } from "hono"
@@ -8,8 +9,6 @@ import { createAuthMiddleware } from "../middleware/auth.ts"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
-import type { InMemoryPostgres } from "./in-memory-postgres.ts"
-import { createRlsMiddleware } from "./in-memory-postgres.ts"
 
 export const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
 export const TEST_ENCRYPTION_KEY = Buffer.from(TEST_ENCRYPTION_KEY_HEX, "hex")
@@ -27,12 +26,12 @@ export const createProtectedApp = (database: InMemoryPostgres) => {
 
   protectedRoutes.use("*", async (c, next) => {
     c.set("db", database.postgresDb)
-    c.set("postgresClient", database.postgresClient)
+    c.set("postgresClient", database.adminPostgresClient)
     c.set("redis", getRedisClient())
     await next()
   })
 
-  protectedRoutes.use("*", createAuthMiddleware({ adminClient: database.postgresClient }))
+  protectedRoutes.use("*", createAuthMiddleware({ adminClient: database.adminPostgresClient }))
   protectedRoutes.use("*", createRlsMiddleware(database.client))
   protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
 

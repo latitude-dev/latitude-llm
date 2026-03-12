@@ -1,7 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { type OpenAPIHono, createRoute, z } from "@hono/zod-openapi"
+import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi"
 import { healthcheckClickhouse } from "@platform/db-clickhouse"
-import { type PostgresClient, healthcheckPostgres } from "@platform/db-postgres"
+import { healthcheckPostgres, type PostgresClient } from "@platform/db-postgres"
 import type { Effect as EffectType } from "effect"
 import { Effect } from "effect"
 

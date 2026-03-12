@@ -1,8 +1,8 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import type { RedisClient } from "@platform/cache-redis"
+import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
-import { type PostgresClient, createPostgresClient } from "@platform/db-postgres"
+import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { Effect } from "effect"
 

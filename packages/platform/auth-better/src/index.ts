@@ -1,14 +1,11 @@
 import { stripe } from "@better-auth/stripe"
 import { MembershipRepository } from "@domain/organizations"
-import { UserId, generateId } from "@domain/shared"
-import { MembershipRepositoryLive, SqlClientLive } from "@platform/db-postgres"
-import { type PostgresClient, postgresSchema } from "@platform/db-postgres"
+import { generateId, UserId } from "@domain/shared"
+import { MembershipRepositoryLive, type PostgresClient, postgresSchema, SqlClientLive } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { customSession } from "better-auth/plugins"
-import { magicLink } from "better-auth/plugins"
-import { organization } from "better-auth/plugins"
+import { customSession, magicLink, organization } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import type { BetterAuthPlugin } from "better-auth/types"
 import { Effect } from "effect"
@@ -38,17 +35,9 @@ export interface BetterAuthConfig {
   readonly stripePublishableKey?: string
   readonly subscriptionPlans?: StripePlanConfig[]
   // Magic Link email configuration
-  readonly sendMagicLink?: (params: {
-    email: string
-    url: string
-    token: string
-  }) => Promise<void>
+  readonly sendMagicLink?: (params: { email: string; url: string; token: string }) => Promise<void>
   // User creation hook for onboarding
-  readonly onUserCreated?: (user: {
-    id: string
-    email: string
-    name?: string
-  }) => Promise<void>
+  readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
   // Trusted origins for callback URLs
   readonly trustedOrigins?: string[]
   // Mount path where Better Auth handlers are exposed
@@ -265,4 +254,4 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
 }
 
 // Export types from better-auth for convenience
-export type { User, Session } from "better-auth"
+export type { Session, User } from "better-auth"

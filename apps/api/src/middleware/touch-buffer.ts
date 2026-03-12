@@ -1,7 +1,7 @@
 import { ApiKeyRepository } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
-import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import type { PostgresClient } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 

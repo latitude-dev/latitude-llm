@@ -1,6 +1,6 @@
 import { Toaster } from "@repo/ui"
 import "@repo/ui/styles/globals.css"
-import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router"
+import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import { Agentation } from "agentation"
 import type { ReactNode } from "react"
 import { useEffect } from "react"
@@ -54,7 +54,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <AppQueryProvider>
           {children}
           <Toaster />
-          {process.env.NODE_ENV === "development" && <Agentation />}
+          {process.env.NODE_ENV === "development" && <Agentation endpoint="http://localhost:4747" />}
         </AppQueryProvider>
         <Scripts />
       </body>

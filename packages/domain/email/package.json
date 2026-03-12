@@ -18,7 +18,7 @@
     "react": "catalog:"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
+    "@biomejs/biome": "catalog:",
     "@types/react": "catalog:",
     "typescript": "^5.7.0"
   }

@@ -13,14 +13,19 @@ import {
 } from "@domain/email"
 import { UserRepository } from "@domain/users"
 import { createBetterAuth } from "@platform/auth-better"
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import type { RedisClient } from "@platform/cache-redis"
+import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import { AuthIntentRepositoryLive, SqlClientLive, UserRepositoryLive } from "@platform/db-postgres"
-import { type PostgresClient, createPostgresClient } from "@platform/db-postgres"
+import {
+  AuthIntentRepositoryLive,
+  createPostgresClient,
+  type PostgresClient,
+  SqlClientLive,
+  UserRepositoryLive,
+} from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { type StorageDisk, createStorageDisk } from "@platform/storage-object"
+import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined

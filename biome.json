@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
@@ -18,7 +18,21 @@
       "semicolons": "asNeeded"
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "files": {
-    "ignore": ["dist/**", "coverage/**", ".turbo/**", "node_modules/**", "**/*.gen.ts", "**/models.dev.json"]
+    "includes": [
+      "**",
+      "!!**/dist",
+      "!!**/coverage",
+      "!!**/.turbo",
+      "!!**/node_modules",
+      "!**/*.gen.ts",
+      "!**/models.dev.json",
+      "!**/drizzle/**/*.json"
+    ]
   }
 }

@@ -3,12 +3,12 @@ import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import {
-  type SpanDetailRecord,
-  type SpanRecord,
-  type TraceRecord,
   getSpanDetail,
   listSpansByTrace,
   listTracesByProject,
+  type SpanDetailRecord,
+  type SpanRecord,
+  type TraceRecord,
 } from "./spans.functions.ts"
 
 const queryClient = getQueryClient()

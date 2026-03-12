@@ -1,8 +1,8 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { listMembers, removeMember } from "./members.functions.ts"
 import type { MemberRecord } from "./members.functions.ts"
+import { listMembers, removeMember } from "./members.functions.ts"
 
 const queryClient = getQueryClient()
 

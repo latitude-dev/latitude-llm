@@ -1,6 +1,6 @@
 import type { ApiKeyId as ApiKeyIdType, NotFoundError, RepositoryError } from "@domain/shared"
-import { ServiceMap } from "effect"
 import type { Effect } from "effect"
+import { ServiceMap } from "effect"
 import type { ApiKey } from "../entities/api-key.ts"
 
 // ApiKeyRepository Service with all methods needed by use cases

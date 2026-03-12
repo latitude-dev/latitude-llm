@@ -5,6 +5,13 @@ import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId } from "@do
 import { safeParseJson, safeStringifyJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
+const serializeField = (value: unknown): string => {
+  if (value !== null && typeof value === "object" && Object.keys(value as Record<string, unknown>).length === 0) {
+    return ""
+  }
+  return safeStringifyJson(value)
+}
+
 type DatasetRowCH = {
   row_id: string
   input: string
@@ -17,9 +24,9 @@ type DatasetRowCH = {
 const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   rowId: DatasetRowId(row.row_id),
   datasetId: DatasetId(datasetId),
-  input: safeParseJson(row.input),
-  output: safeParseJson(row.output),
-  metadata: safeParseJson(row.metadata),
+  input: safeParseJson(row.input, { fallback: "string" }),
+  output: safeParseJson(row.output, { fallback: "string" }),
+  metadata: safeParseJson(row.metadata, { fallback: "string" }),
   createdAt: new Date(row.created_at),
   version: Number(row.latest_xact_id),
 })
@@ -47,14 +54,18 @@ export const DatasetRowRepositoryLive = Layer.effect(
             dataset_id: args.datasetId,
             row_id: row.id,
             xact_id: args.version,
-            input: safeStringifyJson(row.input),
-            output: safeStringifyJson(row.output ?? {}),
-            metadata: safeStringifyJson(row.metadata ?? {}),
+            input: serializeField(row.input),
+            output: serializeField(row.output),
+            metadata: serializeField(row.metadata),
           }))
 
           for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
             const batch = values.slice(i, i + INSERT_BATCH_SIZE)
-            await client.insert({ table: "dataset_rows", values: batch, format: "JSONEachRow" })
+            await client.insert({
+              table: "dataset_rows",
+              values: batch,
+              format: "JSONEachRow",
+            })
           }
 
           return args.rows.map((r) => r.id)
@@ -114,10 +125,18 @@ export const DatasetRowRepositoryLive = Layer.effect(
 
           const [dataResult, countResult] = await Promise.all([
             client
-              .query({ query: dataQuery, query_params: params, format: "JSONEachRow" })
+              .query({
+                query: dataQuery,
+                query_params: params,
+                format: "JSONEachRow",
+              })
               .then((r) => r.json<DatasetRowCH>()),
             client
-              .query({ query: countQuery, query_params: params, format: "JSONEachRow" })
+              .query({
+                query: countQuery,
+                query_params: params,
+                format: "JSONEachRow",
+              })
               .then((r) => r.json<{ total: string }>()),
           ])
 
@@ -170,6 +189,48 @@ export const DatasetRowRepositoryLive = Layer.effect(
           }
 
           return result
+        }),
+      updateRow: (args) =>
+        chSqlClient.query(async (client) => {
+          await client.insert({
+            table: "dataset_rows",
+            values: [
+              {
+                organization_id: args.organizationId,
+                dataset_id: args.datasetId,
+                row_id: args.rowId,
+                xact_id: args.version,
+                input: serializeField(args.input),
+                output: serializeField(args.output),
+                metadata: serializeField(args.metadata),
+              },
+            ],
+            format: "JSONEachRow",
+          })
+        }),
+      deleteBatch: (args) =>
+        chSqlClient.query(async (client) => {
+          if (args.rowIds.length === 0) return
+
+          const values = args.rowIds.map((rowId) => ({
+            organization_id: args.organizationId,
+            dataset_id: args.datasetId,
+            row_id: rowId,
+            xact_id: args.version,
+            input: "",
+            output: "",
+            metadata: "",
+            _object_delete: true,
+          }))
+
+          for (let i = 0; i < values.length; i += INSERT_BATCH_SIZE) {
+            const batch = values.slice(i, i + INSERT_BATCH_SIZE)
+            await client.insert({
+              table: "dataset_rows",
+              values: batch,
+              format: "JSONEachRow",
+            })
+          }
         }),
     }
   }),

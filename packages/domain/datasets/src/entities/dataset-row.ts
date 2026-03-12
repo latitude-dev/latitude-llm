@@ -1,12 +1,14 @@
 import type { DatasetId, DatasetRowId } from "@domain/shared"
 import { Data } from "effect"
 
+export type RowFieldValue = string | Record<string, unknown>
+
 export interface DatasetRow {
   readonly rowId: DatasetRowId
   readonly datasetId: DatasetId
-  readonly input: Record<string, unknown>
-  readonly output: Record<string, unknown>
-  readonly metadata: Record<string, unknown>
+  readonly input: RowFieldValue
+  readonly output: RowFieldValue
+  readonly metadata: RowFieldValue
   readonly createdAt: Date
   readonly version: number
 }

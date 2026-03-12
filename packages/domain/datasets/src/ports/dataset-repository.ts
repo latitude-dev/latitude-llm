@@ -32,7 +32,9 @@ export class DatasetRepository extends ServiceMap.Service<
     incrementVersion(args: {
       readonly organizationId: OrganizationId
       readonly id: DatasetId
-      readonly rowsInserted: number
+      readonly rowsInserted?: number
+      readonly rowsUpdated?: number
+      readonly rowsDeleted?: number
       readonly source?: string
     }): Effect.Effect<DatasetVersion, DatasetNotFoundError | RepositoryError>
 

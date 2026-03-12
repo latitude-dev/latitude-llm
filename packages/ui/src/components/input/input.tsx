@@ -1,5 +1,5 @@
-import { type VariantProps, cva } from "class-variance-authority"
-import { type InputHTMLAttributes, forwardRef } from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { forwardRef, type InputHTMLAttributes } from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"

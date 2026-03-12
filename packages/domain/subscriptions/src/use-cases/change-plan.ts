@@ -1,6 +1,6 @@
 import { type GrantId, type NotFoundError, type OrganizationId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
-import { type Grant, type GrantType, createGrant } from "../entities/grant.ts"
+import { createGrant, type Grant, type GrantType } from "../entities/grant.ts"
 import type { Plan } from "../entities/plan.ts"
 import type { Subscription } from "../entities/subscription.ts"
 import { GrantRepository } from "../ports/grant-repository.ts"

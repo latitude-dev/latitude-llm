@@ -12,7 +12,7 @@ import {
   Text,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useTracesCollection } from "../../../../domains/spans/spans.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({

@@ -1,5 +1,5 @@
-import { ProjectRepository } from "@domain/projects"
 import type { Project } from "@domain/projects"
+import { ProjectRepository } from "@domain/projects"
 import {
   NotFoundError,
   OrganizationId,

@@ -1,2 +1,2 @@
-export type { StorageDriver, StorageDisk } from "./driver.ts"
+export type { StorageDisk, StorageDriver } from "./driver.ts"
 export { createStorageDisk, createStorageDiskEffect } from "./driver.ts"
