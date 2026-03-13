@@ -1,5 +1,5 @@
 import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
-import { Link, createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { AlertCircle, Info, Mail } from "lucide-react"
 import { useState } from "react"
 import { createSignupIntent } from "../domains/auth/auth.functions.ts"

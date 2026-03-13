@@ -4,8 +4,25 @@ import { type PostgresClient, type PostgresDb, postgresSchema } from "@platform/
 import { sql } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/pglite"
 import { migrate } from "drizzle-orm/pglite/migrator"
+import { afterAll, beforeAll } from "vitest"
 
 const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../../db-postgres/drizzle", import.meta.url))
+
+/**
+ * Hono middleware that switches to the non-owner runtime role for the duration
+ * of the request so Postgres enforces RLS. Resets to the owner role
+ * afterwards so seed/assertion queries remain unrestricted.
+ */
+export function createRlsMiddleware(client: PGlite) {
+  return async (_c: unknown, next: () => Promise<void>) => {
+    await client.exec("SET ROLE latitude_app")
+    try {
+      await next()
+    } finally {
+      await client.exec("RESET ROLE")
+    }
+  }
+}
 
 const unsafeCast = <T>(value: unknown): T => value as T
 
@@ -76,4 +93,49 @@ export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
 
 export const closeInMemoryPostgres = async (database: InMemoryPostgres): Promise<void> => {
   await database.client.close()
+}
+
+interface TestPostgresContext {
+  readonly client: PGlite
+  readonly db: InMemoryPostgres["db"]
+  readonly postgresDb: PostgresDb
+  readonly adminPostgresClient: PostgresClient
+  readonly appPostgresClient: PostgresClient
+}
+
+/**
+ * Registers beforeAll / afterAll hooks for a PGlite-backed test file.
+ * - beforeAll: creates PGlite instance, runs migrations
+ * - afterAll: closes the PGlite connection
+ *
+ * Returns an object whose properties resolve lazily after beforeAll.
+ */
+export function setupTestPostgres(): TestPostgresContext {
+  let pg: InMemoryPostgres
+
+  beforeAll(async () => {
+    pg = await createInMemoryPostgres()
+  })
+
+  afterAll(async () => {
+    await closeInMemoryPostgres(pg)
+  })
+
+  return {
+    get client() {
+      return pg.client
+    },
+    get db() {
+      return pg.db
+    },
+    get postgresDb() {
+      return pg.postgresDb
+    },
+    get adminPostgresClient() {
+      return pg.adminPostgresClient
+    },
+    get appPostgresClient() {
+      return pg.appPostgresClient
+    },
+  }
 }

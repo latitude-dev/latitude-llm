@@ -1,35 +1,34 @@
 export type {
+  CostBreakdown,
+  CostLookupResult,
+  ModelCostSpec,
+  ModelCostTier,
+  TokenCostEntry,
+  TokenType,
+  TokenUsage,
+} from "./entities/cost.ts"
+export {
+  computeCostBreakdown,
+  computeTokenCost,
+  estimateTotalCost,
+} from "./entities/cost.ts"
+export type {
   Model,
-  ModelModality,
   ModelModalities,
+  ModelModality,
   ModelPricing,
 } from "./entities/model.ts"
 export { parseModelsDevData } from "./entities/model.ts"
 
-export type {
-  TokenType,
-  TokenUsage,
-  ModelCostTier,
-  ModelCostSpec,
-  CostLookupResult,
-  TokenCostEntry,
-  CostBreakdown,
-} from "./entities/cost.ts"
 export {
-  computeTokenCost,
-  estimateTotalCost,
-  computeCostBreakdown,
-} from "./entities/cost.ts"
-
-export {
-  getAllModels,
-  findModel,
-  getModelPricing,
-  getModelsForProvider,
-  getModelForProvider,
-  getCostSpec,
+  costBreakdownKey,
   estimateCost,
   estimateCostWithBreakdown,
-  costBreakdownKey,
+  findModel,
   formatModel,
+  getAllModels,
+  getCostSpec,
+  getModelForProvider,
+  getModelPricing,
+  getModelsForProvider,
 } from "./registry.ts"

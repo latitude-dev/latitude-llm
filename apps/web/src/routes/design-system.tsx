@@ -1,3 +1,4 @@
+import type { CheckedState } from "@repo/ui"
 import {
   Button,
   Card,
@@ -6,6 +7,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  Checkbox,
+  CopyButton,
   FormField,
   GitHubIcon,
   GoogleIcon,
@@ -13,9 +16,10 @@ import {
   Input,
   Label,
   LatitudeLogo,
+  RichTextEditor,
   Text,
 } from "@repo/ui"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -127,6 +131,31 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         </div>
       </ShowcaseSection>
 
+      <ShowcaseSection theme={theme} title="Checkbox" description="Selection control with indeterminate state.">
+        <CheckboxShowcase />
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Rich Text Editor"
+        description="Lazy-loaded CodeMirror editor with JSON detection."
+      >
+        <RichTextEditorShowcase />
+      </ShowcaseSection>
+
+      <ShowcaseSection theme={theme} title="Copy Button" description="Clipboard copy with feedback.">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-row items-center gap-2">
+            <Text.Mono>Hello, world!</Text.Mono>
+            <CopyButton value="Hello, world!" />
+          </div>
+          <div className="flex flex-row items-center gap-2">
+            <Text.Mono>cuid_abc123def456</Text.Mono>
+            <CopyButton value="cuid_abc123def456" />
+          </div>
+        </div>
+      </ShowcaseSection>
+
       <Card className={`relative overflow-hidden border-border/70 shadow-xl ${surfaceClass}`}>
         <CardHeader className="relative">
           <CardTitle>
@@ -152,11 +181,64 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         </CardContent>
         <CardFooter className="relative">
           <Text.H6 color="foregroundMuted">
-            `Checkbox`, `Select`, `Skeleton`, and `Tooltip` are exported in `@repo/ui` and are currently pending
-            implementation.
+            `Select`, `Skeleton`, and `Tooltip` are exported in `@repo/ui` and are currently pending implementation.
           </Text.H6>
         </CardFooter>
       </Card>
+    </div>
+  )
+}
+
+function CheckboxShowcase() {
+  const [checked, setChecked] = useState<CheckedState>(false)
+  const [showHitArea, setShowHitArea] = useState(false)
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-row items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Checkbox checked={false} />
+          <Text.H6>Unchecked</Text.H6>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox checked />
+          <Text.H6>Checked</Text.H6>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox checked="indeterminate" />
+          <Text.H6>Indeterminate</Text.H6>
+        </div>
+        <div className="flex items-center gap-2">
+          <Checkbox disabled />
+          <Text.H6 color="foregroundMuted">Disabled</Text.H6>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox checked={checked} onCheckedChange={setChecked} className="hit-area-3" debugHitArea={showHitArea} />
+        <Text.H6>Interactive (hit-area-3) — state: {String(checked)}</Text.H6>
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox checked={showHitArea} onCheckedChange={(v) => setShowHitArea(v === true)} />
+        <Text.H6>Show hit area debug overlay</Text.H6>
+      </div>
+    </div>
+  )
+}
+
+function RichTextEditorShowcase() {
+  const [jsonValue, setJsonValue] = useState('{\n  "name": "Latitude",\n  "type": "platform"\n}')
+  const [textValue, setTextValue] = useState("Hello, world!\nThis is plain text content.")
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Text.H6 weight="bold">JSON content (auto-detected)</Text.H6>
+        <RichTextEditor value={jsonValue} onChange={setJsonValue} minHeight="100px" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Text.H6 weight="bold">Plain text</Text.H6>
+        <RichTextEditor value={textValue} onChange={setTextValue} minHeight="80px" />
+      </div>
     </div>
   )
 }

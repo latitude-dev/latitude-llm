@@ -14,11 +14,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@clickhouse/client": "catalog:",
     "@domain/shared": "workspace:*",
     "@electric-sql/pglite": "0.3.15",
-    "@platform/db-postgres": "workspace:*",
     "@platform/cache-redis": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
     "@repo/utils": "workspace:*",
+    "chdb": "^1.6.0",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",

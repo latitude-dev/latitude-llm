@@ -4,11 +4,7 @@ import { createAuthIntent } from "../entities/auth-intent.ts"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import { createSignupIntentData, normalizeEmail } from "./auth-intent-policy.ts"
 
-export const createSignupIntentUseCase = (input: {
-  email: string
-  name: string
-  organizationName: string
-}) =>
+export const createSignupIntentUseCase = (input: { email: string; name: string; organizationName: string }) =>
   Effect.gen(function* () {
     const users = yield* UserRepository
     const intents = yield* AuthIntentRepository

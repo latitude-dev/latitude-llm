@@ -1,13 +1,11 @@
+import { Ellipsis } from "lucide-react"
 import type { MouseEvent, ReactNode } from "react"
 import { useCallback, useState } from "react"
-
 import { cn } from "../../utils/cn.ts"
 import { Button, type ButtonProps } from "../button/button.tsx"
+import type { IconProps } from "../icons/icons.tsx"
 import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
-
-import { Ellipsis } from "lucide-react"
-import type { IconProps } from "../icons/icons.tsx"
 import {
   type ContentProps,
   DropdownMenuContent,

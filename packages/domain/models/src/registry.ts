@@ -6,12 +6,11 @@
  */
 
 import { formatCount, formatPrice } from "@repo/utils"
+import modelsDevJson from "./data/models.dev.json" with { type: "json" }
 import type { CostBreakdown, CostLookupResult, TokenUsage } from "./entities/cost.ts"
 import { computeCostBreakdown, estimateTotalCost } from "./entities/cost.ts"
 import type { Model, ModelPricing } from "./entities/model.ts"
 import { parseModelsDevData } from "./entities/model.ts"
-
-import modelsDevJson from "./data/models.dev.json" with { type: "json" }
 
 let cachedModels: Model[] | null = null
 

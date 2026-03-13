@@ -1,5 +1,5 @@
 import { Button, Container, Text } from "@repo/ui"
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { useSpanDetail } from "../../../../../../../../domains/spans/spans.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/traces/$traceId/spans/$spanId/")({
@@ -33,13 +33,7 @@ function JsonBlock({ label, value }: { label: string; value: string }) {
   )
 }
 
-function DataBlock({
-  label,
-  data,
-}: {
-  label: string
-  data: readonly object[] | Readonly<Record<string, unknown>>
-}) {
+function DataBlock({ label, data }: { label: string; data: readonly object[] | Readonly<Record<string, unknown>> }) {
   const isEmpty = Array.isArray(data) ? data.length === 0 : Object.keys(data).length === 0
   if (isEmpty) return null
 

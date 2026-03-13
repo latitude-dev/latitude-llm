@@ -1,7 +1,7 @@
 import { Button, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router"
 import {
   ChevronDown,
   ChevronRight,

@@ -8,9 +8,9 @@ import type { AuthIntent } from "../types.ts"
 import {
   AuthIntentEmailMismatchError,
   AuthIntentExpiredError,
+  completeAuthIntentUseCase,
   InvalidAuthIntentTypeError,
   MissingInviteDataError,
-  completeAuthIntentUseCase,
 } from "./complete-auth-intent.ts"
 
 // --- Test Fixtures ---

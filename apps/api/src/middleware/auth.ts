@@ -1,7 +1,7 @@
 import { ApiKeyRepository } from "@domain/api-keys"
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
-import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import type { PostgresClient } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"

@@ -2,34 +2,30 @@ export {
   createProject,
   isProjectDeleted,
   markProjectDeleted,
-  restoreProject,
   type Project,
+  restoreProject,
 } from "./entities/project.ts"
-
-export { ProjectRepository } from "./ports/project-repository.ts"
-
-export {
-  createProjectUseCase,
-  InvalidProjectNameError,
-  ProjectAlreadyExistsError,
-  type CreateProjectError,
-  type CreateProjectInput,
-} from "./use-cases/create-project.ts"
-
-export {
-  updateProjectUseCase,
-  ProjectNotFoundError,
-  InvalidProjectNameError as UpdateInvalidProjectNameError,
-  type UpdateProjectError,
-  type UpdateProjectInput,
-} from "./use-cases/update-project.ts"
-
-export {
-  listAllProjectsUseCase,
-  type ListAllProjectsInput,
-} from "./use-cases/list-projects.ts"
-
 export {
   createProjectCreatedEvent,
   type ProjectCreatedEvent,
 } from "./events/project-created.ts"
+export { ProjectRepository } from "./ports/project-repository.ts"
+export {
+  type CreateProjectError,
+  type CreateProjectInput,
+  createProjectUseCase,
+  InvalidProjectNameError,
+  ProjectAlreadyExistsError,
+} from "./use-cases/create-project.ts"
+
+export {
+  type ListAllProjectsInput,
+  listAllProjectsUseCase,
+} from "./use-cases/list-projects.ts"
+export {
+  InvalidProjectNameError as UpdateInvalidProjectNameError,
+  ProjectNotFoundError,
+  type UpdateProjectError,
+  type UpdateProjectInput,
+  updateProjectUseCase,
+} from "./use-cases/update-project.ts"

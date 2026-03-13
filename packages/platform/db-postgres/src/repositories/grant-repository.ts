@@ -8,8 +8,8 @@ import {
   SubscriptionId,
   type SubscriptionId as SubscriptionIdType,
 } from "@domain/shared"
-import { GrantRepository } from "@domain/subscriptions"
 import type { Grant, GrantType } from "@domain/subscriptions"
+import { GrantRepository } from "@domain/subscriptions"
 import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"

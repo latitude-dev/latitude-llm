@@ -20,11 +20,11 @@ import {
 } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { useProjectsCollection } from "../../domains/projects/projects.collection.ts"
-import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
+import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -124,13 +124,7 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
   )
 }
 
-function RenameProjectModal({
-  project,
-  onClose,
-}: {
-  project: ProjectRecord
-  onClose: () => void
-}) {
+function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onClose: () => void }) {
   const { toast } = useToast()
 
   const form = useForm({
@@ -194,13 +188,7 @@ function RenameProjectModal({
   )
 }
 
-function CreateProjectModal({
-  open,
-  onClose,
-}: {
-  open: boolean
-  onClose: () => void
-}) {
+function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const form = useForm({
     defaultValues: {
       name: "",

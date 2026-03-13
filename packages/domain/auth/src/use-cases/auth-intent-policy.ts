@@ -2,13 +2,7 @@ import type { AuthIntent, MagicLinkEmailTemplate } from "../types.ts"
 
 export const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
-export const createSignupIntentData = ({
-  name,
-  organizationName,
-}: {
-  name: string
-  organizationName: string
-}) => {
+export const createSignupIntentData = ({ name, organizationName }: { name: string; organizationName: string }) => {
   const normalizedName = name.trim()
   const normalizedOrganizationName = organizationName.trim()
 

@@ -1,32 +1,32 @@
-import { Button, Container, Input, Skeleton, TableSkeleton, Text } from "@repo/ui"
-import { createFileRoute } from "@tanstack/react-router"
-import { FileUp, Loader2, Upload } from "lucide-react"
+import { Button, Container, cn, Input, Skeleton, TableSkeleton, Text } from "@repo/ui"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { FileUp, Loader2, Trash2, Upload } from "lucide-react"
 import Papa from "papaparse"
 import { useCallback, useDeferredValue, useRef, useState } from "react"
-import { ColumnMapper } from "../../../../../components/datasets/column-mapper.tsx"
-import { CsvPreviewTable } from "../../../../../components/datasets/csv-preview-table.tsx"
+import { z } from "zod"
+import { CsvImportView, type ParsedCsv } from "../../../../../components/datasets/csv-import-view.tsx"
 import { DatasetTable } from "../../../../../components/datasets/dataset-table.tsx"
+import { DeleteRowsModal } from "../../../../../components/datasets/delete-rows-modal.tsx"
 import { RowDetailPanel } from "../../../../../components/datasets/row-detail-panel.tsx"
 import { VersionBadge } from "../../../../../components/datasets/version-badge.tsx"
 import { useDatasetRowsCollection, useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
-import type {
-  ColumnMapping,
-  CsvTransformOptions,
-  DatasetRecord,
-  DatasetRowRecord,
+import type { DatasetRecord, DatasetRowRecord } from "../../../../../domains/datasets/datasets.functions.ts"
+import {
+  deleteRowsMutation,
+  saveDatasetCsv,
+  updateRowMutation,
 } from "../../../../../domains/datasets/datasets.functions.ts"
-import { saveDatasetCsv } from "../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
+import { useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
+
+const datasetSearchSchema = z.object({
+  rid: z.string().optional(),
+})
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/$datasetId")({
   component: DatasetDetailPage,
+  validateSearch: datasetSearchSchema,
 })
-
-interface ParsedCsv {
-  headers: string[]
-  rows: Record<string, string>[]
-  file: File
-}
 
 function DatasetDetailPage() {
   const { projectId, datasetId } = Route.useParams()
@@ -61,7 +61,7 @@ function DatasetDetailPage() {
   const hasRows = dataset.currentVersion > 0
 
   if (hasRows && !parsedCsv) {
-    return <DatasetRowsView projectId={projectId} datasetId={datasetId} dataset={dataset} />
+    return <DatasetRowsView projectId={projectId} datasetId={datasetId} dataset={dataset} onImport={setParsedCsv} />
   }
 
   if (parsedCsv) {
@@ -79,13 +79,7 @@ function DatasetDetailPage() {
   return <UploadBlankSlate dataset={dataset} onParsed={setParsedCsv} />
 }
 
-function UploadBlankSlate({
-  dataset,
-  onParsed,
-}: {
-  dataset: DatasetRecord
-  onParsed: (csv: ParsedCsv) => void
-}) {
+function UploadBlankSlate({ dataset, onParsed }: { dataset: DatasetRecord; onParsed: (csv: ParsedCsv) => void }) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
   const [parsing, setParsing] = useState(false)
@@ -97,7 +91,10 @@ function UploadBlankSlate({
       setError(null)
       try {
         const text = await file.text()
-        const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true })
+        const result = Papa.parse<Record<string, string>>(text, {
+          header: true,
+          skipEmptyLines: true,
+        })
 
         if (!result.meta.fields || result.meta.fields.length === 0) {
           setError("Could not detect any columns in this CSV")
@@ -135,16 +132,26 @@ function UploadBlankSlate({
           </div>
         )}
 
+        {/* biome-ignore lint/a11y/useSemanticElements: drop zone requires div for drag events */}
         <div
-          className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-16 transition-colors ${
-            isDragOver ? "border-primary bg-primary/5" : "border-border"
-          }`}
+          role="button"
+          tabIndex={0}
+          className={cn(
+            "flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-16 transition-colors",
+            {
+              "border-primary bg-primary/5": isDragOver,
+              "border-border": !isDragOver,
+            },
+          )}
           onDragOver={(e) => {
             e.preventDefault()
             setIsDragOver(true)
           }}
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click()
+          }}
         >
           {parsing ? (
             <>
@@ -193,24 +200,18 @@ function CsvMappingView({
   parsedCsv: ParsedCsv
   onCancel: () => void
 }) {
-  const [mapping, setMapping] = useState<ColumnMapping>(() => ({
-    input: [...parsedCsv.headers],
-    output: [],
-    metadata: [],
-  }))
-  const [options, setOptions] = useState<CsvTransformOptions>({
-    flattenSingleColumn: false,
-    autoParseJson: false,
-  })
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleSave = useCallback(async () => {
-    setSaving(true)
-    setError(null)
-    try {
+  const handleSave = useCallback(
+    async ({
+      file,
+      mapping,
+      options,
+    }: {
+      file: File
+      mapping: { input: string[]; output: string[]; metadata: string[] }
+      options: { flattenSingleColumn: boolean; autoParseJson: boolean }
+    }) => {
       const formData = new FormData()
-      formData.append("file", parsedCsv.file)
+      formData.append("file", file)
       formData.append("datasetId", datasetId)
       formData.append("projectId", projectId)
       formData.append("mapping", JSON.stringify(mapping))
@@ -219,56 +220,23 @@ function CsvMappingView({
       await saveDatasetCsv({ data: formData })
 
       getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
-      getQueryClient().invalidateQueries({ queryKey: ["datasetRows", datasetId] })
+      getQueryClient().invalidateQueries({
+        queryKey: ["datasetRows", datasetId],
+      })
       onCancel()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save dataset")
-    } finally {
-      setSaving(false)
-    }
-  }, [parsedCsv.file, datasetId, projectId, mapping, options, onCancel])
+    },
+    [datasetId, projectId, onCancel],
+  )
 
   return (
     <Container size="full">
-      <div className="flex flex-col gap-4 flex-1 min-h-0">
-        <div className="flex flex-row items-center justify-between px-2">
-          <div className="flex flex-row items-center gap-3">
-            <Text.H3 weight="bold">{dataset.name}</Text.H3>
-            <Text.H6 color="foregroundMuted">{parsedCsv.file.name}</Text.H6>
-          </div>
-          <Button variant="outline" size="sm" onClick={onCancel}>
-            <Text.H6>Cancel</Text.H6>
-          </Button>
-        </div>
-
-        {error && (
-          <div className="flex flex-row items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3">
-            <Text.H5 color="destructive">{error}</Text.H5>
-          </div>
-        )}
-
-        <div className="flex flex-row flex-1 min-h-0 border rounded-lg overflow-hidden">
-          <div className="flex flex-col w-3/5 min-h-0 border-r">
-            <CsvPreviewTable
-              csvRows={parsedCsv.rows}
-              totalRows={parsedCsv.rows.length}
-              mapping={mapping}
-              options={options}
-            />
-          </div>
-          <div className="flex flex-col w-2/5 min-h-0">
-            <ColumnMapper
-              headers={parsedCsv.headers}
-              mapping={mapping}
-              onMappingChange={setMapping}
-              options={options}
-              onOptionsChange={setOptions}
-              onSave={handleSave}
-              saving={saving}
-            />
-          </div>
-        </div>
-      </div>
+      <CsvImportView
+        title={dataset.name}
+        subtitle={parsedCsv.file.name}
+        parsedCsv={parsedCsv}
+        onCancel={onCancel}
+        onSave={handleSave}
+      />
     </Container>
   )
 }
@@ -277,24 +245,159 @@ function DatasetRowsView({
   projectId,
   datasetId,
   dataset,
+  onImport,
 }: {
   projectId: string
   datasetId: string
   dataset: DatasetRecord
+  onImport: (csv: ParsedCsv) => void
 }) {
+  const navigate = useNavigate()
+  const { rid } = Route.useSearch()
   const [search, setSearch] = useState("")
   const deferredSearch = useDeferredValue(search)
-  const [selectedRow, setSelectedRow] = useState<DatasetRowRecord | null>(null)
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(rid ?? null)
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [currentVersion, setCurrentVersion] = useState(dataset.currentVersion)
+  const [currentVersionId, setCurrentVersionId] = useState(dataset.latestVersionId)
   const rowsCollection = useDatasetRowsCollection(datasetId, deferredSearch)
-  const rows = rowsCollection.data
+  const rows = rowsCollection.data ?? []
   const isLoading = !rowsCollection.data
+  const selectedRow = selectedRowId ? (rows.find((r) => r.rowId === selectedRowId) ?? null) : null
+
+  const importFileRef = useRef<HTMLInputElement>(null)
+
+  const rowIds = rows.map((r) => r.rowId)
+  const selection = useSelectableRows({
+    rowIds,
+    totalRowCount: rows.length,
+  })
+
+  const openRow = useCallback(
+    (row: DatasetRowRecord) => {
+      setSelectedRowId(row.rowId)
+      navigate({
+        to: ".",
+        search: { rid: row.rowId },
+        replace: true,
+      })
+    },
+    [navigate],
+  )
+
+  const closeRow = useCallback(() => {
+    setSelectedRowId(null)
+    navigate({
+      to: ".",
+      search: {},
+      replace: true,
+    })
+  }, [navigate])
+
+  const handleSaveRow = useCallback(
+    async (data: { input: string; output: string; metadata: string }) => {
+      if (!selectedRowId) return
+      setSaving(true)
+      try {
+        const result = await updateRowMutation({
+          data: {
+            datasetId,
+            rowId: selectedRowId,
+            input: data.input,
+            output: data.output,
+            metadata: data.metadata,
+          },
+        })
+        setCurrentVersion(result.version)
+        setCurrentVersionId(result.versionId)
+        getQueryClient().invalidateQueries({
+          queryKey: ["datasets", projectId],
+        })
+        getQueryClient().invalidateQueries({
+          queryKey: ["datasetRows", datasetId],
+        })
+      } finally {
+        setSaving(false)
+      }
+    },
+    [selectedRowId, datasetId, projectId],
+  )
+
+  const handleDeleteRows = useCallback(async () => {
+    const ids = selection.selectedRowIds
+    if (ids.length === 0) return
+    setDeleting(true)
+    try {
+      const result = await deleteRowsMutation({
+        data: { datasetId, rowIds: ids as string[] },
+      })
+      setCurrentVersion(result.version)
+      setCurrentVersionId(result.versionId)
+
+      if (selectedRowId && ids.includes(selectedRowId)) {
+        closeRow()
+      }
+
+      selection.clearSelections()
+      setDeleteModalOpen(false)
+      getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
+      getQueryClient().invalidateQueries({
+        queryKey: ["datasetRows", datasetId],
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }, [selection, datasetId, projectId, selectedRowId, closeRow])
+
+  const handleImportFile = useCallback(
+    async (file: File) => {
+      try {
+        const text = await file.text()
+        const result = Papa.parse<Record<string, string>>(text, {
+          header: true,
+          skipEmptyLines: true,
+        })
+        if (!result.meta.fields || result.meta.fields.length === 0) return
+        onImport({ headers: result.meta.fields, rows: result.data, file })
+      } catch {
+        // Silently ignore parse errors
+      }
+    },
+    [onImport],
+  )
 
   return (
     <Container>
       <div className="flex flex-col gap-4 flex-1 min-h-0">
         <div className="flex flex-row items-center justify-between">
-          <Text.H3 weight="bold">{dataset.name}</Text.H3>
-          {dataset.latestVersionId && <VersionBadge versionId={dataset.latestVersionId} />}
+          <div className="flex flex-row items-center gap-3">
+            <Text.H3 weight="bold">{dataset.name}</Text.H3>
+            <VersionBadge versionId={currentVersionId} version={currentVersion} />
+          </div>
+          <div className="flex flex-row items-center gap-2">
+            {selection.selectedCount > 0 && (
+              <Button variant="destructive" size="sm" onClick={() => setDeleteModalOpen(true)}>
+                <Trash2 className="h-4 w-4" />
+                <Text.H6 color="white">Delete {selection.selectedCount}</Text.H6>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
+              <FileUp className="h-4 w-4" />
+              <Text.H6>Import</Text.H6>
+            </Button>
+            <input
+              ref={importFileRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleImportFile(file)
+              }}
+            />
+          </div>
         </div>
 
         <div className="flex flex-row flex-1 min-h-0 border rounded-lg overflow-hidden">
@@ -308,11 +411,19 @@ function DatasetRowsView({
                 className="flex-1"
               />
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-4">
               {isLoading ? (
-                <TableSkeleton cols={4} rows={8} />
+                <TableSkeleton cols={5} rows={8} />
               ) : rows.length > 0 ? (
-                <DatasetTable rows={rows} selectedRowId={selectedRow?.rowId ?? null} onSelectRow={setSelectedRow} />
+                <DatasetTable
+                  rows={rows}
+                  selectedRowId={selectedRow?.rowId ?? null}
+                  onSelectRow={openRow}
+                  headerCheckboxState={selection.headerState}
+                  onToggleAll={selection.toggleAll}
+                  isRowSelected={selection.isSelected}
+                  onToggleRow={selection.toggleRow}
+                />
               ) : (
                 <div className="flex items-center justify-center p-8">
                   <Text.H5 color="foregroundMuted">No rows found</Text.H5>
@@ -323,11 +434,19 @@ function DatasetRowsView({
 
           {selectedRow && (
             <div className="w-1/2 min-h-0">
-              <RowDetailPanel row={selectedRow} onClose={() => setSelectedRow(null)} />
+              <RowDetailPanel row={selectedRow} onClose={closeRow} onSave={handleSaveRow} saving={saving} />
             </div>
           )}
         </div>
       </div>
+
+      <DeleteRowsModal
+        open={deleteModalOpen}
+        onOpenChange={setDeleteModalOpen}
+        selectedCount={selection.selectedCount}
+        onConfirm={handleDeleteRows}
+        deleting={deleting}
+      />
     </Container>
   )
 }

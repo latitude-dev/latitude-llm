@@ -13,7 +13,7 @@ import {
   Text,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
@@ -24,13 +24,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/datase
   component: DatasetsPage,
 })
 
-function DatasetsTable({
-  datasets,
-  projectId,
-}: {
-  datasets: DatasetRecord[]
-  projectId: string
-}) {
+function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; projectId: string }) {
   return (
     <Table>
       <TableHeader>

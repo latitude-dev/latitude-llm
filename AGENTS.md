@@ -665,6 +665,72 @@ This provides working defaults for all services (Postgres, ClickHouse, Redis, et
 - Keep tests deterministic and isolated
 - Prefer package-local runs during iteration; run full monorepo tests before PR
 
+### Database Testing (In-Memory)
+
+**Always use in-memory databases for tests.** Do not use `vi.mock`/`vi.fn` to mock repository methods and do not require running database servers. The project provides embedded, in-process database engines that run the real SQL against the real schema:
+
+- **ClickHouse → chdb** (`chdb` package): An in-process ClickHouse engine via `@platform/testkit`.
+- **Postgres → PGlite** (`@electric-sql/pglite`): An in-process Postgres via WASM via `@platform/testkit`.
+
+#### Postgres test setup (`@platform/testkit`)
+
+```typescript
+import { setupTestPostgres } from "@platform/testkit"
+import { beforeAll, describe, it } from "vitest"
+
+const pg = setupTestPostgres()
+
+describe("MyRepository", () => {
+  it("does something", async () => {
+    // pg.postgresDb is a real Drizzle instance backed by PGlite in-memory
+    // pg.db is the lower-level Drizzle/PGlite instance for direct queries
+    // pg.client is the raw PGlite handle (useful for createRlsMiddleware)
+  })
+})
+```
+
+`setupTestPostgres()` registers vitest hooks automatically:
+- **beforeAll**: creates a PGlite instance, creates the `latitude_app` role, and runs all Drizzle migrations
+- **afterAll**: closes the PGlite connection
+
+For Hono integration tests that need RLS enforcement, use `createRlsMiddleware(pg.client)` from `@platform/testkit`.
+
+#### ClickHouse test setup (`@platform/testkit`)
+
+```typescript
+import { setupTestClickHouse } from "@platform/testkit"
+import { beforeAll, describe, it } from "vitest"
+
+const ch = setupTestClickHouse()
+
+describe("MyRepository", () => {
+  let repo: ReturnType<typeof createMyRepository>
+
+  beforeAll(() => {
+    repo = createMyRepository(ch.client)
+  })
+
+  it("does something", async () => {
+    // ch.client is a real ClickHouseClient backed by chdb in-memory
+  })
+})
+```
+
+`setupTestClickHouse()` registers vitest hooks automatically:
+- **beforeAll**: creates a chdb session and loads the schema from `schema.sql`
+- **beforeEach**: truncates all tables for test isolation
+- **afterAll**: destroys the session and cleans up temp files
+
+The schema file is generated from the development ClickHouse instance. After applying new ClickHouse migrations, regenerate it:
+
+```bash
+pnpm --filter @platform/db-clickhouse ch:schema:dump
+```
+
+#### Why not `vi.mock`?
+
+Mocking repositories with `vi.fn()` tests the wiring, not the queries. In-memory databases catch real bugs: wrong column names, broken `argMax` aggregations, incorrect `GROUP BY` clauses, and schema mismatches. They run in <1s with zero external dependencies.
+
 ## Adding New Infrastructure Dependencies
 
 1. Add a capability interface in `packages/platform/*-core`

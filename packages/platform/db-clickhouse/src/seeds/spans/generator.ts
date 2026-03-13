@@ -298,13 +298,7 @@ function makeLlmSpan({
   return span
 }
 
-function makeToolSpan({
-  base,
-  tool,
-}: {
-  base: SpanBase
-  tool: ToolConfig
-}): SpanRow {
+function makeToolSpan({ base, tool }: { base: SpanBase; tool: ToolConfig }): SpanRow {
   const span = makeBaseSpan(base)
   span.name = `execute_tool ${tool.name}`
   span.operation = "execute_tool"

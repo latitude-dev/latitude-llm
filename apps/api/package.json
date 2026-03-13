@@ -37,7 +37,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.3.15",
     "@platform/testkit": "workspace:*",
     "@repo/vitest-config": "workspace:*"
   }

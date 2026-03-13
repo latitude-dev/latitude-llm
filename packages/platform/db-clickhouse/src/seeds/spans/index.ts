@@ -2,7 +2,7 @@ import { SEED_API_KEY_ID, SEED_ORG_ID, SEED_PROJECT_ID } from "@domain/shared"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { Seeder } from "../types.ts"
-import { type SpanRow, type TraceConfig, generateAllSpans } from "./generator.ts"
+import { generateAllSpans, type SpanRow, type TraceConfig } from "./generator.ts"
 
 const TRACE_COUNT = 2000
 const BATCH_SIZE = 500

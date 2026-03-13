@@ -1,10 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text } from "@repo/ui"
 import { useMemo } from "react"
-import {
-  type ColumnMapping,
-  type CsvTransformOptions,
-  applyMapping,
-} from "../../domains/datasets/datasets.functions.ts"
+import { applyMapping, type ColumnMapping, type CsvTransformOptions } from "../../domains/datasets/column-mapping.ts"
 
 const PREVIEW_LIMIT = 50
 
@@ -107,13 +103,7 @@ function PreviewHeader({ totalRows }: { totalRows: number }) {
   )
 }
 
-function ColumnBadge({
-  label,
-  color,
-}: {
-  label: string
-  color: "blue" | "green" | "amber"
-}) {
+function ColumnBadge({ label, color }: { label: string; color: "blue" | "green" | "amber" }) {
   const colors = {
     blue: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
     green: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",

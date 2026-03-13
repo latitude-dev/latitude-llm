@@ -3,7 +3,7 @@ packages:
   - packages/**
 
 catalog:
-  '@biomejs/biome': 1.9.4
+  '@biomejs/biome': 2.4.6
   '@clickhouse/client': 1.17.0
   '@hono/node-server': 1.19.6
   '@paralleldrive/cuid2': 3.3.0
@@ -41,4 +41,5 @@ ignoredBuiltDependencies:
 
 onlyBuiltDependencies:
   - '@biomejs/biome'
+  - chdb
   - esbuild

@@ -5,8 +5,8 @@ import {
   SubscriptionId,
   type SubscriptionId as SubscriptionIdType,
 } from "@domain/shared"
-import { SubscriptionRepository } from "@domain/subscriptions"
 import type { Subscription } from "@domain/subscriptions"
+import { SubscriptionRepository } from "@domain/subscriptions"
 import { and, desc, eq, inArray, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"

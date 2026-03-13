@@ -1,4 +1,4 @@
-import { OrganizationId, type SubscriptionId, type UserId, generateId } from "@domain/shared"
+import { generateId, OrganizationId, type SubscriptionId, type UserId } from "@domain/shared"
 
 /**
  * Organization entity - represents a tenant/workspace.

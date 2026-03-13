@@ -1,5 +1,5 @@
 import { ProjectRepository } from "@domain/projects"
-import { OrganizationId, ProjectId, isNotFoundError } from "@domain/shared"
+import { isNotFoundError, OrganizationId, ProjectId } from "@domain/shared"
 import { ProjectRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { Effect } from "effect"
 import type { MiddlewareHandler } from "hono"

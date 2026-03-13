@@ -1,4 +1,22 @@
 // Entity exports
+
+export {
+  consume,
+  createGrant,
+  type Grant,
+  type GrantType,
+  hasBalance,
+  isValid,
+  revoke,
+} from "./entities/grant.ts"
+export {
+  getAvailablePlans,
+  getPlanConfig,
+  hasFeature,
+  PLAN_CONFIGS,
+  type Plan,
+  type PlanConfig,
+} from "./entities/plan.ts"
 export {
   createSubscription,
   isActive,
@@ -6,63 +24,38 @@ export {
   isInTrial,
   type Subscription,
 } from "./entities/subscription.ts"
-
 export {
-  createGrant,
-  hasBalance,
-  isValid,
-  revoke,
-  consume,
-  type Grant,
-  type GrantType,
-} from "./entities/grant.ts"
-
-export {
-  getPlanConfig,
-  getAvailablePlans,
-  hasFeature,
-  PLAN_CONFIGS,
-  type Plan,
-  type PlanConfig,
-} from "./entities/plan.ts"
-
-// Port exports
-export { SubscriptionRepository } from "./ports/subscription-repository.ts"
-export { GrantRepository } from "./ports/grant-repository.ts"
-
-// Use case exports
-export {
-  subscribe,
-  type SubscribeInput,
-  type SubscribeError,
-  SubscriptionAlreadyExistsError,
-  InvalidPlanError,
-} from "./use-cases/subscribe.ts"
-
-export {
-  changePlan,
-  type ChangePlanInput,
-  type ChangePlanResult,
-  type ChangePlanError,
-  NoActiveSubscriptionError,
-  SamePlanError,
-  PlanDowngradeError,
-} from "./use-cases/change-plan.ts"
-
-export {
-  getOrganizationQuota,
-  type OrganizationQuota,
-  type QuotaInfo,
-  type GetOrganizationQuotaError,
-} from "./use-cases/get-organization-quota.ts"
-
+  createGrantIssuedEvent,
+  type GrantIssuedEvent,
+} from "./events/grant-issued.ts"
 // Event exports
 export {
   createSubscriptionCreatedEvent,
   type SubscriptionCreatedEvent,
 } from "./events/subscription-created.ts"
-
+export { GrantRepository } from "./ports/grant-repository.ts"
+// Port exports
+export { SubscriptionRepository } from "./ports/subscription-repository.ts"
 export {
-  createGrantIssuedEvent,
-  type GrantIssuedEvent,
-} from "./events/grant-issued.ts"
+  type ChangePlanError,
+  type ChangePlanInput,
+  type ChangePlanResult,
+  changePlan,
+  NoActiveSubscriptionError,
+  PlanDowngradeError,
+  SamePlanError,
+} from "./use-cases/change-plan.ts"
+export {
+  type GetOrganizationQuotaError,
+  getOrganizationQuota,
+  type OrganizationQuota,
+  type QuotaInfo,
+} from "./use-cases/get-organization-quota.ts"
+// Use case exports
+export {
+  InvalidPlanError,
+  type SubscribeError,
+  type SubscribeInput,
+  SubscriptionAlreadyExistsError,
+  subscribe,
+} from "./use-cases/subscribe.ts"

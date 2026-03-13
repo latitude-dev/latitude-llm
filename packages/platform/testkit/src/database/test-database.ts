@@ -1,4 +1,4 @@
-import { type PostgresClient, type PostgresConfig, closePostgres, createPostgresClient } from "@platform/db-postgres"
+import { closePostgres, createPostgresClient, type PostgresClient, type PostgresConfig } from "@platform/db-postgres"
 import { Effect } from "effect"
 
 /**

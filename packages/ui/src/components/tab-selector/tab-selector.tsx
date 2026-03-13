@@ -11,19 +11,9 @@ export type TabSelectorOption<T> = {
   disabled?: boolean
 }
 
-type LinkWrapper = (props: {
-  children: ReactNode
-  href: string
-  className?: string
-}) => ReactNode
+type LinkWrapper = (props: { children: ReactNode; href: string; className?: string }) => ReactNode
 
-function LabelText({
-  isSelected,
-  children,
-}: {
-  isSelected: boolean | undefined | null
-  children: ReactNode | string
-}) {
+function LabelText({ isSelected, children }: { isSelected: boolean | undefined | null; children: ReactNode | string }) {
   if (typeof children === "string") {
     return (
       <Text.H5 weight="medium" color={isSelected ? "foreground" : "foregroundMuted"}>
