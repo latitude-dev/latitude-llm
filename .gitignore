@@ -120,3 +120,7 @@ PRD.md
 progress.txt
 
 packages/cli/prompts
+**/*.tsbuildinfo
+**/*.localstorage
+**/*.localstorage-shm
+**/*.localstorage-wal
