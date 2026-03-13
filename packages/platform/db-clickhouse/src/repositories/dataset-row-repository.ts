@@ -1,7 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type { DatasetRow } from "@domain/datasets"
 import { DatasetRowRepository, RowNotFoundError } from "@domain/datasets"
-import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId } from "@domain/shared"
+import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } from "@domain/shared"
 import { safeParseJson, safeStringifyJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
@@ -47,6 +47,35 @@ export const DatasetRowRepositoryLive = Layer.effect(
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
     return {
+      findExistingTraceIds: (args) =>
+        chSqlClient.query(async (client) => {
+          if (args.traceIds.length === 0) return new Set<TraceId>()
+
+          const result = await client
+            .query({
+              query: `
+                SELECT DISTINCT JSONExtractString(
+                  argMax(metadata, xact_id), 'traceId'
+                ) AS trace_id
+                FROM dataset_rows
+                WHERE organization_id = {organizationId:String}
+                  AND dataset_id = {datasetId:String}
+                GROUP BY row_id
+                HAVING argMax(_object_delete, xact_id) = false
+                  AND trace_id IN ({traceIds:Array(String)})
+              `,
+              query_params: {
+                organizationId: args.organizationId as string,
+                datasetId: args.datasetId as string,
+                traceIds: Array.from(args.traceIds) as string[],
+              },
+              format: "JSONEachRow",
+            })
+            .then((r) => r.json<{ trace_id: string }>())
+
+          return new Set(result.map((r) => TraceId(r.trace_id)))
+        }),
+
       insertBatch: (args) =>
         chSqlClient.query(async (client) => {
           const values = args.rows.map((row) => ({

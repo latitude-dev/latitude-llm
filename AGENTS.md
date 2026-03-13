@@ -283,7 +283,7 @@ export const createProject = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
-    
+
     const project = await Effect.runPromise(
       createProjectUseCase({...}).pipe(
         Effect.provide(ProjectRepositoryLive),
@@ -301,7 +301,7 @@ export const createProject = createServerFn({ method: "POST" })
 export const completeAuthIntentUseCase = (input) =>
   Effect.gen(function* () {
     const sqlClient = yield* SqlClient
-    
+
     // Wraps multi-step operation in single transaction with RLS
     yield* sqlClient.transaction(handleIntentByType(intent, input.session))
   })
@@ -310,7 +310,7 @@ const handleSignup = (intent, session) =>
   Effect.gen(function* () {
     const users = yield* UserRepository
     const memberships = yield* MembershipRepository
-    
+
     // All operations share the same transaction + RLS context
     const organization = yield* createOrganizationUseCase({...})
     yield* memberships.save(createMembership({...}))
@@ -326,13 +326,13 @@ export const ProjectRepositoryLive = Layer.effect(
   ProjectRepository,
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-    
+
     return {
       findById: (id) =>
         sqlClient
           .query((db) => db.select().from(projects).where(eq(projects.id, id)))
           .pipe(Effect.flatMap(...)),
-          
+
       save: (project) =>
         Effect.gen(function* () {
           yield* sqlClient.query((db) =>
@@ -684,7 +684,6 @@ describe("MyRepository", () => {
   it("does something", async () => {
     // pg.postgresDb is a real Drizzle instance backed by PGlite in-memory
     // pg.db is the lower-level Drizzle/PGlite instance for direct queries
-    // pg.client is the raw PGlite handle (useful for createRlsMiddleware)
   })
 })
 ```
@@ -692,8 +691,6 @@ describe("MyRepository", () => {
 `setupTestPostgres()` registers vitest hooks automatically:
 - **beforeAll**: creates a PGlite instance, creates the `latitude_app` role, and runs all Drizzle migrations
 - **afterAll**: closes the PGlite connection
-
-For Hono integration tests that need RLS enforcement, use `createRlsMiddleware(pg.client)` from `@platform/testkit`.
 
 #### ClickHouse test setup (`@platform/testkit`)
 
@@ -787,7 +784,7 @@ import { getPostgresClient } from "../../server/clients.ts"
 export const listProjects = createServerFn({ method: "GET" }).handler(async () => {
   const { organizationId } = await requireSession()
   const client = getPostgresClient()
-  
+
   return await Effect.runPromise(
     Effect.gen(function* () {
       const repo = yield* ProjectRepository
@@ -805,7 +802,7 @@ export const createProject = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { userId, organizationId } = await requireSession()
     const client = getPostgresClient()
-    
+
     return await Effect.runPromise(
       createProjectUseCase({...}).pipe(
         Effect.provide(ProjectRepositoryLive),

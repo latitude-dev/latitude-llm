@@ -178,6 +178,23 @@ export const DatasetRepositoryLive = Layer.effect(
           return toDomainVersion(versionRow as typeof datasetVersions.$inferSelect)
         }),
 
+      decrementVersion: (args) =>
+        Effect.gen(function* () {
+          yield* sqlClient.query((db) => db.delete(datasetVersions).where(eq(datasetVersions.id, args.versionId)))
+
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ currentVersion: sql`GREATEST(${datasets.currentVersion} - 1, 0)` })
+              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .returning({ id: datasets.id }),
+          )
+
+          if (!updated) {
+            return yield* new DatasetNotFoundError({ datasetId: args.id })
+          }
+        }),
+
       resolveVersion: (args) =>
         Effect.gen(function* () {
           const [row] = yield* sqlClient.query((db) =>

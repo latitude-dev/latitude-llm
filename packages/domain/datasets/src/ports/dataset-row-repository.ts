@@ -1,8 +1,13 @@
-import type { DatasetId, DatasetRowId, OrganizationId, RepositoryError } from "@domain/shared"
+import type { DatasetId, DatasetRowId, OrganizationId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { DatasetRow, RowFieldValue, RowNotFoundError } from "../entities/dataset-row.ts"
 
 export interface DatasetRowRepositoryShape {
+  findExistingTraceIds(args: {
+    readonly organizationId: OrganizationId
+    readonly datasetId: DatasetId
+    readonly traceIds: readonly TraceId[]
+  }): Effect.Effect<ReadonlySet<TraceId>, RepositoryError>
   insertBatch(args: {
     readonly organizationId: OrganizationId
     readonly datasetId: DatasetId

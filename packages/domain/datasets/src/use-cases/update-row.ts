@@ -32,15 +32,25 @@ export function updateRow(args: {
       source: "web",
     })
 
-    yield* rowRepo.updateRow({
-      organizationId: args.organizationId,
-      datasetId: args.datasetId,
-      rowId: args.rowId,
-      version: version.version,
-      input: args.input,
-      output: args.output,
-      metadata: args.metadata,
-    })
+    yield* rowRepo
+      .updateRow({
+        organizationId: args.organizationId,
+        datasetId: args.datasetId,
+        rowId: args.rowId,
+        version: version.version,
+        input: args.input,
+        output: args.output,
+        metadata: args.metadata,
+      })
+      .pipe(
+        Effect.tapError(() =>
+          datasetRepo.decrementVersion({
+            organizationId: args.organizationId,
+            id: args.datasetId,
+            versionId: version.id,
+          }),
+        ),
+      )
 
     return { versionId: version.id, version: version.version }
   })

@@ -1,8 +1,18 @@
 import { Button, RichTextEditor, Text } from "@repo/ui"
-import { safeStringifyJson } from "@repo/utils"
 import { Loader2, Save, X } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import type { DatasetRowRecord } from "../../domains/datasets/datasets.functions.ts"
+
+function formatField(value: unknown): string {
+  if (typeof value === "string") return value
+  if (value === null || value === undefined) return ""
+  if (typeof value === "object" && Object.keys(value as Record<string, unknown>).length === 0) return ""
+  try {
+    return JSON.stringify(value, null, 2)
+  } catch {
+    return String(value)
+  }
+}
 
 function EditableSection({
   title,
@@ -43,14 +53,14 @@ export function RowDetailPanel({
   onSave?: (data: { input: string; output: string; metadata: string }) => void
   saving?: boolean
 }) {
-  const [inputText, setInputText] = useState(() => safeStringifyJson(row.input))
-  const [outputText, setOutputText] = useState(() => safeStringifyJson(row.output))
-  const [metadataText, setMetadataText] = useState(() => safeStringifyJson(row.metadata))
+  const [inputText, setInputText] = useState(() => formatField(row.input))
+  const [outputText, setOutputText] = useState(() => formatField(row.output))
+  const [metadataText, setMetadataText] = useState(() => formatField(row.metadata))
 
   useEffect(() => {
-    setInputText(safeStringifyJson(row.input))
-    setOutputText(safeStringifyJson(row.output))
-    setMetadataText(safeStringifyJson(row.metadata))
+    setInputText(formatField(row.input))
+    setOutputText(formatField(row.output))
+    setMetadataText(formatField(row.metadata))
   }, [row.input, row.output, row.metadata])
 
   const handleSave = useCallback(() => {

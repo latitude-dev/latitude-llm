@@ -38,6 +38,12 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly source?: string
     }): Effect.Effect<DatasetVersion, DatasetNotFoundError | RepositoryError>
 
+    decrementVersion(args: {
+      readonly organizationId: OrganizationId
+      readonly id: DatasetId
+      readonly versionId: DatasetVersionId
+    }): Effect.Effect<void, DatasetNotFoundError | RepositoryError>
+
     resolveVersion(args: {
       readonly datasetId: DatasetId
       readonly versionId: DatasetVersionId

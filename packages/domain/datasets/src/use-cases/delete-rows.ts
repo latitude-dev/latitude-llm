@@ -33,12 +33,22 @@ export function deleteRows(args: {
       source: "web",
     })
 
-    yield* rowRepo.deleteBatch({
-      organizationId: args.organizationId,
-      datasetId: args.datasetId,
-      rowIds: args.rowIds,
-      version: version.version,
-    })
+    yield* rowRepo
+      .deleteBatch({
+        organizationId: args.organizationId,
+        datasetId: args.datasetId,
+        rowIds: args.rowIds,
+        version: version.version,
+      })
+      .pipe(
+        Effect.tapError(() =>
+          datasetRepo.decrementVersion({
+            organizationId: args.organizationId,
+            id: args.datasetId,
+            versionId: version.id,
+          }),
+        ),
+      )
 
     return { versionId: version.id, version: version.version }
   })

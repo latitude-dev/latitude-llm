@@ -30,12 +30,22 @@ export function insertRows(args: {
       source: args.source ?? "api",
     })
 
-    const rowIds = yield* rowRepo.insertBatch({
-      organizationId: args.organizationId,
-      datasetId: args.datasetId,
-      version: version.version,
-      rows: resolvedRows,
-    })
+    const rowIds = yield* rowRepo
+      .insertBatch({
+        organizationId: args.organizationId,
+        datasetId: args.datasetId,
+        version: version.version,
+        rows: resolvedRows,
+      })
+      .pipe(
+        Effect.tapError(() =>
+          datasetRepo.decrementVersion({
+            organizationId: args.organizationId,
+            id: args.datasetId,
+            versionId: version.id,
+          }),
+        ),
+      )
 
     return { versionId: version.id, version: version.version, rowIds }
   })

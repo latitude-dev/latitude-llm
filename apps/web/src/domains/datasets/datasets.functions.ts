@@ -1,6 +1,8 @@
 import type { Dataset, DatasetRow } from "@domain/datasets"
 import {
+  addTracesToDataset,
   createDataset,
+  createDatasetFromTraces,
   DatasetRepository,
   deleteRows,
   insertRows,
@@ -8,8 +10,16 @@ import {
   listRows,
   updateRow,
 } from "@domain/datasets"
-import { DatasetId, DatasetRowId, DatasetVersionId, OrganizationId, ProjectId, putInDisk } from "@domain/shared"
-import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  DatasetId,
+  DatasetRowId,
+  DatasetVersionId,
+  OrganizationId,
+  ProjectId,
+  putInDisk,
+  TraceId,
+} from "@domain/shared"
+import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -269,4 +279,70 @@ export const deleteRowsMutation = createServerFn({ method: "POST" })
     )
 
     return { versionId: result.versionId as string, version: result.version }
+  })
+
+export const addTracesToDatasetMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      datasetId: z.string(),
+      traceIds: z.array(z.string()).min(1).max(1000),
+    }),
+  )
+  .handler(async ({ data }): Promise<{ versionId: string; version: number; rowCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const chClient = getClickhouseClient()
+
+    const result = await Effect.runPromise(
+      addTracesToDataset({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        datasetId: DatasetId(data.datasetId),
+        traceIds: data.traceIds.map((id) => TraceId(id)),
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
+        withClickHouse(TraceRepositoryLive, chClient, orgId),
+      ),
+    )
+
+    return { versionId: result.versionId as string, version: result.version, rowCount: result.rowIds.length }
+  })
+
+export const createDatasetFromTracesMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      name: z.string().min(1),
+      traceIds: z.array(z.string()).min(1).max(1000),
+    }),
+  )
+  .handler(async ({ data }): Promise<{ datasetId: string; versionId: string; version: number; rowCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const pgClient = getPostgresClient()
+    const chClient = getClickhouseClient()
+
+    const result = await Effect.runPromise(
+      createDatasetFromTraces({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        name: data.name,
+        traceIds: data.traceIds.map((id) => TraceId(id)),
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, pgClient, orgId),
+        withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
+        withClickHouse(TraceRepositoryLive, chClient, orgId),
+      ),
+    )
+
+    return {
+      datasetId: result.datasetId as string,
+      versionId: result.versionId as string,
+      version: result.version,
+      rowCount: result.rowIds.length,
+    }
   })
