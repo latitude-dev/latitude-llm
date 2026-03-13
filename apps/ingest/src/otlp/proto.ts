@@ -1,5 +1,5 @@
+import type { OtlpExportTraceServiceRequest } from "@domain/spans"
 import protobuf from "protobufjs"
-import type { OtlpExportTraceServiceRequest } from "./types.ts"
 
 /**
  * Protobuf schema for OTLP ExportTraceServiceRequest.
@@ -132,15 +132,14 @@ function bytesToHex(bytes: Uint8Array | number[]): string {
 
 /**
  * Recursively normalize a decoded protobuf object to match the OTLP/JSON shape:
- * - Uint8Array bytes fields → lowercase hex strings
- * - Long objects → decimal strings
+ * - Uint8Array bytes fields -> lowercase hex strings
+ * - Long objects -> decimal strings
  */
 function normalizeValue(value: unknown): unknown {
   if (value === null || value === undefined) return value
   if (value instanceof Uint8Array) return bytesToHex(value)
   if (Array.isArray(value)) return value.map(normalizeValue)
 
-  // protobufjs Long objects have low/high/unsigned properties
   if (typeof value === "object" && "low" in value && "high" in value) {
     const long = value as { low: number; high: number; unsigned: boolean }
     const bigint = BigInt(long.high >>> 0) * BigInt(2 ** 32) + BigInt(long.low >>> 0)

@@ -228,12 +228,18 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
+      '@platform/storage-object':
+        specifier: workspace:*
+        version: link:../../packages/platform/storage-object
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
       '@repo/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      bullmq:
+        specifier: 'catalog:'
+        version: 5.66.0
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -385,9 +391,21 @@ importers:
 
   apps/workers:
     dependencies:
+      '@clickhouse/client':
+        specifier: 'catalog:'
+        version: 1.17.0
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../packages/domain/shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../../packages/domain/spans
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
+      '@platform/db-clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-clickhouse
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
@@ -397,6 +415,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/storage-object':
+        specifier: workspace:*
+        version: link:../../packages/platform/storage-object
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability

@@ -13,10 +13,15 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
+    "@clickhouse/client": "catalog:",
+    "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "@platform/cache-redis": "workspace:*",
+    "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/events-outbox": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
+    "@platform/storage-object": "workspace:*",
     "@repo/observability": "workspace:*",
     "@types/pg": "catalog:",
     "bullmq": "catalog:",

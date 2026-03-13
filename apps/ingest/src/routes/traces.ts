@@ -1,14 +1,11 @@
-import { OrganizationId } from "@domain/shared"
-import { SpanRepository } from "@domain/spans"
-import { ChSqlClientLive, SpanRepositoryLive } from "@platform/db-clickhouse"
+import { OrganizationId, ProjectId, putInDisk } from "@domain/shared"
+import type { OtlpExportTraceServiceRequest } from "@domain/spans"
 import { Effect } from "effect"
 import type { Hono } from "hono"
-import { getClickhouseClient } from "../clients.ts"
+import { getSpanIngestionQueue, getStorageDisk } from "../clients.ts"
 import { authMiddleware } from "../middleware/auth.ts"
 import { projectMiddleware } from "../middleware/project.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
-import { transformOtlpToSpans } from "../otlp/transform.ts"
-import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
 import type { IngestEnv } from "../types.ts"
 
 interface TracesRouteContext {
@@ -31,21 +28,37 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
       return c.json({ error: "Invalid OTLP payload" }, 400)
     }
 
-    const spans = transformOtlpToSpans(request, {
-      organizationId: c.get("organizationId"),
-      projectId: c.get("projectId"),
-      apiKeyId: c.get("apiKeyId"),
-    })
-
-    if (spans.length > 0) {
-      const orgId = OrganizationId(c.get("organizationId"))
-      await Effect.runPromise(
-        Effect.gen(function* () {
-          const repo = yield* SpanRepository
-          yield* repo.insert(spans)
-        }).pipe(Effect.provide(SpanRepositoryLive), Effect.provide(ChSqlClientLive(getClickhouseClient(), orgId))),
-      )
+    if (!request.resourceSpans?.length) {
+      return c.json({})
     }
+
+    const organizationId = c.get("organizationId")
+    const projectId = c.get("projectId")
+    const apiKeyId = c.get("apiKeyId")
+    const ingestedAt = new Date().toISOString()
+
+    const payload = JSON.stringify({ request, context: { organizationId, projectId, apiKeyId }, ingestedAt })
+
+    const disk = getStorageDisk()
+    const storageKey = await Effect.runPromise(
+      putInDisk(disk, {
+        namespace: "ingest",
+        organizationId: OrganizationId(organizationId),
+        projectId: ProjectId(projectId),
+        content: payload,
+      }),
+    )
+
+    const queue = getSpanIngestionQueue()
+    await queue.add(
+      "process-spans",
+      { storageKey },
+      {
+        jobId: storageKey,
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
+      },
+    )
 
     return c.json({})
   })

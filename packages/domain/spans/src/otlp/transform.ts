@@ -1,5 +1,5 @@
 import { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
-import type { SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
+import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpKeyValue, OtlpResource, OtlpSpan } from "./types.ts"
 
 const INT_TO_SPAN_KIND: Record<number, SpanKind> = {
@@ -17,7 +17,6 @@ const INT_TO_STATUS_CODE: Record<number, SpanStatusCode> = {
   2: "error",
 }
 
-// Semantic convention attribute keys that map to dedicated span fields
 const EXTRACTED_ATTRIBUTES = new Set([
   "gen_ai.operation.name",
   "gen_ai.system",
@@ -79,10 +78,11 @@ function extractResourceString(resource: OtlpResource | undefined): Record<strin
   return result
 }
 
-interface TransformContext {
+export interface TransformContext {
   readonly organizationId: string
   readonly projectId: string
   readonly apiKeyId: string
+  readonly ingestedAt: Date
 }
 
 function transformSpan({
@@ -105,7 +105,6 @@ function transformSpan({
 
   const statusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
 
-  // Extract well-known semantic convention attributes
   const operation = extractStringAttr(spanAttrs, "gen_ai.operation.name")
   const provider = extractStringAttr(spanAttrs, "gen_ai.system")
   const model = extractStringAttr(spanAttrs, "gen_ai.request.model")
@@ -121,7 +120,6 @@ function transformSpan({
 
   const serviceName = extractStringAttr(resourceAttrs, "service.name")
 
-  // Split remaining attributes by value type
   const attrString: Record<string, string> = {}
   const attrInt: Record<string, number> = {}
   const attrFloat: Record<string, number> = {}
@@ -200,7 +198,7 @@ function transformSpan({
 
 export function transformOtlpToSpans(request: OtlpExportTraceServiceRequest, context: TransformContext): SpanDetail[] {
   const spans: SpanDetail[] = []
-  const ingestedAt = new Date()
+  const { ingestedAt } = context
 
   for (const resourceSpans of request.resourceSpans ?? []) {
     const resource = resourceSpans.resource

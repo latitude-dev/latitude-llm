@@ -3,6 +3,8 @@ import type { OrganizationId, ProjectId } from "./id.ts"
 
 export interface StorageDiskPort {
   put(key: string, contents: string | Uint8Array): Promise<void>
+  get(key: string): Promise<string>
+  delete(key: string): Promise<void>
 }
 
 export class StorageError extends Data.TaggedError("StorageError")<{
@@ -13,7 +15,7 @@ export class StorageError extends Data.TaggedError("StorageError")<{
   readonly httpMessage = "Storage operation failed"
 }
 
-type FolderNamespace = "datasets" | "unknown"
+type FolderNamespace = "datasets" | "ingest" | "unknown"
 
 type BaseStorageOptions = {
   readonly organizationId: OrganizationId
@@ -26,9 +28,16 @@ type DatasetStorageOptions = BaseStorageOptions & {
   readonly projectId: ProjectId
 }
 
+type IngestStorageOptions = BaseStorageOptions & {
+  readonly namespace: "ingest"
+  readonly projectId: ProjectId
+}
+
 type PutInDiskOptions<N extends FolderNamespace> = N extends "datasets"
   ? DatasetStorageOptions
-  : { readonly namespace: "unknown" } & BaseStorageOptions
+  : N extends "ingest"
+    ? IngestStorageOptions
+    : { readonly namespace: "unknown" } & BaseStorageOptions
 
 const projectsPath = (base: string, projectId: ProjectId) => `${base}/projects/${projectId}`
 
@@ -40,6 +49,11 @@ function buildStorageKey<N extends FolderNamespace>(options: PutInDiskOptions<N>
       const id = crypto.randomUUID()
       const ext = options.extension ?? "csv"
       return `${projectsPath(basePath, options.projectId)}/datasets/${id}.${ext}`
+    }
+    case "ingest": {
+      const id = crypto.randomUUID()
+      const ext = options.extension ?? "json"
+      return `${projectsPath(basePath, options.projectId)}/ingest/${id}.${ext}`
     }
     default:
       return undefined
