@@ -6,6 +6,9 @@ export default defineConfig({
     globals: true,
     testTimeout: 5000,
     environment: 'node',
+    env: {
+      CLICKHOUSE_DB: 'latitude_test',
+    },
     setupFiles: ['./src/tests/setup.ts'],
     include: ['./src/**/*.test.ts'],
   },
