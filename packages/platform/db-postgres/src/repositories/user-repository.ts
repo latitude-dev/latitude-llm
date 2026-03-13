@@ -1,6 +1,6 @@
 import { NotFoundError, SqlClient, type SqlClientShape, type UserId } from "@domain/shared"
-import { UserRepository } from "@domain/users"
 import type { User } from "@domain/users"
+import { UserRepository } from "@domain/users"
 import { and, eq, isNull, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"

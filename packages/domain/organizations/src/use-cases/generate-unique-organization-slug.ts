@@ -11,9 +11,7 @@ const toSlug = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
 
-export const generateUniqueOrganizationSlugUseCase = (input: {
-  name: string
-}) =>
+export const generateUniqueOrganizationSlugUseCase = (input: { name: string }) =>
   Effect.gen(function* () {
     const repository = yield* OrganizationRepository
 

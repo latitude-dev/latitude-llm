@@ -2,8 +2,8 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
 import type { ProjectRecord } from "./projects.functions.ts"
+import { createProject, deleteProject, listProjects, updateProject } from "./projects.functions.ts"
 
 const queryClient = getQueryClient()
 

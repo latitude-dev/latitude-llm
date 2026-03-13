@@ -1,8 +1,8 @@
 import { type InvalidEnvValueError, type MissingEnvValueError, parseEnv, parseEnvOptional } from "@platform/env"
 import { Data, Effect } from "effect"
-import { ApiKey, type WeaviateClient, connectToLocal, connectToWeaviateCloud } from "weaviate-client"
+import { ApiKey, connectToLocal, connectToWeaviateCloud, type WeaviateClient } from "weaviate-client"
 import { defaultWeaviateCollectionDefinitions } from "./collections.ts"
-import { type WeaviateCollectionMigrationError, migrateWeaviateCollectionsEffect } from "./migrations.ts"
+import { migrateWeaviateCollectionsEffect, type WeaviateCollectionMigrationError } from "./migrations.ts"
 
 export interface WeaviateConfig {
   readonly url?: string

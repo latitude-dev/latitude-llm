@@ -7,5 +7,5 @@ export {
   safeParseJson,
   safeStringifyJson,
 } from "./format.ts"
-export { relativeTime } from "./relativeTime.ts"
 export * from "./http-errors.ts"
+export { relativeTime } from "./relativeTime.ts"

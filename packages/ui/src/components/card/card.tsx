@@ -1,4 +1,4 @@
-import { type HTMLAttributes, forwardRef } from "react"
+import { forwardRef, type HTMLAttributes } from "react"
 
 import { type BoxShadow, boxShadow } from "../../tokens/shadow.ts"
 import { cn } from "../../utils/cn.ts"

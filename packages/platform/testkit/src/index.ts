@@ -1,31 +1,24 @@
-// In-memory PGlite exports
-export {
-  closeInMemoryPostgres,
-  createInMemoryPostgres,
-  type InMemoryPostgres,
-} from "./database/pglite.ts"
-
 // Database exports
 export {
-  closeTestDatabase,
-  closeTestDatabaseEffect,
-  createTestDatabase,
-  createTestDatabaseEffect,
-  generateTestId,
-  type TestDatabase,
-  type TestDatabaseConfig,
-} from "./database/test-database.ts"
+  createApiKeyAuthHeaders,
+  createAuthHeaders,
+  createBearerAuthHeaders,
+  createMockJwtToken,
+  createMockSessionContext,
+  type TestAuthContext,
+  withAuthContext,
+} from "./auth/auth-helpers.ts"
 
 // Fixture exports
 export {
+  type ApiKeyFixture,
+  type ApiKeyFixtureInput,
   createApiKeyFixture,
   createMembershipFixture,
   createOrganizationFixture,
   createOrganizationSetup,
   createProjectFixture,
   createUserFixture,
-  type ApiKeyFixture,
-  type ApiKeyFixtureInput,
   type MembershipFixture,
   type MembershipFixtureInput,
   type OrganizationFixture,
@@ -36,6 +29,23 @@ export {
   type UserFixture,
   type UserFixtureInput,
 } from "./database/fixtures.ts"
+export {
+  closeTestDatabase,
+  closeTestDatabaseEffect,
+  createTestDatabase,
+  createTestDatabaseEffect,
+  generateTestId,
+  type TestDatabase,
+  type TestDatabaseConfig,
+} from "./database/test-database.ts"
+// Postgres test utilities exports
+export {
+  closeInMemoryPostgres,
+  createInMemoryPostgres,
+  createRlsMiddleware,
+  type InMemoryPostgres,
+  setupTestPostgres,
+} from "./database/pglite.ts"
 
 // Hono test client exports
 export {
@@ -46,16 +56,17 @@ export {
   type TestResponse,
 } from "./hono/test-client.ts"
 
-// Auth helpers exports
+// ClickHouse test utilities exports
 export {
-  createApiKeyAuthHeaders,
-  createAuthHeaders,
-  createBearerAuthHeaders,
-  createMockJwtToken,
-  createMockSessionContext,
-  withAuthContext,
-  type TestAuthContext,
-} from "./auth/auth-helpers.ts"
+  CLICKHOUSE_SCHEMA_PATH,
+  closeTestClickHouse,
+  createTestClickHouse,
+  loadClickHouseSchema,
+  setupTestClickHouse,
+  truncateClickHouseTables,
+  type TestClickHouse,
+  type TestClickHouseConfig,
+} from "./clickhouse/test-clickhouse.ts"
 
 // Redis test utilities exports
 export {

@@ -2,7 +2,7 @@ import type { NotFoundError, OrganizationId, RepositoryError } from "@domain/sha
 import { type Effect, ServiceMap } from "effect"
 import type { AuthIntent } from "../types.ts"
 
-interface PendingInvite {
+export interface PendingInvite {
   readonly id: string
   readonly email: string
   readonly createdAt: Date

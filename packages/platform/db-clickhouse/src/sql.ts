@@ -54,9 +54,7 @@ export const insertJsonEachRow = <TRow extends Record<string, unknown>>(
   values: ReadonlyArray<TRow>,
 ): Effect.Effect<void, ClickhouseInsertError> =>
   Effect.gen(function* () {
-    if (values.length === 0) {
-      return
-    }
+    if (values.length === 0) return
 
     yield* Effect.tryPromise({
       try: () =>

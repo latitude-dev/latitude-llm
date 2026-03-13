@@ -2,8 +2,8 @@ import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import { useEffect, useState } from "react"
-import { completeAuthIntent, getAuthIntentInfo } from "../../domains/auth/auth.functions.ts"
 import type { AuthIntentInfo } from "../../domains/auth/auth.functions.ts"
+import { completeAuthIntent, getAuthIntentInfo } from "../../domains/auth/auth.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
 
 export const Route = createFileRoute("/auth/confirm")({

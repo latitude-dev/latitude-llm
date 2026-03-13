@@ -1,4 +1,4 @@
-import { type MemberWithUser, MembershipRepository } from "@domain/organizations"
+import { MembershipRepository, type MemberWithUser } from "@domain/organizations"
 import { MembershipId, NotFoundError, OrganizationId, SqlClient, type SqlClientShape, UserId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -113,12 +113,7 @@ export const MembershipRepositoryLive = Layer.effect(
             }),
           ),
 
-      save: (membership: {
-        id: string
-        organizationId: string
-        userId: string
-        role: MemberRole
-      }) =>
+      save: (membership: { id: string; organizationId: string; userId: string; role: MemberRole }) =>
         sqlClient.query((db) =>
           db
             .insert(member)

@@ -3,6 +3,7 @@ import {
   CloseTrigger,
   Container,
   FormWrapper,
+  Icon,
   Input,
   Modal,
   Table,
@@ -17,18 +18,17 @@ import {
   Tooltip,
   useToast,
 } from "@repo/ui"
-import { Icon } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
-import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
 import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
+import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
 import { invalidateMembers, useMembersCollection } from "../../domains/members/members.collection.ts"
-import { inviteMember, removeMember } from "../../domains/members/members.functions.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
+import { inviteMember, removeMember } from "../../domains/members/members.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -37,13 +37,7 @@ export const Route = createFileRoute("/_authenticated/settings")({
 
 // --- Workspace Members Section ---
 
-function InviteMemberModal({
-  open,
-  setOpen,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-}) {
+function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
   const form = useForm({
     defaultValues: {
@@ -200,13 +194,7 @@ function MembershipsSection() {
 
 // --- API Keys Section ---
 
-function CreateApiKeyModal({
-  open,
-  setOpen,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-}) {
+function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const form = useForm({
     defaultValues: {
       name: "",
@@ -265,13 +253,7 @@ function CreateApiKeyModal({
   )
 }
 
-function UpdateApiKeyModal({
-  apiKey,
-  onClose,
-}: {
-  apiKey: ApiKeyRecord
-  onClose: () => void
-}) {
+function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose: () => void }) {
   const { toast } = useToast()
 
   const form = useForm({

@@ -87,7 +87,7 @@ export const createMockSessionContext = (userId: string, organizationId?: string
  */
 export const withAuthContext = <A, E>(
   effect: EffectType.Effect<A, E>,
-  context: TestAuthContext,
+  _context: TestAuthContext,
 ): EffectType.Effect<A, E> => {
   // In a real implementation, this might set context in a fiber ref
   // For now, just return the effect as-is since we're testing at the HTTP layer

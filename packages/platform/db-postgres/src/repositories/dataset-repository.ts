@@ -4,7 +4,7 @@ import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, SqlClient, type
 import { and, count, eq, getColumns, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { datasetVersions, datasets } from "../schema/index.ts"
+import { datasets, datasetVersions } from "../schema/index.ts"
 
 const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: string | null): Dataset => ({
   id: DatasetId(row.id),

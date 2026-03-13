@@ -15,6 +15,7 @@
     "ch:fix": "bash clickhouse/scripts/fix.sh",
     "ch:reset": "bash clickhouse/scripts/reset.sh",
     "ch:connect": "bash clickhouse/scripts/connect.sh",
+    "ch:schema:dump": "bash clickhouse/scripts/dump-schema.sh",
     "ch:seed": "node --import tsx src/seeds/run.ts",
     "check": "biome check src",
     "format": "biome format --write src",
@@ -33,6 +34,8 @@
     "rosetta-ai": "catalog:"
   },
   "devDependencies": {
+    "@platform/db-postgres": "workspace:*",
+    "@platform/testkit": "workspace:*",
     "dotenv": "catalog:",
     "tsx": "catalog:"
   }

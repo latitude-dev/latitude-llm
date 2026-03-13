@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./plugins/hit-area.css";
 @plugin "@tailwindcss/typography";
 
 /* Tell Tailwind to scan this package's source files for classes */
@@ -307,6 +308,8 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 }

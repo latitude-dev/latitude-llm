@@ -42,11 +42,16 @@ export function formatDuration(ns: number): string {
   return `${(ns / 1_000_000_000).toFixed(2)}s`
 }
 
-export function safeParseJson(value: string): Record<string, unknown> {
+export function safeParseJson(
+  value: string,
+  { fallback = "object" }: { fallback?: "object" | "string" } = {},
+): string | Record<string, unknown> {
+  if (value === "") return fallback === "string" ? "" : {}
+
   try {
     return (JSON.parse(value || "{}") ?? {}) as Record<string, unknown>
   } catch {
-    return {}
+    return fallback === "string" ? value : {}
   }
 }
 
@@ -56,6 +61,6 @@ export function safeStringifyJson(value: unknown, fallback = ""): string {
   try {
     return JSON.stringify(value) ?? fallback
   } catch {
-    return fallback
+    return String(value)
   }
 }

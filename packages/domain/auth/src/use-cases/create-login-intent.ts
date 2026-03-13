@@ -1,4 +1,3 @@
-import type { RepositoryError } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { Data, Effect } from "effect"
 import { createAuthIntent } from "../entities/auth-intent.ts"
@@ -12,11 +11,7 @@ export class LoginUserNotFoundError extends Data.TaggedError("LoginUserNotFoundE
   readonly httpMessage = "No account found for this email"
 }
 
-export type CreateLoginIntentError = LoginUserNotFoundError | RepositoryError
-
-export const createLoginIntentUseCase = (input: {
-  email: string
-}) =>
+export const createLoginIntentUseCase = (input: { email: string }) =>
   Effect.gen(function* () {
     const users = yield* UserRepository
     const intents = yield* AuthIntentRepository

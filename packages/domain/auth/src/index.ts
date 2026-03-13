@@ -1,3 +1,6 @@
+export { createAuthIntent } from "./entities/auth-intent.ts"
+// Repositories
+export { AuthIntentRepository, type PendingInvite } from "./ports/auth-intent-repository.ts"
 export type {
   AuthIntent,
   AuthIntentData,
@@ -6,9 +9,6 @@ export type {
   MagicLinkEmailTemplate,
   SignupIntentData,
 } from "./types.ts"
-
-export { createAuthIntent } from "./entities/auth-intent.ts"
-
 export {
   createInviteIntentData,
   createSignupIntentData,
@@ -16,22 +16,13 @@ export {
   resolveMagicLinkEmailTemplateFromContext,
   shouldCreateOrganizationForIntent,
 } from "./use-cases/auth-intent-policy.ts"
-
 export {
-  createLoginIntentUseCase,
-  LoginUserNotFoundError,
-  type CreateLoginIntentError,
-} from "./use-cases/create-login-intent.ts"
-export { createInviteIntentUseCase } from "./use-cases/create-invite-intent.ts"
-export { createSignupIntentUseCase } from "./use-cases/create-signup-intent.ts"
-export {
-  completeAuthIntentUseCase,
-  AuthIntentExpiredError,
   AuthIntentEmailMismatchError,
+  completeAuthIntentUseCase,
   InvalidAuthIntentTypeError,
-  MissingSignupProvisioningDataError,
   MissingInviteDataError,
+  MissingSignupProvisioningDataError,
 } from "./use-cases/complete-auth-intent.ts"
-
-// Repositories
-export { AuthIntentRepository } from "./ports/auth-intent-repository.ts"
+export { createInviteIntentUseCase } from "./use-cases/create-invite-intent.ts"
+export { createLoginIntentUseCase, LoginUserNotFoundError } from "./use-cases/create-login-intent.ts"
+export { createSignupIntentUseCase } from "./use-cases/create-signup-intent.ts"
