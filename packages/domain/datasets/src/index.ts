@@ -3,6 +3,7 @@ export { type DatasetRow, type RowFieldValue, RowNotFoundError } from "./entitie
 
 export { DatasetRepository } from "./ports/dataset-repository.ts"
 export { DatasetRowRepository, type DatasetRowRepositoryShape } from "./ports/dataset-row-repository.ts"
+export { addTracesToDataset, createDatasetFromTraces } from "./use-cases/add-traces-to-dataset.ts"
 export { createDataset } from "./use-cases/create-dataset.ts"
 export { deleteRows } from "./use-cases/delete-rows.ts"
 export { getRowDetail } from "./use-cases/get-row-detail.ts"

@@ -1,6 +1,14 @@
 import type { Dataset, DatasetVersion } from "@domain/datasets"
 import { DatasetNotFoundError, DatasetRepository } from "@domain/datasets"
-import { DatasetId, DatasetVersionId, OrganizationId, ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  DatasetId,
+  DatasetVersionId,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { and, count, eq, getColumns, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -46,7 +54,7 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .insert(datasets)
               .values({
-                organizationId: args.organizationId,
+                organizationId: sqlClient.organizationId,
                 projectId: args.projectId,
                 name: args.name,
                 description: args.description ?? null,
@@ -84,9 +92,8 @@ export const DatasetRepositoryLive = Layer.effect(
           const limit = args.limit ?? 50
           const offset = args.offset ?? 0
           const datasetCols = getColumns(datasets)
-
           const projectFilter = and(
-            eq(datasets.organizationId, args.organizationId),
+            eq(datasets.organizationId, sqlClient.organizationId),
             eq(datasets.projectId, args.projectId),
             isNull(datasets.deletedAt),
           )
@@ -125,7 +132,10 @@ export const DatasetRepositoryLive = Layer.effect(
           )
 
           if (!updated) {
-            return yield* new DatasetNotFoundError({ datasetId: args.id })
+            return yield* new RepositoryError({
+              cause: new Error("Update affected no rows"),
+              operation: "updateFileKey",
+            })
           }
 
           return toDomainDataset(updated)
@@ -142,7 +152,10 @@ export const DatasetRepositoryLive = Layer.effect(
           )
 
           if (!updated) {
-            return yield* new DatasetNotFoundError({ datasetId: id })
+            return yield* new RepositoryError({
+              cause: new Error("Update affected no rows"),
+              operation: "softDelete",
+            })
           }
         }),
 
@@ -157,7 +170,10 @@ export const DatasetRepositoryLive = Layer.effect(
           )
 
           if (!updated) {
-            return yield* new DatasetNotFoundError({ datasetId: args.id })
+            return yield* new RepositoryError({
+              cause: new Error("Update affected no rows"),
+              operation: "incrementVersion",
+            })
           }
 
           const newVersion = Number(updated.currentVersion)
@@ -166,7 +182,7 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .insert(datasetVersions)
               .values({
-                organizationId: args.organizationId,
+                organizationId: sqlClient.organizationId,
                 datasetId: args.id,
                 version: newVersion,
                 rowsInserted: args.rowsInserted,
@@ -176,6 +192,26 @@ export const DatasetRepositoryLive = Layer.effect(
           )
 
           return toDomainVersion(versionRow as typeof datasetVersions.$inferSelect)
+        }),
+
+      decrementVersion: (args) =>
+        Effect.gen(function* () {
+          yield* sqlClient.query((db) => db.delete(datasetVersions).where(eq(datasetVersions.id, args.versionId)))
+
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ currentVersion: sql`GREATEST(${datasets.currentVersion} - 1, 0)` })
+              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .returning({ id: datasets.id }),
+          )
+
+          if (!updated) {
+            return yield* new RepositoryError({
+              cause: new Error("Update affected no rows"),
+              operation: "decrementVersion",
+            })
+          }
         }),
 
       resolveVersion: (args) =>

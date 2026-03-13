@@ -1,6 +1,6 @@
 import { Button, Text } from "@repo/ui"
 import { useCallback, useState } from "react"
-import type { ColumnMapping, CsvTransformOptions } from "../../domains/datasets/column-mapping.ts"
+import type { ColumnMapping, CsvTransformOptions } from "../../../../../../domains/datasets/column-mapping.ts"
 import { ColumnMapper } from "./column-mapper.tsx"
 import { CsvPreviewTable } from "./csv-preview-table.tsx"
 

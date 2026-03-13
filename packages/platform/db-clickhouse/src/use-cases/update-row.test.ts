@@ -58,7 +58,6 @@ describe("updateRow", () => {
   const seedRow = async () => {
     await Effect.runPromise(
       datasetRepo.incrementVersion({
-        organizationId: ORG_ID,
         id: DATASET_ID,
         rowsInserted: 1,
         source: "web",
@@ -67,7 +66,6 @@ describe("updateRow", () => {
 
     await Effect.runPromise(
       rowRepo.insertBatch({
-        organizationId: ORG_ID,
         datasetId: DATASET_ID,
         version: 1,
         rows: [{ id: ROW_ID, input: { prompt: "original" }, output: { text: "v1" } }],
@@ -79,7 +77,6 @@ describe("updateRow", () => {
     await expect(
       run(
         updateRow({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           rowId: DatasetRowId("nonexistent"),
           input: {},
@@ -95,7 +92,6 @@ describe("updateRow", () => {
 
     const result = await run(
       updateRow({
-        organizationId: ORG_ID,
         datasetId: DATASET_ID,
         rowId: ROW_ID,
         input: { prompt: "updated" },
@@ -107,9 +103,7 @@ describe("updateRow", () => {
     expect(result.versionId).toBeDefined()
     expect(result.version).toBeGreaterThan(1)
 
-    const row = await Effect.runPromise(
-      rowRepo.findById({ organizationId: ORG_ID, datasetId: DATASET_ID, rowId: ROW_ID }),
-    )
+    const row = await Effect.runPromise(rowRepo.findById({ datasetId: DATASET_ID, rowId: ROW_ID }))
     expect(row.input).toEqual({ prompt: "updated" })
     expect(row.output).toEqual({ text: "v2" })
   })
@@ -119,7 +113,6 @@ describe("updateRow", () => {
 
     const result = await run(
       updateRow({
-        organizationId: ORG_ID,
         datasetId: DATASET_ID,
         rowId: ROW_ID,
         input: { prompt: "v3" },

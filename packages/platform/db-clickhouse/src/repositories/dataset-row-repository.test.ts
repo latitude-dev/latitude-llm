@@ -29,7 +29,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.insertBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           version: 1,
           rows: [{ id: rowId, input: { prompt: "original" }, output: { text: "v1" } }],
@@ -38,7 +37,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.updateRow({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           rowId,
           version: 2,
@@ -48,7 +46,7 @@ describe("DatasetRowClickHouseRepository", () => {
         }),
       )
 
-      const row = await Effect.runPromise(repo.findById({ organizationId: ORG_ID, datasetId: DATASET_ID, rowId }))
+      const row = await Effect.runPromise(repo.findById({ datasetId: DATASET_ID, rowId }))
 
       expect(row.input).toEqual({ prompt: "updated" })
       expect(row.output).toEqual({ text: "v2" })
@@ -60,7 +58,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.insertBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           version: 1,
           rows: [{ id: rowId, input: { v: 1 } }],
@@ -70,7 +67,6 @@ describe("DatasetRowClickHouseRepository", () => {
       for (const ver of [2, 3]) {
         await Effect.runPromise(
           repo.updateRow({
-            organizationId: ORG_ID,
             datasetId: DATASET_ID,
             rowId,
             version: ver,
@@ -81,7 +77,7 @@ describe("DatasetRowClickHouseRepository", () => {
         )
       }
 
-      const { rows } = await Effect.runPromise(repo.list({ organizationId: ORG_ID, datasetId: DATASET_ID }))
+      const { rows } = await Effect.runPromise(repo.list({ datasetId: DATASET_ID }))
 
       const found = rows.find((r) => r.rowId === rowId)
       expect(found).toBeDefined()
@@ -96,7 +92,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.insertBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           version: 1,
           rows: [{ id: rowId, input: { data: "exists" } }],
@@ -105,7 +100,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.deleteBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           rowIds: [rowId],
           version: 2,
@@ -132,7 +126,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.insertBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           version: 1,
           rows: [
@@ -144,14 +137,13 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.deleteBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           rowIds: [deleteId],
           version: 2,
         }),
       )
 
-      const { rows, total } = await Effect.runPromise(repo.list({ organizationId: ORG_ID, datasetId: DATASET_ID }))
+      const { rows, total } = await Effect.runPromise(repo.list({ datasetId: DATASET_ID }))
 
       expect(total).toBe(1)
       expect(rows.length).toBe(1)
@@ -161,7 +153,6 @@ describe("DatasetRowClickHouseRepository", () => {
     it("handles empty rowIds array gracefully", async () => {
       await Effect.runPromise(
         repo.deleteBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           rowIds: [],
           version: 1,
@@ -176,7 +167,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.insertBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           version: 1,
           rows: [{ id: rowId, input: { key: "json" }, output: { result: "ok" } }],
@@ -185,7 +175,6 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.updateRow({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           rowId,
           version: 2,
@@ -195,7 +184,7 @@ describe("DatasetRowClickHouseRepository", () => {
         }),
       )
 
-      const row = await Effect.runPromise(repo.findById({ organizationId: ORG_ID, datasetId: DATASET_ID, rowId }))
+      const row = await Effect.runPromise(repo.findById({ datasetId: DATASET_ID, rowId }))
 
       expect(row.input).toBe("HOLA")
       expect(row.output).toBe("plain text output")
@@ -207,14 +196,13 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.insertBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           version: 1,
           rows: [{ id: rowId, input: { key: "value" }, output: {}, metadata: {} }],
         }),
       )
 
-      const row = await Effect.runPromise(repo.findById({ organizationId: ORG_ID, datasetId: DATASET_ID, rowId }))
+      const row = await Effect.runPromise(repo.findById({ datasetId: DATASET_ID, rowId }))
 
       expect(row.input).toEqual({ key: "value" })
       expect(row.output).toBe("")
@@ -226,14 +214,13 @@ describe("DatasetRowClickHouseRepository", () => {
 
       await Effect.runPromise(
         repo.insertBatch({
-          organizationId: ORG_ID,
           datasetId: DATASET_ID,
           version: 1,
           rows: [{ id: rowId, input: { code: "yellow72", nested: { a: 1 } }, output: { answer: 42 } }],
         }),
       )
 
-      const row = await Effect.runPromise(repo.findById({ organizationId: ORG_ID, datasetId: DATASET_ID, rowId }))
+      const row = await Effect.runPromise(repo.findById({ datasetId: DATASET_ID, rowId }))
 
       expect(row.input).toEqual({ code: "yellow72", nested: { a: 1 } })
       expect(row.output).toEqual({ answer: 42 })
@@ -243,7 +230,7 @@ describe("DatasetRowClickHouseRepository", () => {
   describe("findById", () => {
     it("returns RowNotFoundError for non-existent row", async () => {
       const result = await Effect.runPromiseExit(
-        repo.findById({ organizationId: ORG_ID, datasetId: DATASET_ID, rowId: DatasetRowId("nonexistent") }),
+        repo.findById({ datasetId: DATASET_ID, rowId: DatasetRowId("nonexistent") }),
       )
 
       expect(result._tag).toBe("Failure")

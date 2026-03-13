@@ -1,10 +1,8 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import { readFileSync } from "node:fs"
-import { createRequire } from "node:module"
 import { resolve } from "node:path"
 import { afterAll, beforeAll, beforeEach } from "vitest"
-const require = createRequire(import.meta.url)
-const { Session } = require("chdb") as typeof import("chdb")
+import { Session } from "chdb"
 
 type ChdbSession = InstanceType<typeof Session>
 
@@ -14,24 +12,30 @@ export interface TestClickHouse {
   cleanup(): void
 }
 
-export interface TestClickHouseConfig {
-  readonly dataDir?: string
-}
-
+/**
+ * Replaces ClickHouse parameter placeholders ({name:Type}) with literal values.
+ * chdb only accepts raw SQL; the real client sends params separately and the server
+ * substitutes. This test double does substitution locally before calling session.query().
+ */
 function substituteParams(sql: string, params?: Record<string, unknown>): string {
   if (!params) return sql
-  return sql.replace(/\{(\w+):(\w+)\}/g, (_match, name: string) => {
+  return sql.replace(/\{(\w+):[\w()]+?\}/g, (_match, name: string) => {
     const value = params[name]
     if (value === undefined || value === null) return "NULL"
+    if (Array.isArray(value)) {
+      const escaped = value.map((v) =>
+        typeof v === "string" ? `'${String(v).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'` : String(v),
+      )
+      return `[${escaped.join(", ")}]`
+    }
     if (typeof value === "number" || typeof value === "bigint") return String(value)
     if (typeof value === "boolean") return value ? "true" : "false"
     return `'${String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`
   })
 }
 
-export function createTestClickHouse(config?: TestClickHouseConfig): TestClickHouse {
-  const session: ChdbSession = config?.dataDir ? new Session(config.dataDir) : new Session()
-
+export function createTestClickHouse(): TestClickHouse {
+  const session = new Session()
   const client = {
     async query(params: { query: string; query_params?: Record<string, unknown>; format?: string }) {
       const sql = substituteParams(params.query, params.query_params)
@@ -148,8 +152,4 @@ export function setupTestClickHouse(): TestClickHouseContext {
       return ch.client
     },
   }
-}
-
-export function closeTestClickHouse(ch: TestClickHouse): void {
-  ch.cleanup()
 }

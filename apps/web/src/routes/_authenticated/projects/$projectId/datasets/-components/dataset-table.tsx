@@ -1,14 +1,11 @@
 import type { CheckedState } from "@repo/ui"
 import { Checkbox, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import type { DatasetRowRecord } from "../../domains/datasets/datasets.functions.ts"
+import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 
-function truncateJson(data: string | Record<string, unknown>, maxLen = 30): string {
-  if (typeof data === "string") return data.length > maxLen ? `${data.slice(0, maxLen)}…` : data
-  const values = Object.values(data)
-  if (values.length === 0) return "{}"
-  const first = String(values[0])
-  return first.length > maxLen ? `${first.slice(0, maxLen)}…` : first
+function formatCellValue(data: string | Record<string, unknown>): string {
+  if (typeof data === "string") return data
+  return JSON.stringify(data)
 }
 
 export function DatasetTable({
@@ -53,17 +50,16 @@ export function DatasetTable({
                 checked={isRowSelected(row.rowId)}
                 onCheckedChange={(checked) => onToggleRow(row.rowId, checked)}
                 onClick={(e) => e.stopPropagation()}
-                className="hit-area-3"
               />
             </TableCell>
             <TableCell>
               <Text.H6 color="foregroundMuted">{relativeTime(row.createdAt)}</Text.H6>
             </TableCell>
-            <TableCell>
-              <Text.H6 className="font-mono truncate max-w-48">{truncateJson(row.input)}</Text.H6>
+            <TableCell className="max-w-48">
+              <Text.Mono ellipsis>{formatCellValue(row.input)}</Text.Mono>
             </TableCell>
-            <TableCell>
-              <Text.H6 className="font-mono truncate max-w-48">{truncateJson(row.output)}</Text.H6>
+            <TableCell className="max-w-48">
+              <Text.Mono ellipsis>{formatCellValue(row.output)}</Text.Mono>
             </TableCell>
           </TableRow>
         ))}

@@ -1,7 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type { DatasetRow } from "@domain/datasets"
 import { DatasetRowRepository, RowNotFoundError } from "@domain/datasets"
-import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId } from "@domain/shared"
+import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } from "@domain/shared"
 import { safeParseJson, safeStringifyJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
@@ -47,10 +47,39 @@ export const DatasetRowRepositoryLive = Layer.effect(
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
     return {
+      findExistingTraceIds: (args) =>
+        chSqlClient.query(async (client, organizationId) => {
+          if (args.traceIds.length === 0) return new Set<TraceId>()
+
+          const result = await client
+            .query({
+              query: `
+                SELECT DISTINCT JSONExtractString(
+                  argMax(metadata, xact_id), 'traceId'
+                ) AS trace_id
+                FROM dataset_rows
+                WHERE organization_id = {organizationId:String}
+                  AND dataset_id = {datasetId:String}
+                GROUP BY row_id
+                HAVING argMax(_object_delete, xact_id) = false
+                  AND trace_id IN ({traceIds:Array(String)})
+              `,
+              query_params: {
+                organizationId: organizationId as string,
+                datasetId: args.datasetId as string,
+                traceIds: Array.from(args.traceIds) as string[],
+              },
+              format: "JSONEachRow",
+            })
+            .then((r) => r.json<{ trace_id: string }>())
+
+          return new Set(result.map((r) => TraceId(r.trace_id)))
+        }),
+
       insertBatch: (args) =>
-        chSqlClient.query(async (client) => {
+        chSqlClient.query(async (client, organizationId) => {
           const values = args.rows.map((row) => ({
-            organization_id: args.organizationId,
+            organization_id: organizationId,
             dataset_id: args.datasetId,
             row_id: row.id,
             xact_id: args.version,
@@ -72,11 +101,11 @@ export const DatasetRowRepositoryLive = Layer.effect(
         }),
 
       list: (args) =>
-        chSqlClient.query(async (client) => {
+        chSqlClient.query(async (client, organizationId) => {
           const limit = args.limit ?? 50
           const offset = args.offset ?? 0
           const params: Record<string, unknown> = {
-            organizationId: args.organizationId,
+            organizationId,
             datasetId: args.datasetId,
             limit,
             offset,
@@ -148,9 +177,9 @@ export const DatasetRowRepositoryLive = Layer.effect(
 
       findById: (args) =>
         Effect.gen(function* () {
-          const result = yield* chSqlClient.query(async (client) => {
+          const result = yield* chSqlClient.query(async (client, organizationId) => {
             const params: Record<string, unknown> = {
-              organizationId: args.organizationId,
+              organizationId,
               datasetId: args.datasetId,
               rowId: args.rowId,
             }
@@ -191,12 +220,12 @@ export const DatasetRowRepositoryLive = Layer.effect(
           return result
         }),
       updateRow: (args) =>
-        chSqlClient.query(async (client) => {
+        chSqlClient.query(async (client, organizationId) => {
           await client.insert({
             table: "dataset_rows",
             values: [
               {
-                organization_id: args.organizationId,
+                organization_id: organizationId,
                 dataset_id: args.datasetId,
                 row_id: args.rowId,
                 xact_id: args.version,
@@ -209,11 +238,11 @@ export const DatasetRowRepositoryLive = Layer.effect(
           })
         }),
       deleteBatch: (args) =>
-        chSqlClient.query(async (client) => {
+        chSqlClient.query(async (client, organizationId) => {
           if (args.rowIds.length === 0) return
 
           const values = args.rowIds.map((rowId) => ({
-            organization_id: args.organizationId,
+            organization_id: organizationId,
             dataset_id: args.datasetId,
             row_id: rowId,
             xact_id: args.version,

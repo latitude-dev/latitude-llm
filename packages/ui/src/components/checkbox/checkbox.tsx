@@ -41,9 +41,11 @@ const Checkbox = forwardRef<ElementRef<typeof CheckboxPrimitive.Root>, CheckboxP
           "disabled:cursor-not-allowed disabled:opacity-50",
           "data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:border-primary",
           "data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground data-[state=indeterminate]:border-primary",
-          "cursor-pointer transition-colors",
-          debugHitArea && "hit-area-debug",
+          "cursor-pointer transition-colors hit-area-3",
           className,
+          {
+            "hit-area-debug": debugHitArea,
+          },
         )}
       >
         <CheckboxPrimitive.Indicator className="flex items-center justify-center">

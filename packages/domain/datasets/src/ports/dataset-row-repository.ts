@@ -1,22 +1,24 @@
-import type { DatasetId, DatasetRowId, OrganizationId, RepositoryError } from "@domain/shared"
+import type { DatasetId, DatasetRowId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
-import type { DatasetRow, RowFieldValue, RowNotFoundError } from "../entities/dataset-row.ts"
+import type { DatasetRow, InsertRowFieldValue, RowFieldValue, RowNotFoundError } from "../entities/dataset-row.ts"
 
 export interface DatasetRowRepositoryShape {
+  findExistingTraceIds(args: {
+    readonly datasetId: DatasetId
+    readonly traceIds: readonly TraceId[]
+  }): Effect.Effect<ReadonlySet<TraceId>, RepositoryError>
   insertBatch(args: {
-    readonly organizationId: OrganizationId
     readonly datasetId: DatasetId
     readonly version: number
     readonly rows: readonly {
       readonly id: DatasetRowId
-      readonly input: Record<string, unknown>
-      readonly output?: Record<string, unknown>
-      readonly metadata?: Record<string, unknown>
+      readonly input: InsertRowFieldValue
+      readonly output?: InsertRowFieldValue
+      readonly metadata?: InsertRowFieldValue
     }[]
   }): Effect.Effect<readonly DatasetRowId[], RepositoryError>
 
   list(args: {
-    readonly organizationId: OrganizationId
     readonly datasetId: DatasetId
     readonly version?: number
     readonly search?: string
@@ -25,14 +27,12 @@ export interface DatasetRowRepositoryShape {
   }): Effect.Effect<{ readonly rows: readonly DatasetRow[]; readonly total: number }, RepositoryError>
 
   findById(args: {
-    readonly organizationId: OrganizationId
     readonly datasetId: DatasetId
     readonly rowId: DatasetRowId
     readonly version?: number
   }): Effect.Effect<DatasetRow, RowNotFoundError | RepositoryError>
 
   updateRow(args: {
-    readonly organizationId: OrganizationId
     readonly datasetId: DatasetId
     readonly rowId: DatasetRowId
     readonly version: number
@@ -42,7 +42,6 @@ export interface DatasetRowRepositoryShape {
   }): Effect.Effect<void, RepositoryError>
 
   deleteBatch(args: {
-    readonly organizationId: OrganizationId
     readonly datasetId: DatasetId
     readonly rowIds: readonly DatasetRowId[]
     readonly version: number

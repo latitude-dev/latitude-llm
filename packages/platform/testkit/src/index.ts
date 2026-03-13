@@ -59,13 +59,11 @@ export {
 // ClickHouse test utilities exports
 export {
   CLICKHOUSE_SCHEMA_PATH,
-  closeTestClickHouse,
   createTestClickHouse,
   loadClickHouseSchema,
   setupTestClickHouse,
   truncateClickHouseTables,
   type TestClickHouse,
-  type TestClickHouseConfig,
 } from "./clickhouse/test-clickhouse.ts"
 
 // Redis test utilities exports

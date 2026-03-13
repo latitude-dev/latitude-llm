@@ -20,6 +20,12 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly traceId: TraceId
   }): Effect.Effect<TraceDetail | null, RepositoryError>
+
+  findByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+  }): Effect.Effect<readonly TraceDetail[], RepositoryError>
 }
 
 export interface TraceListOptions {

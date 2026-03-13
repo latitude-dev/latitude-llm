@@ -49,6 +49,7 @@ export {
   DialogTrigger,
 } from "./components/modal/primitives.tsx"
 export { RichTextEditor, type RichTextEditorProps } from "./components/rich-text-editor/rich-text-editor.tsx"
+export { Select, type SelectOption, type SelectOptionGroup, type SelectProps } from "./components/select/index.tsx"
 export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { TabSelector, type TabSelectorOption, type TabSelectorProps } from "./components/tab-selector/tab-selector.tsx"
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./components/table/table.tsx"

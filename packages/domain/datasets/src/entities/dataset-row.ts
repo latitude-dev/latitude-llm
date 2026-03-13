@@ -3,6 +3,9 @@ import { Data } from "effect"
 
 export type RowFieldValue = string | Record<string, unknown>
 
+/** Value for input/output/metadata when inserting rows (e.g. from CSV with flattenSingleColumn). */
+export type InsertRowFieldValue = RowFieldValue | number | boolean | null
+
 export interface DatasetRow {
   readonly rowId: DatasetRowId
   readonly datasetId: DatasetId
