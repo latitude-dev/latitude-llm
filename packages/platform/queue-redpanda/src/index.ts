@@ -11,4 +11,4 @@ export {
 export type { TopicName } from "./topics.ts"
 export { Topics } from "./topics.ts"
 export type { KafkaConfig } from "./types.ts"
-export { KafkaClientError, RedpandaQueueAdapterTag } from "./types.ts"
+export { KafkaClientError } from "./types.ts"

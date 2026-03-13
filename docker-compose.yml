@@ -79,6 +79,7 @@ services:
       - create
       - domain-events
       - domain-events-dlq
+      - span-ingestion
       - -X
       - brokers=redpanda:29092
       - --partitions=1

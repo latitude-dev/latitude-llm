@@ -1,9 +1,12 @@
 import { Topics } from "@platform/queue-redpanda"
+import { createLogger } from "@repo/observability"
 import type { Hono } from "hono"
 import { getSpanIngestionProducer } from "../clients.ts"
 import { authMiddleware } from "../middleware/auth.ts"
 import { projectMiddleware } from "../middleware/project.ts"
 import type { IngestEnv } from "../types.ts"
+
+const logger = createLogger("ingest:traces")
 
 interface TracesRouteContext {
   app: Hono<IngestEnv>
@@ -19,7 +22,10 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
     const projectId = c.get("projectId")
     const apiKeyId = c.get("apiKeyId")
 
-    const producer = await getSpanIngestionProducer().catch(() => undefined)
+    const producer = await getSpanIngestionProducer().catch((error) => {
+      logger.error(`Failed to get span ingestion producer: ${error}`)
+      return undefined
+    })
     if (producer) {
       await producer
         .send({
@@ -38,7 +44,9 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
             },
           ],
         })
-        .catch(() => undefined)
+        .catch((error) => {
+          logger.error(`Failed to send span ingestion message: ${error}`)
+        })
     }
 
     return c.json({}, 202)
