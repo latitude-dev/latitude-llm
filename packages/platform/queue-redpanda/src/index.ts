@@ -1,27 +1,20 @@
 import { Effect, Layer } from "effect"
-import { type RedpandaEventsPublisherConfig, createRedpandaEventsPublisherEffect } from "./producer.ts"
+import { createRedpandaEventsPublisherEffect, type RedpandaEventsPublisherConfig } from "./producer.ts"
 import { RedpandaQueueAdapterTag } from "./types.ts"
 
 export { createKafkaClient, createKafkaClientEffect } from "./client.ts"
-
-export { Topics } from "./topics.ts"
-export type { TopicName } from "./topics.ts"
-
+export { loadKafkaConfig } from "./config.ts"
+export type { EventHandler, RedpandaEventsConsumerConfig } from "./consumer.ts"
+export { createRedpandaEventsConsumer, DomainEventSchema, EventEnvelopeSchema } from "./consumer.ts"
 export {
   createRedpandaEventsPublisher,
   createRedpandaEventsPublisherEffect,
   RedpandaProducerError,
 } from "./producer.ts"
-
-export { loadKafkaConfig } from "./config.ts"
-
-export { KafkaClientError, RedpandaQueueAdapterTag, redpandaQueueAdapter } from "./types.ts"
-
+export type { TopicName } from "./topics.ts"
+export { Topics } from "./topics.ts"
 export type { KafkaConfig } from "./types.ts"
-
-export { createRedpandaEventsConsumer, DomainEventSchema, EventEnvelopeSchema } from "./consumer.ts"
-
-export type { RedpandaEventsConsumerConfig, EventHandler } from "./consumer.ts"
+export { KafkaClientError, RedpandaQueueAdapterTag, redpandaQueueAdapter } from "./types.ts"
 
 /**
  * Live layer for Redpanda events publisher

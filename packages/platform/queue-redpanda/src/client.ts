@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { Kafka, logLevel } from "kafkajs"
-import { KafkaClientError } from "./types.ts"
 import type { KafkaConfig } from "./types.ts"
+import { KafkaClientError } from "./types.ts"
 
 export const createKafkaClient = (config: KafkaConfig): Kafka => {
   const kafkaConfig: import("kafkajs").KafkaConfig = {
