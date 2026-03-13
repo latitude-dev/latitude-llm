@@ -129,11 +129,3 @@ PRD.md
 progress.txt
 
 packages/cli/prompts
-
-.localstorage*
-docs/plans
-todos/
-compound-engineering.*
-
-.mcp.json
-opencode.json

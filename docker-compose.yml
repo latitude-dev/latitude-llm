@@ -48,7 +48,45 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.14
+    command:
+      - redpanda
+      - start
+      - --kafka-addr=internal://0.0.0.0:29092,external://0.0.0.0:9092
+      - --advertise-kafka-addr=internal://redpanda:29092,external://localhost:9092
+      - --mode=dev-container
+      - --smp=1
+      - --default-log-level=warn
+    ports:
+      - "9092:9092"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health --brokers localhost:29092"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
+
+  redpanda-init:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.14
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    command:
+      - rpk
+      - topic
+      - create
+      - domain-events
+      - domain-events-dlq
+      - --brokers=redpanda:29092
+      - --partitions=1
+      - --replicas=1
+    restart: "no"
+
 volumes:
   postgres_data:
   clickhouse_data:
   weaviate-data:
+  redpanda_data:

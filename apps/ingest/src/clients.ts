@@ -1,22 +1,15 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { SPAN_INGESTION_QUEUE } from "@domain/shared"
-import type { RedisClient, RedisConnection } from "@platform/cache-redis"
+import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
-import { createStorageDisk } from "@platform/storage-object"
-import type { StorageDisk } from "@platform/storage-object"
-import { Queue } from "bullmq"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
-let redisConnectionInstance: RedisConnection | undefined
-let storageDiskInstance: StorageDisk | undefined
-let spanIngestionQueueInstance: Queue | undefined
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
@@ -50,25 +43,4 @@ export const getRedisClient = (): RedisClient => {
     redisInstance = createRedisClient(redisConn)
   }
   return redisInstance
-}
-
-const getRedisConnection = (): RedisConnection => {
-  if (!redisConnectionInstance) {
-    redisConnectionInstance = createRedisConnection()
-  }
-  return redisConnectionInstance
-}
-
-export const getStorageDisk = (): StorageDisk => {
-  if (!storageDiskInstance) {
-    storageDiskInstance = createStorageDisk()
-  }
-  return storageDiskInstance
-}
-
-export const getSpanIngestionQueue = (): Queue => {
-  if (!spanIngestionQueueInstance) {
-    spanIngestionQueueInstance = new Queue(SPAN_INGESTION_QUEUE, { connection: getRedisConnection() })
-  }
-  return spanIngestionQueueInstance
 }
