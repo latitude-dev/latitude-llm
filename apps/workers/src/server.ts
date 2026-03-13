@@ -44,7 +44,6 @@ const initializeWorkers = async () => {
   // Create Redpanda publisher (async initialization)
   const eventsPublisher = await createRedpandaEventsPublisher({
     kafka: kafkaClient,
-    config: kafkaConfig,
   })
 
   // Create outbox consumer (polls Postgres outbox and publishes to Redpanda)
@@ -60,7 +59,7 @@ const initializeWorkers = async () => {
   // Create Redpanda event consumer (consumes from Redpanda and processes events)
   const redpandaConsumer = createRedpandaEventsConsumer({
     kafka: kafkaClient,
-    config: kafkaConfig,
+    groupId: kafkaConfig.groupId,
   })
 
   // Start consumers

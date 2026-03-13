@@ -1,8 +1,8 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events"
 import { Data, Effect } from "effect"
 import type { Kafka } from "kafkajs"
+import { Topics } from "./topics.ts"
 import { KafkaClientError } from "./types.ts"
-import type { KafkaConfig } from "./types.ts"
 
 export class RedpandaProducerError extends Data.TaggedError("RedpandaProducerError")<{
   readonly cause: unknown
@@ -11,7 +11,6 @@ export class RedpandaProducerError extends Data.TaggedError("RedpandaProducerErr
 
 export interface RedpandaEventsPublisherConfig {
   readonly kafka: Kafka
-  readonly config: KafkaConfig
 }
 
 export const mapEnvelopeToMessage = (envelope: EventEnvelope) => {
@@ -63,7 +62,7 @@ export const createRedpandaEventsPublisherEffect = (
         yield* Effect.tryPromise({
           try: () =>
             producer.send({
-              topic: config.config.eventsTopic,
+              topic: Topics.domainEvents,
               acks: -1,
               messages: [message],
             }),

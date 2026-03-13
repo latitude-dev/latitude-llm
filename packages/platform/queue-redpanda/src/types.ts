@@ -9,8 +9,6 @@ export interface KafkaConfig {
   readonly clientId: string
   readonly brokers: string[]
   readonly groupId: string
-  readonly eventsTopic: string
-  readonly dlqTopic: string
   readonly ssl: boolean | undefined
   readonly sasl: { readonly mechanism: "plain"; readonly username: string; readonly password: string } | undefined
 }

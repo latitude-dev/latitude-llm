@@ -63,7 +63,7 @@ services:
     volumes:
       - redpanda_data:/var/lib/redpanda/data
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health --brokers localhost:29092"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:9644/v1/brokers || exit 1"]
       interval: 5s
       timeout: 10s
       retries: 12
@@ -75,12 +75,12 @@ services:
       redpanda:
         condition: service_healthy
     command:
-      - rpk
       - topic
       - create
       - domain-events
       - domain-events-dlq
-      - --brokers=redpanda:29092
+      - -X
+      - brokers=redpanda:29092
       - --partitions=1
       - --replicas=1
     restart: "no"

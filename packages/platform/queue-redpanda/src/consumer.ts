@@ -2,11 +2,11 @@ import type { EventEnvelope } from "@domain/events"
 import { Effect } from "effect"
 import type { EachMessagePayload } from "kafkajs"
 import { z } from "zod"
-import type { KafkaConfig } from "./types.ts"
+import { Topics } from "./topics.ts"
 
 export interface RedpandaEventsConsumerConfig {
-  readonly config: KafkaConfig
   readonly kafka: import("kafkajs").Kafka
+  readonly groupId: string
 }
 
 export const DomainEventSchema = z.object({
@@ -34,7 +34,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfig) => {
   const consumer = config.kafka.consumer({
-    groupId: config.config.groupId,
+    groupId: config.groupId,
   })
 
   let isRunning = false
@@ -42,7 +42,7 @@ export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfi
   const start = async (handler: EventHandler): Promise<void> => {
     await consumer.connect()
     await consumer.subscribe({
-      topic: config.config.eventsTopic,
+      topic: Topics.domainEvents,
     })
 
     isRunning = true
@@ -104,7 +104,7 @@ export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfi
   return {
     start,
     stop,
-    pause: () => consumer.pause([{ topic: config.config.eventsTopic }]),
-    resume: () => consumer.resume([{ topic: config.config.eventsTopic }]),
+    pause: () => consumer.pause([{ topic: Topics.domainEvents }]),
+    resume: () => consumer.resume([{ topic: Topics.domainEvents }]),
   }
 }

@@ -6,8 +6,6 @@ const ENV_KEYS = [
   "LAT_KAFKA_BROKERS",
   "LAT_KAFKA_CLIENT_ID",
   "LAT_KAFKA_CONSUMER_GROUP_ID",
-  "LAT_KAFKA_EVENTS_TOPIC",
-  "LAT_KAFKA_DLQ_TOPIC",
   "LAT_KAFKA_SSL",
   "LAT_KAFKA_SASL_USERNAME",
   "LAT_KAFKA_SASL_PASSWORD",
@@ -17,8 +15,6 @@ const BASE_ENV: Record<string, string> = {
   LAT_KAFKA_BROKERS: "localhost:9092,localhost:9093",
   LAT_KAFKA_CLIENT_ID: "test-client",
   LAT_KAFKA_CONSUMER_GROUP_ID: "test-group",
-  LAT_KAFKA_EVENTS_TOPIC: "domain-events",
-  LAT_KAFKA_DLQ_TOPIC: "domain-events-dlq",
 }
 
 function setEnv(vars: Record<string, string>) {
@@ -43,8 +39,6 @@ describe("loadKafkaConfig", () => {
     expect(config.brokers).toEqual(["localhost:9092", "localhost:9093"])
     expect(config.clientId).toBe("test-client")
     expect(config.groupId).toBe("test-group")
-    expect(config.eventsTopic).toBe("domain-events")
-    expect(config.dlqTopic).toBe("domain-events-dlq")
     expect(config.ssl).toBeUndefined()
     expect(config.sasl).toBeUndefined()
   })

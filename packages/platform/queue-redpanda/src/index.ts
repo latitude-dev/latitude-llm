@@ -4,6 +4,9 @@ import { RedpandaQueueAdapterTag } from "./types.ts"
 
 export { createKafkaClient, createKafkaClientEffect } from "./client.ts"
 
+export { Topics } from "./topics.ts"
+export type { TopicName } from "./topics.ts"
+
 export {
   createRedpandaEventsPublisher,
   createRedpandaEventsPublisherEffect,
