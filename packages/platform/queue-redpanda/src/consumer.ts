@@ -38,6 +38,7 @@ export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfi
   })
 
   let isRunning = false
+  let runPromise: Promise<void> | undefined
 
   const start = async (handler: EventHandler): Promise<void> => {
     await consumer.connect()
@@ -47,7 +48,7 @@ export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfi
 
     isRunning = true
 
-    await consumer.run({
+    runPromise = consumer.run({
       eachMessage: async (payload: EachMessagePayload) => {
         if (!isRunning) return
 
@@ -94,11 +95,16 @@ export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfi
         // TODO: Send to dead-letter topic
       },
     })
+
+    runPromise.catch((error) => {
+      void Effect.runPromise(Effect.logError(`Redpanda consumer crashed: ${error}`))
+    })
   }
 
   const stop = async (): Promise<void> => {
     isRunning = false
     await consumer.disconnect()
+    await runPromise
   }
 
   return {

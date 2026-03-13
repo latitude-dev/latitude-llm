@@ -56,7 +56,10 @@ export const getSpanIngestionProducer = (): Promise<Producer> => {
       const producer = kafka.producer({ allowAutoTopicCreation: false })
       await producer.connect()
       return producer
-    })()
+    })().catch((error) => {
+      spanIngestionProducerPromise = undefined
+      throw error
+    })
   }
   return spanIngestionProducerPromise
 }
