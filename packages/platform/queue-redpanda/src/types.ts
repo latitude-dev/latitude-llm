@@ -24,10 +24,3 @@ export class RedpandaQueueAdapterTag extends ServiceMap.Service<
     readonly publisher: EventsPublisher
   }
 >()("@platform/queue-redpanda/RedpandaQueueAdapterTag") {}
-
-/**
- * Adapter type constant for Redpanda
- */
-export const redpandaQueueAdapter = {
-  type: "redpanda" as const,
-}

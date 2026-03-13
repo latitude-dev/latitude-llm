@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { KafkaSaslWithoutTlsError, loadKafkaConfig } from "./config.ts"
 
 const ENV_KEYS = [
@@ -17,6 +17,8 @@ const BASE_ENV: Record<string, string> = {
   LAT_KAFKA_CONSUMER_GROUP_ID: "test-group",
 }
 
+let originalNodeEnv: string | undefined
+
 function setEnv(vars: Record<string, string>) {
   for (const [k, v] of Object.entries(vars)) {
     process.env[k] = v
@@ -30,7 +32,14 @@ function clearEnv() {
 }
 
 describe("loadKafkaConfig", () => {
-  afterEach(clearEnv)
+  beforeEach(() => {
+    originalNodeEnv = process.env.NODE_ENV
+  })
+
+  afterEach(() => {
+    clearEnv()
+    process.env.NODE_ENV = originalNodeEnv
+  })
 
   it("loads valid config and splits broker list", async () => {
     setEnv(BASE_ENV)
@@ -44,17 +53,13 @@ describe("loadKafkaConfig", () => {
   })
 
   it("fails in production when SASL enabled without TLS", async () => {
-    const origNodeEnv = process.env.NODE_ENV
     process.env.NODE_ENV = "production"
     setEnv({ ...BASE_ENV, LAT_KAFKA_SSL: "false", LAT_KAFKA_SASL_USERNAME: "user", LAT_KAFKA_SASL_PASSWORD: "pass" })
 
     await expect(Effect.runPromise(loadKafkaConfig())).rejects.toBeInstanceOf(KafkaSaslWithoutTlsError)
-
-    process.env.NODE_ENV = origNodeEnv
   })
 
   it("allows SASL with TLS in production", async () => {
-    const origNodeEnv = process.env.NODE_ENV
     process.env.NODE_ENV = "production"
     setEnv({ ...BASE_ENV, LAT_KAFKA_SSL: "true", LAT_KAFKA_SASL_USERNAME: "user", LAT_KAFKA_SASL_PASSWORD: "pass" })
 
@@ -62,19 +67,14 @@ describe("loadKafkaConfig", () => {
 
     expect(config.ssl).toBe(true)
     expect(config.sasl).toEqual({ mechanism: "plain", username: "user", password: "pass" })
-
-    process.env.NODE_ENV = origNodeEnv
   })
 
   it("allows SASL without TLS in non-production", async () => {
-    const origNodeEnv = process.env.NODE_ENV
     process.env.NODE_ENV = "development"
     setEnv({ ...BASE_ENV, LAT_KAFKA_SASL_USERNAME: "user", LAT_KAFKA_SASL_PASSWORD: "pass" })
 
     const config = await Effect.runPromise(loadKafkaConfig())
 
     expect(config.sasl).toBeDefined()
-
-    process.env.NODE_ENV = origNodeEnv
   })
 })

@@ -11,6 +11,7 @@ import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { getPostgresPool } from "./clients.ts"
+import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
 const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
@@ -62,12 +63,16 @@ const initializeWorkers = async () => {
     groupId: kafkaConfig.groupId,
   })
 
+  // Create span ingestion worker (consumes from span-ingestion topic and writes to ClickHouse)
+  const spanIngestionWorker = createSpanIngestionWorker(kafkaClient, `${kafkaConfig.groupId}-span-ingestion`)
+
   // Start consumers
   outboxConsumer.start()
   await redpandaConsumer.start(eventHandler)
+  await spanIngestionWorker.start()
   logger.info("workers ready - outbox consumer and Redpanda consumer started")
 
-  return { outboxConsumer, redpandaConsumer }
+  return { outboxConsumer, redpandaConsumer, spanIngestionWorker }
 }
 
 const workersPromise = initializeWorkers().catch((error) => {
@@ -79,9 +84,10 @@ const workersPromise = initializeWorkers().catch((error) => {
 process.on("SIGINT", async () => {
   logger.info("shutting down workers...")
   try {
-    const { outboxConsumer, redpandaConsumer } = await workersPromise
+    const { outboxConsumer, redpandaConsumer, spanIngestionWorker } = await workersPromise
     await outboxConsumer.stop()
     await redpandaConsumer.stop()
+    await spanIngestionWorker.stop()
   } catch (error) {
     logger.error("Error during shutdown (workers may not have started)", error)
   }

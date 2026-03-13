@@ -13,7 +13,6 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
-    "@clickhouse/client": "catalog:",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
@@ -24,6 +23,7 @@
     "@types/pg": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
+    "kafkajs": "catalog:",
     "pg": "catalog:",
     "tsx": "catalog:"
   }

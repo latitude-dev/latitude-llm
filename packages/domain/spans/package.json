@@ -15,6 +15,7 @@
   "dependencies": {
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
+    "protobufjs": "catalog:",
     "rosetta-ai": "catalog:"
   }
 }
