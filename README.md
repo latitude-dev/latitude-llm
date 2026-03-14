@@ -21,7 +21,7 @@
 </p>
 
 > [!NOTE]
-> You are viewing the **Latitude v2 Alpha** branch (`main`). For the current stable release, use [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1).
+> This is **Latitude v2**, a complete platform rewrite currently in early alpha and not yet ready for production use. For the stable release, use [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1).
 
 <p align="center">
   <img src="docs/assets/readme/gif_ui.gif?raw=true" alt="Latitude demo — observability, evals, and prompt management" width="800"/>
