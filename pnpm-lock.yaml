@@ -210,9 +210,6 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
-      '@domain/spans':
-        specifier: workspace:*
-        version: link:../../packages/domain/spans
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.6(hono@4.9.12)
@@ -388,9 +385,6 @@ importers:
 
   apps/workers:
     dependencies:
-      '@clickhouse/client':
-        specifier: 'catalog:'
-        version: 1.17.0
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
