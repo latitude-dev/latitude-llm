@@ -70,16 +70,13 @@ export const createSpanIngestionWorker = (kafka: Kafka, groupId: string) => {
           const spans = transformOtlpToSpans(request, { organizationId, projectId, apiKeyId, ingestedAt })
           if (spans.length === 0) return
 
-          try {
-            await Effect.runPromise(
-              Effect.gen(function* () {
-                const repo = yield* SpanRepository
-                yield* repo.insert(spans)
-              }).pipe(withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId))),
-            )
-          } catch (error) {
-            logger.error(`Span ingestion: failed to insert spans: ${error}`)
-          }
+          // Let insert errors propagate so kafkajs retries via offset management
+          await Effect.runPromise(
+            Effect.gen(function* () {
+              const repo = yield* SpanRepository
+              yield* repo.insert(spans)
+            }).pipe(withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId))),
+          )
         },
       })
       .catch((error) => {

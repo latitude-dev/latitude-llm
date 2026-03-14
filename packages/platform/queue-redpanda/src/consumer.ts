@@ -30,8 +30,6 @@ export interface EventHandler {
   handle(event: EventEnvelope): Effect.Effect<void, unknown, never>
 }
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
 export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfig) => {
   const consumer = config.kafka.consumer({
     groupId: config.groupId,
@@ -53,46 +51,19 @@ export const createRedpandaEventsConsumer = (config: RedpandaEventsConsumerConfi
         if (!isRunning) return
 
         const value = payload.message.value
-        if (!value) {
-          await Effect.runPromise(Effect.logError("Received message with null value"))
-          return
-        }
+        if (!value) return
 
         let event: EventEnvelope
         try {
           const parsed = JSON.parse(value.toString())
           event = EventEnvelopeSchema.parse(parsed)
-        } catch (error) {
-          await Effect.runPromise(Effect.logError(`Invalid event envelope: ${error}`))
+        } catch {
+          // Poison pill — skip permanently undeserializable messages
           return
         }
 
-        // Retry with exponential backoff
-        let lastError: unknown
-        for (let attempt = 0; attempt < 3; attempt++) {
-          if (!isRunning) return
-
-          if (attempt > 0) {
-            await sleep(1000 * 2 ** (attempt - 1)) // 1s, 2s
-          }
-
-          try {
-            await Effect.runPromise(handler.handle(event))
-            return // Success, exit retry loop
-          } catch (error) {
-            lastError = error
-            await Effect.runPromise(
-              Effect.logError(
-                `Error processing event (attempt ${attempt + 1}/3) from ${payload.topic}[${payload.partition}@${payload.message.offset}]: ${error}`,
-              ),
-            )
-            await payload.heartbeat()
-          }
-        }
-
-        // All retries failed
-        await Effect.runPromise(Effect.logError(`Failed to process event after 3 retries: ${lastError}`))
-        // TODO: Send to dead-letter topic
+        // Let processing errors propagate so kafkajs retries via offset management
+        await Effect.runPromise(handler.handle(event))
       },
     })
 
