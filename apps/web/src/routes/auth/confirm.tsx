@@ -1,0 +1,148 @@
+import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import { CheckCircle, Loader2, XCircle } from "lucide-react"
+import { useEffect, useState } from "react"
+import type { AuthIntentInfo } from "../../domains/auth/auth.functions.ts"
+import { completeAuthIntent, getAuthIntentInfo } from "../../domains/auth/auth.functions.ts"
+import { getSession } from "../../domains/sessions/session.functions.ts"
+
+export const Route = createFileRoute("/auth/confirm")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    authIntentId: (search.authIntentId as string) ?? "",
+    cliSession: (search.cliSession as string) || undefined,
+  }),
+  beforeLoad: async () => {
+    const session = await getSession()
+    if (!session) {
+      throw redirect({ to: "/login" })
+    }
+  },
+  component: AuthConfirmPage,
+})
+
+type ConfirmState =
+  | { step: "loading" }
+  | { step: "name-form"; intentInfo: AuthIntentInfo }
+  | { step: "completing" }
+  | { step: "completed" }
+  | { step: "error"; message: string }
+
+function AuthConfirmPage() {
+  const { authIntentId, cliSession } = Route.useSearch()
+  const navigate = useNavigate()
+  const [state, setState] = useState<ConfirmState>({ step: "loading" })
+  const [name, setName] = useState("")
+
+  useEffect(() => {
+    if (!authIntentId) {
+      void navigate({ to: "/" })
+      return
+    }
+
+    getAuthIntentInfo({ data: { intentId: authIntentId } })
+      .then((info) => {
+        if (info.needsName) {
+          setState({ step: "name-form", intentInfo: info })
+        } else {
+          setState({ step: "completing" })
+          return completeAndRedirect()
+        }
+      })
+      .catch((err) => {
+        setState({ step: "error", message: err instanceof Error ? err.message : "Failed to load" })
+      })
+  }, [authIntentId, navigate])
+
+  const completeAndRedirect = async (userName?: string) => {
+    return completeAuthIntent({ data: { intentId: authIntentId, name: userName } })
+      .then(() => {
+        setState({ step: "completed" })
+        if (cliSession) {
+          void navigate({ to: "/auth/cli", search: { session: cliSession } })
+        } else {
+          setTimeout(() => {
+            void navigate({ to: "/" })
+          }, 2000)
+        }
+      })
+      .catch((err) => {
+        setState({
+          step: "error",
+          message: err instanceof Error ? err.message : "Failed to complete authentication",
+        })
+      })
+  }
+
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    setState({ step: "completing" })
+    void completeAndRedirect(name.trim())
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <div className="flex flex-col items-center justify-center gap-6 max-w-[22rem] w-full">
+        <LatitudeLogo />
+
+        {state.step === "error" ? (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <Icon icon={XCircle} className="h-6 w-6 text-destructive" />
+            </div>
+            <Text.H3 align="center">Something went wrong</Text.H3>
+            <Text.H5 color="foregroundMuted" align="center">
+              {state.message}
+            </Text.H5>
+          </div>
+        ) : state.step === "completed" ? (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Icon icon={CheckCircle} className="h-6 w-6 text-primary" />
+            </div>
+            <Text.H3 align="center">You're in!</Text.H3>
+            <Text.H5 color="foregroundMuted" align="center">
+              {cliSession
+                ? "Redirecting to CLI authorization..."
+                : "In a few seconds you will be redirected to your workspace."}
+            </Text.H5>
+          </div>
+        ) : state.step === "name-form" ? (
+          <div className="flex flex-col items-center gap-4 w-full">
+            <Text.H3 align="center">Welcome to Latitude</Text.H3>
+            <Text.H5 color="foregroundMuted" align="center">
+              {`You've been invited to join ${state.intentInfo.organizationName ?? "a workspace"}. Enter your name to continue.`}
+            </Text.H5>
+            <form onSubmit={handleNameSubmit} className="flex flex-col gap-4 w-full">
+              <label htmlFor="name" className="flex flex-col gap-2">
+                <Text.H6 weight="medium">Name</Text.H6>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </label>
+              <Button size="full" type="submit" disabled={!name.trim()}>
+                Join workspace
+              </Button>
+            </form>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Icon icon={Loader2} className="h-6 w-6 text-muted-foreground animate-spin" />
+            </div>
+            <Text.H3 align="center">Setting up your workspace</Text.H3>
+            <Text.H5 color="foregroundMuted" align="center">
+              Please wait while we complete your authentication...
+            </Text.H5>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

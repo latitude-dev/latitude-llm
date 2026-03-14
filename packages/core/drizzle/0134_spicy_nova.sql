@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."provider_api_keys" DROP CONSTRAINT "provider_api_keys_token_provider_workspace_id_deleted_at_unique";

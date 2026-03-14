@@ -1,6 +1,0 @@
-apiVersion: v2
-name: latitude
-description: Helm chart to deploy Latitude (web, gateway, workers, websockets)
-type: application
-version: 0.1.0
-appVersion: 'latest'

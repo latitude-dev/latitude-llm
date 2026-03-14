@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."workspace_onboarding" DROP COLUMN "current_step";

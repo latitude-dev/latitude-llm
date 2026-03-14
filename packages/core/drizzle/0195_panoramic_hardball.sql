@@ -1,2 +1,0 @@
-ALTER TABLE "latitude"."sessions" ADD COLUMN "current_workspace_id" bigint;--> statement-breakpoint
-ALTER TABLE "latitude"."sessions" ADD CONSTRAINT "sessions_current_workspace_id_workspaces_id_fk" FOREIGN KEY ("current_workspace_id") REFERENCES "latitude"."workspaces"("id") ON DELETE cascade ON UPDATE no action;

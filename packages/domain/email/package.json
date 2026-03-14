@@ -1,0 +1,25 @@
+{
+  "name": "@domain/email",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "email dev -d ./src/templates",
+    "dev:types": "tsc --watch",
+    "check": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "check:fix": "biome check --fix ."
+  },
+  "dependencies": {
+    "@react-email/components": "^0.0.33",
+    "effect": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/react": "catalog:",
+    "typescript": "^5.7.0"
+  }
+}

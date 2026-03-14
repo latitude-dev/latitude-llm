@@ -12,11 +12,19 @@ latitude-lock.json
 .vscode
 .opencode
 
-# Dependencies
+# Node / package manager artifacts
 node_modules
-.pnp
-.pnp.js
+.pnpm-store
+**/.pnpm-store
 *.*-E
+
+# Logs and runtime files
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.stackdump
+pnpm-debug.log*
 
 # Local env files
 .env
@@ -26,44 +34,46 @@ node_modules
 # Testing
 coverage
 
-# Turbo
+# Build/cache outputs
 .turbo
 .tsbuildinfo
-
-# Vim shit
-*.py-E
-# Python packages
-.venv
-**/*.egg-info/
-__pycache__
-
-# Vercel
-.vercel
-.expert
+**/*.tsbuildinfo
+**/*.localstorage
+**/*.localstorage-shm
+**/*.localstorage-wal
+**/*/tsconfig.tsbuildinfo
 
 # Build Outputs
-.next/
-out/
+out
 build
 dist
+
 # Vim crap
 *.ts-E
 *.tsx-E
+*.tsconfig.tsbuildinfo
 
-
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Misc
+# macOS
 .DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.DocumentRevisions-V100
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
 
 # postgres data in development. Ignore
 docker/pgdata/
 
-# Next.js
-next-env.d.ts
+# Object storage data in filesystem
+storage/
+
+# Web scripts build output
 apps/web/scripts-dist
 
 # File uploads in development
@@ -94,7 +104,6 @@ bin/connect.sh
 ONLY_FOR_COPILOT/
 
 __testing__
-
 
 # New spans
 apps/web/ingest

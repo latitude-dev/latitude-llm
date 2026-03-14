@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX IF NOT EXISTS "evaluation_results_v2_unique_evaluated_log_id_evaluation_uuid_idx" ON "latitude"."evaluation_results_v2" USING btree ("evaluated_log_id","evaluation_uuid");

@@ -1,9 +1,26 @@
-name: latitude-llm
+name: latitude-v2
+root: .
+
+startup_window: editor
+
 windows:
-  - workspace: cd .
-  - apps:
-      layout: main-horizontal
+  - editor:
+      layout: main-vertical
       panes:
-        - pnpm catchup && NODE_OPTIONS=--max_old_space_size=4096 pnpm dev --filter='./apps/*'
-  - docker: docker compose up db redis mailpit clickhouse --menu=false
-  - studio: cd packages/core && pnpm db:studio
+        - 'if command -v nvim >/dev/null 2>&1; then nvim; else clear; fi'
+  - infra:
+      panes:
+        - docker compose up --menu=false
+  - db:
+      panes:
+        - pnpm --filter @platform/db-postgres pg:studio
+  - apps:
+      layout: tiled
+      panes:
+        - pnpm --filter @app/api dev
+        - pnpm --filter @app/ingest dev
+        - pnpm --filter @app/web dev
+        - pnpm --filter @app/workers dev
+  - workflows:
+      panes:
+        - pnpm --filter @app/workflows dev

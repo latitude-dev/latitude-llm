@@ -1,3 +1,0 @@
--- Note: leaving this commented because the table was already in latitude
--- schema but drizzle's snapshot was out of sync with the database
--- ALTER TABLE "public"."dataset_rows" SET SCHEMA "latitude";

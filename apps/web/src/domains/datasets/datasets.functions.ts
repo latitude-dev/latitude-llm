@@ -1,0 +1,272 @@
+import type { Dataset, DatasetRow } from "@domain/datasets"
+import {
+  createDataset,
+  DatasetRepository,
+  deleteRows,
+  insertRows,
+  listDatasets,
+  listRows,
+  updateRow,
+} from "@domain/datasets"
+import { DatasetId, DatasetRowId, DatasetVersionId, OrganizationId, ProjectId, putInDisk } from "@domain/shared"
+import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { createServerFn } from "@tanstack/react-start"
+import { Effect } from "effect"
+import Papa from "papaparse"
+import { z } from "zod"
+import { requireSession } from "../../server/auth.ts"
+import { getClickhouseClient, getPostgresClient, getStorageDisk } from "../../server/clients.ts"
+import { errorHandler } from "../../server/middlewares.ts"
+import type { ColumnMapping, CsvTransformOptions } from "./column-mapping.ts"
+import { applyMapping } from "./column-mapping.ts"
+
+export interface DatasetRecord {
+  readonly id: string
+  readonly organizationId: string
+  readonly projectId: string
+  readonly name: string
+  readonly description: string | null
+  readonly fileKey: string | null
+  readonly currentVersion: number
+  readonly latestVersionId: string | null
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+
+export interface DatasetRowRecord {
+  readonly rowId: string
+  readonly datasetId: string
+  readonly input: string | Record<string, JsonValue>
+  readonly output: string | Record<string, JsonValue>
+  readonly metadata: string | Record<string, JsonValue>
+  readonly createdAt: string
+  readonly version: number
+}
+
+const toDatasetRecord = (d: Dataset): DatasetRecord => ({
+  id: d.id,
+  organizationId: d.organizationId,
+  projectId: d.projectId,
+  name: d.name,
+  description: d.description,
+  fileKey: d.fileKey,
+  currentVersion: d.currentVersion,
+  latestVersionId: d.latestVersionId,
+  createdAt: d.createdAt.toISOString(),
+  updatedAt: d.updatedAt.toISOString(),
+})
+
+const toRowRecord = (r: DatasetRow): DatasetRowRecord => ({
+  rowId: r.rowId,
+  datasetId: r.datasetId,
+  input: typeof r.input === "string" ? r.input : (r.input as Record<string, JsonValue>),
+  output: typeof r.output === "string" ? r.output : (r.output as Record<string, JsonValue>),
+  metadata: typeof r.metadata === "string" ? r.metadata : (r.metadata as Record<string, JsonValue>),
+  createdAt: r.createdAt.toISOString(),
+  version: r.version,
+})
+
+export const listDatasetsQuery = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ projectId: z.string() }))
+  .handler(async ({ data }): Promise<{ datasets: DatasetRecord[]; total: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const result = await Effect.runPromise(
+      listDatasets({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+
+    return {
+      datasets: result.datasets.map(toDatasetRecord),
+      total: result.total,
+    }
+  })
+
+export const listRowsQuery = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      datasetId: z.string(),
+      versionId: z.string().optional(),
+      search: z.string().optional(),
+      limit: z.number().int().min(1).max(500).default(50),
+      offset: z.number().default(0),
+    }),
+  )
+  .handler(async ({ data }): Promise<{ rows: DatasetRowRecord[]; total: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const result = await Effect.runPromise(
+      listRows({
+        organizationId: orgId,
+        datasetId: DatasetId(data.datasetId),
+        ...(data.versionId ? { versionId: DatasetVersionId(data.versionId) } : {}),
+        ...(data.search ? { search: data.search } : {}),
+        limit: data.limit,
+        offset: data.offset,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+
+    return { rows: result.rows.map(toRowRecord), total: result.total }
+  })
+
+export const createDatasetMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ projectId: z.string(), name: z.string().min(1) }))
+  .handler(async ({ data }): Promise<DatasetRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const dataset = await Effect.runPromise(
+      createDataset({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        name: data.name,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+
+    return toDatasetRecord(dataset)
+  })
+
+export const saveDatasetCsv = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator((input: unknown) => {
+    if (!(input instanceof FormData)) throw new Error("Expected FormData")
+    return input
+  })
+  .handler(async ({ data: formData }): Promise<{ version: number; rowCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const file = formData.get("file")
+    const datasetId = formData.get("datasetId")
+    const projectId = formData.get("projectId")
+    const mappingRaw = formData.get("mapping")
+    const optionsRaw = formData.get("options")
+
+    if (!(file instanceof File)) throw new Error("No file provided")
+    if (typeof datasetId !== "string" || !datasetId) throw new Error("No datasetId provided")
+    if (typeof projectId !== "string" || !projectId) throw new Error("No projectId provided")
+    if (typeof mappingRaw !== "string") throw new Error("No mapping provided")
+    if (typeof optionsRaw !== "string") throw new Error("No options provided")
+
+    const mapping: ColumnMapping = JSON.parse(mappingRaw)
+    const options: CsvTransformOptions = JSON.parse(optionsRaw)
+
+    const content = await file.text()
+
+    const fileKey = await Effect.runPromise(
+      putInDisk(getStorageDisk(), {
+        namespace: "datasets",
+        organizationId: orgId,
+        projectId: ProjectId(projectId),
+        content,
+      }),
+    )
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DatasetRepository
+        return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+    )
+
+    const parsed = Papa.parse<Record<string, string>>(content, {
+      header: true,
+      skipEmptyLines: true,
+    })
+    const mappedRows = parsed.data.map((row) => applyMapping(row, mapping, options))
+
+    if (mappedRows.length === 0) {
+      return { version: 0, rowCount: 0 }
+    }
+
+    const result = await Effect.runPromise(
+      insertRows({
+        organizationId: orgId,
+        datasetId: DatasetId(datasetId),
+        rows: mappedRows,
+        source: "csv",
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+
+    return { version: result.version, rowCount: mappedRows.length }
+  })
+
+export const updateRowMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      datasetId: z.string(),
+      rowId: z.string(),
+      input: z.string(),
+      output: z.string(),
+      metadata: z.string(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const result = await Effect.runPromise(
+      updateRow({
+        organizationId: orgId,
+        datasetId: DatasetId(data.datasetId),
+        rowId: DatasetRowId(data.rowId),
+        input: data.input,
+        output: data.output,
+        metadata: data.metadata,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+
+    return { versionId: result.versionId, version: result.version }
+  })
+
+export const deleteRowsMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      datasetId: z.string(),
+      rowIds: z.array(z.string()).min(1),
+    }),
+  )
+  .handler(async ({ data }): Promise<{ versionId: string; version: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const result = await Effect.runPromise(
+      deleteRows({
+        organizationId: orgId,
+        datasetId: DatasetId(data.datasetId),
+        rowIds: data.rowIds.map((id) => DatasetRowId(id)),
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+
+    return { versionId: result.versionId as string, version: result.version }
+  })

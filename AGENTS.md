@@ -1,763 +1,930 @@
-# Agent Guidelines for Latitude LLM
+# AGENTS.md
 
-## Philosophy
+Operational guide for coding agents working in this repository.
 
-This codebase will outlive you. Every shortcut becomes someone else's burden. Every hack compounds into technical debt that slows the whole team down.
+## Product Scope
 
-You are not just writing code. You are shaping the future of this project. The patterns you establish will be copied. The corners you cut will be cut again.
+Multi-tenant LLM observability platform. Monorepo managed with `pnpm` workspaces + `turbo`.
 
-Fight entropy. Leave the codebase better than you found it.
+## Architecture Rules
 
-## Required Skills
+### App Boundaries (`apps/*`)
 
-Before writing any code, load the `coding-standards` skill (`/coding-standards`). This skill contains essential principles for writing maintainable code.
+Apps only handle:
 
-## Build/Test Commands
+- Input validation
+- Authentication and authorization
+- Organization access enforcement
+- Routing to domain use-cases
 
-- `pnpm --filter @latitude-data/core db:generate` - Generate database migrations
-- `pnpm --filter @latitude-data/core db:migrate` - Run database migrations
-- `pnpm build` - Build all packages
-- `pnpm lint` - Lint all packages
-- `pnpm prettier` - Format code
-- `pnpm tc` - Type check all packages
-- `pnpm catchup` - Installs dependencies and builds required internal packages. ALWAYS run this command when starting a new worktree.
-- `pnpm test` - Run all tests. NEVER run this command against the whole repo, only against packages you are working on, and one at a time, otherwise the host machine will run out of memory. If `pnpm test` does not work, stop—do not use workarounds. Never use `pnpm exec vitest` or `npx vitest`; run tests only via `pnpm test` from the package directory.
+No business logic in handlers, controllers, or jobs.
 
-### Running Tests
+### Web vs Public API Boundary (`apps/web` and `apps/api`)
 
-To run tests for a specific package, `cd` into the package directory and run `pnpm test` (optionally with a path or pattern to limit scope). Do NOT use `pnpm --filter` for running tests, as it fails due to permission issues. Do NOT use `pnpm exec vitest` or `npx vitest`. If `pnpm test` fails, stop and report; do not fall back to other test runners.
+- `apps/api` is the stable public API surface. Treat its routes/contracts as externally consumed and evolve them carefully.
+- `apps/web` must not call or proxy through `apps/api` for internal product features.
+- For web product development, implement backend behavior in `apps/web` server functions by composing domain use-cases and platform adapters directly.
+- Keep iteration velocity in `apps/web` by adding web-private server functions/stores while preserving `apps/api` stability.
+- Shared business rules still belong in domain packages; `apps/web` and `apps/api` should both orchestrate domain use-cases rather than duplicating policy.
 
-### Running Python SDK Tests
+### Domain Layer (`packages/domain/*`)
 
-The Python SDK (`packages/sdks/python`) uses `uv` instead of `pnpm`. To run tests, `cd` into `packages/sdks/python` and run:
+Business logic lives here. Domain packages expose:
 
-- `uv run scripts/test.py` - Run all tests
-- `uv run scripts/test.py <test_path>` - Run a specific test file
-- `uv run scripts/test.py <test_path>::<TestCase>::<test_name>` - Run a specific test
-- `uv run scripts/lint.py` - Run linter
-- `uv run scripts/format.py` - Run formatter
+- Use-cases
+- Domain types and errors
+- Dependency ports (interfaces/tags)
 
-Do NOT use `pnpm test` for the Python SDK.
+### Infrastructure (`packages/platform/*`)
+
+Infrastructure details live here only. Platform packages implement adapters for domain ports.
+
+### Shared Utilities (`packages/utils`)
+
+General-purpose utility functions that can be shared across any package (domain, platform, or app) live in `@repo/utils`. This package should contain pure, stateless helper functions with no domain or infrastructure dependencies.
+
+Examples: `formatCount`, `formatPrice`, string helpers, number formatters.
+
+When writing a utility function that is not specific to a single domain or package, place it in `@repo/utils` instead of keeping it local.
+
+### Shared Domain vs Utils
+
+`@domain/shared` and `@repo/utils` have different responsibilities and should not be merged.
+
+- Use `@domain/shared` for domain-level shared contracts, types, errors, and IDs used across bounded contexts.
+- Use `@repo/utils` for global pure, stateless helpers that are reusable anywhere.
+- If a helper has domain/business meaning, it belongs in `@domain/shared`; otherwise, use `@repo/utils`.
+
+### Ports and Adapters
+
+- Domain depends on interfaces/tags only (ports like `Repository`, `CacheStore`, `Publisher`)
+- Platform packages implement adapters
+- Composition roots in apps provide live layers
+- Domain must never import concrete DB/cache/queue/object storage clients
+
+### Data and Infrastructure
+
+- **Postgres**: Control-plane and relational data (users, organizations, memberships, config)
+- **ClickHouse**: High-volume telemetry storage and analytical reads
+- **Weaviate**: Vector database for embeddings storage and semantic similarity search
+- **Redis**: Cache and BullMQ backend
+- **Object storage**: Durable raw ingest payload buffering
+
+### Multi-tenancy
+
+- Every request is organization-scoped
+- A user may belong to many organizations
+- Organization membership checks happen at boundaries before domain execution
+- All telemetry persistence and query paths include `organizationId`
+
+### Web Standards First
+
+Prefer Web Standard APIs over Node.js-specific modules in domain, utility, and shared packages. Code in these layers may run in browsers, edge runtimes (Cloudflare Workers, Deno Deploy), or embedded V8 isolates — not just Node.js. Using platform-agnostic APIs maximises the compatibility surface without sacrificing functionality.
+
+**Practical guidelines:**
+
+- Use `crypto.subtle` / `crypto.getRandomValues` instead of `node:crypto`
+- Use `fetch` instead of Node-specific HTTP clients
+- Use `TextEncoder` / `TextDecoder` instead of `Buffer.from(…, 'utf-8')`
+- Use `Uint8Array` for binary data in public interfaces; `Buffer` is acceptable inside Node-only adapters (`packages/platform/*`) that will never leave the server
+- Use `URL`, `URLSearchParams`, `Headers`, `Request`, `Response` from the global scope
+- Use `structuredClone` instead of JSON round-trips for deep cloning
+
+**Where Node-specific APIs are acceptable:**
+
+- Platform adapter packages (`packages/platform/*`) — these are server-only by definition
+- App entry points and server configuration (`apps/*/server.ts`, `apps/*/clients.ts`)
+- Build tooling, scripts, and CLI utilities
+- Test infrastructure (e.g. `node:test`, `node:child_process` in test helpers)
+
+When a Node-specific API is genuinely required outside these scopes, document the reason with a brief comment.
+
+### Anti-patterns to Reject
+
+- Cross-domain logic without clear ownership
+- New provider integrations without a core capability contract
+- Introducing application env vars without the `LAT_` prefix (see Environment Variables)
+- Using `"use client"` or `"use server"` directives — these are Next.js-specific; the web app uses TanStack Start
+
+## Stack and Toolchain
+
+- **Runtime**: Node.js `>=25` (see root `package.json`). Check if mise is installed and use mise to switch to found node version. If Mise is not found ignore this.
+- **Package manager**: check `package.json` `packageManager` field (e.g. `pnpm` 10.30.0). Install deps: `pnpm install`
+- **Task runner**: `turbo` via root scripts
+- **Lint/format**: Biome (`@biomejs/biome` 1.9.x)
+- **Tests**: Vitest 3.x
+- **Core logic**: Effect TS primitives
+- **Postgres ORM**: Drizzle
+- **API/ingest boundaries**: Hono
+- **Web app**: TanStack Start + React
+
+## Commands
+
+### Top-Level (run from repo root)
+
+- `pnpm dev` - run all workspace `dev` tasks via Turbo
+- `pnpm build` - run all workspace builds
+- `pnpm check` - run all workspace lint and format check scripts
+- `pnpm typecheck` - run all workspace typechecks
+- `pnpm test` - run all workspace tests
+- `pnpm hooks` - configure local git hooks for this clone
+
+### Git Hooks (Pre-commit)
+
+- Pre-commit hook lives at `.husky/pre-commit`
+- Pre-commit runs: `pnpm check`, `pnpm typecheck`, and `pnpm knip`
+- Hooks are auto-configured on dependency install via root `prepare` script (`pnpm hooks`)
+- Existing clones should run `pnpm hooks` once to configure `core.hooksPath` and hook permissions
+
+### Package-Scoped (use `--filter`)
+
+```bash
+pnpm --filter @app/api check
+pnpm --filter @app/api typecheck
+pnpm --filter @app/api build
+pnpm --filter @app/api test
+```
+
+Path-based filtering also works:
+
+```bash
+pnpm --filter ./apps/api test
+pnpm --filter ./packages/domain/workspaces check
+```
+
+### Single-Test Workflows
+
+Vitest is invoked as `vitest run --passWithNoTests`:
+
+```bash
+# Single test file
+pnpm --filter @app/api test -- src/some-file.test.ts
+
+# Test name pattern
+pnpm --filter @app/api test -- -t "health endpoint"
+
+# Specific file + name
+pnpm --filter @app/api test -- src/some-file.test.ts -t "returns 200"
+```
+
+## CI-Equivalent Local Checks
+
+Before opening PRs:
+
+```bash
+pnpm check
+pnpm typecheck
+pnpm test
+```
+
+CI workflows (`check.yml`, `typecheck.yml`, `knip.yml`, `test.yml`) use Node 25 + pnpm and run the same commands.
 
 ## Code Style
 
-- Use TypeScript for all code, prefer types over interfaces
-- Prettier config: single quotes, no semicolons, trailing commas
-- Functional programming patterns, early returns for readability
-- Named exports preferred, descriptive names with auxiliary verbs (isLoading, hasError)
-- Event handlers prefixed with "handle" (handleClick, handleSubmit)
-- Directories use lowercase with dashes (auth-wizard)
-- Avoid enums, use const maps or type unions instead
-- Exports go top of file, internal methods at the bottom
-- Always use packages/core's captureException method rather than logging errors with console.error
-- **DO NOT** add comments unless they are JSDocs or you are explicitely asked to.
-- Use JSDoc comments for exported functions and classes. You can skip
-  JSDocs for internal functions that are simple and self-explanatory.
-
-## Architecture
-
-- Monorepo with pnpm workspaces and Turborepo
-- Core business logic in `packages/core`, UI components in `packages/web-ui`
-- Services return Result abstraction for error handling
-- Database operations use Transaction abstraction
-- models are in `packages/core`
-- Write operations receive optional `transaction` parameter defaulting to `new Transaction()`
-- Write services receive model instances, not IDs
-
-## Testing
-
-Before writing tests, load the `testing` skill (`/testing`) for detailed patterns and guidelines.
-
-## CRUD Operations Pattern
-
-### Service Layer (`packages/core/src/services/`)
-
-- Create services in dedicated folders (e.g., `apiKeys/`, `providerApiKeys/`)
-- Each service exports functions that accept model instances and optional `instance` parameter
-- Services use Transaction abstraction and return Result objects
-- Always use named exports
-- Avoid exporting all services from an `index.ts` barrel file
-- Example structure:
-
-  ```
-  services/apiKeys/
-    ├── create.ts
-    ├── destroy.ts
-    ├── update.ts
-  ```
-
-### Action Layer (`apps/web/src/actions/`)
-
-- Server actions use `authProcedure` pattern
-- Input validation with Zod schemas
-- Actions fetch model instances using scoped queries before calling services
-- Keep app boundaries thin: actions, API routes, jobs, and event handlers should contain almost no business logic and delegate domain checks/decisions to services
-- **Admin-only actions**: Place under `actions/admin/` directory for backoffice functionality
-- Example pattern:
-
-  ```typescript
-  export const updateApiKeyAction = authProcedure
-    .inputSchema(z.object({ id: z.number(), name: z.string() }))
-    .action(async ({ parsedInput, ctx }) => {
-      const repo = new Repository(ctx.workspace.id)
-      const model = await repo.find(parsedInput.id).then((r) => r.unwrap())
-      return updateService(model, { name: parsedInput.name }).then((r) =>
-        r.unwrap(),
-      )
-    })
-  ```
-
-- For writing an action with a different scope. Let's say withing projects:
-
-  ```typescript
-  import { withProject, withProjectSchema } from '../../procedures'
-  export const updateProjectAction = withProject
-    .inputSchema(withProjectSchema.extend({ id: z.number(), name: z.string() }))
-    .action(async ({ parsedInput, ctx }) => {
-      const repo = new ProjectRepository(ctx.workspace.id)
-      const model = await repo.find(parsedInput.id).then((r) => r.unwrap())
-      return updateProjectService(model, { name: parsedInput.name }).then((r) =>
-        r.unwrap(),
-      )
-    })
-  ```
-
-  `withProject` procedure inherits from `authProcedure` and adds project validation.
-
-### Store Layer (`apps/web/src/stores/`)
-
-- Use SWR for data fetching with custom hooks
-- Implement optimistic updates in action success handlers
-- Export CRUD operations: `create`, `destroy`, `update` with loading states
-- Toast notifications on success/error
-- Example pattern:
-
-  ```typescript
-  const { execute: update, isPending: isUpdating } = useLatitudeAction(
-    updateAction,
-    {
-      onSuccess: async ({ data: updated }) => {
-        toast({ title: 'Success', description: 'Updated successfully' })
-        mutate(data.map((item) => (item.id === updated.id ? updated : item)))
-      },
-    },
-  )
-  ```
-
-### UI Patterns
-
-- Use modal-based editing for updates (not inline editing)
-- Follow existing modal patterns from destroy operations
-- Add routes to `services/routes.ts` for new modal pages
-- Modal pages in `app/(private)/path/[id]/action/page.tsx` structure
-- Action buttons in table cells with tooltips
-- Use consistent icon patterns: `edit` for updates, `trash` for deletes
-
-## Database Schema Patterns
-
-### PostgreSQL (Drizzle ORM)
-
-#### Schema Definition (`packages/core/src/schema/models/`)
-
-- Use Drizzle ORM with PostgreSQL schema
-- All tables use `latitudeSchema.table()` from `../db-schema`
-- Include timestamps with `...timestamps()` helper
-- Use `bigserial` for primary keys with `{ mode: 'number' }`
-- Foreign keys use `references()` with cascade delete where appropriate
-- Example pattern:
-
-  ```typescript
-  export const tableName = latitudeSchema.table('table_name', {
-    id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    name: varchar('name', { length: 256 }).notNull(),
-    workspaceId: bigint('workspace_id', { mode: 'number' })
-      .notNull()
-      .references(() => workspaces.id, { onDelete: 'cascade' }),
-    ...timestamps(),
-  })
-  ```
-
-### Destructive Database Migrations
-
-Destructive database migrations (dropping tables, columns, or other schema elements) are NOT backwards compatible with currently-deployed code and must be performed in **two separate PRs**:
-
-**PR 1 - Code Changes (deploy first):**
-
-1. Remove all code references to the database entities being dropped
-2. Update Drizzle schema files to remove column/table definitions
-3. Update repositories, services, factories, and tests
-4. The old columns/tables remain in the database but are simply unused
-
-**PR 2 - Database Migration (deploy after PR 1 is live):**
-
-1. Generate the Drizzle migration: `pnpm --filter @latitude-data/core db:generate --name drop_unused_tables`
-2. This creates a migration file to drop the unused columns/tables
-3. Run the migration: `pnpm --filter @latitude-data/core db:migrate`
-
-**Why this approach?**
-
-- If you deploy a migration that drops columns/tables while old code is still running, the old code will crash trying to access non-existent schema
-- By removing code references first, the deployed application no longer needs those columns
-- Once the new code is running everywhere, the destructive migration can safely be applied
-
-**Example: Removing a feature with database tables**
-
-```
-# PR 1: Remove code
-- Delete services, actions, UI components
-- Remove columns from Drizzle schema files
-- Update event handlers and jobs
-- Remove from constants and configuration
-
-# PR 2: Database cleanup (after PR 1 is deployed)
-- pnpm --filter @latitude-data/core db:generate
-- Review the generated migration
-- pnpm --filter @latitude-data/core db:migrate
-```
-
-### SCOPED QUERIES
-
-NOTE: WE ARE CURRENTLY MIGRATING ALL REPOSITORIES TO SCOPED QUERIES.
-
-All database read operations are executed via scoped queries. Scoped queries are defined in `packages/core/src/repositories/queries.ts` and are scoped to a workspace. In the queries folder you can also declare unscoped queries that are used in cases where tenancy checks aren't required.
-
-### Repository Pattern (`packages/core/src/repositories/`)
-
-NOTE: THIS PATTERN IS DEPRECATED AND YOU SHOULD NOT USE IT. USE SCOPED QUERIES INSTEAD.
-
-- For workspace-scoped entities: extend `RepositoryLegacy<T, U>`
-- For global entities: create standalone repository classes
-- Use `getTableColumns()` for type-safe column selection
-- Implement `scope` getter for base query with workspace filtering
-- Export from `packages/core/src/repositories/index.ts`
-- Example pattern:
-
-  ```typescript
-  export class EntityRepository extends RepositoryLegacy<typeof tt, Entity> {
-    get scope() {
-      return this.db
-        .select(tt)
-        .from(tableName)
-        .where(eq(tableName.workspaceId, this.workspaceId))
-        .as('entityScope')
-    }
-  }
-  ```
-
-### ClickHouse Migrations (`packages/core/clickhouse/`)
-
-ClickHouse is used for analytics and high-performance data storage. Migrations use [golang-migrate](https://github.com/golang-migrate/migrate).
-
-**Always manage ClickHouse migrations through the `@latitude-data/core` package.json scripts** (`ch:create`, `ch:up`, `ch:down`, `ch:status`, etc.). **Do not create, rename, or register ClickHouse migration files manually.**
-
-#### Migration Commands
-
-- `pnpm --filter @latitude-data/core ch:connect` - Open interactive ClickHouse client
-- `pnpm --filter @latitude-data/core ch:status` - Show migration status
-- `pnpm --filter @latitude-data/core ch:create <name>` - Create new migration files
-- `pnpm --filter @latitude-data/core ch:up` - Apply pending migrations
-- `pnpm --filter @latitude-data/core ch:down [N|all]` - Rollback N migrations (default: 1) or all
-- `pnpm --filter @latitude-data/core ch:drop` - Drop all tables
-- `pnpm --filter @latitude-data/core ch:reset` - Reset database (down + up)
-- `pnpm --filter @latitude-data/core ch:status:test` - Show test database migration status
-- `pnpm --filter @latitude-data/core ch:up:test` - Apply migrations to test database
-- `pnpm --filter @latitude-data/core ch:down:test [N|all]` - Rollback test database
-- `pnpm --filter @latitude-data/core ch:reset:test` - Reset test database
-
-#### Two Migration Folders
-
-Migrations exist in two versions to support different deployment modes:
-
-- `clickhouse/migrations/unclustered/` - For single-node setups (development, self-hosted)
-- `clickhouse/migrations/clustered/` - For replicated cluster setups (production)
-
-The system automatically selects based on `CLICKHOUSE_CLUSTER_ENABLED` environment variable.
-
-#### Migration File Naming
-
-Files follow the convention: `NNNN_description.{up,down}.sql`
-
-Example:
-
-```
-0001_create_events.up.sql
-0001_create_events.down.sql
-```
-
-#### Writing Migrations
-
-**Always create both clustered and unclustered versions.** They must be kept in sync.
-
-Unclustered example (`unclustered/0001_create_events.up.sql`):
-
-```sql
-CREATE TABLE events (
-    id String,
-    workspace_id UInt64,
-    timestamp DateTime64(3)
-) ENGINE = ReplacingMergeTree()
-ORDER BY (workspace_id, timestamp, id);
-```
-
-Clustered example (`clustered/0001_create_events.up.sql`):
-
-```sql
-CREATE TABLE events ON CLUSTER default (
-    id String,
-    workspace_id UInt64,
-    timestamp DateTime64(3)
-) ENGINE = ReplicatedReplacingMergeTree()
-ORDER BY (workspace_id, timestamp, id);
-```
-
-#### Key Differences
-
-| Aspect     | Unclustered                       | Clustered                                             |
-| ---------- | --------------------------------- | ----------------------------------------------------- |
-| DDL clause | None                              | `ON CLUSTER default`                                  |
-| Engine     | `MergeTree`, `ReplacingMergeTree` | `ReplicatedMergeTree`, `ReplicatedReplacingMergeTree` |
-| Use case   | Dev, self-hosted single-node      | Production HA                                         |
-
-#### Migration Rules
-
-- **Always create both versions**: Every migration needs clustered and unclustered variants
-- **Keep them in sync**: Logic must be identical, only syntax differs
-- **Make migrations reversible**: Always provide a working `down.sql`
-- **Use `ReplacingMergeTree`** for tables that need upsert semantics
-- **Include `workspace_id`** in queries for tenant isolation
-
-## API Routes Pattern (`apps/web/src/app/api/`)
-
-### Route Structure
-
-- Create directory matching endpoint name
-- Use `route.ts` for HTTP handlers
-- Import handlers from `$/middlewares/authHandler` and `$/middlewares/errorHandler`
-- Add routes to `apps/web/src/services/routes/api.ts`
-
-### Authentication & Error Handling
-
-- Wrap handlers with `errorHandler(authHandler(...))` for protected routes
-- Use `errorHandler(...)` only for public routes
-- Access workspace via `ctx.workspace` in authenticated handlers
-- Example pattern:
-
-  ```typescript
-  export const GET = errorHandler(
-    authHandler(
-      async (_: NextRequest, { workspace }: { workspace: Workspace }) => {
-        const repo = new Repository(workspace.id)
-        const data = await repo.findAll().then((r) => r.unwrap())
-        return NextResponse.json(data, { status: 200 })
-      },
+Biome config (`biome.json`) is the source of truth:
+
+- Indentation: 2 spaces
+- Max line width: 120
+- Strings: double quotes
+- Semicolons: as needed
+- Ignore generated/output paths: `dist/**`, `coverage/**`, `.turbo/**`, `node_modules/**`, `**/*.gen.ts`, `**/models.dev.json`
+- Prefer package-local formatting: `pnpm --filter @app/api format`
+
+### Imports
+
+- Prefer static imports; avoid dynamic import patterns unless justified
+- Use `import type { ... }` for type-only imports
+- Keep imports explicit and grep-friendly
+- Preserve clear grouping/order (external, internal alias, then relative)
+- Avoid wildcard exports/imports when explicit named exports are practical
+- Avoid barrel files (index.ts re-exporting from the same directory); import from the specific module
+- **Use `.ts`/`.tsx` extensions** in relative imports (not `.js`). The codebase uses TypeScript source extensions for module resolution
+
+### TypeScript
+
+Base config: `tsconfig.base.json`
+
+- `strict: true` is enabled; keep code strict-clean
+- Module system: `NodeNext` + ESM (`"type": "module"` in packages/apps)
+- Prefer explicit domain types/interfaces over loose objects
+- Methods/functions with more than one argument should default to a single named-arguments object rather than positional arguments
+- Use `readonly` fields for immutable domain data shapes
+- Avoid `any`; use `unknown` + narrowing
+- Avoid unnecessary type assertions (`as { ... }`); prefer relying on inferred types from libraries
+- Validate boundary inputs early (API input, queue payloads, external IO)
+
+### General Principles
+
+- Prefer minimal, explicit abstractions — YAGNI
+- Avoid comments except for genuinely non-obvious reasoning
+
+### Naming Conventions
+
+- Types/interfaces/classes: `PascalCase`
+- Variables/functions/methods: `camelCase`
+- Constants: `UPPER_SNAKE_CASE` only for true constants; otherwise `camelCase` + `as const`
+- File names favor concise module roots (`src/index.ts`, `src/server.ts`, `src/main.tsx`)
+- React component files use **kebab-case**: `my-component.tsx` or `my-component/index.tsx` — never `PascalCase` file names (e.g. `MyComponent.tsx`). This matches the `@repo/ui` convention (`table-skeleton.tsx`, `form-field.tsx`, etc.)
+- Package names follow scoped workspace style (`@app/*`, `@domain/*`, etc.)
+
+### Domain Design (DDD)
+
+- Organize by bounded context (e.g. telemetry, organizations, identity, alerts)
+- Domains should be single-responsibility and focused on policy/rules
+- Use in-memory adapters for fast tests where possible
+
+## Database Patterns
+
+- Postgres adapter stack uses Drizzle ORM in `packages/platform/db-postgres`
+- ClickHouse adapter stack remains SQL-oriented in `packages/platform/db-clickhouse`. **All ClickHouse queries must use parameterized bindings** (`{name:Type}` syntax with `query_params`) — never interpolate user-supplied values directly into SQL strings. **All ClickHouse queries must use parameterized bindings** (`{name:Type}` syntax with `query_params`) — never interpolate user-supplied values directly into SQL strings
+- Weaviate adapter stack lives in `packages/platform/db-weaviate`
+- Domain models are independent from table/row shapes
+- Mapping from DB rows to domain objects belongs in platform adapters
+- **Apps use SqlClient for all DB access**: Boundaries provide `SqlClientLive` layer with organization context for RLS enforcement
+
+### SqlClient and Row-Level Security (RLS)
+
+All Postgres access flows through `SqlClient`—a domain-level service that abstracts database operations and enforces organization scoping via RLS.
+
+**Architecture:**
+- **Domain Layer** (`@domain/shared`): `SqlClient` interface with `transaction()` and `query()` methods
+- **Platform Layer** (`@platform/db-postgres`): `SqlClientLive` implementation with automatic RLS context setting
+- **App Layer** (`apps/*`): Boundaries provide `SqlClientLive` with the request's organization context
+
+**Key behaviors:**
+- Every transaction automatically sets `app.current_organization_id` session variable
+- RLS policies filter all queries by this organization ID at the database level
+- Nested transactions share the same connection (pass-through proxy—no nested transaction overhead)
+- Domain errors propagate through Effect error channel; database errors become `RepositoryError`
+
+**Usage in boundaries (apps):**
+
+```typescript
+// apps/api/src/routes/projects.ts
+import { SqlClientLive } from "@platform/db-postgres"
+import { ProjectRepositoryLive } from "@platform/db-postgres"
+
+app.openapi(createProjectRoute, async (c) => {
+  const project = await Effect.runPromise(
+    createProjectUseCase(input).pipe(
+      Effect.provide(ProjectRepositoryLive),
+      Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
     ),
   )
-  ```
-
-## Jobs Pattern (`packages/core/src/jobs/`)
-
-BullMQ jobs handle background processing tasks like exports, evaluations, and document runs.
-
-### Return Values
-
-- Jobs should return `undefined` on success whenever possible
-- Avoid returning data from jobs unless the return value is explicitly needed by the caller
-- This keeps job results lightweight and prevents unnecessary data serialization
-
-### Job Configuration
-
-- Use `removeOnComplete: true` to clean up successful jobs
-- Use `removeOnFail: false` to retain failed jobs for debugging
-- Configure appropriate retry attempts and backoff strategies
-
-## Backoffice/Admin Patterns
-
-### Navigation Setup
-
-- Add new routes to `BackofficeRoutes` enum in `services/routes.ts`
-- Add corresponding route object to `ROUTES.backoffice`
-- Update `BackofficeTabs` component to include new tab
-- Backoffice pages require admin user authentication
-
-### Page Structure
-
-- Create pages in `app/(admin)/backoffice/[section]/page.tsx`
-- Use consistent layout with `Text.H1` for titles and `Text.H4` for descriptions
-- Organize components in `_components/` subdirectory
-- **NEVER use barrel exports** (`index.ts`) - import components directly from their files
-
-### Component Patterns
-
-- Import UI components from `@latitude-data/web-ui/atoms/` (not molecules)
-- Use `Modal` from atoms, not molecules
-- Use `TextArea` not `Textarea`
-- Button sizes: `size='small'` not `size='sm'`
-- Table components: `Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow`
-- **Use `useLatitudeAction` hook** for server action calls instead of raw `fetch()`
-- **Use server actions** instead of API routes for **write operations** (POST, PUT, DELETE)
-- **Use API routes** with `useFetcher` + SWR for **read operations** (GET)
-
-## Feature Implementation Checklist
-
-When implementing new features, follow this order:
-
-1. **Database Schema**: Create tables, generate migration
-2. **Services**: Implement business logic with Result pattern
-3. **Queries**: Queries are the read data layer with the db
-4. **Actions**: Create server actions with validation (use `actions/admin/` for backoffice features)
-5. **API Routes**: Expose endpoints with proper auth
-6. **Stores**: Create SWR hooks with optimistic updates
-7. **UI Components**: Build interface following design patterns
-8. **Routes**: Add navigation and routing
-
-## Action Organization Patterns
-
-### Regular Actions (`apps/web/src/actions/`)
-
-- User-facing functionality
-- Workspace-scoped operations
-- Public API endpoints
-
-### Admin Actions (`apps/web/src/actions/admin/`)
-
-- Backoffice/admin-only functionality
-- Global system management
-- Cross-workspace operations
-- Examples: feature management, user administration, system configuration
-
-### Import Path Examples
-
-```typescript
-// Regular action
-import { updateApiKeyAction } from '$/actions/apiKeys/update'
-
-// Admin action
-import { createFeatureAction } from '$/actions/admin/features/create'
+  return c.json(toProjectResponse(project), 201)
+})
 ```
 
-## SDK Release Process
+```typescript
+// apps/web/src/domains/projects/projects.functions.ts
+import { getPostgresClient } from "../../server/clients.ts"
 
-### TypeScript SDK (`packages/sdks/typescript/`)
+export const createProject = createServerFn({ method: "POST" })
+  .handler(async ({ data }) => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    
+    const project = await Effect.runPromise(
+      createProjectUseCase({...}).pipe(
+        Effect.provide(ProjectRepositoryLive),
+        Effect.provide(SqlClientLive(client, organizationId)),
+      )
+    )
+    return toRecord(project)
+  })
+```
 
-**IMPORTANT**: When making changes to the TypeScript SDK, you MUST:
-
-1. Update the version in `package.json` (follow semver: patch for fixes, minor for features, major for breaking changes)
-2. Update `CHANGELOG.md` with the new version and description of changes
-3. These updates trigger the CI/CD pipeline to publish the new version
-
-The TypeScript SDK is automatically published to npm and GitHub releases via `.github/workflows/publish-typescript-sdk.yml`:
-
-1. **Manual Changelog**: Update `CHANGELOG.md` with release notes for the new version
-2. **Version Bump**: Update version in `package.json`
-3. **Push to Main**: Workflow automatically:
-   - Builds and tests the package
-   - Publishes to npm if version is new
-   - Extracts changelog content for the version
-   - Creates GitHub release with changelog as release notes
-   - Tags release as `typescript-sdk-VERSION`
-
-### Changelog Format
-
-- Follow [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format
-- Use sections: Added, Changed, Deprecated, Removed, Fixed, Security
-- See `CHANGELOG_TEMPLATE.md` for detailed instructions
-- Workflow extracts content between `## [VERSION]` headers
-
-### Release Detection
-
-- Workflow compares `package.json` version with published npm version
-- Only publishes if versions differ
-- Supports prerelease detection (beta, alpha, rc) for GitHub release flags
-
-## Job Patterns (`packages/core/src/jobs/`)
-
-### Job Structure
-
-Jobs are BullMQ workers that process background tasks. They should follow these patterns:
-
-1. **Never return `Result.error`**: Jobs should not use the Result pattern for error handling
-2. **Throw for retryable errors**: Unhandled exceptions trigger automatic retries via BullMQ
-3. **Use `captureException` for non-retryable errors**: Log errors that shouldn't cause a retry
-4. **Return void or undefined**: Jobs don't need to return values
-
-### Error Handling Patterns
+**Usage in use-cases (multi-operation transactions):**
 
 ```typescript
-// CORRECT: Throw for retryable errors (job will be retried)
-export async function myJob(_: Job<MyJobData>) {
-  const result = await someOperation()
-  if (result.error) {
-    throw result.error // Will trigger retry
-  }
-}
+// packages/domain/auth/src/use-cases/complete-auth-intent.ts
+export const completeAuthIntentUseCase = (input) =>
+  Effect.gen(function* () {
+    const sqlClient = yield* SqlClient
+    
+    // Wraps multi-step operation in single transaction with RLS
+    yield* sqlClient.transaction(handleIntentByType(intent, input.session))
+  })
 
-// CORRECT: Capture non-retryable errors and continue
-export async function myJob(_: Job<MyJobData>) {
-  const results = await Promise.all(items.map(processItem))
-  const errors = results.filter((r) => r.error)
-  errors.forEach((r) => captureException(r.error))
-  // Job continues/completes despite individual item failures
-}
+const handleSignup = (intent, session) =>
+  Effect.gen(function* () {
+    const users = yield* UserRepository
+    const memberships = yield* MembershipRepository
+    
+    // All operations share the same transaction + RLS context
+    const organization = yield* createOrganizationUseCase({...})
+    yield* memberships.save(createMembership({...}))
+    yield* users.setNameIfMissing({...})
+  })
+```
 
-// INCORRECT: Never return Result objects from jobs
-export async function myJob(_: Job<MyJobData>) {
-  try {
-    await someOperation()
-    return Result.nil() // DON'T DO THIS
-  } catch (error) {
-    return captureException(error) // DON'T DO THIS
-  }
+**Usage in repositories (single operations):**
+
+```typescript
+// packages/platform/db-postgres/src/repositories/project-repository.ts
+export const ProjectRepositoryLive = Layer.effect(
+  ProjectRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+    
+    return {
+      findById: (id) =>
+        sqlClient
+          .query((db) => db.select().from(projects).where(eq(projects.id, id)))
+          .pipe(Effect.flatMap(...)),
+          
+      save: (project) =>
+        Effect.gen(function* () {
+          yield* sqlClient.query((db) =>
+            db.insert(projects).values(row).onConflictDoUpdate({...})
+          )
+        }),
+    }
+  })
+)
+```
+
+### Postgres Management
+
+Connect to the development database directly:
+
+```bash
+docker compose exec postgres psql -U latitude -d latitude_development
+```
+
+To reset only the Postgres volume and start fresh (without affecting other services):
+
+```bash
+pnpm --filter @platform/db-postgres pg:reset
+```
+
+This runs `docker/reset-postgres.sh` which stops postgres, removes the `data-llm_postgres_data` volume, restarts postgres, waits for it to be ready, runs migrations, and seeds the database.
+
+### Postgres Schema Conventions
+
+All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **must** follow these rules. Shared helpers live in `schemaHelpers.ts`.
+
+1. **Use `latitudeSchema`** — never create a local `pgSchema("latitude")`. Import `latitudeSchema` from `../schemaHelpers.ts`.
+2. **Use `cuid("id").primaryKey()`** — every table's primary key must use the `cuid()` helper (`varchar(24)` with auto-generated CUID2).
+3. **Use `tzTimestamp(name)`** — never use raw `timestamp(name, { withTimezone: true })`. Import `tzTimestamp` from the helpers.
+4. **Use `...timestamps()`** — every table that has `createdAt`/`updatedAt` must spread the `timestamps()` helper (includes `$onUpdateFn` on `updatedAt`).
+5. **Use `organizationRLSPolicy(tableName)`** — every table with an `organization_id` column must include this helper in its third argument to enable row-level security.
+6. **No foreign keys** — do not use `.references()` or manually create `FOREIGN KEY` constraints. Referential integrity is enforced at the application/domain layer. FK constraints cause lock contention on high-write tables, complicate zero-downtime migrations, and conflict with soft-delete patterns. Use indexes on relationship columns instead (e.g. `index().on(t.datasetId)` rather than `.references(() => datasets.id)`).
+
+```typescript
+// ✅ Good - follows all conventions
+export const projects = latitudeSchema.table(
+    "projects",
+    {
+        id: cuid("id").primaryKey(),
+        organizationId: text("organization_id").notNull(),
+        name: varchar("name", { length: 256 }).notNull(),
+        deletedAt: tzTimestamp("deleted_at"),
+        ...timestamps(),
+    },
+    () => [organizationRLSPolicy("projects")],
+);
+```
+
+### Database Migrations (Drizzle Kit)
+
+### Migration Execution Safety (Agents)
+
+- Agents must not run migration commands on their own.
+- Only run migration-related commands when the user explicitly requests them in the current conversation.
+- This includes generation and apply commands for Postgres, ClickHouse, and Weaviate (`pg:generate`, `pg:generate:custom`, `pg:migrate`, `ch:create`, `ch:up`, `ch:down`, `ch:drop`, `ch:reset`, `ch:fix`, `wv:migrate`).
+- If migration work seems necessary but was not explicitly requested, explain the need and wait for user confirmation.
+
+**Always use drizzle-kit for migrations.** Never create manual SQL files in the drizzle folder.
+
+**Schema changes:**
+
+```bash
+# Generate migration from schema changes
+pnpm --filter @platform/db-postgres pg:generate "<name>"
+
+# Create empty migration for custom SQL (RLS policies, seed data, etc.)
+pnpm --filter @platform/db-postgres pg:generate:custom "<name>"
+
+# Apply migrations
+pnpm --filter @platform/db-postgres pg:migrate
+```
+
+**Key points:**
+
+- Name is slugified automatically; always quote multi-word names (e.g. `"add users table"` → `add-users-table`)
+- Never manually create SQL files in the drizzle folder
+- Use `IF NOT EXISTS` in custom SQL for idempotency
+- Migrations are tracked in `drizzle.__drizzle_migrations` table
+
+### ClickHouse Migrations (Goose)
+
+**Install goose** (if not already installed):
+
+```bash
+brew install goose
+```
+
+Migration files live in `packages/platform/db-clickhouse/clickhouse/migrations/`:
+
+- `unclustered/` — single-node deployments (local dev, default)
+- `clustered/` — distributed deployments (`CLICKHOUSE_CLUSTER_ENABLED=true`)
+
+Goose tracks applied migrations automatically in the `goose_db_version` table (no manual registry).
+
+**Commands (run from repo root):**
+
+```bash
+# Apply all pending migrations
+pnpm --filter @platform/db-clickhouse ch:up
+
+# Roll back last migration
+pnpm --filter @platform/db-clickhouse ch:down
+
+# Show migration status
+pnpm --filter @platform/db-clickhouse ch:status
+
+# Create a new migration (creates timestamp-named files in both unclustered/ and clustered/)
+pnpm --filter @platform/db-clickhouse ch:create <migration_name>
+
+# Convert timestamp migrations to sequential order (run before merging a PR)
+pnpm --filter @platform/db-clickhouse ch:fix
+
+# Roll back ALL migrations (equivalent to drop)
+pnpm --filter @platform/db-clickhouse ch:drop
+
+# Reset ClickHouse volume and re-migrate (nuclear option)
+pnpm --filter @platform/db-clickhouse ch:reset
+
+# Seed sample span data
+pnpm --filter @platform/db-clickhouse ch:seed
+```
+
+**Creating migrations (hybrid versioning):**
+
+Goose hybrid versioning lets developers create migrations independently using timestamps, then normalises them to sequential order before merging. This avoids version conflicts when multiple branches add migrations concurrently.
+
+Workflow:
+
+1. `ch:create <name>` — creates `20260305120000_name.sql` in both `unclustered/` and `clustered/`
+2. Fill in both files (see rules below)
+3. Before merging the PR, run `ch:fix` — renames timestamp files to the next sequential number (e.g. `00002_name.sql`) and commits the renamed files
+
+**Migration file rules:**
+
+- Each migration is a single `.sql` file with `-- +goose Up` and `-- +goose Down` sections
+- Always include `-- +goose NO TRANSACTION` (ClickHouse does not support transactions)
+- `unclustered/`: use standard table engines (e.g. `ReplacingMergeTree`)
+- `clustered/`: add `ON CLUSTER default` and use `Replicated*` engines
+
+### Weaviate Collections and Migrations
+
+Use the dedicated Weaviate package for connection and schema bootstrapping:
+
+- **Connection API:** `packages/platform/db-weaviate/src/client.ts`
+    - `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks.
+- **Collection definitions:** `packages/platform/db-weaviate/src/collections.ts`
+    - Define all collections in code via `defineWeaviateCollections([...])`.
+- **Migration logic:** `packages/platform/db-weaviate/src/migrations.ts`
+    - Migrations are idempotent: checks `collections.exists()` before create and tolerates "already exists" race conditions.
+- **Manual migration command:** `pnpm --filter @platform/db-weaviate wv:migrate`
+    - Entrypoint is `packages/platform/db-weaviate/src/migrate.ts`.
+
+Rules:
+
+- Do not define Weaviate collections in app/domain packages.
+- Do not add ad-hoc Weaviate migration scripts outside `packages/platform/db-weaviate`.
+- Keep collection schema changes centralized in `src/collections.ts` and rely on the package migration flow.
+
+## Effect Patterns
+
+- Prefer `Effect.gen` for sequential effect composition
+- Wrap promise-based APIs with `Effect.tryPromise` and typed errors
+- Use `Data.TaggedError` for domain-specific error types
+- Use `Effect.repeat` with `Schedule` for polling/recurring tasks
+- Use `Fiber` for lifecycle management of long-running effects
+
+## Error Handling
+
+- Always use typed errors (`Data.TaggedError`) instead of raw `Error` at domain/platform boundaries
+- Use `Effect.either` for operations that may fail but shouldn't stop execution
+- Handle errors at boundaries; propagate through Effect error channel internally
+
+### HTTP Error Handling Pattern
+
+Domain errors that need specific HTTP responses implement the `HttpError` interface:
+
+```typescript
+interface HttpError {
+    readonly _tag: string;
+    readonly httpStatus: number;
+    readonly httpMessage: string;
 }
 ```
 
-### Job Registration
+**Implementation rules:**
 
-Jobs are registered in `packages/core/src/jobs/index.ts` and scheduled via BullMQ queues.
+1. Domain errors carry their own HTTP metadata (`httpStatus`, `httpMessage`)
+2. Repositories return typed errors (e.g., `NotFoundError`) instead of null
+3. Routes fail loudly - no try/catch, let errors propagate
+4. Centralized error handling via `app.onError(honoErrorHandler)` in server.ts
+5. Error middleware converts HttpError instances to appropriate HTTP responses
 
-## Event System Patterns
-
-### Event Declaration (`packages/core/src/events/events.d.ts`)
-
-Events in Latitude follow a structured type-safe pattern:
-
-1. **Add Event Name**: Add new event name to the `Events` union type
-2. **Create Event Type**: Define event using `LatitudeEventGeneric<EventName, DataStructure>`
-3. **Add to Union**: Include in the main `LatitudeEvent` union type
-4. **Handler Interface**: Add handler to `IEventsHandlers` interface (optional for pub/sub events)
-
-Example pattern:
+**Example domain error:**
 
 ```typescript
-// 1. Add to Events union
-export type Events = 'existingEvent' | 'myNewEvent' // Add here
-
-// 2. Define event type
-export type MyNewEvent = LatitudeEventGeneric<
-  'myNewEvent',
-  {
-    workspaceId: number
-    userId: string
-    customData: Record<string, unknown>
-  }
->
-
-// 3. Add to LatitudeEvent union
-export type LatitudeEvent = ExistingEvent | MyNewEvent // Add here
-
-// 4. Add handler interface (if needed)
-export interface IEventsHandlers {
-  existingEvent: EventHandler<ExistingEvent>[]
-  myNewEvent: EventHandler<MyNewEvent>[] // Add here
+export class InvalidOrganizationNameError extends Data.TaggedError(
+    "InvalidOrganizationNameError",
+)<{
+    readonly name: string;
+    readonly reason: string;
+}> {
+    readonly httpStatus = 400;
+    get httpMessage() {
+        return this.reason;
+    }
 }
 ```
 
-### Event Publishing (`packages/core/src/events/publisher.ts`)
-
-Use the publisher service to emit events:
+**Example repository method:**
 
 ```typescript
-import { publisher } from '../../../events/publisher'
+findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
+```
 
-// For system events (analytics, webhooks, database storage)
-publisher.publishLater({
-  type: 'myNewEvent',
-  data: {
-    workspaceId: 123,
-    userId: 'user-id',
-    customData: { key: 'value' },
-  },
+## Side Effects and Eventing
+
+- Domain logic emits domain events through domain-level publisher abstractions
+- Side effects (notifications, integrations, projections) are handled asynchronously by workers
+- Do not put side-effect orchestration inside HTTP handlers
+
+## Generated Files
+
+- `apps/web/src/routeTree.gen.ts` is auto-generated by TanStack Router — do not manually edit
+- Generated files may be regenerated during builds or dev server runs; commit them when they change but do not modify by hand
+
+## Authentication (Better Auth)
+
+- Auth is configured via `@platform/auth-better` which wraps the `better-auth` library
+- `createBetterAuth()` in `packages/platform/auth-better/src/index.ts` is the factory
+- Sessions are retrieved via `auth.api.getSession({ headers })` — returns `{ user, session }` with typed fields
+- The `User` type from Better Auth includes `id`, `email`, `name` — access these fields directly without type assertions
+- Session helpers live in `apps/web/src/domains/sessions/session.functions.ts` (`getSession`, `ensureSession`)
+- Organization context is injected into sessions via the `customSession` plugin
+- Auth intent flow (login/signup) uses domain use-cases from `@domain/auth` composed with Postgres repositories
+
+## Application Structure
+
+- **Client initialization**: Centralize in `apps/*/clients.ts`, import where needed
+- **Routes**: Organize in `apps/*/routes/` with `registerRoutes()` pattern for extensibility
+- **Logging**: Use `createLogger()` from `@repo/observability` with service name
+- **Environment**: Use `parseEnv()` for required vars, `parseEnvOptional()` for optional vars
+
+### Environment Variables
+
+#### `LAT_` Prefix Convention
+
+All application environment variables **must** be prefixed with `LAT_` to avoid name collisions with third-party services, Docker containers, and standard conventions.
+
+**What gets the `LAT_` prefix:**
+
+- Database connection strings and pool config (`LAT_DATABASE_URL`, `LAT_PG_POOL_MAX`, ...)
+- Service connection details our code reads (`CLICKHOUSE_URL`, `LAT_REDIS_HOST`, ...)
+- Application ports (`LAT_API_PORT`, `LAT_WEB_PORT`, `LAT_INGEST_PORT`)
+- Auth, email, OAuth, Stripe, CORS config (`LAT_BETTER_AUTH_SECRET`, `LAT_MAILPIT_HOST`, ...)
+- Any new env var introduced for Latitude application code
+
+**What does NOT get the `LAT_` prefix:**
+
+- `NODE_ENV` — standard Node.js convention, used by many libraries
+- Docker service init vars (`POSTGRES_USER`, `CLICKHOUSE_USER`, ...) — required by container images
+- Weaviate, Redis, and other service-specific config consumed only by Docker
+- Vite client-side vars use the combined prefix `VITE_LAT_*` (Vite requires `VITE_` for browser exposure)
+
+**Reference:** See `.env.example` for the full list of current variables split into "Services" (Docker) and "Latitude Application" (`LAT_*`) sections.
+
+#### `.env.example` Maintenance
+
+Every new environment variable **must** be added to `.env.example`:
+
+- **Required vars**: add uncommented with a sensible local-development default (e.g. `LAT_API_PORT=3001`).
+- **Optional vars**: add commented out so the user can uncomment when needed (e.g. `# LAT_STRIPE_SECRET_KEY=sk_test_xxx`).
+
+This keeps `.env.example` the single source of truth for all configuration the project supports.
+
+#### Parsing
+
+**Always** use `parseEnv` or `parseEnvOptional` from `@platform/env`:
+
+```typescript
+// ❌ Bad - unprefixed variable or direct access
+const port = Number(process.env.PORT);
+
+// ✅ Good - LAT_ prefix + parseEnv (pass variable name, not process.env value)
+import { parseEnv, parseEnvOptional } from "@platform/env";
+import { Effect } from "effect";
+
+const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001));
+const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"));
+```
+
+`parseEnv` looks up `process.env[name]` internally, so pass the variable **name** as a string. This ensures type-safe parsing, clear error messages that include the missing variable name, and consistent validation.
+
+## Async and Background Task Guidance
+
+- Pass IDs in async jobs/queue payloads, not full mutable models
+- Re-fetch current state inside task handlers
+- Make stale/deleted entity behavior explicit
+
+## Cloud Agent Environment Setup
+
+When running as a cloud agent (e.g. Cursor Cloud Agent), the repository may not have `.env.development` or `.env.test` files. These are required for running the dev server and tests respectively.
+
+**If `.env.development` or `.env.test` do not exist**, copy `.env.example` as-is:
+
+```bash
+cp .env.example .env.development
+cp .env.example .env.test
+```
+
+Then set `NODE_ENV` appropriately in each file:
+
+- In `.env.development`: `NODE_ENV=development`
+- In `.env.test`: `NODE_ENV=test`
+
+This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests and dev commands to run without additional configuration.
+
+## Testing Conventions
+
+- Shared default environment: Node with globals enabled (`packages/vitest-config/index.ts`)
+- Write tests, mostly e2e, some unit tests when logic is complex
+- **Unit tests**: domain entities/use-cases/policies with fakes
+- **Contract tests**: adapter compliance against domain ports
+- **Integration tests**: infra-backed tests for Postgres/ClickHouse/Redis/BullMQ/object storage
+- **End-to-end tests**: ingest boundary to query boundary across organization scoping
+- Keep tests deterministic and isolated
+- Prefer package-local runs during iteration; run full monorepo tests before PR
+
+### Database Testing (In-Memory)
+
+**Always use in-memory databases for tests.** Do not use `vi.mock`/`vi.fn` to mock repository methods and do not require running database servers. The project provides embedded, in-process database engines that run the real SQL against the real schema:
+
+- **ClickHouse → chdb** (`chdb` package): An in-process ClickHouse engine via `@platform/testkit`.
+- **Postgres → PGlite** (`@electric-sql/pglite`): An in-process Postgres via WASM via `@platform/testkit`.
+
+#### Postgres test setup (`@platform/testkit`)
+
+```typescript
+import { setupTestPostgres } from "@platform/testkit"
+import { beforeAll, describe, it } from "vitest"
+
+const pg = setupTestPostgres()
+
+describe("MyRepository", () => {
+  it("does something", async () => {
+    // pg.postgresDb is a real Drizzle instance backed by PGlite in-memory
+    // pg.db is the lower-level Drizzle/PGlite instance for direct queries
+    // pg.client is the raw PGlite handle (useful for createRlsMiddleware)
+  })
+})
+```
+
+`setupTestPostgres()` registers vitest hooks automatically:
+- **beforeAll**: creates a PGlite instance, creates the `latitude_app` role, and runs all Drizzle migrations
+- **afterAll**: closes the PGlite connection
+
+For Hono integration tests that need RLS enforcement, use `createRlsMiddleware(pg.client)` from `@platform/testkit`.
+
+#### ClickHouse test setup (`@platform/testkit`)
+
+```typescript
+import { setupTestClickHouse } from "@platform/testkit"
+import { beforeAll, describe, it } from "vitest"
+
+const ch = setupTestClickHouse()
+
+describe("MyRepository", () => {
+  let repo: ReturnType<typeof createMyRepository>
+
+  beforeAll(() => {
+    repo = createMyRepository(ch.client)
+  })
+
+  it("does something", async () => {
+    // ch.client is a real ClickHouseClient backed by chdb in-memory
+  })
+})
+```
+
+`setupTestClickHouse()` registers vitest hooks automatically:
+- **beforeAll**: creates a chdb session and loads the schema from `schema.sql`
+- **beforeEach**: truncates all tables for test isolation
+- **afterAll**: destroys the session and cleans up temp files
+
+The schema file is generated from the development ClickHouse instance. After applying new ClickHouse migrations, regenerate it:
+
+```bash
+pnpm --filter @platform/db-clickhouse ch:schema:dump
+```
+
+#### Why not `vi.mock`?
+
+Mocking repositories with `vi.fn()` tests the wiring, not the queries. In-memory databases catch real bugs: wrong column names, broken `argMax` aggregations, incorrect `GROUP BY` clauses, and schema mismatches. They run in <1s with zero external dependencies.
+
+## Adding New Infrastructure Dependencies
+
+1. Add a capability interface in `packages/platform/*-core`
+2. Add concrete provider package in `packages/platform/*-<provider>`
+3. Wire via app composition root and environment-driven config
+4. Keep domain unchanged unless business behavior changes
+
+## Frontend Guidelines (Web App)
+
+When working on `apps/web` or any frontend code:
+
+### Components
+
+- **Always** use `Text` component from `@repo/ui` for all text content
+- **Always** use `Button` component from `@repo/ui` for all buttons
+- **Always** use `GoogleIcon` and `GitHubIcon` from `@repo/ui` for OAuth provider icons
+
+### Route-Level Component Organization
+
+Place React components close to the routes that use them, inside a `components/` subfolder within the route directory. This keeps route files (which TanStack Router auto-discovers) clearly separated from supporting components.
+
+```
+routes/_authenticated/projects/$projectId/datasets/
+├── index.tsx                       # route file
+├── $datasetId.tsx                  # route file
+└── components/                     # supporting components for these routes
+    ├── dataset-table.tsx
+    ├── row-detail-panel.tsx
+    └── version-badge.tsx
+```
+
+- Route files live directly in the route directory — TanStack Router discovers them
+- Components that support those routes live in an adjacent `components/` folder
+- `domains/` directories (`apps/web/src/domains/`) are for state management only: server functions (writes) and collections/queries (reads) — **not** UI components
+
+### Design System Showcase
+
+- When adding a new implemented UI component in `packages/ui` (or replacing a placeholder export with a real implementation), update `apps/web/src/routes/design-system.tsx` to include a usage example for that component in both light and dark mode previews.
+- Treat `apps/web/src/routes/design-system.tsx` as the canonical visual inventory for `@repo/ui` components.
+
+### State Management (TanStack)
+
+The web app uses a **server-centric, query-driven** architecture built on the TanStack ecosystem. No Zustand, Redux, or global stores.
+
+**Server Functions** — All data fetching and mutations use `createServerFn` from `@tanstack/react-start`:
+
+```typescript
+import { Effect } from "effect"
+import { ProjectRepository, createProjectUseCase } from "@domain/projects"
+import { ProjectRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { getPostgresClient } from "../../server/clients.ts"
+
+// Query (GET)
+export const listProjects = createServerFn({ method: "GET" }).handler(async () => {
+  const { organizationId } = await requireSession()
+  const client = getPostgresClient()
+  
+  return await Effect.runPromise(
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      return yield* repo.findAll()
+    }).pipe(
+      Effect.provide(ProjectRepositoryLive),
+      Effect.provide(SqlClientLive(client, organizationId))
+    )
+  )
 })
 
-// For real-time pub/sub events
-publisher.publish('realTimeEvent', { data: 'value' })
+// Mutation (POST) with Zod validation
+export const createProject = createServerFn({ method: "POST" })
+  .inputValidator(createProjectSchema)
+  .handler(async ({ data }) => {
+    const { userId, organizationId } = await requireSession()
+    const client = getPostgresClient()
+    
+    return await Effect.runPromise(
+      createProjectUseCase({...}).pipe(
+        Effect.provide(ProjectRepositoryLive),
+        Effect.provide(SqlClientLive(client, organizationId))
+      )
+    )
+  })
 ```
 
-## Prompt Running Architecture
+Server functions live in `apps/web/src/domains/*/functions.ts`.
 
-The prompt running system handles executing AI prompts against LLM providers. It supports both foreground (streaming) and background (queued) execution modes.
-
-### High-Level Flow
-
-```
-API Request → Gateway Handler → runDocumentAtCommit → ChainStreamManager → AI Provider → Response
-                    ↓                                          ↓
-            (background mode)                          Telemetry (spans/traces)
-                    ↓                                          ↓
-              enqueueRun → BullMQ Job                   Event Handlers
-                                                              ↓
-                                                    Live Evaluations (if enabled)
-```
-
-### Entry Points
-
-#### Gateway API (`apps/gateway/src/routes/api/v3/projects/versions/documents/run/`)
-
-The main entry point is `run.handler.ts` which:
-
-1. Validates request parameters (path, parameters, tools, stream mode)
-2. Fetches document, commit, and project using `getData()`
-3. Publishes a `documentRunRequested` event for analytics
-4. Routes to either `handleBackgroundRun()` or `handleForegroundRun()` based on:
-   - Explicit `background` parameter
-   - `api-background-runs` feature flag for the workspace
-
-### Core Services
-
-#### `runDocumentAtCommit` (`packages/core/src/services/commits/runDocumentAtCommit.ts`)
-
-The main orchestration service that:
-
-1. **Builds provider map**: Fetches all configured provider API keys for the workspace
-2. **Resolves content**: Processes the prompt template, handling includes and references via `getResolvedContent()`
-3. **Creates telemetry context**: Initializes a prompt span via `telemetry.span.prompt()` for tracing
-4. **Validates the chain**: Uses `RunDocumentChecker` to:
-   - Parse the prompt using PromptL
-   - Handle `userMessage` parameter (adds `<user>{{LATITUDE_USER_MESSAGE}}</user>` if needed)
-   - Process and validate parameters (including file type conversions)
-   - Create a `Chain` object for execution
-5. **Runs the chain**: Delegates to `runChain()` which creates a `ChainStreamManager`
-
-#### `ChainStreamManager` (`packages/core/src/lib/streamManager/chainStreamManager.ts`)
-
-Manages multi-step chain execution and streaming:
-
-1. **Step execution**: Recursively calls `step()` to advance through the chain
-2. **Chain validation**: Uses `validateChain()` to:
-   - Render the next step of the chain
-   - Find the appropriate provider from `providersMap`
-   - Check provider quota limits
-   - Apply provider-specific rules
-3. **Tool resolution**: Calls `lookupTools()` and `resolveTools()` to prepare tools
-4. **AI streaming**: Calls `streamAIResponse()` to stream responses from the provider
-5. **State management**: Tracks messages, token usage, and responses across steps
-
-#### `ai()` Service (`packages/core/src/services/ai/index.ts`)
-
-Low-level AI provider integration:
-
-1. **Rule application**: Applies provider-specific rules and validations
-2. **Provider creation**: Creates the appropriate Vercel AI SDK provider adapter
-3. **Model configuration**: Configures the language model with settings from the prompt config
-4. **Stream execution**: Uses Vercel AI SDK's `streamText()` for streaming responses
-5. **Schema support**: Handles structured output schemas when specified
-
-### Background Execution
-
-#### `enqueueRun` (`packages/core/src/services/runs/enqueue.ts`)
-
-For background/async execution:
-
-1. Creates an active run entry in Redis cache
-2. Adds job to BullMQ `runsQueue` with deduplication
-3. Publishes `runDocumentQueued` event
-
-#### `backgroundRunJob` (`packages/core/src/jobs/job-definitions/runs/backgroundRunJob.ts`)
-
-Processes queued runs:
-
-1. Fetches document data using `getJobDocumentData()`
-2. Marks run as started via `startRun()`
-3. Calls `runDocumentAtCommit()` with abort controller
-4. Forwards stream events to Redis stream for client consumption
-5. Handles experiment integration (if applicable)
-6. Cleans up and marks run as ended
-
-### Telemetry & Tracing
-
-#### Span/Trace Creation (`packages/core/src/telemetry/index.ts`)
-
-Latitude uses OpenTelemetry for tracing prompt executions:
-
-1. **LatitudeTelemetry**: Wraps OpenTelemetry SDK with custom span processors
-2. **InternalExporter**: Converts spans to OTLP format and enqueues for processing
-3. **Span Types** (`SpanType` enum):
-   - `Prompt`: Top-level prompt execution
-   - `Completion`: LLM completion calls
-   - `Tool`: Tool executions
-   - `Step`: Chain steps
-   - `Embedding`, `Retrieval`, `Reranking`: Specialized operations
-
-#### Span Ingestion (`packages/core/src/services/tracing/spans/`)
-
-Spans are processed and stored:
-
-1. `ingest.ts`: Entry point for span ingestion, extracts workspace/API key from attributes
-2. `process.ts`: Converts OTLP attributes to internal format, determines span type
-3. `prompt.ts`: Processes prompt-specific metadata (parameters, template, references)
-4. Span metadata includes: `documentLogUuid`, `experimentUuid`, `promptUuid`, `versionUuid`, `source`
-
-### Event System & Handlers
-
-#### Event Handler Registration (`packages/core/src/events/handlers/index.ts`)
-
-Events trigger asynchronous processing via registered handlers:
+**Collections** — Client-side reactive state uses TanStack React DB + Query via `queryCollectionOptions`:
 
 ```typescript
-export const EventHandlers: IEventsHandlers = {
-  spanCreated: [evaluateLiveLogJob],
-  evaluationResultV2Created: [assignIssueToEvaluationResultV2Job, ...],
-  documentRunQueued: [notifyClientOfRunStatusByDocument],
-  // ... many more event handlers
-}
+const projectsCollection = createCollection(
+  queryCollectionOptions({
+    queryClient,
+    queryKey: ["projects"],
+    queryFn: () => listProjects(),
+    getKey: (item) => item.id,
+    onInsert: async ({ transaction }) => { /* optimistic insert */ },
+    onUpdate: async ({ transaction }) => { /* optimistic update */ },
+    onDelete: async ({ transaction }) => { /* optimistic delete */ },
+  }),
+)
+
+export const useProjectsCollection = (...) => useLiveQuery(...)
 ```
 
-#### Live Evaluation Handler (`packages/core/src/events/handlers/evaluateLiveLog.ts`)
+Collection files live in `apps/web/src/domains/*/collection.ts`.
 
-Automatically runs evaluations on prompt executions:
+**Route Guards** — Use `beforeLoad` for auth checks and redirects:
 
-1. Triggered by `spanCreated` event for `SpanType.Prompt` spans
-2. Filters to live-evaluable log sources (excludes `evaluation`, `experiment`)
-3. Fetches evaluations configured for the document with `evaluateLiveLogs: true`
-4. Enqueues `runEvaluationV2Job` for each applicable evaluation
+```typescript
+export const Route = createFileRoute("/_authenticated")({
+    beforeLoad: async () => {
+        const session = await getSession();
+        if (!session) throw redirect({ to: "/login" });
+        return { user: session.user };
+    },
+});
+```
 
-### Evaluation System
+**Key rules:**
 
-#### Running Evaluations (`packages/core/src/services/evaluationsV2/run.ts`)
+- Server functions are the only data-fetching mechanism — no direct REST API calls from the client
+- Use collections for reactive, queryable client state with automatic server sync
+- Use `useState` for local UI state (modals, form visibility); no global stores
+- Invalidate query cache after mutations: `getQueryClient().invalidateQueries({ queryKey: [...] })`
+- Forms use TanStack React Form (`useForm` + `form.Field`)
 
-Evaluations assess prompt outputs:
+### Layout & Spacing
 
-1. Finds the prompt span and extracts actual/expected outputs
-2. Validates evaluation hasn't already run for this span
-3. Runs the evaluation specification (LLM-as-judge, rule-based, etc.)
-4. Creates `EvaluationResultV2` record
-5. Triggers downstream events (suggestions, issue detection)
+- **Always** use flexbox for layout (`flex`, `flex-col`, `flex-row`)
+- **Never** use margin utilities (no `m-*`, `mx-*`, `my-*`, `mt-*`, etc.)
+- **Always** use `gap` utilities for spacing between elements (`gap-*`, `gap-x-*`, `gap-y-*`)
+- **Always** use `p-*` (padding) for internal spacing within containers
 
-#### Evaluation Specifications (`packages/core/src/services/evaluationsV2/specifications/`)
+### Example
 
-Different evaluation types with their own logic:
+```tsx
+// ❌ Bad - using margins and space-y
+<div className="space-y-4 mt-4">
+ <div className="mb-2">Item 1</div>
+ <div className="mb-2">Item 2</div>
+</div>
 
-- LLM-as-judge evaluations
-- Rule-based evaluations
-- Custom metric evaluations
-- Each specification defines `run()` and `supportsLiveEvaluation`
+// ✅ Good - using flexbox with gap
+<div className="flex flex-col gap-4 pt-4">
+ <div>Item 1</div>
+ <div>Item 2</div>
+</div>
+```
 
-### Key Data Structures
+## Cursor Cloud specific instructions
 
-#### PromptL Chain
+### Infrastructure
 
-The prompt is compiled into a `Chain` object (from `promptl-ai`) that:
+Docker is used for local infrastructure services. Start them before running apps:
 
-- Holds the parsed AST and resolved prompt content
-- Manages step-by-step execution via `chain.step()`
-- Tracks completion state
+```bash
+sudo dockerd &>/dev/null &  # if Docker daemon not already running
+sudo docker compose up -d postgres clickhouse redis mailpit redpanda
+```
 
-#### ChainEvent
+### Database setup
 
-Stream events use the `ChainEvent` type with event types:
+After infrastructure is up, run migrations (idempotent):
 
-- `ChainStarted`, `ChainCompleted`, `ChainError`
-- `StepStarted`, `StepCompleted`
-- `ProviderStarted`, `ProviderCompleted`
-- `ToolsStarted`, `ToolsCompleted`, `ToolsRequested`
-- `IntegrationWakingUp`
+```bash
+pnpm --filter @platform/db-postgres pg:migrate
+pnpm --filter @platform/db-clickhouse ch:up
+pnpm --filter @platform/db-postgres pg:seed       # optional: creates seed users owner@acme.com / admin@acme.com
+pnpm --filter @platform/db-clickhouse ch:seed     # optional: inserts sample span data
+```
 
-### Tool Handling
+### Running dev servers
 
-Tools are resolved from multiple sources:
+Start app services individually, matching the local `pnpm tmux` (tmuxinator) workflow:
 
-1. **Client tools**: Defined in the API request, handled by `buildClientToolHandlersMap()`
-2. **Latitude tools**: Built-in tools like web search
-3. **MCP tools**: From configured MCP integrations
-4. **Agent tools**: Sub-prompts that can be called as tools
+```bash
+pnpm --filter @app/web dev &
+pnpm --filter @app/api dev &
+pnpm --filter @app/ingest dev &
+pnpm --filter @app/workers dev &
+```
 
-Tool resolution happens in `lookupTools()` and `resolveTools()` within the stream manager
+| Service    | Port | Health check                                          |
+| ---------- | ---- | ----------------------------------------------------- |
+| Web        | 3000 | `curl http://localhost:3000` (307 redirect to /login) |
+| API        | 3001 | `curl http://localhost:3001/health`                   |
+| Ingest     | 3002 | `curl http://localhost:3002/health`                   |
+| Workers    | N/A  | Logs "workers ready and outbox consumer started"      |
+| Mailpit UI | 8025 | `curl http://localhost:8025`                          |
+
+### Auth for manual testing
+
+The app uses magic-link authentication. Emails are captured by Mailpit at `http://localhost:8025`. Sign up through the web UI at `http://localhost:3000/signup`, then retrieve the magic link from Mailpit to complete authentication.
+
+### Lint, typecheck, test commands
+
+Standard commands per `AGENTS.md` Commands section: `pnpm check`, `pnpm typecheck`, `pnpm test`. All run cleanly.

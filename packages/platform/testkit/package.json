@@ -1,0 +1,29 @@
+{
+  "name": "@platform/testkit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "biome check src",
+    "format": "biome format --write src",
+    "format:check": "biome format --check src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@clickhouse/client": "catalog:",
+    "@domain/shared": "workspace:*",
+    "@electric-sql/pglite": "0.3.15",
+    "@platform/cache-redis": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "chdb": "^1.6.0",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
+    "hono": "catalog:",
+    "ioredis": "catalog:"
+  }
+}

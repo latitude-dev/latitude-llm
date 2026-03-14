@@ -3,56 +3,33 @@ name: Typecheck
 on:
   pull_request:
     branches:
-      - main
+      - latitude-v2
   workflow_call:
-    inputs:
-      workflow_call:
-        type: boolean
-        required: false
-        default: false
 
 jobs:
-  node-lint:
+  typecheck:
     runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 25.x
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
-          run_install: false
+        uses: pnpm/action-setup@v4
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Setup pnpm cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install Node.js dependencies
-        run: pnpm install
-
-      - name: Use Turbo to build affected packages
-        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
-
-      - name: Build package types
-        run: pnpm turbo types:build --cache-dir=.turbo --filter="./packages/**"
+      - name: Create .env.test from example
+        run: cp .env.example .env.test
 
       - name: Typecheck
-        run: pnpm tc
+        run: pnpm typecheck

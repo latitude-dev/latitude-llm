@@ -1,1 +1,0 @@
-ALTER TYPE "latitude"."provider" ADD VALUE 'mistral';

@@ -1,110 +1,97 @@
-import './workers/utils/tracer' // Has to be the first import
-
-import express from 'express'
+import { existsSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import {
-  captureException,
-  captureMessage,
-} from './workers/utils/captureException'
-import { createBullBoard } from '@bull-board/api'
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
-import { ExpressAdapter } from '@bull-board/express'
+  createKafkaClient,
+  createRedpandaEventsConsumer,
+  createRedpandaEventsPublisher,
+  loadKafkaConfig,
+} from "@platform/queue-redpanda"
+import { createLogger } from "@repo/observability"
+import { config as loadDotenv } from "dotenv"
+import { Effect } from "effect"
+import { getPostgresPool } from "./clients.ts"
+import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
-import { startWorkers } from './workers'
-import { setupSchedules } from './workers/schedule'
-import { env } from '@latitude-data/env'
-import { queues } from '@latitude-data/core/queues'
-import { jobTracker } from './workers/utils/jobTracker'
+const nodeEnv = process.env.NODE_ENV || "development"
+const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
 
-setupSchedules()
+if (existsSync(envFilePath)) {
+  loadDotenv({ path: envFilePath, quiet: true })
+}
 
-const app = express()
-const workers = await startWorkers()
+const pgPool = getPostgresPool(10)
+const logger = createLogger("workers")
 
-// Initialize job tracker with all queues
-const allQueues = await queues()
-Object.values(allQueues).forEach((queue) => {
-  jobTracker.registerQueue(queue)
+// Simple event handler that logs events (placeholder for actual side effect processing)
+const eventHandler = {
+  handle: (event: {
+    id: string
+    event: { name: string; organizationId: string }
+  }): Effect.Effect<void, unknown, never> =>
+    Effect.gen(function* () {
+      yield* Effect.logInfo(
+        `Processing event ${event.id} of type ${event.event.name} for org ${event.event.organizationId}`,
+      )
+    }),
+}
+
+// Initialize workers asynchronously
+const initializeWorkers = async () => {
+  // Load Redpanda configuration
+  const kafkaConfig = Effect.runSync(loadKafkaConfig())
+  const kafkaClient = createKafkaClient(kafkaConfig)
+
+  // Create Redpanda publisher (async initialization)
+  const eventsPublisher = await createRedpandaEventsPublisher({
+    kafka: kafkaClient,
+  })
+
+  // Create outbox consumer (polls Postgres outbox and publishes to Redpanda)
+  const outboxConsumer = createPollingOutboxConsumer(
+    {
+      pool: pgPool,
+      pollIntervalMs: 1000,
+      batchSize: 100,
+    },
+    eventsPublisher,
+  )
+
+  // Create Redpanda event consumer (consumes from Redpanda and processes events)
+  const redpandaConsumer = createRedpandaEventsConsumer({
+    kafka: kafkaClient,
+    groupId: kafkaConfig.groupId,
+  })
+
+  // Create span ingestion worker (consumes from span-ingestion topic and writes to ClickHouse)
+  const spanIngestionWorker = createSpanIngestionWorker(kafkaClient, `${kafkaConfig.groupId}-span-ingestion`)
+
+  // Start consumers
+  outboxConsumer.start()
+  await redpandaConsumer.start(eventHandler)
+  await spanIngestionWorker.start()
+  logger.info("workers ready - outbox consumer and Redpanda consumer started")
+
+  return { outboxConsumer, redpandaConsumer, spanIngestionWorker }
+}
+
+const workersPromise = initializeWorkers().catch((error) => {
+  logger.error("Failed to initialize workers", error)
+  process.exit(1)
 })
 
-// Set up Bull Board
-const serverAdapter = new ExpressAdapter()
-serverAdapter.setBasePath('/admin/queues')
-
-createBullBoard({
-  queues: Object.values(allQueues).map((q) => new BullMQAdapter(q)),
-  serverAdapter,
-})
-
-// Basic authentication middleware
-const basicAuth = (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) => {
-  const auth = req.headers.authorization
-  const expectedAuth = `Basic ${Buffer.from(`${env.BULL_ADMIN_USER}:${env.BULL_ADMIN_PASS}`).toString('base64')}`
-
-  if (!auth || auth !== expectedAuth) {
-    res.set('WWW-Authenticate', 'Basic realm="Bull Board"')
-    return res.status(401).send('Authentication required')
+// Graceful shutdown
+process.on("SIGINT", async () => {
+  logger.info("shutting down workers...")
+  try {
+    const { outboxConsumer, redpandaConsumer, spanIngestionWorker } = await workersPromise
+    await outboxConsumer.stop()
+    await redpandaConsumer.stop()
+    await spanIngestionWorker.stop()
+  } catch (error) {
+    logger.error("Error during shutdown (workers may not have started)", error)
   }
+  await pgPool.end()
 
-  next()
-}
-
-// Mount the Bull Board UI with authentication
-app.use('/admin/queues', basicAuth, serverAdapter.getRouter())
-
-// Mount the Bull Board UI
-app.use('/admin/queues', serverAdapter.getRouter())
-
-console.log('Workers started')
-
-const port = env.WORKERS_PORT || 3002
-const host = env.WORKERS_HOST || '0.0.0.0'
-
-// Health check endpoint
-app.get('/health', (_req, res) => {
-  res.json({ status: 'OK', message: 'Workers are healthy' })
-})
-
-// Handle 404s
-app.use((_req, res) => {
-  res.status(404).json({ status: 'Not Found' })
-})
-
-const server = app.listen(port, host, () => {
-  console.log(`Health check server running on port ${port}`)
-})
-
-const gracefulShutdown = async (signal: string) => {
-  console.log(`Received ${signal}, initiating graceful shutdown...`)
-
-  // 1) Stop accepting new jobs
-  await Promise.all(workers.map((w) => w.pause()))
-
-  // 2) Get current active jobs count (poll immediately for accuracy)
-  const remaining = await jobTracker.getActiveJobsCountNow()
-  console.log(`Paused workers. Remaining active jobs: ${remaining}`)
-
-  // 3) Wait for active jobs to complete
-  await Promise.all(workers.map((w) => w.close()))
-
-  // 4) Stop job tracker polling and disable scale-in protection
-  jobTracker.stopPolling()
-  await jobTracker.forceDisableProtection()
-
-  // 5) Close HTTP server and exit
-  server.close(() => process.exit(0))
-}
-
-process.on('SIGINT', () => gracefulShutdown('SIGINT'))
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
-
-process.on('uncaughtException', function (err) {
-  captureException(err)
-})
-
-process.on('unhandledRejection', (reason: string) => {
-  captureMessage(reason, 'error')
+  process.exit(0)
 })

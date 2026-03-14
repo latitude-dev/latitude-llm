@@ -15,34 +15,26 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 25.x
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 9
-
-      - name: Setup pnpm cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
+        uses: pnpm/action-setup@v4
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Update models.dev data
-        run: pnpm --filter @latitude-data/core exec tsx scripts/updateModelsDevData.ts
+        run: pnpm --filter @domain/models update:models-dev
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet packages/core/src/assets/models.dev.json; then
+          if git diff --quiet packages/domain/models/src/data/models.dev.json; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -50,27 +42,19 @@ jobs:
 
       - name: Create Pull Request
         if: steps.changes.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v8
         with:
           commit-message: 'chore: update bundled models.dev data'
           title: 'chore: update bundled models.dev data'
           body: |
-            ## Description
+            Automated update of the bundled models.dev JSON data.
 
-            This PR updates the bundled models.dev JSON data to the latest version from the models.dev API.
-
-            This runs automatically weekly to keep the bundled data fresh for client-side usage, reducing API calls and improving performance.
-
-            ### Changes
-            - Updated `packages/core/src/assets/models.dev.json`
-
-            ### Testing
-            - Run `pnpm --filter @latitude-data/core test -- modelsDev.test.ts` to verify the update
+            Updates `packages/domain/models/src/data/models.dev.json`
+            with the latest model information from the models.dev API.
           branch: chore/update-models-dev-data
           delete-branch: true
           labels: |
             chore
             dependencies
             automated
-          assignees: ${{ github.repository_owner }}
           draft: false

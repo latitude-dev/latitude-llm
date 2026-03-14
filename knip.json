@@ -1,0 +1,46 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    ".": {},
+    "apps/api": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/ingest": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/workers": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/workflows": {
+      "project": ["src/**/*.ts"]
+    },
+    "apps/web": {
+      "entry": ["src/router.tsx", "src/routes/**/*.tsx"],
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "packages/domain/email": {
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "packages/domain/*": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/platform/db-postgres": {
+      "entry": ["src/seeds/index.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/platform/*": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ui": {
+      "project": ["src/**/*.ts", "src/**/*.tsx"]
+    },
+    "packages/vitest-config": {
+      "project": ["**/*.ts"]
+    },
+    "packages/tsconfig": {
+      "entry": [],
+      "project": []
+    }
+  },
+  "ignoreBinaries": ["tmuxinator", "email"]
+}

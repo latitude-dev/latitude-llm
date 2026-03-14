@@ -1,2 +1,0 @@
-ALTER TABLE "latitude"."spans" DROP CONSTRAINT "spans_span_id_unique";--> statement-breakpoint
-ALTER TABLE "latitude"."spans" ADD CONSTRAINT "spans_span_id_trace_id_unique" UNIQUE("span_id","trace_id");

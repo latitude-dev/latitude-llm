@@ -1,0 +1,38 @@
+export {
+  createMembership,
+  isAdminRole,
+  type Membership,
+  type MembershipRole,
+} from "./entities/membership.ts"
+export { createOrganization, type Organization } from "./entities/organization.ts"
+export {
+  createMemberJoinedEvent,
+  type MemberJoinedEvent,
+} from "./events/member-joined.ts"
+export {
+  createOrganizationCreatedEvent,
+  type OrganizationCreatedEvent,
+} from "./events/organization-created.ts"
+// Repositories - Service definitions (implementations in @platform/db-postgres)
+export {
+  MembershipRepository,
+  type MemberWithUser,
+} from "./ports/membership-repository.ts"
+export { OrganizationRepository } from "./ports/organization-repository.ts"
+
+// Use cases
+export {
+  type CreateOrganizationError,
+  type CreateOrganizationInput,
+  createOrganizationUseCase,
+  InvalidOrganizationNameError,
+  OrganizationAlreadyExistsError,
+} from "./use-cases/create-organization.ts"
+export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
+export {
+  CannotRemoveSelfError,
+  MembershipNotFoundError,
+  type RemoveMemberError,
+  type RemoveMemberInput,
+  removeMemberUseCase,
+} from "./use-cases/remove-member.ts"

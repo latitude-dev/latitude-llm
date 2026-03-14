@@ -1,0 +1,47 @@
+{
+  "name": "@platform/db-postgres",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "pg:generate": "node --import tsx scripts/migration.ts auto",
+    "pg:generate:custom": "node --import tsx scripts/migration.ts custom",
+    "pg:migrate": "drizzle-kit migrate --config=drizzle.config.ts",
+    "pg:push": "drizzle-kit push --config=drizzle.config.ts",
+    "pg:check": "drizzle-kit check --config=drizzle.config.ts",
+    "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
+    "pg:seed": "npx tsx src/seeds/run.ts",
+    "pg:reset": "bash ../../../docker/reset-postgres.sh",
+    "check": "biome check src",
+    "format": "biome format --write src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "check:fix": "biome check --fix src"
+  },
+  "dependencies": {
+    "@domain/api-keys": "workspace:*",
+    "@domain/auth": "workspace:*",
+    "@domain/datasets": "workspace:*",
+    "@domain/organizations": "workspace:*",
+    "@domain/projects": "workspace:*",
+    "@domain/shared": "workspace:*",
+    "@domain/subscriptions": "workspace:*",
+    "@domain/users": "workspace:*",
+    "@platform/env": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "effect": "catalog:",
+    "@paralleldrive/cuid2": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@types/pg": "catalog:",
+    "dotenv": "catalog:",
+    "drizzle-kit": "catalog:",
+    "tsx": "catalog:",
+    "vitest": "catalog:"
+  }
+}

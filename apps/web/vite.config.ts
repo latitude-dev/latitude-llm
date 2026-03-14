@@ -1,0 +1,33 @@
+import { existsSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { parseEnv } from "@platform/env"
+import tailwindcss from "@tailwindcss/vite"
+import { tanstackStart } from "@tanstack/react-start/plugin/vite"
+import react from "@vitejs/plugin-react"
+import { config as loadDotenv } from "dotenv"
+import { Effect } from "effect"
+import { defineConfig } from "vite"
+
+const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
+const envFilePath = fileURLToPath(new URL(`../../.env.${nodeEnv}`, import.meta.url))
+
+if (existsSync(envFilePath)) {
+  loadDotenv({ path: envFilePath, quiet: true })
+}
+
+const webPortNumber = Effect.runSync(parseEnv("LAT_WEB_PORT", "number", 3000))
+
+export default defineConfig({
+  plugins: [tanstackStart(), tailwindcss(), react()],
+  server:
+    nodeEnv === "development"
+      ? {
+          port: webPortNumber,
+          strictPort: true,
+          allowedHosts: true,
+        }
+      : {
+          port: webPortNumber,
+          strictPort: true,
+        },
+})

@@ -1,0 +1,22 @@
+{
+  "name": "@app/workflows",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/worker.ts",
+    "check": "biome check src",
+    "format": "biome format --write src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "check:fix": "biome check --fix src"
+  },
+  "dependencies": {
+    "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
+    "dotenv": "catalog:",
+    "effect": "catalog:",
+    "tsx": "catalog:"
+  }
+}

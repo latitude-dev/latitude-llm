@@ -1,0 +1,32 @@
+export {
+  type ApiKey,
+  createApiKey,
+  generateApiKeyToken,
+  isActive,
+  revoke,
+  touch,
+} from "./entities/api-key.ts"
+export { type ApiKeyCreatedEvent, createApiKeyCreatedEvent } from "./events/api-key-created.ts"
+export { ApiKeyRepository } from "./ports/api-key-repository.ts"
+
+export {
+  type GenerateApiKeyError,
+  type GenerateApiKeyInput,
+  generateApiKeyUseCase,
+  InvalidApiKeyNameError,
+} from "./use-cases/generate-api-key.ts"
+
+export {
+  ApiKeyAlreadyRevokedError,
+  ApiKeyCacheInvalidator,
+  ApiKeyNotFoundError,
+  type RevokeApiKeyError,
+  type RevokeApiKeyInput,
+  revokeApiKeyUseCase,
+} from "./use-cases/revoke-api-key.ts"
+
+export {
+  type UpdateApiKeyError,
+  type UpdateApiKeyInput,
+  updateApiKeyUseCase,
+} from "./use-cases/update-api-key.ts"

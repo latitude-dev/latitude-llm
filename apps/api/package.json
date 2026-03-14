@@ -1,0 +1,43 @@
+{
+  "name": "@app/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/server.ts",
+    "check": "biome check src",
+    "format": "biome format --write src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "check:fix": "biome check --fix src"
+  },
+  "dependencies": {
+    "@clickhouse/client": "catalog:",
+    "@domain/api-keys": "workspace:*",
+    "@domain/organizations": "workspace:*",
+    "@domain/projects": "workspace:*",
+    "@domain/shared": "workspace:*",
+    "@hono/node-server": "catalog:",
+    "@hono/swagger-ui": "^0.5.0",
+    "@hono/zod-openapi": "^1.0.0",
+    "@platform/cache-redis": "workspace:*",
+    "@platform/db-clickhouse": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "@types/pg": "catalog:",
+    "drizzle-orm": "catalog:",
+    "dotenv": "catalog:",
+    "effect": "catalog:",
+    "hono": "catalog:",
+    "pg": "catalog:",
+    "tsx": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@platform/testkit": "workspace:*",
+    "@repo/vitest-config": "workspace:*"
+  }
+}
