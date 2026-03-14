@@ -1,9 +1,9 @@
 name: ClickHouse Migrations
 
 on:
-  pull_request:
-    branches:
-      - latitude-v2
+  # pull_request:
+  #   branches:
+  #     - main
   workflow_call:
 
 jobs:

@@ -3,7 +3,7 @@ name: Tests
 on:
   pull_request:
     branches:
-      - latitude-v2
+      - main
   workflow_call:
 
 jobs:
