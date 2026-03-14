@@ -17,20 +17,18 @@
     "@domain/api-keys": "workspace:^",
     "@domain/projects": "workspace:^",
     "@domain/shared": "workspace:*",
-    "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
-    "@platform/storage-object": "workspace:*",
+    "@platform/queue-redpanda": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
-    "bullmq": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
-    "protobufjs": "catalog:",
+    "kafkajs": "catalog:",
     "tsx": "catalog:"
   }
 }

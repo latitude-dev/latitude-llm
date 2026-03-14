@@ -1,22 +1,18 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import { SPAN_INGESTION_QUEUE } from "@domain/shared"
-import type { RedisClient, RedisConnection } from "@platform/cache-redis"
+import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
-import type { StorageDisk } from "@platform/storage-object"
-import { createStorageDisk } from "@platform/storage-object"
-import { Queue } from "bullmq"
+import { createKafkaClient, loadKafkaConfig } from "@platform/queue-redpanda"
 import { Effect } from "effect"
+import type { Producer } from "kafkajs"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
-let redisConnectionInstance: RedisConnection | undefined
-let storageDiskInstance: StorageDisk | undefined
-let spanIngestionQueueInstance: Queue | undefined
+let spanIngestionProducerPromise: Promise<Producer> | undefined
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
@@ -52,23 +48,18 @@ export const getRedisClient = (): RedisClient => {
   return redisInstance
 }
 
-const getRedisConnection = (): RedisConnection => {
-  if (!redisConnectionInstance) {
-    redisConnectionInstance = createRedisConnection()
+export const getSpanIngestionProducer = (): Promise<Producer> => {
+  if (!spanIngestionProducerPromise) {
+    spanIngestionProducerPromise = (async () => {
+      const config = Effect.runSync(loadKafkaConfig())
+      const kafka = createKafkaClient(config)
+      const producer = kafka.producer({ allowAutoTopicCreation: false })
+      await producer.connect()
+      return producer
+    })().catch((error) => {
+      spanIngestionProducerPromise = undefined
+      throw error
+    })
   }
-  return redisConnectionInstance
-}
-
-export const getStorageDisk = (): StorageDisk => {
-  if (!storageDiskInstance) {
-    storageDiskInstance = createStorageDisk()
-  }
-  return storageDiskInstance
-}
-
-export const getSpanIngestionQueue = (): Queue => {
-  if (!spanIngestionQueueInstance) {
-    spanIngestionQueueInstance = new Queue(SPAN_INGESTION_QUEUE, { connection: getRedisConnection() })
-  }
-  return spanIngestionQueueInstance
+  return spanIngestionProducerPromise
 }

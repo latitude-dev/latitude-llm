@@ -1,11 +1,16 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { createPollingOutboxConsumer } from "@platform/events-outbox"
-import { createBullmqEventsPublisher } from "@platform/queue-bullmq"
+import {
+  createKafkaClient,
+  createRedpandaEventsConsumer,
+  createRedpandaEventsPublisher,
+  loadKafkaConfig,
+} from "@platform/queue-redpanda"
 import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
-import { getClickhouseClient, getPostgresPool, getRedisConnection, getStorageDisk } from "./clients.ts"
-import { createEventsWorker } from "./workers/events.ts"
+import { Effect } from "effect"
+import { getPostgresPool } from "./clients.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
@@ -15,47 +20,78 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath, quiet: true })
 }
 
-const redisConnection = getRedisConnection()
 const pgPool = getPostgresPool(10)
-const { queue: eventsQueue, worker: eventsWorker } = createEventsWorker(redisConnection)
-const eventsPublisher = createBullmqEventsPublisher({ queue: eventsQueue })
-const outboxConsumer = createPollingOutboxConsumer(
-  {
-    pool: pgPool,
-    pollIntervalMs: 1000,
-    batchSize: 100,
-  },
-  eventsPublisher,
-)
-
-const { queue: spanIngestionQueue, worker: spanIngestionWorker } = createSpanIngestionWorker({
-  redisConnection,
-  clickhouseClient: getClickhouseClient(),
-  storageDisk: getStorageDisk(),
-})
-
 const logger = createLogger("workers")
 
-eventsWorker.on("ready", () => {
+// Simple event handler that logs events (placeholder for actual side effect processing)
+const eventHandler = {
+  handle: (event: {
+    id: string
+    event: { name: string; organizationId: string }
+  }): Effect.Effect<void, unknown, never> =>
+    Effect.gen(function* () {
+      yield* Effect.logInfo(
+        `Processing event ${event.id} of type ${event.event.name} for org ${event.event.organizationId}`,
+      )
+    }),
+}
+
+// Initialize workers asynchronously
+const initializeWorkers = async () => {
+  // Load Redpanda configuration
+  const kafkaConfig = Effect.runSync(loadKafkaConfig())
+  const kafkaClient = createKafkaClient(kafkaConfig)
+
+  // Create Redpanda publisher (async initialization)
+  const eventsPublisher = await createRedpandaEventsPublisher({
+    kafka: kafkaClient,
+  })
+
+  // Create outbox consumer (polls Postgres outbox and publishes to Redpanda)
+  const outboxConsumer = createPollingOutboxConsumer(
+    {
+      pool: pgPool,
+      pollIntervalMs: 1000,
+      batchSize: 100,
+    },
+    eventsPublisher,
+  )
+
+  // Create Redpanda event consumer (consumes from Redpanda and processes events)
+  const redpandaConsumer = createRedpandaEventsConsumer({
+    kafka: kafkaClient,
+    groupId: kafkaConfig.groupId,
+  })
+
+  // Create span ingestion worker (consumes from span-ingestion topic and writes to ClickHouse)
+  const spanIngestionWorker = createSpanIngestionWorker(kafkaClient, `${kafkaConfig.groupId}-span-ingestion`)
+
+  // Start consumers
   outboxConsumer.start()
+  await redpandaConsumer.start(eventHandler)
+  await spanIngestionWorker.start()
+  logger.info("workers ready - outbox consumer and Redpanda consumer started")
 
-  logger.info("workers ready and outbox consumer started")
+  return { outboxConsumer, redpandaConsumer, spanIngestionWorker }
+}
+
+const workersPromise = initializeWorkers().catch((error) => {
+  logger.error("Failed to initialize workers", error)
+  process.exit(1)
 })
 
-spanIngestionWorker.on("ready", () => {
-  logger.info("span ingestion worker ready")
-})
-
-spanIngestionWorker.on("failed", (job, error) => {
-  logger.error({ jobId: job?.id, storageKey: job?.data?.storageKey, error }, "span ingestion job failed")
-})
-
+// Graceful shutdown
 process.on("SIGINT", async () => {
-  await outboxConsumer.stop()
+  logger.info("shutting down workers...")
+  try {
+    const { outboxConsumer, redpandaConsumer, spanIngestionWorker } = await workersPromise
+    await outboxConsumer.stop()
+    await redpandaConsumer.stop()
+    await spanIngestionWorker.stop()
+  } catch (error) {
+    logger.error("Error during shutdown (workers may not have started)", error)
+  }
   await pgPool.end()
-  await eventsQueue.close()
-  await eventsWorker.close()
-  await spanIngestionQueue.close()
-  await spanIngestionWorker.close()
+
   process.exit(0)
 })

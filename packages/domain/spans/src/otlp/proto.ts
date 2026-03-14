@@ -1,5 +1,5 @@
-import type { OtlpExportTraceServiceRequest } from "@domain/spans"
 import protobuf from "protobufjs"
+import type { OtlpExportTraceServiceRequest } from "./types.ts"
 
 /**
  * Protobuf schema for OTLP ExportTraceServiceRequest.
