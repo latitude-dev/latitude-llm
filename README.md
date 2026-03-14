@@ -1,11 +1,3 @@
-<div align="center">
-  <a href="https://ai.latitude.so?utm_source=github" target="_blank">
-    <img src="docs/assets/readme/Logo.png?raw=true" alt="Latitude — Open Source AI Engineering Platform" width="700"/>
-  </a>
-</div>
-
-<br/>
-
 <h1 align="center" style="border: none; margin-bottom: 8px;">
   Open-Source AI Engineering Platform
 </h1>
