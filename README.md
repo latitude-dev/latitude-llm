@@ -21,7 +21,7 @@
 </p>
 
 > [!NOTE]
-> This is **Latitude v2**, a complete platform rewrite with a new architecture. For the previous stable release, use [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1).
+> You are viewing the **Latitude v2 Alpha** branch (`main`). For the current stable release, use [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1).
 
 <p align="center">
   <img src="docs/assets/readme/gif_ui.gif?raw=true" alt="Latitude demo — observability, evals, and prompt management" width="800"/>
@@ -99,14 +99,6 @@ The Latitude community is on
 
 Contributions are welcome. For an overview of the repo and its architecture, see
 [the contributor guide](https://docs.latitude.so/guides/contribution/contributors).
-
-### Local Git Hooks
-
-For contributors working in this monorepo, pre-commit checks are enforced via `.husky/pre-commit`.
-
-- Hook command chain: `pnpm check && pnpm typecheck && pnpm knip`
-- Hooks are configured automatically on install via the root `prepare` script (`pnpm hooks`)
-- If your clone was created before this setup, run `pnpm hooks` once
 
 If you want to help, join the [Slack community](https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw), open an
 [issue](https://github.com/latitude-dev/latitude-llm/issues/new), or submit a pull request.
