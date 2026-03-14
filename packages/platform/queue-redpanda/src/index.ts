@@ -1,4 +1,4 @@
-export { createKafkaClient, createKafkaClientEffect } from "./client.ts"
+export { createKafkaClient } from "./client.ts"
 export { loadKafkaConfig } from "./config.ts"
 export type { EventHandler, RedpandaEventsConsumerConfig } from "./consumer.ts"
 export { createRedpandaEventsConsumer, DomainEventSchema, EventEnvelopeSchema } from "./consumer.ts"
