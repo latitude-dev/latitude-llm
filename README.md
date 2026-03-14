@@ -21,12 +21,11 @@
 </p>
 
 > [!NOTE]
-> You are viewing the **Latitude v2** branch (`main`). This is a complete platform rewrite with a new architecture. For the previous stable release, use [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1).
+> This is **Latitude v2**, a complete platform rewrite with a new architecture. For the previous stable release, use [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1).
 
 <p align="center">
   <img src="docs/assets/readme/gif_ui.gif?raw=true" alt="Latitude demo — observability, evals, and prompt management" width="800"/>
 </p>
-
 
 ## 🌈 Why Latitude?
 
