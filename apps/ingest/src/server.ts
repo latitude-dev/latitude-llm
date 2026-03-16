@@ -11,10 +11,10 @@ import { registerRoutes } from "./routes/index.ts"
 import type { IngestEnv } from "./types.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
-const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-
-if (existsSync(envFilePath)) {
-  loadDotenv({ path: envFilePath, quiet: true })
+// Load .env file for local development; skipped in production containers where the file won't exist
+if (import.meta.url) {
+  const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
+  if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 }
 
 const app = new Hono<IngestEnv>()

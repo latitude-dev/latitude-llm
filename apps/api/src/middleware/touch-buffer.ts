@@ -26,7 +26,7 @@ interface TouchBufferConfig {
  *
  * Performance impact:
  * - Reduces writes by 90%+ (30s window / avg 100ms request = 300:1 reduction)
- * - lastUsedAt accuracy reduced to flush interval (±30 seconds by default)
+ * - lastUsedAt accuracy reduced to flush interval (+/-30 seconds by default)
  *
  * Usage:
  * ```typescript
@@ -111,11 +111,9 @@ class TouchBuffer {
         }).pipe(Effect.provide(apiKeyRepoLayer), Effect.provide(sqlClientLayer)),
       )
 
-      const duration = Date.now() - startTime
-      logger.info(`Flushed ${keyIds.length} touch updates in ${duration}ms`)
+      logger.info(`Flushed ${keyIds.length} touch updates in ${Date.now() - startTime}ms`)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error"
-      logger.error(`Failed to flush touch updates: ${errorMessage}`)
+      logger.error(`Failed to flush touch updates: ${error instanceof Error ? error.message : "Unknown error"}`)
 
       // Re-add failed keys to buffer for retry (with limit to prevent unbounded growth)
       for (const [keyId, timestamp] of batch) {

@@ -1,9 +1,8 @@
 import { Toaster } from "@repo/ui"
 import "@repo/ui/styles/globals.css"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
-import { Agentation } from "agentation"
 import type { ReactNode } from "react"
-import { useEffect } from "react"
+import { lazy, Suspense, useEffect } from "react"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
@@ -11,6 +10,9 @@ const DESCRIPTION =
   "Latitude is the platform for building and running AI agents without code. With Latte, you can create complex automations using a single prompt. Latitude handles everything: creating the agents, connecting them to 2,500+ tools, and deploying them into production."
 const URL = "https://app.latitude.so"
 const HOST_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)"
+const AgentationToolbar = import.meta.env.DEV
+  ? lazy(() => import("agentation").then((module) => ({ default: module.Agentation })))
+  : null
 
 export const Route = createRootRoute({
   head: () => ({
@@ -54,7 +56,11 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <AppQueryProvider>
           {children}
           <Toaster />
-          {process.env.NODE_ENV === "development" && <Agentation endpoint="http://localhost:4747" />}
+          {AgentationToolbar !== null ? (
+            <Suspense fallback={null}>
+              <AgentationToolbar endpoint="http://localhost:4747" />
+            </Suspense>
+          ) : null}
         </AppQueryProvider>
         <Scripts />
       </body>

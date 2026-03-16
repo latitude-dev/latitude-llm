@@ -1,0 +1,238 @@
+# Local testing values for kind cluster
+# Usage: helm install latitude ./charts/latitude -f kind/values-kind.yaml
+
+global:
+  nodeEnv: development
+  image:
+    # Use local registry (hostname configured in kind containerd)
+    registry: "kind-registry:5000"
+    repository: latitude-llm
+    tag: ""
+    pullPolicy: Always
+
+# =============================================================================
+# Service URLs (for inter-service communication)
+# =============================================================================
+  urls:
+    web: "http://localhost:3000"
+    api: "http://localhost:3001"
+    ingest: "http://localhost:3002"
+
+# =============================================================================
+# Secrets (inline for local testing only)
+# =============================================================================
+secrets:
+  # Postgres - these match the docker-compose defaults
+  databaseUrl: "postgresql://latitude:secret@postgres.latitude.svc.cluster.local:5432/latitude_development"
+  adminDatabaseUrl: "postgresql://latitude:secret@postgres.latitude.svc.cluster.local:5432/latitude_development"
+  
+  # ClickHouse
+  clickhousePassword: "secret"
+  
+  # Generate with: openssl rand -hex 32
+  apiKeyEncryptionKey: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  betterAuthSecret: "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
+
+# =============================================================================
+# Non-secret configuration
+# =============================================================================
+config:
+  # Redis
+  redisHost: "redis.latitude.svc.cluster.local"
+  redisPort: "6379"
+
+  # Postgres
+  pgPoolMax: "10"
+  pgIdleTimeoutMs: "30000"
+  pgConnectTimeoutMs: "10000"
+  
+  # ClickHouse
+  clickhouseUrl: "http://clickhouse.latitude.svc.cluster.local:8123"
+  clickhouseUser: "latitude"
+  clickhouseDb: "latitude"
+  clickhouseMigrationUrl: "clickhouse://clickhouse.latitude.svc.cluster.local:9000"
+  clickhouseClusterEnabled: "false"
+  
+  # Weaviate (if enabled)
+  weaviateHost: "weaviate.latitude.svc.cluster.local"
+  weaviateHttpPort: "8080"
+  weaviateGrpcPort: "50051"
+  
+  # Kafka/Redpanda
+  kafkaBrokers: "redpanda.latitude.svc.cluster.local:9092"
+  kafkaClientId: "latitude-app"
+  kafkaConsumerGroupId: "latitude-event-processors-v1"
+  kafkaSsl: "false"
+  
+  # Storage (use filesystem for local testing)
+  storageDriver: "fs"
+  storageFsRoot: "/app/storage"
+  
+  # CORS (allow localhost)
+  trustedOrigins: "http://localhost:3000,http://localhost:3001"
+  corsAllowedOrigins: "http://localhost:3000,http://localhost:3001,http://localhost:3002"
+  
+  # Better Auth
+  betterAuthUrl: "http://localhost:3001"
+
+# =============================================================================
+# Web service
+# =============================================================================
+web:
+  enabled: true
+  replicaCount: 1
+  port: 3000
+  image:
+    repository: latitude-llm-web
+    tag: latest
+  
+  # Health checks use the /api/health endpoint
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30000
+  
+  # Disable ingress for local testing
+  ingress:
+    enabled: false
+  
+  pdb:
+    enabled: false
+  
+  autoscaling:
+    enabled: false
+
+# =============================================================================
+# API service
+# =============================================================================
+api:
+  enabled: true
+  replicaCount: 1
+  port: 3001
+  image:
+    repository: latitude-llm-api
+    tag: latest
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30001
+  
+  ingress:
+    enabled: false
+  
+  pdb:
+    enabled: false
+  
+  autoscaling:
+    enabled: false
+
+# =============================================================================
+# Workers service
+# =============================================================================
+workers:
+  enabled: true
+  replicaCount: 1
+  healthPort: 9090
+  image:
+    repository: latitude-llm-workers
+    tag: latest
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# =============================================================================
+# Ingest service
+# =============================================================================
+ingest:
+  enabled: true
+  replicaCount: 1
+  port: 3002
+  image:
+    repository: latitude-llm-ingest
+    tag: latest
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30002
+  
+  ingress:
+    enabled: false
+  
+  pdb:
+    enabled: false
+  
+  autoscaling:
+    enabled: false
+
+# =============================================================================
+# Migrations
+# =============================================================================
+migrations:
+  enabled: true
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  image:
+    repository: latitude-llm-migrations
+    tag: latest
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# =============================================================================
+# Service account
+# =============================================================================
+serviceAccount:
+  create: true
