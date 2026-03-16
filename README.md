@@ -13,7 +13,7 @@
 </p>
 
 > [!WARNING]
-> You are viewing the **Latitude v2 Alpha** branch (`latitude-v2`). This branch is in **active development** and is **not ready for production use**. APIs, features, and data formats may change without notice.
+> You are viewing the **Latitude v2 Alpha** branch (`main`). This branch is in **active development** and is **not ready for production use**. APIs, features, and data formats may change without notice.
 >
 > For production use, please use the stable release on the [`latitude-v1`](https://github.com/latitude-dev/latitude-llm/tree/latitude-v1) branch.
 

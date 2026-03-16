@@ -1,0 +1,302 @@
+# Annotation Queues
+
+Annotation queues are the managed workflow surface for fast human review over traces.
+
+They exist to aggregate telemetry into a focused annotation UX with as little distraction as possible.
+
+## Queue Types
+
+Queue concepts:
+
+- a queue is conceptually `manual` when it has no filter configured and queue membership is created by explicit insertion rather than by stored filter materialization, always materialized as a trace id
+- a queue is conceptually `dynamic` / `live` when it has a filter configured and is populated incrementally over time from that filter plus optional sampling
+
+The filter field intentionally reuses the same future grammar as `EvaluationTrigger.filter`, but until that grammar is finalized it is stored as a plain string inside queue settings.
+
+Creation sources:
+
+- user-created queues are the mainline queue-management flow
+- every project also gets a default set of system-created manual queues that provide immediate review value before the team has curated its own queues
+
+Assignment:
+
+- a queue may have zero, one, or many assignees
+- assignees must be existing Latitude users from the same organization
+
+## Background Tasks
+
+Queue population uses the repository queue stack in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers`.
+
+The main contracts are:
+
+- `TraceMaterialized` domain event for post-ingest/project-queryable trace fan-out
+- `annotation-queue-validation` for one flagged `(queue_id, trace_id)` pair on a system-created queue
+
+Rules:
+
+- queue topics are lower-kebab-case and are the durable routing identity
+- payloads carry ids only; workers re-fetch queue definitions and trace context before acting
+- live dynamic queue materialization stays direct and cheap inside the `TraceMaterialized` handler path, so it does not enqueue one BullMQ job per matching dynamic queue
+- system-created queue validation/draft creation is expensive enough to be pushed into `annotation-queue-validation`
+
+## System-Created Default Queues
+
+Every project starts with these system-created manual queues:
+
+### Jailbreaking
+
+- description: attempts to bypass system or safety constraints
+- instructions: use this queue for prompt injection, instruction hierarchy attacks, policy-evasion attempts, tool abuse intended to bypass guardrails, role or identity escape attempts, or assistant behavior that actually follows those bypass attempts. Do not use it for harmless roleplay or ordinary unsafe requests that the assistant correctly refuses.
+
+### Refusal
+
+- description: the assistant refuses a request it should handle
+- instructions: use this queue when the assistant declines, deflects, or over-restricts even though the request is allowed and answerable within product policy and system capabilities. Do not use it when the refusal is correct because the request is unsafe, unsupported, or missing required context or permissions.
+
+### Frustration
+
+- description: the conversation shows clear user frustration or dissatisfaction
+- instructions: use this queue when the user expresses annoyance, disappointment, repeated dissatisfaction, loss of trust, or has to restate/correct themselves because the assistant is not helping. Do not use it for neutral clarifications or isolated terse replies without real evidence of frustration.
+
+### Forgetting
+
+- description: the assistant forgets earlier conversation context or instructions
+- instructions: use this queue when the assistant loses relevant session memory, repeats already-settled questions, contradicts previously established facts, or ignores earlier constraints/preferences from the same conversation. Do not use it for ambiguity that was never resolved or context that the user never provided.
+
+### Laziness
+
+- description: the assistant avoids doing the requested work
+- instructions: use this queue when the assistant gives a shallow partial answer, stops early without justification, refuses to inspect provided context, or pushes work back onto the user that the assistant should have done itself. Do not use it when the task is genuinely blocked by missing access, missing context, or policy constraints.
+
+### NSFW
+
+- description: sexual or otherwise not-safe-for-work content appears
+- instructions: use this queue when the trace contains sexual content, explicit erotic material, or other clearly NSFW content that should be reviewed. Do not use it for benign anatomy or health discussion, mild romance, or safety-oriented policy discussion that is not itself NSFW.
+
+### Tool Call Errors
+
+- description: a tool call failed or returned an error state
+- instructions: use this queue when a tool span errored, a tool execution failed, a malformed tool interaction occurred, or the conversation includes a tool-result message that clearly indicates failure. This queue is primarily matched through deterministic rules rather than the low-cost flagger model.
+
+### Resource Outliers
+
+- description: the trace has unusually high latency, cost, or usage
+- instructions: use this queue when latency, token usage, or cost materially exceeds project norms. This queue is primarily matched through deterministic outlier checks against project medians and configured thresholds rather than the low-cost flagger model.
+
+## Population Flows
+
+### User-Managed Manual Queues
+
+- manual queues are populated from the trace dashboard table and the sessions dashboard table
+- the trace dashboard table exposes row checkboxes plus a bulk action to add selected traces to an annotation queue
+- that trace bulk action creates one `annotation_queue_items` row per selected `(queue_id, trace_id)` pair
+- the sessions dashboard table exposes row checkboxes plus a bulk action to add selected sessions to an annotation queue
+- that session bulk action resolves each selected session to its newest trace and creates one `annotation_queue_items` row per `(queue_id, latest_trace_id)` pair
+- new manual queue items are created with `completedAt = null`
+- if the same trace is added to the same queue again, the unique `(organization_id, project_id, queue_id, trace_id)` constraint turns that pair into a no-op rather than duplicating it
+
+### System-Created Manual Queues
+
+- system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by dynamic filter materialization
+- whenever a `TraceMaterialized` domain event is observed for a project, a dedicated system-annotation-queue flagging handler lists all non-deleted `system = true` queues in that project
+- the flagging handler applies each queue's `settings.sampling` first; if sampling does not pass for a queue, that queue is skipped entirely for the current trace
+- among the sampled-in system queues, the flagging handler first evaluates deterministic rules for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
+- for the remaining sampled-in system queues, the flagger uses limited conversation context, such as the last `N` messages, and receives the queue names, descriptions, and instructions for the LLM-classified system queues
+- the flagger returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
+- for every flagged queue, the flagging handler publishes a separate `annotation-queue-validation` task for that `(queue_id, trace_id)` pair
+- that `annotation-queue-validation` worker uses a larger validator/drafter LLM with the full conversation context to validate the match and create the draft annotation in the same call
+- only if that validation/annotation task confirms the match does the system both create the draft annotation and add the trace to the queue
+- system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user
+
+### Dynamic / Live Queues
+
+- a queue becomes dynamic / live when `settings.filter` is present
+- dynamic queues are incremental: they grow as new matching traces arrive
+- whenever a `TraceMaterialized` domain event is observed for a project, a dedicated live-annotation-queue handler lists all non-deleted dynamic queues in that project
+- queue selection order is `settings.filter` first, then `settings.sampling`
+- if both pass, the handler batch inserts the matching `annotation_queue_items` rows for that `(queue_id, trace_id)` pair with `completedAt = null`
+- this live-annotation-queue handler is separate from the live-evaluation handler and does not enqueue per-queue execution tasks
+- when a dynamic queue is created with `settings.filter` and no explicit sampling, `settings.sampling` is initialized from a named constant in `packages/domain/annotation-queues`; the initial default is `10`
+- dynamic queues do not need a full historical rescan on every read; they materialize queue items incrementally as traces arrive
+
+## Canonical Model
+
+```typescript
+type AnnotationQueueSettings = {
+  filter?: string // same future plain-string grammar as EvaluationTrigger.filter
+  sampling?: number // optional percentage [0, 100], used by dynamic queues and by system queues, with defaults seeded on queue creation/provisioning
+}
+```
+
+The main queue row stores:
+
+- `system`
+- `name`
+- `description`
+- `instructions`
+- `settings`
+- `assignees`
+- `deletedAt`
+
+The queue model is backed by two Postgres tables:
+
+- `annotation_queues`: queue definition and review instructions
+- `annotation_queue_items`: materialized queue membership plus completion state
+
+### Queue Definition
+
+`annotation_queues` fields:
+
+- `system`: boolean marker for system-created queues
+- `name`: unique within the project among non-deleted queues
+- `description`: short summary for the queue list
+- `instructions`: reviewer guidance shown in the focused annotation screen and reused as classifier/validator context for system-created queues
+- `settings.filter`: plain-string filter expression for dynamic queues; it stays absent and read-only for system queues
+- `settings.sampling`: optional queue sampling percentage `[0, 100]`; dynamic queues use it after filter matching, and system queues use it before any deterministic or LLM flagging work. When omitted on queue creation/provisioning, initialize it from named constants with initial defaults of `10`
+- `assignees`: array of existing Latitude user ids from the same organization
+- `deletedAt`: soft delete marker
+
+Required Postgres indexes:
+
+- soft-delete-aware unique btree on `(organization_id, project_id, name, deleted_at)` with nulls-not-distinct semantics
+- btree on `(organization_id, project_id, deleted_at, created_at)` for project-scoped queue listing
+- do not add GIN/array indexes on `assignees`, do not add GIN/JSONB indexes on `settings`, and do not add text indexes on `description`, `instructions`, or `settings.filter` until queue filtering/search workloads are clearer
+
+### Queue Items
+
+`annotation_queue_items` materialize the actual review backlog for both manual and dynamic queues.
+
+Fields:
+
+- `queue_id`
+- `trace_id`: queued trace id; when a session is manually queued, store the newest trace id of that session
+- `completedAt`: set when the reviewer marks the item as fully annotated
+
+Creation rules:
+
+- manual queue insertion creates the row from the trace dashboard bulk action
+- manual session insertion creates the row from the sessions dashboard bulk action after resolving the session to its newest trace
+- system-created queue insertion creates the row only after the asynchronous validation/annotation task confirms the match and creates the draft annotation
+- dynamic queue insertion creates the row when a new trace passes the queue filter and then the queue sampling check
+- all paths create queue items with `completedAt = null`
+
+Required Postgres indexes:
+
+- btree on `(organization_id, project_id, queue_id, completed_at, created_at, trace_id)` for progress queries, pending-item navigation, and deterministic review order
+- unique btree on `(organization_id, project_id, queue_id, trace_id)` to avoid duplicate queue membership for the same trace
+
+## Queue Invariants
+
+- queues always work with traces; when session context matters, it is derived from related traces sharing the current trace's `session_id`
+- when a user manually adds a session to a queue, resolve that session to its newest trace and store only that `trace_id`
+- a queue is conceptually `manual` when `settings.filter` is absent
+- a queue is conceptually `dynamic` / `live` when `settings.filter` is present
+- every project has a default set of system-created manual queues from the start
+- system-created default queues are manual queues with `system = true` even though the system inserts their members automatically
+- `system = true` queues keep their canonical `name`, `description`, `instructions`, and `settings.filter` non-editable, but they may still be deleted and their `settings.sampling` may still be edited
+- `settings.filter` is only editable for `system = false` queues
+- `settings.sampling` is valid for dynamic queues and for `system = true` queues
+- when a dynamic queue is created with no explicit sampling, `settings.sampling` is initialized from a named constant with initial default `10%`
+- when a system queue is provisioned, `settings.sampling` is initialized from a named constant with initial default `10%`
+- progress is derived from total queue items versus queue items with `completedAt` set
+- completion is queue-item state, not annotation-row state
+- `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic
+- `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
+- manual queue insertion, system-created queue insertion, and dynamic queue materialization all create queue items with `completedAt = null`
+- system-created queue insertion happens only after a separate full-context validation/annotation task confirms the match and writes the pending-review annotation
+- dynamic queue materialization is incremental on `TraceMaterialized` and evaluates `filter` before `sampling`
+- queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
+
+## Project Page
+
+Each project has an `Annotation Queues` page showing all non-deleted queues.
+
+Table columns:
+
+- `Name`: truncated, with a `system` tag when `system = true` and a `live` tag when `settings.filter` is configured
+- `Description`: truncated to two lines
+- `Progress`: percentage bar showing total queue items versus completed queue items
+- `Assignees`: rounded profile pictures for assigned users
+- `Created at`: queue creation timestamp
+- `Quick actions`: edit and delete
+
+Interactions:
+
+- create button opens the queue creation modal
+- edit opens the queue settings modal
+- delete opens a confirmation modal
+- row click navigates to the focused queue review screen
+- the create modal edits `name`, `description`, `instructions`, `assignees`, and the optional `settings.filter` / `settings.sampling` fields for user-created queues
+- the edit modal keeps `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues while still allowing `assignees` and `settings.sampling` updates
+- when a queue is created with `settings.filter` and no explicit sampling, the UI/server path initializes `settings.sampling` from the named default constant
+- when a system queue is provisioned for a project, the UI/server path initializes `settings.sampling` from the named default constant and later lets users tune that sampling per queue
+- manual queue insertion entry points live in both the trace dashboard table and the sessions dashboard table
+- the list includes both user-created queues and the project's default system-created queues
+
+Pagination:
+
+- limit/offset
+- sorted by `created_at DESC`
+
+## Focused Review Screen
+
+The queue review screen is intentionally optimized for annotation speed.
+
+The left sidebar stays collapsed.
+
+The screen operates on one queued trace at a time.
+
+### Bottom Bar
+
+- add current trace to a dataset
+- show current index position inside the queue, derived from the paginated query position rather than a persisted queue-item position field
+- previous / next queue-item navigation
+- mark current item as fully annotated
+
+Every action must also have a visible hotkey label.
+
+### Main Layout
+
+The screen has three vertical sections:
+
+1. `Metadata`
+   - timestamp
+   - duration
+   - tokens
+   - cost
+   - current related scores bucketed by `source_id`, read from canonical Postgres scores so drafts on the current trace are visible immediately
+2. `Conversation`
+   - full message list for the current trace
+   - message-level or text-range selection to create annotations
+   - persisted highlights after annotation creation
+   - clicking a persisted highlight focuses the matching annotation card
+3. `Annotations`
+   - queue name and instructions at the top
+   - list of annotations for the current trace
+   - button to create a conversation-level annotation
+
+Annotation cards show:
+
+- linked issue name or pending-discovery state
+- annotator name
+- annotation feedback text
+- green thumbs-up when `score.value >= 0.5`
+- red thumbs-down when `score.value < 0.5`
+
+If no queue items remain pending annotation, show a congratulations empty state.
+
+## Relationship To Annotations
+
+Queues do not replace the annotation model:
+
+- annotations are still canonical scores
+- queue provenance is carried through `source_id = <annotation-queue-cuid>` when the annotation came from a queue
+- annotations created directly in managed UI or public API still use `source_id = "UI" | "API"`
+- system-created queue hits create draft annotation scores with `draftedAt` set, so they remain excluded from issue discovery until a human reviews or finalizes them
+- queue completion is tracked on `annotation_queue_items.completedAt`, not on the annotation score row
+
+## Still Pending Precise Definition
+
+- exact dynamic filter grammar shared with `EvaluationTrigger.filter`
+- exact human approval/edit/replacement flow for system-created draft annotations after they appear in queue review
+- moderation/approval flows beyond the core queue review workflow
