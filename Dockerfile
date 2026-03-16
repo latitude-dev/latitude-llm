@@ -56,112 +56,93 @@ FROM source AS build
 ARG VITE_LAT_API_URL
 ARG VITE_LAT_WEB_URL
 
+# Cache buster - force rebuild when package scripts change
+ARG CACHE_BUSTER=1
+
 RUN pnpm build
-
-# ---------------------------------------------------------------------------
-# Production dependencies — shared layer for all apps
-# ---------------------------------------------------------------------------
-FROM base AS prod-deps
-
-# Copy package.json files
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/api/package.json           apps/api/package.json
-COPY apps/web/package.json           apps/web/package.json
-COPY apps/ingest/package.json        apps/ingest/package.json
-COPY apps/workers/package.json       apps/workers/package.json
-COPY apps/workflows/package.json     apps/workflows/package.json
-
-# Copy all package.json files from packages/
-COPY packages/ /tmp/packages-src/
-RUN find /tmp/packages-src -name 'package.json' -not -path '*/node_modules/*' | while read src; do \
-      dest="packages/${src#/tmp/packages-src/}"; \
-      mkdir -p "$(dirname "$dest")"; \
-      cp "$src" "$dest"; \
-    done && rm -rf /tmp/packages-src
-
-# Install only production dependencies, then remove pnpm store to save space
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts --prod && \
-    rm -rf node_modules/.pnpm
 
 # ---------------------------------------------------------------------------
 # Target: api — minimal image with only api app
 # ---------------------------------------------------------------------------
 FROM base AS api
 
-# Copy production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=prod-deps /app/apps/*/node_modules ./
-COPY --from=prod-deps /app/packages ./packages
+# Copy entire app and remove unnecessary files
+COPY --from=build /app ./
 
-# Copy compiled app
-COPY --from=build /app/apps/api/dist ./apps/api/dist
-COPY --from=build /app/apps/api/package.json ./apps/api/package.json
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Remove source files, tests, and other unnecessary files
+# Note: packages are not needed since everything is bundled by tsup
+RUN rm -rf apps/web apps/ingest apps/workers apps/workflows packages && \
+    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
+    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
 
 ENV NODE_ENV=production
 EXPOSE 3001
 
-CMD ["node", "apps/api/dist/server.js"]
+CMD ["node", "apps/api/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: ingest — minimal image with only ingest app
 # ---------------------------------------------------------------------------
 FROM base AS ingest
 
-# Copy production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=prod-deps /app/apps/*/node_modules ./
-COPY --from=prod-deps /app/packages ./packages
+# Copy entire app and remove unnecessary files
+COPY --from=build /app ./
 
-# Copy compiled app
-COPY --from=build /app/apps/ingest/dist ./apps/ingest/dist
-COPY --from=build /app/apps/ingest/package.json ./apps/ingest/package.json
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Remove source files, tests, and other unnecessary files
+# Note: packages are not needed since everything is bundled by tsup
+RUN rm -rf apps/api apps/web apps/workers apps/workflows packages && \
+    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
+    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
 
 ENV NODE_ENV=production
 EXPOSE 3002
 
-CMD ["node", "apps/ingest/dist/server.js"]
+CMD ["node", "apps/ingest/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: workers — minimal image with only workers app
 # ---------------------------------------------------------------------------
 FROM base AS workers
 
-# Copy production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=prod-deps /app/apps/*/node_modules ./
-COPY --from=prod-deps /app/packages ./packages
+# Copy entire app and remove unnecessary files
+COPY --from=build /app ./
 
-# Copy compiled app
-COPY --from=build /app/apps/workers/dist ./apps/workers/dist
-COPY --from=build /app/apps/workers/package.json ./apps/workers/package.json
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Remove source files, tests, and other unnecessary files
+# Note: packages are not needed since everything is bundled by tsup
+RUN rm -rf apps/api apps/web apps/ingest apps/workflows packages && \
+    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
+    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
 
 ENV NODE_ENV=production
 EXPOSE 9090
 
-CMD ["node", "apps/workers/dist/server.js"]
+CMD ["node", "apps/workers/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: web — minimal image with only web app (TanStack Start SSR)
 # ---------------------------------------------------------------------------
 FROM base AS web
 
-# Copy production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=prod-deps /app/apps/*/node_modules ./
-COPY --from=prod-deps /app/packages ./packages
+# Copy entire app and remove unnecessary files
+COPY --from=build /app ./
 
-# Copy compiled app
-COPY --from=build /app/apps/web/dist ./apps/web/dist
-COPY --from=build /app/apps/web/package.json ./apps/web/package.json
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Fix package.json files to point to dist/ instead of src/ for production
+RUN find packages -name 'package.json' -exec sed -i 's/"main": "src\/index.ts"/"main": "dist\/index.js"/g' {} \; && \
+    find packages -name 'package.json' -exec sed -i 's/"types": "src\/index.ts"/"types": "dist\/index.d.ts"/g' {} \;
+
+# Remove source files, tests, and other unnecessary files
+RUN rm -rf apps/api apps/ingest apps/workers apps/workflows && \
+    rm -rf packages/*/src packages/*/scripts packages/*/drizzle && \
+    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
+    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
 
 ENV NODE_ENV=production
 EXPOSE 3000
@@ -188,20 +169,20 @@ RUN apt-get update && \
     chmod +x /usr/local/bin/goose && \
     apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
-# Copy production dependencies
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=prod-deps /app/apps/*/node_modules ./
-COPY --from=prod-deps /app/packages ./packages
+# Copy entire app and remove unnecessary files
+COPY --from=build /app ./
 
-# Copy compiled app
-COPY --from=build /app/apps/api/dist ./apps/api/dist
-COPY --from=build /app/apps/api/package.json ./apps/api/package.json
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+# Fix package.json files to point to dist/ instead of src/ for production
+RUN find packages -name 'package.json' -exec sed -i 's/"main": "src\/index.ts"/"main": "dist\/index.js"/g' {} \; && \
+    find packages -name 'package.json' -exec sed -i 's/"types": "src\/index.ts"/"types": "dist\/index.d.ts"/g' {} \;
 
-# Copy migration scripts and configs
-COPY --from=build /app/packages/platform/db-postgres/drizzle.config.ts ./packages/platform/db-postgres/
-COPY --from=build /app/packages/platform/db-clickhouse/clickhouse ./packages/platform/db-clickhouse/clickhouse
+# Remove source files, tests, and other unnecessary files (keep drizzle for migrations)
+RUN rm -rf apps/web apps/ingest apps/workers apps/workflows && \
+    rm -rf packages/*/src packages/*/scripts && \
+    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
+    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
+    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
 
 ENV NODE_ENV=production
 
