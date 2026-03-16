@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:analyze": "LAT_WEB_BUNDLE_ANALYZE=true vite build",
     "start": "node .output/server/index.mjs",
     "check": "biome check src",
     "format": "biome format --write src",
@@ -59,6 +60,7 @@
     "agentation": "^2.3.2",
     "dotenv": "catalog:",
     "postcss": "^8.5.3",
+    "rollup-plugin-visualizer": "^7.0.1",
     "vite": "catalog:"
   }
 }
