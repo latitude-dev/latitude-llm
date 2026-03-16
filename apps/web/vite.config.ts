@@ -55,7 +55,7 @@ export default defineConfig({
           }
 
           if (id.includes("papaparse")) {
-            return "vendor-papaparsezod"
+            return "vendor-papaparse"
           }
 
           if (id.includes("react-dom") || id.includes("/react/")) {
