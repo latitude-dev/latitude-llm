@@ -86,10 +86,10 @@ web:
     repository: latitude-llm-web
     tag: latest
   
-  # Use root path for health checks (web app doesn't have /api/health)
+  # Health checks use the /api/health endpoint
   livenessProbe:
     httpGet:
-      path: /
+      path: /api/health
       port: http
     initialDelaySeconds: 10
     periodSeconds: 20
@@ -97,7 +97,7 @@ web:
     failureThreshold: 3
   readinessProbe:
     httpGet:
-      path: /
+      path: /api/health
       port: http
     initialDelaySeconds: 5
     periodSeconds: 10
