@@ -14,6 +14,7 @@ import {
 } from "@repo/ui"
 import { formatPrice } from "@repo/utils"
 import { createFileRoute, Link } from "@tanstack/react-router"
+import { useMemo } from "react"
 import { useSpansByTraceCollection } from "../../../../../../../domains/spans/spans.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/traces/$traceId/spans/")({
@@ -22,7 +23,8 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/traces
 
 function TraceSpansPage() {
   const { projectId, traceId } = Route.useParams()
-  const { data: spans } = useSpansByTraceCollection(traceId)
+  const { data: rawSpans } = useSpansByTraceCollection(traceId)
+  const spans = useMemo(() => rawSpans?.slice().sort((a, b) => a.startTime.localeCompare(b.startTime)), [rawSpans])
 
   return (
     <Container>

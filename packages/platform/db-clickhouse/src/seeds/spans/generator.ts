@@ -288,7 +288,7 @@ function makeLlmSpan({
   span.finish_reasons = [finishReason]
   span.input_messages = JSON.stringify(inputMessages)
   span.output_messages = JSON.stringify(outputMessages)
-  span.system_instructions = systemInstructions ?? ""
+  span.system_instructions = systemInstructions ? JSON.stringify([{ type: "text", content: systemInstructions }]) : ""
   span.tool_definitions = toolDefinitions ? JSON.stringify(toolDefinitions.map(toolToDefinition)) : ""
   span.scope_name = modelConfig.scopeName
   span.scope_version = "1.0.0"
@@ -353,12 +353,7 @@ function makeWrapperSpan({ base, name }: { base: SpanBase; name: string }): Span
 }
 
 function toolToDefinition(tool: ToolConfig) {
-  return {
-    type: "function",
-    name: tool.name,
-    description: tool.description,
-    parameters: tool.parameters,
-  }
+  return { name: tool.name, description: tool.description, parameters: tool.parameters }
 }
 
 // ---------------------------------------------------------------------------

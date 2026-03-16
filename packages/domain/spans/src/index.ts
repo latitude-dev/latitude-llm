@@ -1,4 +1,4 @@
-export type { Span, SpanDetail, SpanKind, SpanStatusCode } from "./entities/span.ts"
+export type { Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export type { Trace, TraceDetail, TraceStatus } from "./entities/trace.ts"
 export { decodeOtlpProtobuf } from "./otlp/proto.ts"
 export type { TransformContext } from "./otlp/transform.ts"

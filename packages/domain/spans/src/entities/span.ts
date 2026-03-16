@@ -1,9 +1,15 @@
 import type { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
-import type { GenAIMessage } from "rosetta-ai"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
 export type SpanKind = "unspecified" | "internal" | "server" | "client" | "producer" | "consumer"
 
 export type SpanStatusCode = "unset" | "ok" | "error"
+
+export interface ToolDefinition {
+  readonly name: string
+  readonly description: string
+  readonly parameters: unknown
+}
 
 /**
  * Span — the listing/query shape returned by list and trace queries.
@@ -65,6 +71,6 @@ export interface Span {
 export interface SpanDetail extends Span {
   readonly inputMessages: readonly GenAIMessage[]
   readonly outputMessages: readonly GenAIMessage[]
-  readonly systemInstructions: string
-  readonly toolDefinitions: string
+  readonly systemInstructions: GenAISystem
+  readonly toolDefinitions: readonly ToolDefinition[]
 }

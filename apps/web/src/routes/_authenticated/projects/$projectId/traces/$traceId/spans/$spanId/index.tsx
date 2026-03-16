@@ -137,10 +137,10 @@ function SpanDetailPage() {
 
           <Text.H3>Content Payloads</Text.H3>
           <div className="flex flex-col gap-4">
+            <DataBlock label="System Instructions" data={span.systemInstructions} />
             <DataBlock label="Input Messages" data={span.inputMessages} />
             <DataBlock label="Output Messages" data={span.outputMessages} />
-            <JsonBlock label="System Instructions" value={span.systemInstructions} />
-            <JsonBlock label="Tool Definitions" value={span.toolDefinitions} />
+            <DataBlock label="Tool Definitions" data={span.toolDefinitions} />
           </div>
 
           <Text.H3>Attributes</Text.H3>

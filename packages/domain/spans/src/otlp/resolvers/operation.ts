@@ -1,0 +1,45 @@
+import { fromString } from "./utils.ts"
+
+const OPENINFERENCE_OPERATION: Record<string, string> = {
+  LLM: "chat",
+  EMBEDDING: "embeddings",
+  RETRIEVER: "retrieval",
+  TOOL: "execute_tool",
+  AGENT: "invoke_agent",
+  CHAIN: "chain",
+  RERANKER: "reranker",
+  GUARDRAIL: "guardrail",
+  EVALUATOR: "evaluator",
+  PROMPT: "prompt",
+}
+
+const OPENLLMETRY_OPERATION: Record<string, string> = {
+  completion: "text_completion",
+  embedding: "embeddings",
+  rerank: "reranker",
+  agent: "invoke_agent",
+  tool: "execute_tool",
+}
+
+const VERCEL_OPERATION: Record<string, string> = {
+  "ai.generateText": "chat",
+  "ai.generateText.doGenerate": "chat",
+  "ai.streamText": "chat",
+  "ai.streamText.doStream": "chat",
+  "ai.generateObject": "chat",
+  "ai.generateObject.doGenerate": "chat",
+  "ai.streamObject": "chat",
+  "ai.streamObject.doStream": "chat",
+  "ai.embed": "embeddings",
+  "ai.embed.doEmbed": "embeddings",
+  "ai.embedMany": "embeddings",
+  "ai.embedMany.doEmbed": "embeddings",
+  "ai.toolCall": "execute_tool",
+}
+
+export const operationCandidates = [
+  fromString("gen_ai.operation.name"),
+  fromString("openinference.span.kind", (v) => OPENINFERENCE_OPERATION[v] ?? v.toLowerCase()),
+  fromString("llm.request.type", (v) => OPENLLMETRY_OPERATION[v] ?? v),
+  fromString("ai.operationId", (v) => VERCEL_OPERATION[v] ?? v),
+]
