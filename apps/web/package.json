@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:analyze": "LAT_WEB_BUNDLE_ANALYZE=true vite build",
+    "check:bundle-size": "node ./scripts/check-bundle-size.mjs",
     "start": "node .output/server/index.mjs",
     "check": "biome check src",
     "format": "biome format --write src",
