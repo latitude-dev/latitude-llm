@@ -1,7 +1,7 @@
 import { Button, Text } from "@repo/ui"
 import { ArrowDown, GripVertical } from "lucide-react"
 import { useCallback, useState } from "react"
-import type { ColumnMapping, CsvTransformOptions } from "../../domains/datasets/column-mapping.ts"
+import type { ColumnMapping, CsvTransformOptions } from "../../../../../../domains/datasets/column-mapping.ts"
 
 type Bucket = keyof ColumnMapping
 

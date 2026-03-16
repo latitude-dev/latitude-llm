@@ -1,10 +1,9 @@
-import type { DatasetId, DatasetRowId, DatasetVersionId, OrganizationId } from "@domain/shared"
+import type { DatasetId, DatasetRowId, DatasetVersionId } from "@domain/shared"
 import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 
 export function getRowDetail(args: {
-  readonly organizationId: OrganizationId
   readonly datasetId: DatasetId
   readonly rowId: DatasetRowId
   readonly versionId?: DatasetVersionId
@@ -22,7 +21,6 @@ export function getRowDetail(args: {
     }
 
     return yield* rowRepo.findById({
-      organizationId: args.organizationId,
       datasetId: args.datasetId,
       rowId: args.rowId,
       ...(version !== undefined ? { version } : {}),

@@ -4,11 +4,6 @@ import { FileUp, Loader2, Trash2, Upload } from "lucide-react"
 import Papa from "papaparse"
 import { useCallback, useDeferredValue, useRef, useState } from "react"
 import { z } from "zod"
-import { CsvImportView, type ParsedCsv } from "../../../../../components/datasets/csv-import-view.tsx"
-import { DatasetTable } from "../../../../../components/datasets/dataset-table.tsx"
-import { DeleteRowsModal } from "../../../../../components/datasets/delete-rows-modal.tsx"
-import { RowDetailPanel } from "../../../../../components/datasets/row-detail-panel.tsx"
-import { VersionBadge } from "../../../../../components/datasets/version-badge.tsx"
 import { useDatasetRowsCollection, useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord, DatasetRowRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import {
@@ -18,6 +13,11 @@ import {
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
+import { DatasetTable } from "./-components/dataset-table.tsx"
+import { DeleteRowsModal } from "./-components/delete-rows-modal.tsx"
+import { RowDetailPanel } from "./-components/row-detail-panel.tsx"
+import { VersionBadge } from "./-components/version-badge.tsx"
 
 const datasetSearchSchema = z.object({
   rid: z.string().optional(),
@@ -212,11 +212,15 @@ function CsvMappingView({
     }) => {
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("datasetId", datasetId)
-      formData.append("projectId", projectId)
-      formData.append("mapping", JSON.stringify(mapping))
-      formData.append("options", JSON.stringify(options))
-
+      formData.append(
+        "data",
+        JSON.stringify({
+          datasetId,
+          projectId,
+          mapping,
+          options,
+        }),
+      )
       await saveDatasetCsv({ data: formData })
 
       getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })

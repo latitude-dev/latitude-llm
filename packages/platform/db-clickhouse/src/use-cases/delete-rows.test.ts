@@ -51,7 +51,6 @@ describe("deleteRows", () => {
   const seedRows = async (rowIds: DatasetRowId[]) => {
     await Effect.runPromise(
       datasetRepo.incrementVersion({
-        organizationId: ORG_ID,
         id: DATASET_ID,
         rowsInserted: rowIds.length,
         source: "web",
@@ -60,7 +59,6 @@ describe("deleteRows", () => {
 
     await Effect.runPromise(
       rowRepo.insertBatch({
-        organizationId: ORG_ID,
         datasetId: DATASET_ID,
         version: 1,
         rows: rowIds.map((id) => ({ id, input: { prompt: "test" } })),
@@ -77,7 +75,7 @@ describe("deleteRows", () => {
     )
 
   it("returns early without side effects for empty rowIds", async () => {
-    const result = await run(deleteRows({ organizationId: ORG_ID, datasetId: DATASET_ID, rowIds: [] }))
+    const result = await run(deleteRows({ datasetId: DATASET_ID, rowIds: [] }))
 
     expect(result).toEqual({ versionId: null, version: 0 })
   })
@@ -86,22 +84,22 @@ describe("deleteRows", () => {
     await seedRows([ROW_1])
 
     await expect(
-      run(deleteRows({ organizationId: ORG_ID, datasetId: DATASET_ID, rowIds: [ROW_1, DatasetRowId("missing")] })),
+      run(deleteRows({ datasetId: DATASET_ID, rowIds: [ROW_1, DatasetRowId("missing")] })),
     ).rejects.toBeInstanceOf(RowNotFoundError)
 
-    const { rows } = await Effect.runPromise(rowRepo.list({ organizationId: ORG_ID, datasetId: DATASET_ID }))
+    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: DATASET_ID }))
     expect(rows.some((r) => r.rowId === ROW_1)).toBe(true)
   })
 
   it("deletes rows and increments dataset version", async () => {
     await seedRows([ROW_1, ROW_2])
 
-    const result = await run(deleteRows({ organizationId: ORG_ID, datasetId: DATASET_ID, rowIds: [ROW_1, ROW_2] }))
+    const result = await run(deleteRows({ datasetId: DATASET_ID, rowIds: [ROW_1, ROW_2] }))
 
     expect(result.versionId).toBeDefined()
     expect(result.version).toBeGreaterThan(0)
 
-    const { rows } = await Effect.runPromise(rowRepo.list({ organizationId: ORG_ID, datasetId: DATASET_ID }))
+    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: DATASET_ID }))
     const deletedRowIds = rows.map((r) => r.rowId)
     expect(deletedRowIds).not.toContain(ROW_1)
     expect(deletedRowIds).not.toContain(ROW_2)

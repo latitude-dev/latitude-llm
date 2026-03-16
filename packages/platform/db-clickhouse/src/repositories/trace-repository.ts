@@ -195,6 +195,33 @@ export const TraceRepositoryLive = Layer.effect(
             }),
             Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
           ),
+
+      findByTraceIds: ({ organizationId, projectId, traceIds }) => {
+        if (traceIds.length === 0) return Effect.succeed([])
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT ${DETAIL_SELECT}
+                      FROM traces
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id IN ({traceIds:Array(String)})
+                      GROUP BY organization_id, project_id, trace_id`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                traceIds: Array.from(traceIds) as string[],
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceDetailRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainTraceDetail)),
+            Effect.mapError((error) => toRepositoryError(error, "findByTraceIds")),
+          )
+      },
     }
   }),
 )

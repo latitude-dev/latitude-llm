@@ -28,6 +28,8 @@ export type Common = {
   display?: Display
   userSelect?: boolean
   noWrap?: boolean
+  lineClamp?: number
+  centered?: boolean
   underline?: boolean
   lineThrough?: boolean
   weight?: FontWeight
@@ -63,7 +65,9 @@ const TextAtom = memo(
       capitalize = false,
       whiteSpace = "normal",
       wordBreak = "normal",
+      lineClamp = undefined,
       ellipsis = false,
+      centered = false,
       userSelect = true,
       noWrap = false,
       underline = false,
@@ -107,6 +111,10 @@ const TextAtom = memo(
             [font.family.mono]: false,
             [font.family.sans]: !isDisplay,
             [font.family.display]: isDisplay,
+            "text-center": centered,
+            "line-clamp-1": lineClamp === 1,
+            "line-clamp-3": lineClamp === 3,
+            "leading-5": lineClamp && size === "h6",
           },
         )}
       >

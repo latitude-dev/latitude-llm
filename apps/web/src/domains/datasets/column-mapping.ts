@@ -9,12 +9,14 @@ export interface CsvTransformOptions {
   readonly autoParseJson: boolean
 }
 
+export type MappedFieldValue = Record<string, unknown> | string | number | boolean | null
+
 export function applyMapping(
   row: Record<string, string>,
   mapping: ColumnMapping,
   options: CsvTransformOptions,
-): { input: Record<string, unknown>; output: Record<string, unknown>; metadata: Record<string, unknown> } {
-  const pick = (columns: string[]): Record<string, unknown> => {
+): { input: MappedFieldValue; output: MappedFieldValue; metadata: MappedFieldValue } {
+  const pick = (columns: string[]): MappedFieldValue => {
     const result: Record<string, unknown> = {}
     for (const col of columns) {
       if (!(col in row)) continue
@@ -24,7 +26,7 @@ export function applyMapping(
 
     const firstCol = columns[0]
     if (options.flattenSingleColumn && columns.length === 1 && firstCol && firstCol in result) {
-      return { value: result[firstCol] }
+      return result[firstCol] as MappedFieldValue
     }
 
     return result

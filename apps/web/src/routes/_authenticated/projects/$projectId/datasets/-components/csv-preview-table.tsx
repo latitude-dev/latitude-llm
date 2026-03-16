@@ -1,6 +1,11 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Text } from "@repo/ui"
 import { useMemo } from "react"
-import { applyMapping, type ColumnMapping, type CsvTransformOptions } from "../../domains/datasets/column-mapping.ts"
+import {
+  applyMapping,
+  type ColumnMapping,
+  type CsvTransformOptions,
+  type MappedFieldValue,
+} from "../../../../../../domains/datasets/column-mapping.ts"
 
 const PREVIEW_LIMIT = 50
 
@@ -112,14 +117,12 @@ function ColumnBadge({ label, color }: { label: string; color: "blue" | "green" 
   return <span className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${colors[color]}`}>{label}</span>
 }
 
-function JsonCell({ value }: { value: Record<string, unknown> }) {
+function JsonCell({ value }: { value: MappedFieldValue }) {
+  if (value === null || value === undefined) return <Text.H6 color="foregroundMuted">—</Text.H6>
+  if (typeof value !== "object") {
+    return <Text.H6 className="max-w-64 truncate">{typeof value === "string" ? value : JSON.stringify(value)}</Text.H6>
+  }
   const keys = Object.keys(value)
   if (keys.length === 0) return <Text.H6 color="foregroundMuted">—</Text.H6>
-
-  if (keys.length === 1 && keys[0] === "value") {
-    const v = value.value
-    return <Text.H6 className="max-w-64 truncate">{typeof v === "string" ? v : JSON.stringify(v)}</Text.H6>
-  }
-
   return <pre className="max-w-64 truncate text-xs font-mono text-foreground/80">{JSON.stringify(value, null, 0)}</pre>
 }

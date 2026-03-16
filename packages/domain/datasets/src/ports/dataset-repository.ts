@@ -1,4 +1,4 @@
-import type { DatasetId, DatasetVersionId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Dataset, DatasetNotFoundError, DatasetVersion } from "../entities/dataset.ts"
 
@@ -6,7 +6,6 @@ export class DatasetRepository extends ServiceMap.Service<
   DatasetRepository,
   {
     create(args: {
-      readonly organizationId: OrganizationId
       readonly projectId: ProjectId
       readonly name: string
       readonly description?: string
@@ -16,7 +15,6 @@ export class DatasetRepository extends ServiceMap.Service<
     findById(id: DatasetId): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
 
     listByProject(args: {
-      readonly organizationId: OrganizationId
       readonly projectId: ProjectId
       readonly limit?: number
       readonly offset?: number
@@ -30,13 +28,17 @@ export class DatasetRepository extends ServiceMap.Service<
     softDelete(id: DatasetId): Effect.Effect<void, DatasetNotFoundError | RepositoryError>
 
     incrementVersion(args: {
-      readonly organizationId: OrganizationId
       readonly id: DatasetId
       readonly rowsInserted?: number
       readonly rowsUpdated?: number
       readonly rowsDeleted?: number
       readonly source?: string
     }): Effect.Effect<DatasetVersion, DatasetNotFoundError | RepositoryError>
+
+    decrementVersion(args: {
+      readonly id: DatasetId
+      readonly versionId: DatasetVersionId
+    }): Effect.Effect<void, DatasetNotFoundError | RepositoryError>
 
     resolveVersion(args: {
       readonly datasetId: DatasetId
