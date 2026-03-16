@@ -6,6 +6,7 @@ import { createSignupIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
+import { toUserMessage } from "../lib/errors.ts"
 
 // Latitude logo SVG - actual implementation from legacy
 const LatitudeLogo = (props: React.SVGProps<SVGSVGElement>) => (
@@ -98,7 +99,7 @@ function SignupPage() {
 
       setIsSent(true)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      setError(toUserMessage(err))
     } finally {
       setIsLoading(false)
     }

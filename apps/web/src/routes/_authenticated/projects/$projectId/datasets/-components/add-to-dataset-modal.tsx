@@ -8,6 +8,7 @@ import {
   createDatasetFromTracesMutation,
 } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
 
 interface AddToDatasetModalProps {
   open: boolean
@@ -79,7 +80,7 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add traces to dataset.",
+        description: toUserMessage(error),
       })
     } finally {
       setSubmitting(false)

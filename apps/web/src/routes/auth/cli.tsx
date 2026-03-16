@@ -4,6 +4,7 @@ import { CheckCircle, Loader2, Terminal, XCircle } from "lucide-react"
 import { useState } from "react"
 import { exchangeCliSession } from "../../domains/auth/auth.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
+import { toUserMessage } from "../../lib/errors.ts"
 
 export const Route = createFileRoute("/auth/cli")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -45,7 +46,7 @@ function CliAuthPage() {
     } catch (err) {
       setState({
         step: "error",
-        message: err instanceof Error ? err.message : "Failed to authorize CLI",
+        message: toUserMessage(err),
       })
     }
   }
