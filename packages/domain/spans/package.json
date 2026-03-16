@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/models": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
     "protobufjs": "catalog:",
