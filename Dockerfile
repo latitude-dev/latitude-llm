@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 WORKDIR /app
 
+# Enable pipefail for proper error handling in piped commands
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # ---------------------------------------------------------------------------
 # Install dependencies
 # ---------------------------------------------------------------------------
