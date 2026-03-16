@@ -15,10 +15,12 @@ import { getPostgresPool } from "./clients.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
-const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-
-if (existsSync(envFilePath)) {
-  loadDotenv({ path: envFilePath, quiet: true })
+// Only load .env file if import.meta.url is available (not in CJS bundles)
+if (import.meta.url) {
+  const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
+  if (existsSync(envFilePath)) {
+    loadDotenv({ path: envFilePath, quiet: true })
+  }
 }
 
 const pgPool = getPostgresPool(10)

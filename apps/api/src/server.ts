@@ -16,8 +16,11 @@ import { registerRoutes } from "./routes/index.ts"
 import { logger } from "./utils/logger.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
-const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
+// Only load .env file if import.meta.url is available (not in CJS bundles)
+if (import.meta.url) {
+  const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
+  if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
+}
 
 const app = new OpenAPIHono()
 const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
