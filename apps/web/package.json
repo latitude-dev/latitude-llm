@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && tsc src/server-entry.ts --outDir dist/server --esModuleInterop --target ES2020 --module NodeNext --moduleResolution NodeNext",
+    "start": "node dist/server/server-entry.js",
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",

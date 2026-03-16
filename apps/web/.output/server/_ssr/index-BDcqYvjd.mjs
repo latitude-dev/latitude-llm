@@ -1,0 +1,58 @@
+import { j as jsxRuntimeExports } from "../_libs/react.mjs";
+import { l as TableWithHeader, m as TableBlankSlate } from "./router-DWBQ1rk2.mjs";
+import { C as Container } from "./container-CyYjdg0j.mjs";
+import "../_libs/papaparse.mjs";
+import "stream";
+import "../_libs/tanstack__react-router.mjs";
+import "../_libs/tanstack__router-core.mjs";
+import "../_libs/tiny-invariant.mjs";
+import "../_libs/tanstack__history.mjs";
+import "node:stream/web";
+import "node:stream";
+import "../_libs/tiny-warning.mjs";
+import "../_libs/react-dom.mjs";
+import "util";
+import "crypto";
+import "async_hooks";
+import "../_libs/isbot.mjs";
+import "./index-D2KejSDZ.mjs";
+import "./index.mjs";
+import "node:async_hooks";
+import "../_libs/zod.mjs";
+import "events";
+import "dns";
+import "fs";
+import "net";
+import "tls";
+import "path";
+import "string_decoder";
+import "http";
+import "https";
+import "child_process";
+import "assert";
+import "url";
+import "tty";
+import "buffer";
+import "zlib";
+import "node:os";
+import "os";
+import "node:crypto";
+import "path/posix";
+import "node:util";
+import "fs/promises";
+import "node:fs/promises";
+import "node:process";
+import "node:path";
+import "node:fs";
+import "node:zlib";
+import "../_libs/effect.mjs";
+import "../_libs/tanstack__query-core.mjs";
+import "../_libs/tanstack__react-query.mjs";
+import "./middlewares-BgvwNBR1.mjs";
+import "../_libs/lucide-react.mjs";
+function IssuesPage() {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Container, { className: "pt-14", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TableWithHeader, { title: "Issues", table: /* @__PURE__ */ jsxRuntimeExports.jsx(TableBlankSlate, { description: "Issues will appear here once your agents start reporting them." }) }) });
+}
+export {
+  IssuesPage as component
+};

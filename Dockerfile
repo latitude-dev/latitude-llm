@@ -132,25 +132,31 @@ CMD ["node", "apps/workers/dist/server.cjs"]
 # ---------------------------------------------------------------------------
 FROM base AS web
 
-# Copy entire app and remove unnecessary files
-COPY --from=build /app ./
+# Copy built web app
+COPY --from=build /app/apps/web/dist ./apps/web/dist
+COPY --from=build /app/apps/web/package.json ./apps/web/package.json
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-# Fix package.json files to point to dist/ instead of src/ for production
-RUN find packages -name 'package.json' -exec sed -i 's/"main": "src\/index.ts"/"main": "dist\/index.js"/g' {} \; && \
-    find packages -name 'package.json' -exec sed -i 's/"types": "src\/index.ts"/"types": "dist\/index.d.ts"/g' {} \;
+# Copy packages (needed for workspace dependencies)
+COPY --from=build /app/packages ./packages
 
-# Remove source files, tests, and other unnecessary files
-RUN rm -rf apps/api apps/ingest apps/workers apps/workflows && \
-    rm -rf packages/*/src packages/*/scripts packages/*/drizzle && \
-    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
-    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
+# Reinstall production dependencies (preserves symlinks correctly)
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts --production
+
+# Remove source files from packages (keep only dist)
+RUN find packages -name "src" -type d -exec rm -rf {} + 2>/dev/null || true && \
+    find packages -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
+    find packages -name "tsconfig.json" -delete && \
+    find . -name "*.test.ts" -delete && \
+    find . -name "*.spec.ts" -delete
 
 ENV NODE_ENV=production
 EXPOSE 3000
 
-CMD ["node", "apps/web/dist/server/server.js"]
+CMD ["node", "apps/web/dist/server/server-entry.js"]
 
 # ---------------------------------------------------------------------------
 # Target: migrations — minimal image with migration tools
@@ -173,18 +179,10 @@ RUN apt-get update && \
     chmod +x /usr/local/bin/goose && \
     apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
-# Copy entire app and remove unnecessary files
+# Copy entire app and remove apps not needed for migrations
 COPY --from=build /app ./
 
-# Fix package.json files to point to dist/ instead of src/ for production
-RUN find packages -name 'package.json' -exec sed -i 's/"main": "src\/index.ts"/"main": "dist\/index.js"/g' {} \; && \
-    find packages -name 'package.json' -exec sed -i 's/"types": "src\/index.ts"/"types": "dist\/index.d.ts"/g' {} \;
-
-# Remove source files, tests, and other unnecessary files (keep drizzle for migrations)
-RUN rm -rf apps/web apps/ingest apps/workers apps/workflows && \
-    rm -rf packages/*/src packages/*/scripts && \
-    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
-    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
+RUN rm -rf apps/web apps/api apps/ingest apps/workers apps/workflows && \
     find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
     find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
 

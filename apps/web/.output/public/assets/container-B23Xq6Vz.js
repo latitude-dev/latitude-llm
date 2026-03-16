@@ -1,0 +1,1 @@
+import{j as s,z as n}from"./main-Dx3nfXW5.js";function m({size:x="xl",limitMaxHeight:l=!1,className:a,children:e}){return s.jsx("div",{className:n("mx-auto w-full py-6 px-4 flex flex-col gap-6",a,{"max-h-full":l,"max-w-screen-xl":x==="xl","max-w-screen-2xl":x==="2xl"}),children:e})}export{m as C};
