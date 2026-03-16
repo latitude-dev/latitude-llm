@@ -31,6 +31,7 @@ import type { MemberRecord } from "../../domains/members/members.functions.ts"
 import { inviteMember, removeMember } from "../../domains/members/members.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
+import { toUserMessage } from "../../server/middlewares.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
@@ -152,7 +153,7 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
                       .catch((e) =>
                         toast({
                           variant: "destructive",
-                          description: JSON.parse(e.message).message,
+                          description: toUserMessage(e),
                         }),
                       )
                   }}

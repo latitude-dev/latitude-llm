@@ -1,6 +1,7 @@
 import { Button, Text } from "@repo/ui"
 import { useCallback, useState } from "react"
 import type { ColumnMapping, CsvTransformOptions } from "../../../../../../domains/datasets/column-mapping.ts"
+import { toUserMessage } from "../../../../../../server/middlewares.ts"
 import { ColumnMapper } from "./column-mapper.tsx"
 import { CsvPreviewTable } from "./csv-preview-table.tsx"
 
@@ -37,7 +38,7 @@ export function CsvImportView({ title, subtitle, parsedCsv, onCancel, onSave }: 
     try {
       await onSave({ file: parsedCsv.file, mapping, options })
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save dataset")
+      setError(toUserMessage(e))
     } finally {
       setSaving(false)
     }

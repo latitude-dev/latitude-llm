@@ -11,6 +11,7 @@ import {
   TableSkeleton,
   TableWithHeader,
   Text,
+  useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
@@ -19,6 +20,7 @@ import { useDatasetsCollection } from "../../../../../domains/datasets/datasets.
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
+import { toUserMessage } from "../../../../../server/middlewares.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
   component: DatasetsPage,
@@ -74,6 +76,7 @@ function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; pro
 function DatasetsPage() {
   const { projectId } = Route.useParams()
   const navigate = useNavigate()
+  const { toast } = useToast()
   const datasetsCollection = useDatasetsCollection(projectId)
   const datasets = datasetsCollection.data ?? []
   const isLoading = !datasetsCollection.data
@@ -89,10 +92,12 @@ function DatasetsPage() {
         to: "/projects/$projectId/datasets/$datasetId",
         params: { projectId, datasetId: dataset.id },
       })
+    } catch (err) {
+      toast({ variant: "destructive", description: toUserMessage(err) })
     } finally {
       setCreating(false)
     }
-  }, [projectId, navigate])
+  }, [projectId, navigate, toast])
 
   return (
     <Container className="pt-14">
