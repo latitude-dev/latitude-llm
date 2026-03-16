@@ -8,7 +8,7 @@ import {
   createDatasetFromTracesMutation,
 } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
-import { toUserMessage } from "../../../../../../server/middlewares.ts"
+import { toUserMessage } from "../../../../../../lib/errors.ts"
 
 interface AddToDatasetModalProps {
   open: boolean

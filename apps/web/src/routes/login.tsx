@@ -6,7 +6,7 @@ import { createLoginIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
-import { parseServerError } from "../server/middlewares.ts"
+import { parseServerError } from "../lib/errors.ts"
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({

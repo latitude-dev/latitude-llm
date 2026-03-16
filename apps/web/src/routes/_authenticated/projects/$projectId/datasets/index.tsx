@@ -20,7 +20,7 @@ import { useDatasetsCollection } from "../../../../../domains/datasets/datasets.
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
-import { toUserMessage } from "../../../../../server/middlewares.ts"
+import { toUserMessage } from "../../../../../lib/errors.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
   component: DatasetsPage,

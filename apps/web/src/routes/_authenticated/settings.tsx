@@ -31,7 +31,7 @@ import type { MemberRecord } from "../../domains/members/members.functions.ts"
 import { inviteMember, removeMember } from "../../domains/members/members.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
-import { toUserMessage } from "../../server/middlewares.ts"
+import { toUserMessage } from "../../lib/errors.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
