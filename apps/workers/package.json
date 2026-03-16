@@ -17,6 +17,7 @@
     "@domain/spans": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
+    "@platform/env": "workspace:*",
     "@platform/events-outbox": "workspace:*",
     "@platform/queue-redpanda": "workspace:*",
     "@repo/observability": "workspace:*",

@@ -410,6 +410,9 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../../packages/platform/env
       '@platform/events-outbox':
         specifier: workspace:*
         version: link:../../packages/platform/events-outbox
