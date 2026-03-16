@@ -1,8 +1,13 @@
+import type { Readable } from "node:stream"
 import { Data, Effect } from "effect"
-import type { OrganizationId, ProjectId } from "./id.ts"
+import type { DatasetId, OrganizationId, ProjectId } from "./id.ts"
 
 export interface StorageDiskPort {
   put(key: string, contents: string | Uint8Array): Promise<void>
+  /**
+   * Write a file from a Node Readable stream (e.g. for streaming uploads without buffering).
+   */
+  putStream(key: string, contents: Readable): Promise<void>
   get(key: string): Promise<string>
   delete(key: string): Promise<void>
 }
@@ -15,12 +20,24 @@ export class StorageError extends Data.TaggedError("StorageError")<{
   readonly httpMessage = "Storage operation failed"
 }
 
-type FolderNamespace = "datasets" | "ingest" | "unknown"
+type FolderNamespace = "datasetExports" | "datasets" | "ingest" | "unknown"
 
 type BaseStorageOptions = {
   readonly organizationId: OrganizationId
   readonly content: string | Uint8Array
   readonly extension?: string
+}
+
+type BaseStreamStorageOptions = {
+  readonly organizationId: OrganizationId
+  readonly stream: Readable
+  readonly extension?: string
+}
+
+type DatasetExportsStorageOptions = BaseStorageOptions & {
+  readonly namespace: "datasetExports"
+  readonly projectId: ProjectId
+  readonly datasetId: DatasetId
 }
 
 type DatasetStorageOptions = BaseStorageOptions & {
@@ -33,18 +50,51 @@ type IngestStorageOptions = BaseStorageOptions & {
   readonly projectId: ProjectId
 }
 
-type PutInDiskOptions<N extends FolderNamespace> = N extends "datasets"
-  ? DatasetStorageOptions
-  : N extends "ingest"
-    ? IngestStorageOptions
-    : { readonly namespace: "unknown" } & BaseStorageOptions
+type DatasetExportsStreamOptions = BaseStreamStorageOptions & {
+  readonly namespace: "datasetExports"
+  readonly projectId: ProjectId
+  readonly datasetId: DatasetId
+}
+
+type DatasetsStreamOptions = BaseStreamStorageOptions & {
+  readonly namespace: "datasets"
+  readonly projectId: ProjectId
+}
+
+type IngestStreamOptions = BaseStreamStorageOptions & {
+  readonly namespace: "ingest"
+  readonly projectId: ProjectId
+}
+
+type PutInDiskStreamOptions<N extends FolderNamespace> = N extends "datasetExports"
+  ? DatasetExportsStreamOptions
+  : N extends "datasets"
+    ? DatasetsStreamOptions
+    : N extends "ingest"
+      ? IngestStreamOptions
+      : never
+
+type PutInDiskOptions<N extends FolderNamespace> = N extends "datasetExports"
+  ? DatasetExportsStorageOptions
+  : N extends "datasets"
+    ? DatasetStorageOptions
+    : N extends "ingest"
+      ? IngestStorageOptions
+      : { readonly namespace: "unknown" } & BaseStorageOptions
 
 const projectsPath = (base: string, projectId: ProjectId) => `${base}/projects/${projectId}`
 
-function buildStorageKey<N extends FolderNamespace>(options: PutInDiskOptions<N>): string | undefined {
+type KeyBuildingOptions = PutInDiskOptions<FolderNamespace> | PutInDiskStreamOptions<FolderNamespace>
+
+function buildStorageKey(options: KeyBuildingOptions): string | undefined {
   const basePath = `organizations/${options.organizationId}`
 
   switch (options.namespace) {
+    case "datasetExports": {
+      const exportId = crypto.randomUUID()
+      const ext = options.extension ?? "csv"
+      return `${projectsPath(basePath, options.projectId)}/dataset-exports/${options.datasetId}/${exportId}.${ext}`
+    }
     case "datasets": {
       const id = crypto.randomUUID()
       const ext = options.extension ?? "csv"
@@ -79,5 +129,24 @@ export function putInDisk<N extends FolderNamespace>(
       return fileKey
     },
     catch: (cause) => new StorageError({ cause, operation: "putInDisk" }),
+  })
+}
+
+/**
+ * Writes to object storage from a Node Readable stream. Same key layout as putInDisk.
+ */
+export function putInDiskStream<N extends FolderNamespace>(
+  disk: StorageDiskPort,
+  options: PutInDiskStreamOptions<N>,
+): Effect.Effect<string, StorageError> {
+  return Effect.tryPromise({
+    try: async () => {
+      const fileKey = buildStorageKey(options)
+      if (!fileKey) throw new Error(`Unknown storage namespace: ${options.namespace}`)
+
+      await disk.putStream(fileKey, options.stream)
+      return fileKey
+    },
+    catch: (cause) => new StorageError({ cause, operation: "putInDiskStream" }),
   })
 }

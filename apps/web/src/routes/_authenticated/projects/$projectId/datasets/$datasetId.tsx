@@ -1,19 +1,21 @@
-import { Button, Container, cn, Input, Skeleton, TableSkeleton, Text } from "@repo/ui"
+import { parseDatasetCsv } from "@domain/datasets"
+import { Button, Container, cn, Input, Skeleton, TableSkeleton, Text, toast } from "@repo/ui"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { FileUp, Loader2, Trash2, Upload } from "lucide-react"
-import Papa from "papaparse"
+import { Download, FileUp, Loader2, Trash2, Upload } from "lucide-react"
 import { useCallback, useDeferredValue, useRef, useState } from "react"
 import { z } from "zod"
 import { useDatasetRowsCollection, useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord, DatasetRowRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import {
   deleteRowsMutation,
+  getDatasetDownload,
   saveDatasetCsv,
   updateRowMutation,
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
+import { DatasetNameEdit } from "./-components/dataset-name-edit.tsx"
 import { DatasetTable } from "./-components/dataset-table.tsx"
 import { DeleteRowsModal } from "./-components/delete-rows-modal.tsx"
 import { RowDetailPanel } from "./-components/row-detail-panel.tsx"
@@ -91,17 +93,14 @@ function UploadBlankSlate({ dataset, onParsed }: { dataset: DatasetRecord; onPar
       setError(null)
       try {
         const text = await file.text()
-        const result = Papa.parse<Record<string, string>>(text, {
-          header: true,
-          skipEmptyLines: true,
-        })
+        const { headers, rows } = parseDatasetCsv(text)
 
-        if (!result.meta.fields || result.meta.fields.length === 0) {
+        if (headers.length === 0) {
           setError("Could not detect any columns in this CSV")
           return
         }
 
-        onParsed({ headers: result.meta.fields, rows: result.data, file })
+        onParsed({ headers, rows, file })
       } catch {
         setError("Failed to parse CSV file")
       } finally {
@@ -124,7 +123,7 @@ function UploadBlankSlate({ dataset, onParsed }: { dataset: DatasetRecord; onPar
   return (
     <Container>
       <div className="flex flex-col gap-4 flex-1 min-h-0">
-        <Text.H3 weight="bold">{dataset.name}</Text.H3>
+        <DatasetNameEdit dataset={dataset} />
 
         {error && (
           <div className="flex flex-row items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3">
@@ -266,6 +265,7 @@ function DatasetRowsView({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [currentVersion, setCurrentVersion] = useState(dataset.currentVersion)
   const [currentVersionId, setCurrentVersionId] = useState(dataset.latestVersionId)
+  const [downloading, setDownloading] = useState(false)
   const rowsCollection = useDatasetRowsCollection(datasetId, deferredSearch)
   const rows = rowsCollection.data ?? []
   const isLoading = !rowsCollection.data
@@ -359,12 +359,9 @@ function DatasetRowsView({
     async (file: File) => {
       try {
         const text = await file.text()
-        const result = Papa.parse<Record<string, string>>(text, {
-          header: true,
-          skipEmptyLines: true,
-        })
-        if (!result.meta.fields || result.meta.fields.length === 0) return
-        onImport({ headers: result.meta.fields, rows: result.data, file })
+        const { headers, rows } = parseDatasetCsv(text)
+        if (headers.length === 0) return
+        onImport({ headers, rows, file })
       } catch {
         // Silently ignore parse errors
       }
@@ -372,12 +369,40 @@ function DatasetRowsView({
     [onImport],
   )
 
+  const handleDownload = useCallback(async () => {
+    setDownloading(true)
+    try {
+      const result = await getDatasetDownload({ data: { datasetId } })
+      if (result.type === "enqueued") {
+        toast({
+          title: "Export started",
+          description: "You'll receive an email with a download link when your export is ready.",
+        })
+        return
+      }
+      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8;" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = result.filename
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 0)
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        description: e instanceof Error ? e.message : "Download failed",
+      })
+    } finally {
+      setDownloading(false)
+    }
+  }, [datasetId])
+
   return (
     <Container>
       <div className="flex flex-col gap-4 flex-1 min-h-0">
         <div className="flex flex-row items-center justify-between">
           <div className="flex flex-row items-center gap-3">
-            <Text.H3 weight="bold">{dataset.name}</Text.H3>
+            <DatasetNameEdit dataset={dataset} />
             <VersionBadge versionId={currentVersionId} version={currentVersion} />
           </div>
           <div className="flex flex-row items-center gap-2">
@@ -387,6 +412,16 @@ function DatasetRowsView({
                 <Text.H6 color="white">Delete {selection.selectedCount}</Text.H6>
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownload}
+              disabled={downloading || dataset.currentVersion === 0}
+              isLoading={downloading}
+            >
+              <Download className="h-4 w-4" />
+              <Text.H6>Download</Text.H6>
+            </Button>
             <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
               <FileUp className="h-4 w-4" />
               <Text.H6>Import</Text.H6>

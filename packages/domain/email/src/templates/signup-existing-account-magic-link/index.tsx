@@ -1,6 +1,6 @@
-import { renderEmail } from "../utils/render.ts"
-import { SignupExistingAccountMagicLinkEmail } from "./SignupExistingAccountMagicLinkEmail.tsx"
-import type { RenderedEmail } from "./types.ts"
+import { renderEmail } from "../../utils/render.ts"
+import type { RenderedEmail } from "../types.ts"
+import { SignupExistingAccountMagicLinkEmail } from "./EmailTemplate.tsx"
 
 export interface SignupExistingAccountMagicLinkEmailData {
   readonly userName: string

@@ -1,8 +1,11 @@
 import { Section } from "@react-email/components"
-import { ContainerLayout } from "../components/ContainerLayout.js"
-import { EmailButton } from "../components/EmailButton.js"
-import { EmailText } from "../components/EmailText.js"
-import { emailDesignTokens } from "../tokens/design-system.js"
+// @ts-expect-error TS6133 - React required at runtime for JSX in workers
+// biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
+import React from "react"
+import { ContainerLayout } from "../../components/ContainerLayout.tsx"
+import { EmailButton } from "../../components/EmailButton.tsx"
+import { EmailText } from "../../components/EmailText.tsx"
+import { emailDesignTokens } from "../../tokens/design-system.ts"
 
 interface SignupExistingAccountMagicLinkEmailProps {
   readonly userName: string
@@ -33,3 +36,10 @@ export function SignupExistingAccountMagicLinkEmail({
     </ContainerLayout>
   )
 }
+
+SignupExistingAccountMagicLinkEmail.PreviewProps = {
+  userName: "Alex",
+  magicLinkUrl: "https://app.latitude.so/auth/verify?token=signup-existing-preview",
+} satisfies SignupExistingAccountMagicLinkEmailProps
+
+export default SignupExistingAccountMagicLinkEmail

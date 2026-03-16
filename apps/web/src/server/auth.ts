@@ -21,7 +21,7 @@ const getSessionUserId = (session: unknown): string | null => {
   return typeof id === "string" ? id : null
 }
 
-const getSessionOrganizationId = (session: unknown): string | null => {
+export const getSessionOrganizationId = (session: unknown): string | null => {
   if (typeof session !== "object" || session === null) {
     return null
   }

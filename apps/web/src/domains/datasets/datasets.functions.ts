@@ -1,13 +1,18 @@
 import type { Dataset, DatasetRow } from "@domain/datasets"
 import {
   addTracesToDataset,
+  buildDatasetCsvExport,
+  countRows,
   createDataset,
   createDatasetFromTraces,
+  DATASET_DOWNLOAD_DIRECT_THRESHOLD,
   DatasetRepository,
   deleteRows,
   insertRows,
   listDatasets,
   listRows,
+  parseDatasetCsv,
+  renameDataset,
   updateRow,
 } from "@domain/datasets"
 import {
@@ -21,12 +26,14 @@ import {
 } from "@domain/shared"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { Topics } from "@platform/queue-redpanda"
+import { UnauthorizedError } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
-import Papa from "papaparse"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getStorageDisk } from "../../server/clients.ts"
+import { ensureSession } from "../../domains/sessions/session.functions.ts"
+import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
+import { getClickhouseClient, getKafkaProducer, getPostgresClient, getStorageDisk } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 import { applyMapping } from "./column-mapping.ts"
 
@@ -149,9 +156,94 @@ export const listRowsQuery = createServerFn({ method: "GET" })
     return { rows: result.rows.map(toRowRecord), total: result.total }
   })
 
+export const renameDatasetMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ datasetId: z.string(), name: z.string() }))
+  .handler(async ({ data }): Promise<DatasetRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const dataset = await Effect.runPromise(
+      renameDataset({
+        datasetId: DatasetId(data.datasetId),
+        name: data.name,
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+    )
+
+    return toDatasetRecord(dataset)
+  })
+
+type DatasetDownloadResult = { type: "direct"; csv: string; filename: string } | { type: "enqueued" }
+
+export const getDatasetDownload = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ datasetId: z.string() }))
+  .handler(async ({ data }): Promise<DatasetDownloadResult> => {
+    const session = await ensureSession()
+    const email = session?.user?.email
+    const organizationId = getSessionOrganizationId(session)
+
+    if (!organizationId || !email) {
+      throw new UnauthorizedError({ httpMessage: "Unauthorized" })
+    }
+
+    const orgId = OrganizationId(organizationId)
+    const dataset = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DatasetRepository
+        return yield* repo.findById(DatasetId(data.datasetId))
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+    )
+
+    const total = await Effect.runPromise(
+      countRows({ datasetId: DatasetId(data.datasetId) }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+
+    if (total > DATASET_DOWNLOAD_DIRECT_THRESHOLD) {
+      const producer = await getKafkaProducer()
+
+      const payload = {
+        datasetId: data.datasetId,
+        organizationId,
+        projectId: dataset.projectId,
+        recipientEmail: email,
+      }
+      await producer.send({
+        topic: Topics.datasetExport,
+        messages: [
+          {
+            key: orgId,
+            value: Buffer.from(JSON.stringify(payload), "utf-8"),
+            headers: {
+              "organization-id": payload.organizationId,
+              "project-id": payload.projectId,
+            },
+          },
+        ],
+      })
+      return { type: "enqueued" }
+    }
+
+    const result = await Effect.runPromise(
+      listRows({
+        datasetId: DatasetId(data.datasetId),
+        limit: total,
+        offset: 0,
+      }).pipe(
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+      ),
+    )
+    const { csv, filename } = buildDatasetCsvExport(dataset.name, result.rows)
+    return { type: "direct", csv, filename }
+  })
+
 export const createDatasetMutation = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ projectId: z.string(), name: z.string().min(1) }))
+  .inputValidator(z.object({ projectId: z.string(), name: z.string() }))
   .handler(async ({ data }): Promise<DatasetRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -199,15 +291,15 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
     await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* DatasetRepository
-        return yield* repo.updateFileKey({ id: DatasetId(datasetId), fileKey })
+        return yield* repo.updateFileKey({
+          id: DatasetId(datasetId),
+          fileKey,
+        })
       }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
     )
 
-    const parsed = Papa.parse<Record<string, string>>(content, {
-      header: true,
-      skipEmptyLines: true,
-    })
-    const mappedRows = parsed.data.map((row) => applyMapping(row, mapping, options))
+    const { rows } = parseDatasetCsv(content)
+    const mappedRows = rows.map((row) => applyMapping(row, mapping, options))
 
     if (mappedRows.length === 0) {
       return { version: 0, rowCount: 0 }
@@ -309,10 +401,16 @@ export const addTracesToDatasetMutation = createServerFn({ method: "POST" })
       ),
     )
 
-    return { versionId: result.versionId as string, version: result.version, rowCount: result.rowIds.length }
+    return {
+      versionId: result.versionId as string,
+      version: result.version,
+      rowCount: result.rowIds.length,
+    }
   })
 
-export const createDatasetFromTracesMutation = createServerFn({ method: "POST" })
+export const createDatasetFromTracesMutation = createServerFn({
+  method: "POST",
+})
   .middleware([errorHandler])
   .inputValidator(
     z.object({
@@ -321,28 +419,37 @@ export const createDatasetFromTracesMutation = createServerFn({ method: "POST" }
       traceIds: z.array(z.string()).min(1).max(1000),
     }),
   )
-  .handler(async ({ data }): Promise<{ datasetId: string; versionId: string; version: number; rowCount: number }> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const pgClient = getPostgresClient()
-    const chClient = getClickhouseClient()
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      datasetId: string
+      versionId: string
+      version: number
+      rowCount: number
+    }> => {
+      const { organizationId } = await requireSession()
+      const orgId = OrganizationId(organizationId)
+      const pgClient = getPostgresClient()
+      const chClient = getClickhouseClient()
 
-    const result = await Effect.runPromise(
-      createDatasetFromTraces({
-        projectId: ProjectId(data.projectId),
-        name: data.name,
-        traceIds: data.traceIds.map((id) => TraceId(id)),
-      }).pipe(
-        withPostgres(DatasetRepositoryLive, pgClient, orgId),
-        withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
-        withClickHouse(TraceRepositoryLive, chClient, orgId),
-      ),
-    )
+      const result = await Effect.runPromise(
+        createDatasetFromTraces({
+          projectId: ProjectId(data.projectId),
+          name: data.name,
+          traceIds: data.traceIds.map((id) => TraceId(id)),
+        }).pipe(
+          withPostgres(DatasetRepositoryLive, pgClient, orgId),
+          withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
+          withClickHouse(TraceRepositoryLive, chClient, orgId),
+        ),
+      )
 
-    return {
-      datasetId: result.datasetId as string,
-      versionId: result.versionId as string,
-      version: result.version,
-      rowCount: result.rowIds.length,
-    }
-  })
+      return {
+        datasetId: result.datasetId as string,
+        versionId: result.versionId as string,
+        version: result.version,
+        rowCount: result.rowIds.length,
+      }
+    },
+  )

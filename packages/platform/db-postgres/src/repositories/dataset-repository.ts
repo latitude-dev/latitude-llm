@@ -9,7 +9,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, count, eq, getColumns, isNull, sql } from "drizzle-orm"
+import { and, count, eq, getColumns, isNull, ne, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { datasets, datasetVersions } from "../schema/index.ts"
@@ -119,6 +119,38 @@ export const DatasetRepositoryLive = Layer.effect(
             datasets: rows.map((r) => toDomainDataset(r, r.latestVersionId)),
             total: totalResult[0]?.total ?? 0,
           } as const
+        }),
+
+      existsByNameInProject: (args) =>
+        Effect.gen(function* () {
+          const conditions = and(
+            eq(datasets.organizationId, sqlClient.organizationId),
+            eq(datasets.projectId, args.projectId),
+            eq(datasets.name, args.name),
+            isNull(datasets.deletedAt),
+            ...(args.excludeDatasetId ? [ne(datasets.id, args.excludeDatasetId)] : []),
+          )
+          const [row] = yield* sqlClient.query((db) =>
+            db.select({ one: sql<number>`1` }).from(datasets).where(conditions).limit(1),
+          )
+          return row !== undefined
+        }),
+
+      updateName: (args) =>
+        Effect.gen(function* () {
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ name: args.name })
+              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .returning(),
+          )
+
+          if (!updated) {
+            return yield* new DatasetNotFoundError({ datasetId: args.id })
+          }
+
+          return toDomainDataset(updated)
         }),
 
       updateFileKey: (args) =>

@@ -6,8 +6,7 @@
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "email dev -d ./src/templates",
-    "dev:types": "tsc --watch",
+    "dev": "email dev -d ./src/templates -p 3001",
     "check": "biome check .",
     "typecheck": "tsc --noEmit",
     "check:fix": "biome check --fix ."
@@ -19,7 +18,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@react-email/preview-server": "5.2.9",
     "@types/react": "catalog:",
+    "react-email": "5.2.9",
     "typescript": "^5.7.0"
   }
 }

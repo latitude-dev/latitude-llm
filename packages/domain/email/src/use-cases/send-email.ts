@@ -9,9 +9,9 @@ import type { EmailSendError, EmailSender } from "../ports/email-sender.ts"
  * Can be used for any email type (magic link, notifications, etc.)
  */
 
-export const sendEmail = (deps: { readonly emailSender: EmailSender }) => {
+export const sendEmail = ({ emailSender }: { readonly emailSender: EmailSender }) => {
   return (email: EmailContent): Effect.Effect<void, EmailSendError> => {
-    return deps.emailSender.send({
+    return emailSender.send({
       to: email.to,
       subject: email.subject,
       html: email.html,

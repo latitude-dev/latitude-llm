@@ -25,8 +25,10 @@ import {
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
+import { createKafkaClient, loadKafkaConfig } from "@platform/queue-redpanda"
 import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
+import type { Producer } from "kafkajs"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -34,6 +36,7 @@ let redisClientInstance: RedisClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDisk | undefined
+let kafkaProducer: Promise<Producer> | undefined
 
 interface AuthIntentEmailContext {
   readonly type: AuthIntent["type"]
@@ -110,6 +113,22 @@ export const getStorageDisk = (): StorageDisk => {
     storageDiskInstance = createStorageDisk()
   }
   return storageDiskInstance
+}
+
+export const getKafkaProducer = (): Promise<Producer> => {
+  if (!kafkaProducer) {
+    kafkaProducer = (async () => {
+      const config = Effect.runSync(loadKafkaConfig())
+      const kafka = createKafkaClient(config)
+      const producer = kafka.producer({ allowAutoTopicCreation: false })
+      await producer.connect()
+      return producer
+    })().catch((error) => {
+      kafkaProducer = undefined
+      throw error
+    })
+  }
+  return kafkaProducer
 }
 
 export const getBetterAuth = () => {
