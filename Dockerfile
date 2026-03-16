@@ -155,8 +155,9 @@ CMD ["node", "apps/web/dist/server/server.js"]
 FROM base AS migrations
 
 # Install curl and goose for ClickHouse migrations
+# hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends curl=7.* && \
     GOOSE_VERSION=3.24.1 && \
     ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
