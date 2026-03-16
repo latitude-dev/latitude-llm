@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
     "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src",
@@ -30,5 +30,8 @@
     "hono": "catalog:",
     "kafkajs": "catalog:",
     "tsx": "catalog:"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0"
   }
 }

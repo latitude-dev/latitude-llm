@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
     "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src",
@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
-    "@repo/vitest-config": "workspace:*"
+    "@repo/vitest-config": "workspace:*",
+    "tsup": "^8.0.0"
   }
 }
