@@ -1,0 +1,52 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: latitude
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # Web UI
+      - containerPort: 30000
+        hostPort: 3000
+        protocol: TCP
+      # API
+      - containerPort: 30001
+        hostPort: 3001
+        protocol: TCP
+      # Ingest
+      - containerPort: 30002
+        hostPort: 3002
+        protocol: TCP
+      # Postgres
+      - containerPort: 30432
+        hostPort: 5432
+        protocol: TCP
+      # Redis
+      - containerPort: 30679
+        hostPort: 6379
+        protocol: TCP
+      # ClickHouse HTTP
+      - containerPort: 30812
+        hostPort: 8123
+        protocol: TCP
+      # ClickHouse Native
+      - containerPort: 30900
+        hostPort: 9000
+        protocol: TCP
+      # Redpanda Kafka
+      - containerPort: 30992
+        hostPort: 9092
+        protocol: TCP
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+  - role: worker
+  - role: worker
+containerdConfigPatches:
+  - |
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
+      endpoint = ["http://kind-registry:5000"]
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."kind-registry:5000"]
+      endpoint = ["http://kind-registry:5000"]

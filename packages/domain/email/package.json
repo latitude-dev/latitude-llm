@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
     "dev": "email dev -d ./src/templates",
     "dev:types": "tsc --watch",
     "check": "biome check .",
