@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import type { AuthIntentInfo } from "../../domains/auth/auth.functions.ts"
 import { completeAuthIntent, getAuthIntentInfo } from "../../domains/auth/auth.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
+import { toUserMessage } from "../../lib/errors.ts"
 
 export const Route = createFileRoute("/auth/confirm")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -49,7 +50,7 @@ function AuthConfirmPage() {
         }
       })
       .catch((err) => {
-        setState({ step: "error", message: err instanceof Error ? err.message : "Failed to load" })
+        setState({ step: "error", message: toUserMessage(err) })
       })
   }, [authIntentId, navigate])
 
@@ -68,7 +69,7 @@ function AuthConfirmPage() {
       .catch((err) => {
         setState({
           step: "error",
-          message: err instanceof Error ? err.message : "Failed to complete authentication",
+          message: toUserMessage(err),
         })
       })
   }

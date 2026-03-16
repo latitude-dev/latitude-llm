@@ -1,6 +1,7 @@
 import { Button, Container, Text } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { useSpanDetail } from "../../../../../../../../domains/spans/spans.collection.ts"
+import { toUserMessage } from "../../../../../../../../lib/errors.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/traces/$traceId/spans/$spanId/")({
   component: SpanDetailPage,
@@ -53,7 +54,7 @@ function SpanDetailPage() {
     return (
       <Container>
         <div className="flex flex-col gap-4 py-8">
-          <Text.H4 color="destructive">{error instanceof Error ? error.message : String(error)}</Text.H4>
+          <Text.H4 color="destructive">{toUserMessage(error)}</Text.H4>
           <Link to="/projects/$projectId/traces/$traceId/spans" params={{ projectId, traceId }}>
             <Button variant="outline">Back to spans</Button>
           </Link>
