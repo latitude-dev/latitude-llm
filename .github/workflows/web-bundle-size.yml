@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      NODE_ENV: test
+      NODE_ENV: production
 
     steps:
       - name: Checkout repository
@@ -27,8 +27,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Create .env.development from example
-        run: cp .env.example .env.development
+      - name: Create .env.production from example
+        run: cp .env.example .env.production
 
       - name: Build web app
         run: pnpm --filter @app/web build
