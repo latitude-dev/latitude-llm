@@ -6,7 +6,7 @@
 FROM node:25-slim AS base
 
 # Install pnpm using npm (corepack was removed from Node.js 25)
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* && \
     npm install -g pnpm@10.30.3 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -16,71 +16,108 @@ WORKDIR /app
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # ---------------------------------------------------------------------------
-# Install dependencies
+# Prefetch dependencies into pnpm store (cache-friendly)
 # ---------------------------------------------------------------------------
 FROM base AS deps
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/api/package.json           apps/api/package.json
-COPY apps/web/package.json           apps/web/package.json
-COPY apps/ingest/package.json        apps/ingest/package.json
-COPY apps/workers/package.json       apps/workers/package.json
-COPY apps/workflows/package.json     apps/workflows/package.json
 
-# Copy all package.json files from packages/
-COPY packages/ /tmp/packages-src/
-RUN find /tmp/packages-src -name 'package.json' -not -path '*/node_modules/*' | while read src; do \
-      dest="packages/${src#/tmp/packages-src/}"; \
-      mkdir -p "$(dirname "$dest")"; \
-      cp "$src" "$dest"; \
-    done && rm -rf /tmp/packages-src
-
-# Skip postinstall scripts (chdb and other dev-only native deps)
+# Populate pnpm store from lockfile only for better cache reuse
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts
+    pnpm fetch --frozen-lockfile --ignore-scripts
 
 # ---------------------------------------------------------------------------
 # Source — full repo with deps installed
 # ---------------------------------------------------------------------------
-FROM base AS source
+FROM deps AS source
 
-COPY --from=deps /app/node_modules         ./node_modules
-COPY --from=deps /app/apps/*/node_modules   ./
-COPY --from=deps /app/packages/             ./packages/
 COPY . .
+
+# Skip postinstall scripts (chdb and other dev-only native deps)
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts
+    pnpm install --frozen-lockfile --ignore-scripts --offline
 
 # ---------------------------------------------------------------------------
-# Build — compile all packages
+# Build api — compile api app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
-FROM source AS build
+FROM source AS build-api
+
+RUN pnpm --filter @app/api build
+
+# ---------------------------------------------------------------------------
+# Build ingest — compile ingest app (turbo builds dependencies automatically)
+# ---------------------------------------------------------------------------
+FROM source AS build-ingest
+
+RUN pnpm --filter @app/ingest build
+
+# ---------------------------------------------------------------------------
+# Build workers — compile workers app (turbo builds dependencies automatically)
+# ---------------------------------------------------------------------------
+FROM source AS build-workers
+
+RUN pnpm --filter @app/workers build
+
+# ---------------------------------------------------------------------------
+# Build web — compile web app (turbo builds dependencies automatically)
+# ---------------------------------------------------------------------------
+FROM source AS build-web
 
 ARG VITE_LAT_API_URL
 ARG VITE_LAT_WEB_URL
 
-# Cache buster - force rebuild when package scripts change
-ARG CACHE_BUSTER=1
+RUN pnpm --filter @app/web build
 
-RUN pnpm build
+# ---------------------------------------------------------------------------
+# Build migrations — compile packages needed for migrations
+# ---------------------------------------------------------------------------
+FROM source AS build-migrations
+
+RUN pnpm --filter @platform/db-postgres build && \
+    pnpm --filter @platform/db-clickhouse build && \
+    pnpm --filter @platform/db-weaviate build
+
+# ---------------------------------------------------------------------------
+# Runtime base — shared runtime settings and cleanup helper
+# ---------------------------------------------------------------------------
+FROM base AS runtime
+
+ENV NODE_ENV=production
+
+RUN cat <<'EOF' > /usr/local/bin/prune-workspace && chmod +x /usr/local/bin/prune-workspace
+#!/bin/bash
+set -euo pipefail
+
+find packages -name "src" -type d -exec rm -rf {} + 2>/dev/null || true
+find packages -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete
+find packages -name "tsconfig.json" -delete
+find . -name "*.test.ts" -delete
+find . -name "*.spec.ts" -delete
+EOF
+
+RUN cat <<'EOF' > /usr/local/bin/install-prod-deps && chmod +x /usr/local/bin/install-prod-deps
+#!/bin/bash
+set -euo pipefail
+
+pnpm install --frozen-lockfile --ignore-scripts --production
+EOF
 
 # ---------------------------------------------------------------------------
 # Target: api — minimal image with only api app
 # ---------------------------------------------------------------------------
-FROM base AS api
+FROM runtime AS api
 
-# Copy entire app and remove unnecessary files
-COPY --from=build /app ./
+COPY --from=build-api /app/apps/api/dist ./apps/api/dist
+COPY --from=build-api /app/apps/api/package.json ./apps/api/package.json
+COPY --from=build-api /app/package.json ./package.json
+COPY --from=build-api /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build-api /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-api /app/packages ./packages
 
-# Remove source files, tests, and other unnecessary files
-# Note: packages are not needed since everything is bundled by tsup
-RUN rm -rf apps/web apps/ingest apps/workers apps/workflows packages && \
-    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
-    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    install-prod-deps
 
-ENV NODE_ENV=production
+RUN prune-workspace
 EXPOSE 3001
 
 CMD ["node", "apps/api/dist/server.cjs"]
@@ -88,20 +125,19 @@ CMD ["node", "apps/api/dist/server.cjs"]
 # ---------------------------------------------------------------------------
 # Target: ingest — minimal image with only ingest app
 # ---------------------------------------------------------------------------
-FROM base AS ingest
+FROM runtime AS ingest
 
-# Copy entire app and remove unnecessary files
-COPY --from=build /app ./
+COPY --from=build-ingest /app/apps/ingest/dist ./apps/ingest/dist
+COPY --from=build-ingest /app/apps/ingest/package.json ./apps/ingest/package.json
+COPY --from=build-ingest /app/package.json ./package.json
+COPY --from=build-ingest /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build-ingest /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-ingest /app/packages ./packages
 
-# Remove source files, tests, and other unnecessary files
-# Note: packages are not needed since everything is bundled by tsup
-RUN rm -rf apps/api apps/web apps/workers apps/workflows packages && \
-    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
-    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    install-prod-deps
 
-ENV NODE_ENV=production
+RUN prune-workspace
 EXPOSE 3002
 
 CMD ["node", "apps/ingest/dist/server.cjs"]
@@ -109,59 +145,47 @@ CMD ["node", "apps/ingest/dist/server.cjs"]
 # ---------------------------------------------------------------------------
 # Target: workers — minimal image with only workers app
 # ---------------------------------------------------------------------------
-FROM base AS workers
+FROM runtime AS workers
 
-# Copy entire app and remove unnecessary files
-COPY --from=build /app ./
+COPY --from=build-workers /app/apps/workers/dist ./apps/workers/dist
+COPY --from=build-workers /app/apps/workers/package.json ./apps/workers/package.json
+COPY --from=build-workers /app/package.json ./package.json
+COPY --from=build-workers /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build-workers /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-workers /app/packages ./packages
 
-# Remove source files, tests, and other unnecessary files
-# Note: packages are not needed since everything is bundled by tsup
-RUN rm -rf apps/api apps/web apps/ingest apps/workflows packages && \
-    find . -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
-    find . -name "tsconfig.json" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    install-prod-deps
 
-ENV NODE_ENV=production
+RUN prune-workspace
 EXPOSE 9090
 
 CMD ["node", "apps/workers/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
-# Target: web — minimal image with only web app (TanStack Start SSR)
+# Target: web — minimal image with only web app (TanStack Start SSR with Nitro)
 # ---------------------------------------------------------------------------
-FROM base AS web
+FROM runtime AS web
 
-# Copy built web app
-COPY --from=build /app/apps/web/dist ./apps/web/dist
-COPY --from=build /app/apps/web/package.json ./apps/web/package.json
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-web /app/apps/web/.output ./apps/web/.output
+COPY --from=build-web /app/apps/web/package.json ./apps/web/package.json
+COPY --from=build-web /app/package.json ./package.json
+COPY --from=build-web /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build-web /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-web /app/packages ./packages
 
-# Copy packages (needed for workspace dependencies)
-COPY --from=build /app/packages ./packages
-
-# Reinstall production dependencies (preserves symlinks correctly)
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts --production
+    install-prod-deps
 
-# Remove source files from packages (keep only dist)
-RUN find packages -name "src" -type d -exec rm -rf {} + 2>/dev/null || true && \
-    find packages -name "*.ts" -not -path "*/node_modules/*" -not -name "*.d.ts" -delete && \
-    find packages -name "tsconfig.json" -delete && \
-    find . -name "*.test.ts" -delete && \
-    find . -name "*.spec.ts" -delete
-
-ENV NODE_ENV=production
+RUN prune-workspace
 EXPOSE 3000
 
-CMD ["node", "apps/web/dist/server/server-entry.js"]
+CMD ["node", "apps/web/.output/server/index.mjs"]
 
 # ---------------------------------------------------------------------------
 # Target: migrations — minimal image with migration tools
 # ---------------------------------------------------------------------------
-FROM base AS migrations
+FROM runtime AS migrations
 
 # Install curl and goose for ClickHouse migrations
 # hadolint ignore=DL3008
@@ -179,13 +203,13 @@ RUN apt-get update && \
     chmod +x /usr/local/bin/goose && \
     apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
-# Copy entire app and remove apps not needed for migrations
-COPY --from=build /app ./
+COPY --from=build-migrations /app/packages ./packages
+COPY --from=build-migrations /app/apps/workflows ./apps/workflows
+COPY --from=build-migrations /app/package.json ./package.json
+COPY --from=build-migrations /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build-migrations /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
-RUN rm -rf apps/web apps/api apps/ingest apps/workers apps/workflows && \
-    find . -name "*.test.ts" -not -path "*/node_modules/*" -delete && \
-    find . -name "*.spec.ts" -not -path "*/node_modules/*" -delete
-
-ENV NODE_ENV=production
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --ignore-scripts
 
 CMD ["sh", "-c", "pnpm --filter @platform/db-postgres pg:migrate && pnpm --filter @platform/db-clickhouse ch:up && pnpm --filter @platform/db-weaviate wv:migrate"]
