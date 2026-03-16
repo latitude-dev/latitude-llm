@@ -1,1 +1,0 @@
-import{j as e,E as s,G as t}from"./main-Dx3nfXW5.js";import{C as a}from"./container-B23Xq6Vz.js";function o(){return e.jsx(a,{className:"pt-14",children:e.jsx(s,{title:"Issues",table:e.jsx(t,{description:"Issues will appear here once your agents start reporting them."})})})}export{o as component};

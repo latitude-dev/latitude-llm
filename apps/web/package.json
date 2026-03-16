@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc src/server-entry.ts --outDir dist/server --esModuleInterop --target ES2020 --module NodeNext --moduleResolution NodeNext",
-    "start": "node dist/server/server-entry.js",
+    "build": "vite build",
+    "start": "node .output/server/index.mjs",
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -42,6 +42,7 @@
     "better-auth": "catalog:",
     "effect": "catalog:",
     "lucide-react": "^0.481.0",
+    "nitro": "3.0.260311-beta",
     "papaparse": "^5.5.3",
     "react": "catalog:",
     "react-dom": "catalog:",

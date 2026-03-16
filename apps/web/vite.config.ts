@@ -6,6 +6,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite"
 import react from "@vitejs/plugin-react"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
+import { nitro } from "nitro/vite"
 import { defineConfig } from "vite"
 
 const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
@@ -18,7 +19,7 @@ if (existsSync(envFilePath)) {
 const webPortNumber = Effect.runSync(parseEnv("LAT_WEB_PORT", "number", 3000))
 
 export default defineConfig({
-  plugins: [tanstackStart(), tailwindcss(), react()],
+  plugins: [tanstackStart(), nitro(), tailwindcss(), react()],
   server:
     nodeEnv === "development"
       ? {
