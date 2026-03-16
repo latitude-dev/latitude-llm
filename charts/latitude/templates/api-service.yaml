@@ -12,6 +12,9 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+      {{- if and (eq .Values.api.service.type "NodePort") .Values.api.service.nodePort }}
+      nodePort: {{ .Values.api.service.nodePort }}
+      {{- end }}
   selector:
     {{- include "latitude.selectorLabels" (merge (dict "componentName" "api") .) | nindent 4 }}
 {{- end }}

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { fileURLToPath } from "node:url"
+import { parseEnv } from "@platform/env"
 import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import {
   createKafkaClient,
@@ -15,7 +16,7 @@ import { getPostgresPool } from "./clients.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
-// Only load .env file if import.meta.url is available (not in CJS bundles)
+// Load .env file for local development; skipped in production containers where the file won't exist
 if (import.meta.url) {
   const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
   if (existsSync(envFilePath)) {
@@ -27,7 +28,7 @@ const pgPool = getPostgresPool(10)
 const logger = createLogger("workers")
 let ready = false
 
-const healthPort = Number(process.env.LAT_WORKERS_HEALTH_PORT) || 9090
+const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
 const healthServer = createServer((req, res) => {
   if (req.url === "/health" && req.method === "GET") {
     const status = ready ? 200 : 503
@@ -94,8 +95,8 @@ const workersPromise = initializeWorkers().catch((error) => {
   process.exit(1)
 })
 
-process.on("SIGINT", async () => {
-  logger.info("shutting down workers...")
+const handleShutdown = async (signal: string) => {
+  logger.info(`Received ${signal}, shutting down workers...`)
   ready = false
   healthServer.close()
 
@@ -110,4 +111,7 @@ process.on("SIGINT", async () => {
 
   await pgPool.end()
   process.exit(0)
-})
+}
+
+process.on("SIGTERM", () => handleShutdown("SIGTERM"))
+process.on("SIGINT", () => handleShutdown("SIGINT"))

@@ -16,7 +16,7 @@ import { registerRoutes } from "./routes/index.ts"
 import { logger } from "./utils/logger.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
-// Only load .env file if import.meta.url is available (not in CJS bundles)
+// Load .env file for local development; skipped in production containers where the file won't exist
 if (import.meta.url) {
   const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
   if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })

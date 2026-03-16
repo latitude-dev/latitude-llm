@@ -22,6 +22,10 @@ data:
   LAT_PG_IDLE_TIMEOUT_MS: {{ .Values.config.pgIdleTimeoutMs | quote }}
   LAT_PG_CONNECT_TIMEOUT_MS: {{ .Values.config.pgConnectTimeoutMs | quote }}
 
+  # Redis
+  LAT_REDIS_HOST: {{ required "config.redisHost is required" .Values.config.redisHost | quote }}
+  LAT_REDIS_PORT: {{ .Values.config.redisPort | quote }}
+
   # ClickHouse (application queries via HTTP)
   LAT_CLICKHOUSE_URL: {{ .Values.config.clickhouseUrl | quote }}
   LAT_CLICKHOUSE_USER: {{ .Values.config.clickhouseUser | quote }}

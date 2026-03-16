@@ -84,6 +84,9 @@ FROM base AS runtime
 
 ENV NODE_ENV=production
 
+RUN groupadd -r latitude && useradd -r -g latitude -d /app -s /sbin/nologin latitude && \
+    chown -R latitude:latitude /app
+
 RUN cat <<'EOF' > /usr/local/bin/prune-workspace && chmod +x /usr/local/bin/prune-workspace
 #!/bin/bash
 set -euo pipefail
@@ -118,6 +121,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     install-prod-deps
 
 RUN prune-workspace
+USER latitude
 EXPOSE 3001
 
 CMD ["node", "apps/api/dist/server.cjs"]
@@ -138,6 +142,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     install-prod-deps
 
 RUN prune-workspace
+USER latitude
 EXPOSE 3002
 
 CMD ["node", "apps/ingest/dist/server.cjs"]
@@ -158,6 +163,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     install-prod-deps
 
 RUN prune-workspace
+USER latitude
 EXPOSE 9090
 
 CMD ["node", "apps/workers/dist/server.cjs"]
@@ -178,6 +184,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     install-prod-deps
 
 RUN prune-workspace
+USER latitude
 EXPOSE 3000
 
 CMD ["node", "apps/web/.output/server/index.mjs"]
@@ -190,7 +197,7 @@ FROM runtime AS migrations
 # Install curl and goose for ClickHouse migrations
 # hadolint ignore=DL3008
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl=7.* && \
+    apt-get install -y --no-install-recommends curl && \
     GOOSE_VERSION=3.24.1 && \
     ARCH=$(dpkg --print-architecture) && \
     case "$ARCH" in \
@@ -211,5 +218,7 @@ COPY --from=build-migrations /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --ignore-scripts
+
+USER latitude
 
 CMD ["sh", "-c", "pnpm --filter @platform/db-postgres pg:migrate && pnpm --filter @platform/db-clickhouse ch:up && pnpm --filter @platform/db-weaviate wv:migrate"]

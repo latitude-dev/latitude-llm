@@ -29,10 +29,6 @@ secrets:
   # ClickHouse
   clickhousePassword: "secret"
   
-  # Redis
-  redisHost: "redis.latitude.svc.cluster.local"
-  redisPort: "6379"
-  
   # Generate with: openssl rand -hex 32
   apiKeyEncryptionKey: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
   betterAuthSecret: "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210"
@@ -41,6 +37,10 @@ secrets:
 # Non-secret configuration
 # =============================================================================
 config:
+  # Redis
+  redisHost: "redis.latitude.svc.cluster.local"
+  redisPort: "6379"
+
   # Postgres
   pgPoolMax: "10"
   pgIdleTimeoutMs: "30000"

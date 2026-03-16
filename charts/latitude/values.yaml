@@ -1,3 +1,8 @@
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
 # -- Global settings shared across all services
 global:
   # -- Node environment (production, staging, development)
@@ -48,7 +53,6 @@ global:
 # When set, inline secret values are ignored entirely.
 # Required keys: LAT_DATABASE_URL, LAT_ADMIN_DATABASE_URL,
 #   LAT_CLICKHOUSE_PASSWORD, CLICKHOUSE_PASSWORD (same value, used by goose),
-#   LAT_REDIS_HOST, LAT_REDIS_PORT,
 #   LAT_API_KEY_ENCRYPTION_KEY, LAT_BETTER_AUTH_SECRET
 # Optional keys (depending on features enabled): LAT_WEAVIATE_API_KEY,
 #   LAT_KAFKA_SASL_USERNAME, LAT_KAFKA_SASL_PASSWORD,
@@ -66,10 +70,6 @@ secrets:
   adminDatabaseUrl: ""
   # -- ClickHouse password
   clickhousePassword: ""
-  # -- Redis host
-  redisHost: ""
-  # -- Redis port
-  redisPort: "6379"
   # -- 32-byte hex key for AES-256-GCM API key encryption
   apiKeyEncryptionKey: ""
   # -- Better Auth secret (random 32+ byte hex)
@@ -103,6 +103,10 @@ secrets:
 # Non-secret configuration
 # =============================================================================
 config:
+  # -- Redis connection
+  redisHost: ""
+  redisPort: "6379"
+
   # -- Postgres connection pool settings
   pgPoolMax: "20"
   pgIdleTimeoutMs: "30000"
@@ -502,6 +506,8 @@ migrations:
     tag: ""
   # -- Backoff limit for the migration job
   backoffLimit: 3
+  # -- Maximum time (seconds) for the migration job to complete before it is terminated
+  activeDeadlineSeconds: 600
   # -- Time-to-live after completion (seconds). Set 0 to clean up immediately.
   ttlSecondsAfterFinished: 300
   # -- Resource requests and limits
