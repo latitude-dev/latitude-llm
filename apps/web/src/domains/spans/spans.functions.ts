@@ -1,5 +1,5 @@
 import { NotFoundError, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
-import type { Span, SpanDetail, Trace } from "@domain/spans"
+import type { FieldFilter, Span, SpanDetail, Trace } from "@domain/spans"
 import { SpanRepository, TraceRepository } from "@domain/spans"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
@@ -222,6 +222,53 @@ export const listTracesByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           options: { limit: 200 },
+        })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+
+    return traces.map(serializeTrace)
+  })
+
+const QueryTracesInputSchema = z.object({
+  projectId: z.string(),
+  filters: z.array(z.any()).optional(),
+  limit: z.number().int().min(1).max(1000).optional(),
+  offset: z.number().int().min(0).optional(),
+})
+
+/**
+ * Query traces with optional filters.
+ *
+ * Filters support: string (eq, like with * wildcard), number (eq, gt, gte,
+ * lt, lte, between), date (same operators), array (contains).
+ * Any filter can be negated with `negated: true`.
+ *
+ * Filterable trace fields:
+ *   traceId, status (0=unset,1=ok,2=error), startTime, endTime,
+ *   spanCount, errorCount, durationNs, tokensInput, tokensOutput,
+ *   tokensCacheRead, tokensCacheCreate, tokensReasoning, tokensTotal,
+ *   costInputMicrocents, costOutputMicrocents, costTotalMicrocents,
+ *   tags, models, providers, serviceNames, rootSpanName
+ */
+export const queryTraces = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(QueryTracesInputSchema)
+  .handler(async ({ data }): Promise<TraceRecord[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const filters = (data.filters ?? []) as readonly FieldFilter[]
+
+    const traces = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.findByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          options: {
+            filters,
+            ...(data.limit !== undefined ? { limit: data.limit } : {}),
+            ...(data.offset !== undefined ? { offset: data.offset } : {}),
+          },
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )

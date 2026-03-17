@@ -8,7 +8,7 @@
     "check:fix": "turbo check:fix",
     "hooks": "node ./scripts/setup-git-hooks.mjs",
     "format": "turbo format",
-    "tmux": "tmuxinator start .",
+    "tmux": "session=$(git branch --show-current | tr '/.' '--'); tmuxinator start . --name \"$session\" --no-attach && tmux switch-client -t \"$session\"",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "knip": "knip",

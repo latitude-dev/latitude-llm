@@ -15,7 +15,7 @@
       "project": ["src/**/*.ts"]
     },
     "apps/web": {
-      "entry": ["src/router.tsx", "src/routes/**/*.tsx"],
+      "entry": ["src/router.tsx", "src/routes/**/*.tsx", "src/domains/**/*.ts"],
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
     "packages/domain/email": {
@@ -42,5 +42,5 @@
       "project": []
     }
   },
-  "ignoreBinaries": ["tmuxinator", "email"]
+  "ignoreBinaries": ["tmuxinator", "tmux", "email"]
 }

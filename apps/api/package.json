@@ -18,6 +18,7 @@
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",
     "@hono/swagger-ui": "^0.5.0",
     "@hono/zod-openapi": "^1.0.0",

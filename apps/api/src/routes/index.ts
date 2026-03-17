@@ -10,6 +10,7 @@ import { createApiKeysRoutes } from "./api-keys.ts"
 import { createCliAuthRoutes } from "./cli-auth.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
+import { createTracesRoutes } from "./traces.ts"
 
 interface RoutesContext {
   app: OpenAPIHono
@@ -48,6 +49,7 @@ export const registerRoutes = (context: RoutesContext) => {
 
   protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
   protectedRoutes.route("/:organizationId/api-keys", createApiKeysRoutes())
+  protectedRoutes.route("/:organizationId/projects/:projectId/traces", createTracesRoutes())
 
   v1.route("/organizations", protectedRoutes)
 

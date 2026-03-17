@@ -1,3 +1,4 @@
+import type { FieldFilter } from "@domain/spans"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
@@ -6,6 +7,7 @@ import {
   getSpanDetail,
   listSpansByTrace,
   listTracesByProject,
+  queryTraces,
   type SpanDetailRecord,
   type SpanRecord,
   type TraceRecord,
@@ -69,3 +71,19 @@ export const useTracesCollection = (projectId: string) => {
   const collection = getTracesCollection(projectId)
   return useLiveQuery((q) => q.from({ trace: collection }))
 }
+
+export const useQueryTraces = ({
+  projectId,
+  filters,
+  limit,
+  offset,
+}: {
+  projectId: string
+  filters?: readonly FieldFilter[]
+  limit?: number
+  offset?: number
+}) =>
+  useQuery<TraceRecord[]>({
+    queryKey: ["traces", "query", projectId, filters, limit, offset],
+    queryFn: () => queryTraces({ data: { projectId, filters: filters as FieldFilter[], limit, offset } }),
+  })
