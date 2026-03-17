@@ -26,6 +26,28 @@ export interface DatasetRowRepositoryShape {
     readonly offset?: number
   }): Effect.Effect<{ readonly rows: readonly DatasetRow[]; readonly total: number }, RepositoryError>
 
+  /**
+   * Returns total row count without fetching rows. Use when only the count is needed
+   * (e.g. download threshold check) to avoid loading row data.
+   */
+  count(args: {
+    readonly datasetId: DatasetId
+    readonly version?: number
+    readonly search?: string
+  }): Effect.Effect<number, RepositoryError>
+
+  /**
+   * Returns one page of rows without a total count. Use for export/iteration to avoid
+   * repeated count queries and to process in bounded memory.
+   */
+  listPage(args: {
+    readonly datasetId: DatasetId
+    readonly version?: number
+    readonly search?: string
+    readonly limit: number
+    readonly offset: number
+  }): Effect.Effect<readonly DatasetRow[], RepositoryError>
+
   findById(args: {
     readonly datasetId: DatasetId
     readonly rowId: DatasetRowId

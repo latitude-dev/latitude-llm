@@ -39,6 +39,46 @@ const buildSearchClause = (search: string | undefined) =>
 const buildVersionClause = (version: number | undefined) =>
   version !== undefined ? "AND xact_id <= {version:UInt64}" : ""
 
+/**
+ * List query used by both list (with count) and listPage. Uses offset today;
+ * ORDER BY is deterministic (created_at DESC, row_id DESC) so keyset pagination
+ * can be added later (e.g. WHERE (created_at, row_id) < (cursor_created_at, cursor_row_id)).
+ */
+const buildListDataQuery = (versionClause: string, searchClause: string) => `
+  SELECT
+    row_id,
+    argMax(input, xact_id) AS input,
+    argMax(output, xact_id) AS output,
+    argMax(metadata, xact_id) AS metadata,
+    min(created_at) AS created_at,
+    max(xact_id) AS latest_xact_id
+  FROM dataset_rows
+  WHERE organization_id = {organizationId:String}
+    AND dataset_id = {datasetId:String}
+    ${versionClause}
+  GROUP BY row_id
+  HAVING argMax(_object_delete, xact_id) = false
+    ${searchClause}
+  ORDER BY created_at DESC, row_id DESC
+  LIMIT {limit:UInt32} OFFSET {offset:UInt32}
+`
+
+const buildListCountQuery = (versionClause: string, searchClause: string) => `
+  SELECT count() AS total FROM (
+    SELECT
+      row_id,
+      argMax(input, xact_id) AS input,
+      argMax(output, xact_id) AS output
+    FROM dataset_rows
+    WHERE organization_id = {organizationId:String}
+      AND dataset_id = {datasetId:String}
+      ${versionClause}
+    GROUP BY row_id
+    HAVING argMax(_object_delete, xact_id) = false
+      ${searchClause}
+  )
+`
+
 const INSERT_BATCH_SIZE = 500
 
 export const DatasetRowRepositoryLive = Layer.effect(
@@ -116,41 +156,8 @@ export const DatasetRowRepositoryLive = Layer.effect(
 
           const versionClause = buildVersionClause(args.version)
           const searchClause = buildSearchClause(args.search)
-
-          const dataQuery = `
-            SELECT
-              row_id,
-              argMax(input, xact_id) AS input,
-              argMax(output, xact_id) AS output,
-              argMax(metadata, xact_id) AS metadata,
-              min(created_at) AS created_at,
-              max(xact_id) AS latest_xact_id
-            FROM dataset_rows
-            WHERE organization_id = {organizationId:String}
-              AND dataset_id = {datasetId:String}
-              ${versionClause}
-            GROUP BY row_id
-            HAVING argMax(_object_delete, xact_id) = false
-              ${searchClause}
-            ORDER BY created_at DESC
-            LIMIT {limit:UInt32} OFFSET {offset:UInt32}
-          `
-
-          const countQuery = `
-            SELECT count() AS total FROM (
-              SELECT
-                row_id,
-                argMax(input, xact_id) AS input,
-                argMax(output, xact_id) AS output
-              FROM dataset_rows
-              WHERE organization_id = {organizationId:String}
-                AND dataset_id = {datasetId:String}
-                ${versionClause}
-              GROUP BY row_id
-              HAVING argMax(_object_delete, xact_id) = false
-                ${searchClause}
-            )
-          `
+          const dataQuery = buildListDataQuery(versionClause, searchClause)
+          const countQuery = buildListCountQuery(versionClause, searchClause)
 
           const [dataResult, countResult] = await Promise.all([
             client
@@ -173,6 +180,58 @@ export const DatasetRowRepositoryLive = Layer.effect(
             rows: dataResult.map((row) => toDomainRow(row, args.datasetId)),
             total: Number(countResult[0]?.total ?? 0),
           } as const
+        }),
+
+      count: (args) =>
+        chSqlClient.query(async (client, organizationId) => {
+          const params: Record<string, unknown> = {
+            organizationId,
+            datasetId: args.datasetId,
+          }
+
+          if (args.version !== undefined) params.version = args.version
+          if (args.search) params.search = args.search
+
+          const versionClause = buildVersionClause(args.version)
+          const searchClause = buildSearchClause(args.search)
+          const countQuery = buildListCountQuery(versionClause, searchClause)
+
+          const countResult = await client
+            .query({
+              query: countQuery,
+              query_params: params,
+              format: "JSONEachRow",
+            })
+            .then((r) => r.json<{ total: string }>())
+
+          return Number(countResult[0]?.total ?? 0)
+        }),
+
+      listPage: (args) =>
+        chSqlClient.query(async (client, organizationId) => {
+          const params: Record<string, unknown> = {
+            organizationId,
+            datasetId: args.datasetId,
+            limit: args.limit,
+            offset: args.offset,
+          }
+
+          if (args.version !== undefined) params.version = args.version
+          if (args.search) params.search = args.search
+
+          const versionClause = buildVersionClause(args.version)
+          const searchClause = buildSearchClause(args.search)
+          const dataQuery = buildListDataQuery(versionClause, searchClause)
+
+          const dataResult = await client
+            .query({
+              query: dataQuery,
+              query_params: params,
+              format: "JSONEachRow",
+            })
+            .then((r) => r.json<DatasetRowCH>())
+
+          return dataResult.map((row) => toDomainRow(row, args.datasetId))
         }),
 
       findById: (args) =>

@@ -1,8 +1,8 @@
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import { Disk } from "flydrive"
-import { FSDriver } from "flydrive/drivers/fs"
 import { S3Driver } from "flydrive/drivers/s3"
+import { createFsDriverEffect } from "./fs-url-builder.ts"
 
 export type StorageDriver = "fs" | "s3"
 
@@ -32,13 +32,7 @@ export const createStorageDiskEffect = (): Effect.Effect<StorageDisk> =>
         return new Disk(s3Driver)
       }
 
-      const location = yield* parseEnv("LAT_STORAGE_FS_ROOT", "string")
-
-      const fsDriver = new FSDriver({
-        location,
-        visibility: "private",
-      })
-
+      const fsDriver = yield* createFsDriverEffect()
       return new Disk(fsDriver)
     }),
   )

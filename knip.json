@@ -19,7 +19,8 @@
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
     "packages/domain/email": {
-      "project": ["src/**/*.ts", "src/**/*.tsx"]
+      "project": ["src/**/*.ts", "src/**/*.tsx"],
+      "ignoreDependencies": ["@react-email/preview-server"]
     },
     "packages/domain/*": {
       "project": ["src/**/*.ts"]
@@ -42,5 +43,8 @@
       "project": []
     }
   },
-  "ignoreBinaries": ["tmuxinator", "email"]
+  "ignoreBinaries": ["tmuxinator"],
+  "ignoreIssues": {
+    "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"]
+  }
 }

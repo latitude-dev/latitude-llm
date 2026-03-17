@@ -12,6 +12,9 @@ import {
   Tailwind,
 } from "@react-email/components"
 import type { ReactNode } from "react"
+// @ts-expect-error TS6133 - React required at runtime for JSX in workers
+// biome-ignore lint/correctness/noUnusedImports: React required at runtime for JSX in workers
+import React from "react"
 import { emailDesignTokens, emailTailwindConfig } from "../tokens/design-system.js"
 
 const LATITUDE_LOGO_URL = "https://app.latitude.so/latitude-logo.png"

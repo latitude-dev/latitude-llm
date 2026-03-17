@@ -1,14 +1,32 @@
-export { type Dataset, DatasetNotFoundError, type DatasetVersion } from "./entities/dataset.ts"
+export { DATASET_DOWNLOAD_DIRECT_THRESHOLD } from "./constants.ts"
+export {
+  type Dataset,
+  DatasetNotFoundError,
+  type DatasetVersion,
+  DuplicateDatasetNameError,
+} from "./entities/dataset.ts"
 export { type DatasetRow, type RowFieldValue, RowNotFoundError } from "./entities/dataset-row.ts"
-
+export {
+  buildDatasetCsvExport,
+  type CsvRow,
+  csvExportHeader,
+  type DatasetCsvExport,
+  type ParsedDatasetCsv,
+  parseDatasetCsv,
+  rowsToCsvData,
+  rowsToCsvFragment,
+  sanitizeDatasetFilename,
+} from "./export-csv.ts"
 export { DatasetRepository } from "./ports/dataset-repository.ts"
 export { DatasetRowRepository, type DatasetRowRepositoryShape } from "./ports/dataset-row-repository.ts"
 export { addTracesToDataset, createDatasetFromTraces } from "./use-cases/add-traces-to-dataset.ts"
+export { countRows } from "./use-cases/count-rows.ts"
 export { createDataset } from "./use-cases/create-dataset.ts"
 export { deleteRows } from "./use-cases/delete-rows.ts"
 export { getRowDetail } from "./use-cases/get-row-detail.ts"
 export { insertRows } from "./use-cases/insert-rows.ts"
 export { listDatasets } from "./use-cases/list-datasets.ts"
 export { listRows } from "./use-cases/list-rows.ts"
+export { renameDataset } from "./use-cases/rename-dataset.ts"
 export { updateRow } from "./use-cases/update-row.ts"
 export { buildValidRowId } from "./validate-row-id.ts"

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { fileURLToPath } from "node:url"
+import type { EventEnvelope } from "@domain/events"
 import { parseEnv } from "@platform/env"
 import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import {
@@ -13,10 +14,10 @@ import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { getPostgresPool } from "./clients.ts"
+import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
-// Load .env file for local development; skipped in production containers where the file won't exist
 if (import.meta.url) {
   const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
   if (existsSync(envFilePath)) {
@@ -45,15 +46,8 @@ healthServer.listen(healthPort, () => {
 })
 
 const eventHandler = {
-  handle: (event: {
-    id: string
-    event: { name: string; organizationId: string }
-  }): Effect.Effect<void, unknown, never> =>
-    Effect.gen(function* () {
-      yield* Effect.logInfo(
-        `Processing event ${event.id} of type ${event.event.name} for org ${event.event.organizationId}`,
-      )
-    }),
+  handle: (event: EventEnvelope): Effect.Effect<void, unknown, never> =>
+    Effect.logInfo(`Processing event ${event.id} of type ${event.event.name} for org ${event.event.organizationId}`),
 }
 
 const initializeWorkers = async () => {
@@ -79,15 +73,17 @@ const initializeWorkers = async () => {
   })
 
   const spanIngestionWorker = createSpanIngestionWorker(kafkaClient, `${kafkaConfig.groupId}-span-ingestion`)
+  const datasetExportWorker = createDatasetExportWorker(kafkaClient, `${kafkaConfig.groupId}-dataset-export`)
 
   outboxConsumer.start()
   await redpandaConsumer.start(eventHandler)
   await spanIngestionWorker.start()
+  await datasetExportWorker.start()
 
   ready = true
   logger.info("workers ready - outbox consumer and Redpanda consumer started")
 
-  return { outboxConsumer, redpandaConsumer, spanIngestionWorker }
+  return { outboxConsumer, redpandaConsumer, spanIngestionWorker, datasetExportWorker }
 }
 
 const workersPromise = initializeWorkers().catch((error) => {
@@ -101,10 +97,11 @@ const handleShutdown = async (signal: string) => {
   healthServer.close()
 
   try {
-    const { outboxConsumer, redpandaConsumer, spanIngestionWorker } = await workersPromise
+    const { outboxConsumer, redpandaConsumer, spanIngestionWorker, datasetExportWorker } = await workersPromise
     await outboxConsumer.stop()
     await redpandaConsumer.stop()
     await spanIngestionWorker.stop()
+    await datasetExportWorker.stop()
   } catch (error) {
     logger.error("Error during shutdown (workers may not have started)", error)
   }

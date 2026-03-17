@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
 import { Route as AuthConfirmRouteImport } from './routes/auth/confirm'
 import { Route as AuthCliRouteImport } from './routes/auth/cli'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
@@ -50,6 +51,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const DownloadsExportRoute = DownloadsExportRouteImport.update({
+  id: '/downloads/export',
+  path: '/downloads/export',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthConfirmRoute = AuthConfirmRouteImport.update({
   id: '/auth/confirm',
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/auth/cli': typeof AuthCliRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/downloads/export': typeof DownloadsExportRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -147,6 +154,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/auth/cli': typeof AuthCliRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/downloads/export': typeof DownloadsExportRoute
   '/': typeof AuthenticatedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/auth/cli': typeof AuthCliRoute
   '/auth/confirm': typeof AuthConfirmRoute
+  '/downloads/export': typeof DownloadsExportRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/cli'
     | '/auth/confirm'
+    | '/downloads/export'
     | '/projects/$projectId'
     | '/api/auth/$'
     | '/projects/$projectId/'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/cli'
     | '/auth/confirm'
+    | '/downloads/export'
     | '/'
     | '/api/auth/$'
     | '/projects/$projectId'
@@ -222,6 +233,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/auth/cli'
     | '/auth/confirm'
+    | '/downloads/export'
     | '/_authenticated/'
     | '/_authenticated/projects/$projectId'
     | '/api/auth/$'
@@ -241,6 +253,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   AuthCliRoute: typeof AuthCliRoute
   AuthConfirmRoute: typeof AuthConfirmRoute
+  DownloadsExportRoute: typeof DownloadsExportRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/downloads/export': {
+      id: '/downloads/export'
+      path: '/downloads/export'
+      fullPath: '/downloads/export'
+      preLoaderRoute: typeof DownloadsExportRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/confirm': {
       id: '/auth/confirm'
@@ -423,6 +443,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   AuthCliRoute: AuthCliRoute,
   AuthConfirmRoute: AuthConfirmRoute,
+  DownloadsExportRoute: DownloadsExportRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

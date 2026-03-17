@@ -20,6 +20,17 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly offset?: number
     }): Effect.Effect<{ readonly datasets: readonly Dataset[]; readonly total: number }, RepositoryError>
 
+    existsByNameInProject(args: {
+      readonly projectId: ProjectId
+      readonly name: string
+      readonly excludeDatasetId?: DatasetId
+    }): Effect.Effect<boolean, RepositoryError>
+
+    updateName(args: {
+      readonly id: DatasetId
+      readonly name: string
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
+
     updateFileKey(args: {
       readonly id: DatasetId
       readonly fileKey: string

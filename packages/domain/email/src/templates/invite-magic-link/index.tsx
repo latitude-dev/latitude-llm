@@ -1,6 +1,6 @@
-import { renderEmail } from "../utils/render.ts"
-import { InviteMagicLinkEmail } from "./InviteMagicLinkEmail.tsx"
-import type { RenderedEmail } from "./types.ts"
+import { renderEmail } from "../../utils/render.ts"
+import type { RenderedEmail } from "../types.ts"
+import { InviteMagicLinkEmail } from "./EmailTemplate.tsx"
 
 export interface InviteMagicLinkEmailData {
   readonly inviterName: string

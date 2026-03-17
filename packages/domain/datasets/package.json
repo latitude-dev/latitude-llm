@@ -16,6 +16,10 @@
   "dependencies": {
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "papaparse": "^5.5.3"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.5.2"
   }
 }

@@ -1,0 +1,49 @@
+import { Readable } from "node:stream"
+import { parseEnvOptional } from "@platform/env"
+import { verifySignedExportToken } from "@platform/storage-object"
+import { createFileRoute } from "@tanstack/react-router"
+import { Effect } from "effect"
+import { getStorageDisk } from "../../server/clients.ts"
+
+export const Route = createFileRoute("/downloads/export")({
+  server: {
+    handlers: {
+      GET: async ({ request }: { request: Request }) => {
+        const url = new URL(request.url)
+        const token = url.searchParams.get("token")
+        if (!token) {
+          return new Response("Missing token", { status: 400 })
+        }
+
+        const secret = Effect.runSync(parseEnvOptional("LAT_BETTER_AUTH_SECRET", "string"))
+        if (!secret) {
+          return new Response("Export downloads not configured", {
+            status: 503,
+          })
+        }
+
+        let key: string
+        try {
+          key = await Effect.runPromise(verifySignedExportToken(token, secret))
+        } catch {
+          return new Response("Forbidden", { status: 403 })
+        }
+
+        const disk = getStorageDisk()
+        const nodeStream = await disk.getStream(key).catch(() => null)
+        if (!nodeStream) {
+          return new Response("Not found", { status: 404 })
+        }
+
+        const webStream = Readable.toWeb(nodeStream as Readable) as ReadableStream
+        const filename = key.split("/").at(-1) ?? "export.csv"
+        return new Response(webStream, {
+          headers: {
+            "Content-Type": "text/csv",
+            "Content-Disposition": `attachment; filename="${filename}"`,
+          },
+        })
+      },
+    },
+  },
+})
