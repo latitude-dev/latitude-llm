@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import type { ExternalUserId, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
 export type SpanKind = "unspecified" | "internal" | "server" | "client" | "producer" | "consumer"
@@ -21,6 +21,7 @@ export interface Span {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
   readonly sessionId: SessionId
+  readonly userId: ExternalUserId
   readonly traceId: TraceId
   readonly spanId: SpanId
   readonly parentSpanId: string
@@ -36,6 +37,7 @@ export interface Span {
   readonly traceState: string
   readonly errorType: string
   readonly tags: readonly string[]
+  readonly metadata: Readonly<Record<string, string>>
   readonly eventsJson: string
   readonly linksJson: string
   readonly operation: string

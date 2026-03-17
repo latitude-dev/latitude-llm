@@ -37,6 +37,8 @@ export type DatasetVersionId = Branded<string, "DatasetVersionId">
 export type TraceId = Branded<string, "TraceId">
 export type SpanId = Branded<string, "SpanId">
 export type SessionId = Branded<string, "SessionId">
+/** User identifier from external telemetry instrumentation, not the platform User entity. */
+export type ExternalUserId = Branded<string, "ExternalUserId">
 
 // Factory functions to create branded IDs
 // Use these when creating IDs from strings (e.g., from database rows)
@@ -53,6 +55,7 @@ export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId
 export const DatasetRowId = (value: string): DatasetRowId => value as DatasetRowId
 export const DatasetVersionId = (value: string): DatasetVersionId => value as DatasetVersionId
+export const ExternalUserId = (value: string): ExternalUserId => value as ExternalUserId
 
 /**
  * Generate a unique ID using CUID2.

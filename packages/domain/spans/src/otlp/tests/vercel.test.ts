@@ -20,6 +20,8 @@ const TRACE_ID = "0af7651916cd43dd8448eb211c80319c"
 const SERVICE_NAME = "travel-planner"
 const SCOPE_NAME = "ai"
 const SCOPE_VERSION = "4.0.0"
+const SESSION_ID = "thread-vercel-789"
+const METADATA_OBJ = { region: "eu-west", tier: "premium" }
 
 const SPAN_IDS = {
   agent: "b7ad6b7169203331",
@@ -89,7 +91,11 @@ function buildAgentSpan(): OtlpSpan {
     kind: 1,
     startTimeUnixNano: "1710590400000000000",
     endTimeUnixNano: "1710590410000000000",
-    attributes: [],
+    attributes: [
+      str("session.id", SESSION_ID),
+      str("user.id", "vercel-user-1"),
+      str("metadata", JSON.stringify(METADATA_OBJ)),
+    ],
     status: { code: 1 },
   }
 }
@@ -514,6 +520,34 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
       const llm1Outer = findSpan("llm1Outer")
       expect(llm1Outer.startTime).toEqual(new Date(1710590400500))
       expect(llm1Outer.endTime).toEqual(new Date(1710590401500))
+    })
+  })
+
+  // ── Session, user, tags, metadata ────────────────────
+
+  describe("session, user, tags, metadata", () => {
+    it("resolves sessionId via session.id (OpenInference)", () => {
+      expect(findSpan("agent").sessionId).toBe(SESSION_ID)
+    })
+
+    it("resolves userId via user.id (OpenInference)", () => {
+      expect(findSpan("agent").userId).toBe("vercel-user-1")
+    })
+
+    it("userId is empty on spans without user attributes", () => {
+      expect(findSpan("llm1Inner").userId).toBe("")
+    })
+
+    it("tags default to empty when no tag attributes are present", () => {
+      expect(findSpan("agent").tags).toEqual([])
+    })
+
+    it("resolves metadata from JSON string (OpenInference metadata)", () => {
+      expect(findSpan("agent").metadata).toEqual({ region: "eu-west", tier: "premium" })
+    })
+
+    it("metadata is empty on spans without metadata attributes", () => {
+      expect(findSpan("llm1Inner").metadata).toEqual({})
     })
   })
 

@@ -9,10 +9,12 @@ import {
 import {
   type ChSqlClient,
   DatasetId,
+  ExternalUserId,
   OrganizationId,
   ProjectId,
   RepositoryError,
   SEED_API_KEY_ID,
+  SessionId,
   SpanId,
   TraceId,
 } from "@domain/shared"
@@ -183,14 +185,19 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         costInputMicrocents: 0,
         costOutputMicrocents: 0,
         costTotalMicrocents: 0,
+        sessionId: SessionId(""),
+        userId: ExternalUserId(""),
         tags: [],
+        metadata: {},
         models: [],
         providers: [],
         serviceNames: [],
         rootSpanId: SpanId("span-1"),
         rootSpanName: "root",
+        systemInstructions: [],
         inputMessages: [],
         outputMessages: [],
+        allMessages: [],
       },
     ])
 

@@ -311,6 +311,24 @@ export const ASSISTANT_RESPONSES: readonly string[] = [
   "I found several recent papers on transformer architectures. The most relevant ones cover sparse attention mechanisms and efficient inference...",
 ]
 
+export const USER_IDS: readonly string[] = [
+  "user_2nJk8mPqR1",
+  "user_7xLwB3vKe9",
+  "user_4hTfN6yZs5",
+  "user_9aCdQ2wMr3",
+  "user_1pXjE8bGn7",
+  "user_6sYkH4tLv2",
+  "user_3mWcF9zDa8",
+  "user_8rUeI5xOk4",
+  "user_5gVbJ1qSn6",
+  "user_0dNiL7hCm0",
+  "usr_alice@acme.com",
+  "usr_bob@acme.com",
+  "usr_carol@globex.io",
+  "usr_dave@initech.net",
+  "usr_eve@piedpiper.com",
+]
+
 export const SERVICE_NAMES: readonly string[] = [
   "chat-service",
   "api-gateway",

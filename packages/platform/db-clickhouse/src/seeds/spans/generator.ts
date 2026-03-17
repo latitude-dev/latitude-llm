@@ -8,6 +8,7 @@ import {
   SYSTEM_PROMPTS,
   TOOLS,
   type ToolConfig,
+  USER_IDS,
   USER_PROMPTS,
 } from "./pools.ts"
 
@@ -19,6 +20,7 @@ export type SpanRow = {
   organization_id: string
   project_id: string
   session_id: string
+  user_id: string
   trace_id: string
   span_id: string
   parent_span_id: string
@@ -32,6 +34,7 @@ export type SpanRow = {
   status_message: string
   error_type: string
   tags: string[]
+  metadata: Record<string, string>
   operation: string
   provider: string
   model: string
@@ -191,10 +194,12 @@ type SpanBase = {
   durationMs: number
   serviceName: string
   sessionId: string
+  userId: string
   organizationId: string
   projectId: string
   apiKeyId: string
   tags: string[]
+  metadata: Record<string, string>
 }
 
 function makeBaseSpan(base: SpanBase): SpanRow {
@@ -202,6 +207,7 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     organization_id: base.organizationId,
     project_id: base.projectId,
     session_id: base.sessionId,
+    user_id: base.userId,
     trace_id: base.traceId,
     span_id: randomHex(16),
     parent_span_id: base.parentSpanId,
@@ -215,6 +221,7 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     status_message: "",
     error_type: "",
     tags: base.tags,
+    metadata: base.metadata,
     operation: "",
     provider: "",
     model: "",
@@ -366,8 +373,37 @@ type TraceContext = {
   apiKeyId: string
   startTime: Date
   sessionId: string
+  userId: string
   serviceName: string
   tags: string[]
+  metadata: Record<string, string>
+}
+
+function generateTraceMetadata(): Record<string, string> {
+  if (Math.random() < 0.25) return {}
+
+  const meta: Record<string, string> = {}
+
+  meta.environment = pick(["production", "staging", "development", "preview"])
+  meta.sdk_version = pick(["1.2.0", "1.3.1", "1.4.0-beta.2", "2.0.0"])
+
+  if (Math.random() > 0.3) {
+    meta.app_version = pick(["3.12.0", "3.12.1", "3.13.0-rc.1", "3.11.4"])
+  }
+  if (Math.random() > 0.5) {
+    meta.feature_flag = pick(["new-checkout-v2", "dark-mode", "ai-summary", "premium-tier", "beta-search"])
+  }
+  if (Math.random() > 0.6) {
+    meta.tenant = pick(["acme-corp", "globex", "initech", "hooli", "piedpiper", "umbrella"])
+  }
+  if (Math.random() > 0.7) {
+    meta.region = pick(["us-east-1", "eu-west-1", "ap-southeast-1", "us-west-2"])
+  }
+  if (Math.random() > 0.8) {
+    meta.request_source = pick(["web", "mobile-ios", "mobile-android", "api", "slack-bot", "cli"])
+  }
+
+  return meta
 }
 
 function newTraceCtx(config: TraceConfig): TraceContext {
@@ -377,11 +413,13 @@ function newTraceCtx(config: TraceConfig): TraceContext {
     apiKeyId: config.apiKeyId,
     startTime: randomTimeInWindow(config.timeWindow.from, config.timeWindow.to),
     sessionId: Math.random() > 0.55 ? `session-${randomHex(8)}` : "",
+    userId: Math.random() > 0.4 ? pick(USER_IDS) : "",
     serviceName: pick(SERVICE_NAMES),
     tags:
       Math.random() > 0.6
         ? pickN(["production", "staging", "canary", "experiment-a", "experiment-b"], randInt(1, 2))
         : [],
+    metadata: generateTraceMetadata(),
   }
 }
 
@@ -399,10 +437,12 @@ function toBase(
     durationMs,
     serviceName: ctx.serviceName,
     sessionId: ctx.sessionId,
+    userId: ctx.userId,
     organizationId: ctx.organizationId,
     projectId: ctx.projectId,
     apiKeyId: ctx.apiKeyId,
     tags: ctx.tags,
+    metadata: ctx.metadata,
   }
 }
 

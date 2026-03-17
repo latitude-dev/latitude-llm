@@ -1,5 +1,5 @@
-import type { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
-import type { GenAIMessage } from "rosetta-ai"
+import type { ExternalUserId, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
 export type TraceStatus = "unset" | "ok" | "error"
 
@@ -34,7 +34,10 @@ export interface Trace {
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
 
+  readonly sessionId: SessionId
+  readonly userId: ExternalUserId
   readonly tags: readonly string[]
+  readonly metadata: Readonly<Record<string, string>>
   readonly models: readonly string[]
   readonly providers: readonly string[]
   readonly serviceNames: readonly string[]
@@ -46,9 +49,13 @@ export interface Trace {
 /**
  * TraceDetail — the point-lookup shape returned by single-trace queries.
  *
- * Extends Trace with the first input and last output messages.
+ * Extends Trace with the first input messages, last output messages,
+ * and an `allMessages` array that concatenates the last span's input
+ * with the last output for a full conversation view.
  */
 export interface TraceDetail extends Trace {
+  readonly systemInstructions: GenAISystem
   readonly inputMessages: readonly GenAIMessage[]
   readonly outputMessages: readonly GenAIMessage[]
+  readonly allMessages: readonly GenAIMessage[]
 }
