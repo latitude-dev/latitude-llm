@@ -9,15 +9,8 @@ import {
   CardTitle,
   Checkbox,
   CopyButton,
-  DataTableBody,
-  DataTableCell,
-  DataTableHeader,
-  DataTableHeaderCell,
-  DataTableHeaderRow,
-  DataTableRoot,
-  DataTableRow,
+  DataTable,
   DataTableSearch,
-  DataTableTable,
   DataTableToolbar,
   FormField,
   GitHubIcon,
@@ -167,7 +160,7 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
       <ShowcaseSection
         theme={theme}
         title="Data Table"
-        description="Toolbar (search + action), sortable header, and rows. Virtualization-friendly."
+        description="Composition (DataTable.Root, .Header, .HeaderRow, .HeaderCell, .Body, .Row, .Cell). Optional sortable header, optional header checkbox."
       >
         <div className="flex flex-col gap-4">
           <DataTableToolbar
@@ -178,41 +171,46 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
               </Button>
             }
           />
-          <DataTableRoot>
-            <DataTableTable>
-              <DataTableHeader>
-                <DataTableHeaderRow>
-                  <DataTableHeaderCell indexColumn>#</DataTableHeaderCell>
-                  <DataTableHeaderCell>Name</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Rows</DataTableHeaderCell>
-                </DataTableHeaderRow>
-              </DataTableHeader>
-              <DataTableBody>
-                <DataTableRow>
-                  <DataTableCell indexColumn>
-                    <Text.H6 color="foregroundMuted">1</Text.H6>
-                  </DataTableCell>
-                  <DataTableCell>
-                    <Text.H5>Sample dataset</Text.H5>
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    <Text.H5 color="foregroundMuted">42</Text.H5>
-                  </DataTableCell>
-                </DataTableRow>
-                <DataTableRow>
-                  <DataTableCell indexColumn>
-                    <Text.H6 color="foregroundMuted">2</Text.H6>
-                  </DataTableCell>
-                  <DataTableCell>
-                    <Text.H5>Another dataset</Text.H5>
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    <Text.H5 color="foregroundMuted">0</Text.H5>
-                  </DataTableCell>
-                </DataTableRow>
-              </DataTableBody>
-            </DataTableTable>
-          </DataTableRoot>
+          <DataTable.Root>
+            <DataTable.Header>
+              <DataTable.HeaderRow>
+                <DataTable.HeaderCell checkboxColumn>
+                  <Checkbox aria-label="Select all" />
+                </DataTable.HeaderCell>
+                <DataTable.HeaderCell indexColumn>#</DataTable.HeaderCell>
+                <DataTable.HeaderCell sortable sortDirection="asc" onSort={() => {}}>
+                  Name
+                </DataTable.HeaderCell>
+                <DataTable.HeaderCell align="right">Rows</DataTable.HeaderCell>
+              </DataTable.HeaderRow>
+            </DataTable.Header>
+            <DataTable.Body>
+              <DataTable.Row>
+                <DataTable.Cell checkboxColumn>
+                  <Checkbox aria-label="Select row 1" />
+                </DataTable.Cell>
+                <DataTable.Cell indexColumn>
+                  <Text.H6 color="foregroundMuted">1</Text.H6>
+                </DataTable.Cell>
+                <DataTable.Cell>Sample dataset</DataTable.Cell>
+                <DataTable.Cell align="right">
+                  <Text.H5 color="foregroundMuted">42</Text.H5>
+                </DataTable.Cell>
+              </DataTable.Row>
+              <DataTable.Row>
+                <DataTable.Cell checkboxColumn>
+                  <Checkbox aria-label="Select row 2" />
+                </DataTable.Cell>
+                <DataTable.Cell indexColumn>
+                  <Text.H6 color="foregroundMuted">2</Text.H6>
+                </DataTable.Cell>
+                <DataTable.Cell>Another dataset</DataTable.Cell>
+                <DataTable.Cell align="right">
+                  <Text.H5 color="foregroundMuted">0</Text.H5>
+                </DataTable.Cell>
+              </DataTable.Row>
+            </DataTable.Body>
+          </DataTable.Root>
         </div>
       </ShowcaseSection>
 

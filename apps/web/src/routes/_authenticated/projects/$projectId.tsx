@@ -6,7 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronsUp,
-  History,
+  DatabaseIcon,
   Link2Off,
   MessageSquareText,
   PanelLeft,
@@ -207,7 +207,7 @@ function ProjectSidebar({
             collapsed={collapsed}
           />
           <NavItem
-            icon={History}
+            icon={DatabaseIcon}
             label="Datasets"
             to={`/projects/${projectId}/datasets`}
             active={isDatasetsActive}

@@ -21,6 +21,7 @@ export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { Container, type ContainerSize } from "./components/container/container.tsx"
 export { CopyButton } from "./components/copy-button/index.tsx"
 export {
+  DataTable,
   DataTableBody,
   DataTableCell,
   DataTableHeader,
@@ -29,7 +30,6 @@ export {
   DataTableRoot,
   DataTableRow,
   DataTableSearch,
-  DataTableTable,
   DataTableToolbar,
   type SortDirection,
 } from "./components/data-table/index.ts"

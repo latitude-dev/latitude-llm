@@ -9,7 +9,6 @@ import {
   DataTableRoot,
   DataTableRow,
   DataTableSearch,
-  DataTableTable,
   DataTableToolbar,
   TableBlankSlate,
   TableSkeleton,
@@ -34,47 +33,47 @@ function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; pro
   const navigate = useNavigate()
   return (
     <DataTableRoot>
-      <DataTableTable>
-        <DataTableHeader>
-          <DataTableHeaderRow>
-            <DataTableHeaderCell indexColumn>#</DataTableHeaderCell>
-            <DataTableHeaderCell>Name</DataTableHeaderCell>
-            <DataTableHeaderCell>Description</DataTableHeaderCell>
-            <DataTableHeaderCell>Last updated</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Rows</DataTableHeaderCell>
-          </DataTableHeaderRow>
-        </DataTableHeader>
-        <DataTableBody>
-          {datasets.map((dataset, index) => (
-            <DataTableRow
-              key={dataset.id}
-              className="cursor-pointer"
-              onClick={() =>
-                navigate({
-                  to: "/projects/$projectId/datasets/$datasetId",
-                  params: { projectId, datasetId: dataset.id },
-                })
-              }
-            >
-              <DataTableCell indexColumn>
-                <Text.H6 color="foregroundMuted">{index + 1}</Text.H6>
-              </DataTableCell>
-              <DataTableCell>
-                <Text.H5>{dataset.name}</Text.H5>
-              </DataTableCell>
-              <DataTableCell>
-                <Text.H5 color="foregroundMuted">{dataset.description ?? "—"}</Text.H5>
-              </DataTableCell>
-              <DataTableCell>
-                <Text.H5 color="foregroundMuted">{relativeTime(dataset.updatedAt)}</Text.H5>
-              </DataTableCell>
-              <DataTableCell align="right">
-                <Text.H5 color="foregroundMuted">—</Text.H5>
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-        </DataTableBody>
-      </DataTableTable>
+      <DataTableHeader>
+        <DataTableHeaderRow>
+          <DataTableHeaderCell indexColumn>#</DataTableHeaderCell>
+          <DataTableHeaderCell sortable>Name</DataTableHeaderCell>
+          <DataTableHeaderCell>Description</DataTableHeaderCell>
+          <DataTableHeaderCell>Last updated</DataTableHeaderCell>
+          <DataTableHeaderCell align="right">Rows</DataTableHeaderCell>
+        </DataTableHeaderRow>
+      </DataTableHeader>
+      <DataTableBody>
+        {datasets.map((dataset, index) => (
+          <DataTableRow
+            key={dataset.id}
+            className="cursor-pointer"
+            onClick={() =>
+              navigate({
+                to: "/projects/$projectId/datasets/$datasetId",
+                params: { projectId, datasetId: dataset.id },
+              })
+            }
+          >
+            <DataTableCell indexColumn>
+              <Text.H6 color="foregroundMuted">{index + 1}</Text.H6>
+            </DataTableCell>
+            <DataTableCell>{dataset.name}</DataTableCell>
+            <DataTableCell>
+              <Text.H5 color="foregroundMuted" ellipsis>
+                {dataset.description ?? "—"}
+              </Text.H5>
+            </DataTableCell>
+            <DataTableCell>
+              <Text.H5 color="foregroundMuted" ellipsis>
+                {relativeTime(dataset.updatedAt)}
+              </Text.H5>
+            </DataTableCell>
+            <DataTableCell align="right">
+              <Text.H5 color="foregroundMuted" ellipsis>—</Text.H5>
+            </DataTableCell>
+          </DataTableRow>
+        ))}
+      </DataTableBody>
     </DataTableRoot>
   )
 }

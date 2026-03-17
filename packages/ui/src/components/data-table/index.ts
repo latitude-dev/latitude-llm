@@ -1,4 +1,5 @@
 export {
+  DataTable,
   DataTableBody,
   DataTableCell,
   DataTableHeader,
@@ -6,7 +7,6 @@ export {
   DataTableHeaderRow,
   DataTableRoot,
   DataTableRow,
-  DataTableTable,
   type SortDirection,
 } from "./data-table.tsx"
 export { DataTableSearch } from "./data-table-search.tsx"
