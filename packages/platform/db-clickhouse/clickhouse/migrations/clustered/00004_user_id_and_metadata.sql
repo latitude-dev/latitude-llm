@@ -63,10 +63,10 @@ AS SELECT
 
     argMinIfState(span_id, start_time, parent_span_id = '')         AS root_span_id,
     argMinIfState(name, start_time, parent_span_id = '')            AS root_span_name,
-    argMinIfState(input_messages, start_time, input_messages != '')  AS input_messages,
-    argMaxIfState(input_messages, end_time, output_messages != '')  AS last_input_messages,
-    argMaxIfState(output_messages, end_time, output_messages != '') AS output_messages,
-    argMinIfState(system_instructions, start_time, system_instructions != '') AS system_instructions
+    argMinIfState(spans.input_messages, start_time, spans.input_messages != '')  AS input_messages,
+    argMaxIfState(spans.input_messages, end_time, spans.output_messages != '')  AS last_input_messages,
+    argMaxIfState(spans.output_messages, end_time, spans.output_messages != '') AS output_messages,
+    argMinIfState(spans.system_instructions, start_time, spans.system_instructions != '') AS system_instructions
 
 FROM spans
 GROUP BY organization_id, project_id, trace_id;
