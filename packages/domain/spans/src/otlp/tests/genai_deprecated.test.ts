@@ -18,6 +18,7 @@ function strArray(key: string, values: string[]): OtlpKeyValue {
 // ─── Trace constants ──────────────────────────────────────
 const TRACE_ID = "0af7651916cd43dd8448eb211c80319c"
 const SESSION_ID = "session-travel-123"
+const USER_ID = "user-traceloop-99"
 const SERVICE_NAME = "travel-planner"
 const SCOPE_NAME = "openllmetry-instrumentor"
 const SCOPE_VERSION = "0.9.0"
@@ -81,7 +82,12 @@ function buildAgentSpan(): OtlpSpan {
     kind: 1,
     startTimeUnixNano: "1710590400000000000",
     endTimeUnixNano: "1710590410000000000",
-    attributes: [str("llm.request.type", "agent")],
+    attributes: [
+      str("llm.request.type", "agent"),
+      str("traceloop.association.properties.user_id", USER_ID),
+      str("traceloop.association.properties.env", "staging"),
+      str("traceloop.association.properties.version", "2.1"),
+    ],
     status: { code: 1 },
   }
 }
@@ -402,12 +408,35 @@ describe("TravelPlanner trace — GenAI deprecated / OpenLLMetry", () => {
     })
   })
 
-  // ── Session and response metadata ─────────────────────
+  // ── Session, user, tags, metadata, and response ──────
 
-  describe("session and response metadata", () => {
+  describe("session, user, tags, metadata, and response", () => {
     it("resolves sessionId on LLM spans", () => {
       expect(findSpan("llmCall1").sessionId).toBe(SESSION_ID)
       expect(findSpan("llmCall2").sessionId).toBe(SESSION_ID)
+    })
+
+    it("resolves userId via traceloop.association.properties.user_id", () => {
+      expect(findSpan("agent").userId).toBe(USER_ID)
+    })
+
+    it("userId is empty on spans without user attributes", () => {
+      expect(findSpan("getWeather").userId).toBe("")
+    })
+
+    it("tags default to empty when no tag attributes are present", () => {
+      expect(findSpan("agent").tags).toEqual([])
+    })
+
+    it("resolves metadata from traceloop.association.properties.* (dot-flattened)", () => {
+      const m = findSpan("agent").metadata
+      expect(m.env).toBe("staging")
+      expect(m.version).toBe("2.1")
+      expect(m.user_id).toBe(USER_ID)
+    })
+
+    it("metadata is empty on spans without metadata-producing attributes", () => {
+      expect(findSpan("getWeather").metadata).toEqual({})
     })
 
     it("resolves responseId on LLM spans", () => {

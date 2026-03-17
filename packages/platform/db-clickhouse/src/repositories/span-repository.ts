@@ -2,6 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import {
   ChSqlClient,
   type ChSqlClientShape,
+  ExternalUserId,
   SessionId,
   SpanId,
   OrganizationId as toOrganizationId,
@@ -50,10 +51,10 @@ const INT_TO_STATUS_CODE: Record<number, SpanStatusCode> = {
 
 // Columns selected for list/trace queries (excludes large blob payloads).
 const LIST_COLUMNS = `
-  organization_id, project_id, session_id, trace_id, span_id,
+  organization_id, project_id, session_id, user_id, trace_id, span_id,
   parent_span_id, api_key_id, start_time, end_time,
   name, service_name, kind, status_code, status_message,
-  trace_flags, trace_state, error_type, tags,
+  trace_flags, trace_state, error_type, tags, metadata,
   events_json, links_json,
   operation, provider, model, response_model,
   tokens_input, tokens_output, tokens_cache_read,
@@ -70,6 +71,7 @@ type SpanListRow = {
   organization_id: string
   project_id: string
   session_id: string
+  user_id: string
   trace_id: string
   span_id: string
   parent_span_id: string
@@ -85,6 +87,7 @@ type SpanListRow = {
   trace_state: string
   error_type: string
   tags: string[]
+  metadata: Record<string, string>
   events_json: string
   links_json: string
   operation: string
@@ -123,6 +126,7 @@ const toBaseFields = (row: SpanListRow) => ({
   organizationId: toOrganizationId(row.organization_id),
   projectId: toProjectId(row.project_id),
   sessionId: SessionId(row.session_id),
+  userId: ExternalUserId(row.user_id),
   traceId: toTraceId(row.trace_id),
   spanId: SpanId(row.span_id),
   parentSpanId: row.parent_span_id,
@@ -138,6 +142,7 @@ const toBaseFields = (row: SpanListRow) => ({
   traceState: row.trace_state,
   errorType: row.error_type,
   tags: row.tags,
+  metadata: row.metadata ?? {},
   eventsJson: row.events_json,
   linksJson: row.links_json,
   operation: row.operation,
@@ -208,6 +213,7 @@ const toInsertRow = (span: SpanDetail) => ({
   organization_id: span.organizationId as string,
   project_id: span.projectId as string,
   session_id: span.sessionId,
+  user_id: span.userId,
   trace_id: span.traceId as string,
   span_id: span.spanId as string,
   parent_span_id: span.parentSpanId,
@@ -223,6 +229,7 @@ const toInsertRow = (span: SpanDetail) => ({
   trace_state: span.traceState,
   error_type: span.errorType,
   tags: span.tags,
+  metadata: span.metadata,
   events_json: span.eventsJson,
   links_json: span.linksJson,
   operation: span.operation,

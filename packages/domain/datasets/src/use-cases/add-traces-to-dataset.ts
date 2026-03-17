@@ -8,8 +8,6 @@ import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
 import { createDataset } from "./create-dataset.ts"
 import { insertRows } from "./insert-rows.ts"
 
-// TODO: include `sessionId` and `userId` in metadata and `all_messages` once they are available on the traces
-// materialized view. Also add it to sessions materialized view.
 function mapTraceToRow(t: TraceDetail) {
   return {
     input: t.inputMessages as unknown as Record<string, unknown>,
@@ -23,6 +21,10 @@ function mapTraceToRow(t: TraceDetail) {
       tokensInput: t.tokensInput,
       tokensOutput: t.tokensOutput,
       costTotalMicrocents: t.costTotalMicrocents,
+      sessionId: t.sessionId,
+      userId: t.userId,
+      systemInstructions: t.systemInstructions,
+      allMessages: t.allMessages,
     } as Record<string, unknown>,
   }
 }

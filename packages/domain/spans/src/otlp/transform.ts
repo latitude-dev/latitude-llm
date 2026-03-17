@@ -1,4 +1,4 @@
-import { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import { ExternalUserId, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import { stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -106,6 +106,7 @@ function transformSpan({
     organizationId: OrganizationId(context.organizationId),
     projectId: ProjectId(context.projectId),
     sessionId: SessionId(resolved.sessionId),
+    userId: ExternalUserId(resolved.userId),
     traceId: TraceId(span.traceId),
     spanId: SpanId(span.spanId),
     parentSpanId: span.parentSpanId ?? "",
@@ -120,7 +121,8 @@ function transformSpan({
     traceFlags: span.flags ?? 0,
     traceState: span.traceState ?? "",
     errorType: resolved.errorType,
-    tags: [],
+    tags: resolved.tags,
+    metadata: resolved.metadata,
     eventsJson: span.events?.length ? JSON.stringify(span.events) : "",
     linksJson: span.links?.length ? JSON.stringify(span.links) : "",
     operation: resolved.operation,

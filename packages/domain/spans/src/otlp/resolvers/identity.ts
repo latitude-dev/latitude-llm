@@ -44,3 +44,22 @@ export const responseModelCandidates = [
   fromString("ai.response.model"),
   fromString("llm.model_name"),
 ]
+
+export const sessionIdCandidates = [
+  fromString("gen_ai.conversation.id"), // GenAI semconv
+  fromString("langfuse.session.id"), // Langfuse
+  fromString("session.id"), // OpenInference / Arize Phoenix
+  fromString("traceloop.association.properties.session_id"), // Traceloop / OpenLLMetry
+  fromString("langsmith.trace.session_id"), // LangSmith
+  fromString("session_id"), // Datadog / HoneyHive
+  fromString("wandb.thread_id"), // W&B Weave
+  fromString("ai.telemetry.metadata.threadId"), // Opik (via Vercel AI SDK metadata)
+]
+
+export const userIdCandidates = [
+  fromString("langfuse.user.id"), // Langfuse
+  fromString("user.id"), // OpenInference / Arize Phoenix
+  fromString("traceloop.association.properties.user_id"), // Traceloop / OpenLLMetry
+  fromString("langsmith.metadata.user_id"), // LangSmith
+  fromString("gen_ai.request.user"), // OpenLIT (mirrors OpenAI API user param)
+]

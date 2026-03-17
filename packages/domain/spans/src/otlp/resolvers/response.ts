@@ -11,5 +11,3 @@ export const finishReasonsCandidates = [
   fromStringArray("gen_ai.response.finish_reasons"),
   fromString<string[]>("ai.response.finishReason", (v) => [VERCEL_FINISH_REASON[v] ?? v]),
 ]
-
-export const sessionIdCandidates = [fromString("gen_ai.conversation.id"), fromString("session.id")]

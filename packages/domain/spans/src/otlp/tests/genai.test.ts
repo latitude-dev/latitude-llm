@@ -32,6 +32,9 @@ function structuredAttr(key: string, value: unknown): OtlpKeyValue {
 // ─── Trace constants ──────────────────────────────────────
 const TRACE_ID = "0af7651916cd43dd8448eb211c80319c"
 const SESSION_ID = "session-travel-123"
+const USER_ID = "user-42"
+const TAGS = ["production", "travel"]
+const METADATA_VALUE = "staging"
 const SERVICE_NAME = "travel-planner"
 const SCOPE_NAME = "genai-instrumentor"
 const SCOPE_VERSION = "1.0.0"
@@ -105,7 +108,13 @@ function buildAgentSpan(): OtlpSpan {
     kind: 1,
     startTimeUnixNano: "1710590400000000000",
     endTimeUnixNano: "1710590410000000000",
-    attributes: [str("gen_ai.operation.name", "invoke_agent")],
+    attributes: [
+      str("gen_ai.operation.name", "invoke_agent"),
+      str("langfuse.user.id", USER_ID),
+      strArray("langfuse.trace.tags", TAGS),
+      str("langfuse.trace.metadata.environment", METADATA_VALUE),
+      str("langfuse.trace.metadata.team", "platform"),
+    ],
     status: { code: 1 },
   }
 }
@@ -467,13 +476,38 @@ describe("TravelPlanner trace — GenAI v1.37+ (current)", () => {
     })
   })
 
-  // ── Session and response metadata ─────────────────────
+  // ── Session, user, tags, metadata, and response ──────
 
-  describe("session and response metadata", () => {
+  describe("session, user, tags, metadata, and response", () => {
     it("resolves sessionId on LLM spans", () => {
       expect(findSpan("llmCall1").sessionId).toBe(SESSION_ID)
       expect(findSpan("llmCall2").sessionId).toBe(SESSION_ID)
       expect(findSpan("llmCall3").sessionId).toBe(SESSION_ID)
+    })
+
+    it("resolves userId on agent span (langfuse.user.id)", () => {
+      expect(findSpan("agent").userId).toBe(USER_ID)
+    })
+
+    it("userId is empty on spans that don't carry it", () => {
+      expect(findSpan("getWeather").userId).toBe("")
+    })
+
+    it("resolves tags on agent span (langfuse.trace.tags)", () => {
+      expect(findSpan("agent").tags).toEqual(TAGS)
+    })
+
+    it("tags is empty on spans that don't carry them", () => {
+      expect(findSpan("getWeather").tags).toEqual([])
+    })
+
+    it("resolves metadata from dot-flattened langfuse.trace.metadata.*", () => {
+      const m = findSpan("agent").metadata
+      expect(m).toEqual({ environment: METADATA_VALUE, team: "platform" })
+    })
+
+    it("metadata is empty on spans without metadata attributes", () => {
+      expect(findSpan("getWeather").metadata).toEqual({})
     })
 
     it("resolves responseId on LLM spans", () => {

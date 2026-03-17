@@ -2,6 +2,8 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import {
   ChSqlClient,
   type ChSqlClientShape,
+  ExternalUserId,
+  SessionId,
   SpanId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
@@ -11,7 +13,7 @@ import {
 import type { Trace, TraceDetail, TraceStatus } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
-import type { GenAIMessage } from "rosetta-ai"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
 const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
   date ? date.toISOString().replace("Z", "") : undefined
@@ -42,7 +44,10 @@ const LIST_SELECT = `
   sum(cost_input_microcents)   AS cost_input_microcents,
   sum(cost_output_microcents)  AS cost_output_microcents,
   sum(cost_total_microcents)   AS cost_total_microcents,
+  argMaxIfMerge(session_id)    AS session_id,
+  argMaxIfMerge(user_id)       AS user_id,
   groupUniqArrayArray(tags)    AS tags,
+  maxMap(metadata)              AS metadata,
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
   groupUniqArrayIfMerge(service_names) AS service_names,
@@ -51,8 +56,10 @@ const LIST_SELECT = `
 `
 
 const DETAIL_SELECT = `${LIST_SELECT},
-  argMinIfMerge(input_messages)  AS input_messages,
-  argMaxIfMerge(output_messages) AS output_messages
+  argMinIfMerge(input_messages)        AS input_messages,
+  argMaxIfMerge(last_input_messages)   AS last_input_messages,
+  argMaxIfMerge(output_messages)       AS output_messages,
+  argMinIfMerge(system_instructions)   AS system_instructions
 `
 
 type TraceListRow = {
@@ -74,7 +81,10 @@ type TraceListRow = {
   cost_input_microcents: string
   cost_output_microcents: string
   cost_total_microcents: string
+  session_id: string
+  user_id: string
   tags: string[]
+  metadata: Record<string, string>
   models: string[]
   providers: string[]
   service_names: string[]
@@ -84,13 +94,25 @@ type TraceListRow = {
 
 type TraceDetailRow = TraceListRow & {
   input_messages: string
+  last_input_messages: string
   output_messages: string
+  system_instructions: string
 }
 
 const parseMessages = (json: string): GenAIMessage[] => {
   if (!json) return []
   try {
     return JSON.parse(json) as GenAIMessage[]
+  } catch {
+    return []
+  }
+}
+
+const parseSystem = (json: string): GenAISystem => {
+  if (!json) return []
+  try {
+    const parsed = JSON.parse(json)
+    return Array.isArray(parsed) ? (parsed as GenAISystem) : []
   } catch {
     return []
   }
@@ -115,7 +137,10 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   costInputMicrocents: Number(row.cost_input_microcents),
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
+  sessionId: SessionId(row.session_id ?? ""),
+  userId: ExternalUserId(row.user_id ?? ""),
   tags: row.tags,
+  metadata: row.metadata ?? {},
   models: row.models,
   providers: row.providers,
   serviceNames: row.service_names,
@@ -123,11 +148,17 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   rootSpanName: row.root_span_name,
 })
 
-const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => ({
-  ...toBaseFields(row),
-  inputMessages: parseMessages(row.input_messages),
-  outputMessages: parseMessages(row.output_messages),
-})
+const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => {
+  const lastInput = parseMessages(row.last_input_messages)
+  const output = parseMessages(row.output_messages)
+  return {
+    ...toBaseFields(row),
+    systemInstructions: parseSystem(row.system_instructions),
+    inputMessages: parseMessages(row.input_messages),
+    outputMessages: output,
+    allMessages: [...lastInput, ...output],
+  }
+}
 
 export const TraceRepositoryLive = Layer.effect(
   TraceRepository,

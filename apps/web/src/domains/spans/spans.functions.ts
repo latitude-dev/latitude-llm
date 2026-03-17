@@ -33,12 +33,14 @@ export interface SpanRecord {
 
 export interface SpanDetailRecord extends SpanRecord {
   readonly sessionId: string
+  readonly userId: string
   readonly apiKeyId: string
   readonly responseModel: string
   readonly traceFlags: number
   readonly traceState: string
   readonly errorType: string
   readonly tags: readonly string[]
+  readonly metadata: Readonly<Record<string, string>>
   readonly eventsJson: string
   readonly linksJson: string
   readonly tokensCacheRead: number
@@ -88,12 +90,14 @@ const serializeSpan = (span: Span): SpanRecord => ({
 const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   ...serializeSpan(span),
   sessionId: span.sessionId,
+  userId: span.userId,
   apiKeyId: span.apiKeyId,
   responseModel: span.responseModel,
   traceFlags: span.traceFlags,
   traceState: span.traceState,
   errorType: span.errorType,
   tags: span.tags,
+  metadata: span.metadata,
   eventsJson: span.eventsJson,
   linksJson: span.linksJson,
   tokensCacheRead: span.tokensCacheRead,
@@ -174,7 +178,10 @@ export interface TraceRecord {
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
+  readonly sessionId: string
+  readonly userId: string
   readonly tags: readonly string[]
+  readonly metadata: Readonly<Record<string, string>>
   readonly models: readonly string[]
   readonly providers: readonly string[]
   readonly serviceNames: readonly string[]
@@ -201,7 +208,10 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
   costInputMicrocents: trace.costInputMicrocents,
   costOutputMicrocents: trace.costOutputMicrocents,
   costTotalMicrocents: trace.costTotalMicrocents,
+  sessionId: trace.sessionId,
+  userId: trace.userId,
   tags: trace.tags,
+  metadata: trace.metadata,
   models: trace.models,
   providers: trace.providers,
   serviceNames: trace.serviceNames,
