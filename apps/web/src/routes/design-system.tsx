@@ -9,6 +9,16 @@ import {
   CardTitle,
   Checkbox,
   CopyButton,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeader,
+  DataTableHeaderCell,
+  DataTableHeaderRow,
+  DataTableRoot,
+  DataTableRow,
+  DataTableSearch,
+  DataTableTable,
+  DataTableToolbar,
   FormField,
   GitHubIcon,
   GoogleIcon,
@@ -20,7 +30,7 @@ import {
   Text,
 } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
+import { Check, Database, Moon, Palette, Sparkles, Sun } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export const Route = createFileRoute("/design-system")({
@@ -91,7 +101,7 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <Button>Default</Button>
           <Button variant="secondary">Secondary</Button>
-          <Button variant="outline" flat>
+          <Button variant="outline">
             Outline Flat
           </Button>
           <Button variant="ghost">Ghost</Button>
@@ -153,6 +163,58 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
             <Text.Mono>cuid_abc123def456</Text.Mono>
             <CopyButton value="cuid_abc123def456" />
           </div>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Data Table"
+        description="Toolbar (search + action), sortable header, and rows. Virtualization-friendly."
+      >
+        <div className="flex flex-col gap-4">
+          <DataTableToolbar
+            left={<DataTableSearch placeholder="Search datasets" />}
+            right={
+            <Button size="sm" variant="primaryMuted" iconProps={{ icon: Database, size: "sm" }}>
+              Create dataset
+            </Button>
+          }
+          />
+          <DataTableRoot>
+            <DataTableTable>
+              <DataTableHeader>
+                <DataTableHeaderRow>
+                  <DataTableHeaderCell indexColumn>#</DataTableHeaderCell>
+                  <DataTableHeaderCell>Name</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Rows</DataTableHeaderCell>
+                </DataTableHeaderRow>
+              </DataTableHeader>
+              <DataTableBody>
+                <DataTableRow>
+                  <DataTableCell indexColumn>
+                    <Text.H6 color="foregroundMuted">1</Text.H6>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <Text.H5>Sample dataset</Text.H5>
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    <Text.H5 color="foregroundMuted">42</Text.H5>
+                  </DataTableCell>
+                </DataTableRow>
+                <DataTableRow>
+                  <DataTableCell indexColumn>
+                    <Text.H6 color="foregroundMuted">2</Text.H6>
+                  </DataTableCell>
+                  <DataTableCell>
+                    <Text.H5>Another dataset</Text.H5>
+                  </DataTableCell>
+                  <DataTableCell align="right">
+                    <Text.H5 color="foregroundMuted">0</Text.H5>
+                  </DataTableCell>
+                </DataTableRow>
+              </DataTableBody>
+            </DataTableTable>
+          </DataTableRoot>
         </div>
       </ShowcaseSection>
 
@@ -298,7 +360,6 @@ function DesignSystemPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
-                  flat
                   onClick={() => {
                     setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"))
                   }}

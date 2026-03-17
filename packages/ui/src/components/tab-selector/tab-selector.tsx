@@ -66,7 +66,6 @@ function ItemOption<T extends string>({
         ref={isSelected ? selectedOptionButtonRef : null}
         type="button"
         variant="ghost"
-        flat
         className={cn(
           "flex w-full px-3 h-8 bg-transparent rounded-lg cursor-pointer items-center justify-center gap-1",
         )}

@@ -267,7 +267,7 @@ function DashboardPageContent() {
           </span>
         }
         actions={
-          <TableWithHeader.Button flat onClick={() => setCreateOpen(true)}>
+          <TableWithHeader.Button onClick={() => setCreateOpen(true)}>
             New project
           </TableWithHeader.Button>
         }

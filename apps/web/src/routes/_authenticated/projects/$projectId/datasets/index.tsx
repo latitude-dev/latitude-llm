@@ -1,20 +1,24 @@
 import {
   Button,
   Container,
-  Table,
+  DataTableBody,
+  DataTableCell,
+  DataTableHeader,
+  DataTableHeaderCell,
+  DataTableHeaderRow,
+  DataTableRoot,
+  DataTableRow,
+  DataTableSearch,
+  DataTableTable,
+  DataTableToolbar,
   TableBlankSlate,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   TableSkeleton,
-  TableWithHeader,
   Text,
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { Database } from "lucide-react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
@@ -27,49 +31,51 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/datase
 })
 
 function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; projectId: string }) {
+  const navigate = useNavigate()
   return (
-    <Table>
-      <TableHeader>
-        <TableRow verticalPadding>
-          <TableHead>Name</TableHead>
-          <TableHead>Version</TableHead>
-          <TableHead>Created</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {datasets.map((dataset) => (
-          <TableRow key={dataset.id} verticalPadding className="cursor-pointer">
-            <TableCell>
-              <Link
-                to="/projects/$projectId/datasets/$datasetId"
-                params={{ projectId, datasetId: dataset.id }}
-                className="contents"
-              >
+    <DataTableRoot>
+      <DataTableTable>
+        <DataTableHeader>
+          <DataTableHeaderRow>
+            <DataTableHeaderCell indexColumn>#</DataTableHeaderCell>
+            <DataTableHeaderCell>Name</DataTableHeaderCell>
+            <DataTableHeaderCell>Description</DataTableHeaderCell>
+            <DataTableHeaderCell>Last updated</DataTableHeaderCell>
+            <DataTableHeaderCell align="right">Rows</DataTableHeaderCell>
+          </DataTableHeaderRow>
+        </DataTableHeader>
+        <DataTableBody>
+          {datasets.map((dataset, index) => (
+            <DataTableRow
+              key={dataset.id}
+              className="cursor-pointer"
+              onClick={() =>
+                navigate({
+                  to: "/projects/$projectId/datasets/$datasetId",
+                  params: { projectId, datasetId: dataset.id },
+                })
+              }
+            >
+              <DataTableCell indexColumn>
+                <Text.H6 color="foregroundMuted">{index + 1}</Text.H6>
+              </DataTableCell>
+              <DataTableCell>
                 <Text.H5>{dataset.name}</Text.H5>
-              </Link>
-            </TableCell>
-            <TableCell>
-              <Link
-                to="/projects/$projectId/datasets/$datasetId"
-                params={{ projectId, datasetId: dataset.id }}
-                className="contents"
-              >
-                <Text.H5 color="foregroundMuted">{dataset.currentVersion}</Text.H5>
-              </Link>
-            </TableCell>
-            <TableCell>
-              <Link
-                to="/projects/$projectId/datasets/$datasetId"
-                params={{ projectId, datasetId: dataset.id }}
-                className="contents"
-              >
-                <Text.H5 color="foregroundMuted">{relativeTime(dataset.createdAt)}</Text.H5>
-              </Link>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+              </DataTableCell>
+              <DataTableCell>
+                <Text.H5 color="foregroundMuted">{dataset.description ?? "—"}</Text.H5>
+              </DataTableCell>
+              <DataTableCell>
+                <Text.H5 color="foregroundMuted">{relativeTime(dataset.updatedAt)}</Text.H5>
+              </DataTableCell>
+              <DataTableCell align="right">
+                <Text.H5 color="foregroundMuted">—</Text.H5>
+              </DataTableCell>
+            </DataTableRow>
+          ))}
+        </DataTableBody>
+      </DataTableTable>
+    </DataTableRoot>
   )
 }
 
@@ -81,6 +87,8 @@ function DatasetsPage() {
   const datasets = datasetsCollection.data ?? []
   const isLoading = !datasetsCollection.data
   const [creating, setCreating] = useState(false)
+  const [search, setSearch] = useState("")
+
   const handleCreate = useCallback(async () => {
     setCreating(true)
     try {
@@ -99,25 +107,46 @@ function DatasetsPage() {
     }
   }, [projectId, navigate, toast])
 
+  const filteredDatasets = search.trim()
+    ? datasets.filter(
+        (d) =>
+          d.name.toLowerCase().includes(search.toLowerCase()) ||
+          (d.description?.toLowerCase().includes(search.toLowerCase()) ?? false),
+      )
+    : datasets
+
   return (
     <Container className="pt-14">
-      <TableWithHeader
-        title="Datasets"
-        actions={
-          <Button variant="outline" onClick={handleCreate} disabled={creating} isLoading={creating}>
-            + Dataset
-          </Button>
-        }
-        table={
-          isLoading ? (
-            <TableSkeleton cols={3} rows={3} />
-          ) : datasets.length > 0 ? (
-            <DatasetsTable datasets={datasets} projectId={projectId} />
-          ) : (
-            <TableBlankSlate description="There are no datasets yet." />
-          )
-        }
-      />
+      <div className="flex flex-col gap-4">
+        <DataTableToolbar
+          left={
+            <DataTableSearch
+              placeholder="Search datasets"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          }
+          right={
+            <Button
+              variant="primaryMuted"
+              size="sm"
+              onClick={handleCreate}
+              disabled={creating}
+              isLoading={creating}
+              iconProps={{ icon: Database, size: "sm" }}
+            >
+              Create dataset
+            </Button>
+          }
+        />
+        {isLoading ? (
+          <TableSkeleton cols={5} rows={3} />
+        ) : filteredDatasets.length > 0 ? (
+          <DatasetsTable datasets={filteredDatasets} projectId={projectId} />
+        ) : (
+          <TableBlankSlate description={search.trim() ? "No datasets match your search." : "There are no datasets yet."} />
+        )}
+      </div>
     </Container>
   )
 }

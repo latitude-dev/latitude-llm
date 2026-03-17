@@ -2,7 +2,13 @@
 
 // Components
 export { type BrandIconProps, GitHubIcon, GoogleIcon, LatitudeLogo } from "./components/brand-icons/index.tsx"
-export { Button, type ButtonProps, buttonVariantsConfig } from "./components/button/button.tsx"
+export {
+  Button,
+  type ButtonIconProps,
+  type ButtonProps,
+  buttonVariants,
+  buttonVariantsConfig,
+} from "./components/button/button.tsx"
 export {
   Card,
   CardContent,
@@ -53,6 +59,19 @@ export { Select, type SelectOption, type SelectOptionGroup, type SelectProps } f
 export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { TabSelector, type TabSelectorOption, type TabSelectorProps } from "./components/tab-selector/tab-selector.tsx"
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./components/table/table.tsx"
+export {
+  DataTableToolbar,
+  DataTableSearch,
+  DataTableRoot,
+  DataTableTable,
+  DataTableHeader,
+  DataTableBody,
+  DataTableHeaderRow,
+  DataTableHeaderCell,
+  DataTableRow,
+  DataTableCell,
+  type SortDirection,
+} from "./components/data-table/index.ts"
 export { TableBlankSlate } from "./components/table-blank-slate/table-blank-slate.tsx"
 export { TableSkeleton } from "./components/table-skeleton/table-skeleton.tsx"
 export { TableWithHeader, TitleWithActions } from "./components/table-with-header/table-with-header.tsx"
