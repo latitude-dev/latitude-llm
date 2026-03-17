@@ -5,7 +5,7 @@ import { useState } from "react"
 import { createLoginIntent } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
-import { AUTH_BASE_PATH, WEB_BASE_URL } from "../lib/auth-config.ts"
+import { WEB_BASE_URL } from "../lib/auth-config.ts"
 import { parseServerError } from "../lib/errors.ts"
 
 export const Route = createFileRoute("/login")({
@@ -73,33 +73,33 @@ function LoginPage() {
     }
   }
 
-  const submitSocialSignIn = (provider: "google" | "github") => {
-    const form = document.createElement("form")
-    form.method = "POST"
-    form.action = `${AUTH_BASE_PATH}/sign-in/social`
+  const submitSocialSignIn = async (provider: "google" | "github") => {
+    if (isLoading) return
 
-    const providerInput = document.createElement("input")
-    providerInput.type = "hidden"
-    providerInput.name = "provider"
-    providerInput.value = provider
+    setIsLoading(true)
+    setError(undefined)
 
-    const callbackUrlInput = document.createElement("input")
-    callbackUrlInput.type = "hidden"
-    callbackUrlInput.name = "callbackURL"
-    callbackUrlInput.value = WEB_BASE_URL
+    const callbackURL = cliSession ? `${WEB_BASE_URL}/auth/cli?session=${encodeURIComponent(cliSession)}` : WEB_BASE_URL
 
-    form.append(providerInput, callbackUrlInput)
-    document.body.appendChild(form)
-    form.submit()
+    try {
+      const { error: signInError } = await authClient.signIn.social({
+        provider,
+        callbackURL,
+      })
+
+      if (signInError) {
+        throw new Error(signInError.message ?? "Failed to sign in with OAuth provider")
+      }
+    } catch (err) {
+      const { message } = parseServerError(err)
+      setError(message)
+      setIsLoading(false)
+    }
   }
 
-  const handleGoogleClick = () => {
-    submitSocialSignIn("google")
-  }
+  const handleGoogleClick = () => submitSocialSignIn("google")
 
-  const handleGitHubClick = () => {
-    submitSocialSignIn("github")
-  }
+  const handleGitHubClick = () => submitSocialSignIn("github")
 
   if (isSent) {
     return (
