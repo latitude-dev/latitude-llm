@@ -17,8 +17,8 @@ import {
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { Database } from "lucide-react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { Database } from "lucide-react"
 import { useCallback, useState } from "react"
 import { useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
@@ -120,11 +120,7 @@ function DatasetsPage() {
       <div className="flex flex-col gap-4">
         <DataTableToolbar
           left={
-            <DataTableSearch
-              placeholder="Search datasets"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <DataTableSearch placeholder="Search datasets" value={search} onChange={(e) => setSearch(e.target.value)} />
           }
           right={
             <Button
@@ -144,7 +140,9 @@ function DatasetsPage() {
         ) : filteredDatasets.length > 0 ? (
           <DatasetsTable datasets={filteredDatasets} projectId={projectId} />
         ) : (
-          <TableBlankSlate description={search.trim() ? "No datasets match your search." : "There are no datasets yet."} />
+          <TableBlankSlate
+            description={search.trim() ? "No datasets match your search." : "There are no datasets yet."}
+          />
         )}
       </div>
     </Container>

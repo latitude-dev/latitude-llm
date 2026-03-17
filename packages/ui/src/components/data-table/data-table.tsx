@@ -18,7 +18,11 @@ function DataTableRoot({ ref, className, ...props }: HTMLAttributes<HTMLDivEleme
   )
 }
 
-function DataTableTable({ ref, className, ...props }: HTMLAttributes<HTMLTableElement> & { ref?: Ref<HTMLTableElement> }) {
+function DataTableTable({
+  ref,
+  className,
+  ...props
+}: HTMLAttributes<HTMLTableElement> & { ref?: Ref<HTMLTableElement> }) {
   return (
     <table
       ref={ref}
@@ -79,58 +83,57 @@ function DataTableHeaderCell({
   indexColumn = false,
   ...props
 }: DataTableHeaderCellProps) {
-    const content = (
-      <span className="inline-flex flex-row items-center gap-2">
-        {typeof children === "string" ? (
-          <Text.H6 weight="medium" color="foregroundMuted">
-            {children}
-          </Text.H6>
-        ) : (
-          children
-        )}
-        {sortable && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 rounded-md"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onSort?.()
-            }}
-            aria-label={sortDirection === "asc" ? "Sort ascending" : sortDirection === "desc" ? "Sort descending" : "Sort"}
-          >
-            <Icon
-              icon={ChevronsUpDown}
-              size="sm"
-              className={cn(
-                sortDirection === "asc" && "rotate-180",
-                sortDirection === "desc" && "rotate-0",
-              )}
-            />
-          </Button>
-        )}
-      </span>
-    )
+  const content = (
+    <span className="inline-flex flex-row items-center gap-2">
+      {typeof children === "string" ? (
+        <Text.H6 weight="medium" color="foregroundMuted">
+          {children}
+        </Text.H6>
+      ) : (
+        children
+      )}
+      {sortable && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 rounded-md"
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            onSort?.()
+          }}
+          aria-label={
+            sortDirection === "asc" ? "Sort ascending" : sortDirection === "desc" ? "Sort descending" : "Sort"
+          }
+        >
+          <Icon
+            icon={ChevronsUpDown}
+            size="sm"
+            className={cn(sortDirection === "asc" && "rotate-180", sortDirection === "desc" && "rotate-0")}
+          />
+        </Button>
+      )}
+    </span>
+  )
 
-    return (
-      <th
-        ref={ref}
-        className={cn(
-          "h-12 px-4 align-middle font-medium",
-          indexColumn && "w-12 min-w-12 max-w-12 text-center",
-          align === "left" && "text-left",
-          align === "center" && "text-center",
-          align === "right" && "text-right",
-          className,
-        )}
-        data-slot="data-table-header-cell"
-        {...props}
-      >
-        {content}
-      </th>
-    )
+  return (
+    <th
+      ref={ref}
+      className={cn(
+        "h-12 px-4 align-middle font-medium",
+        indexColumn && "w-12 min-w-12 max-w-12 text-center",
+        align === "left" && "text-left",
+        align === "center" && "text-center",
+        align === "right" && "text-right",
+        className,
+      )}
+      data-slot="data-table-header-cell"
+      {...props}
+    >
+      {content}
+    </th>
+  )
 }
 
 type DataTableRowProps = HTMLAttributes<HTMLTableRowElement> & { ref?: Ref<HTMLTableRowElement> }

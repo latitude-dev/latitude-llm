@@ -101,9 +101,7 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <Button>Default</Button>
           <Button variant="secondary">Secondary</Button>
-          <Button variant="outline">
-            Outline Flat
-          </Button>
+          <Button variant="outline">Outline Flat</Button>
           <Button variant="ghost">Ghost</Button>
           <Button variant="destructive">Destructive</Button>
           <Button isLoading>Loading…</Button>
@@ -175,10 +173,10 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           <DataTableToolbar
             left={<DataTableSearch placeholder="Search datasets" />}
             right={
-            <Button size="sm" variant="primaryMuted" iconProps={{ icon: Database, size: "sm" }}>
-              Create dataset
-            </Button>
-          }
+              <Button size="sm" variant="primaryMuted" iconProps={{ icon: Database, size: "sm" }}>
+                Create dataset
+              </Button>
+            }
           />
           <DataTableRoot>
             <DataTableTable>

@@ -266,11 +266,7 @@ function DashboardPageContent() {
             </Text.H4>
           </span>
         }
-        actions={
-          <TableWithHeader.Button onClick={() => setCreateOpen(true)}>
-            New project
-          </TableWithHeader.Button>
-        }
+        actions={<TableWithHeader.Button onClick={() => setCreateOpen(true)}>New project</TableWithHeader.Button>}
         table={
           isLoading ? (
             <TableSkeleton cols={5} rows={3} />

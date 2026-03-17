@@ -1,12 +1,12 @@
-import type { LucideProps } from "lucide-react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { type ButtonHTMLAttributes, type ComponentType, type ReactNode, forwardRef } from "react"
+import type { LucideProps } from "lucide-react"
+import { type ButtonHTMLAttributes, type ComponentType, forwardRef, type ReactNode } from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
-import { Icon } from "../icons/icons.tsx"
 import type { IconProps } from "../icons/icons.tsx"
+import { Icon } from "../icons/icons.tsx"
 
 const buttonVariants = cva(
   cn(
@@ -51,9 +51,7 @@ export type ButtonIconProps = {
   icon: ComponentType<LucideProps>
 } & Omit<IconProps, "icon" | "color">
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean
   children?: ReactNode
   isLoading?: boolean

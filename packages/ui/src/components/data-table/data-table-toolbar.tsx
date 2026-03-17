@@ -13,10 +13,7 @@ type DataTableToolbarProps = {
 function DataTableToolbar({ left, right, className }: DataTableToolbarProps) {
   return (
     <div
-      className={cn(
-        "flex flex-row flex-wrap items-center justify-between gap-4",
-        className,
-      )}
+      className={cn("flex flex-row flex-wrap items-center justify-between gap-4", className)}
       data-slot="data-table-toolbar"
     >
       {left != null ? <div className="flex shrink-0">{left}</div> : null}

@@ -13,13 +13,7 @@ type DataTableSearchProps = InputHTMLAttributes<HTMLInputElement> & {
   inputClassName?: string
 }
 
-function DataTableSearch({
-  ref,
-  placeholder = "Search…",
-  className,
-  inputClassName,
-  ...props
-}: DataTableSearchProps) {
+function DataTableSearch({ ref, placeholder = "Search…", className, inputClassName, ...props }: DataTableSearchProps) {
   return (
     <div
       className={cn(

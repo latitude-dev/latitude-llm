@@ -20,6 +20,19 @@ export {
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { Container, type ContainerSize } from "./components/container/container.tsx"
 export { CopyButton } from "./components/copy-button/index.tsx"
+export {
+  DataTableBody,
+  DataTableCell,
+  DataTableHeader,
+  DataTableHeaderCell,
+  DataTableHeaderRow,
+  DataTableRoot,
+  DataTableRow,
+  DataTableSearch,
+  DataTableTable,
+  DataTableToolbar,
+  type SortDirection,
+} from "./components/data-table/index.ts"
 export { DropdownMenu, type MenuOption, type TriggerButtonProps } from "./components/dropdown-menu/dropdown-menu.tsx"
 export {
   DropdownMenu as DropdownMenuRoot,
@@ -59,19 +72,6 @@ export { Select, type SelectOption, type SelectOptionGroup, type SelectProps } f
 export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { TabSelector, type TabSelectorOption, type TabSelectorProps } from "./components/tab-selector/tab-selector.tsx"
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./components/table/table.tsx"
-export {
-  DataTableToolbar,
-  DataTableSearch,
-  DataTableRoot,
-  DataTableTable,
-  DataTableHeader,
-  DataTableBody,
-  DataTableHeaderRow,
-  DataTableHeaderCell,
-  DataTableRow,
-  DataTableCell,
-  type SortDirection,
-} from "./components/data-table/index.ts"
 export { TableBlankSlate } from "./components/table-blank-slate/table-blank-slate.tsx"
 export { TableSkeleton } from "./components/table-skeleton/table-skeleton.tsx"
 export { TableWithHeader, TitleWithActions } from "./components/table-with-header/table-with-header.tsx"
