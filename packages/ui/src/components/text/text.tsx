@@ -160,6 +160,11 @@ namespace Text {
   })
   H6.displayName = "Text.H6"
 
+  export const H6M = forwardRef<HTMLHeadingElement, Common>(function H6M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h6" weight="medium" {...props} />
+  })
+  H6M.displayName = "Text.H6M"
+
   export type MonoProps = {
     children: ReactNode
     color?: TextColor

@@ -7,27 +7,14 @@ import { Icon } from "../icons/icons.tsx"
 import { Text } from "../text/text.tsx"
 
 /** Div-based layout for virtualization. Figma: column, gap 4px, no border on container. */
-function DataTableRoot({
-  ref,
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }) {
+function DataTableRoot({ ref, className, ...props }: HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }) {
   return (
-    <div
-      ref={ref}
-      className={cn("flex flex-col w-full gap-1", className)}
-      data-slot="data-table-root"
-      {...props}
-    />
+    <div ref={ref} className={cn("flex flex-col w-full gap-1", className)} data-slot="data-table-root" {...props} />
   )
 }
 
 /** Sticky header wrapper. Figma: border-b only, no background. */
-function DataTableHeader({
-  ref,
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }) {
+function DataTableHeader({ ref, className, ...props }: HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }) {
   return (
     <div
       ref={ref}
@@ -39,11 +26,7 @@ function DataTableHeader({
 }
 
 /** Scrollable body; use for virtualized or mapped rows. */
-function DataTableBody({
-  ref,
-  className,
-  ...props
-}: HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }) {
+function DataTableBody({ ref, className, ...props }: HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }) {
   return (
     <div
       ref={ref}
@@ -65,7 +48,6 @@ function DataTableHeaderRow({
       ref={ref}
       className={cn("flex flex-row items-center h-12 gap-8", className)}
       data-slot="data-table-header-row"
-      role="row"
       {...props}
     />
   )
@@ -147,7 +129,6 @@ function DataTableHeaderCell({
         className,
       )}
       data-slot="data-table-header-cell"
-      role="columnheader"
       {...props}
     >
       {content}
@@ -155,7 +136,6 @@ function DataTableHeaderCell({
   )
 }
 
-/** Figma: body row, 32px height, 32px gap between cells, rounded-lg, bg secondary. */
 function DataTableRow({ ref, className, ...props }: HTMLAttributes<HTMLDivElement> & { ref?: Ref<HTMLDivElement> }) {
   return (
     <div
@@ -165,7 +145,6 @@ function DataTableRow({ ref, className, ...props }: HTMLAttributes<HTMLDivElemen
         className,
       )}
       data-slot="data-table-row"
-      role="row"
       {...props}
     />
   )
@@ -174,9 +153,8 @@ function DataTableRow({ ref, className, ...props }: HTMLAttributes<HTMLDivElemen
 type DataTableCellProps = HTMLAttributes<HTMLDivElement> & {
   ref?: Ref<HTMLDivElement>
   align?: "left" | "center" | "right"
-  indexColumn?: boolean
-  /** Use for row checkbox column: narrow fixed width, centered. */
-  checkboxColumn?: boolean
+  textSize?: "default" | "sm"
+  textColor?: "default" | "muted"
 }
 
 function DataTableCell({
@@ -184,35 +162,30 @@ function DataTableCell({
   className,
   children,
   align = "left",
-  indexColumn = false,
-  checkboxColumn = false,
+  textSize = "default",
+  textColor = "default",
   ...props
 }: DataTableCellProps) {
-  const isString = typeof children === "string"
+  const TextComponent = textSize === "default" ? Text.H5 : Text.H6M
   return (
     <div
       ref={ref}
-      className={cn(
-        "flex flex-row items-center shrink-0 overflow-hidden px-4 min-w-0",
-        indexColumn && "w-12 min-w-12 max-w-12 justify-center",
-        checkboxColumn && "w-10 min-w-10 max-w-10 justify-center px-2",
-        !indexColumn && !checkboxColumn && "flex-1",
-        align === "left" && "justify-start",
-        align === "center" && "justify-center",
-        align === "right" && "justify-end",
-        className,
-      )}
+      className={cn("h-8 flex flex-1 flex-row items-center overflow-hidden px-4 min-w-0", className, {
+        "justify-start": align === "left",
+        "justify-center": align === "center",
+        "justify-end": align === "right",
+      })}
       data-slot="data-table-cell"
-      role="cell"
       {...props}
     >
-      {isString ? (
-        <Text.H5 ellipsis className="min-w-0">
-          {children}
-        </Text.H5>
-      ) : (
-        <span className="flex min-w-0 items-center gap-2 overflow-hidden">{children}</span>
-      )}
+      <TextComponent
+        noWrap
+        ellipsis
+        className="min-w-0"
+        color={textColor === "muted" ? "foregroundMuted" : "foreground"}
+      >
+        {children}
+      </TextComponent>
     </div>
   )
 }

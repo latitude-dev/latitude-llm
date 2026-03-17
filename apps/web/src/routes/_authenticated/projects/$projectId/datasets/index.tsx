@@ -35,11 +35,10 @@ function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; pro
     <DataTableRoot>
       <DataTableHeader>
         <DataTableHeaderRow>
-          <DataTableHeaderCell indexColumn>#</DataTableHeaderCell>
+          <DataTableHeaderCell>#</DataTableHeaderCell>
           <DataTableHeaderCell sortable>Name</DataTableHeaderCell>
           <DataTableHeaderCell>Description</DataTableHeaderCell>
           <DataTableHeaderCell>Last updated</DataTableHeaderCell>
-          <DataTableHeaderCell align="right">Rows</DataTableHeaderCell>
         </DataTableHeaderRow>
       </DataTableHeader>
       <DataTableBody>
@@ -54,23 +53,12 @@ function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; pro
               })
             }
           >
-            <DataTableCell indexColumn>
-              <Text.H6 color="foregroundMuted">{index + 1}</Text.H6>
+            <DataTableCell textSize="sm" textColor="muted">
+              #{index + 1}
             </DataTableCell>
             <DataTableCell>{dataset.name}</DataTableCell>
-            <DataTableCell>
-              <Text.H5 color="foregroundMuted" ellipsis>
-                {dataset.description ?? "—"}
-              </Text.H5>
-            </DataTableCell>
-            <DataTableCell>
-              <Text.H5 color="foregroundMuted" ellipsis>
-                {relativeTime(dataset.updatedAt)}
-              </Text.H5>
-            </DataTableCell>
-            <DataTableCell align="right">
-              <Text.H5 color="foregroundMuted" ellipsis>—</Text.H5>
-            </DataTableCell>
+            <DataTableCell>{dataset.description ?? "—"}</DataTableCell>
+            <DataTableCell>{relativeTime(dataset.updatedAt)}</DataTableCell>
           </DataTableRow>
         ))}
       </DataTableBody>
@@ -108,10 +96,10 @@ function DatasetsPage() {
 
   const filteredDatasets = search.trim()
     ? datasets.filter(
-        (d) =>
-          d.name.toLowerCase().includes(search.toLowerCase()) ||
-          (d.description?.toLowerCase().includes(search.toLowerCase()) ?? false),
-      )
+      (d) =>
+        d.name.toLowerCase().includes(search.toLowerCase()) ||
+        (d.description?.toLowerCase().includes(search.toLowerCase()) ?? false),
+    )
     : datasets
 
   return (
