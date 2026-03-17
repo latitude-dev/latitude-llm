@@ -1,6 +1,7 @@
 import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
+import type { FieldFilter } from "../filters.ts"
 
 /**
  * Repository port for traces (ClickHouse materialized view).
@@ -33,6 +34,8 @@ export interface TraceListOptions {
   readonly startTimeTo?: Date
   readonly limit?: number
   readonly offset?: number
+  /** Generic filters applied on top of the fixed org/project scope. */
+  readonly filters?: readonly FieldFilter[]
 }
 
 export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(

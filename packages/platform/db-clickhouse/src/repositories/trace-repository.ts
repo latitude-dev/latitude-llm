@@ -12,6 +12,7 @@ import type { Trace, TraceDetail, TraceStatus } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
+import { buildFilters, type ColumnSchema } from "../filter-builder.ts"
 
 const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
   date ? date.toISOString().replace("Z", "") : undefined
@@ -21,6 +22,49 @@ const INT_TO_STATUS: Record<number, TraceStatus> = {
   1: "ok",
   2: "error",
 }
+
+/**
+ * Maps Trace domain field names to ClickHouse expressions.
+ *
+ * WHERE fields: raw columns in the traces materialized-view rows.
+ * HAVING fields: expressions that must be evaluated after GROUP BY aggregation.
+ *
+ * status values: 0 = unset, 1 = ok, 2 = error
+ */
+const TRACE_FILTER_SCHEMA = {
+  traceId: { expr: "trace_id", kind: "string", clause: "where", chType: "String" },
+  status: { expr: "overall_status", kind: "number", clause: "where", chType: "UInt8" },
+  // DateTime64(9) defaults to UTC; avoids quotes in the type spec which confuse test param substitution
+  startTime: { expr: "min_start_time", kind: "date", clause: "where", chType: "DateTime64(9)" },
+  endTime: { expr: "max_end_time", kind: "date", clause: "where", chType: "DateTime64(9)" },
+  spanCount: { expr: "sum(span_count)", kind: "number", clause: "having", chType: "UInt64" },
+  errorCount: { expr: "sum(error_count)", kind: "number", clause: "having", chType: "UInt64" },
+  durationNs: {
+    expr: "reinterpretAsInt64(max(max_end_time)) - reinterpretAsInt64(min(min_start_time))",
+    kind: "number",
+    clause: "having",
+    chType: "Int64",
+  },
+  tokensInput: { expr: "sum(tokens_input)", kind: "number", clause: "having", chType: "UInt64" },
+  tokensOutput: { expr: "sum(tokens_output)", kind: "number", clause: "having", chType: "UInt64" },
+  tokensCacheRead: { expr: "sum(tokens_cache_read)", kind: "number", clause: "having", chType: "UInt64" },
+  tokensCacheCreate: { expr: "sum(tokens_cache_create)", kind: "number", clause: "having", chType: "UInt64" },
+  tokensReasoning: { expr: "sum(tokens_reasoning)", kind: "number", clause: "having", chType: "UInt64" },
+  tokensTotal: { expr: "sum(tokens_total)", kind: "number", clause: "having", chType: "UInt64" },
+  costInputMicrocents: { expr: "sum(cost_input_microcents)", kind: "number", clause: "having", chType: "Int64" },
+  costOutputMicrocents: { expr: "sum(cost_output_microcents)", kind: "number", clause: "having", chType: "Int64" },
+  costTotalMicrocents: { expr: "sum(cost_total_microcents)", kind: "number", clause: "having", chType: "Int64" },
+  tags: { expr: "tags", kind: "array", clause: "where", chType: "String" },
+  models: { expr: "groupUniqArrayIfMerge(models)", kind: "array", clause: "having", chType: "String" },
+  providers: { expr: "groupUniqArrayIfMerge(providers)", kind: "array", clause: "having", chType: "String" },
+  serviceNames: {
+    expr: "groupUniqArrayIfMerge(service_names)",
+    kind: "array",
+    clause: "having",
+    chType: "String",
+  },
+  rootSpanName: { expr: "argMinIfMerge(root_span_name)", kind: "string", clause: "having", chType: "String" },
+} satisfies ColumnSchema
 
 const LIST_SELECT = `
   organization_id,
@@ -138,6 +182,15 @@ export const TraceRepositoryLive = Layer.effect(
       findByProjectId: ({ organizationId, projectId, options }) =>
         chSqlClient
           .query(async (client) => {
+            const {
+              whereFragments,
+              havingFragments,
+              params: filterParams,
+            } = buildFilters(options.filters ?? [], TRACE_FILTER_SCHEMA)
+
+            const extraWhere = whereFragments.length ? `AND ${whereFragments.join(" AND ")}` : ""
+            const havingClause = havingFragments.length ? `HAVING ${havingFragments.join(" AND ")}` : ""
+
             const result = await client.query({
               query: `SELECT ${LIST_SELECT}
                       FROM traces
@@ -145,7 +198,9 @@ export const TraceRepositoryLive = Layer.effect(
                         AND project_id = {projectId:String}
                         AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
                         AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
+                        ${extraWhere}
                       GROUP BY organization_id, project_id, trace_id
+                      ${havingClause}
                       ORDER BY start_time DESC
                       LIMIT {limit:UInt32}
                       OFFSET {offset:UInt32}`,
@@ -158,6 +213,7 @@ export const TraceRepositoryLive = Layer.effect(
                 startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
                 limit: options.limit ?? 50,
                 offset: options.offset ?? 0,
+                ...filterParams,
               },
               format: "JSONEachRow",
             })
