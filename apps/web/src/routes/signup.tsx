@@ -128,13 +128,9 @@ function SignupPage() {
     }
   }
 
-  const handleGoogleClick = () => {
-    void submitSocialSignIn("google")
-  }
+  const handleGoogleClick = () => submitSocialSignIn("google")
 
-  const handleGitHubClick = () => {
-    void submitSocialSignIn("github")
-  }
+  const handleGitHubClick = () => submitSocialSignIn("github")
 
   if (isSent) {
     return (
@@ -256,7 +252,6 @@ function SignupPage() {
           {/* OAuth buttons */}
           <div className="flex flex-col gap-2">
             <Button
-              type="button"
               variant="ghost"
               onClick={handleGoogleClick}
               disabled={isLoading}
@@ -267,7 +262,6 @@ function SignupPage() {
             </Button>
 
             <Button
-              type="button"
               variant="ghost"
               onClick={handleGitHubClick}
               disabled={isLoading}

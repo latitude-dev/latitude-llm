@@ -97,13 +97,9 @@ function LoginPage() {
     }
   }
 
-  const handleGoogleClick = () => {
-    void submitSocialSignIn("google")
-  }
+  const handleGoogleClick = () => submitSocialSignIn("google")
 
-  const handleGitHubClick = () => {
-    void submitSocialSignIn("github")
-  }
+  const handleGitHubClick = () => submitSocialSignIn("github")
 
   if (isSent) {
     return (
@@ -193,7 +189,6 @@ function LoginPage() {
           {/* OAuth buttons */}
           <div className="flex flex-col gap-2">
             <Button
-              type="button"
               variant="ghost"
               onClick={handleGoogleClick}
               disabled={isLoading}
@@ -204,7 +199,6 @@ function LoginPage() {
             </Button>
 
             <Button
-              type="button"
               size="lg"
               variant="ghost"
               onClick={handleGitHubClick}
