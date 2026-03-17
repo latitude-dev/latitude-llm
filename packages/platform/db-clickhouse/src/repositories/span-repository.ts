@@ -9,10 +9,10 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
+import type { Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
-import type { GenAIMessage } from "rosetta-ai"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
 // ClickHouse DateTime64(9, 'UTC') rejects trailing 'Z'; strip it.
 const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
@@ -176,12 +176,32 @@ const parseMessages = (json: string): GenAIMessage[] => {
   }
 }
 
+const parseSystem = (json: string): GenAISystem => {
+  if (!json) return []
+  try {
+    const parsed = JSON.parse(json)
+    return Array.isArray(parsed) ? (parsed as GenAISystem) : []
+  } catch {
+    return []
+  }
+}
+
+const parseToolDefinitions = (json: string): ToolDefinition[] => {
+  if (!json) return []
+  try {
+    const parsed = JSON.parse(json)
+    return Array.isArray(parsed) ? (parsed as ToolDefinition[]) : []
+  } catch {
+    return []
+  }
+}
+
 const toDomainSpanDetail = (row: SpanDetailRow): SpanDetail => ({
   ...toBaseFields(row),
   inputMessages: parseMessages(row.input_messages),
   outputMessages: parseMessages(row.output_messages),
-  systemInstructions: row.system_instructions,
-  toolDefinitions: row.tool_definitions,
+  systemInstructions: parseSystem(row.system_instructions),
+  toolDefinitions: parseToolDefinitions(row.tool_definitions),
 })
 
 const toInsertRow = (span: SpanDetail) => ({
@@ -229,8 +249,8 @@ const toInsertRow = (span: SpanDetail) => ({
   scope_version: span.scopeVersion,
   input_messages: JSON.stringify(span.inputMessages),
   output_messages: JSON.stringify(span.outputMessages),
-  system_instructions: span.systemInstructions,
-  tool_definitions: span.toolDefinitions,
+  system_instructions: span.systemInstructions.length > 0 ? JSON.stringify(span.systemInstructions) : "",
+  tool_definitions: span.toolDefinitions.length > 0 ? JSON.stringify(span.toolDefinitions) : "",
   ingested_at: toClickhouseDateTime(span.ingestedAt),
 })
 

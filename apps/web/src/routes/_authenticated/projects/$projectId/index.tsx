@@ -16,7 +16,7 @@ import {
 import { formatCount, formatDuration, formatPrice } from "@repo/utils"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Database } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useTracesCollection } from "../../../../domains/spans/spans.collection.ts"
 import { useSelectableRows } from "../../../../lib/hooks/useSelectableRows.ts"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
@@ -32,7 +32,8 @@ function StatusBadge({ status }: { status: string }) {
 
 function TracesPage() {
   const { projectId } = Route.useParams()
-  const { data: traces } = useTracesCollection(projectId)
+  const { data: rawTraces } = useTracesCollection(projectId)
+  const traces = useMemo(() => rawTraces?.slice().sort((a, b) => b.startTime.localeCompare(a.startTime)), [rawTraces])
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
 
   const traceIds = traces?.map((t) => t.traceId) ?? []

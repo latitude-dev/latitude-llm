@@ -8,11 +8,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "biome check src",
+    "check:fix": "biome check --fix src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/models": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:",
     "protobufjs": "catalog:",

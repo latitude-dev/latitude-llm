@@ -577,6 +577,9 @@ importers:
 
   packages/domain/spans:
     dependencies:
+      '@domain/models':
+        specifier: workspace:*
+        version: link:../models
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

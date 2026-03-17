@@ -59,8 +59,8 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly scopeVersion: string
   readonly inputMessages: readonly object[]
   readonly outputMessages: readonly object[]
-  readonly systemInstructions: string
-  readonly toolDefinitions: string
+  readonly systemInstructions: readonly object[]
+  readonly toolDefinitions: readonly object[]
 }
 
 const serializeSpan = (span: Span): SpanRecord => ({
@@ -114,8 +114,8 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   scopeVersion: span.scopeVersion,
   inputMessages: span.inputMessages as readonly object[],
   outputMessages: span.outputMessages as readonly object[],
-  systemInstructions: span.systemInstructions,
-  toolDefinitions: span.toolDefinitions,
+  systemInstructions: span.systemInstructions as readonly object[],
+  toolDefinitions: span.toolDefinitions as readonly object[],
 })
 
 export const listSpansByTrace = createServerFn({ method: "GET" })
