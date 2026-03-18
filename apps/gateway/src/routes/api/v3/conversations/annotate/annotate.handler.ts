@@ -1,4 +1,5 @@
 import { AppRouteHandler } from '$/openApi/types'
+import { captureException } from '$/common/tracer'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -10,13 +11,13 @@ import { AnnotateRoute } from './annotate.route'
 import { annotateEvaluationV2 } from '@latitude-data/core/services/evaluationsV2/annotate'
 import { findProjectFromDocument } from '@latitude-data/core/queries/projects/findProjectFromDocument'
 import { NotFoundError } from '@latitude-data/constants/errors'
-import { serializeEvaluationResultV2 } from './serializeEvaluationResultV2'
 import {
   HEAD_COMMIT,
   MainSpanMetadata,
   MainSpanType,
   SpanWithDetails,
 } from '@latitude-data/core/constants'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 
 // @ts-expect-error: broken types
 export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
@@ -91,7 +92,9 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     throw new NotFoundError('Could not find evaluation for this version')
   }
 
-  const annotation = await annotateEvaluationV2({
+  const resultUuid = generateUUIDIdentifier()
+
+  void annotateEvaluationV2({
     span: { ...span, metadata } as SpanWithDetails<MainSpanType>,
     evaluation,
     resultScore: score,
@@ -100,12 +103,24 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
       selectedContexts: context ? [context] : undefined,
     },
     commit,
-    workspace: workspace,
-  }).then((r) => r.unwrap())
-
-  const data = serializeEvaluationResultV2(annotation, {
-    commit: commit,
+    workspace,
+    resultUuid,
+  }).then((result) => {
+    if (result.error) captureException(result.error)
+  }).catch((error: unknown) => {
+    captureException(
+      error instanceof Error
+        ? error
+        : new Error('Failed to annotate evaluation asynchronously'),
+    )
   })
 
-  return c.json(data, 201)
+  return c.json(
+    {
+      status: 'accepted',
+      message: 'Annotation queued for asynchronous processing',
+      resultUuid,
+    },
+    202,
+  )
 }

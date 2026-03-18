@@ -17,7 +17,7 @@ import {
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { Result } from '@latitude-data/core/lib/Result'
 import { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock SpanMetadatasRepository
 const mockGet = vi.fn().mockResolvedValue(Result.ok(null))
@@ -34,7 +34,17 @@ vi.mock('@latitude-data/core/repositories', async () => {
   }
 })
 
+const mockAnnotateEvaluationV2 = vi.fn().mockResolvedValue(Result.ok({}))
+vi.mock('@latitude-data/core/services/evaluationsV2/annotate', () => ({
+  annotateEvaluationV2: mockAnnotateEvaluationV2,
+}))
+
 describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/annotate', () => {
+  beforeEach(() => {
+    mockAnnotateEvaluationV2.mockClear()
+    mockAnnotateEvaluationV2.mockResolvedValue(Result.ok({}))
+  })
+
   // Default request body for annotation
   const DEFAULT_REQUEST_BODY = {
     score: 4,
@@ -287,10 +297,14 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       const res = await makeAnnotateRequest({ span, evaluation, apiKey })
 
       // Assert response
-      expect(res.status).toBe(201)
+      expect(res.status).toBe(202)
       const data = await res.json()
-      expect(data).toHaveProperty('uuid')
-      expect(typeof data.uuid).toBe('string')
+      expect(data).toEqual({
+        status: 'accepted',
+        message: 'Annotation queued for asynchronous processing',
+        resultUuid: expect.any(String),
+      })
+      expect(mockAnnotateEvaluationV2).toHaveBeenCalled()
     })
 
     it('fails with non-existent evaluation version', async () => {
@@ -330,24 +344,18 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       const res = await makeAnnotateRequest({ span, evaluation, apiKey })
 
       // Assert response
-      expect(res.status).toBe(201)
+      expect(res.status).toBe(202)
       const data = await res.json()
-
-      // Verify complete response structure
-      expect(data).toHaveProperty('uuid')
-      expect(typeof data.uuid).toBe('string')
-      expect(data).toHaveProperty('versionUuid')
-      expect(data.versionUuid).toBe(commit.uuid)
-      expect(data).toHaveProperty('score')
-      expect(data.score).toBe(DEFAULT_REQUEST_BODY.score)
-      expect(data).toHaveProperty('metadata')
-      expect(data).toHaveProperty('createdAt')
-      expect(data).toHaveProperty('updatedAt')
-
-      // Optional fields that might be null but should exist
-      expect(data).toHaveProperty('normalizedScore')
-      expect(data).toHaveProperty('hasPassed')
-      expect(data).toHaveProperty('error')
+      expect(data).toEqual({
+        status: 'accepted',
+        message: 'Annotation queued for asynchronous processing',
+        resultUuid: expect.any(String),
+      })
+      expect(mockAnnotateEvaluationV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          commit: expect.objectContaining({ uuid: commit.uuid }),
+        }),
+      )
     })
 
     it('returns correct data with custom score and metadata', async () => {
@@ -378,18 +386,43 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       })
 
       // Assert response
-      expect(res.status).toBe(201)
+      expect(res.status).toBe(202)
       const data = await res.json()
+      expect(data).toEqual({
+        status: 'accepted',
+        message: 'Annotation queued for asynchronous processing',
+        resultUuid: expect.any(String),
+      })
+      expect(mockAnnotateEvaluationV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resultScore: customRequestBody.score,
+          resultMetadata: expect.objectContaining(customRequestBody.metadata),
+        }),
+      )
+    })
 
-      // Verify the custom values are returned correctly
-      expect(data).toHaveProperty('uuid')
-      expect(data).toHaveProperty('versionUuid')
-      expect(data.versionUuid).toBe(commit.uuid)
-      expect(data).toHaveProperty('score')
-      expect(data.score).toBe(customRequestBody.score)
-      expect(data).toHaveProperty('metadata')
-      expect(data).toHaveProperty('createdAt')
-      expect(data).toHaveProperty('updatedAt')
+    it('returns immediately without waiting for annotation processing', async () => {
+      const { span, evaluation, apiKey, documents, commit } =
+        await createTestSetup()
+
+      setupSpanMetadataMock({
+        traceId: span.traceId,
+        spanId: span.id,
+        documentUuid: documents[0]!.documentUuid,
+        commitUuid: commit.uuid,
+      })
+
+      mockAnnotateEvaluationV2.mockReturnValueOnce(new Promise(() => {}))
+
+      const res = await makeAnnotateRequest({ span, evaluation, apiKey })
+
+      expect(res.status).toBe(202)
+      const data = await res.json()
+      expect(data).toEqual({
+        status: 'accepted',
+        message: 'Annotation queued for asynchronous processing',
+        resultUuid: expect.any(String),
+      })
     })
   })
 })
