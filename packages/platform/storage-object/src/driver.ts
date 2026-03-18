@@ -1,3 +1,5 @@
+import { Readable } from "node:stream"
+import type { StorageDiskPort } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import { Disk } from "flydrive"
@@ -6,7 +8,40 @@ import { createFsDriverEffect } from "./fs-url-builder.ts"
 
 export type StorageDriver = "fs" | "s3"
 
-export type StorageDisk = Disk
+/**
+ * Adapts a flydrive Disk to the StorageDiskPort interface.
+ * Converts between Web Standard ReadableStream and Node.js Readable.
+ */
+const adaptDiskToPort = (disk: Disk): StorageDiskPort => ({
+  put: (key: string, contents: string | Uint8Array) => disk.put(key, contents),
+  putStream: async (key: string, contents: ReadableStream<Uint8Array>) => {
+    // flydrive expects Node.js Readable; Readable.fromWeb avoids full buffering
+    const readable = Readable.fromWeb(contents as import("node:stream/web").ReadableStream)
+    await disk.putStream(key, readable)
+  },
+  get: (key: string) => disk.get(key),
+  getBytes: (key: string) => disk.getBytes(key),
+  getStream: async (key: string) => {
+    const nodeStream = await disk.getStream(key)
+    return new ReadableStream<Uint8Array>({
+      start(controller) {
+        nodeStream.on("data", (chunk: Buffer) => {
+          controller.enqueue(new Uint8Array(chunk))
+        })
+        nodeStream.on("end", () => {
+          controller.close()
+        })
+        nodeStream.on("error", (error) => {
+          controller.error(error)
+        })
+      },
+    })
+  },
+  delete: (key: string) => disk.delete(key),
+  getSignedUrl: (key: string, options?: { expiresIn?: number }) => disk.getSignedUrl(key, options),
+})
+
+export type StorageDisk = StorageDiskPort
 
 export const createStorageDiskEffect = (): Effect.Effect<StorageDisk> =>
   Effect.orDie(
@@ -29,11 +64,11 @@ export const createStorageDiskEffect = (): Effect.Effect<StorageDisk> =>
           visibility: "private",
         })
 
-        return new Disk(s3Driver)
+        return adaptDiskToPort(new Disk(s3Driver))
       }
 
       const fsDriver = yield* createFsDriverEffect()
-      return new Disk(fsDriver)
+      return adaptDiskToPort(new Disk(fsDriver))
     }),
   )
 

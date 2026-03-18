@@ -1,17 +1,6 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events"
-import { Effect, Fiber, Result, Schedule, ServiceMap } from "effect"
+import { Data, Effect, Fiber, Result, Schedule } from "effect"
 import type { Pool, PoolClient } from "pg"
-
-export class EventsOutboxAdapterTag extends ServiceMap.Service<
-  EventsOutboxAdapterTag,
-  {
-    readonly type: "outbox"
-  }
->()("EventsOutboxAdapterTag") {}
-
-export const eventsOutboxAdapter = {
-  type: "outbox" as const,
-}
 
 export interface OutboxEventRow {
   id: string
@@ -29,6 +18,15 @@ export interface PollingOutboxConsumerConfig {
   readonly pool: Pool
   readonly pollIntervalMs: number
   readonly batchSize: number
+}
+
+export class OutboxConsumerError extends Data.TaggedError("OutboxConsumerError")<{
+  readonly cause: unknown
+}> {}
+
+export interface OutboxConsumer {
+  readonly start: () => Effect.Effect<void, OutboxConsumerError>
+  readonly stop: () => Effect.Effect<void>
 }
 
 const SELECT_UNPUBLISHED_EVENTS = `
@@ -103,52 +101,54 @@ const pollEffect = (
   Effect.gen(function* () {
     const client = yield* Effect.tryPromise(() => config.pool.connect())
 
-    yield* Effect.tryPromise(() => client.query("BEGIN"))
+    const result = yield* Effect.gen(function* () {
+      yield* Effect.tryPromise(() => client.query("BEGIN"))
 
-    const processedCount = yield* processBatchEffect(client, publisher, config.batchSize)
+      const processedCount = yield* processBatchEffect(client, publisher, config.batchSize)
 
-    yield* Effect.tryPromise(() => client.query("COMMIT"))
+      yield* Effect.tryPromise(() => client.query("COMMIT"))
 
-    if (processedCount > 0) {
-      yield* Effect.logInfo(`Processed ${processedCount} events`)
-    }
+      if (processedCount > 0) {
+        yield* Effect.logInfo(`Processed ${processedCount} events`)
+      }
 
-    client.release()
+      return processedCount
+    }).pipe(
+      Effect.tapError(() => Effect.tryPromise(() => client.query("ROLLBACK")).pipe(Effect.ignore)),
+      Effect.ensuring(Effect.sync(() => client.release())),
+    )
 
-    return processedCount
-  })
-
-export const createPollingOutboxConsumerEffect = (
-  config: PollingOutboxConsumerConfig,
-  publisher: EventsPublisher,
-): Effect.Effect<{ start: () => void; stop: () => Promise<void> }, never, never> =>
-  Effect.gen(function* () {
-    let fiber: Fiber.Fiber<void, unknown> | null = null
-
-    const schedule = Schedule.spaced(config.pollIntervalMs)
-
-    return {
-      start: (): void => {
-        if (fiber !== null) return
-
-        const pollingEffect = Effect.repeat(pollEffect(config, publisher), schedule).pipe(Effect.asVoid)
-
-        fiber = Effect.runSync(Effect.forkDetach(pollingEffect, { startImmediately: true }))
-
-        Effect.runSync(Effect.logInfo("Polling outbox consumer started"))
-      },
-      stop: async (): Promise<void> => {
-        if (fiber === null) return
-
-        await Effect.runPromise(Fiber.interrupt(fiber))
-        fiber = null
-        await Effect.runPromise(Effect.logInfo("Polling outbox consumer stopped"))
-      },
-    }
+    return result
   })
 
 export const createPollingOutboxConsumer = (
   config: PollingOutboxConsumerConfig,
   publisher: EventsPublisher,
-): { start: () => void; stop: () => Promise<void> } =>
-  Effect.runSync(createPollingOutboxConsumerEffect(config, publisher))
+): Effect.Effect<OutboxConsumer, OutboxConsumerError> =>
+  Effect.gen(function* () {
+    let fiber: Fiber.Fiber<void, unknown> | null = null
+
+    const schedule = Schedule.spaced(config.pollIntervalMs)
+
+    const start = (): Effect.Effect<void, OutboxConsumerError> =>
+      Effect.gen(function* () {
+        if (fiber !== null) return
+
+        const pollingEffect = Effect.repeat(pollEffect(config, publisher), schedule).pipe(Effect.asVoid)
+
+        fiber = yield* Effect.forkDetach(pollingEffect)
+
+        yield* Effect.logInfo("Polling outbox consumer started")
+      }).pipe(Effect.catchCause((cause) => Effect.fail(new OutboxConsumerError({ cause }))))
+
+    const stop = (): Effect.Effect<void> =>
+      Effect.gen(function* () {
+        if (fiber === null) return
+
+        yield* Fiber.interrupt(fiber)
+        fiber = null
+        yield* Effect.logInfo("Polling outbox consumer stopped")
+      }).pipe(Effect.tapError(Effect.logError), Effect.ignore)
+
+    return { start, stop }
+  })

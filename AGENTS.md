@@ -86,16 +86,15 @@ Prefer Web Standard APIs over Node.js-specific modules in domain, utility, and s
 - Use `crypto.subtle` / `crypto.getRandomValues` instead of `node:crypto`
 - Use `fetch` instead of Node-specific HTTP clients
 - Use `TextEncoder` / `TextDecoder` instead of `Buffer.from(…, 'utf-8')`
-- Use `Uint8Array` for binary data in public interfaces; `Buffer` is acceptable inside Node-only adapters (`packages/platform/*`) that will never leave the server
+- Use `Uint8Array` for binary data in public interfaces
+- Use `ReadableStream` instead of `node:stream` / `node:fs` streams
 - Use `URL`, `URLSearchParams`, `Headers`, `Request`, `Response` from the global scope
 - Use `structuredClone` instead of JSON round-trips for deep cloning
 
 **Where Node-specific APIs are acceptable:**
 
-- Platform adapter packages (`packages/platform/*`) — these are server-only by definition
-- App entry points and server configuration (`apps/*/server.ts`, `apps/*/clients.ts`)
-- Build tooling, scripts, and CLI utilities
-- Test infrastructure (e.g. `node:test`, `node:child_process` in test helpers)
+- Build tooling, scripts, and CLI utilities (e.g. `node:fs`, `node:child_process`)
+- Test infrastructure (e.g. `node:test` in test helpers)
 
 When a Node-specific API is genuinely required outside these scopes, document the reason with a brief comment.
 
@@ -638,9 +637,9 @@ const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"));
 
 ## Cloud Agent Environment Setup
 
-When running as a cloud agent (e.g. Cursor Cloud Agent), the repository may not have `.env.development` or `.env.test` files. These are required for running the dev server and tests respectively.
+**Before starting any work**, always ensure `.env.development` and `.env.test` exist. These files are required for the dev server, tests, and tooling like `knip` to run correctly.
 
-**If `.env.development` or `.env.test` do not exist**, copy `.env.example` as-is:
+**Always run these commands first:**
 
 ```bash
 cp .env.example .env.development
@@ -652,7 +651,7 @@ Then set `NODE_ENV` appropriately in each file:
 - In `.env.development`: `NODE_ENV=development`
 - In `.env.test`: `NODE_ENV=test`
 
-This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests and dev commands to run without additional configuration.
+This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests, dev commands, and `knip` to run without additional configuration.
 
 ## Testing Conventions
 
@@ -885,7 +884,7 @@ Docker is used for local infrastructure services. Start them before running apps
 
 ```bash
 sudo dockerd &>/dev/null &  # if Docker daemon not already running
-sudo docker compose up -d postgres clickhouse redis mailpit redpanda
+sudo docker compose up -d postgres clickhouse redis redis-bullmq mailpit
 ```
 
 ### Database setup

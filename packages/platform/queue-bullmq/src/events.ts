@@ -55,8 +55,11 @@ export const createEventHandler = (handler: EventHandler): MessageHandler => ({
       const body = new TextDecoder().decode(message.body)
       const envelope = yield* Effect.try({
         try: () => EventEnvelopeSchema.parse(JSON.parse(body)),
-        catch: () => null,
-      })
+        catch: (error) => error,
+      }).pipe(
+        Effect.tapError((error) => Effect.logError(`Failed to parse domain event envelope: ${error}`)),
+        Effect.orElseSucceed(() => null),
+      )
       if (!envelope) return
       yield* handler.handle(envelope)
     }),

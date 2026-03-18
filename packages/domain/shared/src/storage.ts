@@ -1,15 +1,26 @@
-import type { Readable } from "node:stream"
 import { Data, Effect } from "effect"
 import type { DatasetId, OrganizationId, ProjectId } from "./id.ts"
 
 export interface StorageDiskPort {
   put(key: string, contents: string | Uint8Array): Promise<void>
   /**
-   * Write a file from a Node Readable stream (e.g. for streaming uploads without buffering).
+   * Write a file from a ReadableStream (Web Standard Streams API).
    */
-  putStream(key: string, contents: Readable): Promise<void>
+  putStream(key: string, contents: ReadableStream<Uint8Array>): Promise<void>
   get(key: string): Promise<string>
+  /**
+   * Returns file contents as a Uint8Array. Use for binary data.
+   */
+  getBytes(key: string): Promise<Uint8Array>
+  getStream(key: string): Promise<ReadableStream<Uint8Array>>
   delete(key: string): Promise<void>
+  /**
+   * Generate a signed URL for downloading the file.
+   * @param key - The storage key
+   * @param options - Options including expiresIn (seconds)
+   * @returns A signed URL that can be used to download the file
+   */
+  getSignedUrl(key: string, options?: { expiresIn?: number }): Promise<string>
 }
 
 export class StorageError extends Data.TaggedError("StorageError")<{
@@ -30,7 +41,7 @@ type BaseStorageOptions = {
 
 type BaseStreamStorageOptions = {
   readonly organizationId: OrganizationId
-  readonly stream: Readable
+  readonly stream: ReadableStream<Uint8Array>
   readonly extension?: string
 }
 
@@ -133,7 +144,8 @@ export function putInDisk<N extends FolderNamespace>(
 }
 
 /**
- * Writes to object storage from a Node Readable stream. Same key layout as putInDisk.
+ * Writes to object storage from a ReadableStream (Web Standard Streams API).
+ * Same key layout as putInDisk.
  */
 export function putInDiskStream<N extends FolderNamespace>(
   disk: StorageDiskPort,
@@ -148,5 +160,25 @@ export function putInDiskStream<N extends FolderNamespace>(
       return fileKey
     },
     catch: (cause) => new StorageError({ cause, operation: "putInDiskStream" }),
+  })
+}
+
+/**
+ * Reads file contents from object storage.
+ */
+export function getFromDisk(disk: StorageDiskPort, key: string): Effect.Effect<Uint8Array, StorageError> {
+  return Effect.tryPromise({
+    try: () => disk.getBytes(key),
+    catch: (cause) => new StorageError({ cause, operation: "getFromDisk" }),
+  })
+}
+
+/**
+ * Deletes a file from object storage.
+ */
+export function deleteFromDisk(disk: StorageDiskPort, key: string): Effect.Effect<void, StorageError> {
+  return Effect.tryPromise({
+    try: () => disk.delete(key),
+    catch: (cause) => new StorageError({ cause, operation: "deleteFromDisk" }),
   })
 }

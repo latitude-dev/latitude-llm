@@ -23,7 +23,7 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/email-transport": "workspace:*",
-    "@platform/queue-redpanda": "workspace:*",
+    "@platform/queue-bullmq": "workspace:*",
     "@platform/storage-object": "workspace:*",
     "@platform/events-outbox": "workspace:*",
     "@repo/observability": "workspace:*",

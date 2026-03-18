@@ -1,7 +1,7 @@
 import { generateId } from "@domain/shared"
 import { postgresSchema } from "@platform/db-postgres"
 import { createRlsMiddleware, type InMemoryPostgres } from "@platform/testkit"
-import { encrypt, hashToken } from "@repo/utils"
+import { encrypt, hashToken, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { getRedisClient } from "../clients.ts"
@@ -11,7 +11,7 @@ import { createOrganizationContextMiddleware } from "../middleware/organization-
 import type { OrganizationScopedEnv } from "../types.ts"
 
 export const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
-export const TEST_ENCRYPTION_KEY = Buffer.from(TEST_ENCRYPTION_KEY_HEX, "hex")
+export const TEST_ENCRYPTION_KEY = hexDecode(TEST_ENCRYPTION_KEY_HEX)
 
 /**
  * Create a protected Hono sub-app wired with the in-memory PGlite database,

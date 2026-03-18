@@ -5,7 +5,8 @@ import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
-import { createKafkaClient, createRedpandaQueuePublisher, loadKafkaConfig } from "@platform/queue-redpanda"
+import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
+import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
@@ -13,6 +14,7 @@ let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let queuePublisherPromise: Promise<QueuePublisher> | undefined
+let storageDiskInstance: StorageDisk | undefined
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
@@ -47,13 +49,19 @@ export const getRedisClient = (): RedisClient => {
 export const getQueuePublisher = (): Promise<QueuePublisher> => {
   if (!queuePublisherPromise) {
     queuePublisherPromise = (async () => {
-      const config = Effect.runSync(loadKafkaConfig())
-      const kafka = createKafkaClient(config)
-      return Effect.runPromise(createRedpandaQueuePublisher({ kafka }))
+      const config = Effect.runSync(loadBullMqConfig())
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }))
     })().catch((error) => {
       queuePublisherPromise = undefined
       throw error
     })
   }
   return queuePublisherPromise
+}
+
+export const getStorageDisk = (): StorageDisk => {
+  if (!storageDiskInstance) {
+    storageDiskInstance = createStorageDisk()
+  }
+  return storageDiskInstance
 }

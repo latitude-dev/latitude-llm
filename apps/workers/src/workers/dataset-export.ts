@@ -1,8 +1,7 @@
-import { Readable } from "node:stream"
 import { csvExportHeader, DatasetRepository, DatasetRowRepository, rowsToCsvFragment } from "@domain/datasets"
 import { datasetExportTemplate, type RenderedEmail, sendEmail } from "@domain/email"
 import type { MessageHandler, QueueConsumer, QueueMessage } from "@domain/queue"
-import { DatasetId, OrganizationId, putInDiskStream } from "@domain/shared"
+import { DatasetId, OrganizationId, putInDisk } from "@domain/shared"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createPostgresClient, DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
@@ -58,14 +57,14 @@ export const createDatasetExportWorker = (consumer: QueueConsumer) => {
           offset += BATCH_SIZE
         }
         const csv = csvChunks.join("")
-        const stream = Readable.from(Buffer.from(csv, "utf-8"))
+        const csvBytes = new TextEncoder().encode(csv)
 
-        const fileKey = yield* putInDiskStream(disk, {
+        const fileKey = yield* putInDisk(disk, {
           namespace: "datasetExports",
           organizationId,
           projectId: dataset.projectId,
           datasetId,
-          stream,
+          content: csvBytes,
           extension: "csv",
         })
 
@@ -104,9 +103,4 @@ export const createDatasetExportWorker = (consumer: QueueConsumer) => {
   }
 
   consumer.subscribe("dataset-export", handler)
-
-  return {
-    start: () => Effect.runPromise(consumer.start()),
-    stop: () => Effect.runPromise(consumer.stop()),
-  }
 }

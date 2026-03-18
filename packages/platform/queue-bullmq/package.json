@@ -1,5 +1,5 @@
 {
-  "name": "@platform/queue-redpanda",
+  "name": "@platform/queue-bullmq",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,8 +17,13 @@
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
     "@platform/env": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "bullmq": "catalog:",
     "effect": "catalog:",
-    "kafkajs": "catalog:",
+    "ioredis": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
   }
 }

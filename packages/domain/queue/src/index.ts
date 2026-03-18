@@ -14,6 +14,7 @@ export interface MessageHandler {
 
 export interface QueuePublisher {
   readonly publish: (queue: QueueName, message: QueueMessage) => Effect.Effect<void, QueuePublishError>
+  readonly close: () => Effect.Effect<void>
 }
 
 export interface QueueConsumer {

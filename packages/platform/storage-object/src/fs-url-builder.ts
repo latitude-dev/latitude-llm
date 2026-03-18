@@ -15,7 +15,7 @@ const DEFAULT_SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
 type FsUrlBuilderOptions = {
   readonly webUrl: string
   /** Produce a signed token for the given storage key and expiry (seconds). */
-  readonly sign: (key: string, expiresInSeconds: number) => string
+  readonly sign: (key: string, expiresInSeconds: number) => string | Promise<string>
   /** Path for the signed download URL (no query). E.g. "/downloads/export". Can serve any key. */
   readonly pathTemplate: string
   readonly defaultExpiresInSeconds?: number
@@ -32,12 +32,12 @@ function createFsUrlBuilder(options: FsUrlBuilderOptions): FsUrlBuilder {
   const path = pathTemplate.startsWith("/") ? pathTemplate : `/${pathTemplate}`
 
   return {
-    generateSignedURL: (key: string, _filePath: string, opts?: { expiresIn?: string | number }) => {
+    generateSignedURL: async (key: string, _filePath: string, opts?: { expiresIn?: string | number }) => {
       const expiresInSeconds = typeof opts?.expiresIn === "number" ? opts.expiresIn : defaultExpiresInSeconds
-      const token = sign(key, expiresInSeconds)
+      const token = await sign(key, expiresInSeconds)
       const query = `token=${encodeURIComponent(token)}`
       const separator = path.includes("?") ? "&" : "?"
-      return Promise.resolve(`${base}${path}${separator}${query}`)
+      return `${base}${path}${separator}${query}`
     },
   }
 }
