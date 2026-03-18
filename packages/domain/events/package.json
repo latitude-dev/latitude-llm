@@ -12,5 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "check:fix": "biome check --fix src"
+  },
+  "dependencies": {
+    "effect": "catalog:"
   }
 }
