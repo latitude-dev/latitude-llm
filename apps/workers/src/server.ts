@@ -95,6 +95,7 @@ const handleShutdown = async (signal: string) => {
     logger.error("Error during shutdown (workers may not have started)", error)
   }
 
+  await pgPool.end()
   process.exit(0)
 }
 

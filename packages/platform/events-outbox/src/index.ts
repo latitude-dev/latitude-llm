@@ -153,7 +153,6 @@ export const createPollingOutboxConsumer = (
 
         yield* Fiber.interrupt(fiber)
         fiber = null
-        yield* Effect.tryPromise(() => config.pool.end())
         yield* Effect.logInfo("Polling outbox consumer stopped")
       }).pipe(Effect.tapError(Effect.logError), Effect.ignore)
 
