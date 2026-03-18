@@ -78,11 +78,7 @@ CREATE TABLE IF NOT EXISTS traces
 ENGINE = AggregatingMergeTree
 PARTITION BY toYYYYMM(min_start_time)
 PRIMARY KEY (organization_id, project_id)
-ORDER BY (organization_id, project_id, trace_id)
-TTL toDateTime(min_start_time) + INTERVAL 3 MONTH TO VOLUME 'cold'
-SETTINGS
-    ttl_only_drop_parts = 1,
-    storage_policy      = 'tiered';
+ORDER BY (organization_id, project_id, trace_id);
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS traces_mv TO traces
 AS SELECT

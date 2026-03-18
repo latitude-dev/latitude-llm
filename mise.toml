@@ -1,2 +1,3 @@
 [tools]
 node = "25"
+terraform = "1.10.5"

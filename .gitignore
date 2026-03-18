@@ -70,9 +70,6 @@ dist
 # postgres data in development. Ignore
 docker/pgdata/
 
-# Object storage data in filesystem
-storage/
-
 # Web scripts build output
 apps/web/scripts-dist
 
@@ -81,8 +78,6 @@ apps/web/uploads
 apps/web/storage
 apps/web/public/uploads
 apps/web/public/files
-uploads
-storage
 
 # Temporal
 tmp
@@ -130,3 +125,5 @@ progress.txt
 
 packages/cli/prompts
 .output
+
+slate.json
