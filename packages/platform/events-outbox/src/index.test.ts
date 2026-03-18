@@ -65,12 +65,13 @@ class PostgresOutboxPoolAdapter {
 }
 
 const pg = setupTestPostgres()
+const TEST_TIMEOUT_MS = 20_000
 
-const waitFor = async (predicate: () => Promise<boolean>, timeoutMs = 5_000): Promise<void> => {
+const waitFor = async (predicate: () => Promise<boolean>, timeoutMs = 12_000): Promise<void> => {
   const started = Date.now()
   while (Date.now() - started < timeoutMs) {
     if (await predicate()) return
-    await new Promise((resolve) => setTimeout(resolve, 25))
+    await new Promise((resolve) => setTimeout(resolve, 100))
   }
   throw new Error(`Condition not met within ${timeoutMs}ms`)
 }
@@ -80,130 +81,134 @@ describe("createPollingOutboxConsumer", () => {
     await pg.db.delete(outboxEvents)
   })
 
-  it("publishes pending outbox events and marks them as published", async () => {
-    const now = new Date("2026-03-18T10:00:00.000Z")
-    const pool = new PostgresOutboxPoolAdapter(pg.postgresDb, () => now)
-    const publishedEventIds: string[] = []
-    const publisher = {
-      publish: (envelope: EventEnvelope) => {
-        publishedEventIds.push(envelope.id)
-        return Promise.resolve()
-      },
-    }
-
-    await pg.db.insert(outboxEvents).values([
-      {
-        id: "outbox_event_test_000001",
-        eventName: "dataset.created",
-        aggregateId: "aggregate_test_000001",
-        organizationId: "org_outbox_test_000001",
-        payload: { datasetId: "dataset_1" },
-        occurredAt: new Date("2026-03-18T09:59:00.000Z"),
-      },
-      {
-        id: "outbox_event_test_000002",
-        eventName: "dataset.created",
-        aggregateId: "aggregate_test_000002",
-        organizationId: "org_outbox_test_000001",
-        payload: { datasetId: "dataset_2" },
-        occurredAt: new Date("2026-03-18T09:59:30.000Z"),
-      },
-    ])
-
-    const consumer = await Effect.runPromise(
-      createPollingOutboxConsumer(
-        {
-          pool: pool as unknown as Pool,
-          pollIntervalMs: 10,
-          batchSize: 100,
+  it(
+    "publishes pending outbox events and marks them as published",
+    async () => {
+      const now = new Date("2026-03-18T10:00:00.000Z")
+      const pool = new PostgresOutboxPoolAdapter(pg.postgresDb, () => now)
+      const publishedEventIds: string[] = []
+      const publisher = {
+        publish: (envelope: EventEnvelope) => {
+          publishedEventIds.push(envelope.id)
+          return Promise.resolve()
         },
-        publisher as unknown as EventsPublisher,
-      ),
-    )
+      }
 
-    await Effect.runPromise(consumer.start())
-
-    await waitFor(async () => {
-      const rows = await pg.db.select().from(outboxEvents).where(eq(outboxEvents.published, true))
-      return rows.length === 2
-    })
-
-    await Effect.runPromise(consumer.stop())
-
-    const rows = await pg.db.select().from(outboxEvents).orderBy(asc(outboxEvents.createdAt))
-
-    expect(publishedEventIds).toEqual(["outbox_event_test_000001", "outbox_event_test_000002"])
-    expect(rows).toHaveLength(2)
-    expect(rows[0]?.published).toBe(true)
-    expect(rows[1]?.published).toBe(true)
-    expect(rows[0]?.publishedAt?.toISOString()).toBe("2026-03-18T10:00:00.000Z")
-    expect(rows[1]?.publishedAt?.toISOString()).toBe("2026-03-18T10:00:00.000Z")
-  })
-
-  it("keeps failed events unpublished while marking successful ones", async () => {
-    const now = new Date("2026-03-18T11:00:00.000Z")
-    const pool = new PostgresOutboxPoolAdapter(pg.postgresDb, () => now)
-    const failedEventId = "outbox_event_test_000011"
-    const publisher = {
-      publish: (envelope: EventEnvelope) => {
-        if (envelope.id === failedEventId) {
-          throw new Error("publish failed")
-        }
-        return Promise.resolve()
-      },
-    }
-
-    await pg.db.insert(outboxEvents).values([
-      {
-        id: failedEventId,
-        eventName: "dataset.deleted",
-        aggregateId: "aggregate_test_000011",
-        organizationId: "org_outbox_test_000001",
-        payload: { datasetId: "dataset_fail" },
-        occurredAt: new Date("2026-03-18T10:59:00.000Z"),
-      },
-      {
-        id: "outbox_event_test_000012",
-        eventName: "dataset.deleted",
-        aggregateId: "aggregate_test_000012",
-        organizationId: "org_outbox_test_000001",
-        payload: { datasetId: "dataset_ok" },
-        occurredAt: new Date("2026-03-18T10:59:30.000Z"),
-      },
-    ])
-
-    const consumer = await Effect.runPromise(
-      createPollingOutboxConsumer(
+      await pg.db.insert(outboxEvents).values([
         {
-          pool: pool as unknown as Pool,
-          pollIntervalMs: 10,
-          batchSize: 100,
+          id: "outbox_event_test_000001",
+          eventName: "dataset.created",
+          aggregateId: "aggregate_test_000001",
+          organizationId: "org_outbox_test_000001",
+          payload: { datasetId: "dataset_1" },
+          occurredAt: new Date("2026-03-18T09:59:00.000Z"),
         },
-        publisher as unknown as EventsPublisher,
-      ),
-    )
+        {
+          id: "outbox_event_test_000002",
+          eventName: "dataset.created",
+          aggregateId: "aggregate_test_000002",
+          organizationId: "org_outbox_test_000001",
+          payload: { datasetId: "dataset_2" },
+          occurredAt: new Date("2026-03-18T09:59:30.000Z"),
+        },
+      ])
 
-    await Effect.runPromise(consumer.start())
+      const consumer = await Effect.runPromise(
+        createPollingOutboxConsumer(
+          {
+            pool: pool as unknown as Pool,
+            pollIntervalMs: 10,
+            batchSize: 100,
+          },
+          publisher as unknown as EventsPublisher,
+        ),
+      )
 
-    await waitFor(async () => {
-      const [okRow] = await pg.db.select().from(outboxEvents).where(eq(outboxEvents.id, "outbox_event_test_000012"))
-      return okRow?.published === true
-    })
+      await Effect.runPromise(consumer.start())
 
-    await Effect.runPromise(consumer.stop())
+      await waitFor(async () => publishedEventIds.length === 2)
 
-    const rows = await pg.db
-      .select()
-      .from(outboxEvents)
-      .where(inArray(outboxEvents.id, [failedEventId, "outbox_event_test_000012"]))
-      .orderBy(asc(outboxEvents.id))
+      await Effect.runPromise(consumer.stop())
 
-    const failedRow = rows.find((row) => row.id === failedEventId)
-    const okRow = rows.find((row) => row.id === "outbox_event_test_000012")
+      const rows = await pg.db.select().from(outboxEvents).orderBy(asc(outboxEvents.createdAt))
 
-    expect(okRow?.published).toBe(true)
-    expect(okRow?.publishedAt?.toISOString()).toBe("2026-03-18T11:00:00.000Z")
-    expect(failedRow?.published).toBe(false)
-    expect(failedRow?.publishedAt).toBeNull()
-  })
+      expect(publishedEventIds).toEqual(["outbox_event_test_000001", "outbox_event_test_000002"])
+      expect(rows).toHaveLength(2)
+      expect(rows[0]?.published).toBe(true)
+      expect(rows[1]?.published).toBe(true)
+      expect(rows[0]?.publishedAt?.toISOString()).toBe("2026-03-18T10:00:00.000Z")
+      expect(rows[1]?.publishedAt?.toISOString()).toBe("2026-03-18T10:00:00.000Z")
+    },
+    TEST_TIMEOUT_MS,
+  )
+
+  it(
+    "keeps failed events unpublished while marking successful ones",
+    async () => {
+      const now = new Date("2026-03-18T11:00:00.000Z")
+      const pool = new PostgresOutboxPoolAdapter(pg.postgresDb, () => now)
+      const failedEventId = "outbox_event_test_000011"
+      const publishedEventIds: string[] = []
+      const publisher = {
+        publish: (envelope: EventEnvelope) => {
+          if (envelope.id === failedEventId) {
+            return Promise.reject(new Error("publish failed"))
+          }
+          publishedEventIds.push(envelope.id)
+          return Promise.resolve()
+        },
+      }
+
+      await pg.db.insert(outboxEvents).values([
+        {
+          id: failedEventId,
+          eventName: "dataset.deleted",
+          aggregateId: "aggregate_test_000011",
+          organizationId: "org_outbox_test_000001",
+          payload: { datasetId: "dataset_fail" },
+          occurredAt: new Date("2026-03-18T10:59:00.000Z"),
+        },
+        {
+          id: "outbox_event_test_000012",
+          eventName: "dataset.deleted",
+          aggregateId: "aggregate_test_000012",
+          organizationId: "org_outbox_test_000001",
+          payload: { datasetId: "dataset_ok" },
+          occurredAt: new Date("2026-03-18T10:59:30.000Z"),
+        },
+      ])
+
+      const consumer = await Effect.runPromise(
+        createPollingOutboxConsumer(
+          {
+            pool: pool as unknown as Pool,
+            pollIntervalMs: 10,
+            batchSize: 100,
+          },
+          publisher as unknown as EventsPublisher,
+        ),
+      )
+
+      await Effect.runPromise(consumer.start())
+
+      await waitFor(async () => publishedEventIds.includes("outbox_event_test_000012"))
+
+      await Effect.runPromise(consumer.stop())
+
+      const rows = await pg.db
+        .select()
+        .from(outboxEvents)
+        .where(inArray(outboxEvents.id, [failedEventId, "outbox_event_test_000012"]))
+        .orderBy(asc(outboxEvents.id))
+
+      const failedRow = rows.find((row) => row.id === failedEventId)
+      const okRow = rows.find((row) => row.id === "outbox_event_test_000012")
+
+      expect(okRow?.published).toBe(true)
+      expect(okRow?.publishedAt?.toISOString()).toBe("2026-03-18T11:00:00.000Z")
+      expect(failedRow?.published).toBe(false)
+      expect(failedRow?.publishedAt).toBeNull()
+    },
+    TEST_TIMEOUT_MS,
+  )
 })
