@@ -6,6 +6,7 @@ import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
+import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
@@ -13,6 +14,7 @@ let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let queuePublisherPromise: Promise<QueuePublisher> | undefined
+let storageDiskInstance: StorageDisk | undefined
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
@@ -55,4 +57,11 @@ export const getQueuePublisher = (): Promise<QueuePublisher> => {
     })
   }
   return queuePublisherPromise
+}
+
+export const getStorageDisk = (): StorageDisk => {
+  if (!storageDiskInstance) {
+    storageDiskInstance = createStorageDisk()
+  }
+  return storageDiskInstance
 }

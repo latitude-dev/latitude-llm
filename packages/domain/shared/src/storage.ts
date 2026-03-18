@@ -150,3 +150,26 @@ export function putInDiskStream<N extends FolderNamespace>(
     catch: (cause) => new StorageError({ cause, operation: "putInDiskStream" }),
   })
 }
+
+/**
+ * Reads file contents from object storage.
+ */
+export function getFromDisk(disk: StorageDiskPort, key: string): Effect.Effect<Uint8Array, StorageError> {
+  return Effect.tryPromise({
+    try: async () => {
+      const content = await disk.get(key)
+      return new TextEncoder().encode(content)
+    },
+    catch: (cause) => new StorageError({ cause, operation: "getFromDisk" }),
+  })
+}
+
+/**
+ * Deletes a file from object storage.
+ */
+export function deleteFromDisk(disk: StorageDiskPort, key: string): Effect.Effect<void, StorageError> {
+  return Effect.tryPromise({
+    try: () => disk.delete(key),
+    catch: (cause) => new StorageError({ cause, operation: "deleteFromDisk" }),
+  })
+}

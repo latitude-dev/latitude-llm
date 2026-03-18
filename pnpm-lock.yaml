@@ -237,6 +237,9 @@ importers:
       '@platform/queue-bullmq':
         specifier: workspace:*
         version: link:../../packages/platform/queue-bullmq
+      '@platform/storage-object':
+        specifier: workspace:*
+        version: link:../../packages/platform/storage-object
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
