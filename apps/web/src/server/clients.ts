@@ -11,6 +11,7 @@ import {
   sendEmail,
   signupExistingAccountMagicLinkTemplate,
 } from "@domain/email"
+import type { QueuePublisher } from "@domain/queue"
 import { UserRepository } from "@domain/users"
 import { createBetterAuth } from "@platform/auth-better"
 import type { RedisClient } from "@platform/cache-redis"
@@ -25,10 +26,9 @@ import {
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { createKafkaClient, loadKafkaConfig } from "@platform/queue-redpanda"
+import { createKafkaClient, createRedpandaQueuePublisher, loadKafkaConfig } from "@platform/queue-redpanda"
 import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
-import type { Producer } from "kafkajs"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -36,7 +36,7 @@ let redisClientInstance: RedisClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDisk | undefined
-let kafkaProducer: Promise<Producer> | undefined
+let queuePublisher: Promise<QueuePublisher> | undefined
 
 interface AuthIntentEmailContext {
   readonly type: AuthIntent["type"]
@@ -115,20 +115,18 @@ export const getStorageDisk = (): StorageDisk => {
   return storageDiskInstance
 }
 
-export const getKafkaProducer = (): Promise<Producer> => {
-  if (!kafkaProducer) {
-    kafkaProducer = (async () => {
+export const getQueuePublisher = (): Promise<QueuePublisher> => {
+  if (!queuePublisher) {
+    queuePublisher = (async () => {
       const config = Effect.runSync(loadKafkaConfig())
       const kafka = createKafkaClient(config)
-      const producer = kafka.producer({ allowAutoTopicCreation: false })
-      await producer.connect()
-      return producer
+      return Effect.runPromise(createRedpandaQueuePublisher({ kafka }))
     })().catch((error) => {
-      kafkaProducer = undefined
+      queuePublisher = undefined
       throw error
     })
   }
-  return kafkaProducer
+  return queuePublisher
 }
 
 export const getBetterAuth = () => {

@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@domain/events": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
     "kafkajs": "catalog:",

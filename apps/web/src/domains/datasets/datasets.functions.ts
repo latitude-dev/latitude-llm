@@ -15,6 +15,7 @@ import {
   renameDataset,
   updateRow,
 } from "@domain/datasets"
+import type { QueueMessage } from "@domain/queue"
 import {
   DatasetId,
   DatasetRowId,
@@ -26,14 +27,13 @@ import {
 } from "@domain/shared"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { Topics } from "@platform/queue-redpanda"
 import { UnauthorizedError } from "@repo/utils"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getKafkaProducer, getPostgresClient, getStorageDisk } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getStorageDisk } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 import { applyMapping } from "./column-mapping.ts"
 
@@ -203,7 +203,7 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
     )
 
     if (total > DATASET_DOWNLOAD_DIRECT_THRESHOLD) {
-      const producer = await getKafkaProducer()
+      const publisher = await getQueuePublisher()
 
       const payload = {
         datasetId: data.datasetId,
@@ -211,19 +211,15 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
         projectId: dataset.projectId,
         recipientEmail: email,
       }
-      await producer.send({
-        topic: Topics.datasetExport,
-        messages: [
-          {
-            key: orgId,
-            value: Buffer.from(JSON.stringify(payload), "utf-8"),
-            headers: {
-              "organization-id": payload.organizationId,
-              "project-id": payload.projectId,
-            },
-          },
-        ],
-      })
+      const message: QueueMessage = {
+        body: new TextEncoder().encode(JSON.stringify(payload)),
+        key: orgId,
+        headers: new Map([
+          ["organization-id", payload.organizationId],
+          ["project-id", payload.projectId],
+        ]),
+      }
+      await Effect.runPromise(publisher.publish("dataset-export", message))
       return { type: "enqueued" }
     }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { EventEnvelopeSchema } from "./consumer.ts"
+import { EventEnvelopeSchema } from "./events.ts"
 
 const validWireMessage = {
   id: "evt-123",
