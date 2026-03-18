@@ -1,3 +1,5 @@
+// TS won't add types for these methods until TS 6.
+// https://github.com/microsoft/TypeScript/pull/61696
 declare global {
   interface Uint8Array {
     toBase64(options?: { alphabet?: "base64" | "base64url" }): string
