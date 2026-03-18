@@ -1,9 +1,5 @@
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { Data, Effect } from "effect"
-
-export class BullMqConfigError extends Data.TaggedError("BullMqConfigError")<{
-  readonly message: string
-}> {}
+import { Effect } from "effect"
 
 export interface BullMqConfig {
   readonly host: string
@@ -11,7 +7,7 @@ export interface BullMqConfig {
   readonly password: string | undefined
 }
 
-export const loadBullMqConfig = (): Effect.Effect<BullMqConfig, BullMqConfigError | Error> =>
+export const loadBullMqConfig = (): Effect.Effect<BullMqConfig, Error> =>
   Effect.gen(function* () {
     const host = yield* parseEnv("LAT_BULLMQ_HOST", "string")
     const port = yield* parseEnv("LAT_BULLMQ_PORT", "number", 6380)
