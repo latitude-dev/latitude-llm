@@ -18,6 +18,7 @@
     "@domain/projects": "workspace:^",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",

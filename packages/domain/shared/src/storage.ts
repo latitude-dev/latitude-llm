@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect"
+import { Data, Effect, ServiceMap } from "effect"
 import type { DatasetId, OrganizationId, ProjectId } from "./id.ts"
 
 export interface StorageDiskPort {
@@ -18,6 +18,10 @@ export class StorageError extends Data.TaggedError("StorageError")<{
   readonly httpStatus = 500
   readonly httpMessage = "Storage operation failed"
 }
+
+export class StorageDisk extends ServiceMap.Service<StorageDisk, StorageDiskPort>()(
+  "@domain/shared/StorageDisk",
+) {}
 
 type FolderNamespace = "datasetExports" | "datasets" | "ingest" | "unknown"
 

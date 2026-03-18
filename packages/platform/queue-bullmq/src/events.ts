@@ -1,5 +1,5 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events"
-import type { MessageHandler, QueueMessage, QueuePublishError, QueuePublisher } from "@domain/queue"
+import type { MessageHandler, QueueMessage, QueuePublishError, QueuePublisherShape } from "@domain/queue"
 import { Effect } from "effect"
 import { z } from "zod"
 
@@ -44,7 +44,7 @@ export const mapEnvelopeToQueueMessage = (envelope: EventEnvelope): QueueMessage
   ]),
 })
 
-export const createEventsPublisher = (queuePublisher: QueuePublisher): EventsPublisher<QueuePublishError> => ({
+export const createEventsPublisher = (queuePublisher: QueuePublisherShape): EventsPublisher<QueuePublishError> => ({
   publish: (envelope: EventEnvelope) => queuePublisher.publish("domain-events", mapEnvelopeToQueueMessage(envelope)),
 })
 

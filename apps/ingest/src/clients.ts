@@ -1,20 +1,21 @@
 import type { ClickHouseClient } from "@clickhouse/client"
-import type { QueuePublisher } from "@domain/queue"
+import type { QueuePublisherShape } from "@domain/queue"
 import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
-import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
+import type { StorageDiskPort } from "@domain/shared"
+import { createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
-let queuePublisherPromise: Promise<QueuePublisher> | undefined
-let storageDiskInstance: StorageDisk | undefined
+let queuePublisherPromise: Promise<QueuePublisherShape> | undefined
+let storageDiskInstance: StorageDiskPort | undefined
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
@@ -46,7 +47,7 @@ export const getRedisClient = (): RedisClient => {
   return redisInstance
 }
 
-export const getQueuePublisher = (): Promise<QueuePublisher> => {
+export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
   if (!queuePublisherPromise) {
     queuePublisherPromise = (async () => {
       const config = Effect.runSync(loadBullMqConfig())
@@ -59,7 +60,7 @@ export const getQueuePublisher = (): Promise<QueuePublisher> => {
   return queuePublisherPromise
 }
 
-export const getStorageDisk = (): StorageDisk => {
+export const getStorageDisk = (): StorageDiskPort => {
   if (!storageDiskInstance) {
     storageDiskInstance = createStorageDisk()
   }

@@ -1,7 +1,7 @@
 import { Readable } from "node:stream"
-import type { StorageDiskPort } from "@domain/shared"
+import { StorageDisk, type StorageDiskPort } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { Disk } from "flydrive"
 import { S3Driver } from "flydrive/drivers/s3"
 import { createFsDriverEffect } from "./fs-url-builder.ts"
@@ -41,9 +41,7 @@ const adaptDiskToPort = (disk: Disk): StorageDiskPort => ({
   getSignedUrl: (key: string, options?: { expiresIn?: number }) => disk.getSignedUrl(key, options),
 })
 
-export type StorageDisk = StorageDiskPort
-
-export const createStorageDiskEffect = (): Effect.Effect<StorageDisk> =>
+export const createStorageDiskEffect = (): Effect.Effect<StorageDiskPort> =>
   Effect.orDie(
     Effect.gen(function* () {
       const driver = yield* parseEnv("LAT_STORAGE_DRIVER", "string", "fs")
@@ -72,4 +70,6 @@ export const createStorageDiskEffect = (): Effect.Effect<StorageDisk> =>
     }),
   )
 
-export const createStorageDisk = (): StorageDisk => Effect.runSync(createStorageDiskEffect())
+export const createStorageDisk = (): StorageDiskPort => Effect.runSync(createStorageDiskEffect())
+
+export const StorageDiskLive = (disk: StorageDiskPort) => Layer.succeed(StorageDisk, disk)
