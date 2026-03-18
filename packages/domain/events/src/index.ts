@@ -1,3 +1,5 @@
+import type { Effect } from "effect"
+
 export interface DomainEvent<
   TName extends string = string,
   TPayload extends Record<string, unknown> = Record<string, unknown>,
@@ -13,6 +15,6 @@ export interface EventEnvelope<TEvent extends DomainEvent = DomainEvent> {
   readonly occurredAt: Date
 }
 
-export interface EventsPublisher {
-  publish(envelope: EventEnvelope): Promise<void>
+export interface EventsPublisher<TError = unknown> {
+  publish(envelope: EventEnvelope): Effect.Effect<void, TError>
 }

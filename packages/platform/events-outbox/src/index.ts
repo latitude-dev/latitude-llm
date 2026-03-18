@@ -53,9 +53,9 @@ const MARK_EVENTS_PUBLISHED = `
   WHERE id = ANY($1::text[])
 `
 
-const processBatchEffect = (
+const processBatchEffect = <TPublishError>(
   client: PoolClient,
-  publisher: EventsPublisher,
+  publisher: EventsPublisher<TPublishError>,
   batchSize: number,
 ): Effect.Effect<number, unknown, never> =>
   Effect.gen(function* () {
@@ -78,7 +78,7 @@ const processBatchEffect = (
         occurredAt: row.occurred_at,
       }
 
-      const publishResult = yield* Effect.result(Effect.tryPromise(() => publisher.publish(envelope)))
+      const publishResult = yield* Effect.result(publisher.publish(envelope))
 
       if (Result.isSuccess(publishResult)) {
         processedIds.push(row.id)
@@ -94,9 +94,9 @@ const processBatchEffect = (
     return processedIds.length
   })
 
-const pollEffect = (
+const pollEffect = <TPublishError>(
   config: PollingOutboxConsumerConfig,
-  publisher: EventsPublisher,
+  publisher: EventsPublisher<TPublishError>,
 ): Effect.Effect<number, unknown, never> =>
   Effect.gen(function* () {
     const client = yield* Effect.tryPromise(() => config.pool.connect())
@@ -121,9 +121,9 @@ const pollEffect = (
     return result
   })
 
-export const createPollingOutboxConsumer = (
+export const createPollingOutboxConsumer = <TPublishError>(
   config: PollingOutboxConsumerConfig,
-  publisher: EventsPublisher,
+  publisher: EventsPublisher<TPublishError>,
 ): Effect.Effect<OutboxConsumer, OutboxConsumerError> =>
   Effect.gen(function* () {
     let fiber: Fiber.Fiber<void, unknown> | null = null
