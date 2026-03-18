@@ -39,7 +39,8 @@ const ch = setupTestClickHouse()
 
 function makeFakeTraceRepository(traces: TraceDetail[]): (typeof TraceRepository)["Service"] {
   return {
-    findByProjectId: () => Effect.succeed([]),
+    findByProjectId: () => Effect.succeed({ items: [], hasMore: false }),
+    countByProjectId: () => Effect.succeed(0),
     findByTraceId: () => Effect.succeed(null),
     findByTraceIds: () => Effect.succeed(traces),
   }

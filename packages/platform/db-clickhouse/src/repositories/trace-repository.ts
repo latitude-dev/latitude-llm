@@ -10,7 +10,7 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Trace, TraceDetail, TraceStatus } from "@domain/spans"
+import type { Trace, TraceDetail, TraceListPage, TraceStatus } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -160,14 +160,40 @@ const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => {
   }
 }
 
+interface SortColumn {
+  readonly expr: string
+  readonly chType: string
+  readonly rowKey: keyof TraceListRow
+}
+
+const SORT_COLUMNS: Record<string, SortColumn> = {
+  startTime: { expr: "start_time", chType: "DateTime64(9, 'UTC')", rowKey: "start_time" },
+  duration: { expr: "duration_ns", chType: "Int64", rowKey: "duration_ns" },
+  cost: { expr: "cost_total_microcents", chType: "UInt64", rowKey: "cost_total_microcents" },
+  spans: { expr: "span_count", chType: "UInt64", rowKey: "span_count" },
+}
+
+const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
+
 export const TraceRepositoryLive = Layer.effect(
   TraceRepository,
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
     return {
-      findByProjectId: ({ organizationId, projectId, options }) =>
-        chSqlClient
+      findByProjectId: ({ organizationId, projectId, options }) => {
+        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+        const cmp = orderDir === "DESC" ? "<" : ">"
+        const limit = options.limit ?? 50
+
+        const cursorClause = options.cursor
+          ? `HAVING (${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
+              OR (${sort.expr} = {cursorSortValue:${sort.chType}}
+                  AND trace_id ${cmp} {cursorTraceId:FixedString(32)}))`
+          : ""
+
+        return chSqlClient
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT ${LIST_SELECT}
@@ -177,9 +203,9 @@ export const TraceRepositoryLive = Layer.effect(
                         AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
                         AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
                       GROUP BY organization_id, project_id, trace_id
-                      ORDER BY start_time DESC
-                      LIMIT {limit:UInt32}
-                      OFFSET {offset:UInt32}`,
+                      ${cursorClause}
+                      ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
+                      LIMIT {limit:UInt32}`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
@@ -187,16 +213,64 @@ export const TraceRepositoryLive = Layer.effect(
                 startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
                 hasStartTo: options.startTimeTo !== undefined,
                 startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
-                limit: options.limit ?? 50,
-                offset: options.offset ?? 0,
+                limit: limit + 1,
+                ...(options.cursor
+                  ? {
+                      cursorSortValue: options.cursor.sortValue,
+                      cursorTraceId: options.cursor.traceId,
+                    }
+                  : {}),
               },
               format: "JSONEachRow",
             })
             return result.json<TraceListRow>()
           })
           .pipe(
-            Effect.map((rows) => rows.map(toBaseFields)),
+            Effect.map((rows): TraceListPage => {
+              const hasMore = rows.length > limit
+              const pageRows = hasMore ? rows.slice(0, limit) : rows
+              const items = pageRows.map(toBaseFields)
+              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+              if (!last) return { items, hasMore }
+              return {
+                items,
+                hasMore,
+                nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
+              }
+            }),
             Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
+          )
+      },
+
+      countByProjectId: ({ organizationId, projectId, options }) =>
+        chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT count() AS total
+                      FROM (
+                        SELECT trace_id
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
+                          AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
+                        GROUP BY organization_id, project_id, trace_id
+                      )`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                hasStartFrom: options?.startTimeFrom !== undefined,
+                startTimeFrom: toClickhouseDateTime(options?.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
+                hasStartTo: options?.startTimeTo !== undefined,
+                startTimeTo: toClickhouseDateTime(options?.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{ total: string }>()
+          })
+          .pipe(
+            Effect.map((rows) => Number(rows[0]?.total ?? 0)),
+            Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
           ),
 
       findByTraceId: ({ organizationId, projectId, traceId }) =>

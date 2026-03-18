@@ -13,7 +13,13 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly options: TraceListOptions
-  }): Effect.Effect<readonly Trace[], RepositoryError>
+  }): Effect.Effect<TraceListPage, RepositoryError>
+
+  countByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly options?: TraceFilterOptions
+  }): Effect.Effect<number, RepositoryError>
 
   findByTraceId(input: {
     readonly organizationId: OrganizationId
@@ -28,11 +34,27 @@ export interface TraceRepositoryShape {
   }): Effect.Effect<readonly TraceDetail[], RepositoryError>
 }
 
-export interface TraceListOptions {
+export interface TraceFilterOptions {
   readonly startTimeFrom?: Date
   readonly startTimeTo?: Date
+}
+
+export interface TraceListCursor {
+  readonly sortValue: string
+  readonly traceId: string
+}
+
+export interface TraceListOptions extends TraceFilterOptions {
   readonly limit?: number
-  readonly offset?: number
+  readonly cursor?: TraceListCursor
+  readonly sortBy?: string
+  readonly sortDirection?: "asc" | "desc"
+}
+
+export interface TraceListPage {
+  readonly items: readonly Trace[]
+  readonly hasMore: boolean
+  readonly nextCursor?: TraceListCursor
 }
 
 export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(

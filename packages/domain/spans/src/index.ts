@@ -6,5 +6,11 @@ export { transformOtlpToSpans } from "./otlp/transform.ts"
 export type { OtlpExportTraceServiceRequest } from "./otlp/types.ts"
 export type { SpanListOptions, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
-export type { TraceListOptions, TraceRepositoryShape } from "./ports/trace-repository.ts"
+export type {
+  TraceFilterOptions,
+  TraceListCursor,
+  TraceListOptions,
+  TraceListPage,
+  TraceRepositoryShape,
+} from "./ports/trace-repository.ts"
 export { TraceRepository } from "./ports/trace-repository.ts"

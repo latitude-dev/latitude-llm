@@ -1,7 +1,7 @@
-import { NotFoundError, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
-import type { Span, SpanDetail, Trace } from "@domain/spans"
-import { SpanRepository, TraceRepository } from "@domain/spans"
-import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { NotFoundError, OrganizationId, SpanId, TraceId } from "@domain/shared"
+import type { Span, SpanDetail } from "@domain/spans"
+import { SpanRepository } from "@domain/spans"
+import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -157,84 +157,4 @@ export const getSpanDetail = createServerFn({ method: "GET" })
       throw new NotFoundError({ entity: "Span", id: data.spanId })
     }
     return serializeSpanDetail(span)
-  })
-
-export interface TraceRecord {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly traceId: string
-  readonly spanCount: number
-  readonly errorCount: number
-  readonly startTime: string
-  readonly endTime: string
-  readonly durationNs: number
-  readonly status: string
-  readonly tokensInput: number
-  readonly tokensOutput: number
-  readonly tokensCacheRead: number
-  readonly tokensCacheCreate: number
-  readonly tokensReasoning: number
-  readonly tokensTotal: number
-  readonly costInputMicrocents: number
-  readonly costOutputMicrocents: number
-  readonly costTotalMicrocents: number
-  readonly sessionId: string
-  readonly userId: string
-  readonly tags: readonly string[]
-  readonly metadata: Readonly<Record<string, string>>
-  readonly models: readonly string[]
-  readonly providers: readonly string[]
-  readonly serviceNames: readonly string[]
-  readonly rootSpanId: string
-  readonly rootSpanName: string
-}
-
-const serializeTrace = (trace: Trace): TraceRecord => ({
-  organizationId: trace.organizationId,
-  projectId: trace.projectId,
-  traceId: trace.traceId,
-  spanCount: trace.spanCount,
-  errorCount: trace.errorCount,
-  startTime: trace.startTime.toISOString(),
-  endTime: trace.endTime.toISOString(),
-  durationNs: trace.durationNs,
-  status: trace.status,
-  tokensInput: trace.tokensInput,
-  tokensOutput: trace.tokensOutput,
-  tokensCacheRead: trace.tokensCacheRead,
-  tokensCacheCreate: trace.tokensCacheCreate,
-  tokensReasoning: trace.tokensReasoning,
-  tokensTotal: trace.tokensTotal,
-  costInputMicrocents: trace.costInputMicrocents,
-  costOutputMicrocents: trace.costOutputMicrocents,
-  costTotalMicrocents: trace.costTotalMicrocents,
-  sessionId: trace.sessionId,
-  userId: trace.userId,
-  tags: trace.tags,
-  metadata: trace.metadata,
-  models: trace.models,
-  providers: trace.providers,
-  serviceNames: trace.serviceNames,
-  rootSpanId: trace.rootSpanId,
-  rootSpanName: trace.rootSpanName,
-})
-
-export const listTracesByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
-  .inputValidator(z.object({ projectId: z.string() }))
-  .handler(async ({ data }): Promise<TraceRecord[]> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-    const traces = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* TraceRepository
-        return yield* repo.findByProjectId({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          options: { limit: 200 },
-        })
-      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
-    )
-
-    return traces.map(serializeTrace)
   })

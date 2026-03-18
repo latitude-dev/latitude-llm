@@ -35,6 +35,14 @@ export {
 export { FormField, type FormFieldProps } from "./components/form-field/form-field.tsx"
 export { FormWrapper } from "./components/form-wrapper/form-wrapper.tsx"
 export { Icon, type IconProps, type IconSize } from "./components/icons/icons.tsx"
+export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
+export type {
+  InfiniteTableColumn,
+  InfiniteTableInfiniteScroll,
+  InfiniteTableProps,
+  InfiniteTableSelection,
+  InfiniteTableSorting,
+} from "./components/infinite-table/types.ts"
 export { Input, type InputProps } from "./components/input/input.tsx"
 export { Label } from "./components/label/label.tsx"
 export { CloseTrigger, Modal, type ModalProps } from "./components/modal/modal.tsx"
@@ -71,6 +79,7 @@ export { Toaster } from "./components/toast/toaster.tsx"
 export { toast, useToast } from "./components/toast/useToast.ts"
 export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "./components/tooltip/tooltip.tsx"
 export { useMountEffect } from "./hooks/use-mount-effect.ts"
+// Lib
 export * from "./tokens/colors.ts"
 export * from "./tokens/font.ts"
 export * from "./tokens/opacity.ts"
