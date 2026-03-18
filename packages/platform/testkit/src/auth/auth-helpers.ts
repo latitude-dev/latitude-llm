@@ -1,3 +1,4 @@
+import { base64urlEncode } from "@repo/utils"
 import type { Effect as EffectType } from "effect"
 
 /**
@@ -50,9 +51,9 @@ export const createAuthHeaders = (context: TestAuthContext): Record<string, stri
  */
 export const createMockJwtToken = (payload: Record<string, unknown>): string => {
   const header = { alg: "HS256", typ: "JWT" }
-  const base64Header = Buffer.from(JSON.stringify(header)).toString("base64url")
-  const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64url")
-  const signature = "mock-signature" // Not a real signature
+  const base64Header = base64urlEncode(JSON.stringify(header))
+  const base64Payload = base64urlEncode(JSON.stringify(payload))
+  const signature = "mock-signature"
   return `${base64Header}.${base64Payload}.${signature}`
 }
 

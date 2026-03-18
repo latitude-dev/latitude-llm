@@ -1,5 +1,6 @@
 import type { MessageHandler, QueueConsumer, QueueMessage, QueueName, QueuePublisher } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueueSubscribeError } from "@domain/queue"
+import { base64Decode, base64Encode } from "@repo/utils"
 import { Queue, Worker } from "bullmq"
 import { Effect } from "effect"
 import { Redis } from "ioredis"
@@ -17,7 +18,7 @@ const mapQueueMessageToJob = (message: QueueMessage) => {
   }
   return {
     name: "default",
-    data: Buffer.from(message.body).toString("base64"),
+    data: base64Encode(message.body),
     opts: {
       jobId: message.key ?? undefined,
       headers,
@@ -40,7 +41,7 @@ const mapJobToQueueMessage = (job: {
   }
 
   return {
-    body: Uint8Array.from(atob(job.data), (c) => c.charCodeAt(0)),
+    body: base64Decode(job.data),
     key: job.id,
     headers,
   }

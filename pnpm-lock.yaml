@@ -870,6 +870,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../env
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
       bullmq:
         specifier: 'catalog:'
         version: 5.28.2
@@ -912,9 +915,15 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.0.0
         version: 3.1000.0
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
       '@platform/env':
         specifier: workspace:*
         version: link:../env
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0

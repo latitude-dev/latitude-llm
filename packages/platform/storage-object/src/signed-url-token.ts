@@ -1,7 +1,7 @@
-import { createHmac } from "node:crypto"
+import { base64urlDecode, base64urlEncode } from "@repo/utils"
 import { Data, Effect } from "effect"
 
-const ALGORITHM = "sha256"
+const ALGORITHM = "SHA-256"
 const SEP = "."
 
 class SignedExportTokenError extends Data.TaggedError("SignedExportTokenError")<{
@@ -9,13 +9,19 @@ class SignedExportTokenError extends Data.TaggedError("SignedExportTokenError")<
   readonly cause?: unknown
 }> {}
 
-function base64urlEncode(data: Uint8Array | string): string {
-  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data
-  return Buffer.from(bytes).toString("base64url")
+const importHmacKey = (secret: string): Promise<CryptoKey> =>
+  crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: ALGORITHM }, false, [
+    "sign",
+    "verify",
+  ])
+
+const hmacSign = async (key: CryptoKey, data: Uint8Array): Promise<Uint8Array> => {
+  const signature = await crypto.subtle.sign("HMAC", key, data)
+  return new Uint8Array(signature)
 }
 
-function base64urlDecode(str: string): Uint8Array {
-  return new Uint8Array(Buffer.from(str, "base64url"))
+const hmacVerify = async (key: CryptoKey, signature: Uint8Array, data: Uint8Array): Promise<boolean> => {
+  return crypto.subtle.verify("HMAC", key, signature, data)
 }
 
 function parsePayload(payloadStr: string): Effect.Effect<{ key: string; exp: number }, SignedExportTokenError> {
@@ -41,12 +47,16 @@ function parsePayload(payloadStr: string): Effect.Effect<{ key: string; exp: num
  * Creates a signed token for export download URLs (FS driver).
  * Payload: { key, exp } (exp = expiry timestamp ms). Signature: HMAC-SHA256(secret, payload).
  */
-export function createSignedExportToken(key: string, expiresInSeconds: number, secret: string): string {
+export async function createSignedExportToken(key: string, expiresInSeconds: number, secret: string): Promise<string> {
   const exp = Date.now() + expiresInSeconds * 1000
   const payload = JSON.stringify({ key, exp })
   const payloadB64 = base64urlEncode(payload)
-  const sig = createHmac(ALGORITHM, secret).update(payload).digest()
+
+  const cryptoKey = await importHmacKey(secret)
+  const payloadBytes = new TextEncoder().encode(payload)
+  const sig = await hmacSign(cryptoKey, payloadBytes)
   const sigB64 = base64urlEncode(sig)
+
   return `${payloadB64}${SEP}${sigB64}`
 }
 
@@ -73,17 +83,19 @@ export function verifySignedExportToken(token: string, secret: string): Effect.E
             : Effect.succeed({ payload, payloadStr }),
         ),
         Effect.flatMap(({ payload, payloadStr }) =>
-          Effect.try({
-            try: () => base64urlDecode(sigB64),
+          Effect.tryPromise({
+            try: async () => {
+              const cryptoKey = await importHmacKey(secret)
+              const signature = base64urlDecode(sigB64)
+              const data = new TextEncoder().encode(payloadStr)
+              const valid = await hmacVerify(cryptoKey, signature, data)
+              return valid ? payload.key : null
+            },
             catch: (e) => new SignedExportTokenError({ reason: "invalid_format", cause: e }),
           }).pipe(
-            Effect.flatMap((actualSig) => {
-              const expectedSig = createHmac(ALGORITHM, secret).update(payloadStr).digest()
-              const valid = expectedSig.length === actualSig.length && expectedSig.every((b, i) => b === actualSig[i])
-              return valid
-                ? Effect.succeed(payload.key)
-                : Effect.fail(new SignedExportTokenError({ reason: "invalid_signature" }))
-            }),
+            Effect.flatMap((key) =>
+              key ? Effect.succeed(key) : Effect.fail(new SignedExportTokenError({ reason: "invalid_signature" })),
+            ),
           ),
         ),
       ),

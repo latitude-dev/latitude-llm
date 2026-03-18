@@ -8,8 +8,8 @@ const validPayload = {
   recipientEmail: "u@example.com",
 }
 
-function buf(obj: unknown): Buffer {
-  return Buffer.from(JSON.stringify(obj), "utf-8")
+function toBytes(obj: unknown): Uint8Array {
+  return new TextEncoder().encode(JSON.stringify(obj))
 }
 
 describe("dataset-export-payload", () => {
@@ -43,18 +43,18 @@ describe("dataset-export-payload", () => {
   })
 
   describe("parseDatasetExportPayload", () => {
-    it("parses valid JSON buffer to payload", () => {
-      const result = parseDatasetExportPayload(buf(validPayload))
+    it("parses valid JSON bytes to payload", () => {
+      const result = parseDatasetExportPayload(toBytes(validPayload))
       expect(result).toEqual(validPayload)
     })
 
     it("returns null for invalid JSON", () => {
-      expect(parseDatasetExportPayload(Buffer.from("not json", "utf-8"))).toBe(null)
+      expect(parseDatasetExportPayload(new TextEncoder().encode("not json"))).toBe(null)
     })
 
     it("returns null for valid JSON but invalid payload shape", () => {
-      expect(parseDatasetExportPayload(buf({ datasetId: "x" }))).toBe(null)
-      expect(parseDatasetExportPayload(buf({ ...validPayload, organizationId: 1 }))).toBe(null)
+      expect(parseDatasetExportPayload(toBytes({ datasetId: "x" }))).toBe(null)
+      expect(parseDatasetExportPayload(toBytes({ ...validPayload, organizationId: 1 }))).toBe(null)
     })
   })
 })

@@ -1,4 +1,3 @@
-import { Readable } from "node:stream"
 import { parseEnvOptional } from "@platform/env"
 import { verifySignedExportToken } from "@platform/storage-object"
 import { createFileRoute } from "@tanstack/react-router"
@@ -30,12 +29,11 @@ export const Route = createFileRoute("/downloads/export")({
         }
 
         const disk = getStorageDisk()
-        const nodeStream = await disk.getStream(key).catch(() => null)
-        if (!nodeStream) {
+        const webStream = await disk.getStream(key).catch(() => null)
+        if (!webStream) {
           return new Response("Not found", { status: 404 })
         }
 
-        const webStream = Readable.toWeb(nodeStream as Readable) as ReadableStream
         const filename = key.split("/").at(-1) ?? "export.csv"
         return new Response(webStream, {
           headers: {

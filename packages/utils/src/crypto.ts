@@ -1,4 +1,5 @@
 import { Data, Effect } from "effect"
+import { hexDecode, hexEncode } from "./base64.ts"
 
 export class CryptoError extends Data.TaggedError("CryptoError")<{
   readonly operation: string
@@ -8,20 +9,6 @@ export class CryptoError extends Data.TaggedError("CryptoError")<{
 const ALGORITHM = "AES-GCM"
 const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
-
-function hexEncode(buffer: Uint8Array): string {
-  return Array.from(buffer)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-}
-
-function hexDecode(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2)
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = Number.parseInt(hex.slice(i, i + 2), 16)
-  }
-  return bytes
-}
 
 /**
  * Hash a plaintext string using SHA-256.
@@ -50,7 +37,7 @@ const importKey = (key: Uint8Array): Effect.Effect<CryptoKey, CryptoError> =>
  * Encrypt a plaintext string using AES-256-GCM.
  *
  * @param plaintext - The plaintext to encrypt
- * @param key - 32-byte encryption key as Uint8Array or Buffer
+ * @param key - 32-byte encryption key as Uint8Array
  * @returns Encrypted string in format: iv:authTag:ciphertext (hex-encoded)
  */
 export const encrypt = (plaintext: string, key: Uint8Array): Effect.Effect<string, CryptoError> =>
@@ -65,7 +52,6 @@ export const encrypt = (plaintext: string, key: Uint8Array): Effect.Effect<strin
     })
 
     const encryptedBytes = new Uint8Array(encrypted)
-    // Web Crypto appends the auth tag at the end of the ciphertext
     const ciphertext = encryptedBytes.slice(0, encryptedBytes.length - AUTH_TAG_LENGTH)
     const authTag = encryptedBytes.slice(encryptedBytes.length - AUTH_TAG_LENGTH)
 
@@ -76,7 +62,7 @@ export const encrypt = (plaintext: string, key: Uint8Array): Effect.Effect<strin
  * Decrypt a string encrypted with AES-256-GCM.
  *
  * @param ciphertext - Encrypted string in format: iv:authTag:ciphertext (hex-encoded)
- * @param key - 32-byte encryption key as Uint8Array or Buffer (same key used for encryption)
+ * @param key - 32-byte encryption key as Uint8Array (same key used for encryption)
  * @returns The decrypted plaintext
  */
 export const decrypt = (ciphertext: string, key: Uint8Array): Effect.Effect<string, CryptoError> =>
@@ -104,7 +90,6 @@ export const decrypt = (ciphertext: string, key: Uint8Array): Effect.Effect<stri
 
     const cryptoKey = yield* importKey(key)
 
-    // Web Crypto expects ciphertext + authTag concatenated
     const combined = new Uint8Array(encrypted.length + authTag.length)
     combined.set(encrypted)
     combined.set(authTag, encrypted.length)

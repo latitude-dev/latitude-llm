@@ -86,16 +86,15 @@ Prefer Web Standard APIs over Node.js-specific modules in domain, utility, and s
 - Use `crypto.subtle` / `crypto.getRandomValues` instead of `node:crypto`
 - Use `fetch` instead of Node-specific HTTP clients
 - Use `TextEncoder` / `TextDecoder` instead of `Buffer.from(…, 'utf-8')`
-- Use `Uint8Array` for binary data in public interfaces; `Buffer` is acceptable inside Node-only adapters (`packages/platform/*`) that will never leave the server
+- Use `Uint8Array` for binary data in public interfaces
+- Use `ReadableStream` instead of `node:stream` / `node:fs` streams
 - Use `URL`, `URLSearchParams`, `Headers`, `Request`, `Response` from the global scope
 - Use `structuredClone` instead of JSON round-trips for deep cloning
 
 **Where Node-specific APIs are acceptable:**
 
-- Platform adapter packages (`packages/platform/*`) — these are server-only by definition
-- App entry points and server configuration (`apps/*/server.ts`, `apps/*/clients.ts`)
-- Build tooling, scripts, and CLI utilities
-- Test infrastructure (e.g. `node:test`, `node:child_process` in test helpers)
+- Build tooling, scripts, and CLI utilities (e.g. `node:fs`, `node:child_process`)
+- Test infrastructure (e.g. `node:test` in test helpers)
 
 When a Node-specific API is genuinely required outside these scopes, document the reason with a brief comment.
 

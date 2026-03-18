@@ -17,6 +17,7 @@
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
     "@platform/env": "workspace:*",
+    "@repo/utils": "workspace:*",
     "bullmq": "catalog:",
     "effect": "catalog:",
     "ioredis": "catalog:",
