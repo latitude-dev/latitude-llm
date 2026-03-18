@@ -7,6 +7,7 @@ import { isHttpError, toHttpResponse } from "@repo/utils"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { Hono } from "hono"
+import { getQueuePublisher } from "./clients.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { IngestEnv } from "./types.ts"
 
@@ -34,7 +35,7 @@ app.onError((err, c) => {
 
 registerRoutes({ app })
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port,
@@ -43,3 +44,22 @@ serve(
     logger.info(`ingest listening on http://localhost:${info.port}`)
   },
 )
+
+const handleShutdown = async (signal: string) => {
+  logger.info(`Received ${signal}, shutting down ingest...`)
+  server.close()
+
+  try {
+    const publisher = await getQueuePublisher().catch(() => undefined)
+    if (publisher) {
+      await Effect.runPromise(publisher.close())
+    }
+  } catch (error) {
+    logger.error("Error during shutdown", error)
+  }
+
+  process.exit(0)
+}
+
+process.on("SIGTERM", () => handleShutdown("SIGTERM"))
+process.on("SIGINT", () => handleShutdown("SIGINT"))

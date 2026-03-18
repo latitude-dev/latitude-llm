@@ -47,6 +47,10 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
 
         const organizationId = message.headers.get("organization-id") ?? ""
         const projectId = message.headers.get("project-id") ?? ""
+        if (!organizationId || !projectId) {
+          logger.error("Span ingestion: missing organization-id or project-id header")
+          return
+        }
         const apiKeyId = message.headers.get("api-key-id") ?? ""
         const ingestedAtStr = message.headers.get("ingested-at")
         const ingestedAt = ingestedAtStr ? new Date(ingestedAtStr) : new Date()

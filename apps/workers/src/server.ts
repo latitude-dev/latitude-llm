@@ -12,7 +12,7 @@ import {
 import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
-import { getPostgresPool } from "./clients.ts"
+import { getClickhouseClient, getPostgresPool } from "./clients.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
@@ -96,6 +96,7 @@ const handleShutdown = async (signal: string) => {
   }
 
   await pgPool.end()
+  await getClickhouseClient().close()
   process.exit(0)
 }
 
