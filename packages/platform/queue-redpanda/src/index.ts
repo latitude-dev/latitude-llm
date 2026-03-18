@@ -11,8 +11,8 @@ export {
   createEventsPublisher,
   DomainEventSchema,
   EventEnvelopeSchema,
-  mapEnvelopeToQueueMessage,
   type EventHandler,
+  mapEnvelopeToQueueMessage,
 } from "./events.ts"
 export type { DatasetExportPayload, TopicName } from "./topics.ts"
 export { Topics } from "./topics.ts"
