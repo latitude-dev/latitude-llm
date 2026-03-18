@@ -1,4 +1,4 @@
-import type { EventsPublisher } from "@domain/events"
+import type { EventEnvelope, EventsPublisher } from "@domain/events"
 import { outboxEvents } from "@platform/db-postgres"
 import { setupTestPostgres } from "@platform/testkit"
 import { asc, eq, inArray } from "drizzle-orm"
@@ -84,9 +84,10 @@ describe("createPollingOutboxConsumer", () => {
     const now = new Date("2026-03-18T10:00:00.000Z")
     const pool = new PostgresOutboxPoolAdapter(pg.postgresDb, () => now)
     const publishedEventIds: string[] = []
-    const publisher: EventsPublisher = {
-      publish: async (envelope) => {
+    const publisher = {
+      publish: (envelope: EventEnvelope) => {
         publishedEventIds.push(envelope.id)
+        return Promise.resolve()
       },
     }
 
@@ -116,7 +117,7 @@ describe("createPollingOutboxConsumer", () => {
           pollIntervalMs: 10,
           batchSize: 100,
         },
-        publisher,
+        publisher as unknown as EventsPublisher,
       ),
     )
 
@@ -143,11 +144,12 @@ describe("createPollingOutboxConsumer", () => {
     const now = new Date("2026-03-18T11:00:00.000Z")
     const pool = new PostgresOutboxPoolAdapter(pg.postgresDb, () => now)
     const failedEventId = "outbox_event_test_000011"
-    const publisher: EventsPublisher = {
-      publish: async (envelope) => {
+    const publisher = {
+      publish: (envelope: EventEnvelope) => {
         if (envelope.id === failedEventId) {
           throw new Error("publish failed")
         }
+        return Promise.resolve()
       },
     }
 
@@ -177,7 +179,7 @@ describe("createPollingOutboxConsumer", () => {
           pollIntervalMs: 10,
           batchSize: 100,
         },
-        publisher,
+        publisher as unknown as EventsPublisher,
       ),
     )
 
