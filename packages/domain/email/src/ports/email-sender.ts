@@ -1,11 +1,5 @@
-import { Data, type Effect } from "effect"
-
-/**
- * Email sender port - interface for sending emails
- *
- * This port abstracts email delivery so the domain doesn't depend
- * on specific email providers (SMTP, SendGrid, Mailpit, etc.)
- */
+import { defineError } from "@domain/shared"
+import type { Effect } from "effect"
 
 export interface EmailMessage {
   readonly to: string
@@ -20,10 +14,7 @@ export interface EmailSender {
   readonly send: (message: EmailMessage) => Effect.Effect<void, EmailSendError>
 }
 
-export class EmailSendError extends Data.TaggedError("EmailSendError")<{
+export class EmailSendError extends defineError("EmailSendError", 500, "Failed to send email")<{
   readonly message: string
   readonly cause?: unknown
-}> {
-  readonly httpStatus = 500
-  readonly httpMessage = "Failed to send email"
-}
+}> {}

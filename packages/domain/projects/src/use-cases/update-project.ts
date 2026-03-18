@@ -1,5 +1,7 @@
 import {
   type ConflictError,
+  defineError,
+  defineErrorDynamic,
   type NotFoundError,
   type OrganizationId,
   type ProjectId,
@@ -7,7 +9,7 @@ import {
   SqlClient,
   type ValidationError,
 } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
 import type { Project } from "../entities/project.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
@@ -17,23 +19,19 @@ export interface UpdateProjectInput {
   readonly description?: string | null
 }
 
-export class ProjectNotFoundError extends Data.TaggedError("ProjectNotFoundError")<{
+export class ProjectNotFoundError extends defineError("ProjectNotFoundError", 404, "Project not found")<{
   readonly id: ProjectId
   readonly organizationId: OrganizationId
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Project not found"
-}
+}> {}
 
-export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
+export class InvalidProjectNameError extends defineErrorDynamic(
+  "InvalidProjectNameError",
+  400,
+  (f: { reason: string }) => f.reason,
+)<{
   readonly name: string
   readonly reason: string
-}> {
-  readonly httpStatus = 400
-  get httpMessage() {
-    return this.reason
-  }
-}
+}> {}
 
 export type UpdateProjectError =
   | RepositoryError

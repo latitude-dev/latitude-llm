@@ -1,9 +1,8 @@
 import type { DatasetId, DatasetRowId } from "@domain/shared"
-import { Data } from "effect"
+import { defineErrorDynamic } from "@domain/shared"
 
 export type RowFieldValue = string | Record<string, unknown>
 
-/** Value for input/output/metadata when inserting rows (e.g. from CSV with flattenSingleColumn). */
 export type InsertRowFieldValue = RowFieldValue | number | boolean | null
 
 export interface DatasetRow {
@@ -16,11 +15,10 @@ export interface DatasetRow {
   readonly version: number
 }
 
-export class RowNotFoundError extends Data.TaggedError("RowNotFoundError")<{
+export class RowNotFoundError extends defineErrorDynamic(
+  "RowNotFoundError",
+  404,
+  (f: { rowId: string }) => `Row ${f.rowId} not found`,
+)<{
   readonly rowId: string
-}> {
-  readonly httpStatus = 404
-  get httpMessage() {
-    return `Row ${this.rowId} not found`
-  }
-}
+}> {}

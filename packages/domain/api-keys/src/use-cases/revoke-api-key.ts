@@ -1,5 +1,5 @@
-import { type ApiKeyId, type NotFoundError, type RepositoryError, SqlClient } from "@domain/shared"
-import { Data, Effect, ServiceMap } from "effect"
+import { type ApiKeyId, defineError, type NotFoundError, type RepositoryError, SqlClient } from "@domain/shared"
+import { Effect, ServiceMap } from "effect"
 import { revoke } from "../entities/api-key.ts"
 import { ApiKeyRepository } from "../ports/api-key-repository.ts"
 
@@ -7,19 +7,17 @@ export interface RevokeApiKeyInput {
   readonly id: ApiKeyId
 }
 
-export class ApiKeyNotFoundError extends Data.TaggedError("ApiKeyNotFoundError")<{
+export class ApiKeyNotFoundError extends defineError("ApiKeyNotFoundError", 404, "API key not found")<{
   readonly id: ApiKeyId
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "API key not found"
-}
+}> {}
 
-export class ApiKeyAlreadyRevokedError extends Data.TaggedError("ApiKeyAlreadyRevokedError")<{
+export class ApiKeyAlreadyRevokedError extends defineError(
+  "ApiKeyAlreadyRevokedError",
+  409,
+  "API key already revoked",
+)<{
   readonly id: ApiKeyId
-}> {
-  readonly httpStatus = 409
-  readonly httpMessage = "API key already revoked"
-}
+}> {}
 
 export type RevokeApiKeyError = RepositoryError | NotFoundError | ApiKeyNotFoundError | ApiKeyAlreadyRevokedError
 

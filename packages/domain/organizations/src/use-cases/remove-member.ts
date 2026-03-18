@@ -1,5 +1,5 @@
-import type { RepositoryError } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { defineError, type RepositoryError } from "@domain/shared"
+import { Effect } from "effect"
 import { MembershipRepository } from "../ports/membership-repository.ts"
 
 export interface RemoveMemberInput {
@@ -7,19 +7,17 @@ export interface RemoveMemberInput {
   readonly requestingUserId: string
 }
 
-export class MembershipNotFoundError extends Data.TaggedError("MembershipNotFoundError")<{
+export class MembershipNotFoundError extends defineError("MembershipNotFoundError", 404, "Membership not found")<{
   readonly membershipId: string
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Membership not found"
-}
+}> {}
 
-export class CannotRemoveSelfError extends Data.TaggedError("CannotRemoveSelfError")<{
+export class CannotRemoveSelfError extends defineError(
+  "CannotRemoveSelfError",
+  400,
+  "You cannot remove yourself from the workspace",
+)<{
   readonly userId: string
-}> {
-  readonly httpStatus = 400
-  readonly httpMessage = "You cannot remove yourself from the workspace"
-}
+}> {}
 
 export type RemoveMemberError = RepositoryError | MembershipNotFoundError | CannotRemoveSelfError
 

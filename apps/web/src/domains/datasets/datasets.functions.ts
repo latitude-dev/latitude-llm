@@ -27,7 +27,7 @@ import {
 } from "@domain/shared"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { UnauthorizedError } from "@repo/utils"
+import { UnauthorizedError } from "@domain/shared"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -184,7 +184,7 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
     const organizationId = getSessionOrganizationId(session)
 
     if (!organizationId || !email) {
-      throw new UnauthorizedError({ httpMessage: "Unauthorized" })
+      throw new UnauthorizedError({ message: "Unauthorized" })
     }
 
     const orgId = OrganizationId(organizationId)

@@ -1,89 +1,104 @@
 import { Data } from "effect"
 
 /**
- * Base error types for domain operations.
- *
- * All domain errors extend from these base types to provide consistent
- * error handling across all domains using Effect.
+ * Error factory that bakes HTTP metadata into every domain error at definition
+ * time. All domain errors must use one of these factories — never extend
+ * `Data.TaggedError` directly.
  */
+export const defineError = <Tag extends string>(tag: Tag, httpStatus: number, httpMessage: string) => {
+  class Base extends Data.TaggedError(tag)<{}> {
+    readonly httpStatus = httpStatus
+    readonly httpMessage = httpMessage
+  }
+  return Base as unknown as new <A extends Record<string, unknown> = {}>(
+    args: {} extends A ? void : { readonly [K in keyof A]: A[K] },
+  ) => Data.TaggedError.Constructor<Tag>["prototype"] & Readonly<A> & { readonly httpStatus: number; readonly httpMessage: string }
+}
 
-// Base repository error
-export class RepositoryError extends Data.TaggedError("RepositoryError")<{
+export const defineErrorDynamic = <Tag extends string, Fields extends Record<string, unknown>>(
+  tag: Tag,
+  httpStatus: number,
+  getHttpMessage: (fields: Fields) => string,
+) => {
+  class Base extends Data.TaggedError(tag)<Fields> {
+    readonly httpStatus = httpStatus
+    get httpMessage(): string {
+      return getHttpMessage(this as unknown as Fields)
+    }
+  }
+  return Base
+}
+
+export class RepositoryError extends defineError("RepositoryError", 500, "Internal server error")<{
   readonly cause: unknown
   readonly operation: string
-}> {
-  readonly httpStatus = 500
-  readonly httpMessage = "Internal server error"
-}
+}> {}
 
-// Validation error
-export class ValidationError extends Data.TaggedError("ValidationError")<{
+export class ValidationError extends defineErrorDynamic(
+  "ValidationError",
+  400,
+  (f: { message: string }) => f.message,
+)<{
   readonly field: string
   readonly message: string
-}> {
-  readonly httpStatus = 400
-  get httpMessage() {
-    return this.message
-  }
-}
-// Not found error
-export class NotFoundError extends Data.TaggedError("NotFoundError")<{
+}> {}
+
+export class NotFoundError extends defineErrorDynamic(
+  "NotFoundError",
+  404,
+  (f: { entity: string }) => `${f.entity} not found`,
+)<{
   readonly entity: string
   readonly id: string
-}> {
-  readonly httpStatus = 404
-  get httpMessage() {
-    return `${this.entity} not found`
-  }
-}
+}> {}
 
-// Conflict error (e.g., duplicate unique values)
-export class ConflictError extends Data.TaggedError("ConflictError")<{
+export class ConflictError extends defineErrorDynamic(
+  "ConflictError",
+  409,
+  (f: { entity: string; field: string; value: string }) => `${f.entity} with ${f.field} '${f.value}' already exists`,
+)<{
   readonly entity: string
   readonly field: string
   readonly value: string
-}> {
-  readonly httpStatus = 409
-  get httpMessage() {
-    return `${this.entity} with ${this.field} '${this.value}' already exists`
-  }
-}
+}> {}
 
-// Unauthorized error
-export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
+export class UnauthorizedError extends defineErrorDynamic(
+  "UnauthorizedError",
+  401,
+  (f: { message: string }) => f.message,
+)<{
   readonly message: string
-}> {
-  readonly httpStatus = 401
-  get httpMessage() {
-    return this.message
-  }
-}
+}> {}
 
-// RLS/Permission error
-export class PermissionError extends Data.TaggedError("PermissionError")<{
+export class BadRequestError extends defineErrorDynamic(
+  "BadRequestError",
+  400,
+  (f: { message: string }) => f.message,
+)<{
+  readonly message: string
+}> {}
+
+export class PermissionError extends defineErrorDynamic(
+  "PermissionError",
+  403,
+  (f: { message: string }) => f.message,
+)<{
   readonly message: string
   readonly organizationId: string
-}> {
-  readonly httpStatus = 403
-  get httpMessage() {
-    return this.message
-  }
-}
+}> {}
 
-// Common domain error union type
 export type DomainError =
   | RepositoryError
   | ValidationError
   | NotFoundError
   | ConflictError
   | UnauthorizedError
+  | BadRequestError
   | PermissionError
 
-// Helper to wrap unknown errors into RepositoryError
 export const toRepositoryError = (cause: unknown, operation: string): RepositoryError =>
   new RepositoryError({ cause, operation })
 
-// Helper function to check if an error is a specific type
 export const isNotFoundError = (error: unknown): error is NotFoundError => error instanceof NotFoundError
 
 export const isConflictError = (error: unknown): error is ConflictError => error instanceof ConflictError

@@ -1,4 +1,5 @@
-import { Data, type Effect } from "effect"
+import { defineError } from "@domain/shared"
+import type { Effect } from "effect"
 
 export type QueueName = "dataset-export" | "domain-events" | "span-ingestion"
 
@@ -23,15 +24,15 @@ export interface QueueConsumer {
   readonly subscribe: (queue: QueueName, handler: MessageHandler) => void
 }
 
-export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
+export class QueuePublishError extends defineError("QueuePublishError", 502, "Queue publish failed")<{
   readonly cause: unknown
   readonly queue: QueueName
 }> {}
 
-export class QueueSubscribeError extends Data.TaggedError("QueueSubscribeError")<{
+export class QueueSubscribeError extends defineError("QueueSubscribeError", 503, "Queue consumer unavailable")<{
   readonly cause: unknown
 }> {}
 
-export class QueueClientError extends Data.TaggedError("QueueClientError")<{
+export class QueueClientError extends defineError("QueueClientError", 503, "Queue client not connectable")<{
   readonly cause: unknown
 }> {}

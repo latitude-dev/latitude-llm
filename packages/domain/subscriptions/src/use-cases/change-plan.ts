@@ -1,14 +1,19 @@
-import { type GrantId, type NotFoundError, type OrganizationId, type RepositoryError, SqlClient } from "@domain/shared"
-import { Data, Effect } from "effect"
+import {
+  defineError,
+  defineErrorDynamic,
+  type GrantId,
+  type NotFoundError,
+  type OrganizationId,
+  type RepositoryError,
+  SqlClient,
+} from "@domain/shared"
+import { Effect } from "effect"
 import { createGrant, type Grant, type GrantType } from "../entities/grant.ts"
 import type { Plan } from "../entities/plan.ts"
 import type { Subscription } from "../entities/subscription.ts"
 import { GrantRepository } from "../ports/grant-repository.ts"
 import { SubscriptionRepository } from "../ports/subscription-repository.ts"
 
-/**
- * Input for changing subscription plan.
- */
 export interface ChangePlanInput {
   readonly organizationId: OrganizationId
   readonly newPlan: Plan
@@ -19,34 +24,28 @@ export interface ChangePlanInput {
   }
 }
 
-/**
- * Error types for change plan use case.
- */
-export class NoActiveSubscriptionError extends Data.TaggedError("NoActiveSubscriptionError")<{
+export class NoActiveSubscriptionError extends defineError(
+  "NoActiveSubscriptionError",
+  404,
+  "No active subscription found",
+)<{
   readonly organizationId: OrganizationId
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "No active subscription found"
-}
+}> {}
 
-export class SamePlanError extends Data.TaggedError("SamePlanError")<{
+export class SamePlanError extends defineError("SamePlanError", 409, "Already on the requested plan")<{
   readonly currentPlan: Plan
   readonly requestedPlan: Plan
-}> {
-  readonly httpStatus = 409
-  readonly httpMessage = "Already on the requested plan"
-}
+}> {}
 
-export class PlanDowngradeError extends Data.TaggedError("PlanDowngradeError")<{
+export class PlanDowngradeError extends defineErrorDynamic(
+  "PlanDowngradeError",
+  400,
+  (f: { reason: string }) => f.reason,
+)<{
   readonly currentPlan: Plan
   readonly requestedPlan: Plan
   readonly reason: string
-}> {
-  readonly httpStatus = 400
-  get httpMessage() {
-    return this.reason
-  }
-}
+}> {}
 
 export type ChangePlanError =
   | RepositoryError

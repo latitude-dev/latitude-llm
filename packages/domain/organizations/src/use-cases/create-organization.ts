@@ -1,5 +1,13 @@
-import type { ConflictError, OrganizationId, RepositoryError, UserId, ValidationError } from "@domain/shared"
-import { Data, Effect } from "effect"
+import {
+  type ConflictError,
+  defineError,
+  defineErrorDynamic,
+  type OrganizationId,
+  type RepositoryError,
+  type UserId,
+  type ValidationError,
+} from "@domain/shared"
+import { Effect } from "effect"
 import { createOrganization } from "../entities/organization.ts"
 import { OrganizationRepository } from "../ports/organization-repository.ts"
 import { generateUniqueOrganizationSlugUseCase } from "./generate-unique-organization-slug.ts"
@@ -10,22 +18,22 @@ export interface CreateOrganizationInput {
   readonly creatorId: UserId
 }
 
-export class OrganizationAlreadyExistsError extends Data.TaggedError("OrganizationAlreadyExistsError")<{
+export class OrganizationAlreadyExistsError extends defineError(
+  "OrganizationAlreadyExistsError",
+  409,
+  "Organization already exists",
+)<{
   readonly slug: string
-}> {
-  readonly httpStatus = 409
-  readonly httpMessage = "Organization already exists"
-}
+}> {}
 
-export class InvalidOrganizationNameError extends Data.TaggedError("InvalidOrganizationNameError")<{
+export class InvalidOrganizationNameError extends defineErrorDynamic(
+  "InvalidOrganizationNameError",
+  400,
+  (f: { reason: string }) => f.reason,
+)<{
   readonly name: string
   readonly reason: string
-}> {
-  readonly httpStatus = 400
-  get httpMessage() {
-    return this.reason
-  }
-}
+}> {}
 
 export type CreateOrganizationError =
   | RepositoryError

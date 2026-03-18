@@ -11,6 +11,7 @@
     "check:fix": "biome check --fix ."
   },
   "dependencies": {
+    "@domain/shared": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
