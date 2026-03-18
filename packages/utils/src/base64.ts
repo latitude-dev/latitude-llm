@@ -1,17 +1,19 @@
-/**
- * Encode a Uint8Array or string to base64url (URL-safe base64 without padding).
- * Compatible with Web Standards (RFC 4648 §5).
- */
+function bytesToBase64(bytes: Uint8Array): string {
+  const chunkSize = 8192
+  let result = ""
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length))
+    result += btoa(String.fromCodePoint(...chunk))
+  }
+  return result
+}
+
 export function base64urlEncode(data: Uint8Array | string): string {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data
-  const base64 = btoa(String.fromCodePoint(...bytes))
+  const base64 = bytesToBase64(bytes)
   return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
 }
 
-/**
- * Decode a base64url string to a Uint8Array.
- * Compatible with Web Standards (RFC 4648 §5).
- */
 export function base64urlDecode(str: string): Uint8Array {
   const base64 = str.replace(/-/g, "+").replace(/_/g, "/")
   const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=")
@@ -19,34 +21,22 @@ export function base64urlDecode(str: string): Uint8Array {
   return Uint8Array.from(binary, (c) => c.charCodeAt(0))
 }
 
-/**
- * Encode a Uint8Array or string to standard base64 with padding.
- */
 export function base64Encode(data: Uint8Array | string): string {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data
-  return btoa(String.fromCodePoint(...bytes))
+  return bytesToBase64(bytes)
 }
 
-/**
- * Decode a standard base64 string to a Uint8Array.
- */
 export function base64Decode(str: string): Uint8Array {
   const binary = atob(str)
   return Uint8Array.from(binary, (c) => c.charCodeAt(0))
 }
 
-/**
- * Encode a Uint8Array to a hex string.
- */
 export function hexEncode(buffer: Uint8Array): string {
   return Array.from(buffer)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")
 }
 
-/**
- * Decode a hex string to a Uint8Array.
- */
 export function hexDecode(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2)
   for (let i = 0; i < hex.length; i += 2) {

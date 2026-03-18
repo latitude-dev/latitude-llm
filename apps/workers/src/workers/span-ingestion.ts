@@ -58,8 +58,8 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
 
         const repo = yield* SpanRepository
         yield* repo.insert(spans)
+        yield* deleteFromDisk(disk, fileKey).pipe(Effect.ignore)
       }).pipe(
-        Effect.ensuring(deleteFromDisk(disk, fileKey).pipe(Effect.ignore)),
         Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
         withClickHouse(SpanRepositoryLive, chClient, OrganizationId(message.headers.get("organization-id") ?? "")),
       )

@@ -110,10 +110,14 @@ export const createBullMqQueueConsumer = (
 
     const workers: Map<QueueName, Worker> = new Map()
     const subscriptions = new Map<QueueName, MessageHandler>()
+    let isRunning = false
 
     const start = () =>
       Effect.tryPromise({
         try: async () => {
+          if (isRunning) return
+          isRunning = true
+
           for (const [queue, handler] of subscriptions.entries()) {
             const worker = new Worker(
               queue,
@@ -152,6 +156,8 @@ export const createBullMqQueueConsumer = (
 
     const stop = () =>
       Effect.gen(function* () {
+        if (!isRunning) return
+
         yield* Effect.tryPromise({
           try: async () => {
             await Promise.all(Array.from(workers.values()).map((worker) => worker.close()))
@@ -159,6 +165,8 @@ export const createBullMqQueueConsumer = (
           },
           catch: (cause: unknown) => new QueueClientError({ cause }),
         }).pipe(Effect.tapError(Effect.logError), Effect.ignore)
+
+        isRunning = false
       })
 
     const subscribe = (queue: QueueName, handler: MessageHandler): void => {
