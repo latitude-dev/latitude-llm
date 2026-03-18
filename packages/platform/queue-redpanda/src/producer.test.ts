@@ -1,6 +1,6 @@
 import type { EventEnvelope } from "@domain/events"
 import { describe, expect, it } from "vitest"
-import { mapEnvelopeToMessage } from "./producer.ts"
+import { EventEnvelopeSchema, mapEnvelopeToQueueMessage } from "./events.ts"
 
 const makeEnvelope = (overrides?: Partial<EventEnvelope>): EventEnvelope => ({
   id: "evt-123",
@@ -13,13 +13,13 @@ const makeEnvelope = (overrides?: Partial<EventEnvelope>): EventEnvelope => ({
   ...overrides,
 })
 
-describe("mapEnvelopeToMessage", () => {
+describe("mapEnvelopeToQueueMessage", () => {
   it("serializes envelope with nested event structure", () => {
     const envelope = makeEnvelope()
-    const message = mapEnvelopeToMessage(envelope)
-    const value = JSON.parse(message.value as string)
+    const message = mapEnvelopeToQueueMessage(envelope)
+    const body = JSON.parse(new TextDecoder().decode(message.body))
 
-    expect(value).toEqual({
+    expect(body).toEqual({
       id: "evt-123",
       event: {
         name: "user.created",
@@ -32,27 +32,25 @@ describe("mapEnvelopeToMessage", () => {
 
   it("uses organizationId as message key for partition routing", () => {
     const envelope = makeEnvelope()
-    const message = mapEnvelopeToMessage(envelope)
+    const message = mapEnvelopeToQueueMessage(envelope)
 
     expect(message.key).toBe("org-456")
   })
 
   it("sets event metadata headers", () => {
     const envelope = makeEnvelope()
-    const message = mapEnvelopeToMessage(envelope)
+    const message = mapEnvelopeToQueueMessage(envelope)
 
-    expect(message.headers).toMatchObject({
-      "event-id": "evt-123",
-      "event-name": "user.created",
-      "organization-id": "org-456",
-    })
+    expect(message.headers.get("event-id")).toBe("evt-123")
+    expect(message.headers.get("event-name")).toBe("user.created")
+    expect(message.headers.get("organization-id")).toBe("org-456")
   })
 
-  it("wire format is parseable by EventEnvelopeSchema", async () => {
-    const { EventEnvelopeSchema } = await import("./consumer.ts")
+  it("wire format is parseable by EventEnvelopeSchema", () => {
     const envelope = makeEnvelope()
-    const message = mapEnvelopeToMessage(envelope)
-    const parsed = EventEnvelopeSchema.parse(JSON.parse(message.value as string))
+    const message = mapEnvelopeToQueueMessage(envelope)
+    const body = JSON.parse(new TextDecoder().decode(message.body))
+    const parsed = EventEnvelopeSchema.parse(body)
 
     expect(parsed.id).toBe(envelope.id)
     expect(parsed.event.name).toBe(envelope.event.name)

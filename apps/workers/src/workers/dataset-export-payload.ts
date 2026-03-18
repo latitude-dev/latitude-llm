@@ -10,9 +10,9 @@ export function isValidDatasetExportPayload(payload: unknown): payload is Datase
   return true
 }
 
-export function parseDatasetExportPayload(value: Buffer): DatasetExportPayload | null {
+export function parseDatasetExportPayload(value: Uint8Array): DatasetExportPayload | null {
   try {
-    const parsed = JSON.parse(value.toString("utf-8"))
+    const parsed = JSON.parse(new TextDecoder().decode(value))
     if (!isValidDatasetExportPayload(parsed)) return null
     return parsed
   } catch {

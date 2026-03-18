@@ -16,6 +16,7 @@
     "@clickhouse/client": "catalog:",
     "@domain/api-keys": "workspace:^",
     "@domain/projects": "workspace:^",
+    "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@hono/node-server": "catalog:",
     "@platform/cache-redis": "workspace:*",
@@ -28,7 +29,6 @@
     "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
-    "kafkajs": "catalog:",
     "tsx": "catalog:"
   },
   "devDependencies": {

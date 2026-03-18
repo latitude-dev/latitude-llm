@@ -210,6 +210,9 @@ importers:
       '@domain/projects':
         specifier: workspace:^
         version: link:../../packages/domain/projects
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../../packages/domain/queue
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -246,9 +249,6 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.9.12
-      kafkajs:
-        specifier: 'catalog:'
-        version: 2.2.4
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -277,6 +277,9 @@ importers:
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../../packages/domain/queue
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -343,9 +346,6 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
-      kafkajs:
-        specifier: 'catalog:'
-        version: 2.2.4
       lucide-react:
         specifier: ^0.481.0
         version: 0.481.0(react@19.2.4)
@@ -407,6 +407,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../packages/domain/events
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../../packages/domain/queue
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -446,9 +449,6 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
-      kafkajs:
-        specifier: 'catalog:'
-        version: 2.2.4
       pg:
         specifier: 'catalog:'
         version: 8.16.0
@@ -593,6 +593,19 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
+
+  packages/domain/queue:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
+    devDependencies:
+      '@biomejs/biome':
+        specifier: 'catalog:'
+        version: 2.4.6
+      typescript:
+        specifier: ^5.7.0
+        version: 5.8.3
 
   packages/domain/shared:
     dependencies:
@@ -845,6 +858,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../domain/events
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../../domain/queue
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -11985,7 +12001,7 @@ snapshots:
 
   node-gyp-build-optional-packages@5.2.2:
     dependencies:
-      detect-libc: 2.1.1
+      detect-libc: 2.1.2
     optional: true
 
   node-gyp-build@4.8.4: {}

@@ -1,13 +1,13 @@
 import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { fileURLToPath } from "node:url"
-import type { EventEnvelope } from "@domain/events"
 import { parseEnv } from "@platform/env"
 import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import {
+  createEventsPublisher,
   createKafkaClient,
-  createRedpandaEventsConsumer,
-  createRedpandaEventsPublisher,
+  createRedpandaQueueConsumer,
+  createRedpandaQueuePublisher,
   loadKafkaConfig,
 } from "@platform/queue-redpanda"
 import { createLogger } from "@repo/observability"
@@ -15,6 +15,7 @@ import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { getPostgresPool } from "./clients.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
+import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
@@ -45,18 +46,11 @@ healthServer.listen(healthPort, () => {
   logger.info(`workers health check listening on :${healthPort}/health`)
 })
 
-const eventHandler = {
-  handle: (event: EventEnvelope): Effect.Effect<void, unknown, never> =>
-    Effect.logInfo(`Processing event ${event.id} of type ${event.event.name} for org ${event.event.organizationId}`),
-}
-
 const initializeWorkers = async () => {
   const kafkaConfig = Effect.runSync(loadKafkaConfig())
   const kafkaClient = createKafkaClient(kafkaConfig)
-
-  const eventsPublisher = await createRedpandaEventsPublisher({
-    kafka: kafkaClient,
-  })
+  const queuePublisher = await Effect.runPromise(createRedpandaQueuePublisher({ kafka: kafkaClient }))
+  const eventsPublisher = createEventsPublisher(queuePublisher)
 
   const outboxConsumer = createPollingOutboxConsumer(
     {
@@ -67,23 +61,30 @@ const initializeWorkers = async () => {
     eventsPublisher,
   )
 
-  const redpandaConsumer = createRedpandaEventsConsumer({
-    kafka: kafkaClient,
-    groupId: kafkaConfig.groupId,
-  })
+  const domainEventsConsumer = await Effect.runPromise(
+    createRedpandaQueueConsumer({ kafka: kafkaClient, groupId: `${kafkaConfig.groupId}-domain-events` }),
+  )
+  const spanIngestionConsumer = await Effect.runPromise(
+    createRedpandaQueueConsumer({ kafka: kafkaClient, groupId: `${kafkaConfig.groupId}-span-ingestion` }),
+  )
+  const datasetExportConsumer = await Effect.runPromise(
+    createRedpandaQueueConsumer({ kafka: kafkaClient, groupId: `${kafkaConfig.groupId}-dataset-export` }),
+  )
 
-  const spanIngestionWorker = createSpanIngestionWorker(kafkaClient, `${kafkaConfig.groupId}-span-ingestion`)
-  const datasetExportWorker = createDatasetExportWorker(kafkaClient, `${kafkaConfig.groupId}-dataset-export`)
+  const domainEventsWorker = createDomainEventsWorker(domainEventsConsumer)
+  const spanIngestionWorker = createSpanIngestionWorker(spanIngestionConsumer)
+  const datasetExportWorker = createDatasetExportWorker(datasetExportConsumer)
 
   outboxConsumer.start()
-  await redpandaConsumer.start(eventHandler)
+
+  await domainEventsWorker.start()
   await spanIngestionWorker.start()
   await datasetExportWorker.start()
 
   ready = true
-  logger.info("workers ready - outbox consumer and Redpanda consumer started")
+  logger.info("workers ready - outbox consumer and queue consumers started")
 
-  return { outboxConsumer, redpandaConsumer, spanIngestionWorker, datasetExportWorker }
+  return { consumers: { outboxConsumer }, workers: { domainEventsWorker, spanIngestionWorker, datasetExportWorker } }
 }
 
 const workersPromise = initializeWorkers().catch((error) => {
@@ -97,16 +98,15 @@ const handleShutdown = async (signal: string) => {
   healthServer.close()
 
   try {
-    const { outboxConsumer, redpandaConsumer, spanIngestionWorker, datasetExportWorker } = await workersPromise
-    await outboxConsumer.stop()
-    await redpandaConsumer.stop()
-    await spanIngestionWorker.stop()
-    await datasetExportWorker.stop()
+    const { workers } = await workersPromise
+
+    await Promise.allSettled(Object.values(workers).map((worker) => worker.stop()))
   } catch (error) {
     logger.error("Error during shutdown (workers may not have started)", error)
   }
 
   await pgPool.end()
+
   process.exit(0)
 }
 

@@ -16,6 +16,7 @@
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
@@ -29,7 +30,6 @@
     "@types/pg": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
-    "kafkajs": "catalog:",
     "pg": "catalog:",
     "tsx": "catalog:"
   },
