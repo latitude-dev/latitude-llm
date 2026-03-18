@@ -12,7 +12,10 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath, quiet: true })
 }
 
-const url = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
+const fallbackDatabaseUrl = Effect.runSync(
+  parseEnv("LAT_DATABASE_URL", "string", "postgresql://latitude:latitude@localhost:5432/latitude_development"),
+)
+const url = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string", fallbackDatabaseUrl))
 
 export default defineConfig({
   dialect: "postgresql",

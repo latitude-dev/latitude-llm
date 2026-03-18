@@ -21,16 +21,14 @@
     "@domain/spans": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
-    "@platform/env": "workspace:*",
     "@platform/email-transport": "workspace:*",
+    "@platform/env": "workspace:*",
+    "@platform/events-outbox": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
     "@platform/storage-object": "workspace:*",
-    "@platform/events-outbox": "workspace:*",
     "@repo/observability": "workspace:*",
-    "@types/pg": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
-    "pg": "catalog:",
     "tsx": "catalog:"
   },
   "devDependencies": {
