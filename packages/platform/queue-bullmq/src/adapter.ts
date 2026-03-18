@@ -5,12 +5,6 @@ import { Queue, Worker } from "bullmq"
 import { Effect } from "effect"
 import { Redis } from "ioredis"
 
-const QueueNameToQueueKey: Record<QueueName, string> = {
-  "dataset-export": "bullmq:dataset-export",
-  "domain-events": "bullmq:domain-events",
-  "span-ingestion": "bullmq:span-ingestion",
-}
-
 export const mapQueueMessageToJob = (message: QueueMessage) => {
   const headers: Record<string, string> = {}
   for (const [key, value] of message.headers) {
@@ -67,9 +61,9 @@ export const createBullMqQueuePublisher = (
     })
 
     const queues: Record<QueueName, Queue> = {
-      "dataset-export": new Queue(QueueNameToQueueKey["dataset-export"], { connection }),
-      "domain-events": new Queue(QueueNameToQueueKey["domain-events"], { connection }),
-      "span-ingestion": new Queue(QueueNameToQueueKey["span-ingestion"], { connection }),
+      "dataset-export": new Queue("dataset-export", { connection }),
+      "domain-events": new Queue("domain-events", { connection }),
+      "span-ingestion": new Queue("span-ingestion", { connection }),
     }
 
     return {
@@ -121,10 +115,8 @@ export const createBullMqQueueConsumer = (
       Effect.tryPromise({
         try: async () => {
           for (const [queue, handler] of subscriptions.entries()) {
-            const queueKey = QueueNameToQueueKey[queue]
-
             const worker = new Worker(
-              queueKey,
+              queue,
               async (job) => {
                 const queueMessage = mapJobToQueueMessage({
                   id: job.id ?? "",
