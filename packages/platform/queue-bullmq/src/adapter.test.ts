@@ -1,6 +1,6 @@
 import type { QueueMessage } from "@domain/queue"
 import { describe, expect, it } from "vitest"
-import { mapJobToQueueMessage, mapQueueMessageToJob } from "./adapter.ts"
+import { type BullMqJobData, mapJobToQueueMessage, mapQueueMessageToJob } from "./adapter.ts"
 
 const makeQueueMessage = (overrides?: Partial<QueueMessage>): QueueMessage => ({
   body: new TextEncoder().encode('{"test":"data"}'),
@@ -10,32 +10,24 @@ const makeQueueMessage = (overrides?: Partial<QueueMessage>): QueueMessage => ({
 })
 
 describe("mapQueueMessageToJob", () => {
-  it("converts QueueMessage to BullMQ job format", () => {
+  it("converts QueueMessage to BullMQ job format with headers in data", () => {
     const message = makeQueueMessage()
     const job = mapQueueMessageToJob(message)
 
     expect(job.name).toBe("default")
-    expect(typeof job.data).toBe("string")
-    expect(job.opts.jobId).toBe("msg-123")
-    expect(job.opts.headers).toEqual({ "content-type": "application/json" })
+    expect(typeof job.data.body).toBe("string")
+    expect(job.data.headers).toEqual({ "content-type": "application/json" })
   })
 
-  it("base64 encodes the body", () => {
+  it("base64 encodes the body inside data", () => {
     const message = makeQueueMessage({ body: new TextEncoder().encode("hello world") })
     const job = mapQueueMessageToJob(message)
 
-    const decoded = atob(job.data)
+    const decoded = atob(job.data.body)
     expect(decoded).toBe("hello world")
   })
 
-  it("handles null key as undefined jobId", () => {
-    const message = makeQueueMessage({ key: null })
-    const job = mapQueueMessageToJob(message)
-
-    expect(job.opts.jobId).toBeUndefined()
-  })
-
-  it("converts Map headers to plain object", () => {
+  it("converts Map headers to plain object in data", () => {
     const headers = new Map([
       ["event-id", "evt-1"],
       ["event-name", "user.created"],
@@ -43,7 +35,7 @@ describe("mapQueueMessageToJob", () => {
     const message = makeQueueMessage({ headers })
     const job = mapQueueMessageToJob(message)
 
-    expect(job.opts.headers).toEqual({
+    expect(job.data.headers).toEqual({
       "event-id": "evt-1",
       "event-name": "user.created",
     })
@@ -54,8 +46,7 @@ describe("mapJobToQueueMessage", () => {
   it("converts BullMQ job to QueueMessage", () => {
     const job = {
       id: "job-456",
-      data: btoa("test data"),
-      opts: { headers: { "content-type": "application/json" } },
+      data: { body: btoa("test data"), headers: { "content-type": "application/json" } } satisfies BullMqJobData,
     }
     const message = mapJobToQueueMessage(job)
 
@@ -65,11 +56,10 @@ describe("mapJobToQueueMessage", () => {
     expect(message?.headers.get("content-type")).toBe("application/json")
   })
 
-  it("returns null for empty data", () => {
+  it("returns null for empty body", () => {
     const job = {
       id: "job-456",
-      data: "",
-      opts: { headers: {} },
+      data: { body: "", headers: {} } satisfies BullMqJobData,
     }
     const message = mapJobToQueueMessage(job)
 
@@ -79,8 +69,7 @@ describe("mapJobToQueueMessage", () => {
   it("handles missing headers", () => {
     const job = {
       id: "job-456",
-      data: btoa("test"),
-      opts: {},
+      data: { body: btoa("test"), headers: {} } satisfies BullMqJobData,
     }
     const message = mapJobToQueueMessage(job)
 
@@ -96,14 +85,12 @@ describe("mapJobToQueueMessage", () => {
     })
     const job = mapQueueMessageToJob(original)
     const message = mapJobToQueueMessage({
-      id: job.opts.jobId ?? "",
+      id: "auto-generated-id",
       data: job.data,
-      opts: { headers: job.opts.headers },
     })
 
     expect(message).not.toBeNull()
     expect(message?.body).toEqual(original.body)
-    expect(message?.key).toBe(original.key)
     expect(message?.headers.get("x-custom")).toBe("value")
   })
 })

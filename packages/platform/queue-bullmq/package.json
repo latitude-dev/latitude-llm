@@ -22,5 +22,8 @@
     "effect": "catalog:",
     "ioredis": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "vitest": "catalog:"
   }
 }

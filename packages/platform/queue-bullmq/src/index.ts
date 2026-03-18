@@ -1,6 +1,5 @@
 export {
-  type BullMqQueueConsumerConfig,
-  type BullMqQueuePublisherConfig,
+  type BullMqRedisConfig,
   createBullMqQueueConsumer,
   createBullMqQueuePublisher,
 } from "./adapter.ts"

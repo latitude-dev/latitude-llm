@@ -1,7 +1,6 @@
 export const Topics = {
   datasetExport: "dataset-export",
   domainEvents: "domain-events",
-  domainEventsDlq: "domain-events-dlq",
   spanIngestion: "span-ingestion",
 } as const
 
