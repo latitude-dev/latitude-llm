@@ -18,5 +18,10 @@
     "@types/pg": "catalog:",
     "effect": "catalog:",
     "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@platform/db-postgres": "workspace:*",
+    "@platform/testkit": "workspace:*",
+    "drizzle-orm": "catalog:"
   }
 }

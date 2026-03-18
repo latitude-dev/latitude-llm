@@ -6,12 +6,20 @@ import {
   SpanRepository,
   transformOtlpToSpans,
 } from "@domain/spans"
+import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import type { StorageDisk } from "@platform/storage-object"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getClickhouseClient, getStorageDisk } from "../clients.ts"
 
 const logger = createLogger("span-ingestion")
+
+export interface SpanIngestionWorkerDependencies {
+  readonly clickhouseClient?: ClickHouseClient
+  readonly disk?: StorageDisk
+  readonly logger?: Pick<typeof logger, "error">
+}
 
 function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
   try {
@@ -24,9 +32,10 @@ function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceS
   }
 }
 
-export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
-  const chClient = getClickhouseClient()
-  const disk = getStorageDisk()
+export const createSpanIngestionWorker = (consumer: QueueConsumer, deps: SpanIngestionWorkerDependencies = {}) => {
+  const chClient = deps.clickhouseClient ?? getClickhouseClient()
+  const disk = deps.disk ?? getStorageDisk()
+  const workerLogger = deps.logger ?? logger
 
   const handler: MessageHandler = {
     handle: (message: QueueMessage) => {
@@ -37,7 +46,7 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
         const payload = yield* getFromDisk(disk, fileKey)
         const request = decodeRequest(payload, contentType)
         if (!request) {
-          logger.error("Span ingestion: failed to decode message")
+          workerLogger.error("Span ingestion: failed to decode message")
           return
         }
 
@@ -48,7 +57,7 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
         const organizationId = message.headers.get("organization-id") ?? ""
         const projectId = message.headers.get("project-id") ?? ""
         if (!organizationId || !projectId) {
-          logger.error("Span ingestion: missing organization-id or project-id header")
+          workerLogger.error("Span ingestion: missing organization-id or project-id header")
           return
         }
         const apiKeyId = message.headers.get("api-key-id") ?? ""
@@ -64,7 +73,7 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
         yield* repo.insert(spans)
         yield* deleteFromDisk(disk, fileKey).pipe(Effect.ignore)
       }).pipe(
-        Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
+        Effect.tapError((error) => Effect.sync(() => workerLogger.error("Span ingestion failed", error))),
         withClickHouse(SpanRepositoryLive, chClient, OrganizationId(message.headers.get("organization-id") ?? "")),
       )
     },
