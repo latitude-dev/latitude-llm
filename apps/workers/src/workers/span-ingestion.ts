@@ -15,7 +15,7 @@ import { getClickhouseClient, getStorageDisk } from "../clients.ts"
 
 const logger = createLogger("span-ingestion")
 
-export interface SpanIngestionWorkerDependencies {
+interface SpanIngestionWorkerDependencies {
   readonly clickhouseClient?: ClickHouseClient
   readonly disk?: StorageDisk
   readonly logger?: Pick<typeof logger, "error">
