@@ -8,6 +8,10 @@ export interface StorageDiskPort {
    */
   putStream(key: string, contents: ReadableStream<Uint8Array>): Promise<void>
   get(key: string): Promise<string>
+  /**
+   * Returns file contents as a Uint8Array. Use for binary data.
+   */
+  getBytes(key: string): Promise<Uint8Array>
   getStream(key: string): Promise<ReadableStream<Uint8Array>>
   delete(key: string): Promise<void>
   /**
@@ -164,10 +168,7 @@ export function putInDiskStream<N extends FolderNamespace>(
  */
 export function getFromDisk(disk: StorageDiskPort, key: string): Effect.Effect<Uint8Array, StorageError> {
   return Effect.tryPromise({
-    try: async () => {
-      const content = await disk.get(key)
-      return new TextEncoder().encode(content)
-    },
+    try: () => disk.getBytes(key),
     catch: (cause) => new StorageError({ cause, operation: "getFromDisk" }),
   })
 }

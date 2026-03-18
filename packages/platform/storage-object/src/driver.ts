@@ -33,6 +33,7 @@ const adaptDiskToPort = (disk: Disk): StorageDiskPort => ({
     await disk.putStream(key, readable)
   },
   get: (key: string) => disk.get(key),
+  getBytes: (key: string) => disk.getBytes(key),
   getStream: async (key: string) => {
     const nodeStream = await disk.getStream(key)
     return new ReadableStream<Uint8Array>({

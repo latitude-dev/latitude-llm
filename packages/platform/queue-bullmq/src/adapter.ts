@@ -11,7 +11,7 @@ const QueueNameToQueueKey: Record<QueueName, string> = {
   "span-ingestion": "bullmq:span-ingestion",
 }
 
-const mapQueueMessageToJob = (message: QueueMessage) => {
+export const mapQueueMessageToJob = (message: QueueMessage) => {
   const headers: Record<string, string> = {}
   for (const [key, value] of message.headers) {
     headers[key] = value
@@ -26,7 +26,7 @@ const mapQueueMessageToJob = (message: QueueMessage) => {
   }
 }
 
-const mapJobToQueueMessage = (job: {
+export const mapJobToQueueMessage = (job: {
   id: string
   data: string
   opts: { headers?: Record<string, string> }

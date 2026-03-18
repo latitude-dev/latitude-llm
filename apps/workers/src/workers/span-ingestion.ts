@@ -38,12 +38,10 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
         const request = decodeRequest(payload, contentType)
         if (!request) {
           logger.error("Span ingestion: failed to decode message")
-          yield* deleteFromDisk(disk, fileKey)
           return
         }
 
         if (!request.resourceSpans?.length) {
-          yield* deleteFromDisk(disk, fileKey)
           return
         }
 
@@ -55,14 +53,13 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
 
         const spans = transformOtlpToSpans(request, { organizationId, projectId, apiKeyId, ingestedAt })
         if (spans.length === 0) {
-          yield* deleteFromDisk(disk, fileKey)
           return
         }
 
         const repo = yield* SpanRepository
         yield* repo.insert(spans)
-        yield* deleteFromDisk(disk, fileKey)
       }).pipe(
+        Effect.ensuring(deleteFromDisk(disk, fileKey).pipe(Effect.ignore)),
         Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
         withClickHouse(SpanRepositoryLive, chClient, OrganizationId(message.headers.get("organization-id") ?? "")),
       )
