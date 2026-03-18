@@ -1,8 +1,8 @@
-import { Toaster } from "@repo/ui"
+import { Toaster, useMountEffect } from "@repo/ui"
 import "@repo/ui/styles/globals.css"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
-import { lazy, Suspense, useEffect } from "react"
+import { lazy, Suspense } from "react"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
@@ -69,7 +69,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function HostThemeSync() {
-  useEffect(() => {
+  useMountEffect(() => {
     const root = document.documentElement
     const media = window.matchMedia(HOST_THEME_MEDIA_QUERY)
 
@@ -89,7 +89,7 @@ function HostThemeSync() {
     return () => {
       media.removeEventListener("change", onThemeChange)
     }
-  }, [])
+  })
 
   return null
 }

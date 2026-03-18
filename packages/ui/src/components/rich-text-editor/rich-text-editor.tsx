@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from "react"
+import { lazy, Suspense, useState } from "react"
+import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 
 export interface RichTextEditorProps {
   value: string
@@ -27,9 +28,9 @@ export function RichTextEditor(props: RichTextEditorProps) {
   const [mounted, setMounted] = useState(false)
   const height = props.minHeight ?? DEFAULT_MIN_HEIGHT
 
-  useEffect(() => {
+  useMountEffect(() => {
     setMounted(true)
-  }, [])
+  })
 
   if (!mounted) {
     return <EditorFallback minHeight={height} />

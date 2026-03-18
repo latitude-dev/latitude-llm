@@ -1,7 +1,7 @@
-import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { Button, Icon, LatitudeLogo, Text, useMountEffect } from "@repo/ui"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { CheckCircle, Loader2, XCircle } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import type { AuthIntentInfo } from "../../domains/auth/auth.functions.ts"
 import { completeAuthIntent, getAuthIntentInfo } from "../../domains/auth/auth.functions.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
@@ -12,10 +12,26 @@ export const Route = createFileRoute("/auth/confirm")({
     authIntentId: (search.authIntentId as string) ?? "",
     cliSession: (search.cliSession as string) || undefined,
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const session = await getSession()
     if (!session) {
       throw redirect({ to: "/login" })
+    }
+
+    if (!search.authIntentId) {
+      throw redirect({ to: "/" })
+    }
+
+    try {
+      const intentInfo = await getAuthIntentInfo({ data: { intentId: search.authIntentId } })
+      return { intentInfo, authIntentId: search.authIntentId, cliSession: search.cliSession }
+    } catch (err) {
+      return {
+        intentInfo: null,
+        authIntentId: search.authIntentId,
+        cliSession: search.cliSession,
+        initialError: toUserMessage(err),
+      }
     }
   },
   component: AuthConfirmPage,
@@ -29,30 +45,16 @@ type ConfirmState =
   | { step: "error"; message: string }
 
 function AuthConfirmPage() {
-  const { authIntentId, cliSession } = Route.useSearch()
+  const { intentInfo, authIntentId, cliSession, initialError } = Route.useRouteContext()
   const navigate = useNavigate()
-  const [state, setState] = useState<ConfirmState>({ step: "loading" })
+  const shouldAutoComplete = !!intentInfo && !intentInfo.needsName
+  const [state, setState] = useState<ConfirmState>(() => {
+    if (initialError) return { step: "error", message: initialError }
+    if (!intentInfo) return { step: "error", message: "Authentication intent could not be loaded." }
+    if (intentInfo.needsName) return { step: "name-form", intentInfo }
+    return { step: "completing" }
+  })
   const [name, setName] = useState("")
-
-  useEffect(() => {
-    if (!authIntentId) {
-      void navigate({ to: "/" })
-      return
-    }
-
-    getAuthIntentInfo({ data: { intentId: authIntentId } })
-      .then((info) => {
-        if (info.needsName) {
-          setState({ step: "name-form", intentInfo: info })
-        } else {
-          setState({ step: "completing" })
-          return completeAndRedirect()
-        }
-      })
-      .catch((err) => {
-        setState({ step: "error", message: toUserMessage(err) })
-      })
-  }, [authIntentId, navigate])
 
   const completeAndRedirect = async (userName?: string) => {
     return completeAuthIntent({ data: { intentId: authIntentId, name: userName } })
@@ -72,6 +74,11 @@ function AuthConfirmPage() {
           message: toUserMessage(err),
         })
       })
+  }
+
+  const handleAutoComplete = () => {
+    if (state.step !== "completing") return
+    void completeAndRedirect()
   }
 
   const handleNameSubmit = (e: React.FormEvent) => {
@@ -132,18 +139,38 @@ function AuthConfirmPage() {
               </Button>
             </form>
           </div>
+        ) : state.step === "completing" ? (
+          shouldAutoComplete ? (
+            <AutoCompleteAuthIntent onMount={handleAutoComplete} />
+          ) : (
+            <LoadingState />
+          )
         ) : (
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Icon icon={Loader2} className="h-6 w-6 text-muted-foreground animate-spin" />
-            </div>
-            <Text.H3 align="center">Setting up your workspace</Text.H3>
-            <Text.H5 color="foregroundMuted" align="center">
-              Please wait while we complete your authentication...
-            </Text.H5>
-          </div>
+          <LoadingState />
         )}
       </div>
+    </div>
+  )
+}
+
+function AutoCompleteAuthIntent({ onMount }: { onMount: () => void }) {
+  useMountEffect(() => {
+    onMount()
+  })
+
+  return <LoadingState />
+}
+
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+        <Icon icon={Loader2} className="h-6 w-6 text-muted-foreground animate-spin" />
+      </div>
+      <Text.H3 align="center">Setting up your workspace</Text.H3>
+      <Text.H5 color="foregroundMuted" align="center">
+        Please wait while we complete your authentication...
+      </Text.H5>
     </div>
   )
 }

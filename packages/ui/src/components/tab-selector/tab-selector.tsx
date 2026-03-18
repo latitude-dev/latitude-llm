@@ -1,5 +1,6 @@
-import { Fragment, type ReactNode, useCallback, useEffect, useRef, useState } from "react"
+import { Fragment, type ReactNode, useCallback, useRef, useState } from "react"
 
+import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
 import { Text } from "../text/text.tsx"
@@ -100,20 +101,20 @@ function TabSelector<T extends string>({
 }: TabSelectorProps<T>) {
   const selectedOptionBackgroundRef = useRef<HTMLDivElement>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
-  const [selected, setSelected] = useState<T | null>(originalSelected ?? null)
-
-  useEffect(() => {
-    setSelected(originalSelected ?? null)
-  }, [originalSelected])
+  const isControlled = originalSelected !== undefined
+  const [internalSelected, setInternalSelected] = useState<T | null>(originalSelected ?? null)
+  const selected = isControlled ? (originalSelected ?? null) : internalSelected
 
   const handleSelect = useCallback(
     (option: TabSelectorOption<T>) => () => {
       if (option.disabled) return
 
-      setSelected(option.value)
+      if (!isControlled) {
+        setInternalSelected(option.value)
+      }
       onSelect?.(option.value)
     },
-    [onSelect],
+    [isControlled, onSelect],
   )
 
   const selectedOptionButtonRef = useCallback((button: HTMLElement | null) => {
@@ -141,9 +142,9 @@ function TabSelector<T extends string>({
     resizeObserverRef.current.observe(button)
   }, [])
 
-  useEffect(() => {
+  useMountEffect(() => {
     return () => resizeObserverRef.current?.disconnect()
-  }, [])
+  })
 
   return (
     <div

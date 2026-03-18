@@ -70,6 +70,7 @@ export {
 export { Toaster } from "./components/toast/toaster.tsx"
 export { toast, useToast } from "./components/toast/useToast.ts"
 export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "./components/tooltip/tooltip.tsx"
+export { useMountEffect } from "./hooks/use-mount-effect.ts"
 export * from "./tokens/colors.ts"
 export * from "./tokens/font.ts"
 export * from "./tokens/opacity.ts"

@@ -3,7 +3,7 @@ import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { countUserOrganizations, getOrganization } from "../domains/organizations/organizations.functions.ts"
 import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
@@ -82,11 +82,9 @@ function ProjectBreadcrumb({ projectId }: { projectId: string }) {
 }
 
 function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"))
-  }, [])
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false,
+  )
 
   const toggle = () => {
     const next = !isDark

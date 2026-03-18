@@ -1,5 +1,6 @@
 import { Check, Clipboard } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
+import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { Button } from "../button/button.tsx"
 import { Icon } from "../icons/icons.tsx"
 
@@ -14,11 +15,11 @@ export function CopyButton({ value, className }: { value: string; className?: st
     timeoutRef.current = setTimeout(() => setCopied(false), 2000)
   }, [value])
 
-  useEffect(() => {
+  useMountEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [])
+  })
 
   return (
     <Button flat variant="ghost" size="icon" onClick={handleCopy} className={className}>
