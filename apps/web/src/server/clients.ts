@@ -12,6 +12,7 @@ import {
   signupExistingAccountMagicLinkTemplate,
 } from "@domain/email"
 import type { QueuePublisherShape } from "@domain/queue"
+import type { StorageDiskPort } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { createBetterAuth } from "@platform/auth-better"
 import type { RedisClient } from "@platform/cache-redis"
@@ -27,7 +28,6 @@ import {
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
-import type { StorageDiskPort } from "@domain/shared"
 import { createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 

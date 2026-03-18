@@ -1,6 +1,6 @@
-import { QueuePublishError, QueuePublisher } from "@domain/queue"
 import type { QueuePublisherShape } from "@domain/queue"
-import { OrganizationId, ProjectId, StorageDisk, StorageError, type StorageDiskPort } from "@domain/shared"
+import { QueuePublishError, QueuePublisher } from "@domain/queue"
+import { OrganizationId, ProjectId, StorageDisk, type StorageDiskPort, StorageError } from "@domain/shared"
 import { Effect, Layer, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { ingestSpansUseCase } from "./ingest-spans.ts"
@@ -55,13 +55,13 @@ describe("ingestSpansUseCase", () => {
     await Effect.runPromise(runUseCase(disk, publisher))
 
     expect(written).toHaveLength(1)
-    expect(written[0]!.key).toContain("organizations/org-1/projects/proj-1/ingest/")
-    expect(written[0]!.key).toMatch(/\.json$/)
+    expect(written[0]?.key).toContain("organizations/org-1/projects/proj-1/ingest/")
+    expect(written[0]?.key).toMatch(/\.json$/)
 
     expect(published).toHaveLength(1)
-    expect(published[0]!.queue).toBe("span-ingestion")
-    const body = new TextDecoder().decode(published[0]!.message.body)
-    expect(body).toBe(written[0]!.key)
+    expect(published[0]?.queue).toBe("span-ingestion")
+    const body = new TextDecoder().decode(published[0]?.message.body)
+    expect(body).toBe(written[0]?.key)
   })
 
   it("uses protobuf extension for protobuf content type", async () => {
@@ -75,7 +75,7 @@ describe("ingestSpansUseCase", () => {
       ),
     )
 
-    expect(written[0]!.key).toMatch(/\.protobuf$/)
+    expect(written[0]?.key).toMatch(/\.protobuf$/)
   })
 
   it("fails with StorageError when disk write fails", async () => {
@@ -181,7 +181,7 @@ describe("ingestSpansUseCase", () => {
     )
 
     expect(capturedHeaders).toHaveLength(1)
-    const headers = capturedHeaders[0]!
+    const headers = capturedHeaders[0] as Map<string, string>
     expect(headers.get("content-type")).toBe("application/json")
     expect(headers.get("organization-id")).toBe("org-1")
     expect(headers.get("project-id")).toBe("proj-1")

@@ -19,9 +19,7 @@ export class StorageError extends Data.TaggedError("StorageError")<{
   readonly httpMessage = "Storage operation failed"
 }
 
-export class StorageDisk extends ServiceMap.Service<StorageDisk, StorageDiskPort>()(
-  "@domain/shared/StorageDisk",
-) {}
+export class StorageDisk extends ServiceMap.Service<StorageDisk, StorageDiskPort>()("@domain/shared/StorageDisk") {}
 
 type FolderNamespace = "datasetExports" | "datasets" | "ingest" | "unknown"
 

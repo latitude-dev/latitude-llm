@@ -1,12 +1,6 @@
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import {
-  type OrganizationId,
-  type ProjectId,
-  StorageDisk,
-  type StorageError,
-  putInDisk,
-} from "@domain/shared"
+import { type OrganizationId, type ProjectId, putInDisk, StorageDisk, type StorageError } from "@domain/shared"
 import { Effect } from "effect"
 
 export interface IngestSpansInput {

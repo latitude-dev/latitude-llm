@@ -1,8 +1,8 @@
 export {
   type BullMqRedisConfig,
-  QueuePublisherLive,
   createBullMqQueueConsumer,
   createBullMqQueuePublisher,
+  QueuePublisherLive,
 } from "./adapter.ts"
 export { type BullMqConfig, loadBullMqConfig } from "./config.ts"
 export {

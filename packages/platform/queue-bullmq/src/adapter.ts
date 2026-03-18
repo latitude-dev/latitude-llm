@@ -1,5 +1,5 @@
 import type { MessageHandler, QueueConsumer, QueueMessage, QueueName, QueuePublisherShape } from "@domain/queue"
-import { QueueClientError, QueuePublisher, QueuePublishError, QueueSubscribeError } from "@domain/queue"
+import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError } from "@domain/queue"
 import { base64Decode, base64Encode } from "@repo/utils"
 import { Queue, Worker } from "bullmq"
 import { Effect, Layer } from "effect"

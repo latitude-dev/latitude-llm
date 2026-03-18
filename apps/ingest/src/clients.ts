@@ -1,12 +1,12 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type { QueuePublisherShape } from "@domain/queue"
+import type { StorageDiskPort } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
-import type { StorageDiskPort } from "@domain/shared"
 import { createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
