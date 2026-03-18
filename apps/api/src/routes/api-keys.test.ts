@@ -47,7 +47,7 @@ describe("API Keys Routes Integration", () => {
   let database: InMemoryPostgres
 
   beforeAll(async () => {
-    process.env.LAT_API_KEY_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
+    process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
     database = await createInMemoryPostgres()
 
     const { app: root, protectedRoutes } = createProtectedApp(database)

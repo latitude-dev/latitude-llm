@@ -176,11 +176,7 @@ ORDER BY (
     session_id,
     trace_id,
     span_id
-)
-TTL toDateTime(start_time) + INTERVAL 3 MONTH TO VOLUME 'cold'
-SETTINGS
-    ttl_only_drop_parts = 1,
-    storage_policy      = 'tiered';
+);
 
 -- +goose Down
 DROP TABLE IF EXISTS spans;

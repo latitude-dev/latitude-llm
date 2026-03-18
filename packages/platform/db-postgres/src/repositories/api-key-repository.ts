@@ -20,7 +20,7 @@ let encryptionKeyCache: Buffer | undefined
 
 const getEncryptionKey = (): Buffer => {
   if (!encryptionKeyCache) {
-    const encryptionKeyHex = Effect.runSync(parseEnv("LAT_API_KEY_ENCRYPTION_KEY", "string"))
+    const encryptionKeyHex = Effect.runSync(parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string"))
     encryptionKeyCache = Buffer.from(encryptionKeyHex, "hex")
   }
   return encryptionKeyCache
