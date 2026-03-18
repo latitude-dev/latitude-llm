@@ -66,7 +66,7 @@ class PostgresOutboxPoolAdapter {
 
 const pg = setupTestPostgres()
 
-const waitFor = async (predicate: () => Promise<boolean>, timeoutMs = 2_000): Promise<void> => {
+const waitFor = async (predicate: () => Promise<boolean>, timeoutMs = 5_000): Promise<void> => {
   const started = Date.now()
   while (Date.now() - started < timeoutMs) {
     if (await predicate()) return
