@@ -1,11 +1,12 @@
 import {
   NotFoundError,
+  OrganizationId,
   SqlClient,
   type SqlClientShape,
   SubscriptionId,
   type SubscriptionId as SubscriptionIdType,
 } from "@domain/shared"
-import type { Subscription } from "@domain/subscriptions"
+import type { Plan, Subscription } from "@domain/subscriptions"
 import { SubscriptionRepository } from "@domain/subscriptions"
 import { and, desc, eq, inArray, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -14,28 +15,33 @@ import { subscription } from "../schema/index.ts"
 
 // ── Subscription helpers ─────────────────────────────────────────────────────
 
-const toDomainPlan = (plan: string): import("@domain/subscriptions").Plan => {
-  const planMap: Record<string, import("@domain/subscriptions").Plan> = {
-    hobby: "HobbyV3",
-    team: "TeamV4",
-    enterprise: "EnterpriseV1",
-    scale: "ScaleV1",
-    hobby_v3: "HobbyV3",
-    team_v4: "TeamV4",
-    enterprise_v1: "EnterpriseV1",
-    scale_v1: "ScaleV1",
+const PLAN_MAP: Record<string, Plan> = {
+  hobby: "HobbyV3",
+  team: "TeamV4",
+  enterprise: "EnterpriseV1",
+  scale: "ScaleV1",
+  hobby_v3: "HobbyV3",
+  team_v4: "TeamV4",
+  enterprise_v1: "EnterpriseV1",
+  scale_v1: "ScaleV1",
+}
+
+const toDomainPlan = (plan: string): Plan => {
+  const mapped = PLAN_MAP[plan.toLowerCase()]
+  if (!mapped) {
+    throw new Error(`Unknown subscription plan: "${plan}"`)
   }
-  return planMap[plan.toLowerCase()] ?? "HobbyV3"
+  return mapped
 }
 
 const toDomainSubscription = (row: typeof subscription.$inferSelect): Subscription => ({
   id: SubscriptionId(row.id),
-  organizationId: row.referenceId as import("@domain/shared").OrganizationId,
+  organizationId: OrganizationId(row.referenceId),
   plan: toDomainPlan(row.plan),
-  trialEndsAt: row.trialEnd,
-  cancelledAt: row.canceledAt ?? row.cancelAt,
-  createdAt: row.periodStart ?? new Date(),
-  updatedAt: new Date(),
+  status: row.status,
+  periodStart: row.periodStart ?? null,
+  trialEndsAt: row.trialEnd ?? null,
+  cancelledAt: row.canceledAt ?? null,
 })
 
 // ── Subscription Repository Live Layer ───────────────────────────────────────

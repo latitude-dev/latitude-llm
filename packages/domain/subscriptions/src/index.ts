@@ -4,6 +4,7 @@ export {
   consume,
   createGrant,
   type Grant,
+  type GrantSource,
   type GrantType,
   hasBalance,
   isValid,

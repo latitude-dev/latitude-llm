@@ -91,11 +91,13 @@ export const updateProjectUseCase = (input: UpdateProjectInput) =>
           nextName = trimmedName
         }
 
+        const now = new Date()
         const updatedProject: Project = {
           ...existingProject,
           name: nextName,
           description: input.description !== undefined ? input.description : existingProject.description,
-          updatedAt: new Date(),
+          lastEditedAt: now,
+          updatedAt: now,
         }
 
         yield* repo.save(updatedProject)

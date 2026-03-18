@@ -130,7 +130,6 @@ export const changePlan = (input: ChangePlanInput) =>
         const updatedSubscription: Subscription = {
           ...subscription,
           plan: input.newPlan,
-          updatedAt: new Date(),
         }
 
         yield* subscriptionRepository.save(updatedSubscription)

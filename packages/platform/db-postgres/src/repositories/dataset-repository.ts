@@ -35,6 +35,7 @@ const toDomainVersion = (row: typeof datasetVersions.$inferSelect): DatasetVersi
   rowsUpdated: row.rowsUpdated,
   rowsDeleted: row.rowsDeleted,
   source: row.source,
+  actorId: row.actorId ?? null,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
@@ -219,6 +220,7 @@ export const DatasetRepositoryLive = Layer.effect(
                 version: newVersion,
                 rowsInserted: args.rowsInserted,
                 source: args.source ?? "api",
+                actorId: args.actorId ?? null,
               })
               .returning(),
           )

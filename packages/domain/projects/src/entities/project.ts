@@ -14,6 +14,7 @@ export interface Project {
   readonly description: string | null
   readonly createdById: UserId | null
   readonly deletedAt: Date | null
+  readonly lastEditedAt: Date
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -29,6 +30,7 @@ export const createProject = (params: {
   description?: string
   createdById?: UserId
   deletedAt?: Date
+  lastEditedAt?: Date
   createdAt?: Date
   updatedAt?: Date
 }): Project => {
@@ -41,6 +43,7 @@ export const createProject = (params: {
     description: params.description ?? null,
     createdById: params.createdById ?? null,
     deletedAt: params.deletedAt ?? null,
+    lastEditedAt: params.lastEditedAt ?? now,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
   }
@@ -57,10 +60,12 @@ export const isProjectDeleted = (project: Project): boolean => {
  * Mark a project as deleted (soft delete).
  */
 export const markProjectDeleted = (project: Project): Project => {
+  const now = new Date()
   return {
     ...project,
-    deletedAt: new Date(),
-    updatedAt: new Date(),
+    deletedAt: now,
+    lastEditedAt: now,
+    updatedAt: now,
   }
 }
 
@@ -68,9 +73,11 @@ export const markProjectDeleted = (project: Project): Project => {
  * Restore a soft-deleted project.
  */
 export const restoreProject = (project: Project): Project => {
+  const now = new Date()
   return {
     ...project,
     deletedAt: null,
-    updatedAt: new Date(),
+    lastEditedAt: now,
+    updatedAt: now,
   }
 }

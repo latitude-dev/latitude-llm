@@ -25,7 +25,7 @@ export const apiKeys = latitudeSchema.table(
     token: text("token").notNull(),
     tokenHash: text("token_hash").notNull().unique(),
     organizationId: cuid("organization_id").notNull(),
-    name: varchar("name", { length: 256 }),
+    name: varchar("name", { length: 256 }).notNull().default(""),
     lastUsedAt: tzTimestamp("last_used_at"),
     deletedAt: tzTimestamp("deleted_at"),
     ...timestamps(),

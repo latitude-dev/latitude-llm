@@ -8,7 +8,7 @@ import {
   SubscriptionId,
   type SubscriptionId as SubscriptionIdType,
 } from "@domain/shared"
-import type { Grant, GrantType } from "@domain/subscriptions"
+import type { Grant, GrantSource, GrantType } from "@domain/subscriptions"
 import { GrantRepository } from "@domain/subscriptions"
 import { and, eq, gt, gte, isNull, or } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -31,6 +31,7 @@ const toDomainGrant = (row: typeof grants.$inferSelect): Grant => ({
   organizationId: OrganizationId(row.organizationId),
   subscriptionId: SubscriptionId(row.subscriptionId),
   type: toDomainGrantType(row.type),
+  source: row.source as GrantSource,
   amount: Number(row.amount),
   balance: Number(row.balance),
   expiresAt: row.expiresAt,
@@ -43,10 +44,10 @@ const toGrantInsertRow = (grant: Grant): typeof grants.$inferInsert => ({
   organizationId: grant.organizationId,
   subscriptionId: grant.subscriptionId,
   type: toDbGrantType(grant.type),
+  source: grant.source,
   amount: grant.amount,
   balance: grant.balance,
   expiresAt: grant.expiresAt,
-  source: "subscription",
 })
 
 export const GrantRepositoryLive = Layer.effect(

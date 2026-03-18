@@ -29,17 +29,18 @@ const getEncryptionKey = (): Buffer => {
 const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer) =>
   Effect.gen(function* () {
     const token = yield* decrypt(row.token, encryptionKey).pipe(Effect.mapError((e) => toRepositoryError(e, "decrypt")))
-    return {
+    const apiKey: ApiKey = {
       id: ApiKeyId(row.id),
       organizationId: OrganizationId(row.organizationId),
       token,
       tokenHash: row.tokenHash,
-      name: row.name ?? "",
+      name: row.name,
       lastUsedAt: row.lastUsedAt,
       deletedAt: row.deletedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-    } as ApiKey
+    }
+    return apiKey
   })
 
 const toInsertRow = (apiKey: ApiKey, encryptionKey: Buffer) =>
