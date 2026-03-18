@@ -98,8 +98,9 @@ const handleShutdown = async (signal: string) => {
   healthServer.close()
 
   try {
-    const { workers } = await workersPromise
+    const { consumers, workers } = await workersPromise
 
+    await consumers.outboxConsumer.stop()
     await Promise.allSettled(Object.values(workers).map((worker) => worker.stop()))
   } catch (error) {
     logger.error("Error during shutdown (workers may not have started)", error)

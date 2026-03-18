@@ -50,10 +50,14 @@ export const createEventsPublisher = (queuePublisher: QueuePublisher): EventsPub
 })
 
 export const createEventHandler = (handler: EventHandler): MessageHandler => ({
-  handle: (message: QueueMessage) => {
-    const body = new TextDecoder().decode(message.body)
-    const parsed = JSON.parse(body)
-    const envelope = EventEnvelopeSchema.parse(parsed)
-    return handler.handle(envelope)
-  },
+  handle: (message: QueueMessage) =>
+    Effect.gen(function* () {
+      const body = new TextDecoder().decode(message.body)
+      const envelope = yield* Effect.try({
+        try: () => EventEnvelopeSchema.parse(JSON.parse(body)),
+        catch: () => null,
+      })
+      if (!envelope) return
+      yield* handler.handle(envelope)
+    }),
 })

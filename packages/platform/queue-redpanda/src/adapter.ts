@@ -142,14 +142,14 @@ export const createRedpandaQueueConsumer = (
         isRunning = false
         yield* Effect.tryPromise({
           try: () => consumer.disconnect(),
-          catch: () => undefined as never,
-        })
+          catch: (cause: unknown) => new QueueClientError({ cause }),
+        }).pipe(Effect.tapError(Effect.logError), Effect.ignore)
         const promise = runPromise
         if (promise) {
           yield* Effect.tryPromise({
             try: () => promise,
-            catch: () => undefined as never,
-          })
+            catch: (cause: unknown) => new QueueClientError({ cause }),
+          }).pipe(Effect.tapError(Effect.logError), Effect.ignore)
         }
       })
 
