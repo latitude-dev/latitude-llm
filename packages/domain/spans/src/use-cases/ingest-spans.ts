@@ -1,6 +1,13 @@
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import { type OrganizationId, type ProjectId, putInDisk, StorageDisk, type StorageError } from "@domain/shared"
+import {
+  deleteFromDisk,
+  type OrganizationId,
+  type ProjectId,
+  putInDisk,
+  StorageDisk,
+  type StorageError,
+} from "@domain/shared"
 import { Effect } from "effect"
 
 export interface IngestSpansInput {
@@ -26,15 +33,17 @@ export const ingestSpansUseCase = (
       extension: input.contentType.includes("protobuf") ? "protobuf" : "json",
     })
 
-    yield* publisher.publish("span-ingestion", {
-      body: new TextEncoder().encode(fileKey),
-      key: input.organizationId,
-      headers: new Map([
-        ["content-type", input.contentType],
-        ["organization-id", input.organizationId],
-        ["project-id", input.projectId],
-        ["api-key-id", input.apiKeyId],
-        ["ingested-at", new Date().toISOString()],
-      ]),
-    })
+    yield* publisher
+      .publish("span-ingestion", {
+        body: new TextEncoder().encode(fileKey),
+        key: input.organizationId,
+        headers: new Map([
+          ["content-type", input.contentType],
+          ["organization-id", input.organizationId],
+          ["project-id", input.projectId],
+          ["api-key-id", input.apiKeyId],
+          ["ingested-at", new Date().toISOString()],
+        ]),
+      })
+      .pipe(Effect.tapError(() => deleteFromDisk(disk, fileKey).pipe(Effect.ignore)))
   })

@@ -15,6 +15,7 @@ const validInput = {
 
 const createFakeDisk = () => {
   const written: { key: string; contents: string | Uint8Array }[] = []
+  const deleted: string[] = []
   const disk: StorageDiskPort = {
     put: async (key, contents) => {
       written.push({ key, contents })
@@ -23,10 +24,12 @@ const createFakeDisk = () => {
     get: async () => "",
     getBytes: async () => new Uint8Array(),
     getStream: async () => new ReadableStream(),
-    delete: async () => {},
+    delete: async (key) => {
+      deleted.push(key)
+    },
     getSignedUrl: async () => "",
   }
-  return { disk, written }
+  return { disk, written, deleted }
 }
 
 const createFakePublisher = () => {
@@ -109,8 +112,8 @@ describe("ingestSpansUseCase", () => {
     expect(published).toHaveLength(0)
   })
 
-  it("fails with QueuePublishError when publish fails", async () => {
-    const { disk, written } = createFakeDisk()
+  it("fails with QueuePublishError and cleans up file when publish fails", async () => {
+    const { disk, written, deleted } = createFakeDisk()
     const failingPublisher: QueuePublisherShape = {
       publish: (queue) => Effect.fail(new QueuePublishError({ cause: new Error("queue down"), queue })),
       close: () => Effect.void,
@@ -126,6 +129,8 @@ describe("ingestSpansUseCase", () => {
     )
 
     expect(written).toHaveLength(1)
+    expect(deleted).toHaveLength(1)
+    expect(deleted[0]).toBe(written[0]?.key)
     expect(Result.isFailure(res)).toBe(true)
     if (Result.isFailure(res)) {
       expect(res.failure._tag).toBe("QueuePublishError")
