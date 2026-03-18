@@ -637,9 +637,9 @@ const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"));
 
 ## Cloud Agent Environment Setup
 
-When running as a cloud agent (e.g. Cursor Cloud Agent), the repository may not have `.env.development` or `.env.test` files. These are required for running the dev server and tests respectively.
+**Before starting any work**, always ensure `.env.development` and `.env.test` exist. These files are required for the dev server, tests, and tooling like `knip` to run correctly.
 
-**If `.env.development` or `.env.test` do not exist**, copy `.env.example` as-is:
+**Always run these commands first:**
 
 ```bash
 cp .env.example .env.development
@@ -651,7 +651,7 @@ Then set `NODE_ENV` appropriately in each file:
 - In `.env.development`: `NODE_ENV=development`
 - In `.env.test`: `NODE_ENV=test`
 
-This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests and dev commands to run without additional configuration.
+This provides working defaults for all services (Postgres, ClickHouse, Redis, etc.) that match the Docker Compose setup, allowing tests, dev commands, and `knip` to run without additional configuration.
 
 ## Testing Conventions
 
