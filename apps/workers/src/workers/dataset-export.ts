@@ -3,12 +3,12 @@ import { datasetExportTemplate, type RenderedEmail, sendEmail } from "@domain/em
 import type { MessageHandler, QueueConsumer, QueueMessage } from "@domain/queue"
 import { DatasetId, OrganizationId, putInDisk } from "@domain/shared"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { createPostgresClient, DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { createStorageDisk } from "@platform/storage-object"
 import { createLogger } from "@repo/observability"
 import { Data, Effect } from "effect"
-import { getClickhouseClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 import { parseDatasetExportPayload } from "./dataset-export-payload.ts"
 
 class DatasetExportError extends Data.TaggedError("DatasetExportError")<{
@@ -21,7 +21,7 @@ const BATCH_SIZE = 1000
 const SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
 
 export const createDatasetExportWorker = (consumer: QueueConsumer) => {
-  const pgClient = createPostgresClient()
+  const pgClient = getPostgresClient()
   const chClient = getClickhouseClient()
   const disk = createStorageDisk()
   const emailSender = createEmailTransportSender()

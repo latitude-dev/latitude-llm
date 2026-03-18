@@ -12,7 +12,7 @@ import {
 import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresPool } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient } from "./clients.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
@@ -25,7 +25,7 @@ if (import.meta.url) {
   }
 }
 
-const pgPool = getPostgresPool(10)
+const pgClient = getPostgresClient(10)
 const logger = createLogger("workers")
 let ready = false
 
@@ -49,10 +49,11 @@ const initializeWorkers = async () => {
   const bullMqConfig = Effect.runSync(loadBullMqConfig())
   const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
   const eventsPublisher = createEventsPublisher(queuePublisher)
+
   const outboxConsumer = await Effect.runPromise(
     createPollingOutboxConsumer(
       {
-        pool: pgPool,
+        pool: pgClient.pool,
         pollIntervalMs: 1000,
         batchSize: 100,
       },
@@ -95,7 +96,7 @@ const handleShutdown = async (signal: string) => {
     logger.error("Error during shutdown (workers may not have started)", error)
   }
 
-  await pgPool.end()
+  await pgClient.pool.end()
   await getClickhouseClient().close()
   process.exit(0)
 }

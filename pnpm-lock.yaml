@@ -443,18 +443,12 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
-      '@types/pg':
-        specifier: 'catalog:'
-        version: 8.16.0
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
-      pg:
-        specifier: 'catalog:'
-        version: 8.16.0
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
