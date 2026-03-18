@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { zIndex } from "../../tokens/zIndex.ts"
 import { cn } from "../../utils/cn.ts"
@@ -102,24 +102,26 @@ export function Select<V = unknown>({
   onOpenChange: controlledOnOpenChange,
   footerAction,
 }: SelectProps<V>) {
-  const [selectedValue, setSelected] = useState<V | undefined>(value ?? defaultValue)
+  const isControlled = value !== undefined
+  const [internalSelected, setInternalSelected] = useState<V | undefined>(defaultValue)
   const [internalIsOpen, setInternalIsOpen] = useState(false)
 
+  const selectedValue = isControlled ? value : internalSelected
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalIsOpen
   const setIsOpen = controlledOnOpenChange ?? setInternalIsOpen
 
-  useEffect(() => {
-    setSelected(value ?? defaultValue)
-  }, [value, defaultValue])
-
   const _onChange = (newValue: string) => {
-    setSelected(newValue as V)
+    if (!isControlled) {
+      setInternalSelected(newValue as V)
+    }
     if (onChange) onChange(newValue as V)
     setIsOpen(false)
   }
 
   const _onRemove = () => {
-    setSelected(undefined)
+    if (!isControlled) {
+      setInternalSelected(undefined)
+    }
     if (onChange) onChange(undefined as V)
     setIsOpen(false)
   }
@@ -146,8 +148,7 @@ export function Select<V = unknown>({
             required={required}
             disabled={disabled || loading}
             name={name}
-            value={selectedValue as string}
-            defaultValue={defaultValue as string}
+            value={selectedValue !== undefined ? String(selectedValue) : undefined}
             {...(searchable ? {} : { onValueChange: _onChange })}
             onOpenChange={setIsOpen}
           >

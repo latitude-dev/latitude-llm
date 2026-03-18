@@ -473,7 +473,13 @@ function DatasetRowsView({
 
           {selectedRow && (
             <div className="w-1/2 min-h-0">
-              <RowDetailPanel row={selectedRow} onClose={closeRow} onSave={handleSaveRow} saving={saving} />
+              <RowDetailPanel
+                key={selectedRow.rowId}
+                row={selectedRow}
+                onClose={closeRow}
+                onSave={handleSaveRow}
+                saving={saving}
+              />
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useSyncExternalStore } from "react"
 
 import type { ToastActionElement, ToastProps } from "./toast.tsx"
 
@@ -120,14 +120,14 @@ const reducer = (state: State, action: Action): State => {
   }
 }
 
-const listeners: Array<(state: State) => void> = []
+const listeners = new Set<() => void>()
 
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action)
   for (const listener of listeners) {
-    listener(memoryState)
+    listener()
   }
 }
 
@@ -163,17 +163,16 @@ function toast({ ...props }: Toast) {
 }
 
 function useToast() {
-  const [state, setState] = useState<State>(memoryState)
-
-  useEffect(() => {
-    listeners.push(setState)
-    return () => {
-      const index = listeners.indexOf(setState)
-      if (index > -1) {
-        listeners.splice(index, 1)
+  const state = useSyncExternalStore(
+    (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
       }
-    }
-  }, [])
+    },
+    () => memoryState,
+    () => memoryState,
+  )
 
   return useMemo(
     () => ({

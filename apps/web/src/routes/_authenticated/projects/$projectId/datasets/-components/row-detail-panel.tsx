@@ -1,6 +1,6 @@
 import { Button, RichTextEditor, Text } from "@repo/ui"
 import { Loader2, Save, X } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 
 function formatField(value: unknown): string {
@@ -56,12 +56,6 @@ export function RowDetailPanel({
   const [inputText, setInputText] = useState(() => formatField(row.input))
   const [outputText, setOutputText] = useState(() => formatField(row.output))
   const [metadataText, setMetadataText] = useState(() => formatField(row.metadata))
-
-  useEffect(() => {
-    setInputText(formatField(row.input))
-    setOutputText(formatField(row.output))
-    setMetadataText(formatField(row.metadata))
-  }, [row.input, row.output, row.metadata])
 
   const handleSave = useCallback(() => {
     onSave?.({ input: inputText, output: outputText, metadata: metadataText })

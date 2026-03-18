@@ -18,10 +18,11 @@ import {
   LatitudeLogo,
   RichTextEditor,
   Text,
+  useMountEffect,
 } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 export const Route = createFileRoute("/design-system")({
   component: DesignSystemPage,
@@ -247,17 +248,25 @@ function DesignSystemPage() {
   const [theme, setTheme] = useState<"light" | "dark">("light")
   const pageSurfaceClass = theme === "dark" ? "bg-black" : "bg-white"
 
-  useEffect(() => {
+  const applyTheme = (nextTheme: "light" | "dark") => {
     const root = document.documentElement
-    root.classList.toggle("dark", theme === "dark")
-    root.style.colorScheme = theme
+    root.classList.toggle("dark", nextTheme === "dark")
+    root.style.colorScheme = nextTheme
+  }
 
+  const restoreHostTheme = () => {
+    const root = document.documentElement
+    const hostTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    root.classList.toggle("dark", hostTheme === "dark")
+    root.style.colorScheme = hostTheme
+  }
+
+  useMountEffect(() => {
+    applyTheme(theme)
     return () => {
-      const hostTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-      root.classList.toggle("dark", hostTheme === "dark")
-      root.style.colorScheme = hostTheme
+      restoreHostTheme()
     }
-  }, [theme])
+  })
 
   return (
     <>
@@ -300,7 +309,11 @@ function DesignSystemPage() {
                   variant="outline"
                   flat
                   onClick={() => {
-                    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"))
+                    setTheme((currentTheme) => {
+                      const nextTheme = currentTheme === "light" ? "dark" : "light"
+                      applyTheme(nextTheme)
+                      return nextTheme
+                    })
                   }}
                 >
                   <Icon icon={theme === "light" ? Moon : Sun} size="sm" />

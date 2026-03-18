@@ -1,5 +1,5 @@
 import { Check, Loader2, Search } from "lucide-react"
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useMemo, useState } from "react"
 
 import { cn } from "../../utils/cn.ts"
 import { Text } from "../text/text.tsx"
@@ -31,11 +31,6 @@ export function SearchableSelectList<V = unknown>({
   loading = false,
 }: SearchableSelectListProps<V>) {
   const [search, setSearch] = useState("")
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
 
   const handleSearch = (value: string) => {
     setSearch(value)
@@ -53,8 +48,8 @@ export function SearchableSelectList<V = unknown>({
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <Search className="h-4 w-4 shrink-0 opacity-50" />
         <input
-          ref={inputRef}
           type="text"
+          autoFocus
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder={searchPlaceholder}
