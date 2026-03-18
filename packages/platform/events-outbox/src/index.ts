@@ -1,5 +1,5 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events"
-import { Effect, Fiber, Result, Schedule, ServiceMap } from "effect"
+import { Data, Effect, Fiber, Result, Schedule, ServiceMap } from "effect"
 import type { Pool, PoolClient } from "pg"
 
 export class EventsOutboxAdapterTag extends ServiceMap.Service<
@@ -29,6 +29,15 @@ export interface PollingOutboxConsumerConfig {
   readonly pool: Pool
   readonly pollIntervalMs: number
   readonly batchSize: number
+}
+
+export class OutboxConsumerError extends Data.TaggedError("OutboxConsumerError")<{
+  readonly cause: unknown
+}> {}
+
+export interface OutboxConsumer {
+  readonly start: () => Effect.Effect<void, OutboxConsumerError>
+  readonly stop: () => Effect.Effect<void>
 }
 
 const SELECT_UNPUBLISHED_EVENTS = `
@@ -118,37 +127,35 @@ const pollEffect = (
     return processedCount
   })
 
-export const createPollingOutboxConsumerEffect = (
+export const createPollingOutboxConsumer = (
   config: PollingOutboxConsumerConfig,
   publisher: EventsPublisher,
-): Effect.Effect<{ start: () => void; stop: () => Promise<void> }, never, never> =>
+): Effect.Effect<OutboxConsumer, OutboxConsumerError> =>
   Effect.gen(function* () {
     let fiber: Fiber.Fiber<void, unknown> | null = null
 
     const schedule = Schedule.spaced(config.pollIntervalMs)
 
-    return {
-      start: (): void => {
+    const start = (): Effect.Effect<void, OutboxConsumerError> =>
+      Effect.gen(function* () {
         if (fiber !== null) return
 
         const pollingEffect = Effect.repeat(pollEffect(config, publisher), schedule).pipe(Effect.asVoid)
 
-        fiber = Effect.runSync(Effect.forkDetach(pollingEffect, { startImmediately: true }))
+        fiber = yield* Effect.forkDetach(pollingEffect, { startImmediately: true })
 
-        Effect.runSync(Effect.logInfo("Polling outbox consumer started"))
-      },
-      stop: async (): Promise<void> => {
+        yield* Effect.logInfo("Polling outbox consumer started")
+      }).pipe(Effect.catchCause((cause) => Effect.fail(new OutboxConsumerError({ cause }))))
+
+    const stop = (): Effect.Effect<void> =>
+      Effect.gen(function* () {
         if (fiber === null) return
 
-        await Effect.runPromise(Fiber.interrupt(fiber))
+        yield* Fiber.interrupt(fiber)
         fiber = null
-        await Effect.runPromise(Effect.logInfo("Polling outbox consumer stopped"))
-      },
-    }
-  })
+        yield* Effect.tryPromise(() => config.pool.end())
+        yield* Effect.logInfo("Polling outbox consumer stopped")
+      }).pipe(Effect.tapError(Effect.logError), Effect.ignore)
 
-export const createPollingOutboxConsumer = (
-  config: PollingOutboxConsumerConfig,
-  publisher: EventsPublisher,
-): { start: () => void; stop: () => Promise<void> } =>
-  Effect.runSync(createPollingOutboxConsumerEffect(config, publisher))
+    return { start, stop }
+  })

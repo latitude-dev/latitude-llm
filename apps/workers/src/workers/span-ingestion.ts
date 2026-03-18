@@ -55,9 +55,4 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer) => {
   }
 
   consumer.subscribe("span-ingestion", handler)
-
-  return {
-    start: () => Effect.runPromise(consumer.start()),
-    stop: () => Effect.runPromise(consumer.stop()),
-  }
 }

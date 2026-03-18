@@ -83,6 +83,11 @@ export const createRedpandaQueuePublisher = (
             }),
           catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
         }),
+      close: () =>
+        Effect.tryPromise({
+          try: () => producer.disconnect(),
+          catch: (cause: unknown) => new QueueClientError({ cause }),
+        }).pipe(Effect.tapError(Effect.logError), Effect.ignore),
     }
   })
 

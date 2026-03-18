@@ -1,4 +1,4 @@
-import type { DatasetExportPayload } from "@platform/queue-redpanda"
+import type { DatasetExportPayload } from "@platform/queue-bullmq"
 
 export function isValidDatasetExportPayload(payload: unknown): payload is DatasetExportPayload {
   if (payload === null || typeof payload !== "object") return false

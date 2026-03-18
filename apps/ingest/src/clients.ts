@@ -5,7 +5,7 @@ import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
-import { createKafkaClient, createRedpandaQueuePublisher, loadKafkaConfig } from "@platform/queue-redpanda"
+import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
@@ -47,9 +47,8 @@ export const getRedisClient = (): RedisClient => {
 export const getQueuePublisher = (): Promise<QueuePublisher> => {
   if (!queuePublisherPromise) {
     queuePublisherPromise = (async () => {
-      const config = Effect.runSync(loadKafkaConfig())
-      const kafka = createKafkaClient(config)
-      return Effect.runPromise(createRedpandaQueuePublisher({ kafka }))
+      const config = Effect.runSync(loadBullMqConfig())
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }))
     })().catch((error) => {
       queuePublisherPromise = undefined
       throw error

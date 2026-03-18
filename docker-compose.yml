@@ -40,6 +40,14 @@ services:
     ports:
       - "6379:6379"
 
+  redis-bullmq:
+    image: redis:7
+    command: redis-server --maxmemory-policy noeviction
+    env_file:
+      - .env.${NODE_ENV:-development}
+    ports:
+      - "6380:6379"
+
   mailpit:
     image: axllent/mailpit:v1.24
     env_file:
@@ -48,46 +56,7 @@ services:
       - "1025:1025"
       - "8025:8025"
 
-  redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:v24.3.14
-    command:
-      - redpanda
-      - start
-      - --kafka-addr=internal://0.0.0.0:29092,external://0.0.0.0:9092
-      - --advertise-kafka-addr=internal://redpanda:29092,external://localhost:9092
-      - --mode=dev-container
-      - --smp=1
-      - --default-log-level=warn
-    ports:
-      - "9092:9092"
-    volumes:
-      - redpanda_data:/var/lib/redpanda/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:9644/v1/brokers || exit 1"]
-      interval: 5s
-      timeout: 10s
-      retries: 12
-      start_period: 15s
-
-  redpanda-init:
-    image: docker.redpanda.com/redpandadata/redpanda:v24.3.14
-    depends_on:
-      redpanda:
-        condition: service_healthy
-    command:
-      - topic
-      - create
-      - domain-events
-      - domain-events-dlq
-      - span-ingestion
-      - -X
-      - brokers=redpanda:29092
-      - --partitions=1
-      - --replicas=1
-    restart: "no"
-
 volumes:
   postgres_data:
   clickhouse_data:
   weaviate-data:
-  redpanda_data:

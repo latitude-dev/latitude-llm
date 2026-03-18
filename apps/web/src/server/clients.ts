@@ -26,7 +26,7 @@ import {
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { createKafkaClient, createRedpandaQueuePublisher, loadKafkaConfig } from "@platform/queue-redpanda"
+import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
@@ -118,9 +118,8 @@ export const getStorageDisk = (): StorageDisk => {
 export const getQueuePublisher = (): Promise<QueuePublisher> => {
   if (!queuePublisher) {
     queuePublisher = (async () => {
-      const config = Effect.runSync(loadKafkaConfig())
-      const kafka = createKafkaClient(config)
-      return Effect.runPromise(createRedpandaQueuePublisher({ kafka }))
+      const config = Effect.runSync(loadBullMqConfig())
+      return Effect.runPromise(createBullMqQueuePublisher({ redis: config }))
     })().catch((error) => {
       queuePublisher = undefined
       throw error

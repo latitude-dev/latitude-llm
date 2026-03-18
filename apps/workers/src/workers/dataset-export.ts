@@ -104,9 +104,4 @@ export const createDatasetExportWorker = (consumer: QueueConsumer) => {
   }
 
   consumer.subscribe("dataset-export", handler)
-
-  return {
-    start: () => Effect.runPromise(consumer.start()),
-    stop: () => Effect.runPromise(consumer.stop()),
-  }
 }

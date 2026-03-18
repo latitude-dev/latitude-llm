@@ -23,7 +23,7 @@
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
-    "@platform/queue-redpanda": "workspace:*",
+    "@platform/queue-bullmq": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "dotenv": "catalog:",

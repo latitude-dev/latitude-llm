@@ -1,6 +1,6 @@
 import type { EventEnvelope } from "@domain/events"
 import type { QueueConsumer } from "@domain/queue"
-import { createEventHandler } from "@platform/queue-redpanda"
+import { createEventHandler } from "@platform/queue-bullmq"
 import { Effect } from "effect"
 
 const eventHandler = {
@@ -10,9 +10,4 @@ const eventHandler = {
 
 export const createDomainEventsWorker = (consumer: QueueConsumer) => {
   consumer.subscribe("domain-events", createEventHandler(eventHandler))
-
-  return {
-    start: () => Effect.runPromise(consumer.start()),
-    stop: () => Effect.runPromise(consumer.stop()),
-  }
 }

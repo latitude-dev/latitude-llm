@@ -4,12 +4,11 @@ import { fileURLToPath } from "node:url"
 import { parseEnv } from "@platform/env"
 import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import {
+  createBullMqQueueConsumer,
+  createBullMqQueuePublisher,
   createEventsPublisher,
-  createKafkaClient,
-  createRedpandaQueueConsumer,
-  createRedpandaQueuePublisher,
-  loadKafkaConfig,
-} from "@platform/queue-redpanda"
+  loadBullMqConfig,
+} from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
@@ -47,44 +46,33 @@ healthServer.listen(healthPort, () => {
 })
 
 const initializeWorkers = async () => {
-  const kafkaConfig = Effect.runSync(loadKafkaConfig())
-  const kafkaClient = createKafkaClient(kafkaConfig)
-  const queuePublisher = await Effect.runPromise(createRedpandaQueuePublisher({ kafka: kafkaClient }))
+  const bullMqConfig = Effect.runSync(loadBullMqConfig())
+  const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
   const eventsPublisher = createEventsPublisher(queuePublisher)
-
-  const outboxConsumer = createPollingOutboxConsumer(
-    {
-      pool: pgPool,
-      pollIntervalMs: 1000,
-      batchSize: 100,
-    },
-    eventsPublisher,
+  const outboxConsumer = await Effect.runPromise(
+    createPollingOutboxConsumer(
+      {
+        pool: pgPool,
+        pollIntervalMs: 1000,
+        batchSize: 100,
+      },
+      eventsPublisher,
+    ),
   )
 
-  const domainEventsConsumer = await Effect.runPromise(
-    createRedpandaQueueConsumer({ kafka: kafkaClient, groupId: `${kafkaConfig.groupId}-domain-events` }),
-  )
-  const spanIngestionConsumer = await Effect.runPromise(
-    createRedpandaQueueConsumer({ kafka: kafkaClient, groupId: `${kafkaConfig.groupId}-span-ingestion` }),
-  )
-  const datasetExportConsumer = await Effect.runPromise(
-    createRedpandaQueueConsumer({ kafka: kafkaClient, groupId: `${kafkaConfig.groupId}-dataset-export` }),
-  )
+  const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
 
-  const domainEventsWorker = createDomainEventsWorker(domainEventsConsumer)
-  const spanIngestionWorker = createSpanIngestionWorker(spanIngestionConsumer)
-  const datasetExportWorker = createDatasetExportWorker(datasetExportConsumer)
+  createDomainEventsWorker(queueConsumer)
+  createSpanIngestionWorker(queueConsumer)
+  createDatasetExportWorker(queueConsumer)
 
-  outboxConsumer.start()
-
-  await domainEventsWorker.start()
-  await spanIngestionWorker.start()
-  await datasetExportWorker.start()
+  await Effect.runPromise(outboxConsumer.start())
+  await Effect.runPromise(queueConsumer.start())
 
   ready = true
-  logger.info("workers ready - outbox consumer and queue consumers started")
+  logger.info("workers ready - outbox consumer and queue consumer started")
 
-  return { consumers: { outboxConsumer }, workers: { domainEventsWorker, spanIngestionWorker, datasetExportWorker } }
+  return { consumers: { outboxConsumer, queueConsumer }, queuePublisher }
 }
 
 const workersPromise = initializeWorkers().catch((error) => {
@@ -98,15 +86,14 @@ const handleShutdown = async (signal: string) => {
   healthServer.close()
 
   try {
-    const { consumers, workers } = await workersPromise
+    const { consumers, queuePublisher } = await workersPromise
 
-    await consumers.outboxConsumer.stop()
-    await Promise.allSettled(Object.values(workers).map((worker) => worker.stop()))
+    await Effect.runPromise(consumers.outboxConsumer.stop())
+    await Effect.runPromise(consumers.queueConsumer.stop())
+    await Effect.runPromise(queuePublisher.close())
   } catch (error) {
     logger.error("Error during shutdown (workers may not have started)", error)
   }
-
-  await pgPool.end()
 
   process.exit(0)
 }
