@@ -43,8 +43,6 @@ services:
   redis-bullmq:
     image: redis:7
     command: redis-server --maxmemory-policy noeviction
-    env_file:
-      - .env.${NODE_ENV:-development}
     ports:
       - "6380:6379"
 

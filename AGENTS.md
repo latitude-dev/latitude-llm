@@ -884,7 +884,7 @@ Docker is used for local infrastructure services. Start them before running apps
 
 ```bash
 sudo dockerd &>/dev/null &  # if Docker daemon not already running
-sudo docker compose up -d postgres clickhouse redis mailpit redpanda
+sudo docker compose up -d postgres clickhouse redis redis-bullmq mailpit
 ```
 
 ### Database setup
