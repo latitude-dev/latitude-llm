@@ -34,7 +34,9 @@ vi.mock('@latitude-data/core/repositories', async () => {
   }
 })
 
-const mockAnnotateEvaluationV2 = vi.fn().mockResolvedValue(Result.ok({}))
+const { mockAnnotateEvaluationV2 } = vi.hoisted(() => ({
+  mockAnnotateEvaluationV2: vi.fn(),
+}))
 vi.mock('@latitude-data/core/services/evaluationsV2/annotate', () => ({
   annotateEvaluationV2: mockAnnotateEvaluationV2,
 }))
