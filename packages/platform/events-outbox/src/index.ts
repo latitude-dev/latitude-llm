@@ -1,17 +1,6 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events"
-import { Data, Effect, Fiber, Result, Schedule, ServiceMap } from "effect"
+import { Data, Effect, Fiber, Result, Schedule } from "effect"
 import type { Pool, PoolClient } from "pg"
-
-export class EventsOutboxAdapterTag extends ServiceMap.Service<
-  EventsOutboxAdapterTag,
-  {
-    readonly type: "outbox"
-  }
->()("EventsOutboxAdapterTag") {}
-
-export const eventsOutboxAdapter = {
-  type: "outbox" as const,
-}
 
 export interface OutboxEventRow {
   id: string
@@ -112,19 +101,24 @@ const pollEffect = (
   Effect.gen(function* () {
     const client = yield* Effect.tryPromise(() => config.pool.connect())
 
-    yield* Effect.tryPromise(() => client.query("BEGIN"))
+    const result = yield* Effect.gen(function* () {
+      yield* Effect.tryPromise(() => client.query("BEGIN"))
 
-    const processedCount = yield* processBatchEffect(client, publisher, config.batchSize)
+      const processedCount = yield* processBatchEffect(client, publisher, config.batchSize)
 
-    yield* Effect.tryPromise(() => client.query("COMMIT"))
+      yield* Effect.tryPromise(() => client.query("COMMIT"))
 
-    if (processedCount > 0) {
-      yield* Effect.logInfo(`Processed ${processedCount} events`)
-    }
+      if (processedCount > 0) {
+        yield* Effect.logInfo(`Processed ${processedCount} events`)
+      }
 
-    client.release()
+      return processedCount
+    }).pipe(
+      Effect.tapError(() => Effect.tryPromise(() => client.query("ROLLBACK")).pipe(Effect.ignore)),
+      Effect.ensuring(Effect.sync(() => client.release())),
+    )
 
-    return processedCount
+    return result
   })
 
 export const createPollingOutboxConsumer = (
@@ -142,7 +136,7 @@ export const createPollingOutboxConsumer = (
 
         const pollingEffect = Effect.repeat(pollEffect(config, publisher), schedule).pipe(Effect.asVoid)
 
-        fiber = yield* Effect.forkDetach(pollingEffect, { startImmediately: true })
+        fiber = yield* Effect.forkDetach(pollingEffect)
 
         yield* Effect.logInfo("Polling outbox consumer started")
       }).pipe(Effect.catchCause((cause) => Effect.fail(new OutboxConsumerError({ cause }))))
