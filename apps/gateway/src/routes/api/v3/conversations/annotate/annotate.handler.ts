@@ -105,15 +105,17 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     commit,
     workspace,
     resultUuid,
-  }).then((result) => {
-    if (result.error) captureException(result.error)
-  }).catch((error: unknown) => {
-    captureException(
-      error instanceof Error
-        ? error
-        : new Error('Failed to annotate evaluation asynchronously'),
-    )
   })
+    .then((result) => {
+      if (result.error) captureException(result.error)
+    })
+    .catch((error: unknown) => {
+      captureException(
+        error instanceof Error
+          ? error
+          : new Error('Failed to annotate evaluation asynchronously'),
+      )
+    })
 
   return c.json(
     {
