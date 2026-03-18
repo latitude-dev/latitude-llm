@@ -1,4 +1,11 @@
-import { defineError, defineErrorDynamic, type GrantId, type OrganizationId, type RepositoryError, type SubscriptionId } from "@domain/shared"
+import {
+  defineError,
+  defineErrorDynamic,
+  type GrantId,
+  type OrganizationId,
+  type RepositoryError,
+  type SubscriptionId,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { createGrant, type GrantType } from "../entities/grant.ts"
 import { getAvailablePlans, type Plan } from "../entities/plan.ts"
@@ -26,11 +33,7 @@ export class SubscriptionAlreadyExistsError extends defineError(
   readonly organizationId: OrganizationId
 }> {}
 
-export class InvalidPlanError extends defineErrorDynamic(
-  "InvalidPlanError",
-  400,
-  (f: { reason: string }) => f.reason,
-)<{
+export class InvalidPlanError extends defineErrorDynamic("InvalidPlanError", 400, (f: { reason: string }) => f.reason)<{
   readonly plan: Plan
   readonly reason: string
 }> {}

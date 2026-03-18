@@ -24,10 +24,10 @@ import {
   ProjectId,
   putInDisk,
   TraceId,
+  UnauthorizedError,
 } from "@domain/shared"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { UnauthorizedError } from "@domain/shared"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"

@@ -29,8 +29,7 @@ const toSlug = (value: string) =>
 export class ProjectAlreadyExistsError extends defineErrorDynamic(
   "ProjectAlreadyExistsError",
   409,
-  (f: { name: string; slug: string }) =>
-    `Project '${f.name}' or slug '${f.slug}' already exists in this organization`,
+  (f: { name: string; slug: string }) => `Project '${f.name}' or slug '${f.slug}' already exists in this organization`,
 )<{
   readonly name: string
   readonly slug: string

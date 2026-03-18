@@ -1,4 +1,10 @@
-import { type ApiKeyId, defineErrorDynamic, type RepositoryError, SqlClient, type ValidationError } from "@domain/shared"
+import {
+  type ApiKeyId,
+  defineErrorDynamic,
+  type RepositoryError,
+  SqlClient,
+  type ValidationError,
+} from "@domain/shared"
 import { type CryptoError, hashToken } from "@repo/utils"
 import { Effect } from "effect"
 import { createApiKey, generateApiKeyToken } from "../entities/api-key.ts"

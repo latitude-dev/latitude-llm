@@ -1,31 +1,25 @@
 import { Data } from "effect"
 
-/**
- * Error factory that bakes HTTP metadata into every domain error at definition
- * time. All domain errors must use one of these factories — never extend
- * `Data.TaggedError` directly.
- */
 export const defineError = <Tag extends string>(tag: Tag, httpStatus: number, httpMessage: string) => {
-  class Base extends Data.TaggedError(tag)<{}> {
-    readonly httpStatus = httpStatus
-    readonly httpMessage = httpMessage
-  }
-  return Base as unknown as new <A extends Record<string, unknown> = {}>(
-    args: {} extends A ? void : { readonly [K in keyof A]: A[K] },
-  ) => Data.TaggedError.Constructor<Tag>["prototype"] & Readonly<A> & { readonly httpStatus: number; readonly httpMessage: string }
+  const Base = Data.TaggedError(tag)
+  Object.defineProperty(Base.prototype, "httpStatus", { value: httpStatus, writable: false, enumerable: true })
+  Object.defineProperty(Base.prototype, "httpMessage", { value: httpMessage, writable: false, enumerable: true })
+  return Base
 }
 
-export const defineErrorDynamic = <Tag extends string, Fields extends Record<string, unknown>>(
+export const defineErrorDynamic = <Tag extends string, Fields extends Record<string, any>>(
   tag: Tag,
   httpStatus: number,
   getHttpMessage: (fields: Fields) => string,
 ) => {
-  class Base extends Data.TaggedError(tag)<Fields> {
-    readonly httpStatus = httpStatus
-    get httpMessage(): string {
-      return getHttpMessage(this as unknown as Fields)
-    }
-  }
+  const Base = Data.TaggedError(tag)
+  Object.defineProperty(Base.prototype, "httpStatus", { value: httpStatus, writable: false, enumerable: true })
+  Object.defineProperty(Base.prototype, "httpMessage", {
+    get(this: Fields) {
+      return getHttpMessage(this)
+    },
+    enumerable: true,
+  })
   return Base
 }
 
@@ -34,11 +28,7 @@ export class RepositoryError extends defineError("RepositoryError", 500, "Intern
   readonly operation: string
 }> {}
 
-export class ValidationError extends defineErrorDynamic(
-  "ValidationError",
-  400,
-  (f: { message: string }) => f.message,
-)<{
+export class ValidationError extends defineErrorDynamic("ValidationError", 400, (f: { message: string }) => f.message)<{
   readonly field: string
   readonly message: string
 }> {}
@@ -70,19 +60,11 @@ export class UnauthorizedError extends defineErrorDynamic(
   readonly message: string
 }> {}
 
-export class BadRequestError extends defineErrorDynamic(
-  "BadRequestError",
-  400,
-  (f: { message: string }) => f.message,
-)<{
+export class BadRequestError extends defineErrorDynamic("BadRequestError", 400, (f: { message: string }) => f.message)<{
   readonly message: string
 }> {}
 
-export class PermissionError extends defineErrorDynamic(
-  "PermissionError",
-  403,
-  (f: { message: string }) => f.message,
-)<{
+export class PermissionError extends defineErrorDynamic("PermissionError", 403, (f: { message: string }) => f.message)<{
   readonly message: string
   readonly organizationId: string
 }> {}
