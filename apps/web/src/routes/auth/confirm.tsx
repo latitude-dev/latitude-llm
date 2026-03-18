@@ -140,7 +140,11 @@ function AuthConfirmPage() {
             </form>
           </div>
         ) : state.step === "completing" ? (
-          shouldAutoComplete ? <AutoCompleteAuthIntent onMount={handleAutoComplete} /> : <LoadingState />
+          shouldAutoComplete ? (
+            <AutoCompleteAuthIntent onMount={handleAutoComplete} />
+          ) : (
+            <LoadingState />
+          )
         ) : (
           <LoadingState />
         )}

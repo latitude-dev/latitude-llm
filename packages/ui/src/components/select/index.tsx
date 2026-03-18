@@ -148,7 +148,7 @@ export function Select<V = unknown>({
             required={required}
             disabled={disabled || loading}
             name={name}
-            value={selectedValue !== undefined ? String(selectedValue) : undefined}
+            {...(selectedValue !== undefined ? { value: String(selectedValue) } : {})}
             {...(searchable ? {} : { onValueChange: _onChange })}
             onOpenChange={setIsOpen}
           >
