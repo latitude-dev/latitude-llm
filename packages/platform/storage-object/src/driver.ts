@@ -15,21 +15,8 @@ export type StorageDriver = "fs" | "s3"
 const adaptDiskToPort = (disk: Disk): StorageDiskPort => ({
   put: (key: string, contents: string | Uint8Array) => disk.put(key, contents),
   putStream: async (key: string, contents: ReadableStream<Uint8Array>) => {
-    const reader = contents.getReader()
-    const chunks: Uint8Array[] = []
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      if (value) chunks.push(value)
-    }
-    const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
-    const combined = new Uint8Array(totalLength)
-    let offset = 0
-    for (const chunk of chunks) {
-      combined.set(chunk, offset)
-      offset += chunk.length
-    }
-    const readable = Readable.from(Buffer.from(combined))
+    // flydrive expects Node.js Readable; Readable.fromWeb avoids full buffering
+    const readable = Readable.fromWeb(contents as import("node:stream/web").ReadableStream)
     await disk.putStream(key, readable)
   },
   get: (key: string) => disk.get(key),
