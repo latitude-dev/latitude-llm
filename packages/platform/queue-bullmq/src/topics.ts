@@ -1,8 +1,10 @@
+import type { QueueName } from "@domain/queue"
+
 export const Topics = {
   datasetExport: "dataset-export",
   domainEvents: "domain-events",
   spanIngestion: "span-ingestion",
-} as const
+} as const satisfies Record<string, QueueName>
 
 export type TopicName = (typeof Topics)[keyof typeof Topics]
 

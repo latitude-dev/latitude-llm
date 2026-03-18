@@ -83,14 +83,7 @@ export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
     postgresClientInstance = createPostgresClient()
   }
-
-  const postgresClient = postgresClientInstance
-
-  if (!postgresClient) {
-    throw new Error("Postgres client is not initialized")
-  }
-
-  return postgresClient
+  return postgresClientInstance
 }
 
 export const getRedisClient = (): RedisClient => {
@@ -236,11 +229,5 @@ export const getBetterAuth = () => {
     })
   }
 
-  const betterAuth = betterAuthInstance
-
-  if (!betterAuth) {
-    throw new Error("Better Auth is not initialized")
-  }
-
-  return betterAuth
+  return betterAuthInstance
 }
