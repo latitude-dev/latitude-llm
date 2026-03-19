@@ -1,5 +1,5 @@
 import type { MessageHandler, QueueConsumer, QueueMessage } from "@domain/queue"
-import { deleteFromDisk, getFromDisk, OrganizationId } from "@domain/shared"
+import { deleteFromDisk, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import {
   decodeOtlpProtobuf,
   type OtlpExportTraceServiceRequest,
@@ -8,7 +8,6 @@ import {
 } from "@domain/spans"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import type { StorageDisk } from "@platform/storage-object"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getClickhouseClient, getStorageDisk } from "../clients.ts"
@@ -17,7 +16,7 @@ const logger = createLogger("span-ingestion")
 
 interface SpanIngestionWorkerDependencies {
   readonly clickhouseClient?: ClickHouseClient
-  readonly disk?: StorageDisk
+  readonly disk?: StorageDiskPort
   readonly logger?: Pick<typeof logger, "error">
 }
 

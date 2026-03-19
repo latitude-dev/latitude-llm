@@ -9,6 +9,7 @@ interface DataRowProps<T> {
   rowKey: string
   columns: InfiniteTableColumn<T>[]
   isSelected?: boolean
+  isActive?: boolean
   onToggleRow?: (key: string, checked: CheckedState) => void
   hasSelection: boolean
   onClick?: (row: T) => void
@@ -21,6 +22,7 @@ function DataRowInner<T>({
   rowKey,
   columns,
   isSelected,
+  isActive,
   onToggleRow,
   hasSelection,
   onClick,
@@ -42,7 +44,9 @@ function DataRowInner<T>({
       ref={measureRef}
       data-index={dataIndex}
       className={cn("bg-secondary transition-colors", {
+        "bg-accent": isActive,
         "hover:bg-muted cursor-pointer": onClick,
+        "hover:bg-accent": onClick && isActive,
         "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring": onClick,
       })}
       onClick={onClick ? () => onClick(row) : undefined}

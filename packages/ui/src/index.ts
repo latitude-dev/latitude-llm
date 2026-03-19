@@ -14,6 +14,9 @@ export {
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { Container, type ContainerSize } from "./components/container/container.tsx"
 export { CopyButton } from "./components/copy-button/index.tsx"
+export { DetailDrawer } from "./components/detail-drawer/detail-drawer.tsx"
+export { DetailSection } from "./components/detail-drawer/detail-section.tsx"
+export { DetailSummary, type DetailSummaryItem } from "./components/detail-drawer/detail-summary.tsx"
 export { DropdownMenu, type MenuOption, type TriggerButtonProps } from "./components/dropdown-menu/dropdown-menu.tsx"
 export {
   DropdownMenu as DropdownMenuRoot,
@@ -64,6 +67,7 @@ export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 export { TableBlankSlate } from "./components/table-blank-slate/table-blank-slate.tsx"
 export { TableSkeleton } from "./components/table-skeleton/table-skeleton.tsx"
 export { TableWithHeader, TitleWithActions } from "./components/table-with-header/table-with-header.tsx"
+export { type TabOption, Tabs } from "./components/tabs/tabs.tsx"
 export { type Common as TextCommonProps, Text, TextAtom, type TextProps } from "./components/text/text.tsx"
 export type { ToastActionElement, ToastProps } from "./components/toast/toast.tsx"
 export {
@@ -78,6 +82,7 @@ export {
 export { Toaster } from "./components/toast/toaster.tsx"
 export { toast, useToast } from "./components/toast/useToast.ts"
 export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "./components/tooltip/tooltip.tsx"
+export { useHover } from "./hooks/use-hover.ts"
 export { useMountEffect } from "./hooks/use-mount-effect.ts"
 // Lib
 export * from "./tokens/colors.ts"

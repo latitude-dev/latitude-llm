@@ -22,6 +22,7 @@ export function InfiniteTable<T>({
   columns,
   getRowKey,
   onRowClick,
+  activeRowKey,
   selection,
   infiniteScroll,
   sorting,
@@ -185,6 +186,7 @@ export function InfiniteTable<T>({
                     rowKey={rowKey}
                     columns={columns}
                     hasSelection={!!selection}
+                    isActive={activeRowKey === rowKey}
                     {...(selection
                       ? { isSelected: selection.isSelected(rowKey), onToggleRow: selection.toggleRow }
                       : {})}
