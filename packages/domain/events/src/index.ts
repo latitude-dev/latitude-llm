@@ -16,5 +16,5 @@ export interface EventEnvelope<TEvent extends DomainEvent = DomainEvent> {
 }
 
 export interface EventsPublisher<TError = unknown> {
-  publish(envelope: EventEnvelope): Effect.Effect<void, TError>
+  publish(envelope: EventEnvelope): Effect.Effect<void, TError, never>
 }

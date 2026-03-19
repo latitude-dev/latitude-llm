@@ -456,6 +456,9 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
     devDependencies:
+      '@platform/testkit':
+        specifier: workspace:*
+        version: link:../../packages/platform/testkit
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.2)
@@ -859,6 +862,16 @@ importers:
       pg:
         specifier: 'catalog:'
         version: 8.16.0
+    devDependencies:
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../db-postgres
+      '@platform/testkit':
+        specifier: workspace:*
+        version: link:../testkit
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.15-859cf75(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@7.4.2(prisma@7.4.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(typescript@5.8.3))(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.16.0)(mssql@11.0.1(@azure/core-client@1.10.1))(mysql2@3.15.3)(pg@8.16.0)(postgres@3.4.7)(prisma@7.4.2(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(valibot@1.2.0(typescript@5.8.3))(zod@4.3.6)
 
   packages/platform/queue-bullmq:
     dependencies:

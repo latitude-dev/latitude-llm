@@ -32,6 +32,7 @@
     "tsx": "catalog:"
   },
   "devDependencies": {
+    "@platform/testkit": "workspace:*",
     "tsup": "^8.0.0"
   }
 }
