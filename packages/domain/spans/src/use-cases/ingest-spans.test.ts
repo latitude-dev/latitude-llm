@@ -136,7 +136,7 @@ describe("ingestSpansUseCase", () => {
       expect(res.failure._tag).toBe("QueuePublishError")
       expect(res.failure).toBeInstanceOf(QueuePublishError)
       const err = res.failure as QueuePublishError
-      expect(err.httpStatus).toBe(500)
+      expect(err.httpStatus).toBe(502)
       expect(err.httpMessage).toContain("span-ingestion")
     }
   })
