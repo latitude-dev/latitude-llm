@@ -6,9 +6,6 @@ import type { Subscription } from "../entities/subscription.ts"
 import { GrantRepository } from "../ports/grant-repository.ts"
 import { SubscriptionRepository } from "../ports/subscription-repository.ts"
 
-/**
- * Input for changing subscription plan.
- */
 export interface ChangePlanInput {
   readonly organizationId: OrganizationId
   readonly newPlan: Plan
@@ -19,9 +16,6 @@ export interface ChangePlanInput {
   }
 }
 
-/**
- * Error types for change plan use case.
- */
 export class NoActiveSubscriptionError extends Data.TaggedError("NoActiveSubscriptionError")<{
   readonly organizationId: OrganizationId
 }> {

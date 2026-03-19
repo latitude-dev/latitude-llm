@@ -1,5 +1,4 @@
-import { OrganizationId, UserId } from "@domain/shared"
-import { UnauthorizedError } from "@repo/utils"
+import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
 import { ensureSession } from "../domains/sessions/session.functions.ts"
 
 interface AuthenticatedSession {
@@ -40,12 +39,12 @@ export const requireSession = async (): Promise<AuthenticatedSession> => {
   const userId = getSessionUserId(session)
 
   if (!userId) {
-    throw new UnauthorizedError({ httpMessage: "No user in session" })
+    throw new UnauthorizedError({ message: "No user in session" })
   }
 
   const organizationId = getSessionOrganizationId(session)
   if (!organizationId) {
-    throw new UnauthorizedError({ httpMessage: "No active organization in session" })
+    throw new UnauthorizedError({ message: "No active organization in session" })
   }
 
   return { userId: UserId(userId), organizationId: OrganizationId(organizationId) }

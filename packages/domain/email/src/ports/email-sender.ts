@@ -1,12 +1,5 @@
 import { Data, type Effect } from "effect"
 
-/**
- * Email sender port - interface for sending emails
- *
- * This port abstracts email delivery so the domain doesn't depend
- * on specific email providers (SMTP, SendGrid, Mailpit, etc.)
- */
-
 export interface EmailMessage {
   readonly to: string
   readonly subject: string

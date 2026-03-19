@@ -6,9 +6,6 @@ import { createSubscription } from "../entities/subscription.ts"
 import { GrantRepository } from "../ports/grant-repository.ts"
 import { SubscriptionRepository } from "../ports/subscription-repository.ts"
 
-/**
- * Input for subscribing to a plan.
- */
 export interface SubscribeInput {
   readonly subscriptionId: SubscriptionId
   readonly organizationId: OrganizationId
@@ -21,9 +18,6 @@ export interface SubscribeInput {
   }
 }
 
-/**
- * Error types for subscribe use case.
- */
 export class SubscriptionAlreadyExistsError extends Data.TaggedError("SubscriptionAlreadyExistsError")<{
   readonly organizationId: OrganizationId
 }> {

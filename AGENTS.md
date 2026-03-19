@@ -508,10 +508,11 @@ Rules:
 - Always use typed errors (`Data.TaggedError`) instead of raw `Error` at domain/platform boundaries
 - Use `Effect.either` for operations that may fail but shouldn't stop execution
 - Handle errors at boundaries; propagate through Effect error channel internally
+- Every domain error must implement the `HttpError` interface (`httpStatus` and `httpMessage`) — no exceptions. Even if the error doesn't currently reach an HTTP boundary, that boundary may change. Use a readonly field for static messages and a getter for messages computed from error fields.
 
 ### HTTP Error Handling Pattern
 
-Domain errors that need specific HTTP responses implement the `HttpError` interface:
+All domain errors implement the `HttpError` interface from `@repo/utils`:
 
 ```typescript
 interface HttpError {
@@ -529,18 +530,26 @@ interface HttpError {
 4. Centralized error handling via `app.onError(honoErrorHandler)` in server.ts
 5. Error middleware converts HttpError instances to appropriate HTTP responses
 
-**Example domain error:**
+**Example domain errors:**
 
 ```typescript
-export class InvalidOrganizationNameError extends Data.TaggedError(
-    "InvalidOrganizationNameError",
-)<{
-    readonly name: string;
-    readonly reason: string;
+// Static message
+export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
+    readonly cause: unknown;
+    readonly queue: QueueName;
 }> {
-    readonly httpStatus = 400;
+    readonly httpStatus = 502;
+    readonly httpMessage = "Queue publish failed";
+}
+
+// Dynamic message computed from fields
+export class NotFoundError extends Data.TaggedError("NotFoundError")<{
+    readonly entity: string;
+    readonly id: string;
+}> {
+    readonly httpStatus = 404;
     get httpMessage() {
-        return this.reason;
+        return `${this.entity} not found`;
     }
 }
 ```

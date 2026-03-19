@@ -38,7 +38,6 @@ export class MissingSignupProvisioningDataError extends Data.TaggedError("Missin
 
 export class MissingInviteDataError extends Data.TaggedError("MissingInviteDataError")<{
   readonly intentId: string
-  readonly reason?: never
 }> {
   readonly httpStatus = 400
   readonly httpMessage = "Missing invite details for membership provisioning"

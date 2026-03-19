@@ -26,12 +26,21 @@ export interface QueueConsumer {
 export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
   readonly cause: unknown
   readonly queue: QueueName
-}> {}
+}> {
+  readonly httpStatus = 502
+  readonly httpMessage = "Queue publish failed"
+}
 
 export class QueueSubscribeError extends Data.TaggedError("QueueSubscribeError")<{
   readonly cause: unknown
-}> {}
+}> {
+  readonly httpStatus = 503
+  readonly httpMessage = "Queue consumer unavailable"
+}
 
 export class QueueClientError extends Data.TaggedError("QueueClientError")<{
   readonly cause: unknown
-}> {}
+}> {
+  readonly httpStatus = 503
+  readonly httpMessage = "Queue client not connectable"
+}

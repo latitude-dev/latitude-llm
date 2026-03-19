@@ -3,23 +3,11 @@ import type { DatasetId, OrganizationId, ProjectId } from "./id.ts"
 
 export interface StorageDiskPort {
   put(key: string, contents: string | Uint8Array): Promise<void>
-  /**
-   * Write a file from a ReadableStream (Web Standard Streams API).
-   */
   putStream(key: string, contents: ReadableStream<Uint8Array>): Promise<void>
   get(key: string): Promise<string>
-  /**
-   * Returns file contents as a Uint8Array. Use for binary data.
-   */
   getBytes(key: string): Promise<Uint8Array>
   getStream(key: string): Promise<ReadableStream<Uint8Array>>
   delete(key: string): Promise<void>
-  /**
-   * Generate a signed URL for downloading the file.
-   * @param key - The storage key
-   * @param options - Options including expiresIn (seconds)
-   * @returns A signed URL that can be used to download the file
-   */
   getSignedUrl(key: string, options?: { expiresIn?: number }): Promise<string>
 }
 
