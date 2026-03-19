@@ -1,17 +1,34 @@
-import { Data } from "effect"
+import { type Cause, Data, type Types } from "effect"
 
-export const defineError = <Tag extends string>(tag: Tag, httpStatus: number, httpMessage: string) => {
+type HttpMeta = { readonly httpStatus: number; readonly httpMessage: string }
+
+export interface HttpErrorCtor<Tag extends string> {
+  // biome-ignore lint/suspicious/noExplicitAny: mirrors Data.TaggedError's exact generic constraint
+  // biome-ignore lint/complexity/noBannedTypes: mirrors Data.TaggedError's exact default/conditional types
+  new <A extends Record<string, any> = {}>(
+    // biome-ignore lint/suspicious/noConfusingVoidType: mirrors Data.TaggedError's exact conditional args type
+    // biome-ignore lint/complexity/noBannedTypes: mirrors Data.TaggedError's exact default/conditional types
+    args: Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P] },
+  ): Cause.YieldableError & { readonly _tag: Tag } & Readonly<A> & HttpMeta
+}
+
+export const defineError = <Tag extends string>(
+  tag: Tag,
+  httpStatus: number,
+  httpMessage: string,
+): HttpErrorCtor<Tag> => {
   const Base = Data.TaggedError(tag)
   Object.defineProperty(Base.prototype, "httpStatus", { value: httpStatus, writable: false, enumerable: true })
   Object.defineProperty(Base.prototype, "httpMessage", { value: httpMessage, writable: false, enumerable: true })
-  return Base
+  return Base as unknown as HttpErrorCtor<Tag>
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: mirrors Data.TaggedError's generic constraint for Fields
 export const defineErrorDynamic = <Tag extends string, Fields extends Record<string, any>>(
   tag: Tag,
   httpStatus: number,
   getHttpMessage: (fields: Fields) => string,
-) => {
+): HttpErrorCtor<Tag> => {
   const Base = Data.TaggedError(tag)
   Object.defineProperty(Base.prototype, "httpStatus", { value: httpStatus, writable: false, enumerable: true })
   Object.defineProperty(Base.prototype, "httpMessage", {
@@ -20,7 +37,7 @@ export const defineErrorDynamic = <Tag extends string, Fields extends Record<str
     },
     enumerable: true,
   })
-  return Base
+  return Base as unknown as HttpErrorCtor<Tag>
 }
 
 export class RepositoryError extends defineError("RepositoryError", 500, "Internal server error")<{

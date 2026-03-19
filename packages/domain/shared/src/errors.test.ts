@@ -4,21 +4,12 @@ import {
   BadRequestError,
   ConflictError,
   defineError,
-  defineErrorDynamic,
   NotFoundError,
   PermissionError,
   RepositoryError,
   UnauthorizedError,
   ValidationError,
 } from "./errors.ts"
-
-const isHttpError = (error: unknown): error is { httpStatus: number; httpMessage: string } =>
-  typeof error === "object" &&
-  error !== null &&
-  "httpStatus" in error &&
-  typeof (error as any).httpStatus === "number" &&
-  "httpMessage" in error &&
-  typeof (error as any).httpMessage === "string"
 
 describe("defineError", () => {
   it("produces instances with static httpStatus and httpMessage", () => {
@@ -28,7 +19,6 @@ describe("defineError", () => {
     expect(err.httpMessage).toBe("Internal server error")
     expect(err.cause).toBe("timeout")
     expect(err.operation).toBe("findById")
-    expect(isHttpError(err)).toBe(true)
   })
 
   it("supports custom static errors via defineError", () => {
@@ -41,7 +31,6 @@ describe("defineError", () => {
     expect(err.httpStatus).toBe(502)
     expect(err.httpMessage).toBe("Bad gateway")
     expect(err.detail).toBe("upstream timeout")
-    expect(isHttpError(err)).toBe(true)
     expect(err instanceof MyStaticError).toBe(true)
   })
 })
@@ -54,7 +43,6 @@ describe("defineErrorDynamic", () => {
     expect(err.httpMessage).toBe("Project not found")
     expect(err.entity).toBe("Project")
     expect(err.id).toBe("abc123")
-    expect(isHttpError(err)).toBe(true)
   })
 
   it("computes httpMessage from fields for ValidationError", () => {
