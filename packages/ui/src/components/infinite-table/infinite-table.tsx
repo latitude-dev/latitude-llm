@@ -1,11 +1,12 @@
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { cn } from "../../utils/cn.ts"
+import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import { Checkbox } from "../checkbox/checkbox.tsx"
 import { Text } from "../text/text.tsx"
 import { DataRow } from "./data-row.tsx"
 import { HeaderCell } from "./header-cell.tsx"
-import type { InfiniteTableProps, SortDirection } from "./types.ts"
+import type { InfiniteTableProps } from "./types.ts"
 
 const ROW_HEIGHT = 40
 const SKELETON_ROW_COUNT = 8
@@ -82,6 +83,11 @@ export function InfiniteTable<T>({
 
   const rowKeys = useMemo(() => data.map(getRowKey), [data, getRowKey])
 
+  const activeRowIndex = useMemo(() => {
+    if (activeRowKey == null || activeRowKey === "") return -1
+    return data.findIndex((row) => getRowKey(row) === activeRowKey)
+  }, [activeRowKey, data, getRowKey])
+
   const tableRef = useRef<HTMLTableElement>(null)
   const [layoutFixed, setLayoutFixed] = useState(false)
 
@@ -99,6 +105,21 @@ export function InfiniteTable<T>({
     table.style.width = `${table.offsetWidth}px`
     setLayoutFixed(true)
   }, [layoutFixed, data.length])
+
+  useLayoutEffect(() => {
+    if (activeRowIndex < 0) return
+
+    const scrollActiveRowIntoView = () => {
+      virtualizer.scrollToIndex(activeRowIndex, {
+        align: "center",
+        behavior: "instant",
+      })
+    }
+
+    scrollActiveRowIntoView()
+    const rafId = requestAnimationFrame(scrollActiveRowIntoView)
+    return () => cancelAnimationFrame(rafId)
+  }, [activeRowIndex, virtualizer])
 
   const paddingTop = virtualRows[0]?.start ?? 0
   const lastRow = virtualRows[virtualRows.length - 1]
@@ -129,7 +150,7 @@ export function InfiniteTable<T>({
         >
           <table
             ref={tableRef}
-            className={cn("min-w-full border-separate border-spacing-y-1", layoutFixed && "table-fixed")}
+            className={cn("min-w-full border-separate border-spacing-y-1", { "table-fixed": layoutFixed })}
           >
             <thead className="sticky top-0 z-10 bg-background">
               <tr>
@@ -144,6 +165,7 @@ export function InfiniteTable<T>({
                   return (
                     <HeaderCell
                       key={col.key}
+                      {...(col.align ? { align: col.align } : {})}
                       resizable={col.resizable !== false && i < columns.length - 1}
                       {...(col.minWidth !== undefined ? { minWidth: col.minWidth } : {})}
                       {...(isSortable && col.sortKey

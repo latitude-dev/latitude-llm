@@ -124,7 +124,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       addTracesToDataset({
         projectId: PROJECT_ID,
         datasetId: DATASET_ID,
-        traceIds: [traceId],
+        selection: { mode: "selected", traceIds: [traceId] },
       }),
     )
 
@@ -146,7 +146,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       createDatasetFromTraces({
         projectId: PROJECT_ID,
         name: "from-traces-dataset",
-        traceIds,
+        selection: { mode: "selected", traceIds },
       }),
     )
 
@@ -231,7 +231,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         createDatasetFromTraces({
           projectId: PROJECT_ID,
           name: "rollback-on-fail",
-          traceIds: [TraceId("trace-fail-1")],
+          selection: { mode: "selected", traceIds: [TraceId("trace-fail-1")] },
         }),
         {
           datasetRepo: capturingDatasetRepo,

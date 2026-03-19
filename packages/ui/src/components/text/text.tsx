@@ -139,11 +139,20 @@ namespace Text {
     return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h3" {...props} />
   })
   H3.displayName = "Text.H3"
+  export const H3M = forwardRef<HTMLHeadingElement, Common>(function H3M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h3" weight="medium" {...props} />
+  })
+  H3M.displayName = "Text.H3M"
 
   export const H4 = forwardRef<HTMLHeadingElement, Common>(function H4(props, ref) {
     return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" {...props} />
   })
   H4.displayName = "Text.H4"
+
+  export const H4B = forwardRef<HTMLHeadingElement, Common>(function H4M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" weight="bold" {...props} />
+  })
+  H4B.displayName = "Text.H4B"
 
   export const H5 = forwardRef<HTMLHeadingElement, Common>(function H5(props, ref) {
     return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h5" {...props} />

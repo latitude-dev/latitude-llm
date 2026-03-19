@@ -18,6 +18,7 @@ const PROJECT_ID = ProjectId("proj-del-rows")
 const DATASET_ID = DatasetId("ds-del-rows")
 const ROW_1 = DatasetRowId("row-del-1")
 const ROW_2 = DatasetRowId("row-del-2")
+const ROW_3 = DatasetRowId("row-del-3")
 
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
@@ -49,7 +50,7 @@ describe("deleteRows", () => {
   })
 
   const seedRows = async (rowIds: DatasetRowId[]) => {
-    await Effect.runPromise(
+    const version = await Effect.runPromise(
       datasetRepo.incrementVersion({
         id: DATASET_ID,
         rowsInserted: rowIds.length,
@@ -60,10 +61,12 @@ describe("deleteRows", () => {
     await Effect.runPromise(
       rowRepo.insertBatch({
         datasetId: DATASET_ID,
-        version: 1,
+        version: version.version,
         rows: rowIds.map((id) => ({ id, input: { prompt: "test" } })),
       }),
     )
+
+    return version
   }
 
   const run = <A, E>(effect: Effect.Effect<A, E, DatasetRepository | DatasetRowRepository>) =>
@@ -74,34 +77,85 @@ describe("deleteRows", () => {
       ),
     )
 
-  it("returns early without side effects for empty rowIds", async () => {
-    const result = await run(deleteRows({ datasetId: DATASET_ID, rowIds: [] }))
+  const activeRowIds = async () => {
+    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: DATASET_ID }))
+    return rows.map((r) => r.rowId)
+  }
 
-    expect(result).toEqual({ versionId: null, version: 0 })
+  describe("mode: selected", () => {
+    it("returns early without side effects for empty rowIds", async () => {
+      const result = await run(deleteRows({ datasetId: DATASET_ID, selection: { mode: "selected", rowIds: [] } }))
+      expect(result).toEqual({ versionId: null, version: 0 })
+    })
+
+    it("validates all rows exist before deleting", async () => {
+      await seedRows([ROW_1])
+
+      await expect(
+        run(
+          deleteRows({
+            datasetId: DATASET_ID,
+            selection: { mode: "selected", rowIds: [ROW_1, DatasetRowId("missing")] },
+          }),
+        ),
+      ).rejects.toBeInstanceOf(RowNotFoundError)
+
+      expect(await activeRowIds()).toContain(ROW_1)
+    })
+
+    it("deletes specified rows and increments dataset version", async () => {
+      await seedRows([ROW_1, ROW_2])
+
+      const result = await run(
+        deleteRows({ datasetId: DATASET_ID, selection: { mode: "selected", rowIds: [ROW_1, ROW_2] } }),
+      )
+
+      expect(result.versionId).toBeDefined()
+      expect(result.version).toBeGreaterThan(0)
+
+      const ids = await activeRowIds()
+      expect(ids).not.toContain(ROW_1)
+      expect(ids).not.toContain(ROW_2)
+    })
   })
 
-  it("validates all rows exist before deleting", async () => {
-    await seedRows([ROW_1])
+  describe("mode: all", () => {
+    it("deletes all rows in the dataset", async () => {
+      await seedRows([ROW_1, ROW_2, ROW_3])
 
-    await expect(
-      run(deleteRows({ datasetId: DATASET_ID, rowIds: [ROW_1, DatasetRowId("missing")] })),
-    ).rejects.toBeInstanceOf(RowNotFoundError)
+      const result = await run(deleteRows({ datasetId: DATASET_ID, selection: { mode: "all" } }))
 
-    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: DATASET_ID }))
-    expect(rows.some((r) => r.rowId === ROW_1)).toBe(true)
+      expect(result.versionId).toBeDefined()
+      expect(result.version).toBeGreaterThan(0)
+      expect(result.deletedCount).toBeGreaterThanOrEqual(3)
+
+      const ids = await activeRowIds()
+      expect(ids).not.toContain(ROW_1)
+      expect(ids).not.toContain(ROW_2)
+      expect(ids).not.toContain(ROW_3)
+    })
+
+    it("returns deletedCount 0 when dataset is already empty", async () => {
+      const result = await run(deleteRows({ datasetId: DATASET_ID, selection: { mode: "all" } }))
+
+      expect(result.versionId).toBeDefined()
+      expect(result.deletedCount).toBe(0)
+    })
   })
 
-  it("deletes rows and increments dataset version", async () => {
-    await seedRows([ROW_1, ROW_2])
+  describe("mode: allExcept", () => {
+    it("deletes all rows except excluded ones", async () => {
+      await seedRows([ROW_1, ROW_2, ROW_3])
 
-    const result = await run(deleteRows({ datasetId: DATASET_ID, rowIds: [ROW_1, ROW_2] }))
+      const result = await run(deleteRows({ datasetId: DATASET_ID, selection: { mode: "allExcept", rowIds: [ROW_2] } }))
 
-    expect(result.versionId).toBeDefined()
-    expect(result.version).toBeGreaterThan(0)
+      expect(result.versionId).toBeDefined()
+      expect(result.version).toBeGreaterThan(0)
 
-    const { rows } = await Effect.runPromise(rowRepo.list({ datasetId: DATASET_ID }))
-    const deletedRowIds = rows.map((r) => r.rowId)
-    expect(deletedRowIds).not.toContain(ROW_1)
-    expect(deletedRowIds).not.toContain(ROW_2)
+      const ids = await activeRowIds()
+      expect(ids).not.toContain(ROW_1)
+      expect(ids).toContain(ROW_2)
+      expect(ids).not.toContain(ROW_3)
+    })
   })
 })

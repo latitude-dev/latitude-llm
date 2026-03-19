@@ -1,5 +1,7 @@
 // Tokens
 
+export { Alert } from "./components/alert/index.tsx"
+export { Badge, type BadgeProps, badgeVariants } from "./components/badge/index.tsx"
 // Components
 export { type BrandIconProps, GitHubIcon, GoogleIcon, LatitudeLogo } from "./components/brand-icons/index.tsx"
 export { Button, type ButtonProps, buttonVariantsConfig } from "./components/button/button.tsx"
@@ -100,3 +102,4 @@ export * from "./tokens/wordBreak.ts"
 export * from "./tokens/zIndex.ts"
 // Utils
 export { cn } from "./utils/cn.ts"
+export { type SortDirection, sortDirectionSchema } from "./utils/filtersHelpers.ts"

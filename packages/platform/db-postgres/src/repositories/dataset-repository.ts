@@ -201,6 +201,23 @@ export const DatasetRepositoryLive = Layer.effect(
           return toDomainDataset(updated)
         }),
 
+      updateDetails: (args) =>
+        Effect.gen(function* () {
+          const [updated] = yield* sqlClient.query((db) =>
+            db
+              .update(datasets)
+              .set({ name: args.name, description: args.description })
+              .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
+              .returning(),
+          )
+
+          if (!updated) {
+            return yield* new DatasetNotFoundError({ datasetId: args.id })
+          }
+
+          return toDomainDataset(updated)
+        }),
+
       updateFileKey: (args) =>
         Effect.gen(function* () {
           const [updated] = yield* sqlClient.query((db) =>

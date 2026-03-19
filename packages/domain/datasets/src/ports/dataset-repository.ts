@@ -51,6 +51,12 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly name: string
     }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
 
+    updateDetails(args: {
+      readonly id: DatasetId
+      readonly name: string
+      readonly description: string | null
+    }): Effect.Effect<Dataset, DatasetNotFoundError | RepositoryError>
+
     updateFileKey(args: {
       readonly id: DatasetId
       readonly fileKey: string

@@ -806,6 +806,8 @@ When working on `apps/web` or any frontend code:
 
 - **Always** use `Text` component from `@repo/ui` for all text content
 - **Always** use `Button` component from `@repo/ui` for all buttons
+- **Do not** nest `Text` inside `Button`. `Button` already sets font size, weight, and color for its label; children should be plain text (and optional icons) as direct children. Wrapping the label in `Text` duplicates and conflicts with those styles and is wrong (e.g. `<Button><Text.H5>Save</Text.H5></Button>`).
+- **Lucide icons**: import the icon component from `lucide-react` and pass it to `@repo/ui`’s `Icon` via the `icon` prop (e.g. `<Icon icon={Pencil} size="sm" />`), not as raw `<Pencil />` everywhere—`Icon` applies shared sizing and color tokens. Buttons and other `@repo/ui` primitives that take an icon follow the same pattern when they accept an `icon` prop; otherwise wrap with `Icon`.
 - **Always** use `GoogleIcon` and `GitHubIcon` from `@repo/ui` for OAuth provider icons
 
 ### Route-Level Component Organization
@@ -818,8 +820,7 @@ routes/_authenticated/projects/$projectId/datasets/
 ├── $datasetId.tsx                  # route file
 └── -components/                    # supporting components for these routes
     ├── dataset-table.tsx
-    ├── row-detail-panel.tsx
-    └── version-badge.tsx
+    └── row-detail-panel.tsx
 ```
 
 - Route files live directly in the route directory — TanStack Router discovers them
@@ -938,6 +939,18 @@ export const Route = createFileRoute("/_authenticated")({
  <div>Item 1</div>
  <div>Item 2</div>
 </div>
+```
+
+### Conditional Classes (`cn`)
+
+When using `cn()` for conditional classes, **always** use the object syntax `{ "class-name": condition }` — never the short-circuit `condition && "class-name"` pattern.
+
+```tsx
+// ❌ Bad - short-circuit conditional
+<div className={cn("base-class", isActive && "bg-accent")} />
+
+// ✅ Good - object syntax
+<div className={cn("base-class", { "bg-accent": isActive })} />
 ```
 
 ## Cursor Cloud specific instructions

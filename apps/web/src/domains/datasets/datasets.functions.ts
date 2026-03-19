@@ -8,12 +8,16 @@ import {
   DATASET_DOWNLOAD_DIRECT_THRESHOLD,
   DATASET_LIST_SORT_COLUMNS,
   DatasetRepository,
+  type DeleteRowsSelection,
+  deleteDataset,
   deleteRows,
+  getRowDetail,
   insertRows,
   listDatasets,
   listRows,
   parseDatasetCsv,
-  renameDataset,
+  type TraceSelection,
+  updateDatasetDetails,
   updateRow,
 } from "@domain/datasets"
 import type { QueueMessage } from "@domain/queue"
@@ -38,6 +42,12 @@ import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher, getStorageDisk } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 import { applyMapping } from "./column-mapping.ts"
+
+const rowSelectionSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("selected"), rowIds: z.array(z.string()).min(1) }),
+  z.object({ mode: z.literal("all") }),
+  z.object({ mode: z.literal("allExcept"), rowIds: z.array(z.string()) }),
+])
 
 const saveDatasetCsvDataSchema = z.object({
   datasetId: z.string().min(1),
@@ -185,6 +195,13 @@ export const getDatasetQuery = createServerFn({ method: "GET" })
     )
   })
 
+const listRowsCursorSchema = z.object({
+  createdAt: z.string(),
+  rowId: z.string(),
+})
+
+export const DATASET_ROW_SORT_COLUMNS = ["createdAt"] as const
+
 export const listRowsQuery = createServerFn({ method: "GET" })
   .middleware([errorHandler])
   .inputValidator(
@@ -192,52 +209,121 @@ export const listRowsQuery = createServerFn({ method: "GET" })
       datasetId: z.string(),
       versionId: z.string().optional(),
       search: z.string().optional(),
+      sortBy: z.enum(DATASET_ROW_SORT_COLUMNS).optional(),
+      sortDirection: sortDirectionSchema.optional(),
       limit: z.number().int().min(1).max(500).default(50),
       offset: z.number().default(0),
+      cursor: listRowsCursorSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<{ rows: DatasetRowRecord[]; total: number }> => {
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      rows: DatasetRowRecord[]
+      total?: number
+      nextCursor?: { createdAt: string; rowId: string }
+    }> => {
+      const { organizationId } = await requireSession()
+      const orgId = OrganizationId(organizationId)
+
+      const sortBy = data.sortBy ?? "createdAt"
+      const sortDirection = data.sortDirection ?? "desc"
+      const sortDirectionForRows = sortBy === "createdAt" ? sortDirection : "desc"
+
+      const result = await Effect.runPromise(
+        listRows({
+          datasetId: DatasetId(data.datasetId),
+          ...(data.versionId ? { versionId: DatasetVersionId(data.versionId) } : {}),
+          ...(data.search ? { search: data.search } : {}),
+          sortDirection: sortDirectionForRows,
+          limit: data.limit,
+          ...(data.cursor
+            ? { cursor: { createdAt: data.cursor.createdAt, rowId: DatasetRowId(data.cursor.rowId) } }
+            : { offset: data.offset }),
+        }).pipe(
+          withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+          withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        ),
+      )
+
+      return {
+        rows: result.rows.map(toRowRecord),
+        ...(result.total !== undefined ? { total: result.total } : {}),
+        ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
+      }
+    },
+  )
+
+export const getRowQuery = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ datasetId: z.string(), rowId: z.string(), versionId: z.string().optional() }))
+  .handler(async ({ data }): Promise<DatasetRowRecord | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
-    const result = await Effect.runPromise(
-      listRows({
+    return Effect.runPromise(
+      getRowDetail({
         datasetId: DatasetId(data.datasetId),
+        rowId: DatasetRowId(data.rowId),
         ...(data.versionId ? { versionId: DatasetVersionId(data.versionId) } : {}),
-        ...(data.search ? { search: data.search } : {}),
-        limit: data.limit,
-        offset: data.offset,
       }).pipe(
+        Effect.map(toRowRecord),
+        Effect.catchTag("RowNotFoundError", () => Effect.succeed(null)),
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
-
-    return { rows: result.rows.map(toRowRecord), total: result.total }
   })
 
-export const renameDatasetMutation = createServerFn({ method: "POST" })
+export const updateDatasetMutation = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ datasetId: z.string(), name: z.string() }))
+  .inputValidator(
+    z.object({
+      datasetId: z.string(),
+      name: z.string(),
+      description: z.string().nullable().optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<DatasetRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
     const dataset = await Effect.runPromise(
-      renameDataset({
+      updateDatasetDetails({
         datasetId: DatasetId(data.datasetId),
         name: data.name,
+        description: data.description ?? null,
       }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
     )
 
     return toDatasetRecord(dataset)
   })
 
+export const deleteDatasetMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ datasetId: z.string() }))
+  .handler(async ({ data }): Promise<void> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    await Effect.runPromise(
+      deleteDataset({
+        datasetId: DatasetId(data.datasetId),
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
+    )
+  })
+
 type DatasetDownloadResult = { type: "direct"; csv: string; filename: string } | { type: "enqueued" }
 
 export const getDatasetDownload = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ datasetId: z.string() }))
+  .inputValidator(
+    z.object({
+      datasetId: z.string(),
+      selection: rowSelectionSchema,
+    }),
+  )
   .handler(async ({ data }): Promise<DatasetDownloadResult> => {
     const session = await ensureSession()
     const email = session?.user?.email
@@ -248,23 +334,31 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
     }
 
     const orgId = OrganizationId(organizationId)
+    const datasetId = DatasetId(data.datasetId)
     const dataset = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* DatasetRepository
-        return yield* repo.findById(DatasetId(data.datasetId))
+        return yield* repo.findById(datasetId)
       }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
     )
 
     const total = await Effect.runPromise(
-      countRows({ datasetId: DatasetId(data.datasetId) }).pipe(
+      countRows({ datasetId }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
 
-    if (total > DATASET_DOWNLOAD_DIRECT_THRESHOLD) {
-      const publisher = await getQueuePublisher()
+    const { selection } = data
+    const effectiveCount =
+      selection.mode === "all"
+        ? total
+        : selection.mode === "allExcept"
+          ? Math.max(0, total - selection.rowIds.length)
+          : selection.rowIds.length
 
+    if (effectiveCount > DATASET_DOWNLOAD_DIRECT_THRESHOLD) {
+      const publisher = await getQueuePublisher()
       const payload = {
         datasetId: data.datasetId,
         organizationId,
@@ -284,16 +378,23 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
     }
 
     const result = await Effect.runPromise(
-      listRows({
-        datasetId: DatasetId(data.datasetId),
-        limit: total,
-        offset: 0,
-      }).pipe(
+      listRows({ datasetId, limit: total, offset: 0 }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
-    const { csv, filename } = buildDatasetCsvExport(dataset.name, result.rows)
+
+    const rows =
+      selection.mode === "all"
+        ? result.rows
+        : (() => {
+            const ids = new Set(selection.rowIds.map(DatasetRowId))
+            return selection.mode === "allExcept"
+              ? result.rows.filter((r) => !ids.has(r.rowId))
+              : result.rows.filter((r) => ids.has(r.rowId))
+          })()
+
+    const { csv, filename } = buildDatasetCsvExport(dataset.name, rows)
     return { type: "direct", csv, filename }
   })
 
@@ -375,6 +476,45 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
     return { version: result.version, rowCount: mappedRows.length }
   })
 
+export const insertDatasetRowMutation = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      datasetId: z.string(),
+      input: z.string(),
+      output: z.string(),
+      metadata: z.string(),
+    }),
+  )
+  .handler(
+    async ({ data }): Promise<{ readonly versionId: string; readonly version: number; readonly rowId: string }> => {
+      const { organizationId } = await requireSession()
+      const orgId = OrganizationId(organizationId)
+
+      const result = await Effect.runPromise(
+        insertRows({
+          datasetId: DatasetId(data.datasetId),
+          rows: [{ input: data.input, output: data.output, metadata: data.metadata }],
+          source: "web",
+        }).pipe(
+          withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+          withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
+        ),
+      )
+
+      const rowId = result.rowIds[0]
+      if (rowId === undefined) {
+        throw new Error("insertRows returned no row id")
+      }
+
+      return {
+        versionId: result.versionId as string,
+        version: result.version,
+        rowId: rowId as string,
+      }
+    },
+  )
+
 export const updateRowMutation = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
@@ -411,17 +551,22 @@ export const deleteRowsMutation = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       datasetId: z.string(),
-      rowIds: z.array(z.string()).min(1),
+      selection: rowSelectionSchema,
     }),
   )
   .handler(async ({ data }): Promise<{ versionId: string; version: number }> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
+    const selection: DeleteRowsSelection =
+      data.selection.mode === "all"
+        ? { mode: "all" }
+        : { mode: data.selection.mode, rowIds: data.selection.rowIds.map(DatasetRowId) }
+
     const result = await Effect.runPromise(
       deleteRows({
         datasetId: DatasetId(data.datasetId),
-        rowIds: data.rowIds.map((id) => DatasetRowId(id)),
+        selection,
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
@@ -431,13 +576,18 @@ export const deleteRowsMutation = createServerFn({ method: "POST" })
     return { versionId: result.versionId as string, version: result.version }
   })
 
+function toTraceSelection(sel: z.infer<typeof rowSelectionSchema>): TraceSelection {
+  if (sel.mode === "all") return { mode: "all" }
+  return { mode: sel.mode, traceIds: sel.rowIds.map(TraceId) }
+}
+
 export const addTracesToDatasetMutation = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
       datasetId: z.string(),
-      traceIds: z.array(z.string()).min(1).max(1000),
+      selection: rowSelectionSchema,
     }),
   )
   .handler(async ({ data }): Promise<{ versionId: string; version: number; rowCount: number }> => {
@@ -449,7 +599,7 @@ export const addTracesToDatasetMutation = createServerFn({ method: "POST" })
       addTracesToDataset({
         projectId: ProjectId(data.projectId),
         datasetId: DatasetId(data.datasetId),
-        traceIds: data.traceIds.map((id) => TraceId(id)),
+        selection: toTraceSelection(data.selection),
       }).pipe(
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
@@ -472,7 +622,7 @@ export const createDatasetFromTracesMutation = createServerFn({
     z.object({
       projectId: z.string(),
       name: z.string().min(1),
-      traceIds: z.array(z.string()).min(1).max(1000),
+      selection: rowSelectionSchema,
     }),
   )
   .handler(
@@ -493,7 +643,7 @@ export const createDatasetFromTracesMutation = createServerFn({
         createDatasetFromTraces({
           projectId: ProjectId(data.projectId),
           name: data.name,
-          traceIds: data.traceIds.map((id) => TraceId(id)),
+          selection: toTraceSelection(data.selection),
         }).pipe(
           withPostgres(DatasetRepositoryLive, pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),

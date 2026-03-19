@@ -1,16 +1,12 @@
 import type { DatasetListSortBy } from "@domain/datasets"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
-import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { getQueryClient } from "../../lib/data/query-client.tsx"
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useDeferredValue, useMemo } from "react"
 import type { DatasetRecord, DatasetRowRecord } from "./datasets.functions.ts"
 import { listDatasetsByProject, listRowsQuery } from "./datasets.functions.ts"
 
-const queryClient = getQueryClient()
-
 const BATCH_SIZE = 50
+const ROWS_BATCH_SIZE = 50
 
 export function useDatasetsInfiniteScroll({
   projectId,
@@ -58,7 +54,63 @@ export function useDatasetsInfiniteScroll({
   return { data, isLoading, infiniteScroll }
 }
 
-/** First page of datasets for dropdowns and lookups. */
+type DatasetRowsCursor = { createdAt: string; rowId: string }
+
+export function useDatasetRowsInfiniteScroll({
+  datasetId,
+  search,
+  sorting,
+}: {
+  readonly datasetId: string
+  readonly search?: string
+  readonly sorting: InfiniteTableSorting
+}) {
+  const deferredSearch = useDeferredValue(search ?? "")
+  const sortDirection = sorting.column === "createdAt" ? sorting.direction : "desc"
+
+  const {
+    data: paginatedData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["datasetRows", datasetId, deferredSearch, sortDirection],
+    queryFn: ({ pageParam }) =>
+      listRowsQuery({
+        data: {
+          datasetId,
+          limit: ROWS_BATCH_SIZE,
+          sortBy: "createdAt",
+          sortDirection,
+          ...(deferredSearch ? { search: deferredSearch } : {}),
+          ...(pageParam ? { cursor: pageParam } : {}),
+        },
+      }),
+    initialPageParam: undefined as DatasetRowsCursor | undefined,
+    getNextPageParam: (lastPage) => lastPage?.nextCursor,
+    placeholderData: keepPreviousData,
+  })
+
+  const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
+    () => ({
+      hasMore: hasNextPage,
+      isLoadingMore: isFetchingNextPage,
+      onLoadMore: fetchNextPage,
+    }),
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
+  )
+
+  const data: readonly DatasetRowRecord[] = useMemo(
+    () => paginatedData?.pages.flatMap((p) => p?.rows ?? []) ?? [],
+    [paginatedData],
+  )
+
+  const total = paginatedData?.pages[0]?.total
+
+  return { data, isLoading, infiniteScroll, total }
+}
+
 export function useDatasetsList(projectId: string) {
   const { data, isLoading } = useQuery({
     queryKey: ["datasets", projectId, { limit: 100 }],
@@ -71,55 +123,4 @@ export function useDatasetsList(projectId: string) {
     staleTime: 30_000,
   })
   return { data: data ?? [], isLoading }
-}
-
-const makeDatasetRowsCollection = (datasetId: string, search?: string) =>
-  createCollection(
-    queryCollectionOptions({
-      queryClient,
-      queryKey: ["datasetRows", datasetId, search ?? ""],
-      queryFn: async () => {
-        const result = await listRowsQuery({
-          data: {
-            datasetId,
-            ...(search ? { search } : {}),
-            limit: 50,
-            offset: 0,
-          },
-        })
-        return result.rows as DatasetRowRecord[]
-      },
-      getKey: (item: DatasetRowRecord) => item.rowId,
-    }),
-  )
-
-type DatasetRowsCollection = ReturnType<typeof makeDatasetRowsCollection>
-const MAX_ROW_COLLECTIONS = 10
-const rowsCollectionsCache = new Map<string, DatasetRowsCollection>()
-
-const getDatasetRowsCollection = (datasetId: string, search?: string): DatasetRowsCollection => {
-  const cacheKey = `${datasetId}:${search ?? ""}`
-  const cached = rowsCollectionsCache.get(cacheKey)
-  if (cached) {
-    rowsCollectionsCache.delete(cacheKey)
-    rowsCollectionsCache.set(cacheKey, cached)
-    return cached
-  }
-
-  const collection = makeDatasetRowsCollection(datasetId, search)
-  rowsCollectionsCache.set(cacheKey, collection)
-
-  if (rowsCollectionsCache.size > MAX_ROW_COLLECTIONS) {
-    const oldest = rowsCollectionsCache.keys().next().value
-    if (oldest) {
-      rowsCollectionsCache.delete(oldest)
-    }
-  }
-
-  return collection
-}
-
-export const useDatasetRowsCollection = (datasetId: string, search?: string) => {
-  const collection = getDatasetRowsCollection(datasetId, search)
-  return useLiveQuery((q) => q.from({ row: collection }), [datasetId, search])
 }
