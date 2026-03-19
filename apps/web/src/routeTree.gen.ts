@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
+import { Route as ColorsRouteImport } from './routes/colors'
+import { Route as ButtonRouteImport } from './routes/button'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
@@ -41,6 +43,16 @@ const LoginRoute = LoginRouteImport.update({
 const DesignSystemRoute = DesignSystemRouteImport.update({
   id: '/design-system',
   path: '/design-system',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ColorsRoute = ColorsRouteImport.update({
+  id: '/colors',
+  path: '/colors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ButtonRoute = ButtonRouteImport.update({
+  id: '/button',
+  path: '/button',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -129,6 +141,8 @@ const AuthenticatedProjectsProjectIdTracesTraceIdSpansSpanIdIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
+  '/button': typeof ButtonRoute
+  '/colors': typeof ColorsRoute
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -147,6 +161,8 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/traces/$traceId/spans/$spanId/': typeof AuthenticatedProjectsProjectIdTracesTraceIdSpansSpanIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/button': typeof ButtonRoute
+  '/colors': typeof ColorsRoute
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -167,6 +183,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/button': typeof ButtonRoute
+  '/colors': typeof ColorsRoute
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
@@ -189,6 +207,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/button'
+    | '/colors'
     | '/design-system'
     | '/login'
     | '/signup'
@@ -207,6 +227,8 @@ export interface FileRouteTypes {
     | '/projects/$projectId/traces/$traceId/spans/$spanId/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/button'
+    | '/colors'
     | '/design-system'
     | '/login'
     | '/signup'
@@ -226,6 +248,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/button'
+    | '/colors'
     | '/design-system'
     | '/login'
     | '/signup'
@@ -247,6 +271,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  ButtonRoute: typeof ButtonRoute
+  ColorsRoute: typeof ColorsRoute
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
@@ -278,6 +304,20 @@ declare module '@tanstack/react-router' {
       path: '/design-system'
       fullPath: '/design-system'
       preLoaderRoute: typeof DesignSystemRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/colors': {
+      id: '/colors'
+      path: '/colors'
+      fullPath: '/colors'
+      preLoaderRoute: typeof ColorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/button': {
+      id: '/button'
+      path: '/button'
+      fullPath: '/button'
+      preLoaderRoute: typeof ButtonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -437,6 +477,8 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  ButtonRoute: ButtonRoute,
+  ColorsRoute: ColorsRoute,
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
