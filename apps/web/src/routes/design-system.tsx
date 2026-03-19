@@ -88,16 +88,108 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         </div>
       </ShowcaseSection>
 
-      <ShowcaseSection theme={theme} title="Buttons" description="Variants, states, and visual hierarchy.">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <Button>Default</Button>
-          <Button variant="secondary">Secondary</Button>
-          <Button variant="outline" flat>
-            Outline Flat
-          </Button>
-          <Button variant="ghost">Ghost</Button>
-          <Button variant="destructive">Destructive</Button>
-          <Button isLoading>Loading…</Button>
+      <ShowcaseSection
+        theme={theme}
+        title="Buttons"
+        description="Sizes, variants (colors), fancy vs flat, and states."
+      >
+        <div className="flex flex-col gap-6">
+          <Link
+            to="/button"
+            className="inline-flex w-fit items-center gap-1 text-sm text-accent-foreground underline-offset-4 hover:underline"
+          >
+            Open button playground →
+          </Link>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Sizes (default variant)</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="sm">Small</Button>
+              <Button size="default">Default</Button>
+              <Button size="lg">Large</Button>
+              <Button size="icon" aria-label="Icon only">
+                <Icon icon={Check} size="sm" />
+              </Button>
+              <Button size="full">Full width</Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Variants — Fancy (raised / 3D)</Text.H6>
+            <div className="flex flex-wrap gap-3">
+              <Button>Default</Button>
+              <Button variant="secondary">Secondary</Button>
+              <Button variant="outline">Outline</Button>
+              <Button variant="ghost">Ghost</Button>
+              <Button variant="destructive">Destructive</Button>
+              <Button variant="link">Link</Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Variants — Flat (no shadow)</Text.H6>
+            <div className="flex flex-wrap gap-3">
+              <Button flat>Default</Button>
+              <Button variant="secondary" flat>
+                Secondary
+              </Button>
+              <Button variant="outline" flat>
+                Outline
+              </Button>
+              <Button variant="ghost" flat>
+                Ghost
+              </Button>
+              <Button variant="destructive" flat>
+                Destructive
+              </Button>
+              <Button variant="link" flat>
+                Link
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Sizes × Variants (sample)</Text.H6>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Text.H6 color="foregroundMuted" className="w-16 shrink-0">
+                  sm
+                </Text.H6>
+                <Button size="sm">Default</Button>
+                <Button size="sm" variant="secondary">
+                  Secondary
+                </Button>
+                <Button size="sm" variant="outline">
+                  Outline
+                </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Text.H6 color="foregroundMuted" className="w-16 shrink-0">
+                  lg
+                </Text.H6>
+                <Button size="lg">Default</Button>
+                <Button size="lg" variant="secondary">
+                  Secondary
+                </Button>
+                <Button size="lg" variant="outline">
+                  Outline
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">States</Text.H6>
+            <div className="flex flex-wrap gap-3">
+              <Button isLoading>Loading…</Button>
+              <Button variant="secondary" isLoading>
+                Loading
+              </Button>
+              <Button disabled>Disabled</Button>
+              <Button variant="outline" disabled>
+                Disabled
+              </Button>
+            </div>
+          </div>
         </div>
       </ShowcaseSection>
 
@@ -284,13 +376,21 @@ function DesignSystemPage() {
           <header
             className={`flex flex-col gap-4 rounded-2xl border border-border/70 p-5 shadow-xl sm:p-6 ${pageSurfaceClass}`}
           >
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              <span aria-hidden="true">←</span>
-              Back to Home
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                <span aria-hidden="true">←</span>
+                Back to Home
+              </Link>
+              <Link
+                to="/colors"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Colors
+              </Link>
+            </div>
 
             <div className="flex flex-col gap-2">
               <Text.H6 color="accentForeground" weight="semibold">

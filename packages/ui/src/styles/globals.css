@@ -204,7 +204,8 @@
   --card-foreground: 223 70% 4%;
   --popover: 0 0% 100%;
   --popover-foreground: 223 70% 4%;
-  --primary: 211 94% 43%;
+  /* --primary: 211 94% 43%; */
+  --primary: 210 100% 50%;
   --primary-foreground: 210 20% 98%;
   --primary-muted: 210 100% 96%;
   --primary-muted-hover: 210 100% 97%;
