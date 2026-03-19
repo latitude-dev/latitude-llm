@@ -1,4 +1,4 @@
-import type { DatasetId, DatasetRowId, RepositoryError, TraceId } from "@domain/shared"
+import type { DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { DatasetRow, InsertRowFieldValue, RowFieldValue, RowNotFoundError } from "../entities/dataset-row.ts"
 
@@ -18,13 +18,23 @@ export interface DatasetRowRepositoryShape {
     }[]
   }): Effect.Effect<readonly DatasetRowId[], RepositoryError>
 
+  /** Cursor for keyset pagination: (createdAt, rowId) of the last row from previous page. */
   list(args: {
     readonly datasetId: DatasetId
     readonly version?: number
     readonly search?: string
+    readonly sortDirection?: SortDirection
     readonly limit?: number
     readonly offset?: number
-  }): Effect.Effect<{ readonly rows: readonly DatasetRow[]; readonly total: number }, RepositoryError>
+    readonly cursor?: { readonly createdAt: string; readonly rowId: DatasetRowId }
+  }): Effect.Effect<
+    {
+      readonly rows: readonly DatasetRow[]
+      readonly total?: number
+      readonly nextCursor?: { readonly createdAt: string; readonly rowId: DatasetRowId }
+    },
+    RepositoryError
+  >
 
   /**
    * Returns total row count without fetching rows. Use when only the count is needed
@@ -68,6 +78,12 @@ export interface DatasetRowRepositoryShape {
     readonly rowIds: readonly DatasetRowId[]
     readonly version: number
   }): Effect.Effect<void, RepositoryError>
+
+  deleteAll(args: {
+    readonly datasetId: DatasetId
+    readonly version: number
+    readonly excludedRowIds?: readonly DatasetRowId[]
+  }): Effect.Effect<number, RepositoryError>
 }
 
 export class DatasetRowRepository extends ServiceMap.Service<DatasetRowRepository, DatasetRowRepositoryShape>()(

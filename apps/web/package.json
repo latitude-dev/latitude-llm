@@ -12,7 +12,7 @@
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
@@ -56,11 +56,13 @@
     "@repo/vitest-config": "workspace:*",
     "@tailwindcss/postcss": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "agentation": "^2.3.2",
     "dotenv": "catalog:",
+    "jsdom": "^29.0.1",
     "postcss": "^8.5.3",
     "rollup-plugin-visualizer": "^7.0.1",
     "vite": "catalog:",

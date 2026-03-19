@@ -24,26 +24,31 @@ const baseTheme = EditorView.theme({
   "&": {
     fontSize: "13px",
     fontFamily: "var(--font-mono)",
+    color: "hsl(var(--secondary-foreground))",
+    backgroundColor: "hsl(var(--secondary))",
   },
   ".cm-content": {
     padding: "8px 0",
+    caretColor: "hsl(var(--secondary-foreground))",
+    backgroundColor: "hsl(var(--secondary))",
   },
   ".cm-gutters": {
-    backgroundColor: "hsl(var(--muted) / 0.5)",
-    borderRight: "1px solid hsl(var(--border))",
+    backgroundColor: "hsl(var(--secondary))",
+    borderRight: "1px solid hsl(var(--secondary))",
     color: "hsl(var(--muted-foreground))",
   },
-  ".cm-activeLineGutter": {
-    backgroundColor: "hsl(var(--muted) / 0.8)",
-  },
   ".cm-activeLine": {
-    backgroundColor: "hsl(var(--accent) / 0.5)",
+    backgroundColor: "transparent",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "transparent",
   },
   "&.cm-focused": {
     outline: "none",
   },
   ".cm-scroller": {
     overflow: "auto",
+    backgroundColor: "hsl(var(--secondary))",
   },
 })
 
@@ -96,7 +101,12 @@ export function CodeMirrorEditor({ value, onChange, readOnly = false, className,
     if (!container) return
 
     const view = new EditorView({
-      state: buildState({ doc: initialValueRef.current, isJsonContent, readOnly, onChangeRef }),
+      state: buildState({
+        doc: initialValueRef.current,
+        isJsonContent,
+        readOnly,
+        onChangeRef,
+      }),
       parent: container,
     })
 
@@ -124,7 +134,7 @@ export function CodeMirrorEditor({ value, onChange, readOnly = false, className,
   return (
     <div
       ref={containerRef}
-      className={cn("rounded-md border bg-background overflow-hidden", className)}
+      className={cn("rounded-md border bg-secondary overflow-hidden", className)}
       style={minHeight ? { ["--cm-min-h" as string]: minHeight } : undefined}
     />
   )

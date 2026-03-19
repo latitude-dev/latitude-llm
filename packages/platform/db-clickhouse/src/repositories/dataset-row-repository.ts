@@ -39,12 +39,30 @@ const buildSearchClause = (search: string | undefined) =>
 const buildVersionClause = (version: number | undefined) =>
   version !== undefined ? "AND xact_id <= {version:UInt64}" : ""
 
+type RowSortDirection = "asc" | "desc"
+
+const buildCreatedAtSortFragments = (sortDirection: RowSortDirection) => {
+  const desc = sortDirection === "desc"
+  const orderDir = desc ? "DESC" : "ASC"
+  const keysetOp = desc ? "<" : ">"
+  return {
+    orderSql: `ORDER BY created_at ${orderDir}, row_id ${orderDir}`,
+    keysetSql: `AND (
+      created_at ${keysetOp} toDateTime64({cursorCreatedAt:String}, 3, 'UTC')
+      OR (
+        created_at = toDateTime64({cursorCreatedAt:String}, 3, 'UTC')
+        AND row_id ${keysetOp} {cursorRowId:String}
+      )
+    )`,
+  }
+}
+
 /**
- * List query used by both list (with count) and listPage. Uses offset today;
- * ORDER BY is deterministic (created_at DESC, row_id DESC) so keyset pagination
- * can be added later (e.g. WHERE (created_at, row_id) < (cursor_created_at, cursor_row_id)).
+ * List query used by both list (with count) and listPage. Uses offset when no cursor.
  */
-const buildListDataQuery = (versionClause: string, searchClause: string) => `
+const buildListDataQueryOffset = (versionClause: string, searchClause: string, sortDirection: RowSortDirection) => {
+  const { orderSql } = buildCreatedAtSortFragments(sortDirection)
+  return `
   SELECT
     row_id,
     argMax(input, xact_id) AS input,
@@ -59,9 +77,38 @@ const buildListDataQuery = (versionClause: string, searchClause: string) => `
   GROUP BY row_id
   HAVING argMax(_object_delete, xact_id) = false
     ${searchClause}
-  ORDER BY created_at DESC, row_id DESC
+  ${orderSql}
   LIMIT {limit:UInt32} OFFSET {offset:UInt32}
 `
+}
+
+/**
+ * Keyset: same shape as traces `findByProjectId` (trace-repository.ts) — cursor goes in HAVING
+ * using SELECT aliases (`created_at`), not repeated aggregates like `min(created_at)` (that nested
+ * aggregate error). ClickHouse allows aliases from SELECT in HAVING.
+ */
+const buildListDataQueryKeyset = (versionClause: string, searchClause: string, sortDirection: RowSortDirection) => {
+  const { orderSql, keysetSql } = buildCreatedAtSortFragments(sortDirection)
+  return `
+  SELECT
+    row_id,
+    argMax(input, xact_id) AS input,
+    argMax(output, xact_id) AS output,
+    argMax(metadata, xact_id) AS metadata,
+    min(created_at) AS created_at,
+    max(xact_id) AS latest_xact_id
+  FROM dataset_rows
+  WHERE organization_id = {organizationId:String}
+    AND dataset_id = {datasetId:String}
+    ${versionClause}
+  GROUP BY row_id
+  HAVING argMax(_object_delete, xact_id) = false
+    ${searchClause}
+    ${keysetSql}
+  ${orderSql}
+  LIMIT {limit:UInt32}
+`
+}
 
 const buildListCountQuery = (versionClause: string, searchClause: string) => `
   SELECT count() AS total FROM (
@@ -143,20 +190,56 @@ export const DatasetRowRepositoryLive = Layer.effect(
       list: (args) =>
         chSqlClient.query(async (client, organizationId) => {
           const limit = args.limit ?? 50
+          const sortDirection: RowSortDirection = args.sortDirection ?? "desc"
+          const versionClause = buildVersionClause(args.version)
+          const searchClause = buildSearchClause(args.search)
+
+          if (args.cursor) {
+            const params: Record<string, unknown> = {
+              organizationId,
+              datasetId: args.datasetId,
+              limit: limit + 1,
+              cursorCreatedAt: args.cursor.createdAt,
+              cursorRowId: args.cursor.rowId,
+            }
+            if (args.version !== undefined) params.version = args.version
+            if (args.search) params.search = args.search
+
+            const dataQuery = buildListDataQueryKeyset(versionClause, searchClause, sortDirection)
+            const dataResult = await client
+              .query({
+                query: dataQuery,
+                query_params: params,
+                format: "JSONEachRow",
+              })
+              .then((r) => r.json<DatasetRowCH>())
+
+            const hasMore = dataResult.length > limit
+            const sliced = hasMore ? dataResult.slice(0, limit) : dataResult
+            const rows = sliced.map((row) => toDomainRow(row, args.datasetId))
+            const lastCh = sliced[sliced.length - 1]
+            const nextCursor =
+              hasMore && lastCh
+                ? ({
+                    createdAt: lastCh.created_at,
+                    rowId: DatasetRowId(lastCh.row_id),
+                  } as const)
+                : undefined
+
+            return nextCursor ? { rows, nextCursor } : { rows }
+          }
+
           const offset = args.offset ?? 0
           const params: Record<string, unknown> = {
             organizationId,
             datasetId: args.datasetId,
-            limit,
+            limit: limit + 1,
             offset,
           }
-
           if (args.version !== undefined) params.version = args.version
           if (args.search) params.search = args.search
 
-          const versionClause = buildVersionClause(args.version)
-          const searchClause = buildSearchClause(args.search)
-          const dataQuery = buildListDataQuery(versionClause, searchClause)
+          const dataQuery = buildListDataQueryOffset(versionClause, searchClause, sortDirection)
           const countQuery = buildListCountQuery(versionClause, searchClause)
 
           const [dataResult, countResult] = await Promise.all([
@@ -176,10 +259,20 @@ export const DatasetRowRepositoryLive = Layer.effect(
               .then((r) => r.json<{ total: string }>()),
           ])
 
-          return {
-            rows: dataResult.map((row) => toDomainRow(row, args.datasetId)),
-            total: Number(countResult[0]?.total ?? 0),
-          } as const
+          const hasMore = dataResult.length > limit
+          const sliced = hasMore ? dataResult.slice(0, limit) : dataResult
+          const rows = sliced.map((row) => toDomainRow(row, args.datasetId))
+          const totalCount = Number(countResult[0]?.total ?? 0)
+          const lastCh = sliced[sliced.length - 1]
+          const nextCursor =
+            hasMore && lastCh
+              ? ({
+                  createdAt: lastCh.created_at,
+                  rowId: DatasetRowId(lastCh.row_id),
+                } as const)
+              : undefined
+
+          return nextCursor ? { rows, total: totalCount, nextCursor } : { rows, total: totalCount }
         }),
 
       count: (args) =>
@@ -221,7 +314,7 @@ export const DatasetRowRepositoryLive = Layer.effect(
 
           const versionClause = buildVersionClause(args.version)
           const searchClause = buildSearchClause(args.search)
-          const dataQuery = buildListDataQuery(versionClause, searchClause)
+          const dataQuery = buildListDataQueryOffset(versionClause, searchClause, "desc")
 
           const dataResult = await client
             .query({
@@ -319,6 +412,59 @@ export const DatasetRowRepositoryLive = Layer.effect(
               format: "JSONEachRow",
             })
           }
+        }),
+      deleteAll: (args) =>
+        chSqlClient.query(async (client, organizationId) => {
+          const excluded = args.excludedRowIds ?? []
+          const excludeClause = excluded.length > 0 ? "AND row_id NOT IN ({excludedRowIds:Array(String)})" : ""
+
+          const params: Record<string, unknown> = {
+            organizationId: organizationId as string,
+            datasetId: args.datasetId as string,
+          }
+          if (excluded.length > 0) {
+            params.excludedRowIds = Array.from(excluded) as string[]
+          }
+
+          const activeRows = await client
+            .query({
+              query: `
+                SELECT row_id
+                FROM dataset_rows
+                WHERE organization_id = {organizationId:String}
+                  AND dataset_id = {datasetId:String}
+                GROUP BY row_id
+                HAVING argMax(_object_delete, xact_id) = false
+                  ${excludeClause}
+              `,
+              query_params: params,
+              format: "JSONEachRow",
+            })
+            .then((r) => r.json<{ row_id: string }>())
+
+          if (activeRows.length === 0) return 0
+
+          const tombstones = activeRows.map((row) => ({
+            organization_id: organizationId,
+            dataset_id: args.datasetId,
+            row_id: row.row_id,
+            xact_id: args.version,
+            input: "",
+            output: "",
+            metadata: "",
+            _object_delete: true,
+          }))
+
+          for (let i = 0; i < tombstones.length; i += INSERT_BATCH_SIZE) {
+            const batch = tombstones.slice(i, i + INSERT_BATCH_SIZE)
+            await client.insert({
+              table: "dataset_rows",
+              values: batch,
+              format: "JSONEachRow",
+            })
+          }
+
+          return activeRows.length
         }),
     }
   }),

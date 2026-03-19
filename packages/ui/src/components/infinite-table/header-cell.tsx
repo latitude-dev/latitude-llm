@@ -2,8 +2,8 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
+import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import { Text } from "../text/text.tsx"
-import type { SortDirection } from "./types.ts"
 
 const TH_HORIZONTAL_PADDING = 32
 
@@ -118,6 +118,7 @@ function ariaSort(direction: SortDirection | null | undefined): "ascending" | "d
 
 export function HeaderCell({
   children,
+  align = "start",
   resizable = true,
   minWidth = 60,
   className,
@@ -126,6 +127,7 @@ export function HeaderCell({
   onSortClick,
 }: {
   children: ReactNode
+  align?: "start" | "end"
   resizable?: boolean
   minWidth?: number
   className?: string
@@ -168,6 +170,7 @@ export function HeaderCell({
       <TextComp
         {...textProps}
         className={cn("flex w-full h-full items-center truncate", {
+          "justify-end": align === "end",
           "bg-transparent border-none rounded-sm p-0 cursor-pointer select-none transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring":
             sortable,
         })}

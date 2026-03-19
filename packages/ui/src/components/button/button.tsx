@@ -6,7 +6,7 @@ import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
 
 const buttonContainerVariants = cva(
-  cn("group relative inline-flex rounded-lg disabled:opacity-50 disabled:pointer-events-none"),
+  cn("group relative inline-flex rounded-lg ", "whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none"),
   {
     variants: {
       variant: {

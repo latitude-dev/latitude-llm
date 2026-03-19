@@ -3,6 +3,7 @@ import {
   AmazonQIcon,
   AnthropicIcon,
   AzureIcon,
+  Badge,
   Button,
   Card,
   CardContent,
@@ -164,6 +165,16 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           <Button variant="ghost">Ghost</Button>
           <Button variant="destructive">Destructive</Button>
           <Button isLoading>Loading…</Button>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection theme={theme} title="Badge" description="Status and label chips.">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="default">Default</Badge>
+          <Badge variant="outlineMuted" size="small" className="font-mono uppercase tracking-wider">
+            v:clxyz
+          </Badge>
+          <Badge variant="muted">Muted</Badge>
         </div>
       </ShowcaseSection>
 

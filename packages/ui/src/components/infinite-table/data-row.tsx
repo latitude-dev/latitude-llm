@@ -10,7 +10,7 @@ interface DataRowProps<T> {
   columns: InfiniteTableColumn<T>[]
   isSelected?: boolean
   isActive?: boolean
-  onToggleRow?: (key: string, checked: CheckedState) => void
+  onToggleRow?: (key: string, checked: CheckedState, options?: { shiftKey?: boolean }) => void
   hasSelection: boolean
   onClick?: (row: T) => void
   dataIndex: number
@@ -47,7 +47,7 @@ function DataRowInner<T>({
         "bg-accent": isActive,
         "hover:bg-muted cursor-pointer": onClick,
         "hover:bg-accent": onClick && isActive,
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring": onClick,
+        "focus-visible:outline-none": onClick,
       })}
       onClick={onClick ? () => onClick(row) : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -56,18 +56,25 @@ function DataRowInner<T>({
       {hasSelection && (
         <td
           className="px-4 py-2 align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            const next = !isSelected
+            onToggleRow?.(rowKey, next, { shiftKey: e.shiftKey })
+          }}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <Checkbox checked={isSelected ?? false} onCheckedChange={(checked) => onToggleRow?.(rowKey, checked)} />
+          <Checkbox checked={isSelected ?? false} className="pointer-events-none" />
         </td>
       )}
       {columns.map((col) => {
-        const content = col.render(row)
+        const content = col.render(row, dataIndex)
         return (
           <td
             key={col.key}
-            className="px-4 py-2 align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis"
+            className={cn(
+              "px-4 py-2 align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis",
+              { "text-right": col.align === "end" },
+            )}
           >
             {typeof content === "string" ? (
               <Text.H5 noWrap ellipsis>

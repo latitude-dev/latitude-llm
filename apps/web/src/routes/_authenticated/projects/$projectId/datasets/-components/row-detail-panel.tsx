@@ -1,7 +1,9 @@
-import { Button, RichTextEditor, Text } from "@repo/ui"
-import { Loader2, Save, X } from "lucide-react"
-import { useCallback, useState } from "react"
+import { DetailSection, RichTextEditor } from "@repo/ui"
+import { ArrowDownRightIcon, ArrowUpRightIcon, TextIcon } from "lucide-react"
+import { useCallback, useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
 import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
+
+export type RowDetailPanelSaveRef = { save: () => void }
 
 function formatField(value: unknown): string {
   if (typeof value === "string") return value
@@ -14,71 +16,75 @@ function formatField(value: unknown): string {
   }
 }
 
-function EditableSection({
-  title,
-  value,
-  onChange,
-  defaultOpen = true,
-}: {
-  title: string
-  value: string
-  onChange: (value: string) => void
-  defaultOpen?: boolean
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-
-  return (
-    <div className="flex flex-col gap-2">
-      <button type="button" className="flex items-center gap-1.5 cursor-pointer" onClick={() => setOpen(!open)}>
-        <Text.H6 color="foregroundMuted">{open ? "▾" : "▸"}</Text.H6>
-        <Text.H5 weight="bold">{title}</Text.H5>
-      </button>
-      {open && (
-        <div className="flex flex-col gap-1">
-          <RichTextEditor value={value} onChange={onChange} />
-        </div>
-      )}
-    </div>
-  )
-}
-
 export function RowDetailPanel({
   row,
-  onClose,
   onSave,
-  saving = false,
+  saveRef,
+  isDraft = false,
+  onSaveVisibilityChange,
 }: {
   row: DatasetRowRecord
-  onClose: () => void
   onSave?: (data: { input: string; output: string; metadata: string }) => void
-  saving?: boolean
+  saveRef?: React.RefObject<RowDetailPanelSaveRef | null>
+  isDraft?: boolean
+  onSaveVisibilityChange?: (visible: boolean) => void
 }) {
   const [inputText, setInputText] = useState(() => formatField(row.input))
   const [outputText, setOutputText] = useState(() => formatField(row.output))
   const [metadataText, setMetadataText] = useState(() => formatField(row.metadata))
 
+  const prevRowIdRef = useRef(row.rowId)
+  useLayoutEffect(() => {
+    if (prevRowIdRef.current === row.rowId) return
+    prevRowIdRef.current = row.rowId
+    setInputText(formatField(row.input))
+    setOutputText(formatField(row.output))
+    setMetadataText(formatField(row.metadata))
+  }, [row.rowId])
+
   const handleSave = useCallback(() => {
     onSave?.({ input: inputText, output: outputText, metadata: metadataText })
   }, [inputText, outputText, metadataText, onSave])
 
+  useImperativeHandle(saveRef, () => ({ save: handleSave }), [handleSave])
+
+  const baselineInput = formatField(row.input)
+  const baselineOutput = formatField(row.output)
+  const baselineMetadata = formatField(row.metadata)
+  const isDirty = inputText !== baselineInput || outputText !== baselineOutput || metadataText !== baselineMetadata
+  const showSaveButton = Boolean(onSave) && (isDraft || isDirty)
+
+  useLayoutEffect(() => {
+    if (!onSave) {
+      onSaveVisibilityChange?.(false)
+      return
+    }
+    onSaveVisibilityChange?.(showSaveButton)
+  }, [onSave, onSaveVisibilityChange, showSaveButton])
+
   return (
-    <div className="flex flex-col h-full border-l">
-      <div className="flex flex-row items-center justify-end px-4 py-3 border-b">
-        {onSave && (
-          <Button onClick={handleSave} disabled={saving} size="sm">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            <Text.H6 color="white">Save Data</Text.H6>
-          </Button>
-        )}
-        <Button flat variant="ghost" onClick={onClose}>
-          <X className="w-4 h-4" />
-        </Button>
-      </div>
-      <div className="flex flex-col gap-4 p-4 overflow-y-auto flex-1">
-        <EditableSection title="Input" value={inputText} onChange={setInputText} />
-        <EditableSection title="Output" value={outputText} onChange={setOutputText} />
-        <EditableSection title="Metadata" value={metadataText} onChange={setMetadataText} />
-      </div>
+    <div className="flex flex-col gap-8">
+      <DetailSection
+        icon={<ArrowDownRightIcon className="h-4 w-4" />}
+        label="Input"
+        contentClassName="max-h-none overflow-visible"
+      >
+        <RichTextEditor value={inputText} onChange={setInputText} />
+      </DetailSection>
+      <DetailSection
+        icon={<ArrowUpRightIcon className="h-4 w-4" />}
+        label="Output"
+        contentClassName="max-h-none overflow-visible"
+      >
+        <RichTextEditor value={outputText} onChange={setOutputText} />
+      </DetailSection>
+      <DetailSection
+        icon={<TextIcon className="h-4 w-4" />}
+        label="Metadata"
+        contentClassName="max-h-none overflow-visible"
+      >
+        <RichTextEditor value={metadataText} onChange={setMetadataText} />
+      </DetailSection>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { Button, CloseTrigger, Input, Modal, Select, type SelectOption, Text, useToast } from "@repo/ui"
+import { Alert, Button, CloseTrigger, Input, Modal, Select, type SelectOption, Text, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
@@ -10,16 +10,27 @@ import {
 } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import type { BulkSelection } from "../../../../../../lib/hooks/useSelectableRows.ts"
+
+const BULK_ADD_WARNING_THRESHOLD = 5_000
 
 interface AddToDatasetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   projectId: string
-  traceIds: string[]
+  selection: BulkSelection<string>
+  selectedCount: number
   onSuccess: () => void
 }
 
-export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onSuccess }: AddToDatasetModalProps) {
+export function AddToDatasetModal({
+  open,
+  onOpenChange,
+  projectId,
+  selection,
+  selectedCount,
+  onSuccess,
+}: AddToDatasetModalProps) {
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null)
   const [creatingNew, setCreatingNew] = useState(false)
   const [newDatasetName, setNewDatasetName] = useState("")
@@ -44,13 +55,13 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
   }, [])
 
   const handleSubmit = useCallback(async () => {
-    if (traceIds.length === 0) return
+    if (selectedCount === 0) return
     setSubmitting(true)
     try {
       if (creatingNew) {
         if (!newDatasetName.trim()) return
         const result = await createDatasetFromTracesMutation({
-          data: { projectId, name: newDatasetName.trim(), traceIds },
+          data: { projectId, name: newDatasetName.trim(), selection },
         })
         toast({
           title: "Dataset created",
@@ -66,7 +77,7 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
       } else {
         if (!selectedDatasetId) return
         const result = await addTracesToDatasetMutation({
-          data: { projectId, datasetId: selectedDatasetId, traceIds },
+          data: { projectId, datasetId: selectedDatasetId, selection },
         })
         toast({
           title: "Traces added to dataset",
@@ -74,6 +85,7 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
         })
         getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
         getQueryClient().invalidateQueries({ queryKey: ["datasetRows", selectedDatasetId] })
+        getQueryClient().invalidateQueries({ queryKey: ["datasetRowCount", selectedDatasetId] })
         onSuccess()
         onOpenChange(false)
       }
@@ -86,17 +98,28 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
     } finally {
       setSubmitting(false)
     }
-  }, [creatingNew, selectedDatasetId, newDatasetName, projectId, traceIds, toast, navigate, onSuccess, onOpenChange])
+  }, [
+    creatingNew,
+    selectedDatasetId,
+    newDatasetName,
+    projectId,
+    selection,
+    selectedCount,
+    toast,
+    navigate,
+    onSuccess,
+    onOpenChange,
+  ])
 
   const canSubmit =
-    traceIds.length > 0 && !submitting && (creatingNew ? newDatasetName.trim().length > 0 : !!selectedDatasetId)
+    selectedCount > 0 && !submitting && (creatingNew ? newDatasetName.trim().length > 0 : !!selectedDatasetId)
 
   return (
     <Modal
       open={open}
       onOpenChange={onOpenChange}
       title="Add traces to dataset"
-      description={`${traceIds.length} trace${traceIds.length === 1 ? "" : "s"} selected`}
+      description={`${selectedCount} trace${selectedCount === 1 ? "" : "s"} selected`}
       dismissible
       footer={
         <div className="flex flex-row items-center gap-2">
@@ -109,6 +132,13 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
       }
     >
       <div className="flex flex-col gap-4">
+        {selectedCount > BULK_ADD_WARNING_THRESHOLD && (
+          <Alert
+            variant="warning"
+            title="Large selection"
+            description={`You are about to add ${selectedCount} traces to a dataset. This may take a moment.`}
+          />
+        )}
         {creatingNew ? (
           <div className="flex flex-col gap-2">
             <Input

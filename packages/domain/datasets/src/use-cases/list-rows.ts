@@ -1,4 +1,4 @@
-import type { DatasetId, DatasetVersionId } from "@domain/shared"
+import type { DatasetId, DatasetRowId, DatasetVersionId, SortDirection } from "@domain/shared"
 import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { DatasetRowRepository } from "../ports/dataset-row-repository.ts"
@@ -7,8 +7,10 @@ export function listRows(args: {
   readonly datasetId: DatasetId
   readonly versionId?: DatasetVersionId
   readonly search?: string
+  readonly sortDirection?: SortDirection
   readonly limit?: number
   readonly offset?: number
+  readonly cursor?: { readonly createdAt: string; readonly rowId: DatasetRowId }
 }) {
   return Effect.gen(function* () {
     const rowRepo = yield* DatasetRowRepository
@@ -26,8 +28,10 @@ export function listRows(args: {
       datasetId: args.datasetId,
       ...(version !== undefined ? { version } : {}),
       ...(args.search ? { search: args.search } : {}),
+      ...(args.sortDirection !== undefined ? { sortDirection: args.sortDirection } : {}),
       ...(args.limit !== undefined ? { limit: args.limit } : {}),
       ...(args.offset !== undefined ? { offset: args.offset } : {}),
+      ...(args.cursor ? { cursor: args.cursor } : {}),
     })
   })
 }

@@ -5,17 +5,31 @@ interface DeleteRowsModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   selectedCount: number
+  isAllSelected: boolean
   onConfirm: () => void
   deleting: boolean
 }
 
-export function DeleteRowsModal({ open, onOpenChange, selectedCount, onConfirm, deleting }: DeleteRowsModalProps) {
+export function DeleteRowsModal({
+  open,
+  onOpenChange,
+  selectedCount,
+  isAllSelected,
+  onConfirm,
+  deleting,
+}: DeleteRowsModalProps) {
+  const title = isAllSelected ? "Delete all rows" : "Delete selected rows"
+  const description = isAllSelected
+    ? "You are about to delete all rows in this dataset."
+    : `You are about to delete ${selectedCount} row${selectedCount === 1 ? "" : "s"}.`
+  const buttonLabel = isAllSelected ? "Delete all rows" : `Delete ${selectedCount} row${selectedCount === 1 ? "" : "s"}`
+
   return (
     <Modal
       open={open}
       onOpenChange={onOpenChange}
-      title="Delete selected rows"
-      description={`You are about to delete ${selectedCount} row${selectedCount === 1 ? "" : "s"}. This will create a new dataset version.`}
+      title={title}
+      description={description}
       dismissible
       footer={
         <div className="flex flex-row items-center gap-2">
@@ -24,9 +38,7 @@ export function DeleteRowsModal({ open, onOpenChange, selectedCount, onConfirm, 
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={deleting}>
             {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            <Text.H5 color="white">
-              Delete {selectedCount} row{selectedCount === 1 ? "" : "s"}
-            </Text.H5>
+            <Text.H5 color="white">{buttonLabel}</Text.H5>
           </Button>
         </div>
       }
