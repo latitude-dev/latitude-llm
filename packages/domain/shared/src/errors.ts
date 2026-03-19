@@ -17,10 +17,11 @@ export const defineError = <Tag extends string>(
   httpStatus: number,
   httpMessage: string,
 ): HttpErrorCtor<Tag> => {
-  const Base = Data.TaggedError(tag)
-  Object.defineProperty(Base.prototype, "httpStatus", { value: httpStatus, writable: false, enumerable: true })
-  Object.defineProperty(Base.prototype, "httpMessage", { value: httpMessage, writable: false, enumerable: true })
-  return Base as unknown as HttpErrorCtor<Tag>
+  // biome-ignore lint/suspicious/noExplicitAny: Data.TaggedError returns a generic constructor that can't be extended without widening
+  return class extends (Data.TaggedError(tag) as any) {
+    readonly httpStatus = httpStatus
+    readonly httpMessage = httpMessage
+  } as unknown as HttpErrorCtor<Tag>
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: mirrors Data.TaggedError's generic constraint for Fields
@@ -29,15 +30,13 @@ export const defineErrorDynamic = <Tag extends string, Fields extends Record<str
   httpStatus: number,
   getHttpMessage: (fields: Fields) => string,
 ): HttpErrorCtor<Tag> => {
-  const Base = Data.TaggedError(tag)
-  Object.defineProperty(Base.prototype, "httpStatus", { value: httpStatus, writable: false, enumerable: true })
-  Object.defineProperty(Base.prototype, "httpMessage", {
-    get(this: Fields) {
-      return getHttpMessage(this)
-    },
-    enumerable: true,
-  })
-  return Base as unknown as HttpErrorCtor<Tag>
+  // biome-ignore lint/suspicious/noExplicitAny: Data.TaggedError returns a generic constructor that can't be extended without widening
+  return class extends (Data.TaggedError(tag) as any) {
+    readonly httpStatus = httpStatus
+    get httpMessage(): string {
+      return getHttpMessage(this as unknown as Fields)
+    }
+  } as unknown as HttpErrorCtor<Tag>
 }
 
 export class RepositoryError extends defineError("RepositoryError", 500, "Internal server error")<{
