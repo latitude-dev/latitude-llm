@@ -62,26 +62,20 @@ export const annotateRouteConfig = defineRouteConfig({
   },
   responses: {
     ...GENERIC_ERROR_RESPONSES,
-    [http.Status.CREATED]: {
-      description: 'Annotation was created successfully',
+    [http.Status.ACCEPTED]: {
+      description: 'Annotation request was accepted for processing',
       content: {
         [http.MediaTypes.JSON]: {
           schema: z.object({
-            uuid: z.string().openapi({ description: 'Annotation UUID' }),
-            score: z.number().openapi({ description: 'Score' }),
-            normalizedScore: z
-              .number()
-              .openapi({ description: 'Normalized score' }),
-            metadata: z
-              .object({
-                reason: z
-                  .string()
-                  .openapi({ description: 'Reason for the score' }),
-              })
-              .optional(),
-            hasPassed: z.boolean().openapi({ description: 'Has passed?' }),
-            error: z.string().optional().openapi({ description: 'Error' }),
-            versionUuid: z.string().openapi({ description: 'Version UUID' }),
+            status: z
+              .literal('accepted')
+              .openapi({ description: 'Processing status' }),
+            message: z
+              .string()
+              .openapi({ description: 'Queueing confirmation message' }),
+            resultUuid: z
+              .string()
+              .openapi({ description: 'Annotation result UUID' }),
           }),
         },
       },
