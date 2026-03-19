@@ -11,7 +11,8 @@ import {
   sendEmail,
   signupExistingAccountMagicLinkTemplate,
 } from "@domain/email"
-import type { QueuePublisher } from "@domain/queue"
+import type { QueuePublisherShape } from "@domain/queue"
+import type { StorageDiskPort } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { createBetterAuth } from "@platform/auth-better"
 import type { RedisClient } from "@platform/cache-redis"
@@ -27,7 +28,7 @@ import {
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
-import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
+import { createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
@@ -35,8 +36,8 @@ let adminPostgresClientInstance: PostgresClient | undefined
 let redisClientInstance: RedisClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
-let storageDiskInstance: StorageDisk | undefined
-let queuePublisher: Promise<QueuePublisher> | undefined
+let storageDiskInstance: StorageDiskPort | undefined
+let queuePublisher: Promise<QueuePublisherShape> | undefined
 
 interface AuthIntentEmailContext {
   readonly type: AuthIntent["type"]
@@ -101,14 +102,14 @@ export const getClickhouseClient = (): ClickHouseClient => {
   return clickhouseClientInstance
 }
 
-export const getStorageDisk = (): StorageDisk => {
+export const getStorageDisk = (): StorageDiskPort => {
   if (!storageDiskInstance) {
     storageDiskInstance = createStorageDisk()
   }
   return storageDiskInstance
 }
 
-export const getQueuePublisher = (): Promise<QueuePublisher> => {
+export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
   if (!queuePublisher) {
     queuePublisher = (async () => {
       const config = Effect.runSync(loadBullMqConfig())

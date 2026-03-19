@@ -1,4 +1,4 @@
-import { Data, type Effect } from "effect"
+import { Data, type Effect, ServiceMap } from "effect"
 
 export type QueueName = "dataset-export" | "domain-events" | "span-ingestion"
 
@@ -12,10 +12,14 @@ export interface MessageHandler {
   readonly handle: (message: QueueMessage) => Effect.Effect<void, unknown>
 }
 
-export interface QueuePublisher {
+export interface QueuePublisherShape {
   readonly publish: (queue: QueueName, message: QueueMessage) => Effect.Effect<void, QueuePublishError>
   readonly close: () => Effect.Effect<void>
 }
+
+export class QueuePublisher extends ServiceMap.Service<QueuePublisher, QueuePublisherShape>()(
+  "@domain/queue/QueuePublisher",
+) {}
 
 export interface QueueConsumer {
   readonly start: () => Effect.Effect<void, QueueSubscribeError>
@@ -28,7 +32,9 @@ export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
   readonly queue: QueueName
 }> {
   readonly httpStatus = 502
-  readonly httpMessage = "Queue publish failed"
+  get httpMessage() {
+    return `Failed to publish message to queue "${this.queue}"`
+  }
 }
 
 export class QueueSubscribeError extends Data.TaggedError("QueueSubscribeError")<{

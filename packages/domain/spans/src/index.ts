@@ -14,3 +14,5 @@ export type {
   TraceRepositoryShape,
 } from "./ports/trace-repository.ts"
 export { TraceRepository } from "./ports/trace-repository.ts"
+export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
+export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"

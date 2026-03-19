@@ -1,8 +1,8 @@
-import type { MessageHandler, QueueConsumer, QueueMessage, QueueName, QueuePublisher } from "@domain/queue"
-import { QueueClientError, QueuePublishError, QueueSubscribeError } from "@domain/queue"
+import type { MessageHandler, QueueConsumer, QueueMessage, QueueName, QueuePublisherShape } from "@domain/queue"
+import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError } from "@domain/queue"
 import { base64Decode, base64Encode } from "@repo/utils"
 import { Queue, Worker } from "bullmq"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { Redis } from "ioredis"
 
 export interface BullMqJobData {
@@ -48,7 +48,7 @@ export interface BullMqRedisConfig {
 
 export const createBullMqQueuePublisher = (
   config: BullMqRedisConfig,
-): Effect.Effect<QueuePublisher, QueueClientError> =>
+): Effect.Effect<QueuePublisherShape, QueueClientError> =>
   Effect.gen(function* () {
     const connection = new Redis({
       host: config.redis.host,
@@ -160,3 +160,5 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
 
     return { start, stop, subscribe }
   })
+
+export const QueuePublisherLive = (publisher: QueuePublisherShape) => Layer.succeed(QueuePublisher, publisher)

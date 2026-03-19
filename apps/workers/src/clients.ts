@@ -1,10 +1,11 @@
+import type { StorageDiskPort } from "@domain/shared"
 import { type ClickHouseClient, type ClickhouseConfig, createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
-import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
+import { createStorageDisk } from "@platform/storage-object"
 
 let pgClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
-let storageDiskInstance: StorageDisk | undefined
+let storageDiskInstance: StorageDiskPort | undefined
 
 export const getPostgresClient = (maxConnections?: number): PostgresClient => {
   if (!pgClientInstance) {
@@ -20,7 +21,7 @@ export const getClickhouseClient = (config?: ClickhouseConfig): ClickHouseClient
   return clickhouseInstance
 }
 
-export const getStorageDisk = (): StorageDisk => {
+export const getStorageDisk = (): StorageDiskPort => {
   if (!storageDiskInstance) {
     storageDiskInstance = createStorageDisk()
   }
