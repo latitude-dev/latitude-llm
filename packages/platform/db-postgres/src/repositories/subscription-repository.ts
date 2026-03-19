@@ -1,6 +1,7 @@
 import {
   NotFoundError,
   OrganizationId,
+  RepositoryError,
   SqlClient,
   type SqlClientShape,
   SubscriptionId,
@@ -26,25 +27,31 @@ const PLAN_MAP: Record<string, Plan> = {
   scale_v1: "ScaleV1",
 }
 
-const toDomainPlan = (plan: string): Plan => {
+const toDomainPlan = (plan: string): Effect.Effect<Plan, RepositoryError> => {
   const mapped = PLAN_MAP[plan.toLowerCase()]
   if (!mapped) {
-    throw new Error(`Unknown subscription plan: "${plan}"`)
+    return Effect.fail(
+      new RepositoryError({ cause: new Error(`Unknown subscription plan: "${plan}"`), operation: "toDomainPlan" }),
+    )
   }
-  return mapped
+  return Effect.succeed(mapped)
 }
 
-const toDomainSubscription = (row: typeof subscription.$inferSelect): Subscription => ({
-  id: SubscriptionId(row.id),
-  organizationId: OrganizationId(row.referenceId),
-  plan: toDomainPlan(row.plan),
-  status: row.status,
-  periodStart: row.periodStart ?? null,
-  trialEndsAt: row.trialEnd ?? null,
-  cancelledAt: row.canceledAt ?? null,
-  createdAt: row.createdAt,
-  updatedAt: row.updatedAt,
-})
+const toDomainSubscription = (row: typeof subscription.$inferSelect) =>
+  Effect.map(
+    toDomainPlan(row.plan),
+    (plan): Subscription => ({
+      id: SubscriptionId(row.id),
+      organizationId: OrganizationId(row.referenceId),
+      plan,
+      status: row.status,
+      periodStart: row.periodStart ?? null,
+      trialEndsAt: row.trialEnd ?? null,
+      cancelledAt: row.canceledAt ?? null,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }),
+  )
 
 // ── Subscription Repository Live Layer ───────────────────────────────────────
 
@@ -55,21 +62,18 @@ export const SubscriptionRepositoryLive = Layer.effect(
 
     return {
       findById: (id: SubscriptionIdType) =>
-        sqlClient
-          .query((db) => db.select().from(subscription).where(eq(subscription.id, id)).limit(1))
-          .pipe(
-            Effect.flatMap((results) => {
-              const [result] = results
-              if (!result) {
-                return Effect.fail(new NotFoundError({ entity: "Subscription", id }))
-              }
-              return Effect.succeed(toDomainSubscription(result))
-            }),
-          ),
+        Effect.gen(function* () {
+          const results = yield* sqlClient.query((db) =>
+            db.select().from(subscription).where(eq(subscription.id, id)).limit(1),
+          )
+          const [result] = results
+          if (!result) return yield* new NotFoundError({ entity: "Subscription", id })
+          return yield* toDomainSubscription(result)
+        }),
 
       findActive: () =>
-        sqlClient
-          .query((db) =>
+        Effect.gen(function* () {
+          const results = yield* sqlClient.query((db) =>
             db
               .select()
               .from(subscription)
@@ -77,20 +81,18 @@ export const SubscriptionRepositoryLive = Layer.effect(
               .orderBy(desc(subscription.periodStart))
               .limit(1),
           )
-          .pipe(
-            Effect.flatMap((results) => {
-              const [result] = results
-              if (!result) {
-                return Effect.fail(new NotFoundError({ entity: "Subscription", id: "active" }))
-              }
-              return Effect.succeed(toDomainSubscription(result))
-            }),
-          ),
+          const [result] = results
+          if (!result) return yield* new NotFoundError({ entity: "Subscription", id: "active" })
+          return yield* toDomainSubscription(result)
+        }),
 
       findAll: () =>
-        sqlClient
-          .query((db) => db.select().from(subscription).orderBy(desc(subscription.periodStart)))
-          .pipe(Effect.map((results) => results.map(toDomainSubscription))),
+        Effect.gen(function* () {
+          const results = yield* sqlClient.query((db) =>
+            db.select().from(subscription).orderBy(desc(subscription.periodStart)),
+          )
+          return yield* Effect.all(results.map(toDomainSubscription))
+        }),
 
       save: (_sub: Subscription) =>
         Effect.logWarning(
