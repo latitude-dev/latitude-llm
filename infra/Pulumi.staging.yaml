@@ -1,0 +1,7 @@
+config:
+  latitude-infra:imageTag: latest
+  latitude-infra:hostedZoneId: Z04918046RTZRA6UX0HY
+  latitude-infra:domainName: latitude.so
+  latitude-infra:githubOwner: latitude-dev
+  latitude-infra:githubRepo: latitude-llm
+encryptionsalt: v1:MG/gGDH83aQ=:v1:i0G9DLX0tuo8VYas:zijEeWEDExlnRGdKt84rnDnD1wmscQ==

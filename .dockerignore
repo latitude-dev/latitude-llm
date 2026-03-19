@@ -9,8 +9,8 @@
 **/coverage/
 **/.turbo/
 **/.next/
-docker/
 charts/
+infra/
 *.md
 npm-debug.log
 .env*

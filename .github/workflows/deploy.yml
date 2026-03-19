@@ -1,0 +1,406 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
+  typecheck:
+    uses: ./.github/workflows/typecheck.yml
+
+  test:
+    uses: ./.github/workflows/test.yml
+
+  # ── Staging ──────────────────────────────────────────────
+
+  staging-build:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    uses: ./.github/workflows/build-images.yml
+    with:
+      environment: staging
+      ref: ${{ github.sha }}
+      push: true
+    secrets: inherit
+
+  staging-migrate:
+    needs: staging-build
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: Run migrations
+        env:
+          CLUSTER: latitude-staging-cluster
+          TASK_DEF: latitude-staging-migrations
+          LOG_GROUP: /ecs/latitude-staging/migrations
+        run: |
+          SERVICE_ARN=$(aws ecs list-services \
+            --cluster "${CLUSTER}" \
+            --query "serviceArns[?contains(@, 'web')]" \
+            --output text)
+
+          NETWORK=$(aws ecs describe-services \
+            --cluster "${CLUSTER}" \
+            --services "${SERVICE_ARN}" \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration' \
+            --output json)
+
+          SUBNETS=$(echo "$NETWORK" | jq -r '.subnets | join(",")')
+          SECURITY_GROUP=$(echo "$NETWORK" | jq -r '.securityGroups[0]')
+          PUBLIC_IP=$(echo "$NETWORK" | jq -r '.assignPublicIp')
+
+          TASK=$(aws ecs run-task \
+            --cluster "${CLUSTER}" \
+            --task-definition "${TASK_DEF}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${SUBNETS}],securityGroups=[${SECURITY_GROUP}],assignPublicIp=${PUBLIC_IP}}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          TASK_ID=$(basename "${TASK}")
+
+          echo "Started migration task: ${TASK_ID}"
+          echo "Waiting for task to start..."
+
+          aws ecs wait tasks-running --cluster "${CLUSTER}" --tasks "${TASK}"
+
+          echo "Task is running, streaming logs..."
+
+          LAST_EVENT_TIME=0
+
+          while true; do
+            STATUS=$(aws ecs describe-tasks \
+              --cluster "${CLUSTER}" \
+              --tasks "${TASK}" \
+              --query 'tasks[0].lastStatus' \
+              --output text)
+
+            LOG_STREAM=$(aws logs describe-log-streams \
+              --log-group-name "${LOG_GROUP}" \
+              --log-stream-name-prefix "migrations/migrations/${TASK_ID}" \
+              --query 'logStreams[0].logStreamName' \
+              --output text 2>/dev/null || echo "")
+
+            if [ -n "${LOG_STREAM}" ] && [ "${LOG_STREAM}" != "None" ]; then
+              EVENTS=$(aws logs get-log-events \
+                --log-group-name "${LOG_GROUP}" \
+                --log-stream-name "${LOG_STREAM}" \
+                --start-time "${LAST_EVENT_TIME}" \
+                --query 'events' \
+                --output json)
+
+              echo "${EVENTS}" | jq -r '.[] | .message' 2>/dev/null
+
+              NEWEST_TIME=$(echo "${EVENTS}" | jq -r '.[-1].timestamp // empty' 2>/dev/null)
+              if [ -n "${NEWEST_TIME}" ]; then
+                LAST_EVENT_TIME=$((NEWEST_TIME + 1))
+              fi
+            fi
+
+            if [ "${STATUS}" = "STOPPED" ]; then
+              echo "Task stopped, fetching final logs..."
+
+              if [ -n "${LOG_STREAM}" ] && [ "${LOG_STREAM}" != "None" ]; then
+                EVENTS=$(aws logs get-log-events \
+                  --log-group-name "${LOG_GROUP}" \
+                  --log-stream-name "${LOG_STREAM}" \
+                  --start-time "${LAST_EVENT_TIME}" \
+                  --query 'events' \
+                  --output json)
+                echo "${EVENTS}" | jq -r '.[] | .message' 2>/dev/null
+              fi
+              break
+            fi
+
+            sleep 2
+          done
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster "${CLUSTER}" \
+            --tasks "${TASK}" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migrations failed with exit code ${EXIT_CODE}"
+            exit 1
+          fi
+          echo "Migrations completed successfully"
+
+  staging-deploy:
+    needs: [staging-migrate, staging-build]
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: Deploy services
+        env:
+          CLUSTER: latitude-staging-cluster
+          ENV_NAME: staging
+          IMAGE_TAG: ${{ needs.staging-build.outputs.image_tag }}
+          REGISTRY: ${{ needs.staging-build.outputs.registry }}
+        run: |
+          for SERVICE in web api ingest workers; do
+            echo "Deploying ${SERVICE}..."
+            FAMILY="latitude-${ENV_NAME}-${SERVICE}"
+            IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
+            SERVICE_ARN=$(aws ecs list-services \
+              --cluster "${CLUSTER}" \
+              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+              --output text)
+            aws ecs register-task-definition \
+              --family "${FAMILY}" \
+              --cli-input-json "$(aws ecs describe-task-definition \
+                --task-definition "${FAMILY}" \
+                --query 'taskDefinition' \
+                --output json | jq \
+                  --arg image "${IMAGE}" '
+                  .containerDefinitions[0].image = $image |
+                  del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+                ')"
+            aws ecs update-service \
+              --cluster "${CLUSTER}" \
+              --service "${SERVICE_ARN}" \
+              --task-definition "${FAMILY}"
+            echo "Deployed ${SERVICE}"
+          done
+
+      - name: Wait for services to stabilize
+        env:
+          CLUSTER: latitude-staging-cluster
+          ENV_NAME: staging
+        run: |
+          for SERVICE in web api ingest workers; do
+            echo "Waiting for ${SERVICE} to stabilize..."
+            SERVICE_ARN=$(aws ecs list-services \
+              --cluster "${CLUSTER}" \
+              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+              --output text)
+            aws ecs wait services-stable \
+              --cluster "${CLUSTER}" \
+              --services "${SERVICE_ARN}"
+          done
+
+  # ── Production ───────────────────────────────────────────
+
+  production-build:
+    needs: [check, typecheck, test]
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) || (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
+    uses: ./.github/workflows/build-images.yml
+    with:
+      environment: production
+      ref: ${{ github.sha }}
+      push: true
+    secrets: inherit
+
+  production-migrate:
+    needs: production-build
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: Run migrations
+        env:
+          CLUSTER: latitude-production-cluster
+          TASK_DEF: latitude-production-migrations
+          LOG_GROUP: /ecs/latitude-production/migrations
+        run: |
+          SERVICE_ARN=$(aws ecs list-services \
+            --cluster "${CLUSTER}" \
+            --query "serviceArns[?contains(@, 'web')]" \
+            --output text)
+
+          NETWORK=$(aws ecs describe-services \
+            --cluster "${CLUSTER}" \
+            --services "${SERVICE_ARN}" \
+            --query 'services[0].networkConfiguration.awsvpcConfiguration' \
+            --output json)
+
+          SUBNETS=$(echo "$NETWORK" | jq -r '.subnets | join(",")')
+          SECURITY_GROUP=$(echo "$NETWORK" | jq -r '.securityGroups[0]')
+          PUBLIC_IP=$(echo "$NETWORK" | jq -r '.assignPublicIp')
+
+          TASK=$(aws ecs run-task \
+            --cluster "${CLUSTER}" \
+            --task-definition "${TASK_DEF}" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${SUBNETS}],securityGroups=[${SECURITY_GROUP}],assignPublicIp=${PUBLIC_IP}}" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          TASK_ID=$(basename "${TASK}")
+
+          echo "Started migration task: ${TASK_ID}"
+          echo "Waiting for task to start..."
+
+          aws ecs wait tasks-running --cluster "${CLUSTER}" --tasks "${TASK}"
+
+          echo "Task is running, streaming logs..."
+
+          LAST_EVENT_TIME=0
+
+          while true; do
+            STATUS=$(aws ecs describe-tasks \
+              --cluster "${CLUSTER}" \
+              --tasks "${TASK}" \
+              --query 'tasks[0].lastStatus' \
+              --output text)
+
+            LOG_STREAM=$(aws logs describe-log-streams \
+              --log-group-name "${LOG_GROUP}" \
+              --log-stream-name-prefix "migrations/migrations/${TASK_ID}" \
+              --query 'logStreams[0].logStreamName' \
+              --output text 2>/dev/null || echo "")
+
+            if [ -n "${LOG_STREAM}" ] && [ "${LOG_STREAM}" != "None" ]; then
+              EVENTS=$(aws logs get-log-events \
+                --log-group-name "${LOG_GROUP}" \
+                --log-stream-name "${LOG_STREAM}" \
+                --start-time "${LAST_EVENT_TIME}" \
+                --query 'events' \
+                --output json)
+
+              echo "${EVENTS}" | jq -r '.[] | .message' 2>/dev/null
+
+              NEWEST_TIME=$(echo "${EVENTS}" | jq -r '.[-1].timestamp // empty' 2>/dev/null)
+              if [ -n "${NEWEST_TIME}" ]; then
+                LAST_EVENT_TIME=$((NEWEST_TIME + 1))
+              fi
+            fi
+
+            if [ "${STATUS}" = "STOPPED" ]; then
+              echo "Task stopped, fetching final logs..."
+
+              if [ -n "${LOG_STREAM}" ] && [ "${LOG_STREAM}" != "None" ]; then
+                EVENTS=$(aws logs get-log-events \
+                  --log-group-name "${LOG_GROUP}" \
+                  --log-stream-name "${LOG_STREAM}" \
+                  --start-time "${LAST_EVENT_TIME}" \
+                  --query 'events' \
+                  --output json)
+                echo "${EVENTS}" | jq -r '.[] | .message' 2>/dev/null
+              fi
+              break
+            fi
+
+            sleep 2
+          done
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster "${CLUSTER}" \
+            --tasks "${TASK}" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migrations failed with exit code ${EXIT_CODE}"
+            exit 1
+          fi
+          echo "Migrations completed successfully"
+
+  production-deploy:
+    needs: [production-migrate, production-build]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: Deploy services
+        env:
+          CLUSTER: latitude-production-cluster
+          ENV_NAME: production
+          IMAGE_TAG: ${{ needs.production-build.outputs.image_tag }}
+          REGISTRY: ${{ needs.production-build.outputs.registry }}
+        run: |
+          for SERVICE in web api ingest workers; do
+            echo "Deploying ${SERVICE}..."
+            FAMILY="latitude-${ENV_NAME}-${SERVICE}"
+            IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
+            SERVICE_ARN=$(aws ecs list-services \
+              --cluster "${CLUSTER}" \
+              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+              --output text)
+            aws ecs register-task-definition \
+              --family "${FAMILY}" \
+              --cli-input-json "$(aws ecs describe-task-definition \
+                --task-definition "${FAMILY}" \
+                --query 'taskDefinition' \
+                --output json | jq \
+                  --arg image "${IMAGE}" '
+                  .containerDefinitions[0].image = $image |
+                  del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+                ')"
+            aws ecs update-service \
+              --cluster "${CLUSTER}" \
+              --service "${SERVICE_ARN}" \
+              --task-definition "${FAMILY}"
+            echo "Deployed ${SERVICE}"
+          done
+
+      - name: Wait for services to stabilize
+        env:
+          CLUSTER: latitude-production-cluster
+          ENV_NAME: production
+        run: |
+          for SERVICE in web api ingest workers; do
+            echo "Waiting for ${SERVICE} to stabilize..."
+            SERVICE_ARN=$(aws ecs list-services \
+              --cluster "${CLUSTER}" \
+              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+              --output text)
+            aws ecs wait services-stable \
+              --cluster "${CLUSTER}" \
+              --services "${SERVICE_ARN}"
+          done

@@ -1,33 +1,22 @@
 -- +goose NO TRANSACTION
 -- +goose Up
 
--- Add user_id and metadata columns to spans
+-- Add user_id and metadata columns to spans (single ALTER to avoid replication lag)
 ALTER TABLE spans
-    ADD COLUMN IF NOT EXISTS user_id String DEFAULT '' CODEC(ZSTD(1)) AFTER session_id;
-
-ALTER TABLE spans
-    ADD COLUMN IF NOT EXISTS metadata Map(LowCardinality(String), String) DEFAULT map() CODEC(ZSTD(1)) AFTER tags;
-
-ALTER TABLE spans
+    ADD COLUMN IF NOT EXISTS user_id String DEFAULT '' CODEC(ZSTD(1)) AFTER session_id,
+    ADD COLUMN IF NOT EXISTS metadata Map(LowCardinality(String), String) DEFAULT map() CODEC(ZSTD(1)) AFTER tags,
     ADD INDEX IF NOT EXISTS idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 2;
 
 -- Recreate traces_mv with new columns.
 -- Drop the old view first, then alter the destination table, then recreate.
 DROP VIEW IF EXISTS traces_mv;
 
+-- Add columns to traces in single ALTER (avoid replication lag)
 ALTER TABLE traces
-    ADD COLUMN IF NOT EXISTS session_id AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER cost_total_microcents;
-
-ALTER TABLE traces
-    ADD COLUMN IF NOT EXISTS user_id AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER session_id;
-
-ALTER TABLE traces
-    ADD COLUMN IF NOT EXISTS metadata SimpleAggregateFunction(maxMap, Map(String, String)) CODEC(ZSTD(1)) AFTER tags;
-
-ALTER TABLE traces
-    ADD COLUMN IF NOT EXISTS last_input_messages AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)) AFTER input_messages;
-
-ALTER TABLE traces
+    ADD COLUMN IF NOT EXISTS session_id AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER cost_total_microcents,
+    ADD COLUMN IF NOT EXISTS user_id AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)) AFTER session_id,
+    ADD COLUMN IF NOT EXISTS metadata SimpleAggregateFunction(maxMap, Map(String, String)) CODEC(ZSTD(1)) AFTER tags,
+    ADD COLUMN IF NOT EXISTS last_input_messages AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)) AFTER input_messages,
     ADD COLUMN IF NOT EXISTS system_instructions AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(3)) AFTER output_messages;
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS traces_mv TO traces

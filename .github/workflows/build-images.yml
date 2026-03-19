@@ -11,6 +11,11 @@ on:
         description: "Git ref to build from"
         required: true
         type: string
+      push:
+        description: "Push images to registry"
+        required: false
+        type: boolean
+        default: true
       aws-region:
         description: "AWS region"
         required: false
@@ -20,6 +25,9 @@ on:
       image_tag:
         description: "Image tag that was pushed (sha-<commit>)"
         value: ${{ jobs.metadata.outputs.image_tag }}
+      registry:
+        description: "Container registry URL"
+        value: ${{ jobs.metadata.outputs.registry }}
 
 permissions:
   contents: read
@@ -29,7 +37,6 @@ jobs:
   metadata:
     name: Compute image metadata
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       registry: ${{ steps.meta.outputs.registry }}
@@ -56,8 +63,8 @@ jobs:
   build:
     name: Build and push ${{ matrix.service }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
     needs: metadata
+    environment: ${{ inputs.environment }}
     strategy:
       fail-fast: false
       matrix:
@@ -75,6 +82,7 @@ jobs:
           node-version: 25
 
       - name: Login to GHCR
+        if: ${{ inputs.push }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -89,10 +97,14 @@ jobs:
         with:
           context: .
           target: ${{ matrix.service }}
-          push: true
+          push: ${{ inputs.push }}
           tags: |
             ${{ needs.metadata.outputs.registry }}/latitude-${{ inputs.environment }}-${{ matrix.service }}:${{ needs.metadata.outputs.image_tag }}
             ${{ needs.metadata.outputs.registry }}/latitude-${{ inputs.environment }}-${{ matrix.service }}:latest
-          build-args: ${{ matrix.service == 'web' && format('VITE_LAT_API_URL={0}\nVITE_LAT_WEB_URL={1}', vars.VITE_LAT_API_URL, vars.VITE_LAT_WEB_URL) || '' }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          build-args: |
+            VITE_LAT_API_URL=${{ vars.VITE_LAT_API_URL }}
+            VITE_LAT_WEB_URL=${{ vars.VITE_LAT_WEB_URL }}
+          cache-from: |
+            type=registry,ref=${{ needs.metadata.outputs.registry }}/latitude-${{ inputs.environment }}-${{ matrix.service }}:latest
+            type=gha,scope=${{ inputs.environment }}-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.environment }}-${{ matrix.service }}

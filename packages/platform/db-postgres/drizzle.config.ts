@@ -12,19 +12,14 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath, quiet: true })
 }
 
-const fallbackDatabaseUrl = Effect.runSync(
-  parseEnv("LAT_DATABASE_URL", "string", "postgresql://latitude:latitude@localhost:5432/latitude_development"),
-)
-const url = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string", fallbackDatabaseUrl))
+const url = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
 
 export default defineConfig({
   dialect: "postgresql",
   schema: [
-    // Better Auth tables
     "./src/schema/better-auth.ts",
     "./src/schema/auth-intent.ts",
     "./src/schema/subscription.ts",
-    // Domain tables
     "./src/schema/datasets.ts",
     "./src/schema/datasetVersions.ts",
     "./src/schema/projects.ts",
@@ -33,7 +28,5 @@ export default defineConfig({
     "./src/schema/outbox-events.ts",
   ],
   out: "./drizzle",
-  dbCredentials: {
-    url,
-  },
+  dbCredentials: { url },
 })
