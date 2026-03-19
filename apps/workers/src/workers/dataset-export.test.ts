@@ -4,10 +4,10 @@ import type { MessageHandler, QueueConsumer, QueueMessage, QueueName } from "@do
 import { DatasetId, DatasetRowId, OrganizationId } from "@domain/shared"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { postgresSchema } from "@platform/db-postgres"
-import type { StorageDisk } from "@platform/storage-object"
+import { FakeStorageDisk } from "@platform/storage-object"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
-import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
 import { createDatasetExportWorker } from "./dataset-export.ts"
 
 class TestQueueConsumer implements QueueConsumer {
@@ -32,42 +32,6 @@ class TestQueueConsumer implements QueueConsumer {
   }
 }
 
-class FakeStorageDisk {
-  readonly files = new Map<string, string>()
-  readonly signedUrlCalls: Array<{ key: string; expiresIn?: number }> = []
-
-  async put(key: string, contents: string | Uint8Array): Promise<void> {
-    this.files.set(key, typeof contents === "string" ? contents : Buffer.from(contents).toString("utf-8"))
-  }
-
-  async putStream(key: string, contents: NodeJS.ReadableStream): Promise<void> {
-    const chunks: string[] = []
-    for await (const chunk of contents) {
-      chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"))
-    }
-    this.files.set(key, chunks.join(""))
-  }
-
-  async get(key: string): Promise<string> {
-    const value = this.files.get(key)
-    if (!value) throw new Error(`Missing file for key ${key}`)
-    return value
-  }
-
-  async delete(key: string): Promise<void> {
-    this.files.delete(key)
-  }
-
-  async getSignedUrl(key: string, options?: { expiresIn?: number }): Promise<string> {
-    if (options?.expiresIn === undefined) {
-      this.signedUrlCalls.push({ key })
-    } else {
-      this.signedUrlCalls.push({ key, expiresIn: options.expiresIn })
-    }
-    return `https://download.test/${key}`
-  }
-}
-
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
 
@@ -85,10 +49,6 @@ describe("createDatasetExportWorker", () => {
         return yield* DatasetRowRepository
       }).pipe(withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID)),
     )
-  })
-
-  beforeEach(async () => {
-    await pg.db.delete(postgresSchema.datasets)
   })
 
   it("exports dataset rows to CSV, signs URL, and emails recipient", async () => {
@@ -128,7 +88,7 @@ describe("createDatasetExportWorker", () => {
     createDatasetExportWorker(consumer, {
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
-      disk: disk as unknown as StorageDisk,
+      disk,
       emailSender,
       logger: { info: () => undefined, error: () => undefined },
     })
@@ -150,7 +110,8 @@ describe("createDatasetExportWorker", () => {
     expect(disk.files.size).toBe(1)
     const exportedFile = Array.from(disk.files.entries())[0]
     if (!exportedFile) throw new Error("Expected one exported CSV file")
-    const [fileKey, csv] = exportedFile
+    const [fileKey, csvBytes] = exportedFile
+    const csv = new TextDecoder().decode(csvBytes)
 
     expect(fileKey).toContain("dataset-exports")
     expect(fileKey).toContain(DATASET_ID)
@@ -181,7 +142,7 @@ describe("createDatasetExportWorker", () => {
     createDatasetExportWorker(consumer, {
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
-      disk: disk as unknown as StorageDisk,
+      disk,
       emailSender,
       logger: { info: () => undefined, error: () => undefined },
     })

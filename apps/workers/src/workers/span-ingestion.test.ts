@@ -1,6 +1,6 @@
 import type { MessageHandler, QueueConsumer, QueueMessage, QueueName } from "@domain/queue"
 import { queryClickhouse } from "@platform/db-clickhouse"
-import type { StorageDisk } from "@platform/storage-object"
+import { FakeStorageDisk } from "@platform/storage-object"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -25,26 +25,6 @@ class TestQueueConsumer implements QueueConsumer {
     const handler = this.handlers.get(queue)
     if (!handler) throw new Error(`No handler registered for queue ${queue}`)
     await Effect.runPromise(handler.handle(message))
-  }
-}
-
-class FakeStorageDisk {
-  private readonly files = new Map<string, Uint8Array>()
-
-  putBytes(key: string, value: Uint8Array): void {
-    this.files.set(key, value)
-  }
-
-  async getBytes(key: string): Promise<Uint8Array> {
-    const value = this.files.get(key)
-    if (!value) {
-      throw new Error(`Missing storage key ${key}`)
-    }
-    return value
-  }
-
-  async delete(key: string): Promise<void> {
-    this.files.delete(key)
   }
 }
 
@@ -86,7 +66,7 @@ describe("createSpanIngestionWorker", () => {
 
     createSpanIngestionWorker(consumer, {
       clickhouseClient: ch.client,
-      disk: disk as unknown as StorageDisk,
+      disk,
       logger: { error: () => undefined },
     })
 
@@ -135,7 +115,7 @@ describe("createSpanIngestionWorker", () => {
 
     createSpanIngestionWorker(consumer, {
       clickhouseClient: ch.client,
-      disk: disk as unknown as StorageDisk,
+      disk,
       logger: { error: () => undefined },
     })
 

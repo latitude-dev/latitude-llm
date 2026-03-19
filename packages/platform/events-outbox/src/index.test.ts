@@ -1,4 +1,4 @@
-import type { EventEnvelope, EventsPublisher } from "@domain/events"
+import type { EventEnvelope } from "@domain/events"
 import { outboxEvents } from "@platform/db-postgres"
 import { setupTestPostgres } from "@platform/testkit"
 import { asc, eq, inArray } from "drizzle-orm"
@@ -89,8 +89,9 @@ describe("createPollingOutboxConsumer", () => {
       const publishedEventIds: string[] = []
       const publisher = {
         publish: (envelope: EventEnvelope) => {
-          publishedEventIds.push(envelope.id)
-          return Promise.resolve()
+          return Effect.sync(() => {
+            publishedEventIds.push(envelope.id)
+          })
         },
       }
 
@@ -120,7 +121,7 @@ describe("createPollingOutboxConsumer", () => {
             pollIntervalMs: 10,
             batchSize: 100,
           },
-          publisher as unknown as EventsPublisher,
+          publisher,
         ),
       )
 
@@ -152,10 +153,11 @@ describe("createPollingOutboxConsumer", () => {
       const publisher = {
         publish: (envelope: EventEnvelope) => {
           if (envelope.id === failedEventId) {
-            return Promise.reject(new Error("publish failed"))
+            return Effect.fail(new Error("publish failed"))
           }
-          publishedEventIds.push(envelope.id)
-          return Promise.resolve()
+          return Effect.sync(() => {
+            publishedEventIds.push(envelope.id)
+          })
         },
       }
 
@@ -185,7 +187,7 @@ describe("createPollingOutboxConsumer", () => {
             pollIntervalMs: 10,
             batchSize: 100,
           },
-          publisher as unknown as EventsPublisher,
+          publisher,
         ),
       )
 
