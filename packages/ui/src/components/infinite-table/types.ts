@@ -36,6 +36,7 @@ export interface InfiniteTableProps<T> {
   columns: InfiniteTableColumn<T>[]
   getRowKey: (row: T) => string
   onRowClick?: (row: T) => void
+  activeRowKey?: string
   selection?: InfiniteTableSelection
   infiniteScroll?: InfiniteTableInfiniteScroll
   sorting?: InfiniteTableSorting

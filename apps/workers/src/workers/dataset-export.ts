@@ -1,12 +1,12 @@
 import { csvExportHeader, DatasetRepository, DatasetRowRepository, rowsToCsvFragment } from "@domain/datasets"
 import { datasetExportTemplate, type EmailSender, type RenderedEmail, sendEmail } from "@domain/email"
 import type { MessageHandler, QueueConsumer, QueueMessage } from "@domain/queue"
-import { DatasetId, OrganizationId, putInDisk } from "@domain/shared"
+import { DatasetId, OrganizationId, putInDisk, type StorageDiskPort } from "@domain/shared"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { DatasetRepositoryLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
-import { createStorageDisk, type StorageDisk } from "@platform/storage-object"
+import { createStorageDisk } from "@platform/storage-object"
 import { createLogger } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
@@ -24,7 +24,7 @@ const SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
 interface DatasetExportWorkerDependencies {
   readonly postgresClient?: PostgresClient
   readonly clickhouseClient?: ClickHouseClient
-  readonly disk?: StorageDisk
+  readonly disk?: StorageDiskPort
   readonly emailSender?: EmailSender
   readonly logger?: Pick<typeof logger, "info" | "error">
 }

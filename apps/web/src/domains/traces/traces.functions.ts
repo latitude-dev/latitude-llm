@@ -1,5 +1,5 @@
-import { OrganizationId, ProjectId } from "@domain/shared"
-import type { Trace } from "@domain/spans"
+import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import type { Trace, TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
@@ -69,6 +69,21 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
   rootSpanName: trace.rootSpanName,
 })
 
+export interface TraceDetailRecord extends TraceRecord {
+  readonly systemInstructions: readonly object[]
+  readonly inputMessages: readonly object[]
+  readonly outputMessages: readonly object[]
+  readonly allMessages: readonly object[]
+}
+
+const serializeTraceDetail = (trace: TraceDetail): TraceDetailRecord => ({
+  ...serializeTrace(trace),
+  systemInstructions: trace.systemInstructions as readonly object[],
+  inputMessages: trace.inputMessages as readonly object[],
+  outputMessages: trace.outputMessages as readonly object[],
+  allMessages: trace.allMessages as readonly object[],
+})
+
 const traceListCursorSchema = z.object({
   sortValue: z.string(),
   traceId: z.string(),
@@ -135,6 +150,26 @@ export const countTracesByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
         })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
+export const getTraceDetail = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .handler(async ({ data }): Promise<TraceDetailRecord | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        const detail = yield* repo.findByTraceId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          traceId: TraceId(data.traceId),
+        })
+        return detail ? serializeTraceDetail(detail) : null
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )
   })

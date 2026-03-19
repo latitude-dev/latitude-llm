@@ -1,7 +1,13 @@
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { countTracesByProject, listTracesByProject, type TraceRecord } from "./traces.functions.ts"
+import {
+  countTracesByProject,
+  getTraceDetail,
+  listTracesByProject,
+  type TraceDetailRecord,
+  type TraceRecord,
+} from "./traces.functions.ts"
 
 const BATCH_SIZE = 50
 
@@ -20,8 +26,8 @@ export function useTracesInfiniteScroll({
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey: ["traces", projectId, sorting],
-    queryFn: ({ pageParam }) =>
-      listTracesByProject({
+    queryFn: async ({ pageParam }) => {
+      const result = await listTracesByProject({
         data: {
           projectId,
           limit: BATCH_SIZE,
@@ -29,9 +35,11 @@ export function useTracesInfiniteScroll({
           sortBy: sorting.column,
           sortDirection: sorting.direction,
         },
-      }),
+      })
+      return result ?? { traces: [], hasMore: false }
+    },
     initialPageParam: undefined as { sortValue: string; traceId: string } | undefined,
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    getNextPageParam: (lastPage) => lastPage?.nextCursor,
   })
 
   const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
@@ -59,4 +67,11 @@ export function useTracesCount({ projectId }: { readonly projectId: string }) {
   })
 
   return { totalCount, isLoading }
+}
+
+export function useTraceDetail({ projectId, traceId }: { readonly projectId: string; readonly traceId: string }) {
+  return useQuery<TraceDetailRecord | null>({
+    queryKey: ["traceDetail", projectId, traceId],
+    queryFn: () => getTraceDetail({ data: { projectId, traceId } }),
+  })
 }
