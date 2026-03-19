@@ -2,6 +2,7 @@ import app from '$/routes/app'
 import { Providers, Span } from '@latitude-data/constants'
 import {
   EvaluationType,
+  HEAD_COMMIT,
   EvaluationV2,
   HumanEvaluationMetric,
   LogSources,
@@ -18,6 +19,7 @@ import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { Result } from '@latitude-data/core/lib/Result'
 import { ApiKey } from '@latitude-data/core/schema/models/types/ApiKey'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { UnprocessableEntityError } from '@latitude-data/constants/errors'
 
 // Mock SpanMetadatasRepository
 const mockGet = vi.fn().mockResolvedValue(Result.ok(null))
@@ -34,17 +36,17 @@ vi.mock('@latitude-data/core/repositories', async () => {
   }
 })
 
-const { mockAnnotateEvaluationV2 } = vi.hoisted(() => ({
-  mockAnnotateEvaluationV2: vi.fn(),
+const { mockEnqueueAnnotateEvaluationV2 } = vi.hoisted(() => ({
+  mockEnqueueAnnotateEvaluationV2: vi.fn(),
 }))
-vi.mock('@latitude-data/core/services/evaluationsV2/annotate', () => ({
-  annotateEvaluationV2: mockAnnotateEvaluationV2,
+vi.mock('@latitude-data/core/services/evaluationsV2/enqueueAnnotation', () => ({
+  enqueueAnnotateEvaluationV2: mockEnqueueAnnotateEvaluationV2,
 }))
 
 describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/annotate', () => {
   beforeEach(() => {
-    mockAnnotateEvaluationV2.mockClear()
-    mockAnnotateEvaluationV2.mockResolvedValue(Result.ok({}))
+    mockEnqueueAnnotateEvaluationV2.mockClear()
+    mockEnqueueAnnotateEvaluationV2.mockResolvedValue(Result.nil())
   })
 
   // Default request body for annotation
@@ -306,11 +308,21 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
         message: 'Annotation queued for asynchronous processing',
         resultUuid: expect.any(String),
       })
-      expect(mockAnnotateEvaluationV2).toHaveBeenCalled()
+      expect(mockEnqueueAnnotateEvaluationV2).toHaveBeenCalledWith({
+        workspaceId: expect.any(Number),
+        conversationUuid: span.documentLogUuid!,
+        evaluationUuid: evaluation.uuid,
+        score: DEFAULT_REQUEST_BODY.score,
+        metadata: DEFAULT_REQUEST_BODY.metadata,
+        context: undefined,
+        versionUuid: HEAD_COMMIT,
+        resultUuid: data.resultUuid,
+      })
     })
 
-    it('fails with non-existent evaluation version', async () => {
+    it('accepts request with non-existent evaluation version for background processing', async () => {
       const { span, evaluation, apiKey } = await createTestSetup()
+      const nonExistentVersionUuid = generateUUIDIdentifier()
 
       // Make the request with non-existent version UUID
       const res = await makeAnnotateRequest({
@@ -319,7 +331,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
         apiKey,
         requestBody: {
           score: 5,
-          versionUuid: generateUUIDIdentifier(),
+          versionUuid: nonExistentVersionUuid,
           metadata: {
             reason: 'Test reason',
           },
@@ -327,7 +339,19 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
       })
 
       // Assert response
-      expect(res.status).toBe(404)
+      expect(res.status).toBe(202)
+      const data = await res.json()
+      expect(data).toEqual({
+        status: 'accepted',
+        message: 'Annotation queued for asynchronous processing',
+        resultUuid: expect.any(String),
+      })
+      expect(mockEnqueueAnnotateEvaluationV2).toHaveBeenCalledWith(
+        expect.objectContaining({
+          versionUuid: nonExistentVersionUuid,
+          resultUuid: data.resultUuid,
+        }),
+      )
     })
 
     it('succeeds with HEAD_COMMIT when version not specified', async () => {
@@ -353,9 +377,10 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
         message: 'Annotation queued for asynchronous processing',
         resultUuid: expect.any(String),
       })
-      expect(mockAnnotateEvaluationV2).toHaveBeenCalledWith(
+      expect(mockEnqueueAnnotateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
-          commit: expect.objectContaining({ uuid: commit.uuid }),
+          versionUuid: HEAD_COMMIT,
+          resultUuid: data.resultUuid,
         }),
       )
     })
@@ -395,15 +420,16 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
         message: 'Annotation queued for asynchronous processing',
         resultUuid: expect.any(String),
       })
-      expect(mockAnnotateEvaluationV2).toHaveBeenCalledWith(
+      expect(mockEnqueueAnnotateEvaluationV2).toHaveBeenCalledWith(
         expect.objectContaining({
-          resultScore: customRequestBody.score,
-          resultMetadata: expect.objectContaining(customRequestBody.metadata),
+          score: customRequestBody.score,
+          metadata: expect.objectContaining(customRequestBody.metadata),
+          resultUuid: data.resultUuid,
         }),
       )
     })
 
-    it('returns immediately without waiting for annotation processing', async () => {
+    it('returns an error when queue enqueueing fails', async () => {
       const { span, evaluation, apiKey, documents, commit } =
         await createTestSetup()
 
@@ -414,17 +440,15 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
         commitUuid: commit.uuid,
       })
 
-      mockAnnotateEvaluationV2.mockReturnValueOnce(new Promise(() => {}))
+      mockEnqueueAnnotateEvaluationV2.mockResolvedValueOnce(
+        Result.error(
+          new UnprocessableEntityError('Failed to enqueue annotation job'),
+        ),
+      )
 
       const res = await makeAnnotateRequest({ span, evaluation, apiKey })
 
-      expect(res.status).toBe(202)
-      const data = await res.json()
-      expect(data).toEqual({
-        status: 'accepted',
-        message: 'Annotation queued for asynchronous processing',
-        resultUuid: expect.any(String),
-      })
+      expect(res.status).toBe(422)
     })
   })
 })
