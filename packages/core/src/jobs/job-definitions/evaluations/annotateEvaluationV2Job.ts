@@ -60,15 +60,19 @@ export async function annotateEvaluationV2Job(
 
   try {
     const workspace = await unsafelyFindWorkspace(workspaceId)
-    if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
+    if (!workspace)
+      throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
     const evaluationsRepo = new EvaluationsV2Repository(workspace.id)
     const spansRepo = new SpansRepository(workspace.id)
     const spanMetadataRepo = new SpanMetadatasRepository(workspace.id)
 
-    const span = await spansRepo.findLastMainSpanByDocumentLogUuid(conversationUuid)
+    const span =
+      await spansRepo.findLastMainSpanByDocumentLogUuid(conversationUuid)
     if (!span) {
-      throw new NotFoundError(`Could not find span with uuid ${conversationUuid}`)
+      throw new NotFoundError(
+        `Could not find span with uuid ${conversationUuid}`,
+      )
     }
 
     const metadata = (await spanMetadataRepo
