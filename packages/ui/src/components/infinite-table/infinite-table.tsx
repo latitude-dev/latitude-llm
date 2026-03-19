@@ -103,21 +103,30 @@ export function InfiniteTable<T>({
   const paddingTop = virtualRows[0]?.start ?? 0
   const lastRow = virtualRows[virtualRows.length - 1]
   const paddingBottom = lastRow ? virtualizer.getTotalSize() - lastRow.end : 0
-
   const showBlankSlate = !isLoading && data.length === 0 && !layoutFixed
-
-  return (
-    <div className="flex flex-col h-full">
-      {showBlankSlate ? (
-        (blankSlate ?? (
-          <div className="rounded-lg w-full py-40 flex flex-col gap-4 items-center justify-center bg-linear-to-b from-secondary to-transparent px-4">
-            <Text.H5 align="center" display="block" color="foregroundMuted">
-              No data found.
-            </Text.H5>
-          </div>
-        ))
+  const blankSlateText = blankSlate && blankSlate === "string" ? blankSlate : "No data found."
+  const blankSlateContent =
+    showBlankSlate && blankSlate !== undefined ? (
+      typeof blankSlate === "string" ? (
+        <div className="rounded-lg w-full py-40 flex flex-col gap-4 items-center justify-center bg-linear-to-b from-secondary to-transparent px-4">
+          <Text.H5 align="center" display="block" color="foregroundMuted">
+            {blankSlateText}
+          </Text.H5>
+        </div>
       ) : (
-        <div ref={scrollContainerRef} onScroll={handleScroll} className={cn("flex-1 min-h-0 overflow-auto", className)}>
+        blankSlate
+      )
+    ) : null
+  return (
+    <div className="flex flex-col flex-1 min-h-0">
+      {blankSlateContent ? (
+        blankSlateContent
+      ) : (
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className={cn("flex-1 min-h-0 overflow-auto custom-scrollbar", className)}
+        >
           <table
             ref={tableRef}
             className={cn("min-w-full border-separate border-spacing-y-1", layoutFixed && "table-fixed")}
@@ -168,7 +177,9 @@ export function InfiniteTable<T>({
                       ref={virtualizer.measureElement}
                       data-index={virtualRow.index}
                       className="bg-secondary"
-                      style={{ opacity: 1 - skeletonIndex / SKELETON_ROW_COUNT }}
+                      style={{
+                        opacity: 1 - skeletonIndex / SKELETON_ROW_COUNT,
+                      }}
                     >
                       <td colSpan={colCount} className="h-9" />
                     </tr>
@@ -188,7 +199,10 @@ export function InfiniteTable<T>({
                     hasSelection={!!selection}
                     isActive={activeRowKey === rowKey}
                     {...(selection
-                      ? { isSelected: selection.isSelected(rowKey), onToggleRow: selection.toggleRow }
+                      ? {
+                          isSelected: selection.isSelected(rowKey),
+                          onToggleRow: selection.toggleRow,
+                        }
                       : {})}
                     {...(onRowClick ? { onClick: onRowClick } : {})}
                     dataIndex={virtualRow.index}
@@ -198,7 +212,14 @@ export function InfiniteTable<T>({
               })}
               {paddingBottom > 0 && (
                 <tr>
-                  <td colSpan={colCount} style={{ height: paddingBottom, padding: 0, border: "none" }} />
+                  <td
+                    colSpan={colCount}
+                    style={{
+                      height: paddingBottom,
+                      padding: 0,
+                      border: "none",
+                    }}
+                  />
                 </tr>
               )}
             </tbody>

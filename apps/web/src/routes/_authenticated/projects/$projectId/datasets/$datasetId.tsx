@@ -1,14 +1,16 @@
 import { parseDatasetCsv } from "@domain/datasets"
 import { Button, Container, cn, Input, Skeleton, TableSkeleton, Text, toast } from "@repo/ui"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Download, FileUp, Loader2, Trash2, Upload } from "lucide-react"
 import { useCallback, useDeferredValue, useRef, useState } from "react"
 import { z } from "zod"
-import { useDatasetRowsCollection, useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
+import { useDatasetRowsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord, DatasetRowRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import {
   deleteRowsMutation,
   getDatasetDownload,
+  getDatasetQuery,
   saveDatasetCsv,
   updateRowMutation,
 } from "../../../../../domains/datasets/datasets.functions.ts"
@@ -33,9 +35,10 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/datase
 function DatasetDetailPage() {
   const { projectId, datasetId } = Route.useParams()
 
-  const datasetsCollection = useDatasetsCollection(projectId)
-  const dataset = datasetsCollection.data?.find((d) => d.id === datasetId)
-  const isLoading = !datasetsCollection.data
+  const { data: dataset, isLoading } = useQuery({
+    queryKey: ["dataset", datasetId],
+    queryFn: () => getDatasetQuery({ data: { datasetId } }),
+  })
 
   const [parsedCsv, setParsedCsv] = useState<ParsedCsv | null>(null)
 

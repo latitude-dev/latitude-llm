@@ -37,6 +37,7 @@ export {
 } from "./components/dropdown-menu/primitives.tsx"
 export { FormField, type FormFieldProps } from "./components/form-field/form-field.tsx"
 export { FormWrapper } from "./components/form-wrapper/form-wrapper.tsx"
+export * from "./components/icons/custom-icons/index.tsx"
 export { Icon, type IconProps, type IconSize } from "./components/icons/icons.tsx"
 export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
 export type {

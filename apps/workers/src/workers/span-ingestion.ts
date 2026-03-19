@@ -1,11 +1,7 @@
 import type { MessageHandler, QueueConsumer, QueueMessage } from "@domain/queue"
 import { deleteFromDisk, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
-import {
-  decodeOtlpProtobuf,
-  type OtlpExportTraceServiceRequest,
-  SpanRepository,
-  transformOtlpToSpans,
-} from "@domain/spans"
+import { SpanRepository } from "@domain/spans"
+import { decodeOtlpProtobuf, type OtlpExportTraceServiceRequest, transformOtlpToSpans } from "@domain/spans/otlp"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createLogger } from "@repo/observability"
@@ -63,7 +59,12 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer, deps: SpanIng
         const ingestedAtStr = message.headers.get("ingested-at")
         const ingestedAt = ingestedAtStr ? new Date(ingestedAtStr) : new Date()
 
-        const spans = transformOtlpToSpans(request, { organizationId, projectId, apiKeyId, ingestedAt })
+        const spans = transformOtlpToSpans(request, {
+          organizationId,
+          projectId,
+          apiKeyId,
+          ingestedAt,
+        })
         if (spans.length === 0) {
           return
         }

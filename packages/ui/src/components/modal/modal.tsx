@@ -82,7 +82,7 @@ function Modal({
           {children ? (
             <div
               className={cn("px-6", {
-                "overflow-y-auto custom-scrollbar pb-6": scrollable,
+                "flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-6": scrollable,
                 "min-h-0 flex-grow flex flex-col": !scrollable,
               })}
             >

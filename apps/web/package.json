@@ -62,6 +62,7 @@
     "dotenv": "catalog:",
     "postcss": "^8.5.3",
     "rollup-plugin-visualizer": "^7.0.1",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }

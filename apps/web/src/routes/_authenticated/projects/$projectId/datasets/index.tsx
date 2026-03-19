@@ -1,86 +1,114 @@
 import {
   Button,
-  Container,
-  Table,
-  TableBlankSlate,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableSkeleton,
-  TableWithHeader,
-  Text,
+  DatabaseAddIcon,
+  Icon,
+  InfiniteTable,
+  type InfiniteTableColumn,
+  type InfiniteTableSorting,
+  Tooltip,
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
-import { useCallback, useState } from "react"
-import { useDatasetsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
+import { createFileRoute } from "@tanstack/react-router"
+import { useCallback, useMemo, useState } from "react"
+import { z } from "zod"
+import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.functions.ts"
+import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
-  component: DatasetsPage,
+const DATASET_LIST_SORT_COLUMNS = ["name", "updatedAt"] as const
+const sortDirectionSchema = z.enum(["asc", "desc"])
+const datasetsListSearchSchema = z.object({
+  sortBy: z.enum(DATASET_LIST_SORT_COLUMNS).optional(),
+  sortDirection: sortDirectionSchema.optional(),
 })
 
-function DatasetsTable({ datasets, projectId }: { datasets: DatasetRecord[]; projectId: string }) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow verticalPadding>
-          <TableHead>Name</TableHead>
-          <TableHead>Version</TableHead>
-          <TableHead>Created</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {datasets.map((dataset) => (
-          <TableRow key={dataset.id} verticalPadding className="cursor-pointer">
-            <TableCell>
-              <Link
-                to="/projects/$projectId/datasets/$datasetId"
-                params={{ projectId, datasetId: dataset.id }}
-                className="contents"
-              >
-                <Text.H5>{dataset.name}</Text.H5>
-              </Link>
-            </TableCell>
-            <TableCell>
-              <Link
-                to="/projects/$projectId/datasets/$datasetId"
-                params={{ projectId, datasetId: dataset.id }}
-                className="contents"
-              >
-                <Text.H5 color="foregroundMuted">{dataset.currentVersion}</Text.H5>
-              </Link>
-            </TableCell>
-            <TableCell>
-              <Link
-                to="/projects/$projectId/datasets/$datasetId"
-                params={{ projectId, datasetId: dataset.id }}
-                className="contents"
-              >
-                <Text.H5 color="foregroundMuted">{relativeTime(dataset.createdAt)}</Text.H5>
-              </Link>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  )
+export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
+  component: DatasetsPage,
+  validateSearch: (search: Record<string, unknown>) => {
+    const parsed = datasetsListSearchSchema.safeParse(search)
+    if (!parsed.success) return {}
+    return parsed.data
+  },
+})
+
+const DEFAULT_SORTING: InfiniteTableSorting = {
+  column: "updatedAt",
+  direction: "desc",
 }
+
+const columns: InfiniteTableColumn<DatasetRecord>[] = [
+  {
+    key: "name",
+    header: "Name",
+    sortKey: "name",
+    render: (d) => d.name,
+  },
+  {
+    key: "description",
+    header: "Description",
+    render: (d) => d.description ?? "—",
+  },
+  {
+    key: "updatedAt",
+    header: "Last updated",
+    sortKey: "updatedAt",
+    render: (d) => (
+      <Tooltip trigger={relativeTime(new Date(d.updatedAt))}>{new Date(d.updatedAt).toLocaleString()}</Tooltip>
+    ),
+  },
+]
 
 function DatasetsPage() {
   const { projectId } = Route.useParams()
-  const navigate = useNavigate()
+  const search = Route.useSearch()
+  const navigate = Route.useNavigate()
   const { toast } = useToast()
-  const datasetsCollection = useDatasetsCollection(projectId)
-  const datasets = datasetsCollection.data ?? []
-  const isLoading = !datasetsCollection.data
   const [creating, setCreating] = useState(false)
+
+  const sorting: InfiniteTableSorting = useMemo(
+    () => ({
+      column: search.sortBy ?? DEFAULT_SORTING.column,
+      direction: search.sortDirection ?? DEFAULT_SORTING.direction,
+    }),
+    [search.sortBy, search.sortDirection],
+  )
+
+  const handleSortChange = useCallback(
+    (next: InfiniteTableSorting) => {
+      navigate({
+        params: { projectId },
+        search: {
+          sortBy: next.column,
+          sortDirection: next.direction,
+        },
+      })
+    },
+    [navigate, projectId],
+  )
+
+  const {
+    data: datasets,
+    isLoading,
+    infiniteScroll,
+  } = useDatasetsInfiniteScroll({
+    projectId,
+    sorting,
+  })
+
+  const getRowKey = useCallback((d: DatasetRecord) => d.id, [])
+  const onRowClick = useCallback(
+    (d: DatasetRecord) =>
+      navigate({
+        to: "/projects/$projectId/datasets/$datasetId",
+        params: { projectId, datasetId: d.id },
+      }),
+    [navigate, projectId],
+  )
+
   const handleCreate = useCallback(async () => {
     setCreating(true)
     try {
@@ -100,24 +128,34 @@ function DatasetsPage() {
   }, [projectId, navigate, toast])
 
   return (
-    <Container className="pt-14">
-      <TableWithHeader
-        title="Datasets"
-        actions={
-          <Button variant="outline" onClick={handleCreate} disabled={creating} isLoading={creating}>
-            + Dataset
-          </Button>
-        }
-        table={
-          isLoading ? (
-            <TableSkeleton cols={3} rows={3} />
-          ) : datasets.length > 0 ? (
-            <DatasetsTable datasets={datasets} projectId={projectId} />
-          ) : (
-            <TableBlankSlate description="There are no datasets yet." />
-          )
-        }
-      />
-    </Container>
+    <Layout>
+      <Layout.Content>
+        <Layout.Actions>
+          <Layout.ActionsRow>
+            <Layout.ActionRowItem />
+            <Layout.ActionRowItem className="shrink-0">
+              <Button flat variant="outline" onClick={handleCreate} disabled={creating} isLoading={creating}>
+                <Icon size="sm" icon={DatabaseAddIcon} />
+                Dataset
+              </Button>
+            </Layout.ActionRowItem>
+          </Layout.ActionsRow>
+        </Layout.Actions>
+        <Layout.List>
+          <InfiniteTable
+            data={datasets}
+            isLoading={isLoading}
+            columns={columns}
+            getRowKey={getRowKey}
+            onRowClick={onRowClick}
+            infiniteScroll={infiniteScroll}
+            sorting={sorting}
+            defaultSorting={DEFAULT_SORTING}
+            onSortChange={handleSortChange}
+            blankSlate="There are no datasets yet."
+          />
+        </Layout.List>
+      </Layout.Content>
+    </Layout>
   )
 }

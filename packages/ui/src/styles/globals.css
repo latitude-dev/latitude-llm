@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./plugins/hit-area.css";
+@import "./plugins/custom-scrollbar.css";
 @plugin "@tailwindcss/typography";
 
 /* Tell Tailwind to scan this package's source files for classes */

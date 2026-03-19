@@ -6,6 +6,7 @@ import {
   createDataset,
   createDatasetFromTraces,
   DATASET_DOWNLOAD_DIRECT_THRESHOLD,
+  DATASET_LIST_SORT_COLUMNS,
   DatasetRepository,
   deleteRows,
   insertRows,
@@ -23,6 +24,7 @@ import {
   OrganizationId,
   ProjectId,
   putInDisk,
+  sortDirectionSchema,
   TraceId,
   UnauthorizedError,
 } from "@domain/shared"
@@ -103,26 +105,84 @@ const toRowRecord = (r: DatasetRow): DatasetRowRecord => ({
   version: r.version,
 })
 
-export const listDatasetsQuery = createServerFn({ method: "GET" })
+const datasetListCursorSchema = z.object({
+  sortValue: z.string(),
+  id: z.string(),
+})
+
+interface DatasetListResult {
+  readonly datasets: readonly DatasetRecord[]
+  readonly hasMore: boolean
+  readonly nextCursor?: { readonly sortValue: string; readonly id: string }
+}
+
+export const listDatasetsByProject = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ projectId: z.string() }))
-  .handler(async ({ data }): Promise<{ datasets: DatasetRecord[]; total: number }> => {
+  .inputValidator(
+    z
+      .object({
+        projectId: z.string(),
+        limit: z.number().int().min(1).max(500).optional(),
+        cursor: datasetListCursorSchema.optional(),
+        sortBy: z.enum(DATASET_LIST_SORT_COLUMNS).optional(),
+        sortDirection: sortDirectionSchema.optional(),
+      })
+      .refine(
+        (data) => {
+          if (!data.cursor) return true
+          const sortBy = data.sortBy ?? "updatedAt"
+          if (sortBy === "updatedAt") {
+            const date = new Date(data.cursor.sortValue)
+            return !Number.isNaN(date.getTime()) && date.toISOString() === data.cursor.sortValue
+          }
+          return true
+        },
+        {
+          message: "cursor.sortValue must be a valid ISO date string when sortBy is 'updatedAt'",
+          path: ["cursor", "sortValue"],
+        },
+      ),
+  )
+  .handler(async ({ data }): Promise<DatasetListResult> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
-    const result = await Effect.runPromise(
+    const page = await Effect.runPromise(
       listDatasets({
         projectId: ProjectId(data.projectId),
-      }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
-        withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
-      ),
+        options: {
+          limit: data.limit ?? 50,
+          ...(data.cursor ? { cursor: data.cursor } : {}),
+          ...(data.sortBy ? { sortBy: data.sortBy } : {}),
+          ...(data.sortDirection ? { sortDirection: data.sortDirection } : {}),
+        },
+      }).pipe(withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId)),
     )
 
-    return {
-      datasets: result.datasets.map(toDatasetRecord),
-      total: result.total,
+    const datasets = page.datasets.map(toDatasetRecord)
+    if (!page.nextCursor) {
+      return { datasets, hasMore: page.hasMore }
     }
+    return { datasets, hasMore: page.hasMore, nextCursor: page.nextCursor }
+  })
+
+export const getDatasetQuery = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ datasetId: z.string() }))
+  .handler(async ({ data }): Promise<DatasetRecord | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* DatasetRepository
+        const dataset = yield* repo.findById(DatasetId(data.datasetId))
+        return toDatasetRecord(dataset)
+      }).pipe(
+        Effect.catchTag("DatasetNotFoundError", () => Effect.succeed(null)),
+        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+      ),
+    )
   })
 
 export const listRowsQuery = createServerFn({ method: "GET" })

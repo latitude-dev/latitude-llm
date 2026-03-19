@@ -78,6 +78,7 @@ apps/web/uploads
 apps/web/storage
 apps/web/public/uploads
 apps/web/public/files
+storage
 
 # Temporal
 tmp

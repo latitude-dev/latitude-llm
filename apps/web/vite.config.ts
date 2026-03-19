@@ -20,8 +20,21 @@ if (existsSync(envFilePath)) {
 const webPortNumber = Effect.runSync(parseEnv("LAT_WEB_PORT", "number", 3000))
 const bundleAnalyze = Effect.runSync(parseEnv("LAT_WEB_BUNDLE_ANALYZE", "boolean", false))
 
+/** Strip "use client" / "use server" so Rollup doesn't error when merging modules (Next.js-only directives). */
+function stripUseDirectives() {
+  return {
+    name: "strip-use-directives",
+    transform(code: string, id: string) {
+      if (id.includes("node_modules") && /^\s*["']use (client|server)["']\s*;?\s*\n/.test(code)) {
+        return { code: code.replace(/^\s*["']use (client|server)["']\s*;?\s*\n?/, ""), map: null }
+      }
+      return null
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [tanstackStart(), nitro(), tailwindcss(), react()],
+  plugins: [stripUseDirectives(), tanstackStart(), nitro(), tailwindcss(), react()],
   build: {
     rollupOptions: {
       plugins: bundleAnalyze

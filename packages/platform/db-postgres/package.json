@@ -38,6 +38,7 @@
     "pg": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.3.15",
     "@types/pg": "catalog:",
     "dotenv": "catalog:",
     "drizzle-kit": "catalog:",

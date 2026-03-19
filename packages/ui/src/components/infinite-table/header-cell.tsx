@@ -2,9 +2,9 @@ import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import { type ReactNode, useCallback, useLayoutEffect, useRef, useState } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
+import { Text } from "../text/text.tsx"
 import type { SortDirection } from "./types.ts"
 
-// Matches the `px-4` (16px × 2) applied to the <th>
 const TH_HORIZONTAL_PADDING = 32
 
 function ResizableHandle({
@@ -70,8 +70,12 @@ function ResizableHandle({
         abortRef.current = null
       }
 
-      document.addEventListener("pointermove", onPointerMove, { signal: controller.signal })
-      document.addEventListener("pointerup", onPointerUp, { signal: controller.signal })
+      document.addEventListener("pointermove", onPointerMove, {
+        signal: controller.signal,
+      })
+      document.addEventListener("pointerup", onPointerUp, {
+        signal: controller.signal,
+      })
     },
     [thRef],
   )
@@ -129,6 +133,8 @@ export function HeaderCell({
   sortDirection?: SortDirection | null
   onSortClick?: () => void
 }) {
+  const TextComp = sortable ? "button" : "div"
+  const textProps = sortable ? { type: "button" as const, onClick: onSortClick } : {}
   const thRef = useRef<HTMLTableCellElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
   const headerMinWidth = useRef(minWidth)
@@ -139,42 +145,38 @@ export function HeaderCell({
     headerMinWidth.current = Math.max(minWidth, el.offsetWidth + TH_HORIZONTAL_PADDING)
   }, [minWidth, children])
 
-  const measuredChildren = (
-    <span ref={measureRef} className="inline-flex items-center gap-1 w-fit">
-      {sortable && <SortIcon direction={sortDirection ?? null} />}
-      {children}
-    </span>
-  )
-
-  const content = sortable ? (
-    <button
-      type="button"
-      onClick={onSortClick}
-      className={cn(
-        "flex w-full h-full items-center justify-end truncate",
-        "bg-transparent border-none rounded-sm p-0",
-        "text-xs leading-4 text-muted-foreground",
-        "cursor-pointer select-none transition-colors hover:text-foreground",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-      )}
-    >
-      {measuredChildren}
-    </button>
-  ) : (
-    <div className="flex items-center justify-end truncate">{measuredChildren}</div>
-  )
+  const headerLabel =
+    typeof children === "string" ? (
+      <Text.H6 weight="medium" color="foregroundMuted">
+        {children}
+      </Text.H6>
+    ) : (
+      children
+    )
 
   return (
     <th
       ref={thRef}
       className={cn(
-        "relative h-12 text-right align-middle text-xs leading-4 font-medium text-muted-foreground",
+        "relative h-12 align-middle",
         "px-4", // matches TH_HORIZONTAL_PADDING
         className,
       )}
       aria-sort={sortable ? ariaSort(sortDirection) : undefined}
     >
-      {content}
+      {" "}
+      <TextComp
+        {...textProps}
+        className={cn("flex w-full h-full items-center truncate", {
+          "bg-transparent border-none rounded-sm p-0 cursor-pointer select-none transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring":
+            sortable,
+        })}
+      >
+        <span ref={measureRef} className="inline-flex items-center gap-1 w-fit">
+          {sortable && <SortIcon direction={sortDirection ?? null} />}
+          {headerLabel}
+        </span>
+      </TextComp>
       <ResizableHandle minWidth={headerMinWidth} thRef={thRef} disabled={!resizable} />
     </th>
   )

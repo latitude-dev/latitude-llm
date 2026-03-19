@@ -2,7 +2,8 @@ import { Button, CloseTrigger, Input, Modal, Select, type SelectOption, Text, us
 import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
-import { useDatasetsCollection } from "../../../../../../domains/datasets/datasets.collection.ts"
+import { useDatasetsList } from "../../../../../../domains/datasets/datasets.collection.ts"
+import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 import {
   addTracesToDatasetMutation,
   createDatasetFromTracesMutation,
@@ -25,10 +26,10 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
   const [submitting, setSubmitting] = useState(false)
   const { toast } = useToast()
   const navigate = useNavigate()
-  const { data: datasets } = useDatasetsCollection(projectId)
+  const { data: datasets } = useDatasetsList(projectId)
 
   const datasetOptions = useMemo<SelectOption<string>[]>(
-    () => (datasets ?? []).map((ds) => ({ label: ds.name, value: ds.id })),
+    () => datasets.map((ds: DatasetRecord) => ({ label: ds.name, value: ds.id })),
     [datasets],
   )
 

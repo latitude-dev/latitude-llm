@@ -17,7 +17,14 @@ export {
   rowsToCsvFragment,
   sanitizeDatasetFilename,
 } from "./export-csv.ts"
-export { DatasetRepository } from "./ports/dataset-repository.ts"
+export {
+  DATASET_LIST_SORT_COLUMNS,
+  type DatasetListCursor,
+  type DatasetListOptions,
+  type DatasetListPage,
+  type DatasetListSortBy,
+  DatasetRepository,
+} from "./ports/dataset-repository.ts"
 export { DatasetRowRepository, type DatasetRowRepositoryShape } from "./ports/dataset-row-repository.ts"
 export { addTracesToDataset, createDatasetFromTraces } from "./use-cases/add-traces-to-dataset.ts"
 export { countRows } from "./use-cases/count-rows.ts"
