@@ -1,5 +1,5 @@
 import { createProject } from "@domain/projects"
-import { SEED_ORG_ID, SEED_OWNER_USER_ID, SEED_PROJECT_ID, SEED_PROJECT_NAME, SEED_PROJECT_SLUG } from "@domain/shared"
+import { SEED_ORG_ID, SEED_PROJECT_ID, SEED_PROJECT_NAME, SEED_PROJECT_SLUG } from "@domain/shared"
 import { Effect } from "effect"
 import type { SeedContext, Seeder } from "../types.ts"
 
@@ -12,7 +12,6 @@ const seedProjects: Seeder = {
         organizationId: SEED_ORG_ID,
         name: SEED_PROJECT_NAME,
         slug: SEED_PROJECT_SLUG,
-        createdById: SEED_OWNER_USER_ID,
       })
       yield* ctx.repositories.project.save(project)
       console.log(`  -> project: ${project.name} (${project.slug})`)

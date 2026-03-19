@@ -22,6 +22,7 @@ export interface DatasetVersion {
   readonly rowsUpdated: number
   readonly rowsDeleted: number
   readonly source: string
+  readonly actorId: string | null
   readonly createdAt: Date
   readonly updatedAt: Date
 }

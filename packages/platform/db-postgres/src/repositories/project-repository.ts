@@ -18,9 +18,8 @@ const toDomainProject = (row: typeof projects.$inferSelect): Project => ({
   organizationId: OrganizationId(row.organizationId),
   name: row.name,
   slug: row.slug,
-  description: null,
-  createdById: null,
   deletedAt: row.deletedAt,
+  lastEditedAt: row.lastEditedAt,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
@@ -83,6 +82,7 @@ export const ProjectRepositoryLive = Layer.effect(
                   name: row.name,
                   slug: row.slug,
                   deletedAt: row.deletedAt,
+                  lastEditedAt: new Date(),
                   updatedAt: new Date(),
                 },
               }),

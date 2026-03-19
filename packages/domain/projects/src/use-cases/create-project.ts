@@ -4,7 +4,6 @@ import {
   type ProjectId,
   type RepositoryError,
   SqlClient,
-  type UserId,
   type ValidationError,
 } from "@domain/shared"
 import { Data, Effect } from "effect"
@@ -14,8 +13,6 @@ import { ProjectRepository } from "../ports/project-repository.ts"
 export interface CreateProjectInput {
   readonly id?: ProjectId
   readonly name: string
-  readonly description?: string
-  readonly createdById?: UserId
 }
 
 const toSlug = (value: string) =>
@@ -94,8 +91,6 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
       organizationId,
       name: trimmedName,
       slug: trimmedSlug,
-      ...(input.description !== undefined && { description: input.description }),
-      ...(input.createdById !== undefined && { createdById: input.createdById }),
     })
 
     return yield* sqlClient.transaction(

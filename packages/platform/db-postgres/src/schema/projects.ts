@@ -1,15 +1,6 @@
 import { varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
-/**
- * Projects table - stores projects within organizations.
- *
- * Supports soft delete via deleted_at.
- * RLS is enabled on this table.
- *
- * Scoped to the 'latitude' schema.
- */
-
 export const projects = latitudeSchema.table(
   "projects",
   {

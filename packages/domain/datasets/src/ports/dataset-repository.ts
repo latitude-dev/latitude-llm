@@ -44,6 +44,7 @@ export class DatasetRepository extends ServiceMap.Service<
       readonly rowsUpdated?: number
       readonly rowsDeleted?: number
       readonly source?: string
+      readonly actorId?: string
     }): Effect.Effect<DatasetVersion, DatasetNotFoundError | RepositoryError>
 
     decrementVersion(args: {

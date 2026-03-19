@@ -1,14 +1,13 @@
 import type { GrantId, OrganizationId, SubscriptionId } from "@domain/shared"
 
-/**
- * Grant type enum - defines what quota is being granted.
- */
 export type GrantType = "seats" | "runs" | "credits"
+export type GrantSource = "subscription" | "purchase" | "promocode"
 
 /**
  * Grant entity - represents a quota allocation for an organization.
  *
- * Grants are issued when a subscription is created or upgraded.
+ * Grants are issued when a subscription is created or upgraded,
+ * or via purchases and promo codes.
  * Each grant has a balance that can be consumed.
  */
 export interface Grant {
@@ -16,6 +15,7 @@ export interface Grant {
   readonly organizationId: OrganizationId
   readonly subscriptionId: SubscriptionId
   readonly type: GrantType
+  readonly source: GrantSource
   readonly amount: number
   readonly balance: number
   readonly expiresAt: Date | null
@@ -23,14 +23,12 @@ export interface Grant {
   readonly updatedAt: Date
 }
 
-/**
- * Factory function to create a new Grant.
- */
 export const createGrant = (params: {
   id: GrantId
   organizationId: OrganizationId
   subscriptionId: SubscriptionId
   type: GrantType
+  source?: GrantSource
   amount: number
   expiresAt?: Date | null
   createdAt?: Date
@@ -42,6 +40,7 @@ export const createGrant = (params: {
     organizationId: params.organizationId,
     subscriptionId: params.subscriptionId,
     type: params.type,
+    source: params.source ?? "subscription",
     amount: params.amount,
     balance: params.amount,
     expiresAt: params.expiresAt ?? null,

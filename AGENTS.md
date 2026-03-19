@@ -495,6 +495,15 @@ Rules:
 - Do not add ad-hoc Weaviate migration scripts outside `packages/platform/db-weaviate`.
 - Keep collection schema changes centralized in `src/collections.ts` and rely on the package migration flow.
 
+### Mapper Conventions
+
+When writing `toDomain*` and `toInsertRow` functions in platform repositories:
+
+- **Never hardcode field values.** Every field on the domain entity must be read from the DB row (`row.fieldName`), not assigned a literal (`null`, `""`, `new Date()`). If a field has no backing column, that is a schema gap — add the column or remove the field from the domain type.
+- **Never use `as EntityType` casts** on mapper return values. These bypass TypeScript's structural check and hide type mismatches. Let the return type be inferred or explicitly annotated — the compiler will catch missing or incompatible fields.
+- **Never coerce nullable columns** with `?? fallback` to satisfy a non-nullable domain type. Surface the mismatch: either make the column `notNull()` or make the domain field nullable.
+- **`toInsertRow` must round-trip.** Every field written by `toInsertRow` should be readable by `toDomain*`, and vice versa. A field present in the domain type but absent from `toInsertRow` means data is silently discarded on write.
+
 ## Effect Patterns
 
 - Prefer `Effect.gen` for sequential effect composition

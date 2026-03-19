@@ -1,34 +1,23 @@
-import { generateId, type OrganizationId, ProjectId, type UserId } from "@domain/shared"
+import { generateId, type OrganizationId, ProjectId } from "@domain/shared"
 
-/**
- * Project entity - represents a project within an organization.
- *
- * Projects are used to group related prompts, evaluations, and telemetry data.
- * They support soft deletion via the deletedAt field.
- */
 export interface Project {
   readonly id: ProjectId
   readonly organizationId: OrganizationId
   readonly name: string
   readonly slug: string
-  readonly description: string | null
-  readonly createdById: UserId | null
   readonly deletedAt: Date | null
+  readonly lastEditedAt: Date
   readonly createdAt: Date
   readonly updatedAt: Date
 }
 
-/**
- * Factory function to create a new Project.
- */
 export const createProject = (params: {
   id?: ProjectId | undefined
   organizationId: OrganizationId
   name: string
   slug: string
-  description?: string
-  createdById?: UserId
   deletedAt?: Date
+  lastEditedAt?: Date
   createdAt?: Date
   updatedAt?: Date
 }): Project => {
@@ -38,9 +27,8 @@ export const createProject = (params: {
     organizationId: params.organizationId,
     name: params.name,
     slug: params.slug,
-    description: params.description ?? null,
-    createdById: params.createdById ?? null,
     deletedAt: params.deletedAt ?? null,
+    lastEditedAt: params.lastEditedAt ?? now,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
   }
@@ -57,10 +45,12 @@ export const isProjectDeleted = (project: Project): boolean => {
  * Mark a project as deleted (soft delete).
  */
 export const markProjectDeleted = (project: Project): Project => {
+  const now = new Date()
   return {
     ...project,
-    deletedAt: new Date(),
-    updatedAt: new Date(),
+    deletedAt: now,
+    lastEditedAt: now,
+    updatedAt: now,
   }
 }
 
@@ -68,9 +58,11 @@ export const markProjectDeleted = (project: Project): Project => {
  * Restore a soft-deleted project.
  */
 export const restoreProject = (project: Project): Project => {
+  const now = new Date()
   return {
     ...project,
     deletedAt: null,
-    updatedAt: new Date(),
+    lastEditedAt: now,
+    updatedAt: now,
   }
 }

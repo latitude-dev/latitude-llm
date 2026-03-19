@@ -123,7 +123,6 @@ const handleSignup = (intent: AuthIntent, session: SessionInput) =>
         organizationId: organization.id,
         userId: UserId(session.userId),
         role: "owner",
-        confirmedAt: new Date(),
       }),
     )
 
@@ -157,7 +156,6 @@ const handleInvite = (intent: AuthIntent, session: SessionInput) =>
         organizationId: OrganizationId(organizationId),
         userId: UserId(session.userId),
         role: "member",
-        confirmedAt: new Date(),
       }),
     )
 

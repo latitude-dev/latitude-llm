@@ -10,8 +10,6 @@ const toDomainMembership = (memberRow: typeof member.$inferSelect) => ({
   organizationId: OrganizationId(memberRow.organizationId),
   userId: UserId(memberRow.userId),
   role: memberRow.role,
-  invitedAt: null,
-  confirmedAt: memberRow.createdAt,
   createdAt: memberRow.createdAt,
 })
 
