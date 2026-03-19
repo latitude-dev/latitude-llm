@@ -2,6 +2,27 @@ import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError } from "@d
 import { type Effect, ServiceMap } from "effect"
 import type { Dataset, DatasetNotFoundError, DatasetVersion } from "../entities/dataset.ts"
 
+export const DATASET_LIST_SORT_COLUMNS = ["name", "updatedAt"] as const
+export type DatasetListSortBy = (typeof DATASET_LIST_SORT_COLUMNS)[number]
+
+export interface DatasetListCursor {
+  readonly sortValue: string
+  readonly id: string
+}
+
+export interface DatasetListOptions {
+  readonly limit?: number
+  readonly cursor?: DatasetListCursor
+  readonly sortBy?: DatasetListSortBy
+  readonly sortDirection?: "asc" | "desc"
+}
+
+export interface DatasetListPage {
+  readonly datasets: readonly Dataset[]
+  readonly hasMore: boolean
+  readonly nextCursor?: DatasetListCursor
+}
+
 export class DatasetRepository extends ServiceMap.Service<
   DatasetRepository,
   {
@@ -16,9 +37,8 @@ export class DatasetRepository extends ServiceMap.Service<
 
     listByProject(args: {
       readonly projectId: ProjectId
-      readonly limit?: number
-      readonly offset?: number
-    }): Effect.Effect<{ readonly datasets: readonly Dataset[]; readonly total: number }, RepositoryError>
+      readonly options?: DatasetListOptions
+    }): Effect.Effect<DatasetListPage, RepositoryError>
 
     existsByNameInProject(args: {
       readonly projectId: ProjectId

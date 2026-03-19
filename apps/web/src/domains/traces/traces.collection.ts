@@ -52,7 +52,7 @@ export function useTracesInfiniteScroll({
   )
 
   const data: readonly TraceRecord[] = useMemo(
-    () => paginatedData?.pages.flatMap((p) => p.traces) ?? [],
+    () => paginatedData?.pages.flatMap((p) => p?.traces ?? []) ?? [],
     [paginatedData],
   )
 

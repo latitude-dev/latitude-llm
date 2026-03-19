@@ -37,7 +37,8 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.481.0",
     "@tanstack/react-virtual": "^3.13.23",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "@domain/shared": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

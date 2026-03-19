@@ -1,58 +1,76 @@
+import type { DatasetListSortBy } from "@domain/datasets"
+import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { DatasetRecord, DatasetRowRecord } from "./datasets.functions.ts"
-import { listDatasetsQuery, listRowsQuery } from "./datasets.functions.ts"
+import { listDatasetsByProject, listRowsQuery } from "./datasets.functions.ts"
 
 const queryClient = getQueryClient()
 
-const makeDatasetsCollection = (projectId: string) =>
-  createCollection(
-    queryCollectionOptions({
-      queryClient,
-      queryKey: ["datasets", projectId],
-      queryFn: async () => {
-        const result = await listDatasetsQuery({ data: { projectId } })
-        return result.datasets
-      },
-      getKey: (item: DatasetRecord) => item.id,
+const BATCH_SIZE = 50
+
+export function useDatasetsInfiniteScroll({
+  projectId,
+  sorting,
+}: {
+  readonly projectId: string
+  readonly sorting: InfiniteTableSorting
+}) {
+  const {
+    data: paginatedData,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["datasets", projectId, sorting],
+    queryFn: ({ pageParam }) =>
+      listDatasetsByProject({
+        data: {
+          projectId,
+          limit: BATCH_SIZE,
+          cursor: pageParam,
+          sortBy: sorting.column as DatasetListSortBy,
+          sortDirection: sorting.direction,
+        },
+      }),
+    initialPageParam: undefined as { sortValue: string; id: string } | undefined,
+    getNextPageParam: (lastPage) => lastPage?.nextCursor,
+  })
+
+  const infiniteScroll: InfiniteTableInfiniteScroll = useMemo(
+    () => ({
+      hasMore: hasNextPage,
+      isLoadingMore: isFetchingNextPage,
+      onLoadMore: fetchNextPage,
     }),
+    [hasNextPage, isFetchingNextPage, fetchNextPage],
   )
 
-type DatasetsCollection = ReturnType<typeof makeDatasetsCollection>
-const datasetsCollectionsCache = new Map<string, DatasetsCollection>()
+  const data: readonly DatasetRecord[] = useMemo(
+    () => paginatedData?.pages.flatMap((p) => p?.datasets ?? []) ?? [],
+    [paginatedData],
+  )
 
-const getDatasetsCollection = (projectId: string): DatasetsCollection => {
-  const cached = datasetsCollectionsCache.get(projectId)
-  if (cached) return cached
-  const collection = makeDatasetsCollection(projectId)
-  datasetsCollectionsCache.set(projectId, collection)
-  return collection
+  return { data, isLoading, infiniteScroll }
 }
 
-type DatasetsSource = { dataset: DatasetsCollection }
-type DatasetsContext = {
-  baseSchema: SchemaFromSource<DatasetsSource>
-  schema: SchemaFromSource<DatasetsSource>
-  fromSourceName: "dataset"
-  hasJoins: false
-}
-
-export const useDatasetsCollection = <TContext extends Context = DatasetsContext>(
-  projectId: string,
-  queryFn?: (datasets: QueryBuilder<DatasetsContext>) => QueryBuilder<TContext>,
-  deps?: Array<unknown>,
-) => {
-  const collection = getDatasetsCollection(projectId)
-  return useLiveQuery<TContext>(
-    (q) => {
-      const datasets = q.from({ dataset: collection })
-      if (queryFn) return queryFn(datasets)
-      return datasets as unknown as QueryBuilder<TContext>
+/** First page of datasets for dropdowns and lookups. */
+export function useDatasetsList(projectId: string) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["datasets", projectId, { limit: 100 }],
+    queryFn: async () => {
+      const page = await listDatasetsByProject({
+        data: { projectId, limit: 100, sortBy: "name", sortDirection: "asc" },
+      })
+      return page.datasets
     },
-    [projectId, ...(deps ?? [])],
-  )
+    staleTime: 30_000,
+  })
+  return { data: data ?? [], isLoading }
 }
 
 const makeDatasetRowsCollection = (datasetId: string, search?: string) =>

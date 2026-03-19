@@ -38,14 +38,14 @@ export {
   type TestDatabase,
   type TestDatabaseConfig,
 } from "./database/test-database.ts"
-// Postgres test utilities exports
+// Postgres test utilities (implementation lives in db-postgres to avoid cycle)
 export {
   closeInMemoryPostgres,
   createInMemoryPostgres,
   createRlsMiddleware,
   type InMemoryPostgres,
   setupTestPostgres,
-} from "./database/pglite.ts"
+} from "@platform/db-postgres"
 
 // Hono test client exports
 export {

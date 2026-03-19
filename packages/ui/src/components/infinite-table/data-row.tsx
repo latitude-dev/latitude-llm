@@ -55,7 +55,7 @@ function DataRowInner<T>({
     >
       {hasSelection && (
         <td
-          className="px-4 py-2 text-right align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis"
+          className="px-4 py-2 align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis"
           onClick={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
         >
@@ -67,7 +67,7 @@ function DataRowInner<T>({
         return (
           <td
             key={col.key}
-            className="px-4 py-2 text-right align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis"
+            className="px-4 py-2 align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis"
           >
             {typeof content === "string" ? (
               <Text.H5 noWrap ellipsis>

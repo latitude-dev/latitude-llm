@@ -1,7 +1,11 @@
 import type { Effect } from "effect"
 import { ServiceMap } from "effect"
+import { z } from "zod"
 import type { RepositoryError } from "./errors.ts"
 import type { OrganizationId } from "./id.ts"
+
+export const sortDirectionSchema = z.enum(["asc", "desc"])
+export type SortDirection = z.infer<typeof sortDirectionSchema>
 
 /**
  * SqlClient provides database access and transaction management.

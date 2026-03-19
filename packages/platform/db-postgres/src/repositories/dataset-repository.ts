@@ -1,5 +1,5 @@
-import type { Dataset, DatasetVersion } from "@domain/datasets"
-import { DatasetNotFoundError, DatasetRepository } from "@domain/datasets"
+import type { Dataset, DatasetListCursor, DatasetListPage, DatasetVersion } from "@domain/datasets"
+import { type DATASET_LIST_SORT_COLUMNS, DatasetNotFoundError, DatasetRepository } from "@domain/datasets"
 import {
   DatasetId,
   DatasetVersionId,
@@ -9,7 +9,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, count, eq, getColumns, isNull, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, getColumns, gt, isNull, lt, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { datasets, datasetVersions } from "../schema/index.ts"
@@ -39,6 +39,41 @@ const toDomainVersion = (row: typeof datasetVersions.$inferSelect): DatasetVersi
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
+
+type DatasetListRow = typeof datasets.$inferSelect & {
+  latestVersionId: string | null
+}
+
+interface DatasetSortColumn {
+  readonly orderBy: (dir: "asc" | "desc") => [ReturnType<typeof asc>, ReturnType<typeof asc>]
+  readonly cursorCondition: (cursor: DatasetListCursor, dir: "asc" | "desc") => ReturnType<typeof or>
+  readonly getSortValue: (row: DatasetListRow) => string
+}
+
+const SORT_COLUMNS: Record<(typeof DATASET_LIST_SORT_COLUMNS)[number], DatasetSortColumn> = {
+  name: {
+    orderBy: (dir) =>
+      dir === "asc" ? [asc(datasets.name), asc(datasets.id)] : [desc(datasets.name), desc(datasets.id)],
+    cursorCondition: (cursor, dir) =>
+      dir === "desc"
+        ? or(lt(datasets.name, cursor.sortValue), and(eq(datasets.name, cursor.sortValue), lt(datasets.id, cursor.id)))
+        : or(gt(datasets.name, cursor.sortValue), and(eq(datasets.name, cursor.sortValue), gt(datasets.id, cursor.id))),
+    getSortValue: (row) => row.name,
+  },
+  updatedAt: {
+    orderBy: (dir) =>
+      dir === "asc" ? [asc(datasets.updatedAt), asc(datasets.id)] : [desc(datasets.updatedAt), desc(datasets.id)],
+    cursorCondition: (cursor, dir) => {
+      const value = new Date(cursor.sortValue)
+      return dir === "desc"
+        ? or(lt(datasets.updatedAt, value), and(eq(datasets.updatedAt, value), lt(datasets.id, cursor.id)))
+        : or(gt(datasets.updatedAt, value), and(eq(datasets.updatedAt, value), gt(datasets.id, cursor.id)))
+    },
+    getSortValue: (row) => row.updatedAt.toISOString(),
+  },
+}
+
+const DEFAULT_SORT: DatasetSortColumn = SORT_COLUMNS.updatedAt
 
 /**
  * Live layer that pulls db from SqlClient
@@ -90,8 +125,12 @@ export const DatasetRepositoryLive = Layer.effect(
 
       listByProject: (args) =>
         Effect.gen(function* () {
-          const limit = args.limit ?? 50
-          const offset = args.offset ?? 0
+          const options = args.options ?? {}
+          const limit = options.limit ?? 50
+          const cursor = options.cursor
+          const sortBy = options.sortBy === "name" ? "name" : "updatedAt"
+          const sortDirection = options.sortDirection === "asc" ? "asc" : "desc"
+          const sort = SORT_COLUMNS[sortBy] ?? DEFAULT_SORT
           const datasetCols = getColumns(datasets)
           const projectFilter = and(
             eq(datasets.organizationId, sqlClient.organizationId),
@@ -99,27 +138,35 @@ export const DatasetRepositoryLive = Layer.effect(
             isNull(datasets.deletedAt),
           )
 
-          const [rows, totalResult] = yield* sqlClient.query((db) =>
-            Promise.all([
-              db
-                .select({ ...datasetCols, latestVersionId: datasetVersions.id })
-                .from(datasets)
-                .leftJoin(
-                  datasetVersions,
-                  and(eq(datasetVersions.datasetId, datasets.id), eq(datasetVersions.version, datasets.currentVersion)),
-                )
-                .where(projectFilter)
-                .orderBy(datasets.createdAt)
-                .limit(limit)
-                .offset(offset),
-              db.select({ total: count() }).from(datasets).where(projectFilter),
-            ]),
+          const orderBy = sort.orderBy(sortDirection)
+          const cursorCondition = cursor ? sort.cursorCondition(cursor, sortDirection) : undefined
+          const whereClause = cursorCondition ? and(projectFilter, cursorCondition) : projectFilter
+
+          const rows = yield* sqlClient.query((db) =>
+            db
+              .select({ ...datasetCols, latestVersionId: datasetVersions.id })
+              .from(datasets)
+              .leftJoin(
+                datasetVersions,
+                and(eq(datasetVersions.datasetId, datasets.id), eq(datasetVersions.version, datasets.currentVersion)),
+              )
+              .where(whereClause)
+              .orderBy(...orderBy)
+              .limit(limit + 1),
           )
 
-          return {
-            datasets: rows.map((r) => toDomainDataset(r, r.latestVersionId)),
-            total: totalResult[0]?.total ?? 0,
-          } as const
+          const hasMore = rows.length > limit
+          const pageRows = hasMore ? rows.slice(0, limit) : rows
+          const items = pageRows.map((r) => toDomainDataset(r, r.latestVersionId))
+          const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+          const nextCursor: DatasetListCursor | undefined = last
+            ? { sortValue: sort.getSortValue(last), id: last.id }
+            : undefined
+
+          const page: DatasetListPage = nextCursor
+            ? { datasets: items, hasMore, nextCursor }
+            : { datasets: items, hasMore }
+          return page
         }),
 
       existsByNameInProject: (args) =>
@@ -235,7 +282,9 @@ export const DatasetRepositoryLive = Layer.effect(
           const [updated] = yield* sqlClient.query((db) =>
             db
               .update(datasets)
-              .set({ currentVersion: sql`GREATEST(${datasets.currentVersion} - 1, 0)` })
+              .set({
+                currentVersion: sql`GREATEST(${datasets.currentVersion} - 1, 0)`,
+              })
               .where(and(eq(datasets.id, args.id), isNull(datasets.deletedAt)))
               .returning({ id: datasets.id }),
           )
@@ -259,7 +308,9 @@ export const DatasetRepositoryLive = Layer.effect(
           )
 
           if (!row) {
-            return yield* new DatasetNotFoundError({ datasetId: args.datasetId })
+            return yield* new DatasetNotFoundError({
+              datasetId: args.datasetId,
+            })
           }
 
           return Number(row.version)

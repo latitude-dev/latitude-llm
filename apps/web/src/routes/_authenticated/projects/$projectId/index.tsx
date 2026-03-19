@@ -8,12 +8,13 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { AppWindowIcon, CalendarIcon, ChevronDown, Columns2Icon, DatabaseIcon, FilterIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { z } from "zod"
 import { useTracesCount, useTracesInfiniteScroll } from "../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../domains/traces/traces.functions.ts"
+import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useSelectableRows } from "../../../../lib/hooks/useSelectableRows.ts"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
@@ -120,7 +121,7 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
 function TracesPage() {
   const { projectId } = Route.useParams()
   const { traceId: activeTraceId } = Route.useSearch()
-  const navigate = useNavigate()
+  const navigate = Route.useNavigate()
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
 
@@ -143,7 +144,6 @@ function TracesPage() {
   const onRowClick = useCallback(
     (t: TraceRecord) => {
       navigate({
-        to: ".",
         search: t.traceId === activeTraceId ? {} : { traceId: t.traceId },
         replace: true,
       })
@@ -160,69 +160,73 @@ function TracesPage() {
   }, [navigate])
 
   return (
-    <div className="flex flex-row h-full">
-      <div className="flex flex-col flex-1 min-w-0 gap-3">
-        <div className="flex flex-col p-6 pb-0 gap-3">
-          <div className="flex flex-row gap-2 items-center justify-between">
-            <div className="flex flex-row gap-2 items-center">
-              <Button variant="outline" size="sm" flat disabled>
-                <AppWindowIcon className="h-4 w-4" />
-                <Text.H6>All logs</Text.H6>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" flat disabled>
-                <CalendarIcon className="h-4 w-4" />
-                <Text.H6>Last 7 days</Text.H6>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" flat disabled>
-                <Columns2Icon className="h-4 w-4" />
-                <Text.H6>Columns</Text.H6>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" flat disabled>
-                <FilterIcon className="h-4 w-4" />
-                <Text.H6>Filters</Text.H6>
-              </Button>
-              {selection.selectedCount > 0 && (
-                <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-                  <DatabaseIcon className="h-4 w-4" />
-                  <Text.H6>Add to Dataset ({selection.selectedCount})</Text.H6>
+    <>
+      <Layout>
+        <Layout.Content>
+          <Layout.Actions>
+            <Layout.ActionsRow>
+              <Layout.ActionRowItem>
+                <Button variant="outline" size="sm" flat disabled>
+                  <AppWindowIcon className="h-4 w-4" />
+                  <Text.H6>All logs</Text.H6>
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
-              )}
+                <Button variant="outline" size="sm" flat disabled>
+                  <CalendarIcon className="h-4 w-4" />
+                  <Text.H6>Last 7 days</Text.H6>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" flat disabled>
+                  <Columns2Icon className="h-4 w-4" />
+                  <Text.H6>Columns</Text.H6>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" flat disabled>
+                  <FilterIcon className="h-4 w-4" />
+                  <Text.H6>Filters</Text.H6>
+                </Button>
+                {selection.selectedCount > 0 && (
+                  <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
+                    <DatabaseIcon className="h-4 w-4" />
+                    <Text.H6>Add to Dataset ({selection.selectedCount})</Text.H6>
+                  </Button>
+                )}
+              </Layout.ActionRowItem>
+              <Layout.ActionRowItem className="shrink-0">
+                <Input placeholder="Search traces" size="sm" className="w-60" disabled />
+              </Layout.ActionRowItem>
+            </Layout.ActionsRow>
+            <div className="w-full flex flex-col bg-secondary rounded-lg p-4 min-h-[144px] items-center justify-center">
+              <Text.H5 color="foregroundMuted">Coming soon</Text.H5>
             </div>
-
-            <div className="flex flex-row gap-2 items-center">
-              <Input placeholder="Search traces" size="sm" className="w-60" disabled />
-            </div>
-          </div>
-
-          <div className="w-full flex flex-col bg-secondary rounded-lg p-4 min-h-[144px] items-center justify-center">
-            <Text.H5 color="foregroundMuted">Coming soon</Text.H5>
-          </div>
-        </div>
-
-        <div className="min-h-0 grow">
-          <InfiniteTable
-            className="p-6 pt-0"
-            data={traces}
-            isLoading={isLoading}
-            columns={columns}
-            getRowKey={getRowKey}
-            onRowClick={onRowClick}
-            activeRowKey={activeTraceId}
-            selection={selection}
-            infiniteScroll={infiniteScroll}
-            sorting={sorting}
-            defaultSorting={DEFAULT_SORTING}
-            onSortChange={setSorting}
-          />
-        </div>
-      </div>
-
-      {activeTraceId && (
-        <TraceDetailDrawer traceId={activeTraceId} trace={activeTrace} projectId={projectId} onClose={closeDrawer} />
-      )}
+          </Layout.Actions>
+          <Layout.List>
+            <InfiniteTable
+              data={traces}
+              isLoading={isLoading}
+              columns={columns}
+              getRowKey={getRowKey}
+              onRowClick={onRowClick}
+              activeRowKey={activeTraceId}
+              selection={selection}
+              infiniteScroll={infiniteScroll}
+              sorting={sorting}
+              defaultSorting={DEFAULT_SORTING}
+              onSortChange={setSorting}
+            />
+          </Layout.List>
+        </Layout.Content>
+        {activeTraceId ? (
+          <Layout.Aside>
+            <TraceDetailDrawer
+              traceId={activeTraceId}
+              trace={activeTrace}
+              projectId={projectId}
+              onClose={closeDrawer}
+            />
+          </Layout.Aside>
+        ) : null}
+      </Layout>
 
       <AddToDatasetModal
         open={addToDatasetOpen}
@@ -231,6 +235,6 @@ function TracesPage() {
         traceIds={selection.selectedRowIds}
         onSuccess={selection.clearSelections}
       />
-    </div>
+    </>
   )
 }

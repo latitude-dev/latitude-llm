@@ -1,5 +1,8 @@
+import type { SortDirection as DomainSortDirection } from "@domain/shared"
 import type { ReactNode } from "react"
 import type { CheckedState } from "../checkbox/checkbox.tsx"
+
+export type SortDirection = DomainSortDirection
 
 export interface InfiniteTableColumn<T> {
   key: string
@@ -23,8 +26,6 @@ export interface InfiniteTableInfiniteScroll {
   onLoadMore: () => void
 }
 
-export type SortDirection = "asc" | "desc"
-
 export interface InfiniteTableSorting {
   column: string
   direction: SortDirection
@@ -42,6 +43,6 @@ export interface InfiniteTableProps<T> {
   sorting?: InfiniteTableSorting
   defaultSorting?: InfiniteTableSorting
   onSortChange?: (sorting: InfiniteTableSorting) => void
-  blankSlate?: ReactNode
+  blankSlate?: ReactNode | string
   className?: string
 }

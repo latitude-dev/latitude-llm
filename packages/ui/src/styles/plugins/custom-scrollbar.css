@@ -1,0 +1,62 @@
+/*
+ * Custom Scrollbar Utilities
+ *
+ * Classes:
+ *   no-scrollbar           — hide scrollbar while keeping overflow scroll (all browsers)
+ *   scrollable-indicator   — gradient fade at top/bottom to indicate scrollable content
+ *   custom-scrollbar       — overlay scrollbar with styled thumb (webkit)
+ *   custom-scrollbar-screenshot — use with custom-scrollbar to hide overflow in screenshots
+ */
+
+/* Tailwind v4 @utility directive (not standard CSS; editor may warn without css.lint.unknownAtRules) */
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  overflow: -moz-scrollbars-none;
+}
+
+/* Tailwind v4 @utility directive (not standard CSS; editor may warn without css.lint.unknownAtRules) */
+@utility scrollable-indicator {
+  background:
+    linear-gradient(hsl(var(--background)) 30%, hsl(var(--background) / 0)),
+    linear-gradient(hsl(var(--background)), hsl(var(--background)) 0%) 0 100%,
+    radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.1), transparent),
+    radial-gradient(farthest-side at 50% 100%, hsl(var(--background-shadow) / 0.1), rgba(0, 0, 0, 0)) 0 100%;
+  background-repeat: no-repeat;
+  background-color: hsl(var(--background));
+  background-size:
+    100% 60px,
+    100% 60px,
+    100% 6px,
+    100% 6px;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* Tailwind v4 @utility directive (not standard CSS; editor may warn without css.lint.unknownAtRules) */
+@utility custom-scrollbar {
+  /* biome-ignore lint/complexity/noImportantStyles: required to override parent overflow so overlay scrollbar works */
+  overflow: overlay !important;
+  &::-webkit-scrollbar {
+    @apply w-5 h-5;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gray-400;
+    @apply rounded-full bg-clip-padding border-solid;
+    @apply border-transparent border-[6px];
+  }
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
+}
+
+/* Tailwind v4 @utility directive (not standard CSS; editor may warn without css.lint.unknownAtRules) */
+@utility custom-scrollbar-screenshot {
+  /* biome-ignore lint/complexity/noImportantStyles: required so screenshot capture hides overflow reliably */
+  overflow: hidden !important;
+}
