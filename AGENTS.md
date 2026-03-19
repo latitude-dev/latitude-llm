@@ -508,11 +508,11 @@ Rules:
 - Always use typed errors (`Data.TaggedError`) instead of raw `Error` at domain/platform boundaries
 - Use `Effect.either` for operations that may fail but shouldn't stop execution
 - Handle errors at boundaries; propagate through Effect error channel internally
-- Every domain error must include `httpStatus` and `httpMessage` — no exceptions. Even if the error doesn't currently reach an HTTP boundary, that boundary may change. Use a readonly field for static messages and a getter for messages computed from error fields.
+- Every domain error must implement the `HttpError` interface (`httpStatus` and `httpMessage`) — no exceptions. Even if the error doesn't currently reach an HTTP boundary, that boundary may change. Use a readonly field for static messages and a getter for messages computed from error fields.
 
 ### HTTP Error Handling Pattern
 
-Domain errors that need specific HTTP responses implement the `HttpError` interface:
+All domain errors implement the `HttpError` interface from `@repo/utils`:
 
 ```typescript
 interface HttpError {
