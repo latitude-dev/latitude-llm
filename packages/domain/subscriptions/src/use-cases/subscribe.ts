@@ -1,12 +1,5 @@
-import {
-  defineError,
-  defineErrorDynamic,
-  type GrantId,
-  type OrganizationId,
-  type RepositoryError,
-  type SubscriptionId,
-} from "@domain/shared"
-import { Effect } from "effect"
+import { type GrantId, type OrganizationId, type RepositoryError, type SubscriptionId } from "@domain/shared"
+import { Data, Effect } from "effect"
 import { createGrant, type GrantType } from "../entities/grant.ts"
 import { getAvailablePlans, type Plan } from "../entities/plan.ts"
 import { createSubscription } from "../entities/subscription.ts"
@@ -25,18 +18,22 @@ export interface SubscribeInput {
   }
 }
 
-export class SubscriptionAlreadyExistsError extends defineError(
-  "SubscriptionAlreadyExistsError",
-  409,
-  "Organization already has an active subscription",
-)<{
+export class SubscriptionAlreadyExistsError extends Data.TaggedError("SubscriptionAlreadyExistsError")<{
   readonly organizationId: OrganizationId
-}> {}
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage = "Organization already has an active subscription"
+}
 
-export class InvalidPlanError extends defineErrorDynamic("InvalidPlanError", 400, (f: { reason: string }) => f.reason)<{
+export class InvalidPlanError extends Data.TaggedError("InvalidPlanError")<{
   readonly plan: Plan
   readonly reason: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.reason
+  }
+}
 
 export type SubscribeError = RepositoryError | SubscriptionAlreadyExistsError | InvalidPlanError
 

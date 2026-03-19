@@ -1,5 +1,4 @@
-import { Effect } from "effect"
-import { defineError } from "./errors.ts"
+import { Data, Effect } from "effect"
 import type { DatasetId, OrganizationId, ProjectId } from "./id.ts"
 
 export interface StorageDiskPort {
@@ -12,10 +11,13 @@ export interface StorageDiskPort {
   getSignedUrl(key: string, options?: { expiresIn?: number }): Promise<string>
 }
 
-export class StorageError extends defineError("StorageError", 500, "Storage operation failed")<{
+export class StorageError extends Data.TaggedError("StorageError")<{
   readonly cause: unknown
   readonly operation: string
-}> {}
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Storage operation failed"
+}
 
 type FolderNamespace = "datasetExports" | "datasets" | "ingest" | "unknown"
 

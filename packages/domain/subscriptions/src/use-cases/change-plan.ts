@@ -1,13 +1,5 @@
-import {
-  defineError,
-  defineErrorDynamic,
-  type GrantId,
-  type NotFoundError,
-  type OrganizationId,
-  type RepositoryError,
-  SqlClient,
-} from "@domain/shared"
-import { Effect } from "effect"
+import { type GrantId, type NotFoundError, type OrganizationId, type RepositoryError, SqlClient } from "@domain/shared"
+import { Data, Effect } from "effect"
 import { createGrant, type Grant, type GrantType } from "../entities/grant.ts"
 import type { Plan } from "../entities/plan.ts"
 import type { Subscription } from "../entities/subscription.ts"
@@ -24,28 +16,31 @@ export interface ChangePlanInput {
   }
 }
 
-export class NoActiveSubscriptionError extends defineError(
-  "NoActiveSubscriptionError",
-  404,
-  "No active subscription found",
-)<{
+export class NoActiveSubscriptionError extends Data.TaggedError("NoActiveSubscriptionError")<{
   readonly organizationId: OrganizationId
-}> {}
+}> {
+  readonly httpStatus = 404
+  readonly httpMessage = "No active subscription found"
+}
 
-export class SamePlanError extends defineError("SamePlanError", 409, "Already on the requested plan")<{
+export class SamePlanError extends Data.TaggedError("SamePlanError")<{
   readonly currentPlan: Plan
   readonly requestedPlan: Plan
-}> {}
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage = "Already on the requested plan"
+}
 
-export class PlanDowngradeError extends defineErrorDynamic(
-  "PlanDowngradeError",
-  400,
-  (f: { reason: string }) => f.reason,
-)<{
+export class PlanDowngradeError extends Data.TaggedError("PlanDowngradeError")<{
   readonly currentPlan: Plan
   readonly requestedPlan: Plan
   readonly reason: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.reason
+  }
+}
 
 export type ChangePlanError =
   | RepositoryError

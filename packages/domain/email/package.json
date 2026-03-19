@@ -12,7 +12,6 @@
     "check:fix": "biome check --fix ."
   },
   "dependencies": {
-    "@domain/shared": "workspace:*",
     "@react-email/components": "^1.0.9",
     "effect": "catalog:",
     "react": "catalog:"

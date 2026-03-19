@@ -526,9 +526,6 @@ importers:
 
   packages/domain/email:
     dependencies:
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@react-email/components':
         specifier: ^1.0.9
         version: 1.0.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -600,9 +597,6 @@ importers:
 
   packages/domain/queue:
     dependencies:
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0

@@ -1,52 +1,47 @@
 import { createMembership, createOrganizationUseCase, MembershipRepository } from "@domain/organizations"
-import { defineError, OrganizationId, SqlClient, UserId } from "@domain/shared"
+import { OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
-import { Effect, Match } from "effect"
+import { Data, Effect, Match } from "effect"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import type { AuthIntent, AuthIntentType } from "../types.ts"
 import { normalizeEmail, shouldCreateOrganizationForIntent } from "./auth-intent-policy.ts"
 
-export class InvalidAuthIntentTypeError extends defineError(
-  "InvalidAuthIntentTypeError",
-  400,
-  "Invalid authentication intent type",
-)<{
+export class InvalidAuthIntentTypeError extends Data.TaggedError("InvalidAuthIntentTypeError")<{
   readonly intentId: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Invalid authentication intent type"
+}
 
-export class AuthIntentExpiredError extends defineError(
-  "AuthIntentExpiredError",
-  400,
-  "Authentication intent has expired",
-)<{
+export class AuthIntentExpiredError extends Data.TaggedError("AuthIntentExpiredError")<{
   readonly intentId: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Authentication intent has expired"
+}
 
-export class AuthIntentEmailMismatchError extends defineError(
-  "AuthIntentEmailMismatchError",
-  400,
-  "Authentication intent email mismatch",
-)<{
+export class AuthIntentEmailMismatchError extends Data.TaggedError("AuthIntentEmailMismatchError")<{
   readonly intentId: string
   readonly intentEmail: string
   readonly sessionEmail: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Authentication intent email mismatch"
+}
 
-export class MissingSignupProvisioningDataError extends defineError(
-  "MissingSignupProvisioningDataError",
-  400,
-  "Missing signup details for organization provisioning",
-)<{
+export class MissingSignupProvisioningDataError extends Data.TaggedError("MissingSignupProvisioningDataError")<{
   readonly intentId: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Missing signup details for organization provisioning"
+}
 
-export class MissingInviteDataError extends defineError(
-  "MissingInviteDataError",
-  400,
-  "Missing invite details for membership provisioning",
-)<{
+export class MissingInviteDataError extends Data.TaggedError("MissingInviteDataError")<{
   readonly intentId: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Missing invite details for membership provisioning"
+}
 
 interface SessionInput {
   readonly userId: string

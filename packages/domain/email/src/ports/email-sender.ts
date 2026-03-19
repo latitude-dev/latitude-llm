@@ -1,5 +1,4 @@
-import { defineError } from "@domain/shared"
-import type { Effect } from "effect"
+import { Data, type Effect } from "effect"
 
 export interface EmailMessage {
   readonly to: string
@@ -14,7 +13,10 @@ export interface EmailSender {
   readonly send: (message: EmailMessage) => Effect.Effect<void, EmailSendError>
 }
 
-export class EmailSendError extends defineError("EmailSendError", 500, "Failed to send email")<{
+export class EmailSendError extends Data.TaggedError("EmailSendError")<{
   readonly message: string
   readonly cause?: unknown
-}> {}
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Failed to send email"
+}

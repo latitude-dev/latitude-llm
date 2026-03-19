@@ -508,7 +508,7 @@ Rules:
 - Always use typed errors (`Data.TaggedError`) instead of raw `Error` at domain/platform boundaries
 - Use `Effect.either` for operations that may fail but shouldn't stop execution
 - Handle errors at boundaries; propagate through Effect error channel internally
-- All domain errors must extend `defineError` or `defineErrorDynamic` from `@domain/shared` — no exceptions. Never extend `Data.TaggedError` directly in domain packages. Every domain error gets `httpStatus` and `httpMessage` at definition time regardless of whether it currently reaches an HTTP boundary, because that boundary may change.
+- Every domain error must include `httpStatus` and `httpMessage` — no exceptions. Even if the error doesn't currently reach an HTTP boundary, that boundary may change. Use a readonly field for static messages and a getter for messages computed from error fields.
 
 ### HTTP Error Handling Pattern
 
@@ -530,26 +530,28 @@ interface HttpError {
 4. Centralized error handling via `app.onError(honoErrorHandler)` in server.ts
 5. Error middleware converts HttpError instances to appropriate HTTP responses
 
-**Error definition factories (`@domain/shared`):**
-
-Use `defineError` for static messages and `defineErrorDynamic` for computed messages:
+**Example domain errors:**
 
 ```typescript
-// Static message — httpMessage is fixed at definition time
-export class QueuePublishError extends defineError("QueuePublishError", 502, "Queue publish failed")<{
+// Static message
+export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
     readonly cause: unknown;
     readonly queue: QueueName;
-}> {}
+}> {
+    readonly httpStatus = 502;
+    readonly httpMessage = "Queue publish failed";
+}
 
-// Dynamic message — httpMessage is computed from fields
-export class NotFoundError extends defineErrorDynamic(
-    "NotFoundError",
-    404,
-    (f: { entity: string }) => `${f.entity} not found`,
-)<{
+// Dynamic message computed from fields
+export class NotFoundError extends Data.TaggedError("NotFoundError")<{
     readonly entity: string;
     readonly id: string;
-}> {}
+}> {
+    readonly httpStatus = 404;
+    get httpMessage() {
+        return `${this.entity} not found`;
+    }
+}
 ```
 
 **Example repository method:**

@@ -1,89 +1,71 @@
-import { type Cause, Data, type Types } from "effect"
+import { Data } from "effect"
 
-type HttpMeta = { readonly httpStatus: number; readonly httpMessage: string }
-
-export interface HttpErrorCtor<Tag extends string> {
-  // biome-ignore lint/suspicious/noExplicitAny: mirrors Data.TaggedError's exact generic constraint
-  // biome-ignore lint/complexity/noBannedTypes: mirrors Data.TaggedError's exact default/conditional types
-  new <A extends Record<string, any> = {}>(
-    // biome-ignore lint/suspicious/noConfusingVoidType: mirrors Data.TaggedError's exact conditional args type
-    // biome-ignore lint/complexity/noBannedTypes: mirrors Data.TaggedError's exact default/conditional types
-    args: Types.Equals<A, {}> extends true ? void : { readonly [P in keyof A as P extends "_tag" ? never : P]: A[P] },
-  ): Cause.YieldableError & { readonly _tag: Tag } & Readonly<A> & HttpMeta
-}
-
-export const defineError = <Tag extends string>(
-  tag: Tag,
-  httpStatus: number,
-  httpMessage: string,
-): HttpErrorCtor<Tag> => {
-  // biome-ignore lint/suspicious/noExplicitAny: Data.TaggedError returns a generic constructor that can't be extended without widening
-  return class extends (Data.TaggedError(tag) as any) {
-    readonly httpStatus = httpStatus
-    readonly httpMessage = httpMessage
-  } as unknown as HttpErrorCtor<Tag>
-}
-
-// biome-ignore lint/suspicious/noExplicitAny: mirrors Data.TaggedError's generic constraint for Fields
-export const defineErrorDynamic = <Tag extends string, Fields extends Record<string, any>>(
-  tag: Tag,
-  httpStatus: number,
-  getHttpMessage: (fields: Fields) => string,
-): HttpErrorCtor<Tag> => {
-  // biome-ignore lint/suspicious/noExplicitAny: Data.TaggedError returns a generic constructor that can't be extended without widening
-  return class extends (Data.TaggedError(tag) as any) {
-    readonly httpStatus = httpStatus
-    get httpMessage(): string {
-      return getHttpMessage(this as unknown as Fields)
-    }
-  } as unknown as HttpErrorCtor<Tag>
-}
-
-export class RepositoryError extends defineError("RepositoryError", 500, "Internal server error")<{
+export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   readonly cause: unknown
   readonly operation: string
-}> {}
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Internal server error"
+}
 
-export class ValidationError extends defineErrorDynamic("ValidationError", 400, (f: { message: string }) => f.message)<{
+export class ValidationError extends Data.TaggedError("ValidationError")<{
   readonly field: string
   readonly message: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.message
+  }
+}
 
-export class NotFoundError extends defineErrorDynamic(
-  "NotFoundError",
-  404,
-  (f: { entity: string }) => `${f.entity} not found`,
-)<{
+export class NotFoundError extends Data.TaggedError("NotFoundError")<{
   readonly entity: string
   readonly id: string
-}> {}
+}> {
+  readonly httpStatus = 404
+  get httpMessage() {
+    return `${this.entity} not found`
+  }
+}
 
-export class ConflictError extends defineErrorDynamic(
-  "ConflictError",
-  409,
-  (f: { entity: string; field: string; value: string }) => `${f.entity} with ${f.field} '${f.value}' already exists`,
-)<{
+export class ConflictError extends Data.TaggedError("ConflictError")<{
   readonly entity: string
   readonly field: string
   readonly value: string
-}> {}
+}> {
+  readonly httpStatus = 409
+  get httpMessage() {
+    return `${this.entity} with ${this.field} '${this.value}' already exists`
+  }
+}
 
-export class UnauthorizedError extends defineErrorDynamic(
-  "UnauthorizedError",
-  401,
-  (f: { message: string }) => f.message,
-)<{
+export class UnauthorizedError extends Data.TaggedError("UnauthorizedError")<{
   readonly message: string
-}> {}
+}> {
+  readonly httpStatus = 401
+  get httpMessage() {
+    return this.message
+  }
+}
 
-export class BadRequestError extends defineErrorDynamic("BadRequestError", 400, (f: { message: string }) => f.message)<{
+export class BadRequestError extends Data.TaggedError("BadRequestError")<{
   readonly message: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.message
+  }
+}
 
-export class PermissionError extends defineErrorDynamic("PermissionError", 403, (f: { message: string }) => f.message)<{
+export class PermissionError extends Data.TaggedError("PermissionError")<{
   readonly message: string
   readonly organizationId: string
-}> {}
+}> {
+  readonly httpStatus = 403
+  get httpMessage() {
+    return this.message
+  }
+}
 
 export type DomainError =
   | RepositoryError

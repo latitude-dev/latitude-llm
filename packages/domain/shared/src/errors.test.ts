@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import {
   BadRequestError,
   ConflictError,
-  defineError,
   NotFoundError,
   PermissionError,
   RepositoryError,
@@ -11,8 +10,8 @@ import {
   ValidationError,
 } from "./errors.ts"
 
-describe("defineError", () => {
-  it("produces instances with static httpStatus and httpMessage", () => {
+describe("static httpStatus and httpMessage", () => {
+  it("RepositoryError", () => {
     const err = new RepositoryError({ cause: "timeout", operation: "findById" })
     expect(err._tag).toBe("RepositoryError")
     expect(err.httpStatus).toBe(500)
@@ -20,23 +19,10 @@ describe("defineError", () => {
     expect(err.cause).toBe("timeout")
     expect(err.operation).toBe("findById")
   })
-
-  it("supports custom static errors via defineError", () => {
-    class MyStaticError extends defineError("MyStaticError", 502, "Bad gateway")<{
-      readonly detail: string
-    }> {}
-
-    const err = new MyStaticError({ detail: "upstream timeout" })
-    expect(err._tag).toBe("MyStaticError")
-    expect(err.httpStatus).toBe(502)
-    expect(err.httpMessage).toBe("Bad gateway")
-    expect(err.detail).toBe("upstream timeout")
-    expect(err instanceof MyStaticError).toBe(true)
-  })
 })
 
-describe("defineErrorDynamic", () => {
-  it("produces instances with dynamic httpMessage", () => {
+describe("dynamic httpMessage", () => {
+  it("NotFoundError computes message from entity field", () => {
     const err = new NotFoundError({ entity: "Project", id: "abc123" })
     expect(err._tag).toBe("NotFoundError")
     expect(err.httpStatus).toBe(404)
@@ -45,31 +31,31 @@ describe("defineErrorDynamic", () => {
     expect(err.id).toBe("abc123")
   })
 
-  it("computes httpMessage from fields for ValidationError", () => {
+  it("ValidationError forwards message field", () => {
     const err = new ValidationError({ field: "email", message: "Invalid email format" })
     expect(err.httpStatus).toBe(400)
     expect(err.httpMessage).toBe("Invalid email format")
   })
 
-  it("computes httpMessage from fields for ConflictError", () => {
+  it("ConflictError builds message from entity/field/value", () => {
     const err = new ConflictError({ entity: "User", field: "email", value: "foo@bar.com" })
     expect(err.httpStatus).toBe(409)
     expect(err.httpMessage).toBe("User with email 'foo@bar.com' already exists")
   })
 
-  it("computes httpMessage from fields for UnauthorizedError", () => {
+  it("UnauthorizedError forwards message field", () => {
     const err = new UnauthorizedError({ message: "Token expired" })
     expect(err.httpStatus).toBe(401)
     expect(err.httpMessage).toBe("Token expired")
   })
 
-  it("computes httpMessage from fields for BadRequestError", () => {
+  it("BadRequestError forwards message field", () => {
     const err = new BadRequestError({ message: "Missing required field" })
     expect(err.httpStatus).toBe(400)
     expect(err.httpMessage).toBe("Missing required field")
   })
 
-  it("computes httpMessage from fields for PermissionError", () => {
+  it("PermissionError forwards message field", () => {
     const err = new PermissionError({ message: "Forbidden", organizationId: "org1" })
     expect(err.httpStatus).toBe(403)
     expect(err.httpMessage).toBe("Forbidden")

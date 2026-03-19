@@ -1,5 +1,5 @@
 import type { DatasetId, DatasetVersionId, OrganizationId, ProjectId } from "@domain/shared"
-import { defineErrorDynamic } from "@domain/shared"
+import { Data } from "effect"
 
 export interface Dataset {
   readonly id: DatasetId
@@ -26,19 +26,21 @@ export interface DatasetVersion {
   readonly updatedAt: Date
 }
 
-export class DatasetNotFoundError extends defineErrorDynamic(
-  "DatasetNotFoundError",
-  404,
-  (f: { datasetId: string }) => `Dataset ${f.datasetId} not found`,
-)<{
+export class DatasetNotFoundError extends Data.TaggedError("DatasetNotFoundError")<{
   readonly datasetId: string
-}> {}
+}> {
+  readonly httpStatus = 404
+  get httpMessage() {
+    return `Dataset ${this.datasetId} not found`
+  }
+}
 
-export class DuplicateDatasetNameError extends defineErrorDynamic(
-  "DuplicateDatasetNameError",
-  409,
-  (f: { name: string }) => `A dataset named "${f.name}" already exists in this project`,
-)<{
+export class DuplicateDatasetNameError extends Data.TaggedError("DuplicateDatasetNameError")<{
   readonly projectId: string
   readonly name: string
-}> {}
+}> {
+  readonly httpStatus = 409
+  get httpMessage() {
+    return `A dataset named "${this.name}" already exists in this project`
+  }
+}

@@ -1,6 +1,5 @@
 import {
   type ConflictError,
-  defineErrorDynamic,
   type OrganizationId,
   type ProjectId,
   type RepositoryError,
@@ -8,7 +7,7 @@ import {
   type UserId,
   type ValidationError,
 } from "@domain/shared"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import { createProject } from "../entities/project.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
@@ -26,24 +25,26 @@ const toSlug = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
 
-export class ProjectAlreadyExistsError extends defineErrorDynamic(
-  "ProjectAlreadyExistsError",
-  409,
-  (f: { name: string; slug: string }) => `Project '${f.name}' or slug '${f.slug}' already exists in this organization`,
-)<{
+export class ProjectAlreadyExistsError extends Data.TaggedError("ProjectAlreadyExistsError")<{
   readonly name: string
   readonly slug: string
   readonly organizationId: OrganizationId
-}> {}
+}> {
+  readonly httpStatus = 409
+  get httpMessage() {
+    return `Project '${this.name}' or slug '${this.slug}' already exists in this organization`
+  }
+}
 
-export class InvalidProjectNameError extends defineErrorDynamic(
-  "InvalidProjectNameError",
-  400,
-  (f: { message: string }) => f.message,
-)<{
+export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
   readonly field: string
   readonly message: string
-}> {}
+}> {
+  readonly httpStatus = 400
+  get httpMessage() {
+    return this.message
+  }
+}
 
 export type CreateProjectError =
   | RepositoryError
