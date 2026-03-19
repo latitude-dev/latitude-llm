@@ -189,7 +189,6 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
             <TableCell align="right">
               {(member.status === "active" || member.status === "invited") && (
                 <Button
-                  flat
                   variant="ghost"
                   onClick={() => {
                     const transaction =
@@ -234,7 +233,7 @@ function MembershipsSection() {
         <div className="flex flex-row items-center gap-2">
           <Text.H4 weight="bold">Organization Members</Text.H4>
         </div>
-        <Button flat variant="outline" onClick={() => setInviteOpen(true)}>
+        <Button variant="outline" onClick={() => setInviteOpen(true)}>
           Add Member
         </Button>
       </div>
@@ -390,7 +389,6 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   asChild
                   trigger={
                     <Button
-                      flat
                       variant="ghost"
                       onClick={() => {
                         navigator.clipboard.writeText(apiKey.token)
@@ -418,7 +416,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   <Tooltip
                     asChild
                     trigger={
-                      <Button flat variant="ghost" onClick={() => setApiKeyToEdit(apiKey)}>
+                      <Button variant="ghost" onClick={() => setApiKeyToEdit(apiKey)}>
                         <Icon icon={Pencil} size="sm" />
                       </Button>
                     }
@@ -429,7 +427,6 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                     asChild
                     trigger={
                       <Button
-                        flat
                         disabled={apiKeys.length === 1}
                         variant="ghost"
                         onClick={() => {
@@ -469,7 +466,7 @@ function ApiKeysSection() {
           </div>
         }
         actions={
-          <Button flat variant="outline" onClick={() => setCreateOpen(true)}>
+          <Button variant="outline" onClick={() => setCreateOpen(true)}>
             Create API Key
           </Button>
         }

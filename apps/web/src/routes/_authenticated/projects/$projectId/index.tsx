@@ -126,7 +126,7 @@ function ProjectPage() {
       <Layout.Actions>
         <Layout.ActionsRow>
           <Layout.ActionRowItem>
-            <Button variant="outline" size="sm" flat disabled>
+            <Button variant="outline" size="sm" disabled>
               <AppWindowIcon className="h-4 w-4" />
               All logs
               <ChevronDown className="h-4 w-4" />
@@ -148,17 +148,12 @@ function ProjectPage() {
                 setRawFilters(serializeFilters(next) ?? "")
               }}
             />
-            <Button variant="outline" size="sm" flat disabled>
+            <Button variant="outline" size="sm" disabled>
               <Columns2Icon className="h-4 w-4" />
               Columns
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <Button
-              variant={filtersOpen ? "outline" : "ghost"}
-              size="sm"
-              flat
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
+            <Button variant={filtersOpen ? "outline" : "ghost"} size="sm" onClick={() => setFiltersOpen(!filtersOpen)}>
               <FilterIcon className="h-4 w-4" />
               Filters
               {hasActiveFilters && (

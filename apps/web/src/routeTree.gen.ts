@@ -10,11 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as DesignSystemRouteRouteImport } from './routes/design-system/route'
 import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
+import { Route as DesignSystemIndexRouteImport } from './routes/design-system/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
+import { Route as DesignSystemColorsRouteImport } from './routes/design-system/colors'
+import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedUserSettingsRouteImport } from './routes/_authenticated/user-settings'
@@ -32,19 +35,24 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DesignSystemRoute = DesignSystemRouteImport.update({
-  id: '/design-system',
-  path: '/design-system',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesignSystemRouteRoute = DesignSystemRouteRouteImport.update({
+  id: '/design-system',
+  path: '/design-system',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
   id: '/welcome/',
   path: '/welcome/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DesignSystemIndexRoute = DesignSystemIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DesignSystemRouteRoute,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
@@ -55,6 +63,16 @@ const DownloadsExportRoute = DownloadsExportRouteImport.update({
   id: '/downloads/export',
   path: '/downloads/export',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DesignSystemColorsRoute = DesignSystemColorsRouteImport.update({
+  id: '/colors',
+  path: '/colors',
+  getParentRoute: () => DesignSystemRouteRoute,
+} as any)
+const DesignSystemButtonRoute = DesignSystemButtonRouteImport.update({
+  id: '/button',
+  path: '/button',
+  getParentRoute: () => DesignSystemRouteRoute,
 } as any)
 const AuthInviteRoute = AuthInviteRouteImport.update({
   id: '/auth/invite',
@@ -120,14 +138,17 @@ const AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
-  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/design-system/button': typeof DesignSystemButtonRoute
+  '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
+  '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -138,14 +159,16 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/issues/': typeof AuthenticatedProjectsProjectIdIssuesIndexRoute
 }
 export interface FileRoutesByTo {
-  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/design-system/button': typeof DesignSystemButtonRoute
+  '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/': typeof AuthenticatedIndexRoute
+  '/design-system': typeof DesignSystemIndexRoute
   '/welcome': typeof WelcomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
@@ -156,15 +179,18 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
+  '/design-system/button': typeof DesignSystemButtonRoute
+  '/design-system/colors': typeof DesignSystemColorsRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -177,14 +203,17 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/design-system'
+    | '/'
     | '/login'
     | '/settings'
     | '/user-settings'
     | '/api/health'
     | '/auth/invite'
+    | '/design-system/button'
+    | '/design-system/colors'
     | '/downloads/export'
+    | '/design-system/'
     | '/welcome/'
     | '/projects/$projectId'
     | '/api/auth/$'
@@ -195,14 +224,16 @@ export interface FileRouteTypes {
     | '/projects/$projectId/issues/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/design-system'
     | '/login'
     | '/settings'
     | '/user-settings'
     | '/api/health'
     | '/auth/invite'
+    | '/design-system/button'
+    | '/design-system/colors'
     | '/downloads/export'
     | '/'
+    | '/design-system'
     | '/welcome'
     | '/api/auth/$'
     | '/projects/$projectId/settings'
@@ -212,15 +243,18 @@ export interface FileRouteTypes {
     | '/projects/$projectId/issues'
   id:
     | '__root__'
-    | '/_authenticated'
     | '/design-system'
+    | '/_authenticated'
     | '/login'
     | '/_authenticated/settings'
     | '/_authenticated/user-settings'
     | '/api/health'
     | '/auth/invite'
+    | '/design-system/button'
+    | '/design-system/colors'
     | '/downloads/export'
     | '/_authenticated/'
+    | '/design-system/'
     | '/welcome/'
     | '/_authenticated/projects/$projectId'
     | '/api/auth/$'
@@ -232,8 +266,8 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  DesignSystemRouteRoute: typeof DesignSystemRouteRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
   ApiHealthRoute: typeof ApiHealthRoute
   AuthInviteRoute: typeof AuthInviteRoute
@@ -251,18 +285,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/design-system': {
-      id: '/design-system'
-      path: '/design-system'
-      fullPath: '/design-system'
-      preLoaderRoute: typeof DesignSystemRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/design-system': {
+      id: '/design-system'
+      path: '/design-system'
+      fullPath: '/design-system'
+      preLoaderRoute: typeof DesignSystemRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/welcome/': {
@@ -271,6 +305,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/welcome/'
       preLoaderRoute: typeof WelcomeIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/design-system/': {
+      id: '/design-system/'
+      path: '/'
+      fullPath: '/design-system/'
+      preLoaderRoute: typeof DesignSystemIndexRouteImport
+      parentRoute: typeof DesignSystemRouteRoute
     }
     '/_authenticated/': {
       id: '/_authenticated/'
@@ -285,6 +326,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/downloads/export'
       preLoaderRoute: typeof DownloadsExportRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/design-system/colors': {
+      id: '/design-system/colors'
+      path: '/colors'
+      fullPath: '/design-system/colors'
+      preLoaderRoute: typeof DesignSystemColorsRouteImport
+      parentRoute: typeof DesignSystemRouteRoute
+    }
+    '/design-system/button': {
+      id: '/design-system/button'
+      path: '/button'
+      fullPath: '/design-system/button'
+      preLoaderRoute: typeof DesignSystemButtonRouteImport
+      parentRoute: typeof DesignSystemRouteRoute
     }
     '/auth/invite': {
       id: '/auth/invite'
@@ -366,6 +421,21 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DesignSystemRouteRouteChildren {
+  DesignSystemButtonRoute: typeof DesignSystemButtonRoute
+  DesignSystemColorsRoute: typeof DesignSystemColorsRoute
+  DesignSystemIndexRoute: typeof DesignSystemIndexRoute
+}
+
+const DesignSystemRouteRouteChildren: DesignSystemRouteRouteChildren = {
+  DesignSystemButtonRoute: DesignSystemButtonRoute,
+  DesignSystemColorsRoute: DesignSystemColorsRoute,
+  DesignSystemIndexRoute: DesignSystemIndexRoute,
+}
+
+const DesignSystemRouteRouteWithChildren =
+  DesignSystemRouteRoute._addFileChildren(DesignSystemRouteRouteChildren)
+
 interface AuthenticatedProjectsProjectIdRouteChildren {
   AuthenticatedProjectsProjectIdSettingsRoute: typeof AuthenticatedProjectsProjectIdSettingsRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -413,8 +483,8 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
+  DesignSystemRouteRoute: DesignSystemRouteRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
   ApiHealthRoute: ApiHealthRoute,
   AuthInviteRoute: AuthInviteRoute,

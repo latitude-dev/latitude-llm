@@ -508,11 +508,11 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
         <Text.H5>Filters</Text.H5>
         <div className="flex items-center gap-1">
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" flat onClick={clearAll}>
+            <Button variant="ghost" size="sm" onClick={clearAll}>
               Clear all
             </Button>
           )}
-          <Button variant="ghost" size="sm" flat onClick={onClose}>
+          <Button variant="ghost" size="sm" onClick={onClose}>
             <XIcon className="h-4 w-4" />
           </Button>
         </div>

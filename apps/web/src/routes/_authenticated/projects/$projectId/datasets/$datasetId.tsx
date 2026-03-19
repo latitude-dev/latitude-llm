@@ -543,7 +543,6 @@ function DatasetRowsView({
                 {selection.selectedCount > 0 && (
                   <>
                     <Button
-                      flat
                       variant="outline"
                       size="sm"
                       onClick={handleDownload}
@@ -553,7 +552,7 @@ function DatasetRowsView({
                       <Download className="h-4 w-4" />
                       Download
                     </Button>
-                    <Button flat variant="destructive" size="sm" onClick={() => setDeleteModalOpen(true)}>
+                    <Button variant="destructive" size="sm" onClick={() => setDeleteModalOpen(true)}>
                       <Trash2 className="h-4 w-4" />
                       Delete
                     </Button>
@@ -562,7 +561,7 @@ function DatasetRowsView({
               </Layout.ActionRowItem>
               <Layout.ActionRowItem>
                 <Input type="text" placeholder="Search rows..." value={q} onChange={(e) => setQ(e.target.value)} />
-                <Button flat variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
+                <Button variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
                   <FileDownIcon className="h-4 w-4" />
                   <Text.H6>Import</Text.H6>
                 </Button>
@@ -576,7 +575,7 @@ function DatasetRowsView({
                     if (file) handleImportFile(file)
                   }}
                 />
-                <Button flat variant="outline" size="sm" onClick={handleAddRow} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={handleAddRow} disabled={saving}>
                   <CirclePlus className="h-4 w-4" />
                   Add row
                 </Button>

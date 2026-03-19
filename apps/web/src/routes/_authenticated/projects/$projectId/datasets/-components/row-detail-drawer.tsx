@@ -70,7 +70,6 @@ export function RowDetailDrawer({
       actions={
         <>
           <Button
-            flat
             variant="ghost"
             className="w-8 h-8 p-0"
             disabled={!canNavigateNext}
@@ -81,7 +80,6 @@ export function RowDetailDrawer({
             <ArrowDownIcon className="w-4 h-4 text-muted-foreground" />
           </Button>
           <Button
-            flat
             variant="ghost"
             className="w-8 h-8 p-0"
             disabled={!canNavigatePrev}
@@ -100,7 +98,7 @@ export function RowDetailDrawer({
       }
       rightActions={
         onSave && saveVisible ? (
-          <Button onClick={() => panelSaveRef.current?.save()} variant="default" flat size="sm" disabled={saving}>
+          <Button onClick={() => panelSaveRef.current?.save()} variant="default" size="sm" disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save row
           </Button>

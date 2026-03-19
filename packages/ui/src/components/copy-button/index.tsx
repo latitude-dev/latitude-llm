@@ -37,7 +37,7 @@ export function CopyButton({
   })
 
   const button = (
-    <Button flat variant="ghost" size="icon" onClick={handleCopy} className={className}>
+    <Button variant="ghost" size="icon" onClick={handleCopy} className={className}>
       <Icon icon={copied ? Check : Clipboard} size="sm" color={copied ? "success" : "foregroundMuted"} />
     </Button>
   )

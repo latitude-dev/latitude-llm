@@ -206,7 +206,8 @@
   --card-foreground: 223 70% 4%;
   --popover: 0 0% 100%;
   --popover-foreground: 223 70% 4%;
-  --primary: 211 94% 43%;
+  /* --primary: 211 94% 43%; */
+  --primary: 210 100% 50%;
   --primary-foreground: 210 20% 98%;
   --primary-muted: 210 100% 96%;
   --primary-muted-hover: 210 100% 97%;
@@ -234,6 +235,8 @@
   --input: 0 0% 84.8%;
   --ring: 211 94% 43%;
   --radius: 0.5rem;
+  --button-face-inset-shadow: inset 0 3px 8px 0 rgb(255 255 255 / 0.48);
+  --button-face-inset-shadow-hover: inset 0 3px 8px 0 rgb(255 255 255 / 0.3);
   --latte: 45 99% 55%;
   --latte-border: 42.5 51% 81.5%;
   --latte-background: 43 71% 98%;
@@ -260,7 +263,7 @@
   --card-foreground: 0 0% 98%;
   --popover: 0 0% 3.9%;
   --popover-foreground: 0 0% 98%;
-  --primary: 210 98% 24%;
+  --primary: 211 94% 43%;
   --primary-foreground: 210 20% 98%;
   --primary-muted: 210 100% 12%;
   --primary-muted-hover: 210 100% 16%;
@@ -274,9 +277,9 @@
   --accent: 211 88% 10%;
   --accent-button: 211 97% 35%;
   --accent-foreground: 211 94% 65%;
-  --destructive: 0 62.8% 30.6%;
+  --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
-  --destructive-muted: 0 75% 10%;
+  --destructive-muted: 0 75% 15%;
   --destructive-muted-foreground: 0 75% 56%;
   --success: 142 76% 36%;
   --success-foreground: 120 87% 97%;
@@ -287,6 +290,8 @@
   --border: 231 9% 12.9%;
   --input: 0 0% 14.9%;
   --ring: 205 91% 44%;
+  --button-face-inset-shadow: inset 0 3px 8px 0 rgb(255 255 255 / 0.3);
+  --button-face-inset-shadow-hover: inset 0 3px 8px 0 rgb(255 255 255 / 0.1);
   --latte: 45 99% 55%;
   --latte-border: 45 81% 44%;
   --latte-background: 43 71% 8%;

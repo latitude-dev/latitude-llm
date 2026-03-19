@@ -40,10 +40,10 @@ export function TraceDetailDrawer({
       onClose={onClose}
       actions={
         <>
-          <Button flat variant="ghost" className="w-8 h-8 p-0" disabled>
+          <Button variant="ghost" className="w-8 h-8 p-0" disabled>
             <ArrowDownIcon className="w-4 h-4 text-muted-foreground" />
           </Button>
-          <Button flat variant="ghost" className="w-8 h-8 p-0" disabled>
+          <Button variant="ghost" className="w-8 h-8 p-0" disabled>
             <ArrowUpIcon className="w-4 h-4 text-muted-foreground" />
           </Button>
         </>
