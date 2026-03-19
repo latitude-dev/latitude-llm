@@ -8,8 +8,6 @@ export const projects = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(),
     name: varchar("name", { length: 256 }).notNull(),
     slug: varchar("slug", { length: 256 }).notNull(),
-    description: varchar("description", { length: 2048 }),
-    createdById: cuid("created_by_id"),
     deletedAt: tzTimestamp("deleted_at"),
     lastEditedAt: tzTimestamp("last_edited_at").notNull().defaultNow(),
     ...timestamps(),

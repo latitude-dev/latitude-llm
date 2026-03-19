@@ -42,6 +42,8 @@ const toDomainSubscription = (row: typeof subscription.$inferSelect): Subscripti
   periodStart: row.periodStart ?? null,
   trialEndsAt: row.trialEnd ?? null,
   cancelledAt: row.canceledAt ?? null,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
 })
 
 // ── Subscription Repository Live Layer ───────────────────────────────────────

@@ -19,7 +19,6 @@ const projectsCollection = createCollection(
           createProject({
             data: {
               name: mutation.modified.name,
-              ...(mutation.modified.description !== null ? { description: mutation.modified.description } : {}),
             },
           }),
         ),
@@ -32,7 +31,6 @@ const projectsCollection = createCollection(
             data: {
               id: mutation.key,
               name: mutation.modified.name,
-              description: mutation.modified.description,
             },
           }),
         ),

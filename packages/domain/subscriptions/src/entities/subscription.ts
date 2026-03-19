@@ -1,16 +1,6 @@
 import type { OrganizationId, SubscriptionId } from "@domain/shared"
 import type { Plan } from "./plan.ts"
 
-/**
- * Subscription entity - tracks organization billing subscription.
- *
- * Each organization has one active subscription at a time.
- * Subscriptions have a plan, trial status, and cancellation tracking.
- *
- * This entity is backed by the Better Auth Stripe plugin table, which
- * has no created_at/updated_at columns. The `periodStart` field maps
- * to the Stripe billing period start.
- */
 export interface Subscription {
   readonly id: SubscriptionId
   readonly organizationId: OrganizationId
@@ -19,6 +9,8 @@ export interface Subscription {
   readonly periodStart: Date | null
   readonly trialEndsAt: Date | null
   readonly cancelledAt: Date | null
+  readonly createdAt: Date
+  readonly updatedAt: Date
 }
 
 export const createSubscription = (params: {
@@ -29,7 +21,10 @@ export const createSubscription = (params: {
   periodStart?: Date | null
   trialEndsAt?: Date | null
   cancelledAt?: Date | null
+  createdAt?: Date
+  updatedAt?: Date
 }): Subscription => {
+  const now = new Date()
   return {
     id: params.id,
     organizationId: params.organizationId,
@@ -38,6 +33,8 @@ export const createSubscription = (params: {
     periodStart: params.periodStart ?? null,
     trialEndsAt: params.trialEndsAt ?? null,
     cancelledAt: params.cancelledAt ?? null,
+    createdAt: params.createdAt ?? now,
+    updatedAt: params.updatedAt ?? now,
   }
 }
 

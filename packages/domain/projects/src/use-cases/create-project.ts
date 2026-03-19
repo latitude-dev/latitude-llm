@@ -4,28 +4,15 @@ import {
   type ProjectId,
   type RepositoryError,
   SqlClient,
-  type UserId,
   type ValidationError,
 } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { createProject } from "../entities/project.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
-/**
- * Create a new project use case.
- *
- * This use case:
- * 1. Validates the project name
- * 2. Checks for name uniqueness within the organization
- * 3. Creates the project entity
- * 4. Persists to the repository
- * 5. Returns the created project
- */
 export interface CreateProjectInput {
   readonly id?: ProjectId
   readonly name: string
-  readonly description?: string
-  readonly createdById?: UserId
 }
 
 const toSlug = (value: string) =>
@@ -104,8 +91,6 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
       organizationId,
       name: trimmedName,
       slug: trimmedSlug,
-      ...(input.description !== undefined && { description: input.description }),
-      ...(input.createdById !== undefined && { createdById: input.createdById }),
     })
 
     return yield* sqlClient.transaction(

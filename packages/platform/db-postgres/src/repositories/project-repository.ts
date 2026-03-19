@@ -7,7 +7,6 @@ import {
   type ProjectId as ProjectIdType,
   SqlClient,
   type SqlClientShape,
-  UserId,
 } from "@domain/shared"
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -19,8 +18,6 @@ const toDomainProject = (row: typeof projects.$inferSelect): Project => ({
   organizationId: OrganizationId(row.organizationId),
   name: row.name,
   slug: row.slug,
-  description: row.description ?? null,
-  createdById: row.createdById ? UserId(row.createdById) : null,
   deletedAt: row.deletedAt,
   lastEditedAt: row.lastEditedAt,
   createdAt: row.createdAt,
@@ -32,8 +29,6 @@ const toInsertRow = (project: Project): typeof projects.$inferInsert => ({
   organizationId: project.organizationId,
   name: project.name,
   slug: project.slug,
-  description: project.description,
-  createdById: project.createdById,
   deletedAt: project.deletedAt,
 })
 
@@ -86,7 +81,6 @@ export const ProjectRepositoryLive = Layer.effect(
                 set: {
                   name: row.name,
                   slug: row.slug,
-                  description: row.description,
                   deletedAt: row.deletedAt,
                   lastEditedAt: new Date(),
                   updatedAt: new Date(),

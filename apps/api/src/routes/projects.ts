@@ -18,8 +18,6 @@ const ProjectSchema = z
     organizationId: z.string(),
     name: z.string(),
     slug: z.string(),
-    description: z.string().nullable(),
-    createdById: z.string().nullable(),
     deletedAt: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -29,29 +27,20 @@ const ProjectSchema = z
 const CreateProjectBodySchema = z
   .object({
     name: z.string().min(1).openapi({ description: "Project name" }),
-    description: z.string().optional().openapi({ description: "Project description" }),
   })
   .openapi("CreateProjectBody")
 
 const UpdateProjectBodySchema = z
   .object({
     name: z.string().min(1).optional().openapi({ description: "New project name" }),
-    description: z
-      .string()
-      .nullable()
-      .optional()
-      .openapi({ description: "New project description; send null to clear" }),
   })
   .openapi("UpdateProjectBody")
 
-/** Serialize a Project domain object to match the API response schema. */
 const toProjectResponse = (project: Project) => ({
   id: project.id as string,
   organizationId: project.organizationId as string,
   name: project.name,
   slug: project.slug,
-  description: project.description,
-  createdById: (project.createdById as string | null) ?? null,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),
   updatedAt: project.updatedAt.toISOString(),
@@ -209,13 +198,10 @@ export const createProjectsRoutes = () => {
   })
 
   app.openapi(createProjectRoute, async (c) => {
-    const auth = c.var.auth
     const body = c.req.valid("json")
 
     const input: CreateProjectInput = {
       name: body.name,
-      ...(body.description !== undefined && { description: body.description }),
-      createdById: auth.userId,
     }
 
     const project = await Effect.runPromise(
@@ -260,7 +246,6 @@ export const createProjectsRoutes = () => {
       updateProjectUseCase({
         id,
         ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.description !== undefined ? { description: body.description } : {}),
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
 

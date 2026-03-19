@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "0bf2f6c0-70ac-434b-8c1a-52c02c8dfe7c",
+  "id": "4a0af65c-f097-43f2-b183-a7991cac177d",
   "prevIds": [
     "ebf66caf-8215-4cd7-ae4a-bcacac2db74a"
   ],
@@ -1228,6 +1228,32 @@
       "table": "subscription"
     },
     {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "created_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "subscription"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "updated_at",
+      "entityType": "columns",
+      "schema": "latitude",
+      "table": "subscription"
+    },
+    {
       "type": "varchar(24)",
       "typeSchema": null,
       "notNull": true,
@@ -1548,32 +1574,6 @@
       "generated": null,
       "identity": null,
       "name": "slug",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "projects"
-    },
-    {
-      "type": "varchar(2048)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "description",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "projects"
-    },
-    {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "created_by_id",
       "entityType": "columns",
       "schema": "latitude",
       "table": "projects"

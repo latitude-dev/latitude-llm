@@ -1,19 +1,6 @@
 import { sql } from "drizzle-orm"
 import { boolean, integer, pgPolicy, text, varchar } from "drizzle-orm/pg-core"
-import { cuid, latitudeSchema, tzTimestamp } from "../schemaHelpers.ts"
-
-/**
- * Better Auth Stripe Plugin - Subscription table
- *
- * This table is managed by the Better Auth Stripe plugin.
- * It stores subscription data synchronized from Stripe.
- * The `reference_id` column holds the organization ID (plugin convention).
- *
- * Schema based on Better Auth Stripe plugin requirements:
- * @see https://better-auth.com/docs/plugins/stripe
- *
- * Scoped to the 'latitude' schema.
- */
+import { cuid, latitudeSchema, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const subscription = latitudeSchema.table(
   "subscription",
@@ -35,6 +22,7 @@ export const subscription = latitudeSchema.table(
     trialEnd: tzTimestamp("trial_end"),
     billingInterval: text("billing_interval"),
     stripeScheduleId: varchar("stripe_schedule_id", { length: 256 }),
+    ...timestamps(),
   },
   () => [
     pgPolicy("subscription_organization_policy", {

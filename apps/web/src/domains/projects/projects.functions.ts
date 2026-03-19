@@ -1,6 +1,6 @@
 import type { Project } from "@domain/projects"
 import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { ProjectId, UserId } from "@domain/shared"
+import { ProjectId } from "@domain/shared"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -14,7 +14,6 @@ export interface ProjectRecord {
   readonly organizationId: string
   readonly name: string
   readonly slug: string
-  readonly description: string | null
   readonly deletedAt: string | null
   readonly createdAt: string
   readonly updatedAt: string
@@ -25,7 +24,6 @@ const toRecord = (project: Project): ProjectRecord => ({
   organizationId: project.organizationId,
   name: project.name,
   slug: project.slug,
-  description: project.description,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),
   updatedAt: project.updatedAt.toISOString(),
@@ -49,16 +47,14 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ name: z.string(), description: z.string().optional() }))
+  .inputValidator(z.object({ name: z.string() }))
   .handler(async ({ data }): Promise<ProjectRecord> => {
-    const { userId, organizationId } = await requireSession()
+    const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
       createProjectUseCase({
         name: data.name,
-        ...(data.description !== undefined ? { description: data.description } : {}),
-        createdById: UserId(userId),
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     )
 
@@ -71,7 +67,6 @@ export const updateProject = createServerFn({ method: "POST" })
     z.object({
       id: z.string(),
       name: z.string().optional(),
-      description: z.string().nullable().optional(),
     }),
   )
   .handler(async ({ data }): Promise<ProjectRecord> => {
@@ -82,7 +77,6 @@ export const updateProject = createServerFn({ method: "POST" })
       updateProjectUseCase({
         id: ProjectId(data.id),
         ...(data.name !== undefined ? { name: data.name } : {}),
-        ...(data.description !== undefined ? { description: data.description } : {}),
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     )
 

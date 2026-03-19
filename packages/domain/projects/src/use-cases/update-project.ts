@@ -14,7 +14,6 @@ import { ProjectRepository } from "../ports/project-repository.ts"
 export interface UpdateProjectInput {
   readonly id: ProjectId
   readonly name?: string
-  readonly description?: string | null
 }
 
 export class ProjectNotFoundError extends Data.TaggedError("ProjectNotFoundError")<{
@@ -95,7 +94,6 @@ export const updateProjectUseCase = (input: UpdateProjectInput) =>
         const updatedProject: Project = {
           ...existingProject,
           name: nextName,
-          description: input.description !== undefined ? input.description : existingProject.description,
           lastEditedAt: now,
           updatedAt: now,
         }
