@@ -146,8 +146,8 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
                   flat
                   variant="ghost"
                   onClick={() => {
-                    void removeMemberMutation(member.id).isPersisted.promise
-                      .then(() => {
+                    void removeMemberMutation(member.id)
+                      .isPersisted.promise.then(() => {
                         toast({
                           description: "Member removed",
                         })
