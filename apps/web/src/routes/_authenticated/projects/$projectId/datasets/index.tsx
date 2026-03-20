@@ -14,9 +14,8 @@ import { useCallback, useMemo, useState } from "react"
 import { z } from "zod"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
-import { createDatasetMutation } from "../../../../../domains/datasets/datasets.functions.ts"
+import { createDatasetIntentMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
-import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 
 const DATASET_LIST_SORT_COLUMNS = ["name", "updatedAt"] as const
@@ -112,10 +111,11 @@ function DatasetsPage() {
   const handleCreate = useCallback(async () => {
     setCreating(true)
     try {
-      const dataset = await createDatasetMutation({
-        data: { projectId, name: `Dataset ${new Date().toLocaleString()}` },
+      const transaction = createDatasetIntentMutation({
+        projectId,
+        name: `Dataset ${new Date().toLocaleString()}`,
       })
-      getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
+      const dataset = await transaction.isPersisted.promise
       navigate({
         to: "/projects/$projectId/datasets/$datasetId",
         params: { projectId, datasetId: dataset.id },

@@ -5,7 +5,7 @@ import {
   createLoginIntentUseCase,
   createSignupIntentUseCase,
 } from "@domain/auth"
-import { OrganizationId } from "@domain/shared"
+import { isValidId, OrganizationId } from "@domain/shared"
 import {
   ApiKeyRepositoryLive,
   AuthIntentRepositoryLive,
@@ -35,9 +35,15 @@ export const createLoginIntent = createServerFn({ method: "POST" })
   .inputValidator(createLoginIntentInputSchema)
   .handler(async ({ data }) => {
     const adminClient = getAdminPostgresClient()
+    if (data.intentId && !isValidId(data.intentId)) {
+      throw new Error("Invalid intent id")
+    }
 
     const intent = await Effect.runPromise(
-      createLoginIntentUseCase({ email: data.email }).pipe(
+      createLoginIntentUseCase({
+        email: data.email,
+        ...(data.intentId ? { intentId: data.intentId } : {}),
+      }).pipe(
         withPostgres(Layer.mergeAll(UserRepositoryLive, AuthIntentRepositoryLive), adminClient),
       ),
     )
@@ -50,12 +56,16 @@ export const createSignupIntent = createServerFn({ method: "POST" })
   .inputValidator(createSignupIntentInputSchema)
   .handler(async ({ data }) => {
     const adminClient = getAdminPostgresClient()
+    if (data.intentId && !isValidId(data.intentId)) {
+      throw new Error("Invalid intent id")
+    }
 
     const intent = await Effect.runPromise(
       createSignupIntentUseCase({
         name: data.name,
         email: data.email,
         organizationName: data.organizationName,
+        ...(data.intentId ? { intentId: data.intentId } : {}),
       }).pipe(withPostgres(Layer.mergeAll(UserRepositoryLive, AuthIntentRepositoryLive), adminClient)),
     )
 

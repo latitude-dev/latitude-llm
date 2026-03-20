@@ -2,7 +2,7 @@ import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
-import { createLoginIntent } from "../domains/auth/auth.functions.ts"
+import { createLoginIntentMutation } from "../domains/auth/auth.mutations.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../lib/auth-config.ts"
@@ -45,7 +45,8 @@ function LoginPage() {
     setError(undefined)
 
     try {
-      const { intentId } = await createLoginIntent({ data: { email } })
+      const transaction = createLoginIntentMutation({ email })
+      const { intentId } = await transaction.isPersisted.promise
 
       const callbackURL = cliSession
         ? `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}&cliSession=${encodeURIComponent(cliSession)}`
