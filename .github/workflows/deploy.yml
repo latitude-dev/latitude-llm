@@ -161,7 +161,9 @@ jobs:
   staging-deploy:
     needs: [staging-migrate, staging-build]
     runs-on: ubuntu-latest
-    environment: staging
+    environment:
+      name: staging
+      deployment: false
     strategy:
       matrix:
         service: [web, api, ingest, workers]
@@ -217,6 +219,13 @@ jobs:
           aws ecs wait services-stable \
             --cluster "${CLUSTER}" \
             --services "${SERVICE_ARN}"
+
+  staging-deploy-complete:
+    needs: staging-deploy
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - run: echo "All staging services deployed successfully"
 
   # ── Production ───────────────────────────────────────────
 
@@ -349,7 +358,9 @@ jobs:
   production-deploy:
     needs: [production-migrate, production-build]
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      deployment: false
     strategy:
       matrix:
         service: [web, api, ingest, workers]
@@ -405,3 +416,10 @@ jobs:
           aws ecs wait services-stable \
             --cluster "${CLUSTER}" \
             --services "${SERVICE_ARN}"
+
+  production-deploy-complete:
+    needs: production-deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "All production services deployed successfully"
