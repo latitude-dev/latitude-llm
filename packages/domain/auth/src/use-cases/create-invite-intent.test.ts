@@ -1,45 +1,37 @@
-import { NotFoundError } from "@domain/shared"
 import { UserRepository } from "@domain/users"
+import { createFakeUserRepository } from "@domain/users/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { AuthIntentRepository, type PendingInvite } from "../ports/auth-intent-repository.ts"
+import { createFakeAuthIntentRepository } from "../testing/fake-auth-intent-repository.ts"
 import type { AuthIntent } from "../types.ts"
 import { createInviteIntentUseCase, InviteAlreadyPendingError } from "./create-invite-intent.ts"
 
-interface FakeAuthIntentRepo {
-  readonly savedIntents: AuthIntent[]
-  readonly pendingInvitesByOrganizationId: Map<string, readonly PendingInvite[]>
-}
+const createTestLayers = (options?: { pendingInvitesByOrganizationId?: Map<string, readonly PendingInvite[]> }) => {
+  const savedIntents: AuthIntent[] = []
+  const pendingByOrg = options?.pendingInvitesByOrganizationId ?? new Map()
 
-const createFakeAuthIntentRepository = (fake: FakeAuthIntentRepo) => ({
-  save: (intent: AuthIntent) =>
-    Effect.sync(() => {
-      fake.savedIntents.push(intent)
-    }),
-  findById: (id: string) => Effect.fail(new NotFoundError({ entity: "AuthIntent", id })),
-  markConsumed: () => Effect.succeed(undefined),
-  findPendingInvitesByOrganizationId: (organizationId: string) =>
-    Effect.succeed(fake.pendingInvitesByOrganizationId.get(organizationId) ?? []),
-})
+  const { repository: authIntentRepo } = createFakeAuthIntentRepository({
+    save: (intent) =>
+      Effect.sync(() => {
+        savedIntents.push(intent)
+      }),
+    findPendingInvitesByOrganizationId: (organizationId) => Effect.succeed(pendingByOrg.get(organizationId) ?? []),
+  })
 
-const createFakeUserRepository = () => ({
-  findByEmail: (email: string) => Effect.fail(new NotFoundError({ entity: "User", id: email })),
-  setNameIfMissing: (_params: { userId: string; name: string }) => Effect.succeed(undefined),
-})
+  const { repository: userRepo } = createFakeUserRepository()
 
-const createTestLayers = (fakeAuthIntentRepo: FakeAuthIntentRepo) =>
-  Layer.mergeAll(
-    Layer.succeed(AuthIntentRepository, createFakeAuthIntentRepository(fakeAuthIntentRepo)),
-    Layer.succeed(UserRepository, createFakeUserRepository()),
+  const testLayers = Layer.mergeAll(
+    Layer.succeed(AuthIntentRepository, authIntentRepo),
+    Layer.succeed(UserRepository, userRepo),
   )
+
+  return { savedIntents, testLayers }
+}
 
 describe("createInviteIntentUseCase", () => {
   it("creates an invite intent when no pending invite exists for the email in the organization", async () => {
-    const fakeAuthIntentRepo: FakeAuthIntentRepo = {
-      savedIntents: [],
-      pendingInvitesByOrganizationId: new Map(),
-    }
-    const testLayers = createTestLayers(fakeAuthIntentRepo)
+    const { savedIntents, testLayers } = createTestLayers()
 
     const intent = await Effect.runPromise(
       createInviteIntentUseCase({
@@ -52,13 +44,12 @@ describe("createInviteIntentUseCase", () => {
 
     expect(intent.email).toBe("invited@example.com")
     expect(intent.type).toBe("invite")
-    expect(fakeAuthIntentRepo.savedIntents).toHaveLength(1)
-    expect(fakeAuthIntentRepo.savedIntents[0]?.email).toBe("invited@example.com")
+    expect(savedIntents).toHaveLength(1)
+    expect(savedIntents[0]?.email).toBe("invited@example.com")
   })
 
   it("rejects duplicate pending invite for same email and organization", async () => {
-    const fakeAuthIntentRepo: FakeAuthIntentRepo = {
-      savedIntents: [],
+    const { savedIntents, testLayers } = createTestLayers({
       pendingInvitesByOrganizationId: new Map([
         [
           "org_1",
@@ -71,8 +62,7 @@ describe("createInviteIntentUseCase", () => {
           ],
         ],
       ]),
-    }
-    const testLayers = createTestLayers(fakeAuthIntentRepo)
+    })
 
     const error = await Effect.runPromise(
       createInviteIntentUseCase({
@@ -84,12 +74,11 @@ describe("createInviteIntentUseCase", () => {
     )
 
     expect(error).toBeInstanceOf(InviteAlreadyPendingError)
-    expect(fakeAuthIntentRepo.savedIntents).toHaveLength(0)
+    expect(savedIntents).toHaveLength(0)
   })
 
   it("allows invite when pending invite exists for same email in another organization", async () => {
-    const fakeAuthIntentRepo: FakeAuthIntentRepo = {
-      savedIntents: [],
+    const { savedIntents, testLayers } = createTestLayers({
       pendingInvitesByOrganizationId: new Map([
         [
           "org_2",
@@ -102,8 +91,7 @@ describe("createInviteIntentUseCase", () => {
           ],
         ],
       ]),
-    }
-    const testLayers = createTestLayers(fakeAuthIntentRepo)
+    })
 
     const intent = await Effect.runPromise(
       createInviteIntentUseCase({
@@ -115,6 +103,6 @@ describe("createInviteIntentUseCase", () => {
     )
 
     expect(intent.email).toBe("invited@example.com")
-    expect(fakeAuthIntentRepo.savedIntents).toHaveLength(1)
+    expect(savedIntents).toHaveLength(1)
   })
 })

@@ -20,6 +20,7 @@ import {
 } from "@domain/shared"
 import type { TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
+import { createFakeTraceRepository } from "@domain/spans/testing"
 import { DatasetRepositoryLive, postgresSchema, withPostgres } from "@platform/db-postgres"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
@@ -37,13 +38,10 @@ const DATASET_ID = DatasetId("ds-add-traces-existing")
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
 
-function makeFakeTraceRepository(traces: TraceDetail[]): (typeof TraceRepository)["Service"] {
-  return {
-    findByProjectId: () => Effect.succeed({ items: [], hasMore: false }),
-    countByProjectId: () => Effect.succeed(0),
-    findByTraceId: () => Effect.succeed(null),
+function makeFakeTraceRepository(traces: TraceDetail[]) {
+  return createFakeTraceRepository({
     findByTraceIds: () => Effect.succeed(traces),
-  }
+  }).repository
 }
 
 const runWithLive = <A, E>(

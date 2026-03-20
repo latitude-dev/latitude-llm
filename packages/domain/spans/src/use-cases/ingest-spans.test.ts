@@ -1,6 +1,8 @@
 import type { QueuePublisherShape } from "@domain/queue"
 import { QueuePublishError, QueuePublisher } from "@domain/queue"
+import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { OrganizationId, ProjectId, StorageDisk, type StorageDiskPort, StorageError } from "@domain/shared"
+import { createFakeStorageDisk } from "@domain/shared/testing"
 import { Effect, Layer, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { ingestSpansUseCase } from "./ingest-spans.ts"
@@ -13,37 +15,6 @@ const validInput = {
   contentType: "application/json",
 }
 
-const createFakeDisk = () => {
-  const written: { key: string; contents: string | Uint8Array }[] = []
-  const deleted: string[] = []
-  const disk: StorageDiskPort = {
-    put: async (key, contents) => {
-      written.push({ key, contents })
-    },
-    putStream: async () => {},
-    get: async () => "",
-    getBytes: async () => new Uint8Array(),
-    getStream: async () => new ReadableStream(),
-    delete: async (key) => {
-      deleted.push(key)
-    },
-    getSignedUrl: async () => "",
-  }
-  return { disk, written, deleted }
-}
-
-const createFakePublisher = () => {
-  const published: { queue: string; message: { body: Uint8Array; key: string | null } }[] = []
-  const publisher: QueuePublisherShape = {
-    publish: (queue, message) => {
-      published.push({ queue, message: { body: message.body, key: message.key } })
-      return Effect.void
-    },
-    close: () => Effect.void,
-  }
-  return { publisher, published }
-}
-
 const runUseCase = (diskPort: StorageDiskPort, publisher: QueuePublisherShape) =>
   ingestSpansUseCase(validInput).pipe(
     Effect.provide(Layer.succeed(StorageDisk, diskPort)),
@@ -52,8 +23,8 @@ const runUseCase = (diskPort: StorageDiskPort, publisher: QueuePublisherShape) =
 
 describe("ingestSpansUseCase", () => {
   it("stores payload to disk and publishes queue message", async () => {
-    const { disk, written } = createFakeDisk()
-    const { publisher, published } = createFakePublisher()
+    const { disk, written } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
 
     await Effect.runPromise(runUseCase(disk, publisher))
 
@@ -68,8 +39,8 @@ describe("ingestSpansUseCase", () => {
   })
 
   it("uses protobuf extension for protobuf content type", async () => {
-    const { disk, written } = createFakeDisk()
-    const { publisher } = createFakePublisher()
+    const { disk, written } = createFakeStorageDisk()
+    const { publisher } = createFakeQueuePublisher()
 
     await Effect.runPromise(
       ingestSpansUseCase({ ...validInput, contentType: "application/x-protobuf" }).pipe(
@@ -82,23 +53,17 @@ describe("ingestSpansUseCase", () => {
   })
 
   it("fails with StorageError when disk write fails", async () => {
-    const failingDisk: StorageDiskPort = {
+    const { disk } = createFakeStorageDisk({
       put: async () => {
         throw new Error("disk unavailable")
       },
-      putStream: async () => {},
-      get: async () => "",
-      getBytes: async () => new Uint8Array(),
-      getStream: async () => new ReadableStream(),
-      delete: async () => {},
-      getSignedUrl: async () => "",
-    }
-    const { publisher, published } = createFakePublisher()
+    })
+    const { publisher, published } = createFakeQueuePublisher()
 
     const res = await Effect.runPromise(
       Effect.result(
         ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.succeed(StorageDisk, failingDisk)),
+          Effect.provide(Layer.succeed(StorageDisk, disk)),
           Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         ),
       ),
@@ -113,17 +78,16 @@ describe("ingestSpansUseCase", () => {
   })
 
   it("fails with QueuePublishError and cleans up file when publish fails", async () => {
-    const { disk, written, deleted } = createFakeDisk()
-    const failingPublisher: QueuePublisherShape = {
+    const { disk, written, deleted } = createFakeStorageDisk()
+    const { publisher } = createFakeQueuePublisher({
       publish: (queue) => Effect.fail(new QueuePublishError({ cause: new Error("queue down"), queue })),
-      close: () => Effect.void,
-    }
+    })
 
     const res = await Effect.runPromise(
       Effect.result(
         ingestSpansUseCase(validInput).pipe(
           Effect.provide(Layer.succeed(StorageDisk, disk)),
-          Effect.provide(Layer.succeed(QueuePublisher, failingPublisher)),
+          Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         ),
       ),
     )
@@ -142,23 +106,17 @@ describe("ingestSpansUseCase", () => {
   })
 
   it("does not publish when storage fails (sequential guarantee)", async () => {
-    const failingDisk: StorageDiskPort = {
+    const { disk } = createFakeStorageDisk({
       put: async () => {
         throw new Error("disk error")
       },
-      putStream: async () => {},
-      get: async () => "",
-      getBytes: async () => new Uint8Array(),
-      getStream: async () => new ReadableStream(),
-      delete: async () => {},
-      getSignedUrl: async () => "",
-    }
-    const { publisher, published } = createFakePublisher()
+    })
+    const { publisher, published } = createFakeQueuePublisher()
 
     await Effect.runPromise(
       Effect.result(
         ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.succeed(StorageDisk, failingDisk)),
+          Effect.provide(Layer.succeed(StorageDisk, disk)),
           Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         ),
       ),
@@ -168,15 +126,14 @@ describe("ingestSpansUseCase", () => {
   })
 
   it("passes correct headers in queue message", async () => {
-    const { disk } = createFakeDisk()
+    const { disk } = createFakeStorageDisk()
     const capturedHeaders: Map<string, string>[] = []
-    const publisher: QueuePublisherShape = {
+    const { publisher } = createFakeQueuePublisher({
       publish: (_queue, message) => {
         capturedHeaders.push(new Map(message.headers))
         return Effect.void
       },
-      close: () => Effect.void,
-    }
+    })
 
     await Effect.runPromise(
       ingestSpansUseCase(validInput).pipe(
