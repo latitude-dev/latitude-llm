@@ -1,5 +1,6 @@
+import { generateId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
-import { createCollection, useLiveQuery } from "@tanstack/react-db"
+import { createCollection, createOptimisticAction, useLiveQuery } from "@tanstack/react-db"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
@@ -14,29 +15,6 @@ const membersCollection = createCollection(
     queryKey: ["members"],
     queryFn: () => listMembers(),
     getKey: (item: MemberRecord) => item.id,
-    onInsert: async ({ transaction }) => {
-      await Promise.all(
-        transaction.mutations.map(async (mutation) => {
-          const { intentId } = await inviteMember({
-            data: {
-              email: mutation.modified.email,
-            },
-          })
-
-          const { error } = await authClient.signIn.magicLink({
-            email: mutation.modified.email,
-            callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
-          })
-
-          if (error) {
-            console.warn("Failed to send invitation email", {
-              email: mutation.modified.email,
-              reason: error.message,
-            })
-          }
-        }),
-      )
-    },
     onDelete: async ({ transaction }) => {
       await Promise.all(
         transaction.mutations.map((mutation) =>
@@ -55,10 +33,10 @@ export function invalidateMembers() {
   return queryClient.invalidateQueries({ queryKey: ["members"] })
 }
 
-export function createMemberInviteMutation(email: string) {
-  return membersCollection.insert(
-    {
-      id: `pending-invite:${email}:${Date.now()}`,
+const inviteMemberIntentAction = createOptimisticAction<{ email: string; intentId: string }>({
+  onMutate: ({ email, intentId }) => {
+    membersCollection.insert({
+      id: intentId,
       userId: null,
       name: null,
       email,
@@ -66,9 +44,37 @@ export function createMemberInviteMutation(email: string) {
       status: "invited",
       confirmedAt: null,
       createdAt: new Date().toISOString(),
-    },
-    { optimistic: false },
-  )
+    })
+  },
+  mutationFn: async ({ email, intentId }) => {
+    await inviteMember({
+      data: {
+        email,
+        intentId,
+      },
+    })
+
+    const { error } = await authClient.signIn.magicLink({
+      email,
+      callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
+    })
+
+    if (error) {
+      console.warn("Failed to send invitation email", {
+        email,
+        reason: error.message,
+      })
+    }
+
+    await invalidateMembers()
+  },
+})
+
+export function createMemberInviteIntentMutation(email: string) {
+  return inviteMemberIntentAction({
+    email,
+    intentId: generateId(),
+  })
 }
 
 export const useMembersCollection = () => {

@@ -1,5 +1,6 @@
 import { AuthIntentRepository, createInviteIntentUseCase } from "@domain/auth"
 import { MembershipRepository, OrganizationRepository, removeMemberUseCase } from "@domain/organizations"
+import { isValidId } from "@domain/shared"
 import {
   AuthIntentRepositoryLive,
   MembershipRepositoryLive,
@@ -76,7 +77,17 @@ export const listMembers = createServerFn({ method: "GET" })
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ email: z.string().email() }))
+  .inputValidator(
+    z.object({
+      email: z.string().email(),
+      intentId: z
+        .string()
+        .optional()
+        .refine((value) => value === undefined || isValidId(value), {
+          message: "Invalid intent id",
+        }),
+    }),
+  )
   .handler(async ({ data }): Promise<{ intentId: string }> => {
     const session = await ensureSession()
     const { organizationId } = await requireSession()
@@ -96,6 +107,7 @@ export const inviteMember = createServerFn({ method: "POST" })
         organizationId,
         organizationName,
         inviterName,
+        ...(data.intentId ? { intentId: data.intentId } : {}),
       }).pipe(withPostgres(Layer.mergeAll(AuthIntentRepositoryLive, UserRepositoryLive), client, organizationId)),
     )
 

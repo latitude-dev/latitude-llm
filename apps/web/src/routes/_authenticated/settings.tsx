@@ -27,7 +27,7 @@ import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/
 import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
 import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
 import {
-  createMemberInviteMutation,
+  createMemberInviteIntentMutation,
   invalidateMembers,
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
@@ -48,7 +48,7 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
     },
     onSubmit: async ({ value }) => {
       try {
-        const transaction = createMemberInviteMutation(value.email)
+        const transaction = createMemberInviteIntentMutation(value.email)
         await transaction.isPersisted.promise
         setOpen(false)
         toast({ description: "Invitation sent" })
