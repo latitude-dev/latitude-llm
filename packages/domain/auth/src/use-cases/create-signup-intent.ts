@@ -4,7 +4,12 @@ import { createAuthIntent } from "../entities/auth-intent.ts"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import { createSignupIntentData, normalizeEmail } from "./auth-intent-policy.ts"
 
-export const createSignupIntentUseCase = (input: { email: string; name: string; organizationName: string }) =>
+export const createSignupIntentUseCase = (input: {
+  intentId?: string
+  email: string
+  name: string
+  organizationName: string
+}) =>
   Effect.gen(function* () {
     const users = yield* UserRepository
     const intents = yield* AuthIntentRepository
@@ -19,6 +24,7 @@ export const createSignupIntentUseCase = (input: { email: string; name: string; 
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     const intent = createAuthIntent({
+      id: input.intentId,
       type: "signup",
       email,
       data: signupData,

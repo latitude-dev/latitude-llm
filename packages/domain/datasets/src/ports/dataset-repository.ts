@@ -27,6 +27,7 @@ export class DatasetRepository extends ServiceMap.Service<
   DatasetRepository,
   {
     create(args: {
+      readonly id?: DatasetId
       readonly projectId: ProjectId
       readonly name: string
       readonly description?: string
