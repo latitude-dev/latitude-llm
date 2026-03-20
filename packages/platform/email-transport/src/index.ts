@@ -1,9 +1,7 @@
 import { type EmailMessage, EmailSendError, type EmailSender } from "@domain/email"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
-import { createTransport, type Transporter } from "nodemailer"
-// @ts-expect-error -- no type declarations for nodemailer-mailgun-transport
-import mailgunTransport from "nodemailer-mailgun-transport"
+import { createTransport } from "nodemailer"
 
 interface MailgunApiConfig {
   readonly apiKey: string | undefined
@@ -34,9 +32,11 @@ export interface EmailTransportConfig {
 
 type EmailProvider = "mailgun" | "smtp" | "mailpit"
 
+type SendFn = (message: EmailMessage, from: string) => Promise<void>
+
 interface ResolvedProvider {
   readonly provider: EmailProvider
-  readonly transporter: Transporter
+  readonly sendFn: SendFn
   readonly from: string | undefined
 }
 
@@ -90,6 +90,73 @@ const mergeMailpitConfig = (base: MailpitConfig, override: Partial<MailpitConfig
   return { ...base, ...override }
 }
 
+const createMailgunSendFn = (apiKey: string, domain: string, region: "us" | "eu"): SendFn => {
+  const apiHost = region === "eu" ? "api.eu.mailgun.net" : "api.mailgun.net"
+  const url = `https://${apiHost}/v3/${domain}/messages`
+  const authHeader = `Basic ${btoa(`api:${apiKey}`)}`
+
+  return async (message, from) => {
+    const body = new FormData()
+    body.append("from", from)
+    body.append("to", message.to)
+    body.append("subject", message.subject)
+    body.append("html", message.html)
+    if (message.text) body.append("text", message.text)
+    if (message.replyTo) body.append("h:Reply-To", message.replyTo)
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: authHeader },
+      body,
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(`Mailgun API ${response.status}: ${text}`)
+    }
+  }
+}
+
+const createSmtpSendFn = (host: string, port: number, user: string, pass: string): SendFn => {
+  const transporter = createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  })
+
+  return async (message, from) => {
+    await transporter.sendMail({
+      from,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      replyTo: message.replyTo,
+    })
+  }
+}
+
+const createMailpitSendFn = (host: string, port: number): SendFn => {
+  const transporter = createTransport({
+    host,
+    port,
+    secure: false,
+    tls: { rejectUnauthorized: false },
+  })
+
+  return async (message, from) => {
+    await transporter.sendMail({
+      from,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      replyTo: message.replyTo,
+    })
+  }
+}
+
 const resolveProvider = ({
   mailgun,
   smtp,
@@ -100,14 +167,9 @@ const resolveProvider = ({
   mailpit: MailpitConfig
 }): ResolvedProvider => {
   if (mailgun.apiKey && mailgun.domain) {
-    const host = mailgun.region === "eu" ? "api.eu.mailgun.net" : "api.mailgun.net"
-    const transport = mailgunTransport({
-      host,
-      auth: { apiKey: mailgun.apiKey, domain: mailgun.domain },
-    })
     return {
       provider: "mailgun",
-      transporter: createTransport(transport),
+      sendFn: createMailgunSendFn(mailgun.apiKey, mailgun.domain, mailgun.region),
       from: mailgun.from ?? `postmaster@${mailgun.domain}`,
     }
   }
@@ -115,24 +177,14 @@ const resolveProvider = ({
   if (smtp.host && smtp.user && smtp.pass) {
     return {
       provider: "smtp",
-      transporter: createTransport({
-        host: smtp.host,
-        port: smtp.port,
-        secure: smtp.port === 465,
-        auth: { user: smtp.user, pass: smtp.pass },
-      }),
+      sendFn: createSmtpSendFn(smtp.host, smtp.port, smtp.user, smtp.pass),
       from: smtp.from,
     }
   }
 
   return {
     provider: "mailpit",
-    transporter: createTransport({
-      host: mailpit.host,
-      port: mailpit.port,
-      secure: false,
-      tls: { rejectUnauthorized: false },
-    }),
+    sendFn: createMailpitSendFn(mailpit.host, mailpit.port),
     from: mailpit.from,
   }
 }
@@ -156,15 +208,7 @@ export const createEmailTransportSender = (config?: EmailTransportConfig): Email
         }
 
         yield* Effect.tryPromise({
-          try: () =>
-            resolved.transporter.sendMail({
-              from: resolvedFrom,
-              to: message.to,
-              subject: message.subject,
-              html: message.html,
-              text: message.text,
-              replyTo: message.replyTo,
-            }),
+          try: () => resolved.sendFn(message, resolvedFrom),
           catch: (error: unknown) =>
             new EmailSendError({
               message:
