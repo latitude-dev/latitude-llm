@@ -1,3 +1,4 @@
+import { generateId } from "@domain/shared"
 import { Button, CloseTrigger, Input, Modal, Select, type SelectOption, Text, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
@@ -48,21 +49,23 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
     try {
       if (creatingNew) {
         if (!newDatasetName.trim()) return
+        const datasetId = generateId()
         const transaction = createDatasetFromTracesIntentMutation({
+          datasetId,
           projectId,
           name: newDatasetName.trim(),
           traceIds,
         })
-        const result = await transaction.isPersisted.promise
+        await transaction.isPersisted.promise
         toast({
           title: "Dataset created",
-          description: `"${newDatasetName.trim()}" created with ${result.rowCount} row${result.rowCount === 1 ? "" : "s"}.`,
+          description: `"${newDatasetName.trim()}" created from selected traces.`,
         })
         onSuccess()
         onOpenChange(false)
         navigate({
           to: "/projects/$projectId/datasets/$datasetId",
-          params: { projectId, datasetId: result.datasetId },
+          params: { projectId, datasetId },
         })
       } else {
         if (!selectedDatasetId) return
@@ -71,10 +74,10 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
           datasetId: selectedDatasetId,
           traceIds,
         })
-        const result = await transaction.isPersisted.promise
+        await transaction.isPersisted.promise
         toast({
           title: "Traces added to dataset",
-          description: `${result.rowCount} row${result.rowCount === 1 ? "" : "s"} added (version ${result.version}).`,
+          description: `${traceIds.length} selected trace${traceIds.length === 1 ? "" : "s"} processed.`,
         })
         onSuccess()
         onOpenChange(false)

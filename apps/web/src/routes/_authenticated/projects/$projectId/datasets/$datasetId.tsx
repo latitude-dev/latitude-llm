@@ -7,10 +7,7 @@ import { useCallback, useDeferredValue, useRef, useState } from "react"
 import { z } from "zod"
 import { useDatasetRowsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord, DatasetRowRecord } from "../../../../../domains/datasets/datasets.functions.ts"
-import {
-  getDatasetDownload,
-  getDatasetQuery,
-} from "../../../../../domains/datasets/datasets.functions.ts"
+import { getDatasetDownload, getDatasetQuery } from "../../../../../domains/datasets/datasets.functions.ts"
 import {
   deleteRowsIntentMutation,
   saveDatasetCsvIntentMutation,
@@ -317,9 +314,12 @@ function DatasetRowsView({
           output: data.output,
           metadata: data.metadata,
         })
-        const result = await transaction.isPersisted.promise
-        setCurrentVersion(result.version)
-        setCurrentVersionId(result.versionId)
+        await transaction.isPersisted.promise
+        const refreshedDataset = await getDatasetQuery({ data: { datasetId } })
+        if (refreshedDataset) {
+          setCurrentVersion(refreshedDataset.currentVersion)
+          setCurrentVersionId(refreshedDataset.latestVersionId)
+        }
       } finally {
         setSaving(false)
       }
@@ -337,9 +337,12 @@ function DatasetRowsView({
         datasetId,
         rowIds: ids as string[],
       })
-      const result = await transaction.isPersisted.promise
-      setCurrentVersion(result.version)
-      setCurrentVersionId(result.versionId)
+      await transaction.isPersisted.promise
+      const refreshedDataset = await getDatasetQuery({ data: { datasetId } })
+      if (refreshedDataset) {
+        setCurrentVersion(refreshedDataset.currentVersion)
+        setCurrentVersionId(refreshedDataset.latestVersionId)
+      }
 
       if (selectedRowId && ids.includes(selectedRowId)) {
         closeRow()

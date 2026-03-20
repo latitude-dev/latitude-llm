@@ -1,3 +1,4 @@
+import { generateId } from "@domain/shared"
 import {
   Button,
   DatabaseAddIcon,
@@ -111,14 +112,16 @@ function DatasetsPage() {
   const handleCreate = useCallback(async () => {
     setCreating(true)
     try {
+      const datasetId = generateId()
       const transaction = createDatasetIntentMutation({
+        id: datasetId,
         projectId,
         name: `Dataset ${new Date().toLocaleString()}`,
       })
-      const dataset = await transaction.isPersisted.promise
+      await transaction.isPersisted.promise
       navigate({
         to: "/projects/$projectId/datasets/$datasetId",
-        params: { projectId, datasetId: dataset.id },
+        params: { projectId, datasetId },
       })
     } catch (err) {
       toast({ variant: "destructive", description: toUserMessage(err) })

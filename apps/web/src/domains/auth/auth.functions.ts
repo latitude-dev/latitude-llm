@@ -43,9 +43,7 @@ export const createLoginIntent = createServerFn({ method: "POST" })
       createLoginIntentUseCase({
         email: data.email,
         ...(data.intentId ? { intentId: data.intentId } : {}),
-      }).pipe(
-        withPostgres(Layer.mergeAll(UserRepositoryLive, AuthIntentRepositoryLive), adminClient),
-      ),
+      }).pipe(withPostgres(Layer.mergeAll(UserRepositoryLive, AuthIntentRepositoryLive), adminClient)),
     )
 
     return { intentId: intent.id }
