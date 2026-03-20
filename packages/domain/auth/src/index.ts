@@ -23,6 +23,6 @@ export {
   MissingInviteDataError,
   MissingSignupProvisioningDataError,
 } from "./use-cases/complete-auth-intent.ts"
-export { createInviteIntentUseCase } from "./use-cases/create-invite-intent.ts"
+export { createInviteIntentUseCase, InviteAlreadyPendingError } from "./use-cases/create-invite-intent.ts"
 export { createLoginIntentUseCase, LoginUserNotFoundError } from "./use-cases/create-login-intent.ts"
 export { createSignupIntentUseCase } from "./use-cases/create-signup-intent.ts"
