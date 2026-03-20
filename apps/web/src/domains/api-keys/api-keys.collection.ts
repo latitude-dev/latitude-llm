@@ -1,3 +1,4 @@
+import { generateId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
@@ -17,6 +18,7 @@ const apiKeysCollection = createCollection(
         transaction.mutations.map((mutation) =>
           createApiKey({
             data: {
+              id: mutation.modified.id,
               name: mutation.modified.name ?? "API Key",
             },
           }),
@@ -51,6 +53,28 @@ const apiKeysCollection = createCollection(
 
 export function invalidateApiKeys() {
   void queryClient.invalidateQueries({ queryKey: ["apiKeys"] })
+}
+
+export function createApiKeyMutation(name: string) {
+  return apiKeysCollection.insert({
+    id: generateId(),
+    organizationId: "",
+    name,
+    token: "",
+    lastUsedAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export function updateApiKeyMutation(id: string, name: string) {
+  return apiKeysCollection.update(id, (draft) => {
+    draft.name = name
+  })
+}
+
+export function deleteApiKeyMutation(id: string) {
+  return apiKeysCollection.delete(id)
 }
 
 export const useApiKeysCollection = () => {

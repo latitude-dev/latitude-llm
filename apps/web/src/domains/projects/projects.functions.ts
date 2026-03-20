@@ -1,6 +1,6 @@
 import type { Project } from "@domain/projects"
 import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
-import { ProjectId } from "@domain/shared"
+import { isValidId, ProjectId } from "@domain/shared"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -47,13 +47,24 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ name: z.string() }))
+  .inputValidator(
+    z.object({
+      id: z
+        .string()
+        .optional()
+        .refine((value) => value === undefined || isValidId(value), {
+          message: "Invalid project id",
+        }),
+      name: z.string(),
+    }),
+  )
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
       createProjectUseCase({
+        ...(data.id ? { id: ProjectId(data.id) } : {}),
         name: data.name,
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
     )

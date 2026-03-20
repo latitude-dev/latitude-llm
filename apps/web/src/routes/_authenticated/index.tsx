@@ -22,18 +22,17 @@ import { extractLeadingEmoji } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
-import { useProjectsCollection } from "../../domains/projects/projects.collection.ts"
+import {
+  createProjectMutation,
+  deleteProjectMutation,
+  renameProjectMutation,
+  useProjectsCollection,
+} from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
-import { createProject, deleteProject, updateProject } from "../../domains/projects/projects.functions.ts"
-import { getQueryClient } from "../../lib/data/query-client.tsx"
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
 })
-
-function invalidateProjects() {
-  void getQueryClient().invalidateQueries({ queryKey: ["projects"] })
-}
 
 function ProjectTitle({ name, projectId }: { name: string; projectId: string }) {
   const [emoji, title] = extractLeadingEmoji(name)
@@ -101,9 +100,7 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
                       label: "Delete",
                       type: "destructive",
                       onClick: () => {
-                        void deleteProject({ data: { id: project.id } }).then(() => {
-                          invalidateProjects()
-                        })
+                        void deleteProjectMutation(project.id).isPersisted.promise
                       },
                     },
                   ]}
@@ -132,8 +129,8 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
       name: project.name,
     },
     onSubmit: async ({ value }) => {
-      await updateProject({ data: { id: project.id, name: value.name } })
-      invalidateProjects()
+      const transaction = renameProjectMutation(project.id, value.name)
+      await transaction.isPersisted.promise
       toast({
         title: "Success",
         description: `Project renamed to "${value.name}".`,
@@ -194,8 +191,8 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
       name: "",
     },
     onSubmit: async ({ value }) => {
-      await createProject({ data: { name: value.name } })
-      invalidateProjects()
+      const transaction = createProjectMutation(value.name)
+      await transaction.isPersisted.promise
       onClose()
     },
   })
