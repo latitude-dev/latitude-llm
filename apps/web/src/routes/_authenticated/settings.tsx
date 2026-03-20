@@ -23,16 +23,19 @@ import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
+import {
+  createApiKeyMutation,
+  deleteApiKeyMutation,
+  updateApiKeyMutation,
+  useApiKeysCollection,
+} from "../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
-import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
 import {
   createMemberInviteIntentMutation,
-  invalidateMembers,
+  removeMemberMutation,
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { removeMember } from "../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -143,9 +146,8 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
                   flat
                   variant="ghost"
                   onClick={() => {
-                    void removeMember({ data: { membershipId: member.id } })
+                    void removeMemberMutation(member.id).isPersisted.promise
                       .then(() => {
-                        invalidateMembers()
                         toast({
                           description: "Member removed",
                         })
@@ -201,8 +203,8 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       name: "",
     },
     onSubmit: async ({ value }) => {
-      await createApiKey({ data: { name: value.name } })
-      invalidateApiKeys()
+      const transaction = createApiKeyMutation(value.name)
+      await transaction.isPersisted.promise
       setOpen(false)
     },
   })
@@ -262,8 +264,8 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
       name: apiKey.name ?? "",
     },
     onSubmit: async ({ value }) => {
-      await updateApiKey({ data: { id: apiKey.id, name: value.name } })
-      invalidateApiKeys()
+      const transaction = updateApiKeyMutation(apiKey.id, value.name)
+      await transaction.isPersisted.promise
       toast({
         title: "Success",
         description: "API key name updated.",
@@ -386,9 +388,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                         disabled={apiKeys.length === 1}
                         variant="ghost"
                         onClick={() => {
-                          void deleteApiKey({ data: { id: apiKey.id } }).then(() => {
-                            invalidateApiKeys()
-                          })
+                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise
                         }}
                       >
                         <Icon icon={Trash2} size="sm" />

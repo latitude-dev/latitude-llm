@@ -77,6 +77,10 @@ export function createMemberInviteIntentMutation(email: string) {
   })
 }
 
+export function removeMemberMutation(membershipId: string) {
+  return membersCollection.delete(membershipId)
+}
+
 export const useMembersCollection = () => {
   return useLiveQuery((query) => query.from({ member: membersCollection }))
 }

@@ -1,3 +1,4 @@
+import { generateId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
@@ -18,6 +19,7 @@ const projectsCollection = createCollection(
         transaction.mutations.map((mutation) =>
           createProject({
             data: {
+              id: mutation.modified.id,
               name: mutation.modified.name,
             },
           }),
@@ -49,6 +51,28 @@ const projectsCollection = createCollection(
     },
   }),
 )
+
+export function createProjectMutation(name: string) {
+  return projectsCollection.insert({
+    id: generateId(),
+    organizationId: "",
+    name,
+    slug: "",
+    deletedAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  })
+}
+
+export function renameProjectMutation(id: string, name: string) {
+  return projectsCollection.update(id, (draft) => {
+    draft.name = name
+  })
+}
+
+export function deleteProjectMutation(id: string) {
+  return projectsCollection.delete(id)
+}
 
 type ProjectsSource = { project: typeof projectsCollection }
 type ProjectsContext = {
