@@ -1,4 +1,4 @@
-import { Button, cn, DetailDrawer, Skeleton, type TabOption, Tabs, Text } from "@repo/ui"
+import { Button, cn, DetailDrawer, ProviderIcon, Skeleton, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { useState } from "react"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
@@ -55,7 +55,26 @@ export function TraceDetailDrawer({
               {isRecordLoading ? (
                 <Skeleton className="h-6 w-48" />
               ) : (
-                <Text.H4>{traceRecord?.rootSpanName ?? "Unnamed Trace"}</Text.H4>
+                <>
+                  <Text.H4>{traceRecord?.rootSpanName ?? "Unnamed Trace"}</Text.H4>
+                  {traceRecord?.providers && traceRecord.providers.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      {traceRecord.providers.map((p) => (
+                        <Tooltip
+                          key={p}
+                          asChild
+                          trigger={
+                            <span>
+                              <ProviderIcon provider={p} size="sm" />
+                            </span>
+                          }
+                        >
+                          {p}
+                        </Tooltip>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
               {isRecordLoading ? (
                 <Skeleton className="h-6 w-12" />

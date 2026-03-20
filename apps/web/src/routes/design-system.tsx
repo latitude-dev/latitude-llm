@@ -1,5 +1,8 @@
 import type { CheckedState } from "@repo/ui"
 import {
+  AmazonQIcon,
+  AnthropicIcon,
+  AzureIcon,
   Button,
   Card,
   CardContent,
@@ -8,21 +11,83 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  ClaudeIcon,
+  CloudflareIcon,
+  CloudflareWorkersIcon,
+  CohereIcon,
+  CopilotIcon,
   CopyButton,
+  DeepseekIcon,
   FormField,
+  GeminiIcon,
   GitHubIcon,
+  GitlabIcon,
   GoogleIcon,
+  GrokIcon,
+  GroqIcon,
+  HuggingfaceIcon,
   Icon,
   Input,
+  KilocodeIcon,
+  KimiIcon,
   Label,
   LatitudeLogo,
+  MetaIcon,
+  MistralIcon,
+  NvidiaIcon,
+  OllamaIcon,
+  OpenaiIcon,
+  OpencodeIcon,
+  OpenrouterIcon,
+  PerplexityIcon,
+  QwenIcon,
+  ReplitIcon,
   RichTextEditor,
   Text,
+  TogetheraiIcon,
   useMountEffect,
+  V0Icon,
+  VercelIcon,
+  XaiIcon,
 } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
+import type { LucideProps } from "lucide-react"
 import { Check, Moon, Palette, Sparkles, Sun } from "lucide-react"
+import type { ComponentType } from "react"
 import { useState } from "react"
+
+const PROVIDER_ICONS: { name: string; icon: ComponentType<LucideProps> }[] = [
+  { name: "Amazon Q", icon: AmazonQIcon },
+  { name: "Anthropic", icon: AnthropicIcon },
+  { name: "Azure", icon: AzureIcon },
+  { name: "Claude", icon: ClaudeIcon },
+  { name: "Cloudflare", icon: CloudflareIcon },
+  { name: "Cloudflare Workers", icon: CloudflareWorkersIcon },
+  { name: "Cohere", icon: CohereIcon },
+  { name: "Copilot", icon: CopilotIcon },
+  { name: "DeepSeek", icon: DeepseekIcon },
+  { name: "Gemini", icon: GeminiIcon },
+  { name: "GitLab", icon: GitlabIcon },
+  { name: "Grok", icon: GrokIcon },
+  { name: "Groq", icon: GroqIcon },
+  { name: "Hugging Face", icon: HuggingfaceIcon },
+  { name: "Kilocode", icon: KilocodeIcon },
+  { name: "Kimi", icon: KimiIcon },
+  { name: "Meta", icon: MetaIcon },
+  { name: "Mistral", icon: MistralIcon },
+  { name: "NVIDIA", icon: NvidiaIcon },
+  { name: "Ollama", icon: OllamaIcon },
+  { name: "OpenAI", icon: OpenaiIcon },
+  { name: "OpenCode", icon: OpencodeIcon },
+  { name: "OpenRouter", icon: OpenrouterIcon },
+  { name: "Perplexity", icon: PerplexityIcon },
+  { name: "Qwen", icon: QwenIcon },
+  { name: "Replit", icon: ReplitIcon },
+  { name: "Together AI", icon: TogetheraiIcon },
+  { name: "v0", icon: V0Icon },
+  { name: "Vercel", icon: VercelIcon },
+  { name: "xAI", icon: XaiIcon },
+]
 
 export const Route = createFileRoute("/design-system")({
   component: DesignSystemPage,
@@ -186,6 +251,19 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           </Text.H6>
         </CardFooter>
       </Card>
+
+      <ShowcaseSection theme={theme} title="Provider Icons" description="LLM and AI provider brand icons.">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+          {PROVIDER_ICONS.map(({ name, icon: ProviderIconComponent }) => (
+            <div key={name} className="flex flex-col items-center gap-2 rounded-lg border border-border/50 p-3">
+              <Icon icon={ProviderIconComponent} size="md" />
+              <Text.H6 color="foregroundMuted" className="text-center text-xs">
+                {name}
+              </Text.H6>
+            </div>
+          ))}
+        </div>
+      </ShowcaseSection>
     </div>
   )
 }

@@ -7,6 +7,8 @@
 /* Tell Tailwind to scan this package's source files for classes */
 @source "../";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* Font families */
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;

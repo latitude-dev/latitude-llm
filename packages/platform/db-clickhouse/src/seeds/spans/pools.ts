@@ -73,7 +73,7 @@ export const MODELS: readonly ModelConfig[] = [
     finishReasonStop: "stop",
   },
   {
-    provider: "gcp.gemini",
+    provider: "google",
     model: "gemini-2.0-flash",
     responseModel: "gemini-2.0-flash",
     scopeName: "google-genai-instrumentation",
