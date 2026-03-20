@@ -1,8 +1,17 @@
+import { OrganizationId } from "@domain/shared"
 import { UserRepository } from "@domain/users"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import { createAuthIntent } from "../entities/auth-intent.ts"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 import { createInviteIntentData, normalizeEmail } from "./auth-intent-policy.ts"
+
+export class InviteAlreadyPendingError extends Data.TaggedError("InviteAlreadyPendingError")<{
+  readonly email: string
+  readonly organizationId: string
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage = "User already has a pending invitation to this workspace"
+}
 
 export const createInviteIntentUseCase = (input: {
   email: string
@@ -20,6 +29,16 @@ export const createInviteIntentUseCase = (input: {
       organizationName: input.organizationName,
       inviterName: input.inviterName,
     })
+    const pendingInvites = yield* intents.findPendingInvitesByOrganizationId(OrganizationId(input.organizationId))
+    const hasPendingInvite = pendingInvites.some((invite) => normalizeEmail(invite.email) === email)
+
+    if (hasPendingInvite) {
+      return yield* new InviteAlreadyPendingError({
+        email,
+        organizationId: input.organizationId,
+      })
+    }
+
     const existingUser = yield* users
       .findByEmail(email)
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
