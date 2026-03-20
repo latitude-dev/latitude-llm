@@ -1,0 +1,123 @@
+# Latitude Infrastructure
+
+AWS infrastructure for the Latitude LLM observability platform using Pulumi (TypeScript).
+
+## Prerequisites
+
+- [Pulumi CLI](https://www.pulumi.com/docs/install/)
+- [AWS CLI](https://aws.amazon.com/cli/) configured with credentials
+- [Node.js 25+](https://nodejs.org/)
+- [pnpm](https://pnpm.io/)
+
+## Quick Start
+
+1. **Install dependencies:**
+
+   ```bash
+   pnpm install
+   ```
+
+2. **Configure secrets:**
+
+   ```bash
+   pulumi config set hostedZoneId ZXXXXXXXXXXXXXXXXXXX
+   pulumi config set githubOwner your-github-owner
+   pulumi config set githubRepo your-github-repo
+   ```
+
+3. **Create the S3 backend bucket** (one-time setup):
+
+   ```bash
+   aws s3 mb s3://latitude-pulumi-state --region eu-central-1
+   aws s3api put-bucket-versioning --bucket latitude-pulumi-state --versioning-configuration Status=Enabled
+   ```
+
+4. **Initialize stacks:**
+
+   ```bash
+   pulumi stack init staging
+   pulumi stack init production
+   ```
+
+5. **Deploy staging:**
+
+   ```bash
+   pulumi up --stack staging
+   ```
+
+6. **Deploy production:**
+
+   ```bash
+   pulumi up --stack production
+   ```
+
+## Architecture
+
+### Staging (Cost-Optimized)
+
+- 2 AZ VPC with fck-nat instance (no NAT gateway)
+- RDS PostgreSQL 16 `db.t4g.micro` (standard, single-AZ)
+- ElastiCache Redis 7 `cache.t3.micro` (cache + BullMQ)
+- ECS Fargate: 1 task per service, no auto-scaling
+- Domains: `staging.latitude.so`, `staging-api.latitude.so`, `staging-ingest.latitude.so`
+
+### Production (MVP-Ready)
+
+- 2 AZ VPC with NAT gateway
+- Aurora Serverless v2 PostgreSQL 16: 0.5-2 ACU, Multi-AZ
+- MemoryDB Redis 7 `db.t4g.small` (cache + BullMQ, 2-node)
+- ECS Fargate: Auto-scaling 1-3 tasks per service
+- Domains: `console.latitude.so`, `api.latitude.so`, `ingest.latitude.so`
+
+## Services
+
+All services listen on port 8080 inside the container (mapped via ALB target groups).
+
+| Service | Health Check  | Description                                              |
+| ------- | ------------- | -------------------------------------------------------- |
+| web     | `/api/health` | TanStack Start SSR app                                   |
+| api     | `/health`     | Hono public API                                          |
+| ingest  | `/health`     | Hono telemetry ingestion                                 |
+| workers | `/health`     | BullMQ background workers (no ALB, internal health only) |
+
+## File Structure
+
+```
+infra/
+├── Pulumi.yaml              # Project config
+├── Pulumi.staging.yaml      # Staging stack config
+├── Pulumi.production.yaml   # Production stack config
+├── config.ts                # Environment configurations
+├── index.ts                 # Stack entry point
+└── lib/
+    ├── types.ts             # Pulumi AWS type aliases
+    ├── vpc.ts               # VPC, subnets, NAT
+    ├── vpc-endpoints.ts     # S3 + Secrets Manager VPC endpoints
+    ├── security-groups.ts   # Security group factories
+    ├── alb.ts               # ALB + listeners + target groups
+    ├── ecs.ts               # ECS cluster + services + migrations task
+    ├── rds.ts               # RDS (standard) / Aurora Serverless v2
+    ├── redis.ts             # ElastiCache / MemoryDB
+    ├── s3.ts                # S3 bucket + lifecycle
+    ├── secrets.ts           # Secrets Manager helpers
+    ├── dns.ts               # ACM + Route53 records
+    ├── bastion.ts           # Bastion instance (Tailscale VPN access)
+    ├── github-actions.ts    # OIDC provider + deploy role
+    └── observability.ts     # CloudWatch dashboards + alarms
+```
+
+## CI/CD
+
+GitHub Actions workflows:
+
+- `.github/workflows/deploy.yml` - Build and deploy pipeline
+- `.github/workflows/build-images.yml` - Build and push container images to GHCR
+
+Deployment triggers:
+
+- **Staging**: push to `main` → build → migrate → deploy (no check gates)
+- **Production**: push a `v*` tag → checks must pass → build → migrate → deploy
+- **Manual**: workflow_dispatch with environment selector
+
+The deployment workflow uses OIDC authentication (no long-lived AWS credentials).
+

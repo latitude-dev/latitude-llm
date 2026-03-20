@@ -45,7 +45,7 @@ export {
   createRlsMiddleware,
   type InMemoryPostgres,
   setupTestPostgres,
-} from "@platform/db-postgres"
+} from "@platform/db-postgres/testing"
 
 // Hono test client exports
 export {

@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/**
+  - infra
 
 catalog:
   '@biomejs/biome': 2.4.6

@@ -18,6 +18,10 @@
       "entry": ["src/router.tsx", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
+    "infra": {
+      "entry": [],
+      "project": []
+    },
     "packages/domain/email": {
       "project": ["src/**/*.ts", "src/**/*.tsx"],
       "ignoreDependencies": ["@react-email/preview-server"]
@@ -43,7 +47,8 @@
       "project": []
     }
   },
-  "ignoreBinaries": ["tmuxinator"],
+  "ignoreBinaries": ["tmuxinator", "pulumi"],
+  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"],
   "ignoreIssues": {
     "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"]
   }

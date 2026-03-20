@@ -27,7 +27,7 @@ export const registerRoutes = (context: RoutesContext) => {
   const v1 = new OpenAPIHono()
   const protectedRoutes = new OpenAPIHono<ProtectedEnv>()
 
-  registerHealthRoute(context)
+  registerHealthRoute({ app })
 
   // Make shared dependencies available via request context.
   v1.use("*", async (c, next) => {

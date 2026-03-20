@@ -34,5 +34,36 @@
       "!**/models.dev.json",
       "!**/drizzle/**/*.json"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "packages/*/src/**",
+        "packages/*/*/src/**",
+        "apps/*/src/**",
+        "!**/*.test.*",
+        "!**/test/**",
+        "!**/testing/**",
+        "!**/testkit/**",
+        "!**/test-utils/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./test/*", "./testing/*", "../test/*", "../testing/*", "../../test/*", "../../testing/*"],
+                    "message": "Do not import test utilities in production code. Expose them via a /testing subpath export instead."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

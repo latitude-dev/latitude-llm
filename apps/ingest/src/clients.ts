@@ -1,9 +1,7 @@
-import type { ClickHouseClient } from "@clickhouse/client"
 import type { QueuePublisherShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
-import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
@@ -12,7 +10,6 @@ import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
-let clickhouseInstance: ClickHouseClient | undefined
 let redisInstance: RedisClient | undefined
 let queuePublisherPromise: Promise<QueuePublisherShape> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
@@ -30,13 +27,6 @@ export const getAdminPostgresClient = (): PostgresClient => {
     adminPostgresClientInstance = createPostgresClient({ databaseUrl: adminUrl })
   }
   return adminPostgresClientInstance
-}
-
-export const getClickhouseClient = (): ClickHouseClient => {
-  if (!clickhouseInstance) {
-    clickhouseInstance = createClickhouseClient()
-  }
-  return clickhouseInstance
 }
 
 export const getRedisClient = (): RedisClient => {

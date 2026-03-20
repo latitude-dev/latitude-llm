@@ -4,7 +4,7 @@ import type { MessageHandler, QueueConsumer, QueueMessage, QueueName } from "@do
 import { DatasetId, DatasetRowId, OrganizationId } from "@domain/shared"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { postgresSchema } from "@platform/db-postgres"
-import { FakeStorageDisk } from "@platform/storage-object"
+import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"

@@ -1,16 +1,13 @@
 import { type EmailMessage, EmailSendError, type EmailSender } from "@domain/email"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
-import { createTransport, type Transporter } from "nodemailer"
+import { createTransport } from "nodemailer"
 
-interface MailgunSmtpConfig {
-  readonly host: string | undefined
-  readonly port: number
-  readonly user: string | undefined
-  readonly pass: string | undefined
-  readonly from: string | undefined
+interface MailgunApiConfig {
+  readonly apiKey: string | undefined
   readonly domain: string | undefined
   readonly region: "us" | "eu"
+  readonly from: string | undefined
 }
 
 interface SmtpConfig {
@@ -28,67 +25,32 @@ interface MailpitConfig {
 }
 
 export interface EmailTransportConfig {
-  readonly mailgun?: Partial<MailgunSmtpConfig>
+  readonly mailgun?: Partial<MailgunApiConfig>
   readonly smtp?: Partial<SmtpConfig>
   readonly mailpit?: Partial<MailpitConfig>
 }
 
 type EmailProvider = "mailgun" | "smtp" | "mailpit"
 
-interface ProviderConfig {
+type SendFn = (message: EmailMessage, from: string) => Promise<void>
+
+interface ResolvedProvider {
   readonly provider: EmailProvider
-  readonly transportConfig: {
-    readonly host: string
-    readonly port: number
-    readonly secure: boolean
-    readonly auth?: {
-      readonly user: string
-      readonly pass: string
-    }
-    readonly tls?: {
-      readonly rejectUnauthorized: boolean
-    }
-  }
+  readonly sendFn: SendFn
   readonly from: string | undefined
 }
 
-const getMailgunDefaults = ({
-  domain,
-  region,
-}: {
-  domain: string | undefined
-  region: "us" | "eu"
-}): { host: string; user: string | undefined } => {
-  const host = region === "eu" ? "smtp.eu.mailgun.org" : "smtp.mailgun.org"
-  const user = domain ? `postmaster@${domain}` : undefined
-
-  return { host, user }
-}
-
-const getMailgunSmtpConfigFromEnv = (): MailgunSmtpConfig => {
+const getMailgunApiConfigFromEnv = (): MailgunApiConfig => {
+  const apiKey = Effect.runSync(parseEnvOptional("LAT_MAILGUN_API_KEY", "string"))
   const domain = Effect.runSync(parseEnvOptional("LAT_MAILGUN_DOMAIN", "string"))
-  const region = Effect.runSync(parseEnvOptional("LAT_MAILGUN_REGION", "string"))
-  const defaults = getMailgunDefaults({
-    domain,
-    region: region === "eu" ? "eu" : "us",
-  })
-
-  const host = Effect.runSync(parseEnvOptional("LAT_MAILGUN_SMTP_HOST", "string")) ?? defaults.host
-  const port = Effect.runSync(parseEnv("LAT_MAILGUN_SMTP_PORT", "number", 587))
-  const user = Effect.runSync(parseEnvOptional("LAT_MAILGUN_SMTP_USER", "string")) ?? defaults.user
-  const pass =
-    Effect.runSync(parseEnvOptional("LAT_MAILGUN_SMTP_PASS", "string")) ??
-    Effect.runSync(parseEnvOptional("LAT_MAILGUN_API_KEY", "string"))
+  const regionRaw = Effect.runSync(parseEnvOptional("LAT_MAILGUN_REGION", "string"))
   const from = Effect.runSync(parseEnvOptional("LAT_MAILGUN_FROM", "string"))
 
   return {
-    host,
-    port,
-    user,
-    pass,
-    from,
+    apiKey,
     domain,
-    region: region === "eu" ? "eu" : "us",
+    region: regionRaw === "eu" ? "eu" : "us",
+    from,
   }
 }
 
@@ -111,112 +73,125 @@ const getMailpitConfigFromEnv = (): MailpitConfig => {
 }
 
 const mergeMailgunConfig = (
-  base: MailgunSmtpConfig,
-  override: Partial<MailgunSmtpConfig> | undefined,
-): MailgunSmtpConfig => {
-  if (!override) {
-    return base
-  }
-
-  return {
-    ...base,
-    ...override,
-    region: override.region ?? base.region,
-  }
+  base: MailgunApiConfig,
+  override: Partial<MailgunApiConfig> | undefined,
+): MailgunApiConfig => {
+  if (!override) return base
+  return { ...base, ...override, region: override.region ?? base.region }
 }
 
 const mergeSmtpConfig = (base: SmtpConfig, override: Partial<SmtpConfig> | undefined): SmtpConfig => {
-  if (!override) {
-    return base
-  }
-
-  return {
-    ...base,
-    ...override,
-  }
+  if (!override) return base
+  return { ...base, ...override }
 }
 
 const mergeMailpitConfig = (base: MailpitConfig, override: Partial<MailpitConfig> | undefined): MailpitConfig => {
-  if (!override) {
-    return base
-  }
+  if (!override) return base
+  return { ...base, ...override }
+}
 
-  return {
-    ...base,
-    ...override,
+const createMailgunSendFn = (apiKey: string, domain: string, region: "us" | "eu"): SendFn => {
+  const apiHost = region === "eu" ? "api.eu.mailgun.net" : "api.mailgun.net"
+  const url = `https://${apiHost}/v3/${domain}/messages`
+  const authHeader = `Basic ${btoa(`api:${apiKey}`)}`
+
+  return async (message, from) => {
+    const body = new FormData()
+    body.append("from", from)
+    body.append("to", message.to)
+    body.append("subject", message.subject)
+    body.append("html", message.html)
+    if (message.text) body.append("text", message.text)
+    if (message.replyTo) body.append("h:Reply-To", message.replyTo)
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: authHeader },
+      body,
+    })
+
+    if (!response.ok) {
+      const text = await response.text()
+      throw new Error(`Mailgun API ${response.status}: ${text}`)
+    }
   }
 }
 
-const resolveProviderConfig = ({
+const createSmtpSendFn = (host: string, port: number, user: string, pass: string): SendFn => {
+  const transporter = createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  })
+
+  return async (message, from) => {
+    await transporter.sendMail({
+      from,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      replyTo: message.replyTo,
+    })
+  }
+}
+
+const createMailpitSendFn = (host: string, port: number): SendFn => {
+  const transporter = createTransport({
+    host,
+    port,
+    secure: false,
+    tls: { rejectUnauthorized: false },
+  })
+
+  return async (message, from) => {
+    await transporter.sendMail({
+      from,
+      to: message.to,
+      subject: message.subject,
+      html: message.html,
+      text: message.text,
+      replyTo: message.replyTo,
+    })
+  }
+}
+
+const resolveProvider = ({
   mailgun,
   smtp,
   mailpit,
 }: {
-  mailgun: MailgunSmtpConfig
+  mailgun: MailgunApiConfig
   smtp: SmtpConfig
   mailpit: MailpitConfig
-}): ProviderConfig => {
-  if (mailgun.host && mailgun.user && mailgun.pass) {
+}): ResolvedProvider => {
+  if (mailgun.apiKey && mailgun.domain) {
     return {
       provider: "mailgun",
-      transportConfig: {
-        host: mailgun.host,
-        port: mailgun.port,
-        secure: mailgun.port === 465,
-        auth: {
-          user: mailgun.user,
-          pass: mailgun.pass,
-        },
-      },
-      from: mailgun.from ?? (mailgun.domain ? `postmaster@${mailgun.domain}` : undefined),
+      sendFn: createMailgunSendFn(mailgun.apiKey, mailgun.domain, mailgun.region),
+      from: mailgun.from ?? `postmaster@${mailgun.domain}`,
     }
   }
 
   if (smtp.host && smtp.user && smtp.pass) {
     return {
       provider: "smtp",
-      transportConfig: {
-        host: smtp.host,
-        port: smtp.port,
-        secure: smtp.port === 465,
-        auth: {
-          user: smtp.user,
-          pass: smtp.pass,
-        },
-      },
+      sendFn: createSmtpSendFn(smtp.host, smtp.port, smtp.user, smtp.pass),
       from: smtp.from,
     }
   }
 
   return {
     provider: "mailpit",
-    transportConfig: {
-      host: mailpit.host,
-      port: mailpit.port,
-      secure: false,
-      tls: {
-        rejectUnauthorized: false,
-      },
-    },
+    sendFn: createMailpitSendFn(mailpit.host, mailpit.port),
     from: mailpit.from,
   }
 }
 
-const createNodemailerTransporter = (config: ProviderConfig): Effect.Effect<Transporter, never> => {
-  return Effect.sync(() =>
-    createTransport({
-      host: config.transportConfig.host,
-      port: config.transportConfig.port,
-      secure: config.transportConfig.secure,
-      auth: config.transportConfig.auth,
-      tls: config.transportConfig.tls,
-    }),
-  )
-}
-
 export const createEmailTransportSender = (config?: EmailTransportConfig): EmailSender => {
-  const providerConfig = resolveProviderConfig({
-    mailgun: mergeMailgunConfig(getMailgunSmtpConfigFromEnv(), config?.mailgun),
+  const resolved = resolveProvider({
+    mailgun: mergeMailgunConfig(getMailgunApiConfigFromEnv(), config?.mailgun),
     smtp: mergeSmtpConfig(getSmtpConfigFromEnv(), config?.smtp),
     mailpit: mergeMailpitConfig(getMailpitConfigFromEnv(), config?.mailpit),
   })
@@ -224,7 +199,7 @@ export const createEmailTransportSender = (config?: EmailTransportConfig): Email
   return {
     send: (message: EmailMessage): Effect.Effect<void, EmailSendError> => {
       return Effect.gen(function* () {
-        const resolvedFrom = message.from ?? providerConfig.from
+        const resolvedFrom = message.from ?? resolved.from
 
         if (!resolvedFrom) {
           return yield* new EmailSendError({
@@ -232,24 +207,14 @@ export const createEmailTransportSender = (config?: EmailTransportConfig): Email
           })
         }
 
-        const transporter = yield* createNodemailerTransporter(providerConfig)
-
         yield* Effect.tryPromise({
-          try: () =>
-            transporter.sendMail({
-              from: resolvedFrom,
-              to: message.to,
-              subject: message.subject,
-              html: message.html,
-              text: message.text,
-              replyTo: message.replyTo,
-            }),
+          try: () => resolved.sendFn(message, resolvedFrom),
           catch: (error: unknown) =>
             new EmailSendError({
               message:
                 error instanceof Error
-                  ? `Failed to send email via ${providerConfig.provider}: ${error.message}`
-                  : `Failed to send email via ${providerConfig.provider}`,
+                  ? `Failed to send email via ${resolved.provider}: ${error.message}`
+                  : `Failed to send email via ${resolved.provider}`,
               cause: error,
             }),
         })

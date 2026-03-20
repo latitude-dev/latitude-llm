@@ -1,0 +1,94 @@
+name: Rollback Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      service:
+        description: "Service to rollback (or 'all')"
+        required: true
+        type: choice
+        options:
+          - all
+          - web
+          - api
+          - ingest
+          - workers
+
+permissions:
+  contents: read
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+
+      - name: Rollback services
+        env:
+          CLUSTER: latitude-${{ inputs.environment }}-cluster
+          ENV_NAME: ${{ inputs.environment }}
+          TARGET: ${{ inputs.service }}
+        run: |
+          if [ "${TARGET}" = "all" ]; then
+            SERVICES="web api ingest workers"
+          else
+            SERVICES="${TARGET}"
+          fi
+
+          for SERVICE in ${SERVICES}; do
+            FAMILY="latitude-${ENV_NAME}-${SERVICE}"
+
+            CURRENT=$(aws ecs describe-task-definition \
+              --task-definition "${FAMILY}" \
+              --query 'taskDefinition.revision' \
+              --output text)
+
+            if [ "${CURRENT}" -le 1 ]; then
+              echo "No previous revision for ${SERVICE} (current: ${CURRENT}), skipping"
+              continue
+            fi
+
+            PREV=$((CURRENT - 1))
+            echo "Rolling back ${SERVICE}: revision ${CURRENT} → ${PREV}"
+
+            aws ecs update-service \
+              --cluster "${CLUSTER}" \
+              --service "${FAMILY}" \
+              --task-definition "${FAMILY}:${PREV}"
+
+            echo "Rolled back ${SERVICE}"
+          done
+
+      - name: Wait for services to stabilize
+        env:
+          CLUSTER: latitude-${{ inputs.environment }}-cluster
+          ENV_NAME: ${{ inputs.environment }}
+          TARGET: ${{ inputs.service }}
+        run: |
+          if [ "${TARGET}" = "all" ]; then
+            SERVICES="web api ingest workers"
+          else
+            SERVICES="${TARGET}"
+          fi
+
+          for SERVICE in ${SERVICES}; do
+            echo "Waiting for ${SERVICE} to stabilize..."
+            aws ecs wait services-stable \
+              --cluster "${CLUSTER}" \
+              --services "latitude-${ENV_NAME}-${SERVICE}"
+          done

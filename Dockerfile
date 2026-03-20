@@ -6,7 +6,7 @@
 FROM node:25-slim AS base
 
 # Install pnpm using npm (corepack was removed from Node.js 25)
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* && \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* curl && \
     npm install -g pnpm@10.30.3 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -84,6 +84,8 @@ FROM base AS runtime
 
 ENV NODE_ENV=production
 
+COPY packages/platform/db-postgres/global-bundle.pem /app/global-bundle.pem
+
 RUN groupadd -r latitude && useradd -r -g latitude -d /app -s /sbin/nologin latitude && \
     chown -R latitude:latitude /app
 
@@ -122,7 +124,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 RUN prune-workspace
 USER latitude
-EXPOSE 3001
+EXPOSE 8080
 
 CMD ["node", "apps/api/dist/server.cjs"]
 
@@ -143,7 +145,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 RUN prune-workspace
 USER latitude
-EXPOSE 3002
+EXPOSE 8080
 
 CMD ["node", "apps/ingest/dist/server.cjs"]
 
@@ -164,7 +166,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 RUN prune-workspace
 USER latitude
-EXPOSE 9090
+EXPOSE 8080
 
 CMD ["node", "apps/workers/dist/server.cjs"]
 
@@ -185,7 +187,7 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 RUN prune-workspace
 USER latitude
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "apps/web/.output/server/index.mjs"]
 
@@ -195,7 +197,6 @@ CMD ["node", "apps/web/.output/server/index.mjs"]
 FROM runtime AS migrations
 
 # Install curl and goose for ClickHouse migrations
-# hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     GOOSE_VERSION=3.24.1 && \

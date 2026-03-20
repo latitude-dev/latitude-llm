@@ -19,12 +19,4 @@ export { UserRepositoryLive } from "./repositories/user-repository.ts"
 export * from "./schema/index.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
-// In-memory Postgres for tests (owned here to avoid testkit ↔ db-postgres cycle)
-export {
-  closeInMemoryPostgres,
-  createInMemoryPostgres,
-  createRlsMiddleware,
-  type InMemoryPostgres,
-  setupTestPostgres,
-} from "./test/in-memory-postgres.ts"
 export { withPostgres } from "./with-postgres.ts"
