@@ -17,7 +17,7 @@ AWS infrastructure for the Latitude LLM observability platform using Pulumi (Typ
    pnpm install
    ```
 
-2. **Configure secrets** (see [secrets.md](./docs/secrets.md)):
+2. **Configure secrets:**
 
    ```bash
    pulumi config set hostedZoneId ZXXXXXXXXXXXXXXXXXXX
