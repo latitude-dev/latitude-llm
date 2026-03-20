@@ -45,11 +45,6 @@ export type IamOpenidConnectProvider = aws.iam.OpenIdConnectProvider
 export type IamInstanceProfile = aws.iam.InstanceProfile
 
 export type CloudwatchLogGroup = aws.cloudwatch.LogGroup
-export type CloudwatchMetricAlarm = aws.cloudwatch.MetricAlarm
-export type CloudwatchDashboard = aws.cloudwatch.Dashboard
 
 export type SecretsmanagerSecret = aws.secretsmanager.Secret
 export type SecretsmanagerSecretVersion = aws.secretsmanager.SecretVersion
-
-export type SnsTopic = aws.sns.Topic
-export type SnsTopicSubscription = aws.sns.TopicSubscription

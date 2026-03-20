@@ -48,9 +48,6 @@ export interface EnvironmentConfig {
     lifecycleDays: number
   }
 
-  observability: {
-    alertEmail: string
-  }
 }
 
 export interface ServiceConfig {
@@ -157,10 +154,6 @@ export const stagingConfig: EnvironmentConfig = {
     versioning: false,
     lifecycleDays: 30,
   },
-
-  observability: {
-    alertEmail: "alerts@latitude.so",
-  },
 }
 
 export const productionConfig: EnvironmentConfig = {
@@ -249,10 +242,6 @@ export const productionConfig: EnvironmentConfig = {
     bucketName: "latitude-production-spans",
     versioning: true,
     lifecycleDays: 90,
-  },
-
-  observability: {
-    alertEmail: "alerts@latitude.so",
   },
 }
 

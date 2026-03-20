@@ -5,7 +5,6 @@ import { createBastion } from "./lib/bastion.ts"
 import { createCertificate, createDnsRecords } from "./lib/dns.ts"
 import { createEcs } from "./lib/ecs.ts"
 import { createGithubActionsOidc } from "./lib/github-actions.ts"
-import { createObservability } from "./lib/observability.ts"
 import { createRds } from "./lib/rds.ts"
 import { createRedis } from "./lib/redis.ts"
 import { createS3 } from "./lib/s3.ts"
@@ -86,15 +85,6 @@ const ecs = createEcs(
   },
 )
 
-const observability = createObservability(
-  name,
-  envConfig,
-  ecs.cluster,
-  alb.alb,
-  { cluster: rds.cluster, instance: rds.dbInstance },
-  envConfig.observability.alertEmail,
-)
-
 const githubActions = createGithubActionsOidc(name, environment, githubOwner, githubRepo)
 
 export const outputs = {
@@ -123,7 +113,6 @@ export const outputs = {
 
   githubActionsRoleArn: githubActions.deployRole.arn,
 
-  snsTopicArn: observability.snsTopic.arn,
 
   bastionInstanceId: bastion.instance.id,
 
