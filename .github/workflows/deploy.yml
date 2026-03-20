@@ -160,6 +160,9 @@ jobs:
     needs: [staging-migrate, staging-build]
     runs-on: ubuntu-latest
     environment: staging
+    strategy:
+      matrix:
+        service: [web, api, ingest, workers]
     permissions:
       id-token: write
       contents: read
@@ -170,53 +173,48 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
 
-      - name: Deploy services
+      - name: Deploy ${{ matrix.service }}
         env:
           CLUSTER: latitude-staging-cluster
           ENV_NAME: staging
+          SERVICE: ${{ matrix.service }}
           IMAGE_TAG: ${{ needs.staging-build.outputs.image_tag }}
           REGISTRY: ${{ needs.staging-build.outputs.registry }}
         run: |
-          for SERVICE in web api ingest workers; do
-            echo "Deploying ${SERVICE}..."
-            FAMILY="latitude-${ENV_NAME}-${SERVICE}"
-            IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
-            SERVICE_ARN=$(aws ecs list-services \
-              --cluster "${CLUSTER}" \
-              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-              --output text)
-            aws ecs register-task-definition \
-              --family "${FAMILY}" \
-              --cli-input-json "$(aws ecs describe-task-definition \
-                --task-definition "${FAMILY}" \
-                --query 'taskDefinition' \
-                --output json | jq \
-                  --arg image "${IMAGE}" '
-                  .containerDefinitions[0].image = $image |
-                  del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
-                ')"
-            aws ecs update-service \
-              --cluster "${CLUSTER}" \
-              --service "${SERVICE_ARN}" \
-              --task-definition "${FAMILY}"
-            echo "Deployed ${SERVICE}"
-          done
+          FAMILY="latitude-${ENV_NAME}-${SERVICE}"
+          IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
+          SERVICE_ARN=$(aws ecs list-services \
+            --cluster "${CLUSTER}" \
+            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+            --output text)
+          aws ecs register-task-definition \
+            --family "${FAMILY}" \
+            --cli-input-json "$(aws ecs describe-task-definition \
+              --task-definition "${FAMILY}" \
+              --query 'taskDefinition' \
+              --output json | jq \
+                --arg image "${IMAGE}" '
+                .containerDefinitions[0].image = $image |
+                del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+              ')"
+          aws ecs update-service \
+            --cluster "${CLUSTER}" \
+            --service "${SERVICE_ARN}" \
+            --task-definition "${FAMILY}"
 
-      - name: Wait for services to stabilize
+      - name: Wait for ${{ matrix.service }} to stabilize
         env:
           CLUSTER: latitude-staging-cluster
           ENV_NAME: staging
+          SERVICE: ${{ matrix.service }}
         run: |
-          for SERVICE in web api ingest workers; do
-            echo "Waiting for ${SERVICE} to stabilize..."
-            SERVICE_ARN=$(aws ecs list-services \
-              --cluster "${CLUSTER}" \
-              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-              --output text)
-            aws ecs wait services-stable \
-              --cluster "${CLUSTER}" \
-              --services "${SERVICE_ARN}"
-          done
+          SERVICE_ARN=$(aws ecs list-services \
+            --cluster "${CLUSTER}" \
+            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+            --output text)
+          aws ecs wait services-stable \
+            --cluster "${CLUSTER}" \
+            --services "${SERVICE_ARN}"
 
   # ── Production ───────────────────────────────────────────
 
@@ -347,6 +345,9 @@ jobs:
     needs: [production-migrate, production-build]
     runs-on: ubuntu-latest
     environment: production
+    strategy:
+      matrix:
+        service: [web, api, ingest, workers]
     permissions:
       id-token: write
       contents: read
@@ -357,50 +358,45 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
 
-      - name: Deploy services
+      - name: Deploy ${{ matrix.service }}
         env:
           CLUSTER: latitude-production-cluster
           ENV_NAME: production
+          SERVICE: ${{ matrix.service }}
           IMAGE_TAG: ${{ needs.production-build.outputs.image_tag }}
           REGISTRY: ${{ needs.production-build.outputs.registry }}
         run: |
-          for SERVICE in web api ingest workers; do
-            echo "Deploying ${SERVICE}..."
-            FAMILY="latitude-${ENV_NAME}-${SERVICE}"
-            IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
-            SERVICE_ARN=$(aws ecs list-services \
-              --cluster "${CLUSTER}" \
-              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-              --output text)
-            aws ecs register-task-definition \
-              --family "${FAMILY}" \
-              --cli-input-json "$(aws ecs describe-task-definition \
-                --task-definition "${FAMILY}" \
-                --query 'taskDefinition' \
-                --output json | jq \
-                  --arg image "${IMAGE}" '
-                  .containerDefinitions[0].image = $image |
-                  del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
-                ')"
-            aws ecs update-service \
-              --cluster "${CLUSTER}" \
-              --service "${SERVICE_ARN}" \
-              --task-definition "${FAMILY}"
-            echo "Deployed ${SERVICE}"
-          done
+          FAMILY="latitude-${ENV_NAME}-${SERVICE}"
+          IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
+          SERVICE_ARN=$(aws ecs list-services \
+            --cluster "${CLUSTER}" \
+            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+            --output text)
+          aws ecs register-task-definition \
+            --family "${FAMILY}" \
+            --cli-input-json "$(aws ecs describe-task-definition \
+              --task-definition "${FAMILY}" \
+              --query 'taskDefinition' \
+              --output json | jq \
+                --arg image "${IMAGE}" '
+                .containerDefinitions[0].image = $image |
+                del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+              ')"
+          aws ecs update-service \
+            --cluster "${CLUSTER}" \
+            --service "${SERVICE_ARN}" \
+            --task-definition "${FAMILY}"
 
-      - name: Wait for services to stabilize
+      - name: Wait for ${{ matrix.service }} to stabilize
         env:
           CLUSTER: latitude-production-cluster
           ENV_NAME: production
+          SERVICE: ${{ matrix.service }}
         run: |
-          for SERVICE in web api ingest workers; do
-            echo "Waiting for ${SERVICE} to stabilize..."
-            SERVICE_ARN=$(aws ecs list-services \
-              --cluster "${CLUSTER}" \
-              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-              --output text)
-            aws ecs wait services-stable \
-              --cluster "${CLUSTER}" \
-              --services "${SERVICE_ARN}"
-          done
+          SERVICE_ARN=$(aws ecs list-services \
+            --cluster "${CLUSTER}" \
+            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+            --output text)
+          aws ecs wait services-stable \
+            --cluster "${CLUSTER}" \
+            --services "${SERVICE_ARN}"

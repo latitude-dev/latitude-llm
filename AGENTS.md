@@ -98,12 +98,58 @@ Prefer Web Standard APIs over Node.js-specific modules in domain, utility, and s
 
 When a Node-specific API is genuinely required outside these scopes, document the reason with a brief comment.
 
+### Test Code Isolation
+
+Test utilities (fakes, in-memory databases, fixtures) must never be exported from a package's main entry point (`src/index.ts`). Doing so pulls test-only code into production bundles.
+
+**Rules:**
+
+- **Never** export from `./test/` or `./testing/` directories in a package's main `src/index.ts`
+- If a package needs to expose test utilities, add a `/testing` subpath in `package.json` `exports`:
+
+```json
+{
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/my-test-helpers.ts"
+  }
+}
+```
+
+- Test consumers import via the subpath: `import { Fake } from "@platform/my-package/testing"`
+- Biome enforces this with `noRestrictedImports` (errors on `./test/*` and `./testing/*` imports in production source)
+- Production bundlers (tsup) include an esbuild plugin that fails the build if test code is resolved
+
+### Test Code Isolation
+
+Test utilities (fakes, in-memory databases, fixtures) must never be exported from a package's main entry point (`src/index.ts`). Doing so pulls test-only code into production bundles.
+
+**Rules:**
+
+- **Never** export from `./test/` or `./testing/` directories in a package's main `src/index.ts`
+- If a package needs to expose test utilities, add a `/testing` subpath in `package.json` `exports`:
+
+```json
+{
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/my-test-helpers.ts"
+  }
+}
+```
+
+- Test consumers import via the subpath: `import { Fake } from "@platform/my-package/testing"`
+- Biome enforces this with `noRestrictedImports` (errors on `./test/*` and `./testing/*` imports in production source)
+- Production bundlers (tsup) include an esbuild plugin that fails the build if test code is resolved
+
 ### Anti-patterns to Reject
 
 - Cross-domain logic without clear ownership
 - New provider integrations without a core capability contract
 - Introducing application env vars without the `LAT_` prefix (see Environment Variables)
 - Using `"use client"` or `"use server"` directives — these are Next.js-specific; the web app uses TanStack Start
+- Exporting test utilities from a package's main entry point (see Test Code Isolation)
+- Exporting test utilities from a package's main entry point (see Test Code Isolation)
 
 ## Stack and Toolchain
 

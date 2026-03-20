@@ -1,6 +1,6 @@
 import type { MessageHandler, QueueConsumer, QueueMessage, QueueName } from "@domain/queue"
 import { queryClickhouse } from "@platform/db-clickhouse"
-import { FakeStorageDisk } from "@platform/storage-object"
+import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"

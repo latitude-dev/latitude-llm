@@ -5,6 +5,10 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/test/in-memory-postgres.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "pg:generate": "node --import tsx scripts/migration.ts auto",
