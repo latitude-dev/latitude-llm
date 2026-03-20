@@ -1,4 +1,4 @@
-import { AuthIntentRepository, createInviteIntentUseCase } from "@domain/auth"
+import { AuthIntentRepository, cancelInviteIntentUseCase, createInviteIntentUseCase } from "@domain/auth"
 import { MembershipRepository, OrganizationRepository, removeMemberUseCase } from "@domain/organizations"
 import { isValidId } from "@domain/shared"
 import {
@@ -126,5 +126,28 @@ export const removeMember = createServerFn({ method: "POST" })
         membershipId: data.membershipId,
         requestingUserId: userId,
       }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
+    )
+  })
+
+export const cancelMemberInvite = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      inviteId: z
+        .string()
+        .refine((value) => isValidId(value), {
+          message: "Invalid invite id",
+        }),
+    }),
+  )
+  .handler(async ({ data }): Promise<void> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    await Effect.runPromise(
+      cancelInviteIntentUseCase({
+        intentId: data.inviteId,
+        organizationId,
+      }).pipe(withPostgres(AuthIntentRepositoryLive, client, organizationId)),
     )
   })

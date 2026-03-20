@@ -26,3 +26,4 @@ export {
 export { createInviteIntentUseCase } from "./use-cases/create-invite-intent.ts"
 export { createLoginIntentUseCase, LoginUserNotFoundError } from "./use-cases/create-login-intent.ts"
 export { createSignupIntentUseCase } from "./use-cases/create-signup-intent.ts"
+export { cancelInviteIntentUseCase } from "./use-cases/cancel-invite-intent.ts"

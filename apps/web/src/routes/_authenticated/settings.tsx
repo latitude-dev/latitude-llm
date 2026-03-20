@@ -31,6 +31,7 @@ import {
 } from "../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
 import {
+  cancelMemberInviteMutation,
   createMemberInviteIntentMutation,
   removeMemberMutation,
   useMembersCollection,
@@ -141,15 +142,20 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
               )}
             </TableCell>
             <TableCell align="right">
-              {member.status === "active" && (
+              {(member.status === "active" || member.status === "invited") && (
                 <Button
                   flat
                   variant="ghost"
                   onClick={() => {
-                    void removeMemberMutation(member.id)
+                    const transaction =
+                      member.status === "invited"
+                        ? cancelMemberInviteMutation(member.id)
+                        : removeMemberMutation(member.id)
+
+                    void transaction
                       .isPersisted.promise.then(() => {
                         toast({
-                          description: "Member removed",
+                          description: member.status === "invited" ? "Invitation canceled" : "Member removed",
                         })
                       })
                       .catch((e) =>

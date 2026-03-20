@@ -5,7 +5,7 @@ import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { MemberRecord } from "./members.functions.ts"
-import { inviteMember, listMembers, removeMember } from "./members.functions.ts"
+import { cancelMemberInvite, inviteMember, listMembers, removeMember } from "./members.functions.ts"
 
 const queryClient = getQueryClient()
 
@@ -79,6 +79,22 @@ export function createMemberInviteIntentMutation(email: string) {
 
 export function removeMemberMutation(membershipId: string) {
   return membersCollection.delete(membershipId)
+}
+
+const cancelInviteIntentAction = createOptimisticAction<{ inviteId: string }>({
+  onMutate: ({ inviteId }) => {
+    membersCollection.delete(inviteId)
+  },
+  mutationFn: async ({ inviteId }) => {
+    await cancelMemberInvite({
+      data: { inviteId },
+    })
+    await invalidateMembers()
+  },
+})
+
+export function cancelMemberInviteMutation(inviteId: string) {
+  return cancelInviteIntentAction({ inviteId })
 }
 
 export const useMembersCollection = () => {
