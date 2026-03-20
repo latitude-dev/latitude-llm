@@ -46,7 +46,9 @@ jobs:
   staging-migrate:
     needs: staging-build
     runs-on: ubuntu-latest
-    environment: staging
+    environment:
+      name: staging
+      deployment: false
     permissions:
       id-token: write
       contents: read
@@ -196,11 +198,11 @@ jobs:
                 --arg image "${IMAGE}" '
                 .containerDefinitions[0].image = $image |
                 del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
-              ')"
+              ')" > /dev/null
           aws ecs update-service \
             --cluster "${CLUSTER}" \
             --service "${SERVICE_ARN}" \
-            --task-definition "${FAMILY}"
+            --task-definition "${FAMILY}" > /dev/null
 
       - name: Wait for ${{ matrix.service }} to stabilize
         env:
@@ -232,7 +234,9 @@ jobs:
   production-migrate:
     needs: production-build
     runs-on: ubuntu-latest
-    environment: production
+    environment:
+      name: production
+      deployment: false
     permissions:
       id-token: write
       contents: read
@@ -382,11 +386,11 @@ jobs:
                 --arg image "${IMAGE}" '
                 .containerDefinitions[0].image = $image |
                 del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
-              ')"
+              ')" > /dev/null
           aws ecs update-service \
             --cluster "${CLUSTER}" \
             --service "${SERVICE_ARN}" \
-            --task-definition "${FAMILY}"
+            --task-definition "${FAMILY}" > /dev/null
 
       - name: Wait for ${{ matrix.service }} to stabilize
         env:
