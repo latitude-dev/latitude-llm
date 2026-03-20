@@ -26,11 +26,13 @@ import { useState } from "react"
 import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
 import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
-import { invalidateMembers, useMembersCollection } from "../../domains/members/members.collection.ts"
+import {
+  createMemberInviteMutation,
+  invalidateMembers,
+  useMembersCollection,
+} from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { inviteMember, removeMember } from "../../domains/members/members.functions.ts"
-import { authClient } from "../../lib/auth-client.ts"
-import { WEB_BASE_URL } from "../../lib/auth-config.ts"
+import { removeMember } from "../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -46,22 +48,10 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
     },
     onSubmit: async ({ value }) => {
       try {
-        const { intentId } = await inviteMember({ data: { email: value.email } })
-        await invalidateMembers()
+        const transaction = createMemberInviteMutation(value.email)
+        await transaction.isPersisted.promise
         setOpen(false)
         toast({ description: "Invitation sent" })
-
-        const { error } = await authClient.signIn.magicLink({
-          email: value.email,
-          callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
-        })
-
-        if (error) {
-          toast({
-            variant: "destructive",
-            description: "Invitation created, but we could not send the email. Please try again.",
-          })
-        }
       } catch (error) {
         toast({
           variant: "destructive",
