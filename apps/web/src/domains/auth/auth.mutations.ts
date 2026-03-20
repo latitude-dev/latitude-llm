@@ -1,24 +1,27 @@
-import { generateId } from "@domain/shared"
 import { createOptimisticAction } from "@tanstack/react-db"
 import { completeAuthIntent, createLoginIntent, createSignupIntent, exchangeCliSession } from "./auth.functions.ts"
 
-export const createLoginIntentMutation = createOptimisticAction<{ email: string }>({
+export const createLoginIntentMutation = createOptimisticAction<{
+  email: string
+  intentId: string
+}>({
   onMutate: () => {},
-  mutationFn: async ({ email }) => {
-    return createLoginIntent({ data: { email, intentId: generateId() } })
+  mutationFn: async ({ email, intentId }) => {
+    return createLoginIntent({ data: { email, intentId } })
   },
 })
 
 export const createSignupIntentMutation = createOptimisticAction<{
+  intentId: string
   name: string
   email: string
   organizationName: string
 }>({
   onMutate: () => {},
-  mutationFn: async ({ name, email, organizationName }) => {
+  mutationFn: async ({ intentId, name, email, organizationName }) => {
     return createSignupIntent({
       data: {
-        intentId: generateId(),
+        intentId,
         name,
         email,
         organizationName,

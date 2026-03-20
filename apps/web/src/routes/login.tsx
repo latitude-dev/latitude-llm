@@ -1,3 +1,4 @@
+import { generateId } from "@domain/shared"
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
@@ -45,8 +46,9 @@ function LoginPage() {
     setError(undefined)
 
     try {
-      const transaction = createLoginIntentMutation({ email })
-      const { intentId } = await transaction.isPersisted.promise
+      const intentId = generateId()
+      const transaction = createLoginIntentMutation({ email, intentId })
+      await transaction.isPersisted.promise
 
       const callbackURL = cliSession
         ? `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}&cliSession=${encodeURIComponent(cliSession)}`

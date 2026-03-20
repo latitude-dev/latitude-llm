@@ -1,4 +1,3 @@
-import { generateId } from "@domain/shared"
 import { createOptimisticAction } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import {
@@ -14,13 +13,14 @@ import {
 const queryClient = getQueryClient()
 
 export const createDatasetIntentMutation = createOptimisticAction<{
+  id: string
   projectId: string
   name: string
 }>({
   onMutate: () => {},
-  mutationFn: async ({ projectId, name }) => {
+  mutationFn: async ({ id, projectId, name }) => {
     const dataset = await createDatasetMutation({
-      data: { id: generateId(), projectId, name },
+      data: { id, projectId, name },
     })
     await queryClient.invalidateQueries({ queryKey: ["datasets", projectId] })
     return dataset
@@ -43,14 +43,15 @@ export const renameDatasetIntentMutation = createOptimisticAction<{
 })
 
 export const createDatasetFromTracesIntentMutation = createOptimisticAction<{
+  datasetId: string
   projectId: string
   name: string
   traceIds: string[]
 }>({
   onMutate: () => {},
-  mutationFn: async ({ projectId, name, traceIds }) => {
+  mutationFn: async ({ datasetId, projectId, name, traceIds }) => {
     const result = await createDatasetFromTracesMutation({
-      data: { datasetId: generateId(), projectId, name, traceIds },
+      data: { datasetId, projectId, name, traceIds },
     })
     await queryClient.invalidateQueries({ queryKey: ["datasets", projectId] })
     return result
