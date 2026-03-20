@@ -27,7 +27,7 @@ const membersCollection = createCollection(
 )
 
 export function invalidateMembers() {
-  void queryClient.invalidateQueries({ queryKey: ["members"] })
+  return queryClient.invalidateQueries({ queryKey: ["members"] })
 }
 
 export const useMembersCollection = () => {

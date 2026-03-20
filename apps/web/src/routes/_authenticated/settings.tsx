@@ -45,20 +45,29 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       email: "",
     },
     onSubmit: async ({ value }) => {
-      const { intentId } = await inviteMember({ data: { email: value.email } })
+      try {
+        const { intentId } = await inviteMember({ data: { email: value.email } })
+        await invalidateMembers()
+        setOpen(false)
+        toast({ description: "Invitation sent" })
 
-      const { error } = await authClient.signIn.magicLink({
-        email: value.email,
-        callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
-      })
+        const { error } = await authClient.signIn.magicLink({
+          email: value.email,
+          callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
+        })
 
-      if (error) {
-        throw new Error(error.message ?? "Failed to send invitation email")
+        if (error) {
+          toast({
+            variant: "destructive",
+            description: "Invitation created, but we could not send the email. Please try again.",
+          })
+        }
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          description: toUserMessage(error),
+        })
       }
-
-      toast({ description: "Invitation sent" })
-      invalidateMembers()
-      setOpen(false)
     },
   })
 
@@ -73,7 +82,8 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
         <>
           <CloseTrigger />
           <Button
-            type="submit"
+            type="button"
+            disabled={form.state.isSubmitting}
             onClick={() => {
               void form.handleSubmit()
             }}
