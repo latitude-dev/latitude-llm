@@ -152,8 +152,8 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
                         ? cancelMemberInviteMutation(member.id)
                         : removeMemberMutation(member.id)
 
-                    void transaction
-                      .isPersisted.promise.then(() => {
+                    void transaction.isPersisted.promise
+                      .then(() => {
                         toast({
                           description: member.status === "invited" ? "Invitation canceled" : "Member removed",
                         })

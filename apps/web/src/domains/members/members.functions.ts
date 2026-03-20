@@ -133,11 +133,9 @@ export const cancelMemberInvite = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
-      inviteId: z
-        .string()
-        .refine((value) => isValidId(value), {
-          message: "Invalid invite id",
-        }),
+      inviteId: z.string().refine((value) => isValidId(value), {
+        message: "Invalid invite id",
+      }),
     }),
   )
   .handler(async ({ data }): Promise<void> => {
