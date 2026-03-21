@@ -2,6 +2,7 @@ import { MembershipRepository, OrganizationRepository } from "@domain/organizati
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
+import { appendFileSync } from "node:fs"
 import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
@@ -9,6 +10,15 @@ import { errorHandler } from "../../server/middlewares.ts"
 interface OrganizationRecord {
   readonly id: string
   readonly name: string
+}
+
+const debugLog = (payload: {
+  readonly hypothesisId: string
+  readonly location: string
+  readonly message: string
+  readonly data: Record<string, unknown>
+}) => {
+  appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ ...payload, timestamp: Date.now() })}\n`)
 }
 
 export const countUserOrganizations = createServerFn({ method: "GET" })
@@ -38,5 +48,13 @@ export const getOrganization = createServerFn({ method: "GET" })
         return yield* repo.findById(organizationId)
       }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
     )
+    // #region agent log
+    debugLog({
+      hypothesisId: "E",
+      location: "apps/web/src/domains/organizations/organizations.functions.ts:getOrganization",
+      message: "getOrganization success",
+      data: { organizationId: org.id, organizationName: org.name },
+    })
+    // #endregion
     return { id: org.id, name: org.name }
   })

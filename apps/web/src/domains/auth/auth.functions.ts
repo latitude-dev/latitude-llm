@@ -16,6 +16,7 @@ import {
 } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
+import { appendFileSync } from "node:fs"
 import { z } from "zod"
 import { getAdminPostgresClient, getPostgresClient, getRedisClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
@@ -29,6 +30,15 @@ import {
 
 const CLI_SESSION_KEY_PREFIX = "cli:session"
 const getCliSessionKey = (token: string) => `${CLI_SESSION_KEY_PREFIX}:${token}`
+
+const debugLog = (payload: {
+  readonly hypothesisId: string
+  readonly location: string
+  readonly message: string
+  readonly data: Record<string, unknown>
+}) => {
+  appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ ...payload, timestamp: Date.now() })}\n`)
+}
 
 export const createLoginIntent = createServerFn({ method: "POST" })
   .middleware([errorHandler])
@@ -109,22 +119,67 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
     const email = session.user.email
     const name = data.name ?? session.user.name ?? null
 
-    return await Effect.runPromise(
-      completeAuthIntentUseCase({
+    // #region agent log
+    debugLog({
+      hypothesisId: "A",
+      location: "apps/web/src/domains/auth/auth.functions.ts:completeAuthIntent",
+      message: "completeAuthIntent entry",
+      data: {
         intentId: data.intentId,
-        session: { userId, email, name },
-      }).pipe(
-        withPostgres(
-          Layer.mergeAll(
-            AuthIntentRepositoryLive,
-            MembershipRepositoryLive,
-            UserRepositoryLive,
-            OrganizationRepositoryLive,
+        userId,
+        hasSessionName: typeof session.user.name === "string" && session.user.name.trim().length > 0,
+        hasProvidedName: typeof data.name === "string" && data.name.trim().length > 0,
+      },
+    })
+    // #endregion
+
+    try {
+      const result = await Effect.runPromise(
+        completeAuthIntentUseCase({
+          intentId: data.intentId,
+          session: { userId, email, name },
+        }).pipe(
+          withPostgres(
+            Layer.mergeAll(
+              AuthIntentRepositoryLive,
+              MembershipRepositoryLive,
+              UserRepositoryLive,
+              OrganizationRepositoryLive,
+            ),
+            adminClient,
           ),
-          adminClient,
         ),
-      ),
-    )
+      )
+
+      // #region agent log
+      debugLog({
+        hypothesisId: "A",
+        location: "apps/web/src/domains/auth/auth.functions.ts:completeAuthIntent",
+        message: "completeAuthIntent success",
+        data: {
+          intentId: data.intentId,
+          userId,
+        },
+      })
+      // #endregion
+
+      return result
+    } catch (error) {
+      // #region agent log
+      debugLog({
+        hypothesisId: "C",
+        location: "apps/web/src/domains/auth/auth.functions.ts:completeAuthIntent",
+        message: "completeAuthIntent failure",
+        data: {
+          intentId: data.intentId,
+          userId,
+          errorName: error instanceof Error ? error.name : "unknown",
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      })
+      // #endregion
+      throw error
+    }
   })
 
 export const exchangeCliSession = createServerFn({ method: "POST" })

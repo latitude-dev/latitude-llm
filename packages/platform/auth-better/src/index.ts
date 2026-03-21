@@ -9,6 +9,7 @@ import { customSession, magicLink, organization } from "better-auth/plugins"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import type { BetterAuthPlugin } from "better-auth/types"
 import { Effect } from "effect"
+import { appendFileSync } from "node:fs"
 import Stripe from "stripe"
 
 /**
@@ -56,6 +57,15 @@ export interface StripePlanConfig {
   }
 }
 
+const debugLog = (payload: {
+  readonly hypothesisId: string
+  readonly location: string
+  readonly message: string
+  readonly data: Record<string, unknown>
+}) => {
+  appendFileSync("/opt/cursor/logs/debug.log", `${JSON.stringify({ ...payload, timestamp: Date.now() })}\n`)
+}
+
 export const createBetterAuth = (config: BetterAuthConfig) => {
   const baseUrl = config.baseUrl ?? Effect.runSync(parseEnv("LAT_BETTER_AUTH_URL", "string", "http://localhost:3000"))
   const basePath = config.basePath ?? "/auth"
@@ -89,6 +99,17 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
   plugins.push(
     customSession(async ({ user, session }) => {
       const activeOrganizationIdInSession = "activeOrganizationId" in session ? session.activeOrganizationId : null
+      // #region agent log
+      debugLog({
+        hypothesisId: "B",
+        location: "packages/platform/auth-better/src/index.ts:customSession",
+        message: "customSession entry",
+        data: {
+          userId: user.id,
+          hasActiveOrganizationInSession: !!activeOrganizationIdInSession,
+        },
+      })
+      // #endregion
       if (activeOrganizationIdInSession) return { user, session }
 
       const memberships = await Effect.runPromise(
@@ -98,6 +119,19 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         }).pipe(Effect.provide(MembershipRepositoryLive), Effect.provide(SqlClientLive(config.client))),
       )
       const activeOrganizationId = memberships[0]?.organizationId
+
+      // #region agent log
+      debugLog({
+        hypothesisId: "B",
+        location: "packages/platform/auth-better/src/index.ts:customSession",
+        message: "customSession membership lookup result",
+        data: {
+          userId: user.id,
+          membershipsCount: memberships.length,
+          derivedActiveOrganizationId: activeOrganizationId ?? null,
+        },
+      })
+      // #endregion
 
       return {
         user,
