@@ -1,5 +1,4 @@
 import type { PostgresClient } from "@platform/db-postgres"
-import { sql } from "drizzle-orm"
 
 export const isRuntimeAuthError = (error: unknown) => {
   if (!(error instanceof Error)) {
@@ -29,18 +28,19 @@ const getRuntimeDatabaseConfig = (runtimeDatabaseUrl: string) => {
 }
 
 const ensureRuntimeRole = async ({
-  tx,
+  adminClient,
   runtimeRole,
   runtimePassword,
 }: {
-  tx: Parameters<Parameters<PostgresClient["transaction"]>[0]>[0]
+  adminClient: PostgresClient
   runtimeRole: string
   runtimePassword: string | null
 }) => {
-  await tx.execute(sql`
+  await adminClient.pool.query({
+    text: `
 DO $$
-DECLARE role_name text := ${runtimeRole};
-DECLARE role_password text := ${runtimePassword};
+DECLARE role_name text := $1;
+DECLARE role_password text := $2;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = role_name) THEN
     EXECUTE format('CREATE USER %I', role_name);
@@ -50,22 +50,25 @@ BEGIN
     EXECUTE format('ALTER USER %I WITH PASSWORD %L', role_name, role_password);
   END IF;
 END $$;
-`)
+`,
+    values: [runtimeRole, runtimePassword],
+  })
 }
 
 const grantRuntimeRoleAccess = async ({
-  tx,
+  adminClient,
   runtimeRole,
   databaseName,
 }: {
-  tx: Parameters<Parameters<PostgresClient["transaction"]>[0]>[0]
+  adminClient: PostgresClient
   runtimeRole: string
   databaseName: string
 }) => {
-  await tx.execute(sql`
+  await adminClient.pool.query({
+    text: `
 DO $$
-DECLARE role_name text := ${runtimeRole};
-DECLARE database_name text := ${databaseName};
+DECLARE role_name text := $1;
+DECLARE database_name text := $2;
 BEGIN
   EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', database_name, role_name);
   EXECUTE format('GRANT USAGE ON SCHEMA latitude TO %I', role_name);
@@ -76,7 +79,9 @@ BEGIN
     role_name
   );
 END $$;
-`)
+`,
+    values: [runtimeRole, databaseName],
+  })
 }
 
 export const ensureRuntimePostgresRoleAccess = async ({
@@ -95,16 +100,14 @@ export const ensureRuntimePostgresRoleAccess = async ({
     return
   }
 
-  await adminClient.transaction(async (tx) => {
-    await ensureRuntimeRole({
-      tx,
-      runtimeRole: role,
-      runtimePassword: password,
-    })
-    await grantRuntimeRoleAccess({
-      tx,
-      runtimeRole: role,
-      databaseName: database,
-    })
+  await ensureRuntimeRole({
+    adminClient,
+    runtimeRole: role,
+    runtimePassword: password,
+  })
+  await grantRuntimeRoleAccess({
+    adminClient,
+    runtimeRole: role,
+    databaseName: database,
   })
 }

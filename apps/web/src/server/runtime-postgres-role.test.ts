@@ -2,9 +2,15 @@ import type { PostgresClient } from "@platform/db-postgres"
 import { describe, expect, it, vi } from "vitest"
 import { ensureRuntimePostgresRoleAccess, isRuntimeAuthError } from "./runtime-postgres-role.ts"
 
-const createFakeClient = (transaction: PostgresClient["transaction"]): PostgresClient =>
+const createFakeClient = ({
+  transaction,
+  query,
+}: {
+  transaction: PostgresClient["transaction"]
+  query: ReturnType<typeof vi.fn>
+}): PostgresClient =>
   ({
-    pool: {} as PostgresClient["pool"],
+    pool: { query } as unknown as PostgresClient["pool"],
     db: {} as PostgresClient["db"],
     transaction,
   }) satisfies PostgresClient
@@ -32,18 +38,17 @@ describe("isRuntimeAuthError", () => {
 
 describe("ensureRuntimePostgresRoleAccess", () => {
   it("creates or updates runtime role and grants privileges", async () => {
-    const execute = vi.fn().mockResolvedValue({ rows: [] })
-
-    const transaction = createTransactionMock(async (fn) => fn({ execute }))
-    const adminClient = createFakeClient(transaction)
+    const query = vi.fn().mockResolvedValue({ rows: [] })
+    const transaction = createTransactionMock(async (fn) => fn({ execute: vi.fn() }))
+    const adminClient = createFakeClient({ transaction, query })
 
     await ensureRuntimePostgresRoleAccess({
       adminClient,
       runtimeDatabaseUrl: "postgres://latitude_app:secret@localhost:5432/latitude_development",
     })
 
-    expect(transaction).toHaveBeenCalledTimes(1)
-    expect(execute).toHaveBeenCalledTimes(5)
+    expect(transaction).not.toHaveBeenCalled()
+    expect(query).toHaveBeenCalledTimes(2)
   })
 
   it("does nothing when runtime database url cannot be parsed", async () => {
@@ -52,7 +57,8 @@ describe("ensureRuntimePostgresRoleAccess", () => {
         execute: vi.fn().mockResolvedValue({ rows: [] }),
       }),
     )
-    const adminClient = createFakeClient(transaction)
+    const query = vi.fn().mockResolvedValue({ rows: [] })
+    const adminClient = createFakeClient({ transaction, query })
 
     await ensureRuntimePostgresRoleAccess({
       adminClient,
@@ -60,6 +66,7 @@ describe("ensureRuntimePostgresRoleAccess", () => {
     })
 
     expect(transaction).not.toHaveBeenCalled()
+    expect(query).not.toHaveBeenCalled()
   })
 
   it("does nothing when runtime role or database are missing", async () => {
@@ -68,7 +75,8 @@ describe("ensureRuntimePostgresRoleAccess", () => {
         execute: vi.fn().mockResolvedValue({ rows: [] }),
       }),
     )
-    const adminClient = createFakeClient(transaction)
+    const query = vi.fn().mockResolvedValue({ rows: [] })
+    const adminClient = createFakeClient({ transaction, query })
 
     await ensureRuntimePostgresRoleAccess({
       adminClient,
@@ -76,19 +84,20 @@ describe("ensureRuntimePostgresRoleAccess", () => {
     })
 
     expect(transaction).not.toHaveBeenCalled()
+    expect(query).not.toHaveBeenCalled()
   })
 
   it("handles role names with dashes", async () => {
-    const execute = vi.fn().mockResolvedValue({ rows: [] })
-    const transaction = createTransactionMock(async (fn) => fn({ execute }))
-    const adminClient = createFakeClient(transaction)
+    const query = vi.fn().mockResolvedValue({ rows: [] })
+    const transaction = createTransactionMock(async (fn) => fn({ execute: vi.fn() }))
+    const adminClient = createFakeClient({ transaction, query })
 
     await ensureRuntimePostgresRoleAccess({
       adminClient,
       runtimeDatabaseUrl: "postgres://lat-app:secret@localhost:5432/latitude_development",
     })
 
-    expect(transaction).toHaveBeenCalledTimes(1)
-    expect(execute).toHaveBeenCalledTimes(5)
+    expect(transaction).not.toHaveBeenCalled()
+    expect(query).toHaveBeenCalledTimes(2)
   })
 })
