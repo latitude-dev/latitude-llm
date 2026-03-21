@@ -9,6 +9,12 @@ const createFakeClient = (transaction: PostgresClient["transaction"]): PostgresC
     transaction,
   }) satisfies PostgresClient
 
+const createTransactionMock = (
+  fn: (callback: (tx: unknown) => Promise<unknown>) => Promise<unknown>,
+): PostgresClient["transaction"] => {
+  return vi.fn(async (callback) => fn(callback as (tx: unknown) => Promise<unknown>)) as PostgresClient["transaction"]
+}
+
 describe("isRuntimeAuthError", () => {
   it("matches runtime auth failures", () => {
     expect(isRuntimeAuthError(new Error("password authentication failed for user \"latitude_app\""))).toBe(true)
@@ -24,8 +30,8 @@ describe("isRuntimeAuthError", () => {
 
 describe("createPostgresClientWithFallback", () => {
   it("uses runtime client when runtime transaction succeeds", async () => {
-    const runtimeTransaction = vi.fn(async <T>(fn: (tx: unknown) => Promise<T>) => fn("runtime-tx"))
-    const adminTransaction = vi.fn(async <T>(fn: (tx: unknown) => Promise<T>) => fn("admin-tx"))
+    const runtimeTransaction = createTransactionMock(async (fn) => fn("runtime-tx"))
+    const adminTransaction = createTransactionMock(async (fn) => fn("admin-tx"))
 
     const client = createPostgresClientWithFallback({
       runtimeClient: createFakeClient(runtimeTransaction),
@@ -40,10 +46,10 @@ describe("createPostgresClientWithFallback", () => {
   })
 
   it("falls back to admin client after runtime auth failure", async () => {
-    const runtimeTransaction = vi.fn(async () => {
+    const runtimeTransaction = createTransactionMock(async () => {
       throw new Error("password authentication failed for user \"latitude_app\"")
     })
-    const adminTransaction = vi.fn(async <T>(fn: (tx: unknown) => Promise<T>) => fn("admin-tx"))
+    const adminTransaction = createTransactionMock(async (fn) => fn("admin-tx"))
     const onFallback = vi.fn()
 
     const client = createPostgresClientWithFallback({
@@ -63,10 +69,10 @@ describe("createPostgresClientWithFallback", () => {
   })
 
   it("rethrows non-auth runtime errors", async () => {
-    const runtimeTransaction = vi.fn(async () => {
+    const runtimeTransaction = createTransactionMock(async () => {
       throw new Error("connection timeout")
     })
-    const adminTransaction = vi.fn(async <T>(fn: (tx: unknown) => Promise<T>) => fn("admin-tx"))
+    const adminTransaction = createTransactionMock(async (fn) => fn("admin-tx"))
 
     const client = createPostgresClientWithFallback({
       runtimeClient: createFakeClient(runtimeTransaction),
