@@ -29,7 +29,9 @@ import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
+import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
+import { createPostgresClientWithFallback } from "./postgres-client-with-fallback.ts"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -38,6 +40,7 @@ let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let queuePublisher: Promise<QueuePublisherShape> | undefined
+const logger = createLogger("web-clients")
 
 interface AuthIntentEmailContext {
   readonly type: AuthIntent["type"]
@@ -82,7 +85,19 @@ export const getAdminPostgresClient = (): PostgresClient => {
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
-    postgresClientInstance = createPostgresClient()
+    const runtimeClient = createPostgresClient()
+    const adminClient = getAdminPostgresClient()
+
+    postgresClientInstance = createPostgresClientWithFallback({
+      runtimeClient,
+      adminClient,
+      onFallback: (error) => {
+        logger.warn({
+          message: "Runtime DB connection failed, falling back to admin DB connection",
+          error: error instanceof Error ? error.message : String(error),
+        })
+      },
+    })
   }
   return postgresClientInstance
 }
