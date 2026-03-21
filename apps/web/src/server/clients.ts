@@ -31,7 +31,8 @@ import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bu
 import { createStorageDisk } from "@platform/storage-object"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
-import { createPostgresClientWithFallback } from "./postgres-client-with-fallback.ts"
+import { createRuntimePostgresClient } from "./runtime-postgres-client.ts"
+import { ensureRuntimePostgresRoleAccess } from "./runtime-postgres-role.ts"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
@@ -85,15 +86,18 @@ export const getAdminPostgresClient = (): PostgresClient => {
 
 export const getPostgresClient = (): PostgresClient => {
   if (!postgresClientInstance) {
-    const runtimeClient = createPostgresClient()
     const adminClient = getAdminPostgresClient()
-
-    postgresClientInstance = createPostgresClientWithFallback({
-      runtimeClient,
-      adminClient,
-      onFallback: (error) => {
+    const runtimeDatabaseUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"))
+    postgresClientInstance = createRuntimePostgresClient({
+      createRuntimeClient: () => createPostgresClient(),
+      repairRuntimeAccess: () =>
+        ensureRuntimePostgresRoleAccess({
+          adminClient,
+          runtimeDatabaseUrl,
+        }),
+      onRepairAttempt: (error) => {
         logger.warn({
-          message: "Runtime DB connection failed, falling back to admin DB connection",
+          message: "Runtime DB authentication failed, attempting runtime role access repair",
           error: error instanceof Error ? error.message : String(error),
         })
       },
