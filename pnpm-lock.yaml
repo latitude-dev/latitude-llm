@@ -274,9 +274,6 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
-      '@domain/email':
-        specifier: workspace:*
-        version: link:../../packages/domain/email
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
@@ -292,9 +289,6 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
-      '@domain/users':
-        specifier: workspace:*
-        version: link:../../packages/domain/users
       '@platform/auth-better':
         specifier: workspace:*
         version: link:../../packages/platform/auth-better
@@ -307,9 +301,6 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
-      '@platform/email-transport':
-        specifier: workspace:*
-        version: link:../../packages/platform/email-transport
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
@@ -416,6 +407,9 @@ importers:
 
   apps/workers:
     dependencies:
+      '@domain/auth':
+        specifier: workspace:*
+        version: link:../../packages/domain/auth
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
@@ -434,6 +428,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
+      '@domain/users':
+        specifier: workspace:*
+        version: link:../../packages/domain/users
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
@@ -485,7 +482,7 @@ importers:
         version: link:../../packages/observability
       '@temporalio/worker':
         specifier: 'catalog:'
-        version: 1.15.0(tslib@2.8.1)
+        version: 1.15.0(esbuild@0.27.3)(tslib@2.8.1)
       '@temporalio/workflow':
         specifier: 'catalog:'
         version: 1.15.0
@@ -5782,11 +5779,6 @@ packages:
     peerDependencies:
       acorn: ^8.14.0
 
-  acorn@8.15.0:
-    resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
-    engines: {node: '>=0.4.0'}
-    hasBin: true
-
   acorn@8.16.0:
     resolution: {integrity: sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==}
     engines: {node: '>=0.4.0'}
@@ -8701,10 +8693,6 @@ packages:
 
   toml@3.0.0:
     resolution: {integrity: sha512-y/mWCZinnvxjTKYhJ+pYxwD0mRLVvOtdS2Awbgxln6iEnt4rk0yBxeSBHkGJcPucRiG0e55mwWp+g/05rsrd6w==}
-
-  tough-cookie@6.0.0:
-    resolution: {integrity: sha512-kXuRi1mtaKMrsLUxz3sQYvVl37B0Ns6MzfrtV5DvJceE9bPyspOqk9xxv7XbZWcfLWbFmm997vl83qUWVJA64w==}
-    engines: {node: '>=16'}
 
   tough-cookie@6.0.1:
     resolution: {integrity: sha512-LktZQb3IeoUWB9lqR5EWTHgW/VTITCXg4D21M+lvybRVdylLrRMnqaIONLVb5mav8vM19m44HIcGq4qASeu2Qw==}
@@ -14448,7 +14436,7 @@ snapshots:
       long: 5.3.2
       protobufjs: 7.5.4
 
-  '@temporalio/worker@1.15.0(tslib@2.8.1)':
+  '@temporalio/worker@1.15.0(esbuild@0.27.3)(tslib@2.8.1)':
     dependencies:
       '@grpc/grpc-js': 1.14.3
       '@swc/core': 1.15.21
@@ -14467,11 +14455,11 @@ snapshots:
       protobufjs: 7.5.4
       rxjs: 7.8.2
       source-map: 0.7.6
-      source-map-loader: 4.0.2(webpack@5.105.4(@swc/core@1.15.21))
+      source-map-loader: 4.0.2(webpack@5.105.4(@swc/core@1.15.21)(esbuild@0.27.3))
       supports-color: 8.1.1
-      swc-loader: 0.2.7(@swc/core@1.15.21)(webpack@5.105.4(@swc/core@1.15.21))
+      swc-loader: 0.2.7(@swc/core@1.15.21)(webpack@5.105.4(@swc/core@1.15.21)(esbuild@0.27.3))
       unionfs: 4.6.0
-      webpack: 5.105.4(@swc/core@1.15.21)
+      webpack: 5.105.4(@swc/core@1.15.21)(esbuild@0.27.3)
     transitivePeerDependencies:
       - '@swc/helpers'
       - esbuild
@@ -14858,8 +14846,6 @@ snapshots:
   acorn-import-phases@1.0.4(acorn@8.16.0):
     dependencies:
       acorn: 8.16.0
-
-  acorn@8.15.0: {}
 
   acorn@8.16.0: {}
 
@@ -16577,7 +16563,7 @@ snapshots:
       rettime: 0.7.0
       statuses: 2.0.2
       strict-event-emitter: 0.5.1
-      tough-cookie: 6.0.0
+      tough-cookie: 6.0.1
       type-fest: 5.2.0
       until-async: 3.0.2
       yargs: 17.7.2
@@ -16603,7 +16589,7 @@ snapshots:
       rettime: 0.7.0
       statuses: 2.0.2
       strict-event-emitter: 0.5.1
-      tough-cookie: 6.0.0
+      tough-cookie: 6.0.1
       type-fest: 5.2.0
       until-async: 3.0.2
       yargs: 17.7.2
@@ -17604,11 +17590,11 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
-  source-map-loader@4.0.2(webpack@5.105.4(@swc/core@1.15.21)):
+  source-map-loader@4.0.2(webpack@5.105.4(@swc/core@1.15.21)(esbuild@0.27.3)):
     dependencies:
       iconv-lite: 0.6.3
       source-map-js: 1.2.1
-      webpack: 5.105.4(@swc/core@1.15.21)
+      webpack: 5.105.4(@swc/core@1.15.21)(esbuild@0.27.3)
 
   source-map-support@0.5.21:
     dependencies:
@@ -17739,11 +17725,11 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  swc-loader@0.2.7(@swc/core@1.15.21)(webpack@5.105.4(@swc/core@1.15.21)):
+  swc-loader@0.2.7(@swc/core@1.15.21)(webpack@5.105.4(@swc/core@1.15.21)(esbuild@0.27.3)):
     dependencies:
       '@swc/core': 1.15.21
       '@swc/counter': 0.1.3
-      webpack: 5.105.4(@swc/core@1.15.21)
+      webpack: 5.105.4(@swc/core@1.15.21)(esbuild@0.27.3)
 
   symbol-tree@3.2.4: {}
 
@@ -17797,15 +17783,16 @@ snapshots:
       - '@azure/core-client'
       - supports-color
 
-  terser-webpack-plugin@5.4.0(@swc/core@1.15.21)(webpack@5.105.4(@swc/core@1.15.21)):
+  terser-webpack-plugin@5.4.0(@swc/core@1.15.21)(esbuild@0.27.3)(webpack@5.105.4(@swc/core@1.15.21)(esbuild@0.27.3)):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
       jest-worker: 27.5.1
       schema-utils: 4.3.3
       terser: 5.44.0
-      webpack: 5.105.4(@swc/core@1.15.21)
+      webpack: 5.105.4(@swc/core@1.15.21)(esbuild@0.27.3)
     optionalDependencies:
       '@swc/core': 1.15.21
+      esbuild: 0.27.3
 
   terser-webpack-plugin@5.4.0(esbuild@0.25.12)(webpack@5.105.4(esbuild@0.25.12)):
     dependencies:
@@ -17876,11 +17863,6 @@ snapshots:
       is-number: 7.0.0
 
   toml@3.0.0: {}
-
-  tough-cookie@6.0.0:
-    dependencies:
-      tldts: 7.0.16
-    optional: true
 
   tough-cookie@6.0.1:
     dependencies:
@@ -18027,7 +18009,7 @@ snapshots:
   unplugin@2.3.11:
     dependencies:
       '@jridgewell/remapping': 2.3.5
-      acorn: 8.15.0
+      acorn: 8.16.0
       picomatch: 4.0.3
       webpack-virtual-modules: 0.6.2
 
@@ -18266,7 +18248,7 @@ snapshots:
       - uglify-js
     optional: true
 
-  webpack@5.105.4(@swc/core@1.15.21):
+  webpack@5.105.4(@swc/core@1.15.21)(esbuild@0.27.3):
     dependencies:
       '@types/eslint-scope': 3.7.7
       '@types/estree': 1.0.8
@@ -18290,7 +18272,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 4.3.3
       tapable: 2.3.0
-      terser-webpack-plugin: 5.4.0(@swc/core@1.15.21)(webpack@5.105.4(@swc/core@1.15.21))
+      terser-webpack-plugin: 5.4.0(@swc/core@1.15.21)(esbuild@0.27.3)(webpack@5.105.4(@swc/core@1.15.21)(esbuild@0.27.3))
       watchpack: 2.5.1
       webpack-sources: 3.3.4
     transitivePeerDependencies:

@@ -15,6 +15,7 @@ import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "./clients.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
+import { createMagicLinkEmailWorker } from "./workers/magic-link-email.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
@@ -70,6 +71,7 @@ const initializeWorkers = async () => {
   createDomainEventsWorker(queueConsumer)
   createSpanIngestionWorker(queueConsumer)
   createDatasetExportWorker(queueConsumer)
+  createMagicLinkEmailWorker(queueConsumer)
 
   await Effect.runPromise(outboxConsumer.start())
   await Effect.runPromise(queueConsumer.start())

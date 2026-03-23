@@ -13,9 +13,11 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
+    "@domain/auth": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
     "@domain/events": "workspace:*",
+    "@domain/users": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
