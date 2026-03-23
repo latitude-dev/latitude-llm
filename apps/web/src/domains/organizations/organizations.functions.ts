@@ -67,7 +67,7 @@ export const updateOrganizationName = createServerFn({ method: "POST" })
     return { id: org.id, name: org.name }
   })
 
-export const createWorkspace = createServerFn({ method: "POST" })
+export const createOrganization = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(z.object({ name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<OrganizationRecord> => {

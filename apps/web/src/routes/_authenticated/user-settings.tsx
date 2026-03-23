@@ -2,7 +2,7 @@ import { Button, Container, FormWrapper, Input, Modal, Text, useToast } from "@r
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
-import { createWorkspace } from "../../domains/organizations/organizations.functions.ts"
+import { createOrganization } from "../../domains/organizations/organizations.functions.ts"
 import { deleteCurrentUser, updateUserName } from "../../domains/sessions/session.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { toUserMessage } from "../../lib/errors.ts"
@@ -65,9 +65,9 @@ function ProfileSection() {
   )
 }
 
-// --- Create Workspace Section ---
+// --- Create Organization Section ---
 
-function CreateWorkspaceSection() {
+function CreateOrganizationSection() {
   const { toast } = useToast()
   const router = useRouter()
 
@@ -77,8 +77,8 @@ function CreateWorkspaceSection() {
     },
     onSubmit: async ({ value }) => {
       try {
-        await createWorkspace({ data: { name: value.name } })
-        toast({ description: "Workspace created" })
+        await createOrganization({ data: { name: value.name } })
+        toast({ description: "Organization created" })
         form.reset()
         void router.invalidate()
       } catch (error) {
@@ -92,7 +92,7 @@ function CreateWorkspaceSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Create Workspace</Text.H4>
+      <Text.H4 weight="bold">Create Organization</Text.H4>
       <form
         className="flex flex-row items-end gap-3"
         onSubmit={(e) => {
@@ -105,10 +105,10 @@ function CreateWorkspaceSection() {
             <Input
               required
               type="text"
-              label="Workspace Name"
+              label="Organization Name"
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="My Workspace"
+              placeholder="My Organization"
             />
           )}
         </form.Field>
@@ -155,7 +155,7 @@ function DeleteAccountConfirmModal({ open, setOpen }: { open: boolean; setOpen: 
         setOpen(v)
       }}
       title="Delete Account"
-      description="This action is permanent and cannot be undone. All your data will be deleted. If you are the sole member of a workspace, that workspace will also be permanently deleted."
+      description="This action is permanent and cannot be undone. All your data will be deleted. If you are the sole member of an organization, that organization will also be permanently deleted."
       footer={
         <>
           <Button variant="outline" onClick={() => setOpen(false)}>
@@ -187,8 +187,8 @@ function DeleteAccountSection() {
     <div className="flex flex-col gap-4">
       <Text.H4 weight="bold">Delete Account</Text.H4>
       <Text.H5 color="foregroundMuted">
-        Permanently delete your account and all associated data. If you are the sole member of a workspace, that
-        workspace will also be deleted.
+        Permanently delete your account and all associated data. If you are the sole member of an organization, that
+        organization will also be deleted.
       </Text.H5>
       <div>
         <DeleteAccountConfirmModal open={confirmOpen} setOpen={setConfirmOpen} />
@@ -206,7 +206,7 @@ function UserSettingsPage() {
   return (
     <Container className="pt-14">
       <ProfileSection />
-      <CreateWorkspaceSection />
+      <CreateOrganizationSection />
       <DeleteAccountSection />
     </Container>
   )

@@ -45,9 +45,9 @@ export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
 
-// --- Workspace Name Section ---
+// --- Organization Name Section ---
 
-function WorkspaceNameSection() {
+function OrganizationNameSection() {
   const { organizationName } = Route.useRouteContext()
   const { toast } = useToast()
   const router = useRouter()
@@ -59,7 +59,7 @@ function WorkspaceNameSection() {
     onSubmit: async ({ value }) => {
       try {
         await updateOrganizationName({ data: { name: value.name } })
-        toast({ description: "Workspace name updated" })
+        toast({ description: "Organization name updated" })
         void router.invalidate()
       } catch (error) {
         toast({
@@ -72,7 +72,7 @@ function WorkspaceNameSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Workspace Name</Text.H4>
+      <Text.H4 weight="bold">Organization Name</Text.H4>
       <form
         className="flex flex-row items-end gap-3"
         onSubmit={(e) => {
@@ -84,10 +84,10 @@ function WorkspaceNameSection() {
           {(field) => (
             <Input
               type="text"
-              label="Workspace Name"
+              label="Organization Name"
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="Workspace name"
+              placeholder="Organization name"
             />
           )}
         </form.Field>
@@ -99,7 +99,7 @@ function WorkspaceNameSection() {
   )
 }
 
-// --- Workspace Members Section ---
+// --- Organization Members Section ---
 
 function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
@@ -139,7 +139,7 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       open={open}
       onOpenChange={setOpen}
       title="Add New Member"
-      description="Invite a new member to this workspace by email."
+      description="Invite a new member to this organization by email."
       footer={
         <>
           <CloseTrigger />
@@ -255,7 +255,7 @@ function MembershipsSection() {
       <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
       <div className="flex flex-row items-center justify-between">
         <div className="flex flex-row items-center gap-2">
-          <Text.H4 weight="bold">Workspace Members</Text.H4>
+          <Text.H4 weight="bold">Organization Members</Text.H4>
         </div>
         <Button flat variant="outline" onClick={() => setInviteOpen(true)}>
           Add Member
@@ -296,7 +296,7 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       open={open}
       onOpenChange={setOpen}
       title="Create API Key"
-      description="Create a new API key for your workspace to access the Latitude API."
+      description="Create a new API key for your organization to access the Latitude API."
       footer={
         <>
           <CloseTrigger />
@@ -520,7 +520,7 @@ function ApiKeysSection() {
 function SettingsPage() {
   return (
     <Container className="pt-14">
-      <WorkspaceNameSection />
+      <OrganizationNameSection />
       <MembershipsSection />
       <ApiKeysSection />
     </Container>
