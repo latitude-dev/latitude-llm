@@ -14,6 +14,12 @@ import type {
   SecretsmanagerSecret,
 } from "./types.ts"
 
+export interface TemporalCloudConfig {
+  readonly address: string
+  readonly namespace: string
+  readonly taskQueue: string
+}
+
 export interface EcsOutput {
   cluster: EcsCluster
   logGroups: Record<string, CloudwatchLogGroup>
@@ -38,6 +44,7 @@ export function createEcs(
   s3Bucket: S3Bucket,
   imageTag: pulumi.Input<string>,
   albTargetGroupArns: Record<string, Output<string>>,
+  temporalCloud: TemporalCloudConfig,
 ): EcsOutput {
   const cluster = new aws.ecs.Cluster(`${name}-cluster`, {
     name: `${name}-cluster`,
@@ -151,6 +158,7 @@ export function createEcs(
       cacheRedisHost,
       bullmqRedisHost,
       imageTag,
+      temporalCloud,
     )
     taskDefinitions[serviceConfig.name] = taskDef
 
@@ -165,7 +173,9 @@ export function createEcs(
         assignPublicIp: false,
       },
       loadBalancers:
-        serviceConfig.name !== "workers" && albTargetGroupArns[serviceConfig.name] && serviceConfig.port
+        ["web", "api", "ingest"].includes(serviceConfig.name) &&
+        albTargetGroupArns[serviceConfig.name] &&
+        serviceConfig.port
           ? [
               {
                 targetGroupArn: albTargetGroupArns[serviceConfig.name],
@@ -254,6 +264,7 @@ function createTaskDefinition(
   cacheRedisHost: Output<string>,
   bullmqRedisHost: Output<string>,
   imageTag: pulumi.Input<string>,
+  temporalCloud: TemporalCloudConfig,
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
 
@@ -287,6 +298,7 @@ function createTaskDefinition(
       secrets["google-oauth-client-secret"].arn,
       secrets["github-oauth-client-id"].arn,
       secrets["github-oauth-client-secret"].arn,
+      secrets["temporal-api-key"].arn,
     ])
     .apply(
       ([
@@ -312,7 +324,77 @@ function createTaskDefinition(
         googleOauthClientSecretArn,
         githubOauthClientIdArn,
         githubOauthClientSecretArn,
+        temporalApiKeyArn,
       ]) => {
+        const baseEnvironment: { name: string; value: string }[] = [
+          { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
+          { name: "PORT", value: "8080" },
+          { name: "LAT_WEB_PORT", value: "8080" },
+          { name: "LAT_API_PORT", value: "8080" },
+          { name: "LAT_INGEST_PORT", value: "8080" },
+          { name: "LAT_WORKERS_HEALTH_PORT", value: "8080" },
+          { name: "LAT_REDIS_HOST", value: cacheRedis },
+          { name: "LAT_REDIS_PORT", value: "6379" },
+          { name: "LAT_BULLMQ_HOST", value: bullmqRedis },
+          { name: "LAT_BULLMQ_PORT", value: "6379" },
+          { name: "LAT_STORAGE_DRIVER", value: "s3" },
+          { name: "LAT_STORAGE_S3_BUCKET", value: config.s3.bucketName },
+          { name: "LAT_STORAGE_S3_REGION", value: config.region },
+          { name: "LAT_PG_POOL_MAX", value: "20" },
+          { name: "LAT_PG_IDLE_TIMEOUT_MS", value: "30000" },
+          { name: "LAT_PG_CONNECT_TIMEOUT_MS", value: "10000" },
+          { name: "LAT_WEB_URL", value: webUrl },
+          { name: "LAT_API_URL", value: apiUrl },
+          { name: "LAT_INGEST_URL", value: ingestUrl },
+          { name: "LAT_BETTER_AUTH_URL", value: apiUrl },
+          { name: "LAT_TRUSTED_ORIGINS", value: trustedOrigins },
+          { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
+          { name: "VITE_LAT_API_URL", value: `${apiUrl}/v1` },
+          { name: "VITE_LAT_WEB_URL", value: webUrl },
+        ]
+
+        const baseSecrets: { name: string; valueFrom: string }[] = [
+          { name: "LAT_DATABASE_URL", valueFrom: dbSecretArn },
+          { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbAdminSecretArn },
+          { name: "LAT_BETTER_AUTH_SECRET", valueFrom: betterAuthArn },
+          { name: "LAT_MASTER_ENCRYPTION_KEY", valueFrom: encryptionKeyArn },
+          { name: "CLICKHOUSE_URL", valueFrom: clickhouseUrlArn },
+          { name: "CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
+          { name: "CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
+          { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
+          { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
+          { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
+          { name: "LAT_MAILGUN_API_KEY", valueFrom: mailgunApiKeyArn },
+          { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
+          { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
+          { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
+        ]
+
+        const workflowsEnvironment =
+          serviceConfig.name === "workflows"
+            ? [
+                ...baseEnvironment,
+                { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
+                { name: "LAT_TEMPORAL_ADDRESS", value: temporalCloud.address },
+                { name: "LAT_TEMPORAL_NAMESPACE", value: temporalCloud.namespace },
+                { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
+              ]
+            : baseEnvironment
+
+        const oauthSecrets: { name: string; valueFrom: string }[] = [
+          { name: "LAT_GOOGLE_CLIENT_ID", valueFrom: googleOauthClientIdArn },
+          { name: "LAT_GOOGLE_CLIENT_SECRET", valueFrom: googleOauthClientSecretArn },
+          { name: "LAT_GITHUB_CLIENT_ID", valueFrom: githubOauthClientIdArn },
+          { name: "LAT_GITHUB_CLIENT_SECRET", valueFrom: githubOauthClientSecretArn },
+        ]
+
+        const serviceSecrets =
+          serviceConfig.name === "web"
+            ? [...baseSecrets, ...oauthSecrets]
+            : serviceConfig.name === "workflows"
+              ? [...baseSecrets, { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }]
+              : baseSecrets
+
         const def = {
           name: serviceConfig.name,
           image: `ghcr.io/${owner}/latitude-${config.name}-${serviceConfig.name}:${tag}`,
@@ -336,56 +418,8 @@ function createTaskDefinition(
               "awslogs-stream-prefix": serviceConfig.name,
             },
           },
-          environment: [
-            { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
-            { name: "PORT", value: "8080" },
-            { name: "LAT_WEB_PORT", value: "8080" },
-            { name: "LAT_API_PORT", value: "8080" },
-            { name: "LAT_INGEST_PORT", value: "8080" },
-            { name: "LAT_WORKERS_HEALTH_PORT", value: "8080" },
-            { name: "LAT_REDIS_HOST", value: cacheRedis },
-            { name: "LAT_REDIS_PORT", value: "6379" },
-            { name: "LAT_BULLMQ_HOST", value: bullmqRedis },
-            { name: "LAT_BULLMQ_PORT", value: "6379" },
-            { name: "LAT_STORAGE_DRIVER", value: "s3" },
-            { name: "LAT_STORAGE_S3_BUCKET", value: config.s3.bucketName },
-            { name: "LAT_STORAGE_S3_REGION", value: config.region },
-            { name: "LAT_PG_POOL_MAX", value: "20" },
-            { name: "LAT_PG_IDLE_TIMEOUT_MS", value: "30000" },
-            { name: "LAT_PG_CONNECT_TIMEOUT_MS", value: "10000" },
-            { name: "LAT_WEB_URL", value: webUrl },
-            { name: "LAT_API_URL", value: apiUrl },
-            { name: "LAT_INGEST_URL", value: ingestUrl },
-            { name: "LAT_BETTER_AUTH_URL", value: apiUrl },
-            { name: "LAT_TRUSTED_ORIGINS", value: trustedOrigins },
-            { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
-            { name: "VITE_LAT_API_URL", value: `${apiUrl}/v1` },
-            { name: "VITE_LAT_WEB_URL", value: webUrl },
-          ],
-          secrets: [
-            { name: "LAT_DATABASE_URL", valueFrom: dbSecretArn },
-            { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbAdminSecretArn },
-            { name: "LAT_BETTER_AUTH_SECRET", valueFrom: betterAuthArn },
-            { name: "LAT_MASTER_ENCRYPTION_KEY", valueFrom: encryptionKeyArn },
-            { name: "CLICKHOUSE_URL", valueFrom: clickhouseUrlArn },
-            { name: "CLICKHOUSE_USER", valueFrom: clickhouseUserArn },
-            { name: "CLICKHOUSE_PASSWORD", valueFrom: clickhousePasswordArn },
-            { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
-            { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
-            { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
-            { name: "LAT_MAILGUN_API_KEY", valueFrom: mailgunApiKeyArn },
-            { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
-            { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
-            { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
-            ...(serviceConfig.name === "web"
-              ? [
-                  { name: "LAT_GOOGLE_CLIENT_ID", valueFrom: googleOauthClientIdArn },
-                  { name: "LAT_GOOGLE_CLIENT_SECRET", valueFrom: googleOauthClientSecretArn },
-                  { name: "LAT_GITHUB_CLIENT_ID", valueFrom: githubOauthClientIdArn },
-                  { name: "LAT_GITHUB_CLIENT_SECRET", valueFrom: githubOauthClientSecretArn },
-                ]
-              : []),
-          ],
+          environment: workflowsEnvironment,
+          secrets: serviceSecrets,
           healthCheck: {
             command: [
               "CMD-SHELL",

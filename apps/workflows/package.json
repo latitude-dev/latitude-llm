@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/worker.ts",
+    "build": "tsup",
+    "dev": "tsx watch src/server.ts",
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -15,8 +15,13 @@
   "dependencies": {
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
+    "@temporalio/worker": "catalog:",
+    "@temporalio/workflow": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
     "tsx": "catalog:"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0"
   }
 }

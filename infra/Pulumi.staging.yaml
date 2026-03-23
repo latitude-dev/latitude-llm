@@ -4,4 +4,8 @@ config:
   latitude-infra:domainName: latitude.so
   latitude-infra:githubOwner: latitude-dev
   latitude-infra:githubRepo: latitude-llm
+  # Temporal Cloud (workflows ECS task): set namespace before enabling the worker
+  latitude-infra:temporalCloudNamespace: "latitude-llm-staging.naqqz"
+  # latitude-infra:temporalCloudAddress: "eu-central-1.aws.api.temporal.io:7233"
+  # latitude-infra:temporalTaskQueue: "latitude-workflows"
 encryptionsalt: v1:MG/gGDH83aQ=:v1:i0G9DLX0tuo8VYas:zijEeWEDExlnRGdKt84rnDnD1wmscQ==

@@ -54,6 +54,32 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  temporal:
+    image: temporalio/auto-setup:1.27.2
+    depends_on:
+      - postgres
+    env_file:
+      - .env.${NODE_ENV:-development}
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-latitude}
+      POSTGRES_PWD: ${POSTGRES_PASSWORD:-secret}
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:2.36.0
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:8233
+    ports:
+      - "8233:8080"
+
 volumes:
   postgres_data:
   clickhouse_data:
