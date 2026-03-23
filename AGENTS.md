@@ -26,6 +26,21 @@ No business logic in handlers, controllers, or jobs.
 - For web product development, implement backend behavior in `apps/web` server functions by composing domain use-cases and platform adapters directly.
 - Keep iteration velocity in `apps/web` by adding web-private server functions/stores while preserving `apps/api` stability.
 - Shared business rules still belong in domain packages; `apps/web` and `apps/api` should both orchestrate domain use-cases rather than duplicating policy.
+- Latitude product capabilities should be equally accessible to humans through the web UI and to other LLM Agents through MCP/API surfaces.
+- Do not dead-end product behavior into UI-only flows. Preserve the boundary rules above, but design schemas, use-cases, and public capabilities so machine-facing access can exist without redesign.
+
+### Cross-Cutting Implementation Constraints
+
+In addition to the boundary rules above:
+
+- For new domain data contracts, define the canonical shared shape as a Zod schema first when runtime validation is required, then infer TypeScript types from that schema or from Drizzle schemas where appropriate.
+- Enum-like contracts should use literal-string unions or `as const` objects, not TypeScript enums.
+- Shared domain schemas should validate data crossing from app/platform boundaries into domain use-cases.
+- Public request/response schemas should remain boundary-specific; they may reuse shared domain schemas or narrower projections rather than forcing full domain entities onto every surface.
+- Configurable thresholds, weights, debounce windows, sentinel values, and similar tunables should live in named constants inside the owning domain package rather than as scattered inline literals.
+- New Postgres tables must not add foreign key constraints.
+- Organization-scoped Postgres tables must use the repository RLS conventions.
+- When a capability is part of the product contract, preserve a machine-facing MCP/API surface instead of making it web-only.
 
 ### Domain Layer (`packages/domain/*`)
 
@@ -151,6 +166,70 @@ Test utilities (fakes, in-memory databases, fixtures) must never be exported fro
 - Exporting test utilities from a package's main entry point (see Test Code Isolation)
 - Exporting test utilities from a package's main entry point (see Test Code Isolation)
 
+### Documentation and Specs
+
+- `docs/` contains precise and exhaustive Markdown documentation for each domain or system.
+- Each docs file should cover how the domain or system is architected, built, designed, and structured.
+- Keep docs organized by domain/system (for example: `docs/reliability.md`, `docs/evaluations.md`, `docs/annotations.md`, `docs/scores.md`, `docs/issues.md`, `docs/simulations.md`, `docs/organizations.md`, `docs/projects.md`, `docs/users.md`, `docs/settings.md`, `docs/spans.md`).
+- `specs/` is a temporary folder used while a feature or system is under construction.
+- Each spec/PRD in `specs/` should have its own Markdown file and usually include a task list to track progress (for example: `specs/reliability.md`).
+- Specs define exactly what/how/why to build while the feature is under construction, so temporary overlap with docs is acceptable.
+- Docs should describe the intended final system after all planned phases are complete, including post-MVP phases, precisely enough to remain authoritative after the corresponding spec is deleted.
+- Docs should not be written as a snapshot of the repository's currently implemented state.
+- If some part of the final design is still not fully specified, docs may say that the exact detail is still pending precise definition, but they should still be framed around the final intended system.
+- When working on a spec, the coding agent should proactively ask the user clarifying questions and challenge assumptions, gaps, ambiguities, and trade-offs as needed to build the best possible spec.
+- Specs should follow this structure:
+
+```markdown
+# Name
+
+> **Documentation**: `docs/reliability.md`, `docs/evaluations.md`, ...
+
+... (here goes the exact and precise specification and the plan)
+
+## Tasks
+
+> **Status legend**: `[ ] pending`, `[~] in progress`, `[x] complete`
+
+### Phase N - ...
+
+- [ ] **P0-1**: ...
+
+... (here goes more tasks)
+
+**Exit gate**:
+
+- ... (here goes the definition of complete for this phase)
+
+... (here goes more phases)
+```
+
+- Each Phase should be a GitHub PR by itself, each task inside is a subtask of that PR.
+- When implementation stabilizes, promote durable knowledge from `specs/` into `docs/`.
+- Building the related `docs/` for the current spec is recommended.
+- Optionally each Phase could be linked to a Linear task if configured by the user.
+
+### Documentation Sync
+
+When a task introduces, removes, or clarifies durable repository knowledge, the coding agent must read and follow `.agents/skills/docs/SKILL.md` before finalizing.
+
+This includes changes to:
+
+- product behavior
+- business logic
+- architecture or design
+- repository structure or ownership
+- schema, API, storage, query, or lifecycle behavior
+- conventions, constraints, or prohibitions agreed during the conversation
+
+The agent must:
+
+- use the current conversation as the filter for what belongs to the current session
+- inspect the current git changes as evidence
+- update the relevant `docs/*.md` files by domain
+- update `AGENTS.md` when the session establishes a new repo-wide durable rule
+- explicitly say when no durable documentation update is needed
+
 ## Stack and Toolchain
 
 - **Runtime**: Node.js `>=25` (see root `package.json`). Check if mise is installed and use mise to switch to found node version. If Mise is not found ignore this.
@@ -251,6 +330,9 @@ Base config: `tsconfig.base.json`
 
 - `strict: true` is enabled; keep code strict-clean
 - Module system: `NodeNext` + ESM (`"type": "module"` in packages/apps)
+- For new domain data contracts, define the canonical shared shape as a Zod schema first when runtime validation is required, then infer TypeScript types from that schema or from Drizzle schemas where appropriate.
+- Use shared domain schemas to validate data crossing from app/platform boundaries into domain use-cases.
+- Public request/response schemas remain boundary-specific; they may reuse shared domain schemas or narrower projections of them instead of forcing full domain entities onto every surface.
 - Prefer explicit domain types/interfaces over loose objects
 - Methods/functions with more than one argument should default to a single named-arguments object rather than positional arguments
 - Use `readonly` fields for immutable domain data shapes
@@ -292,11 +374,13 @@ Base config: `tsconfig.base.json`
 All Postgres access flows through `SqlClient`—a domain-level service that abstracts database operations and enforces organization scoping via RLS.
 
 **Architecture:**
+
 - **Domain Layer** (`@domain/shared`): `SqlClient` interface with `transaction()` and `query()` methods
 - **Platform Layer** (`@platform/db-postgres`): `SqlClientLive` implementation with automatic RLS context setting
 - **App Layer** (`apps/*`): Boundaries provide `SqlClientLive` with the request's organization context
 
 **Key behaviors:**
+
 - Every transaction automatically sets `app.current_organization_id` session variable
 - RLS policies filter all queries by this organization ID at the database level
 - Nested transactions share the same connection (pass-through proxy—no nested transaction overhead)
@@ -306,8 +390,8 @@ All Postgres access flows through `SqlClient`—a domain-level service that abst
 
 ```typescript
 // apps/api/src/routes/projects.ts
-import { SqlClientLive } from "@platform/db-postgres"
-import { ProjectRepositoryLive } from "@platform/db-postgres"
+import { SqlClientLive } from "@platform/db-postgres";
+import { ProjectRepositoryLive } from "@platform/db-postgres";
 
 app.openapi(createProjectRoute, async (c) => {
   const project = await Effect.runPromise(
@@ -315,9 +399,9 @@ app.openapi(createProjectRoute, async (c) => {
       Effect.provide(ProjectRepositoryLive),
       Effect.provide(SqlClientLive(c.var.postgresClient, c.var.organization.id)),
     ),
-  )
-  return c.json(toProjectResponse(project), 201)
-})
+  );
+  return c.json(toProjectResponse(project), 201);
+});
 ```
 
 ```typescript
@@ -419,15 +503,15 @@ All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **m
 ```typescript
 // ✅ Good - follows all conventions
 export const projects = latitudeSchema.table(
-    "projects",
-    {
-        id: cuid("id").primaryKey(),
-        organizationId: text("organization_id").notNull(),
-        name: varchar("name", { length: 256 }).notNull(),
-        deletedAt: tzTimestamp("deleted_at"),
-        ...timestamps(),
-    },
-    () => [organizationRLSPolicy("projects")],
+  "projects",
+  {
+    id: cuid("id").primaryKey(),
+    organizationId: text("organization_id").notNull(),
+    name: varchar("name", { length: 256 }).notNull(),
+    deletedAt: tzTimestamp("deleted_at"),
+    ...timestamps(),
+  },
+  () => [organizationRLSPolicy("projects")],
 );
 ```
 
@@ -458,6 +542,8 @@ pnpm --filter @platform/db-postgres pg:migrate
 **Key points:**
 
 - Name is slugified automatically; always quote multi-word names (e.g. `"add users table"` → `add-users-table`)
+- Postgres migration history is append-only in this repository. Do not edit existing Drizzle migration files; change the schema and generate a new migration instead.
+- For additive Postgres changes to existing tables, prefer ordinary generated `ALTER TABLE` migrations over bespoke backfill choreography unless the change truly requires data rewriting.
 - Never manually create SQL files in the drizzle folder
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
@@ -519,6 +605,8 @@ Workflow:
 
 - Each migration is a single `.sql` file with `-- +goose Up` and `-- +goose Down` sections
 - Always include `-- +goose NO TRANSACTION` (ClickHouse does not support transactions)
+- ClickHouse migration history is append-only in this repository. Do not edit existing Goose migration files; add a new migration in both `unclustered/` and `clustered/` instead.
+- For additive ClickHouse changes to existing tables, prefer ordinary `ALTER TABLE` / additive projection migrations with sensible defaults unless the change truly requires a table rebuild.
 - `unclustered/`: use standard table engines (e.g. `ReplacingMergeTree`)
 - `clustered/`: add `ON CLUSTER default` and use `Replicated*` engines
 
@@ -527,13 +615,13 @@ Workflow:
 Use the dedicated Weaviate package for connection and schema bootstrapping:
 
 - **Connection API:** `packages/platform/db-weaviate/src/client.ts`
-    - `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks.
+  - `createWeaviateClient()` and `createWeaviateClientEffect()` connect and perform health checks.
 - **Collection definitions:** `packages/platform/db-weaviate/src/collections.ts`
-    - Define all collections in code via `defineWeaviateCollections([...])`.
+  - Define all collections in code via `defineWeaviateCollections([...])`.
 - **Migration logic:** `packages/platform/db-weaviate/src/migrations.ts`
-    - Migrations are idempotent: checks `collections.exists()` before create and tolerates "already exists" race conditions.
+  - Migrations are idempotent: checks `collections.exists()` before create and tolerates "already exists" race conditions.
 - **Manual migration command:** `pnpm --filter @platform/db-weaviate wv:migrate`
-    - Entrypoint is `packages/platform/db-weaviate/src/migrate.ts`.
+  - Entrypoint is `packages/platform/db-weaviate/src/migrate.ts`.
 
 Rules:
 
@@ -571,9 +659,9 @@ All domain errors implement the `HttpError` interface from `@repo/utils`:
 
 ```typescript
 interface HttpError {
-    readonly _tag: string;
-    readonly httpStatus: number;
-    readonly httpMessage: string;
+  readonly _tag: string;
+  readonly httpStatus: number;
+  readonly httpMessage: string;
 }
 ```
 
@@ -590,22 +678,22 @@ interface HttpError {
 ```typescript
 // Static message
 export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
-    readonly cause: unknown;
-    readonly queue: QueueName;
+  readonly cause: unknown;
+  readonly queue: QueueName;
 }> {
-    readonly httpStatus = 502;
-    readonly httpMessage = "Queue publish failed";
+  readonly httpStatus = 502;
+  readonly httpMessage = "Queue publish failed";
 }
 
 // Dynamic message computed from fields
 export class NotFoundError extends Data.TaggedError("NotFoundError")<{
-    readonly entity: string;
-    readonly id: string;
+  readonly entity: string;
+  readonly id: string;
 }> {
-    readonly httpStatus = 404;
-    get httpMessage() {
-        return `${this.entity} not found`;
-    }
+  readonly httpStatus = 404;
+  get httpMessage() {
+    return `${this.entity} not found`;
+  }
 }
 ```
 
@@ -695,9 +783,11 @@ const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"));
 
 ## Async and Background Task Guidance
 
-- Pass IDs in async jobs/queue payloads, not full mutable models
-- Re-fetch current state inside task handlers
+- Async jobs and queue payloads must never carry full mutable entities; pass ids or opaque storage keys instead
+- Re-fetch current state inside task handlers before acting
 - Make stale/deleted entity behavior explicit
+- When BullMQ delay is the chosen debounce mechanism, key the delayed job by the logical entity identity so newer writes replace or reschedule the pending job
+- When a delayed queue topic semantically marks a lifecycle edge, let the delayed task publish a domain event through the outbox after the delay elapses; downstream side effects should run from the domain-event consumers rather than inline in the delayed task
 
 ## Cloud Agent Environment Setup
 
@@ -738,45 +828,47 @@ This provides working defaults for all services (Postgres, ClickHouse, Redis, et
 #### Postgres test setup (`@platform/testkit`)
 
 ```typescript
-import { setupTestPostgres } from "@platform/testkit"
-import { beforeAll, describe, it } from "vitest"
+import { setupTestPostgres } from "@platform/testkit";
+import { beforeAll, describe, it } from "vitest";
 
-const pg = setupTestPostgres()
+const pg = setupTestPostgres();
 
 describe("MyRepository", () => {
   it("does something", async () => {
     // pg.postgresDb is a real Drizzle instance backed by PGlite in-memory
     // pg.db is the lower-level Drizzle/PGlite instance for direct queries
-  })
-})
+  });
+});
 ```
 
 `setupTestPostgres()` registers vitest hooks automatically:
+
 - **beforeAll**: creates a PGlite instance, creates the `latitude_app` role, and runs all Drizzle migrations
 - **afterAll**: closes the PGlite connection
 
 #### ClickHouse test setup (`@platform/testkit`)
 
 ```typescript
-import { setupTestClickHouse } from "@platform/testkit"
-import { beforeAll, describe, it } from "vitest"
+import { setupTestClickHouse } from "@platform/testkit";
+import { beforeAll, describe, it } from "vitest";
 
-const ch = setupTestClickHouse()
+const ch = setupTestClickHouse();
 
 describe("MyRepository", () => {
-  let repo: ReturnType<typeof createMyRepository>
+  let repo: ReturnType<typeof createMyRepository>;
 
   beforeAll(() => {
-    repo = createMyRepository(ch.client)
-  })
+    repo = createMyRepository(ch.client);
+  });
 
   it("does something", async () => {
     // ch.client is a real ClickHouseClient backed by chdb in-memory
-  })
-})
+  });
+});
 ```
 
 `setupTestClickHouse()` registers vitest hooks automatically:
+
 - **beforeAll**: creates a chdb session and loads the schema from `schema.sql`
 - **beforeEach**: truncates all tables for test isolation
 - **afterAll**: destroys the session and cleans up temp files
@@ -793,14 +885,19 @@ Mocking repositories with `vi.fn()` tests the wiring, not the queries. In-memory
 
 ## Adding New Infrastructure Dependencies
 
-1. Add a capability interface in `packages/platform/*-core`
-2. Add concrete provider package in `packages/platform/*-<provider>`
-3. Wire via app composition root and environment-driven config
-4. Keep domain unchanged unless business behavior changes
+1. Add concrete provider package in `packages/platform/*-<provider>`
+2. Wire via app composition root and environment-driven config
+3. Keep domain unchanged unless business behavior changes
 
 ## Frontend Guidelines (Web App)
 
 When working on `apps/web` or any frontend code:
+
+### Legacy UI Reference
+
+- Before building new UI, inspect the old v1 UI/components and product patterns as a reference when relevant.
+- Reuse as much as possible when the old implementation is still solid.
+- Do not copy v1 UI blindly; review it critically and improve it to match v2 conventions, architecture, and quality expectations when needed.
 
 ### Components
 
@@ -823,7 +920,7 @@ routes/_authenticated/projects/$projectId/datasets/
 ```
 
 - Route files live directly in the route directory — TanStack Router discovers them
-- Components that support those routes live in an adjacent `components/` folder
+- Components that support those routes live in an adjacent `-components/` folder
 - `domains/` directories (`apps/web/src/domains/`) are for state management only: server functions (writes) and collections/queries (reads) — **not** UI components
 
 ### Design System Showcase
@@ -901,11 +998,11 @@ Collection files live in `apps/web/src/domains/*/collection.ts`.
 
 ```typescript
 export const Route = createFileRoute("/_authenticated")({
-    beforeLoad: async () => {
-        const session = await getSession();
-        if (!session) throw redirect({ to: "/login" });
-        return { user: session.user };
-    },
+  beforeLoad: async () => {
+    const session = await getSession();
+    if (!session) throw redirect({ to: "/login" });
+    return { user: session.user };
+  },
 });
 ```
 
