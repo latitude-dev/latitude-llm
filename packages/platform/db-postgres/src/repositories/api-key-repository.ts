@@ -20,19 +20,13 @@ import { apiKeys } from "../schema/index.ts"
 let encryptionKeyCache: Buffer | undefined
 
 const VALID_HEX_32_BYTE_KEY = /^[0-9a-f]{64}$/i
-const LEGACY_AES_KEY_LENGTHS = new Set([16, 24, 32])
 
-// Supports strict 32-byte hex keys while remaining compatible with older non-hex secrets.
+// Enforce strict 32-byte key material while allowing any secret format.
 export const resolveApiKeyEncryptionKey = (rawSecret: string): Buffer => {
   const secret = rawSecret.trim()
 
   if (VALID_HEX_32_BYTE_KEY.test(secret)) {
     return Buffer.from(secret, "hex")
-  }
-
-  const legacyHexDecoded = Buffer.from(secret, "hex")
-  if (legacyHexDecoded.length > 0 && LEGACY_AES_KEY_LENGTHS.has(legacyHexDecoded.length)) {
-    return legacyHexDecoded
   }
 
   return createHash("sha256").update(secret, "utf8").digest()
