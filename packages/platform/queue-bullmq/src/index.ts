@@ -8,8 +8,8 @@ export { type BullMqConfig, loadBullMqConfig } from "./config.ts"
 export {
   createEventHandler,
   createEventsPublisher,
-  type DomainEventsQueuePublisher,
   DomainEventSchema,
+  type DomainEventsQueuePublisher,
   EventEnvelopeSchema,
   type EventHandler,
   mapEnvelopeToQueueMessage,

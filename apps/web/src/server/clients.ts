@@ -26,7 +26,7 @@ import {
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { type DomainEventsQueuePublisher, createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
+import { createBullMqQueuePublisher, type DomainEventsQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
