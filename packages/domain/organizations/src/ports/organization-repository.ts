@@ -2,7 +2,6 @@ import type { NotFoundError, OrganizationId, RepositoryError, UserId } from "@do
 import { type Effect, ServiceMap } from "effect"
 import type { Organization } from "../entities/organization.ts"
 
-// OrganizationRepository Service with all methods needed by use cases
 export class OrganizationRepository extends ServiceMap.Service<
   OrganizationRepository,
   {

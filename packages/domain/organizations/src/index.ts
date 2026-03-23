@@ -45,6 +45,7 @@ export {
   removeMemberUseCase,
 } from "./use-cases/remove-member.ts"
 export {
-  type UpdateOrganizationNameInput,
-  updateOrganizationNameUseCase,
-} from "./use-cases/update-organization-name.ts"
+  type UpdateOrganizationError,
+  type UpdateOrganizationInput,
+  updateOrganizationUseCase,
+} from "./use-cases/update-organization.ts"

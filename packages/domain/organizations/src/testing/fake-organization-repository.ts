@@ -28,6 +28,7 @@ export const createFakeOrganizationRepository = (overrides?: Partial<Organizatio
       }),
 
     existsBySlug: (slug) => Effect.succeed([...organizations.values()].some((o) => o.slug === slug)),
+
     ...overrides,
   }
 

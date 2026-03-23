@@ -5,6 +5,7 @@ import {
   OrganizationId,
   ProjectId,
   type ProjectId as ProjectIdType,
+  type ProjectSettings,
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
@@ -18,6 +19,7 @@ const toDomainProject = (row: typeof projects.$inferSelect): Project => ({
   organizationId: OrganizationId(row.organizationId),
   name: row.name,
   slug: row.slug,
+  settings: (row.settings as ProjectSettings | null) ?? null,
   deletedAt: row.deletedAt,
   lastEditedAt: row.lastEditedAt,
   createdAt: row.createdAt,
@@ -29,6 +31,7 @@ const toInsertRow = (project: Project): typeof projects.$inferInsert => ({
   organizationId: project.organizationId,
   name: project.name,
   slug: project.slug,
+  settings: project.settings,
   deletedAt: project.deletedAt,
 })
 
@@ -81,6 +84,7 @@ export const ProjectRepositoryLive = Layer.effect(
                 set: {
                   name: row.name,
                   slug: row.slug,
+                  settings: row.settings,
                   deletedAt: row.deletedAt,
                   lastEditedAt: new Date(),
                   updatedAt: new Date(),

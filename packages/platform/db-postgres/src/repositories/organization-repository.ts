@@ -3,6 +3,7 @@ import {
   NotFoundError,
   OrganizationId,
   type OrganizationId as OrganizationIdType,
+  type OrganizationSettings,
   SqlClient,
   type SqlClientShape,
   SubscriptionId,
@@ -23,6 +24,7 @@ const toDomainOrganization = (row: typeof organization.$inferSelect) => ({
   creatorId: row.creatorId ? UserId(row.creatorId) : null,
   currentSubscriptionId: row.currentSubscriptionId ? SubscriptionId(row.currentSubscriptionId) : null,
   stripeCustomerId: row.stripeCustomerId,
+  settings: (row.settings as OrganizationSettings | null) ?? null,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 })
@@ -36,6 +38,7 @@ const toOrganizationInsertRow = (org: {
   creatorId: string | null
   currentSubscriptionId: string | null
   stripeCustomerId: string | null
+  settings: OrganizationSettings | null
 }) => ({
   id: org.id,
   name: org.name,
@@ -45,6 +48,7 @@ const toOrganizationInsertRow = (org: {
   creatorId: org.creatorId,
   currentSubscriptionId: org.currentSubscriptionId,
   stripeCustomerId: org.stripeCustomerId,
+  settings: org.settings,
 })
 
 /**
@@ -90,6 +94,7 @@ export const OrganizationRepositoryLive = Layer.effect(
         creatorId: string | null
         currentSubscriptionId: string | null
         stripeCustomerId: string | null
+        settings: OrganizationSettings | null
       }) =>
         Effect.gen(function* () {
           const row = toOrganizationInsertRow(org)
@@ -108,6 +113,7 @@ export const OrganizationRepositoryLive = Layer.effect(
                   creatorId: row.creatorId,
                   currentSubscriptionId: row.currentSubscriptionId,
                   stripeCustomerId: row.stripeCustomerId,
+                  settings: row.settings,
                   updatedAt: new Date(),
                 },
               }),

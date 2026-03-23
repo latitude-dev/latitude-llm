@@ -5,7 +5,9 @@ import {
   FormWrapper,
   Icon,
   Input,
+  Label,
   Modal,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -20,7 +22,7 @@ import {
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -36,7 +38,10 @@ import {
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { updateOrganizationName } from "../../domains/organizations/organizations.functions.ts"
+import {
+  updateOrganizationMutation,
+  useOrganizationCollection,
+} from "../../domains/organizations/organizations.collection.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { toUserMessage } from "../../lib/errors.ts"
@@ -45,63 +50,71 @@ export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
 
-// --- Organization Name Section ---
+function OrganizationSection() {
+  const { data: org } = useOrganizationCollection((orgs) => orgs.findOne())
 
-function OrganizationNameSection() {
-  const { organizationName } = Route.useRouteContext()
-  const { toast } = useToast()
-  const router = useRouter()
+  if (!org) return null
 
-  const form = useForm({
-    defaultValues: {
-      name: organizationName ?? "",
-    },
-    onSubmit: async ({ value }) => {
-      try {
-        await updateOrganizationName({ data: { name: value.name } })
-        toast({ description: "Organization name updated" })
-        form.reset({ name: value.name })
-        void router.invalidate()
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          description: toUserMessage(error),
-        })
-      }
-    },
-  })
+  const handleNameSubmit = (name: string) => {
+    updateOrganizationMutation(org.id, { name })
+  }
+
+  const handleKeepMonitoringChange = (checked: boolean) => {
+    updateOrganizationMutation(org.id, { settings: { keepMonitoring: checked } })
+  }
 
   return (
-    <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Organization Name</Text.H4>
-      <form
-        className="flex flex-row items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <form.Field name="name">
-          {(field) => (
-            <Input
-              required
-              type="text"
-              label="Organization Name"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="Organization name"
-            />
-          )}
-        </form.Field>
-        <Button type="submit" disabled={form.state.isSubmitting}>
-          Save
-        </Button>
-      </form>
+    <div className="flex flex-col gap-6">
+      <OrganizationNameForm name={org.name} onSubmit={handleNameSubmit} />
+      <div className="flex flex-row items-center justify-between">
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="keep-monitoring">Keep monitoring after resolution</Label>
+          <Text.H6 color="foregroundMuted">
+            When enabled, linked evaluations stay active after an issue is resolved to detect regressions.
+          </Text.H6>
+        </div>
+        <Switch
+          id="keep-monitoring"
+          checked={org.settings.keepMonitoring ?? true}
+          onCheckedChange={handleKeepMonitoringChange}
+        />
+      </div>
     </div>
   )
 }
 
-// --- Organization Members Section ---
+function OrganizationNameForm({ name, onSubmit }: { name: string; onSubmit: (name: string) => void }) {
+  const form = useForm({
+    defaultValues: { name },
+    onSubmit: ({ value }) => {
+      onSubmit(value.name)
+    },
+  })
+
+  return (
+    <form
+      className="flex flex-row items-end gap-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void form.handleSubmit()
+      }}
+    >
+      <form.Field name="name">
+        {(field) => (
+          <Input
+            required
+            type="text"
+            label="Organization Name"
+            value={field.state.value}
+            onChange={(e) => field.handleChange(e.target.value)}
+            placeholder="Organization name"
+          />
+        )}
+      </form.Field>
+      <Button type="submit">Save</Button>
+    </form>
+  )
+}
 
 function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
@@ -517,12 +530,10 @@ function ApiKeysSection() {
   )
 }
 
-// --- Settings Page ---
-
 function SettingsPage() {
   return (
-    <Container className="flex flex-col gap-8 pt-14">
-      <OrganizationNameSection />
+    <Container>
+      <OrganizationSection />
       <MembershipsSection />
       <ApiKeysSection />
     </Container>
