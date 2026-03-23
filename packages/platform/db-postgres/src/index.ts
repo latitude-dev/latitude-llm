@@ -6,6 +6,7 @@ export {
   createPostgresPool,
 } from "./client.ts"
 export { healthcheckPostgres } from "./health.ts"
+export { createOutboxWriter } from "./outbox-writer.ts"
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 // Repository implementations
 export { AuthIntentRepositoryLive } from "./repositories/auth-intent-repository.ts"

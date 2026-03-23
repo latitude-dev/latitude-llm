@@ -4,7 +4,7 @@ import { createBetterAuth } from "@platform/auth-better"
 import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import { createPostgresClient, outboxEvents, type PostgresClient } from "@platform/db-postgres"
+import { createOutboxWriter, createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
@@ -106,6 +106,8 @@ export const getBetterAuth = () => {
           .filter(Boolean)
       : [webUrl]
 
+    const outboxWriter = createOutboxWriter(adminClient)
+
     betterAuthInstance = createBetterAuth({
       client: adminClient,
       secret: betterAuthSecret,
@@ -119,7 +121,7 @@ export const getBetterAuth = () => {
           webUrl,
         })
 
-        await adminClient.db.insert(outboxEvents).values({
+        await outboxWriter.write({
           id: generateId(),
           eventName: "MagicLinkEmailRequested",
           aggregateId: authIntentId ?? generateId(),

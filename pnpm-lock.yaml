@@ -814,6 +814,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../../domain/events
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../domain/organizations
