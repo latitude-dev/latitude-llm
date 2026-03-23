@@ -4,6 +4,7 @@ import { serve } from "@hono/node-server"
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { parseEnv } from "@platform/env"
+import { initializeObservability, shutdownObservability } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import type { Hono } from "hono"
@@ -21,6 +22,10 @@ if (import.meta.url) {
   const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
   if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 }
+
+await initializeObservability({
+  serviceName: "api",
+})
 
 const app = new OpenAPIHono()
 const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
@@ -76,6 +81,7 @@ const handleShutdown = async (signal: string) => {
     logger.error(`Failed to flush touch buffer: ${error instanceof Error ? error.message : "Unknown error"}`)
   }
 
+  await shutdownObservability()
   logger.info("Graceful shutdown complete")
   process.exit(0)
 }

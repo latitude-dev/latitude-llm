@@ -9,7 +9,7 @@ import {
   createEventsPublisher,
   loadBullMqConfig,
 } from "@platform/queue-bullmq"
-import { createLogger } from "@repo/observability"
+import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "./clients.ts"
@@ -24,6 +24,11 @@ if (import.meta.url) {
     loadDotenv({ path: envFilePath, quiet: true })
   }
 }
+
+await initializeObservability({
+  serviceName: "workers",
+  environment: process.env.LAT_OBSERVABILITY_ENVIRONMENT || nodeEnv,
+})
 
 const pgClient = getPostgresClient(10)
 const logger = createLogger("workers")
@@ -96,6 +101,7 @@ const handleShutdown = async (signal: string) => {
     logger.error("Error during shutdown (workers may not have started)", error)
   }
 
+  await shutdownObservability()
   await pgClient.pool.end()
   await getClickhouseClient().close()
   process.exit(0)
