@@ -267,7 +267,7 @@ export const initializeObservability = async ({
   try {
     await state.initialization
   } catch (error) {
-    state.initialization = undefined
+    delete state.initialization
     state.initialized = false
     state.enabled = false
     emitLog("error", "observability", ["Failed to initialize observability", toSerializable(error)])
