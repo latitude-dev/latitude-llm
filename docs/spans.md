@@ -21,7 +21,7 @@ Reliability adds:
 - a new session materialization, since the product explicitly talks about spans, traces, and sessions
 - a debounced `TraceFinished` domain event emitted after a trace has received no new spans for a named debounce window whose initial default is `5 minutes`
 
-Because v2 is still under development, this should be done by updating the existing `spans` ClickHouse migration files in place rather than by adding backwards-compatibility `ALTER TABLE` layers.
+These telemetry additions should land through new ClickHouse migrations rather than by rewriting existing migration history. Because they are additive extensions to existing unreleased tables, ordinary additive statements and sensible defaults are preferred over bespoke compatibility choreography unless a later change truly requires a rebuild.
 
 ## Trace Completion Signal
 

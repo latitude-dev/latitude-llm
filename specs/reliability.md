@@ -1997,7 +1997,7 @@ Required Postgres indexes:
 
 Telemetry changes:
 
-Because v2 is not released yet, update the existing `spans` ClickHouse migration files in place instead of adding compatibility `ALTER TABLE` layers.
+Extend telemetry through new ClickHouse migrations instead of rewriting existing migration history. Because these reliability changes are additive, use ordinary additive statements such as `ALTER TABLE` plus sensible defaults rather than bespoke compatibility choreography unless a later change truly needs a rebuild.
 
 The `spans` table definition should directly include:
 
@@ -2295,7 +2295,7 @@ Row click opens a detailed view with:
 
 - [ ] Define the canonical shared Zod schemas for simulations and simulation runs; infer TypeScript types.
 - [ ] Add the Postgres `simulations` table with full Drizzle definition using repo-convention helpers, RLS, and the exact secondary indexes defined by this spec.
-- [ ] Extend telemetry storage with `simulation_id` as a non-null fixed-width CUID link using the empty-string sentinel when absent by updating the existing v2 `spans` migration files in place.
+- [ ] Extend telemetry storage with `simulation_id` as a non-null fixed-width CUID link using the empty-string sentinel when absent through a new ClickHouse migration rather than by editing existing migration history.
 - [ ] Define the simulations-domain named constants for reporting defaults and upload/local-only behavior.
 - [ ] Add the missing session materialization boundary needed for later reliability queries.
 

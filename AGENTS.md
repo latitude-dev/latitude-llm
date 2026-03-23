@@ -542,6 +542,8 @@ pnpm --filter @platform/db-postgres pg:migrate
 **Key points:**
 
 - Name is slugified automatically; always quote multi-word names (e.g. `"add users table"` → `add-users-table`)
+- Postgres migration history is append-only in this repository. Do not edit existing Drizzle migration files; change the schema and generate a new migration instead.
+- For additive Postgres changes to existing tables, prefer ordinary generated `ALTER TABLE` migrations over bespoke backfill choreography unless the change truly requires data rewriting.
 - Never manually create SQL files in the drizzle folder
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
@@ -603,6 +605,8 @@ Workflow:
 
 - Each migration is a single `.sql` file with `-- +goose Up` and `-- +goose Down` sections
 - Always include `-- +goose NO TRANSACTION` (ClickHouse does not support transactions)
+- ClickHouse migration history is append-only in this repository. Do not edit existing Goose migration files; add a new migration in both `unclustered/` and `clustered/` instead.
+- For additive ClickHouse changes to existing tables, prefer ordinary `ALTER TABLE` / additive projection migrations with sensible defaults unless the change truly requires a table rebuild.
 - `unclustered/`: use standard table engines (e.g. `ReplacingMergeTree`)
 - `clustered/`: add `ON CLUSTER default` and use `Replicated*` engines
 
