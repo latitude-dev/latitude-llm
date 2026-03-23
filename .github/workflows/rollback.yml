@@ -20,6 +20,7 @@ on:
           - api
           - ingest
           - workers
+          - workflows
 
 permissions:
   contents: read
@@ -45,7 +46,7 @@ jobs:
           TARGET: ${{ inputs.service }}
         run: |
           if [ "${TARGET}" = "all" ]; then
-            SERVICES="web api ingest workers"
+            SERVICES="web api ingest workers workflows"
           else
             SERVICES="${TARGET}"
           fi
@@ -81,7 +82,7 @@ jobs:
           TARGET: ${{ inputs.service }}
         run: |
           if [ "${TARGET}" = "all" ]; then
-            SERVICES="web api ingest workers"
+            SERVICES="web api ingest workers workflows"
           else
             SERVICES="${TARGET}"
           fi

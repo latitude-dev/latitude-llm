@@ -219,6 +219,16 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["github-oauth-client-secret"] = githubOauthClientSecret.secret
   secretVersions["github-oauth-client-secret"] = githubOauthClientSecret.secretVersion
 
+  const temporalApiKey = createSingleSecret(
+    baseName,
+    "temporal-api-key",
+    "Temporal Cloud API key for workflows worker",
+    process.env.LAT_TEMPORAL_API_KEY ?? "placeholder-set-before-deploy",
+    environment,
+  )
+  secrets["temporal-api-key"] = temporalApiKey.secret
+  secretVersions["temporal-api-key"] = temporalApiKey.secretVersion
+
   return {
     secrets,
     secretVersions,

@@ -24,6 +24,11 @@ const domainName = config.get("domainName") ?? defaults.domainName
 const githubOwner = config.get("githubOwner") ?? "latitude-dev"
 const githubRepo = config.get("githubRepo") ?? "latitude"
 
+const temporalCloudAddress =
+  config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
+const temporalCloudNamespace = config.get("temporalCloudNamespace") ?? ""
+const temporalTaskQueue = config.get("temporalTaskQueue") ?? "latitude-workflows"
+
 const name = `latitude-${environment}`
 
 pulumi.log.info(`Deploying ${environment} environment to ${envConfig.region}`)
@@ -82,6 +87,11 @@ const ecs = createEcs(
     web: alb.targetGroups.web.arn,
     api: alb.targetGroups.api.arn,
     ingest: alb.targetGroups.ingest.arn,
+  },
+  {
+    address: temporalCloudAddress,
+    namespace: temporalCloudNamespace,
+    taskQueue: temporalTaskQueue,
   },
 )
 

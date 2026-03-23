@@ -498,6 +498,10 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+    devDependencies:
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(@swc/core@1.15.21)(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.8.3)(yaml@2.8.2)
 
   infra:
     dependencies:

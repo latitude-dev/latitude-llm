@@ -166,7 +166,7 @@ jobs:
       deployment: false
     strategy:
       matrix:
-        service: [web, api, ingest, workers]
+        service: [web, api, ingest, workers, workflows]
     permissions:
       id-token: write
       contents: read
@@ -362,7 +362,7 @@ jobs:
       deployment: false
     strategy:
       matrix:
-        service: [web, api, ingest, workers]
+        service: [web, api, ingest, workers, workflows]
     permissions:
       id-token: write
       contents: read

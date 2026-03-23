@@ -70,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api, ingest, workers, web, migrations]
+        service: [api, ingest, workers, workflows, web, migrations]
 
     steps:
       - name: Checkout

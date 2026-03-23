@@ -1,17 +1,21 @@
 import { existsSync } from "node:fs"
 import { createServer } from "node:http"
-import { fileURLToPath } from "node:url"
-import { parseEnv } from "@platform/env"
+import { join } from "node:path"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { runTemporalWorker } from "./temporal/create-worker.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
-if (import.meta.url) {
-  const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-  if (existsSync(envFilePath)) {
-    loadDotenv({ path: envFilePath, quiet: true })
+for (const envPath of [
+  join(process.cwd(), `.env.${nodeEnv}`),
+  join(process.cwd(), "..", "..", `.env.${nodeEnv}`),
+  join(process.cwd(), "apps", "workflows", `.env.${nodeEnv}`),
+]) {
+  if (existsSync(envPath)) {
+    loadDotenv({ path: envPath, quiet: true })
+    break
   }
 }
 
@@ -41,6 +45,7 @@ healthServer.listen(healthPort, () => {
 const temporalAddress = Effect.runSync(parseEnv("LAT_TEMPORAL_ADDRESS", "string", "localhost:7233"))
 const temporalNamespace = Effect.runSync(parseEnv("LAT_TEMPORAL_NAMESPACE", "string", "default"))
 const temporalTaskQueue = Effect.runSync(parseEnv("LAT_TEMPORAL_TASK_QUEUE", "string", "latitude-workflows"))
+const temporalApiKey = Effect.runSync(parseEnvOptional("LAT_TEMPORAL_API_KEY", "string"))
 
 let shutdownTemporal: (() => Promise<void>) | undefined
 
@@ -49,6 +54,7 @@ const start = async () => {
     address: temporalAddress,
     namespace: temporalNamespace,
     taskQueue: temporalTaskQueue,
+    ...(temporalApiKey !== undefined ? { apiKey: temporalApiKey } : {}),
   })
 
   shutdownTemporal = temporal.shutdown

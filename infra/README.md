@@ -73,12 +73,15 @@ AWS infrastructure for the Latitude LLM observability platform using Pulumi (Typ
 
 All services listen on port 8080 inside the container (mapped via ALB target groups).
 
-| Service | Health Check  | Description                                              |
-| ------- | ------------- | -------------------------------------------------------- |
-| web     | `/api/health` | TanStack Start SSR app                                   |
-| api     | `/health`     | Hono public API                                          |
-| ingest  | `/health`     | Hono telemetry ingestion                                 |
-| workers | `/health`     | BullMQ background workers (no ALB, internal health only) |
+| Service   | Health Check  | Description                                                                 |
+| --------- | ------------- | --------------------------------------------------------------------------- |
+| web       | `/api/health` | TanStack Start SSR app                                                      |
+| api       | `/health`     | Hono public API                                                             |
+| ingest    | `/health`     | Hono telemetry ingestion                                                    |
+| workers   | `/health`     | BullMQ background workers (no ALB, internal health only)                    |
+| workflows | `/health`     | Temporal worker → **Temporal Cloud** (API key in Secrets Manager; no ALB)   |
+
+Set `latitude-infra:temporalCloudNamespace` (and optionally `temporalCloudAddress` / `temporalTaskQueue`) in `Pulumi.<stack>.yaml`. Put the real Temporal Cloud API key in the `latitude-<env>-temporal-api-key` secret (see `LAT_TEMPORAL_API_KEY` when running `pulumi up` with env vars, or update the secret in AWS).
 
 ## File Structure
 

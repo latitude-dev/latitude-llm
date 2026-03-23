@@ -59,6 +59,13 @@ FROM source AS build-workers
 RUN pnpm --filter @app/workers build
 
 # ---------------------------------------------------------------------------
+# Build workflows — Temporal worker app
+# ---------------------------------------------------------------------------
+FROM source AS build-workflows
+
+RUN pnpm --filter @app/workflows build
+
+# ---------------------------------------------------------------------------
 # Build web — compile web app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
 FROM source AS build-web
@@ -169,6 +176,31 @@ USER latitude
 EXPOSE 8080
 
 CMD ["node", "apps/workers/dist/server.cjs"]
+
+# ---------------------------------------------------------------------------
+# Target: workflows — Temporal worker (Temporal Cloud in AWS)
+# ---------------------------------------------------------------------------
+FROM runtime AS workflows
+
+COPY --from=build-workflows /app/apps/workflows/dist ./apps/workflows/dist
+COPY --from=build-workflows /app/apps/workflows/package.json ./apps/workflows/package.json
+COPY --from=build-workflows /app/apps/workflows/src/workflows ./apps/workflows/src/workflows
+COPY --from=build-workflows /app/apps/workflows/src/activities ./apps/workflows/src/activities
+COPY --from=build-workflows /app/package.json ./package.json
+COPY --from=build-workflows /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build-workflows /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=build-workflows /app/packages ./packages
+
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    install-prod-deps
+
+RUN prune-workspace
+USER latitude
+EXPOSE 8080
+
+ENV LAT_TEMPORAL_WORKFLOWS_PATH=/app/apps/workflows/src/workflows
+
+CMD ["node", "apps/workflows/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: web — minimal image with only web app (TanStack Start SSR with Nitro)

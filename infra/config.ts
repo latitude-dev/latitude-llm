@@ -51,7 +51,7 @@ export interface EnvironmentConfig {
 }
 
 export interface ServiceConfig {
-  name: "web" | "api" | "ingest" | "workers"
+  name: "web" | "api" | "ingest" | "workers" | "workflows"
   cpu: number
   memory: number
   port?: number
@@ -146,6 +146,16 @@ export const stagingConfig: EnvironmentConfig = {
         minCount: 1,
         maxCount: 1,
       },
+      {
+        name: "workflows",
+        cpu: 256,
+        memory: 512,
+        port: 8080,
+        healthCheckPath: "/health",
+        desiredCount: 1,
+        minCount: 1,
+        maxCount: 1,
+      },
     ],
   },
 
@@ -227,6 +237,16 @@ export const productionConfig: EnvironmentConfig = {
       },
       {
         name: "workers",
+        cpu: 512,
+        memory: 1024,
+        port: 8080,
+        healthCheckPath: "/health",
+        desiredCount: 1,
+        minCount: 1,
+        maxCount: 3,
+      },
+      {
+        name: "workflows",
         cpu: 512,
         memory: 1024,
         port: 8080,
