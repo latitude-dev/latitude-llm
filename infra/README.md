@@ -124,3 +124,9 @@ Deployment triggers:
 
 The deployment workflow uses OIDC authentication (no long-lived AWS credentials).
 
+## Secret lifecycle
+
+- `better-auth-secret` and `encryption-key` are treated as long-lived immutable secrets in Pulumi.
+- Routine `pulumi up` runs do not rotate these values, preventing deployment-driven session invalidation and API key decryption breakage.
+- To rotate either value, perform an explicit Secrets Manager rotation/change as a planned operation.
+
