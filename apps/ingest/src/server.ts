@@ -2,7 +2,7 @@ import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { serve } from "@hono/node-server"
 import { parseEnv } from "@platform/env"
-import { createLogger } from "@repo/observability"
+import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { isHttpError, toHttpResponse } from "@repo/utils"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
@@ -17,6 +17,10 @@ if (import.meta.url) {
   const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
   if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 }
+
+await initializeObservability({
+  serviceName: "ingest",
+})
 
 const app = new Hono<IngestEnv>()
 const port = Effect.runSync(parseEnv("LAT_INGEST_PORT", "number", 3002))
@@ -58,6 +62,7 @@ const handleShutdown = async (signal: string) => {
     logger.error("Error during shutdown", error)
   }
 
+  await shutdownObservability()
   process.exit(0)
 }
 
