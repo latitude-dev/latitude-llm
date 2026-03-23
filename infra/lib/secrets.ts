@@ -81,16 +81,15 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["better-auth-secret"] = betterAuth.secret
   secretVersions["better-auth-secret"] = betterAuth.secretVersion
 
-  const encryptionKeyValue = new random.RandomPassword(`${baseName}-encryption-key-value`, {
-    length: 64,
-    special: false,
+  const encryptionKeyValue = new random.RandomId(`${baseName}-encryption-key-value`, {
+    byteLength: 32,
   })
 
   const encryptionKey = createSingleSecret(
     baseName,
     "encryption-key",
     "Master encryption key for API keys",
-    process.env.LAT_MASTER_ENCRYPTION_KEY ?? encryptionKeyValue.result,
+    process.env.LAT_MASTER_ENCRYPTION_KEY ?? encryptionKeyValue.hex,
     environment,
   )
   secrets["encryption-key"] = encryptionKey.secret

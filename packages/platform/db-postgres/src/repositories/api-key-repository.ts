@@ -1,4 +1,4 @@
-import { appendFileSync } from "node:fs"
+import { createHash } from "node:crypto"
 import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyRepository } from "@domain/api-keys"
 import {
@@ -19,10 +19,29 @@ import { apiKeys } from "../schema/index.ts"
 
 let encryptionKeyCache: Buffer | undefined
 
+const VALID_HEX_32_BYTE_KEY = /^[0-9a-f]{64}$/i
+const LEGACY_AES_KEY_LENGTHS = new Set([16, 24, 32])
+
+// Supports strict 32-byte hex keys while remaining compatible with older non-hex secrets.
+export const resolveApiKeyEncryptionKey = (rawSecret: string): Buffer => {
+  const secret = rawSecret.trim()
+
+  if (VALID_HEX_32_BYTE_KEY.test(secret)) {
+    return Buffer.from(secret, "hex")
+  }
+
+  const legacyHexDecoded = Buffer.from(secret, "hex")
+  if (legacyHexDecoded.length > 0 && LEGACY_AES_KEY_LENGTHS.has(legacyHexDecoded.length)) {
+    return legacyHexDecoded
+  }
+
+  return createHash("sha256").update(secret, "utf8").digest()
+}
+
 const getEncryptionKey = (): Buffer => {
   if (!encryptionKeyCache) {
-    const encryptionKeyHex = Effect.runSync(parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string"))
-    encryptionKeyCache = Buffer.from(encryptionKeyHex, "hex")
+    const encryptionKeySecret = Effect.runSync(parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string"))
+    encryptionKeyCache = resolveApiKeyEncryptionKey(encryptionKeySecret)
   }
   return encryptionKeyCache
 }
@@ -115,31 +134,6 @@ export const ApiKeyRepositoryLive = Layer.effect(
       save: (apiKey: ApiKey) =>
         Effect.gen(function* () {
           const row = yield* toInsertRow(apiKey, encryptionKey)
-
-          // #region agent log
-          yield* Effect.sync(() => {
-            try {
-              appendFileSync(
-                "/opt/cursor/logs/debug.log",
-                `${JSON.stringify({
-                  hypothesisId: "H3",
-                  location: "api-key-repository.ts:save",
-                  message: "before api_keys insert",
-                  data: {
-                    id: row.id,
-                    organizationId: row.organizationId,
-                    name: row.name,
-                    tokenCiphertextLen: row.token.length,
-                    tokenHashLen: row.tokenHash.length,
-                  },
-                  timestamp: Date.now(),
-                })}\n`,
-              )
-            } catch {
-              // ignore
-            }
-          })
-          // #endregion
 
           yield* sqlClient.query((db) =>
             db
