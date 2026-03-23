@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs"
 import {
   type ApiKey,
   ApiKeyCacheInvalidator,
@@ -173,12 +174,77 @@ export const createApiKeysRoutes = () => {
   app.openapi(generateApiKeyRoute, async (c) => {
     const { name } = c.req.valid("json")
 
-    const apiKey = await Effect.runPromise(
-      generateApiKeyUseCase({ name }).pipe(
-        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
-      ),
-    )
-    return c.json(toApiKeyResponse(apiKey), 201)
+    // #region agent log
+    try {
+      appendFileSync(
+        "/opt/cursor/logs/debug.log",
+        `${JSON.stringify({
+          hypothesisId: "H1",
+          location: "apps/api/src/routes/api-keys.ts:POST",
+          message: "generateApiKey handler entry",
+          data: {
+            organizationId: c.var.organization.id,
+            nameLength: name.length,
+          },
+          timestamp: Date.now(),
+        })}\n`,
+      )
+    } catch {
+      // debug log path may be unavailable in some environments
+    }
+    // #endregion
+
+    try {
+      const apiKey = await Effect.runPromise(
+        generateApiKeyUseCase({ name }).pipe(
+          withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
+        ),
+      )
+      // #region agent log
+      try {
+        appendFileSync(
+          "/opt/cursor/logs/debug.log",
+          `${JSON.stringify({
+            hypothesisId: "H4",
+            location: "apps/api/src/routes/api-keys.ts:POST",
+            message: "generateApiKey Effect.runPromise success",
+            data: { apiKeyId: apiKey.id as string },
+            timestamp: Date.now(),
+          })}\n`,
+        )
+      } catch {
+        // ignore
+      }
+      // #endregion
+      return c.json(toApiKeyResponse(apiKey), 201)
+    } catch (err: unknown) {
+      // #region agent log
+      const asError = err instanceof Error ? err : undefined
+      try {
+        appendFileSync(
+          "/opt/cursor/logs/debug.log",
+          `${JSON.stringify({
+            hypothesisId: "H2",
+            location: "apps/api/src/routes/api-keys.ts:POST",
+            message: "generateApiKey Effect.runPromise threw",
+            data: {
+              ctor: asError?.constructor?.name ?? typeof err,
+              errMessage: asError?.message ?? String(err),
+              errStack: asError?.stack?.slice(0, 800),
+              causePreview:
+                asError && "cause" in asError
+                  ? String((asError as Error & { cause?: unknown }).cause).slice(0, 500)
+                  : undefined,
+            },
+            timestamp: Date.now(),
+          })}\n`,
+        )
+      } catch {
+        // ignore
+      }
+      // #endregion
+      throw err
+    }
   })
 
   app.openapi(listApiKeysRoute, async (c) => {

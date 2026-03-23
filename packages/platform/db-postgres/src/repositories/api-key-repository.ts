@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs"
 import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyRepository } from "@domain/api-keys"
 import {
@@ -114,6 +115,31 @@ export const ApiKeyRepositoryLive = Layer.effect(
       save: (apiKey: ApiKey) =>
         Effect.gen(function* () {
           const row = yield* toInsertRow(apiKey, encryptionKey)
+
+          // #region agent log
+          yield* Effect.sync(() => {
+            try {
+              appendFileSync(
+                "/opt/cursor/logs/debug.log",
+                `${JSON.stringify({
+                  hypothesisId: "H3",
+                  location: "api-key-repository.ts:save",
+                  message: "before api_keys insert",
+                  data: {
+                    id: row.id,
+                    organizationId: row.organizationId,
+                    name: row.name,
+                    tokenCiphertextLen: row.token.length,
+                    tokenHashLen: row.tokenHash.length,
+                  },
+                  timestamp: Date.now(),
+                })}\n`,
+              )
+            } catch {
+              // ignore
+            }
+          })
+          // #endregion
 
           yield* sqlClient.query((db) =>
             db
