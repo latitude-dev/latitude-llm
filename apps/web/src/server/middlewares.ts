@@ -1,9 +1,10 @@
 import type { DomainError } from "@domain/shared"
-import { createLogger } from "@repo/observability"
+import { createLogger, initializeObservability } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { createMiddleware } from "@tanstack/react-start"
 
 const logger = createLogger("server-fn")
+let observabilityInitialized = false
 
 /**
  * Server function error middleware.
@@ -15,6 +16,14 @@ const logger = createLogger("server-fn")
  * `lib/errors.ts` on the client to decode them.
  */
 export const errorHandler = createMiddleware({ type: "function" }).server(async ({ next }) => {
+  if (!observabilityInitialized) {
+    await initializeObservability({
+      serviceName: "web",
+      environment: process.env.LAT_OBSERVABILITY_ENVIRONMENT || process.env.NODE_ENV || "development",
+    })
+    observabilityInitialized = true
+  }
+
   try {
     return await next()
   } catch (e) {
