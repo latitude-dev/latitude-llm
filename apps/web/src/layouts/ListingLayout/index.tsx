@@ -80,7 +80,7 @@ interface ListProps {
 }
 
 function List({ children, className }: ListProps) {
-  return <div className={cn("min-h-0 grow p-6 pt-0 flex flex-col", className)}>{children}</div>
+  return <div className={cn("min-h-0 grow p-6 pt-0 pr-0 flex flex-col", className)}>{children}</div>
 }
 
 ListingLayout.ActionRowItem = ActionRowItem

@@ -131,7 +131,7 @@ function buildLlm1Outer(): OtlpSpan {
       str("ai.response.text", "Let me check the weather for you."),
       str(
         "ai.response.toolCalls",
-        JSON.stringify([{ toolCallId: "call_weather_1", toolName: "get_weather", args: { city: "Barcelona" } }]),
+        JSON.stringify([{ toolCallId: "call_weather_1", toolName: "get_weather", input: { city: "Barcelona" } }]),
       ),
       str("ai.response.id", "chatcmpl-abc001"),
       str("ai.response.finishReason", "tool-calls"),
@@ -225,8 +225,8 @@ function buildLlm2Outer(): OtlpSpan {
       str(
         "ai.response.toolCalls",
         JSON.stringify([
-          { toolCallId: "call_hotel_1", toolName: "book_hotel", args: { city: "Barcelona", checkin: "2026-04-01" } },
-          { toolCallId: "call_attractions_1", toolName: "search_attractions", args: { city: "Barcelona" } },
+          { toolCallId: "call_hotel_1", toolName: "book_hotel", input: { city: "Barcelona", checkin: "2026-04-01" } },
+          { toolCallId: "call_attractions_1", toolName: "search_attractions", input: { city: "Barcelona" } },
         ]),
       ),
       str("ai.response.id", "chatcmpl-abc002"),
@@ -590,7 +590,7 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
     })
 
     it("agent span has no operation (no ai.operationId)", () => {
-      expect(findSpan("agent").operation).toBe("")
+      expect(findSpan("agent").operation).toBe("unspecified")
     })
   })
 

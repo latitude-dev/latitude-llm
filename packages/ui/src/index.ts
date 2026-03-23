@@ -14,6 +14,7 @@ export {
   CardTitle,
 } from "./components/card/card.tsx"
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
+export { CodeBlock, type CodeBlockProps } from "./components/code-block/code-block.tsx"
 export { Container, type ContainerSize } from "./components/container/container.tsx"
 export { CopyButton } from "./components/copy-button/index.tsx"
 export { DetailDrawer } from "./components/detail-drawer/detail-drawer.tsx"
@@ -65,7 +66,9 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "./components/modal/primitives.tsx"
+export { ModelBadge, type ModelBadgeProps } from "./components/model-badge/model-badge.tsx"
 export { RichTextEditor, type RichTextEditorProps } from "./components/rich-text-editor/rich-text-editor.tsx"
+export { SegmentBar, type SegmentBarItem } from "./components/segment-bar/segment-bar.tsx"
 export { Select, type SelectOption, type SelectOptionGroup, type SelectProps } from "./components/select/index.tsx"
 export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { TabSelector, type TabSelectorOption, type TabSelectorProps } from "./components/tab-selector/tab-selector.tsx"
@@ -74,6 +77,12 @@ export { TableBlankSlate } from "./components/table-blank-slate/table-blank-slat
 export { TableSkeleton } from "./components/table-skeleton/table-skeleton.tsx"
 export { TableWithHeader, TitleWithActions } from "./components/table-with-header/table-with-header.tsx"
 export { type TabOption, Tabs } from "./components/tabs/tabs.tsx"
+export {
+  TagBadge,
+  TagBadgeList,
+  type TagBadgeListProps,
+  type TagBadgeProps,
+} from "./components/tag-badge/tag-badge.tsx"
 export { type Common as TextCommonProps, Text, TextAtom, type TextProps } from "./components/text/text.tsx"
 export type { ToastActionElement, ToastProps } from "./components/toast/toast.tsx"
 export {

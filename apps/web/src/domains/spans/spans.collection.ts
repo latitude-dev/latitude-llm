@@ -35,5 +35,6 @@ export const useSpanDetail = ({ traceId, spanId }: { traceId: string; spanId: st
   return useQuery<SpanDetailRecord>({
     queryKey: ["spanDetail", traceId, spanId],
     queryFn: () => getSpanDetail({ data: { traceId, spanId } }),
+    staleTime: Infinity, // Span data is immutable once ingested
   })
 }

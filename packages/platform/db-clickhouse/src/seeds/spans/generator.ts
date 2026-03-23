@@ -227,7 +227,7 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     error_type: "",
     tags: base.tags,
     metadata: base.metadata,
-    operation: "",
+    operation: "unspecified",
     provider: "",
     model: "",
     response_model: "",

@@ -15,6 +15,7 @@ import {
   ClaudeIcon,
   CloudflareIcon,
   CloudflareWorkersIcon,
+  CodeBlock,
   CohereIcon,
   Conversation,
   CopilotIcon,
@@ -45,6 +46,8 @@ import {
   QwenIcon,
   ReplitIcon,
   RichTextEditor,
+  TagBadge,
+  TagBadgeList,
   Text,
   TogetheraiIcon,
   useMountEffect,
@@ -221,6 +224,14 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         <RichTextEditorShowcase />
       </ShowcaseSection>
 
+      <ShowcaseSection
+        theme={theme}
+        title="Code Block"
+        description="Read-only syntax-highlighted code viewer, powered by CodeMirror."
+      >
+        <CodeBlockShowcase />
+      </ShowcaseSection>
+
       <ShowcaseSection theme={theme} title="Copy Button" description="Clipboard copy with feedback.">
         <div className="flex flex-col gap-3">
           <div className="flex flex-row items-center gap-2">
@@ -232,6 +243,14 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
             <CopyButton value="cuid_abc123def456" />
           </div>
         </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Tag Badges"
+        description="Color-coded tags with deterministic hue derived from content."
+      >
+        <TagBadgeShowcase />
       </ShowcaseSection>
 
       <ShowcaseSection
@@ -337,6 +356,80 @@ function RichTextEditorShowcase() {
       <div className="flex flex-col gap-1">
         <Text.H6 weight="bold">Plain text</Text.H6>
         <RichTextEditor value={textValue} onChange={setTextValue} minHeight="80px" />
+      </div>
+    </div>
+  )
+}
+
+const SAMPLE_JSON = JSON.stringify(
+  {
+    traceId: "abc123def456",
+    model: "gpt-4o",
+    provider: "openai",
+    tokens: { input: 1250, output: 384, reasoning: 0 },
+    tags: ["production", "chat"],
+    metadata: { userId: "usr_9x8y7z", sessionId: "sess_a1b2c3" },
+  },
+  null,
+  2,
+)
+
+function CodeBlockShowcase() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Text.H6 weight="bold">JSON content (auto-highlighted, copyable)</Text.H6>
+        <CodeBlock value={SAMPLE_JSON} copyable />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Text.H6 weight="bold">Plain text (no copy button)</Text.H6>
+        <CodeBlock value={"SELECT id, name, status\nFROM spans\nWHERE trace_id = 'abc123'\nORDER BY start_time DESC"} />
+      </div>
+    </div>
+  )
+}
+
+const SAMPLE_TAGS = [
+  "production",
+  "staging",
+  "development",
+  "experiment-a",
+  "experiment-b",
+  "canary",
+  "v2.1.0",
+  "chat",
+  "rag",
+  "batch",
+  "user:premium",
+  "region:eu-west",
+  "gpt-4o",
+  "claude-sonnet",
+]
+
+function TagBadgeShowcase() {
+  const [customTag, setCustomTag] = useState("my-custom-tag")
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Text.H6 weight="bold">Preset tags</Text.H6>
+        <TagBadgeList tags={SAMPLE_TAGS} />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H6 weight="bold">Custom tag</Text.H6>
+        <div className="flex flex-row items-center gap-3">
+          <Input
+            name="custom-tag"
+            value={customTag}
+            onChange={(e) => setCustomTag(e.target.value)}
+            placeholder="Type anything…"
+            autoComplete="off"
+            className="max-w-64"
+          />
+          {customTag && <TagBadge tag={customTag} />}
+        </div>
+        <Text.H6 color="foregroundMuted">Type to see how the color changes with the content.</Text.H6>
       </div>
     </div>
   )

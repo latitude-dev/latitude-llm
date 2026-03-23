@@ -32,6 +32,7 @@ export type Common = {
   centered?: boolean
   underline?: boolean
   lineThrough?: boolean
+  italic?: boolean
   weight?: FontWeight
   asChild?: boolean
 }
@@ -72,6 +73,7 @@ const TextAtom = memo(
       noWrap = false,
       underline = false,
       lineThrough = false,
+      italic = false,
       asChild = false,
     },
     ref,
@@ -108,6 +110,7 @@ const TextAtom = memo(
             "whitespace-nowrap": noWrap,
             underline: underline,
             "line-through": lineThrough,
+            italic: italic,
             [font.family.mono]: false,
             [font.family.sans]: !isDisplay,
             [font.family.display]: isDisplay,
