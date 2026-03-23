@@ -92,6 +92,30 @@ describe("API Keys Routes Integration", () => {
     expect(ids).not.toContain(tenantBKey.id)
   })
 
+  it<ApiKeysRoutesTestContext>("POST /v1/organizations/:organizationId/api-keys creates an API key", async ({
+    app,
+    database,
+  }) => {
+    const tenant = await createTenantSetup(database)
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/api-keys`, {
+        method: "POST",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: "new-key-from-post" }),
+      }),
+    )
+
+    expect(response.status).toBe(201)
+    const body = await response.json()
+    expect(body.name).toBe("new-key-from-post")
+    expect(typeof body.token).toBe("string")
+    expect(body.token.length).toBeGreaterThan(0)
+  })
+
   it<ApiKeysRoutesTestContext>("DELETE /v1/organizations/:organizationId/api-keys/:id cannot revoke cross-tenant keys", async ({
     app,
     database,

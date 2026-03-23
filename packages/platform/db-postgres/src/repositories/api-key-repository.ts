@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyRepository } from "@domain/api-keys"
 import {
@@ -18,10 +19,23 @@ import { apiKeys } from "../schema/index.ts"
 
 let encryptionKeyCache: Buffer | undefined
 
+const VALID_HEX_32_BYTE_KEY = /^[0-9a-f]{64}$/i
+
+// Enforce strict 32-byte key material while allowing any secret format.
+export const resolveApiKeyEncryptionKey = (rawSecret: string): Buffer => {
+  const secret = rawSecret.trim()
+
+  if (VALID_HEX_32_BYTE_KEY.test(secret)) {
+    return Buffer.from(secret, "hex")
+  }
+
+  return createHash("sha256").update(secret, "utf8").digest()
+}
+
 const getEncryptionKey = (): Buffer => {
   if (!encryptionKeyCache) {
-    const encryptionKeyHex = Effect.runSync(parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string"))
-    encryptionKeyCache = Buffer.from(encryptionKeyHex, "hex")
+    const encryptionKeySecret = Effect.runSync(parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string"))
+    encryptionKeyCache = resolveApiKeyEncryptionKey(encryptionKeySecret)
   }
   return encryptionKeyCache
 }
