@@ -7,14 +7,12 @@ import { useCallback, useDeferredValue, useRef, useState } from "react"
 import { z } from "zod"
 import { useDatasetRowsCollection } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord, DatasetRowRecord } from "../../../../../domains/datasets/datasets.functions.ts"
+import { getDatasetDownload, getDatasetQuery } from "../../../../../domains/datasets/datasets.functions.ts"
 import {
-  deleteRowsMutation,
-  getDatasetDownload,
-  getDatasetQuery,
-  saveDatasetCsv,
-  updateRowMutation,
-} from "../../../../../domains/datasets/datasets.functions.ts"
-import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
+  deleteRowsIntentMutation,
+  saveDatasetCsvIntentMutation,
+  updateRowIntentMutation,
+} from "../../../../../domains/datasets/datasets.mutations.ts"
 import { useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
 import { DatasetNameEdit } from "./-components/dataset-name-edit.tsx"
@@ -223,12 +221,12 @@ function CsvMappingView({
           options,
         }),
       )
-      await saveDatasetCsv({ data: formData })
-
-      getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
-      getQueryClient().invalidateQueries({
-        queryKey: ["datasetRows", datasetId],
+      const transaction = saveDatasetCsvIntentMutation({
+        projectId,
+        datasetId,
+        formData,
       })
+      await transaction.isPersisted.promise
       onCancel()
     },
     [datasetId, projectId, onCancel],
@@ -308,23 +306,20 @@ function DatasetRowsView({
       if (!selectedRowId) return
       setSaving(true)
       try {
-        const result = await updateRowMutation({
-          data: {
-            datasetId,
-            rowId: selectedRowId,
-            input: data.input,
-            output: data.output,
-            metadata: data.metadata,
-          },
+        const transaction = updateRowIntentMutation({
+          projectId,
+          datasetId,
+          rowId: selectedRowId,
+          input: data.input,
+          output: data.output,
+          metadata: data.metadata,
         })
-        setCurrentVersion(result.version)
-        setCurrentVersionId(result.versionId)
-        getQueryClient().invalidateQueries({
-          queryKey: ["datasets", projectId],
-        })
-        getQueryClient().invalidateQueries({
-          queryKey: ["datasetRows", datasetId],
-        })
+        await transaction.isPersisted.promise
+        const refreshedDataset = await getDatasetQuery({ data: { datasetId } })
+        if (refreshedDataset) {
+          setCurrentVersion(refreshedDataset.currentVersion)
+          setCurrentVersionId(refreshedDataset.latestVersionId)
+        }
       } finally {
         setSaving(false)
       }
@@ -337,11 +332,17 @@ function DatasetRowsView({
     if (ids.length === 0) return
     setDeleting(true)
     try {
-      const result = await deleteRowsMutation({
-        data: { datasetId, rowIds: ids as string[] },
+      const transaction = deleteRowsIntentMutation({
+        projectId,
+        datasetId,
+        rowIds: ids as string[],
       })
-      setCurrentVersion(result.version)
-      setCurrentVersionId(result.versionId)
+      await transaction.isPersisted.promise
+      const refreshedDataset = await getDatasetQuery({ data: { datasetId } })
+      if (refreshedDataset) {
+        setCurrentVersion(refreshedDataset.currentVersion)
+        setCurrentVersionId(refreshedDataset.latestVersionId)
+      }
 
       if (selectedRowId && ids.includes(selectedRowId)) {
         closeRow()
@@ -349,10 +350,6 @@ function DatasetRowsView({
 
       selection.clearSelections()
       setDeleteModalOpen(false)
-      getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
-      getQueryClient().invalidateQueries({
-        queryKey: ["datasetRows", datasetId],
-      })
     } finally {
       setDeleting(false)
     }

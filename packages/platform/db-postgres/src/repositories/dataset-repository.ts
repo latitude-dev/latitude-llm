@@ -90,6 +90,7 @@ export const DatasetRepositoryLive = Layer.effect(
             db
               .insert(datasets)
               .values({
+                ...(args.id ? { id: args.id } : {}),
                 organizationId: sqlClient.organizationId,
                 projectId: args.projectId,
                 name: args.name,

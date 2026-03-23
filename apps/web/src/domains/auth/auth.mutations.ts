@@ -1,0 +1,48 @@
+import { createOptimisticAction } from "@tanstack/react-db"
+import { completeAuthIntent, createLoginIntent, createSignupIntent, exchangeCliSession } from "./auth.functions.ts"
+
+export const createLoginIntentMutation = createOptimisticAction<{
+  email: string
+  intentId: string
+}>({
+  onMutate: () => {},
+  mutationFn: async ({ email, intentId }) => {
+    return createLoginIntent({ data: { email, intentId } })
+  },
+})
+
+export const createSignupIntentMutation = createOptimisticAction<{
+  intentId: string
+  name: string
+  email: string
+  organizationName: string
+}>({
+  onMutate: () => {},
+  mutationFn: async ({ intentId, name, email, organizationName }) => {
+    return createSignupIntent({
+      data: {
+        intentId,
+        name,
+        email,
+        organizationName,
+      },
+    })
+  },
+})
+
+export const completeAuthIntentMutation = createOptimisticAction<{
+  intentId: string
+  name?: string
+}>({
+  onMutate: () => {},
+  mutationFn: async ({ intentId, name }) => {
+    return completeAuthIntent({ data: { intentId, name } })
+  },
+})
+
+export const exchangeCliSessionMutation = createOptimisticAction<{ sessionToken: string }>({
+  onMutate: () => {},
+  mutationFn: async ({ sessionToken }) => {
+    return exchangeCliSession({ data: { sessionToken } })
+  },
+})

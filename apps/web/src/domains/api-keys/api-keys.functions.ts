@@ -1,5 +1,5 @@
 import { type ApiKey, ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
-import { ApiKeyId } from "@domain/shared"
+import { ApiKeyId, isValidId } from "@domain/shared"
 import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -46,13 +46,26 @@ export const listApiKeys = createServerFn({ method: "GET" })
 
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
+  .inputValidator(
+    z.object({
+      id: z
+        .string()
+        .optional()
+        .refine((value) => value === undefined || isValidId(value), {
+          message: "Invalid API key id",
+        }),
+      name: z.string().min(1).max(256),
+    }),
+  )
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
     const apiKey = await Effect.runPromise(
-      generateApiKeyUseCase({ name: data.name }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
+      generateApiKeyUseCase({
+        ...(data.id ? { id: ApiKeyId(data.id) } : {}),
+        name: data.name,
+      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
     )
 
     return toRecord(apiKey)

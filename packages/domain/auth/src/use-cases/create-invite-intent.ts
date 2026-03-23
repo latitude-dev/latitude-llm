@@ -14,6 +14,7 @@ export class InviteAlreadyPendingError extends Data.TaggedError("InviteAlreadyPe
 }
 
 export const createInviteIntentUseCase = (input: {
+  intentId?: string
   email: string
   organizationId: string
   organizationName: string
@@ -44,6 +45,7 @@ export const createInviteIntentUseCase = (input: {
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     const intent = createAuthIntent({
+      id: input.intentId,
       type: "invite",
       email,
       data: inviteData,

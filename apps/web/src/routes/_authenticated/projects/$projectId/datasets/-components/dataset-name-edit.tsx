@@ -2,8 +2,7 @@ import { Button, Input, Text } from "@repo/ui"
 import { Pencil } from "lucide-react"
 import { useCallback, useState } from "react"
 import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
-import { renameDatasetMutation } from "../../../../../../domains/datasets/datasets.functions.ts"
-import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
+import { renameDatasetIntentMutation } from "../../../../../../domains/datasets/datasets.mutations.ts"
 import { parseServerError } from "../../../../../../lib/errors.ts"
 
 export function DatasetNameEdit({ dataset, onSuccess }: { dataset: DatasetRecord; onSuccess?: () => void }) {
@@ -23,10 +22,12 @@ export function DatasetNameEdit({ dataset, onSuccess }: { dataset: DatasetRecord
     setSaving(true)
     setError(null)
     try {
-      await renameDatasetMutation({
-        data: { datasetId: dataset.id, name: trimmed },
+      const transaction = renameDatasetIntentMutation({
+        datasetId: dataset.id,
+        name: trimmed,
+        projectId,
       })
-      getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
+      await transaction.isPersisted.promise
       setEditing(false)
       onSuccess?.()
     } catch (e) {

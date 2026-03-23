@@ -1,8 +1,9 @@
+import { generateId } from "@domain/shared"
 import { Button, GitHubIcon, GoogleIcon, Icon, Text } from "@repo/ui"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { AlertCircle, Info, Mail } from "lucide-react"
 import { useState } from "react"
-import { createSignupIntent } from "../domains/auth/auth.functions.ts"
+import { createSignupIntentMutation } from "../domains/auth/auth.mutations.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../lib/auth-config.ts"
@@ -76,13 +77,14 @@ function SignupPage() {
     setError(undefined)
 
     try {
-      const { intentId } = await createSignupIntent({
-        data: {
-          name,
-          email: emailValue,
-          organizationName,
-        },
+      const intentId = generateId()
+      const transaction = createSignupIntentMutation({
+        intentId,
+        name,
+        email: emailValue,
+        organizationName,
       })
+      await transaction.isPersisted.promise
 
       const callbackURL = cliSession
         ? `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}&cliSession=${encodeURIComponent(cliSession)}`

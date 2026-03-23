@@ -1,3 +1,4 @@
+import { generateId } from "@domain/shared"
 import { Button, CloseTrigger, Input, Modal, Select, type SelectOption, Text, useToast } from "@repo/ui"
 import { useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
@@ -5,10 +6,9 @@ import { useCallback, useMemo, useState } from "react"
 import { useDatasetsList } from "../../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 import {
-  addTracesToDatasetMutation,
-  createDatasetFromTracesMutation,
-} from "../../../../../../domains/datasets/datasets.functions.ts"
-import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
+  addTracesToDatasetIntentMutation,
+  createDatasetFromTracesIntentMutation,
+} from "../../../../../../domains/datasets/datasets.mutations.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 
 interface AddToDatasetModalProps {
@@ -49,31 +49,36 @@ export function AddToDatasetModal({ open, onOpenChange, projectId, traceIds, onS
     try {
       if (creatingNew) {
         if (!newDatasetName.trim()) return
-        const result = await createDatasetFromTracesMutation({
-          data: { projectId, name: newDatasetName.trim(), traceIds },
+        const datasetId = generateId()
+        const transaction = createDatasetFromTracesIntentMutation({
+          datasetId,
+          projectId,
+          name: newDatasetName.trim(),
+          traceIds,
         })
+        await transaction.isPersisted.promise
         toast({
           title: "Dataset created",
-          description: `"${newDatasetName.trim()}" created with ${result.rowCount} row${result.rowCount === 1 ? "" : "s"}.`,
+          description: `"${newDatasetName.trim()}" created from selected traces.`,
         })
-        getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
         onSuccess()
         onOpenChange(false)
         navigate({
           to: "/projects/$projectId/datasets/$datasetId",
-          params: { projectId, datasetId: result.datasetId },
+          params: { projectId, datasetId },
         })
       } else {
         if (!selectedDatasetId) return
-        const result = await addTracesToDatasetMutation({
-          data: { projectId, datasetId: selectedDatasetId, traceIds },
+        const transaction = addTracesToDatasetIntentMutation({
+          projectId,
+          datasetId: selectedDatasetId,
+          traceIds,
         })
+        await transaction.isPersisted.promise
         toast({
           title: "Traces added to dataset",
-          description: `${result.rowCount} row${result.rowCount === 1 ? "" : "s"} added (version ${result.version}).`,
+          description: `${traceIds.length} selected trace${traceIds.length === 1 ? "" : "s"} processed.`,
         })
-        getQueryClient().invalidateQueries({ queryKey: ["datasets", projectId] })
-        getQueryClient().invalidateQueries({ queryKey: ["datasetRows", selectedDatasetId] })
         onSuccess()
         onOpenChange(false)
       }

@@ -1,9 +1,10 @@
-import type { ProjectId } from "@domain/shared"
+import type { DatasetId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
 import { validateDatasetNameInProject } from "./validate-dataset-name.ts"
 
 export function createDataset(args: {
+  readonly id?: DatasetId
   readonly projectId: ProjectId
   readonly name: string
   readonly description?: string

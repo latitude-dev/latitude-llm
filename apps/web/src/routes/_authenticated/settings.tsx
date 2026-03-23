@@ -23,14 +23,20 @@ import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
-import { invalidateApiKeys, useApiKeysCollection } from "../../domains/api-keys/api-keys.collection.ts"
+import {
+  createApiKeyMutation,
+  deleteApiKeyMutation,
+  updateApiKeyMutation,
+  useApiKeysCollection,
+} from "../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
-import { createApiKey, deleteApiKey, updateApiKey } from "../../domains/api-keys/api-keys.functions.ts"
-import { invalidateMembers, useMembersCollection } from "../../domains/members/members.collection.ts"
+import {
+  cancelMemberInviteMutation,
+  createMemberInviteIntentMutation,
+  removeMemberMutation,
+  useMembersCollection,
+} from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { inviteMember, removeMember } from "../../domains/members/members.functions.ts"
-import { authClient } from "../../lib/auth-client.ts"
-import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -45,20 +51,17 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       email: "",
     },
     onSubmit: async ({ value }) => {
-      const { intentId } = await inviteMember({ data: { email: value.email } })
-
-      const { error } = await authClient.signIn.magicLink({
-        email: value.email,
-        callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
-      })
-
-      if (error) {
-        throw new Error(error.message ?? "Failed to send invitation email")
+      try {
+        const transaction = createMemberInviteIntentMutation(value.email)
+        await transaction.isPersisted.promise
+        setOpen(false)
+        toast({ description: "Invitation sent" })
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          description: toUserMessage(error),
+        })
       }
-
-      toast({ description: "Invitation sent" })
-      invalidateMembers()
-      setOpen(false)
     },
   })
 
@@ -73,7 +76,8 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
         <>
           <CloseTrigger />
           <Button
-            type="submit"
+            type="button"
+            disabled={form.state.isSubmitting}
             onClick={() => {
               void form.handleSubmit()
             }}
@@ -138,16 +142,20 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
               )}
             </TableCell>
             <TableCell align="right">
-              {member.status === "active" && (
+              {(member.status === "active" || member.status === "invited") && (
                 <Button
                   flat
                   variant="ghost"
                   onClick={() => {
-                    void removeMember({ data: { membershipId: member.id } })
+                    const transaction =
+                      member.status === "invited"
+                        ? cancelMemberInviteMutation(member.id)
+                        : removeMemberMutation(member.id)
+
+                    void transaction.isPersisted.promise
                       .then(() => {
-                        invalidateMembers()
                         toast({
-                          description: "Member removed",
+                          description: member.status === "invited" ? "Invitation canceled" : "Member removed",
                         })
                       })
                       .catch((e) =>
@@ -201,8 +209,8 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       name: "",
     },
     onSubmit: async ({ value }) => {
-      await createApiKey({ data: { name: value.name } })
-      invalidateApiKeys()
+      const transaction = createApiKeyMutation(value.name)
+      await transaction.isPersisted.promise
       setOpen(false)
     },
   })
@@ -262,8 +270,8 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
       name: apiKey.name ?? "",
     },
     onSubmit: async ({ value }) => {
-      await updateApiKey({ data: { id: apiKey.id, name: value.name } })
-      invalidateApiKeys()
+      const transaction = updateApiKeyMutation(apiKey.id, value.name)
+      await transaction.isPersisted.promise
       toast({
         title: "Success",
         description: "API key name updated.",
@@ -386,9 +394,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                         disabled={apiKeys.length === 1}
                         variant="ghost"
                         onClick={() => {
-                          void deleteApiKey({ data: { id: apiKey.id } }).then(() => {
-                            invalidateApiKeys()
-                          })
+                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise
                         }}
                       >
                         <Icon icon={Trash2} size="sm" />

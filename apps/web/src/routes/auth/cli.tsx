@@ -2,7 +2,7 @@ import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { CheckCircle, Loader2, Terminal, XCircle } from "lucide-react"
 import { useState } from "react"
-import { exchangeCliSession } from "../../domains/auth/auth.functions.ts"
+import { exchangeCliSessionMutation } from "../../domains/auth/auth.mutations.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 
@@ -41,7 +41,8 @@ function CliAuthPage() {
   const handleAuthorize = async () => {
     setState({ step: "authorizing" })
     try {
-      await exchangeCliSession({ data: { sessionToken } })
+      const transaction = exchangeCliSessionMutation({ sessionToken })
+      await transaction.isPersisted.promise
       setState({ step: "authorized" })
     } catch (err) {
       setState({
