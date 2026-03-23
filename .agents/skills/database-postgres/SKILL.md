@@ -131,12 +131,14 @@ This runs `docker/reset-postgres.sh` which stops postgres, removes the `data-llm
 
 All Drizzle table definitions in `packages/platform/db-postgres/src/schema/` **must** follow these rules. Shared helpers live in `schemaHelpers.ts`.
 
+Organization-scoped Postgres tables must use the repository RLS conventions.
+
 1. **Use `latitudeSchema`** — never create a local `pgSchema("latitude")`. Import `latitudeSchema` from `../schemaHelpers.ts`.
 2. **Use `cuid("id").primaryKey()`** — every table's primary key must use the `cuid()` helper (`varchar(24)` with auto-generated CUID2).
 3. **Use `tzTimestamp(name)`** — never use raw `timestamp(name, { withTimezone: true })`. Import `tzTimestamp` from the helpers.
 4. **Use `...timestamps()`** — every table that has `createdAt`/`updatedAt` must spread the `timestamps()` helper (includes `$onUpdateFn` on `updatedAt`).
 5. **Use `organizationRLSPolicy(tableName)`** — every table with an `organization_id` column must include this helper in its third argument to enable row-level security.
-6. **No foreign keys** — do not use `.references()` or manually create `FOREIGN KEY` constraints. Referential integrity is enforced at the application/domain layer. Use indexes on relationship columns instead (e.g. `index().on(t.datasetId)` rather than `.references(() => datasets.id)`).
+6. **No foreign keys** — new Postgres tables must not add foreign key constraints. Do not use `.references()` or manually create `FOREIGN KEY` constraints. Referential integrity is enforced at the application/domain layer. Use indexes on relationship columns instead (e.g. `index().on(t.datasetId)` rather than `.references(() => datasets.id)`).
 
 ```typescript
 // ✅ Good - follows all conventions
@@ -177,6 +179,8 @@ pnpm --filter @platform/db-postgres pg:migrate
 **Key points:**
 
 - Name is slugified automatically; always quote multi-word names (e.g. `"add users table"` → `add-users-table`)
+- Postgres migration history is append-only in this repository. Do not edit existing Drizzle migration files; change the schema and generate a new migration instead.
+- For additive changes to existing tables, prefer ordinary generated `ALTER TABLE` migrations over bespoke backfill choreography unless the change truly requires data rewriting.
 - Never manually create SQL files in the drizzle folder
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table

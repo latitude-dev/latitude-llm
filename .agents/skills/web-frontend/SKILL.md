@@ -2,6 +2,12 @@
 
 **When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, forms, Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.
 
+## Legacy UI reference
+
+- Before building new UI, inspect the old v1 UI/components and product patterns as a reference when relevant.
+- Reuse as much as possible when the old implementation is still solid.
+- Do not copy v1 UI blindly; review it critically and improve it to match v2 conventions, architecture, and quality expectations when needed.
+
 ## Components
 
 - **Always** use `Text` from `@repo/ui` for text content

@@ -95,7 +95,7 @@ Start infrastructure before app processes (e.g. in cloud agents or a fresh clone
 
 ```bash
 sudo dockerd &>/dev/null &  # if the daemon is not already running
-sudo docker compose up -d postgres clickhouse redis redis-bullmq mailpit
+sudo docker compose up -d postgres clickhouse redis redis-bullmq mailpit temporal temporal-ui
 ```
 
 **Migrations and seeds** (only when the user asked you to set up DBs in this conversation — see [database-postgres](../database-postgres/SKILL.md) and [database-clickhouse-weaviate](../database-clickhouse-weaviate/SKILL.md) for agent rules):
@@ -114,6 +114,7 @@ pnpm --filter @app/web dev &
 pnpm --filter @app/api dev &
 pnpm --filter @app/ingest dev &
 pnpm --filter @app/workers dev &
+pnpm --filter @app/workflows dev &
 ```
 
 | Service    | Port | Health check |
@@ -121,7 +122,9 @@ pnpm --filter @app/workers dev &
 | Web        | 3000 | `curl http://localhost:3000` (redirect to `/login`) |
 | API        | 3001 | `curl http://localhost:3001/health` |
 | Ingest     | 3002 | `curl http://localhost:3002/health` |
-| Workers    | —    | Log: workers ready / outbox consumer |
+| Workers    | 9090 | `curl http://localhost:9090/health` |
+| Workflows  | 9091 | `curl http://localhost:9091/health` |
 | Mailpit UI | 8025 | `curl http://localhost:8025` |
+| Temporal UI | 8233 | `curl http://localhost:8233` |
 
 **Manual auth:** magic links appear in Mailpit at `http://localhost:8025` after signup at `http://localhost:3000/signup`.
