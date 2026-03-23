@@ -34,7 +34,7 @@ function stripUseDirectives() {
 }
 
 export default defineConfig({
-  plugins: [stripUseDirectives(), tanstackStart(), nitro(), tailwindcss(), react()],
+  plugins: [stripUseDirectives(), tanstackStart({ start: { entry: "./src/start.ts" } }), nitro(), tailwindcss(), react()],
   build: {
     rollupOptions: {
       plugins: bundleAnalyze
