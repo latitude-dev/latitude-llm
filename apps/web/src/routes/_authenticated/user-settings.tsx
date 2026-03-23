@@ -122,13 +122,7 @@ function CreateWorkspaceSection() {
 
 // --- Delete Account Section ---
 
-function DeleteAccountConfirmModal({
-  open,
-  setOpen,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-}) {
+function DeleteAccountConfirmModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
   const router = useRouter()
   const [confirmText, setConfirmText] = useState("")

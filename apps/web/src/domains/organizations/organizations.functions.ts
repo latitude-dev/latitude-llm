@@ -1,8 +1,8 @@
 import {
-  MembershipRepository,
-  OrganizationRepository,
   createMembership,
   createOrganizationUseCase,
+  MembershipRepository,
+  OrganizationRepository,
 } from "@domain/organizations"
 import { UserId } from "@domain/shared"
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
