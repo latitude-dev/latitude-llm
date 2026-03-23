@@ -38,7 +38,7 @@ const seedOrganization = (
     id,
     name: `Org ${id}`,
     slug: `org-${id}`,
-    creatorId: creatorId ? UserId(creatorId) : undefined,
+    ...(creatorId ? { creatorId: UserId(creatorId) } : {}),
   })
   organizations.set(id, org)
   return org
