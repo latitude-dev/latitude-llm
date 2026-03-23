@@ -1,12 +1,12 @@
 import type { QueuePublisherShape } from "@domain/queue"
-import type { StorageDiskPort } from "@domain/shared"
+import { generateId, type StorageDiskPort } from "@domain/shared"
 import { createBetterAuth } from "@platform/auth-better"
 import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
+import { createPostgresClient, outboxEvents, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { createBullMqQueuePublisher, loadBullMqConfig, type MagicLinkEmailPayload } from "@platform/queue-bullmq"
+import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
@@ -119,20 +119,14 @@ export const getBetterAuth = () => {
           webUrl,
         })
 
-        const payload: MagicLinkEmailPayload = {
-          email,
-          magicLinkUrl: url,
-          authIntentId,
-        }
-
-        const publisher = await getQueuePublisher()
-        await Effect.runPromise(
-          publisher.publish("magic-link-email", {
-            body: new TextEncoder().encode(JSON.stringify(payload)),
-            headers: new Map(),
-            key: null,
-          }),
-        )
+        await adminClient.db.insert(outboxEvents).values({
+          id: generateId(),
+          eventName: "MagicLinkEmailRequested",
+          aggregateId: authIntentId ?? generateId(),
+          organizationId: "system",
+          payload: { email, magicLinkUrl: url, authIntentId },
+          occurredAt: new Date(),
+        })
       },
     })
   }

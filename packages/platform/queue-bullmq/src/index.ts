@@ -13,5 +13,5 @@ export {
   type EventHandler,
   mapEnvelopeToQueueMessage,
 } from "./events.ts"
-export type { DatasetExportPayload, MagicLinkEmailPayload } from "./topics.ts"
+export type { DatasetExportPayload } from "./topics.ts"
 export { type TopicName, Topics } from "./topics.ts"
