@@ -1,4 +1,9 @@
-import { MembershipRepository, OrganizationRepository, createMembership, createOrganization } from "@domain/organizations"
+import {
+  createMembership,
+  createOrganization,
+  MembershipRepository,
+  OrganizationRepository,
+} from "@domain/organizations"
 import { createFakeMembershipRepository, createFakeOrganizationRepository } from "@domain/organizations/testing"
 import { OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
@@ -44,9 +49,7 @@ describe("deleteUserUseCase", () => {
     const { users, testLayers } = createTestLayers()
     users.set(USER_ID, createTestUser(USER_ID))
 
-    await Effect.runPromise(
-      deleteUserUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(deleteUserUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(users.has(USER_ID)).toBe(false)
   })
@@ -61,9 +64,7 @@ describe("deleteUserUseCase", () => {
     const m = createMembership({ organizationId: ORG_ID, userId: UserId(USER_ID), role: "owner" })
     memberships.set(m.id, m)
 
-    await Effect.runPromise(
-      deleteUserUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(deleteUserUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(users.has(USER_ID)).toBe(false)
     expect(organizations.has(ORG_ID)).toBe(false)
@@ -73,9 +74,7 @@ describe("deleteUserUseCase", () => {
     const { users, testLayers } = createTestLayers()
     users.set(USER_ID, createTestUser(USER_ID))
 
-    await Effect.runPromise(
-      deleteUserUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(deleteUserUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(users.has(USER_ID)).toBe(false)
   })

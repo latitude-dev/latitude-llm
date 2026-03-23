@@ -64,9 +64,7 @@ describe("cleanupUserMembershipsUseCase", () => {
     seedOrganization(organizations, ORG_1, USER_ID)
     seedMembership(memberships, ORG_1, USER_ID)
 
-    await Effect.runPromise(
-      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(organizations.size).toBe(0)
   })
@@ -77,9 +75,7 @@ describe("cleanupUserMembershipsUseCase", () => {
     seedMembership(memberships, ORG_1, USER_ID)
     seedMembership(memberships, ORG_1, OTHER_USER_ID)
 
-    await Effect.runPromise(
-      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(organizations.size).toBe(1)
     const remainingMembers = [...memberships.values()]
@@ -93,9 +89,7 @@ describe("cleanupUserMembershipsUseCase", () => {
     seedMembership(memberships, ORG_1, USER_ID)
     seedMembership(memberships, ORG_1, OTHER_USER_ID)
 
-    await Effect.runPromise(
-      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(organizations.get(ORG_1)!.creatorId).toBeNull()
   })
@@ -112,9 +106,7 @@ describe("cleanupUserMembershipsUseCase", () => {
     seedMembership(memberships, ORG_2, USER_ID)
     seedMembership(memberships, ORG_2, OTHER_USER_ID)
 
-    await Effect.runPromise(
-      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(organizations.has(ORG_1)).toBe(false)
     expect(organizations.has(ORG_2)).toBe(true)
@@ -131,9 +123,7 @@ describe("cleanupUserMembershipsUseCase", () => {
   it("is a no-op when user has no memberships", async () => {
     const { organizations, memberships, testLayers } = createTestLayers()
 
-    await Effect.runPromise(
-      cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)),
-    )
+    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
     expect(organizations.size).toBe(0)
     expect(memberships.size).toBe(0)
