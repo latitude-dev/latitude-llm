@@ -1,4 +1,4 @@
-import type { QueuePublisherShape } from "@domain/queue"
+import type { DomainEventsQueuePublisher } from "@platform/queue-bullmq"
 import type { StorageDiskPort } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
@@ -11,7 +11,7 @@ import { Effect } from "effect"
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let redisInstance: RedisClient | undefined
-let queuePublisherPromise: Promise<QueuePublisherShape> | undefined
+let queuePublisherPromise: Promise<DomainEventsQueuePublisher> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 
 export const getPostgresClient = (): PostgresClient => {
@@ -37,7 +37,7 @@ export const getRedisClient = (): RedisClient => {
   return redisInstance
 }
 
-export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
+export const getQueuePublisher = (): Promise<DomainEventsQueuePublisher> => {
   if (!queuePublisherPromise) {
     queuePublisherPromise = (async () => {
       const config = Effect.runSync(loadBullMqConfig())

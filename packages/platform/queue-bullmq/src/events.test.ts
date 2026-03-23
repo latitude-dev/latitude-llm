@@ -1,6 +1,13 @@
 import type { EventEnvelope } from "@domain/events"
+import { QueuePublishError, type QueuePublisherShape } from "@domain/queue"
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { EventEnvelopeSchema, mapEnvelopeToQueueMessage } from "./events.ts"
+import {
+  EventEnvelopeSchema,
+  mapEnvelopeToQueueMessage,
+  publishDomainEvent,
+  withDomainEventsQueuePublisher,
+} from "./events.ts"
 
 const validWireMessage = {
   id: "evt-123",
@@ -111,5 +118,71 @@ describe("mapEnvelopeToQueueMessage", () => {
     expect(parsed.event.name).toBe(envelope.event.name)
     expect(parsed.occurredAt).toBeInstanceOf(Date)
     expect(parsed.occurredAt.toISOString()).toBe(envelope.occurredAt.toISOString())
+  })
+})
+
+describe("publishDomainEvent", () => {
+  it("publishes to the domain-events queue with mapped envelope payload", async () => {
+    const envelope = makeEnvelope()
+    const calls: Array<{ queue: string; body: string }> = []
+    const queuePublisher: QueuePublisherShape = {
+      publish: (queue, message) =>
+        Effect.sync(() => {
+          calls.push({
+            queue,
+            body: new TextDecoder().decode(message.body),
+          })
+        }),
+      close: () => Effect.void,
+    }
+
+    await Effect.runPromise(publishDomainEvent({ queuePublisher, envelope }))
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.queue).toBe("domain-events")
+    expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+      id: envelope.id,
+      event: envelope.event,
+      occurredAt: envelope.occurredAt.toISOString(),
+    })
+  })
+
+  it("preserves queue publish failures", async () => {
+    const envelope = makeEnvelope()
+    const queuePublisher: QueuePublisherShape = {
+      publish: () =>
+        Effect.fail(
+          new QueuePublishError({
+            queue: "domain-events",
+            cause: new Error("redis unavailable"),
+          }),
+        ),
+      close: () => Effect.void,
+    }
+
+    await expect(Effect.runPromise(publishDomainEvent({ queuePublisher, envelope }))).rejects.toMatchObject({
+      _tag: "QueuePublishError",
+      queue: "domain-events",
+    })
+  })
+})
+
+describe("withDomainEventsQueuePublisher", () => {
+  it("adds publishDomainEvent helper while keeping existing publish/close methods", async () => {
+    const envelope = makeEnvelope()
+    const calls: string[] = []
+    const queuePublisher: QueuePublisherShape = {
+      publish: (queue) =>
+        Effect.sync(() => {
+          calls.push(queue)
+        }),
+      close: () => Effect.sync(() => calls.push("closed")),
+    }
+    const publisher = withDomainEventsQueuePublisher(queuePublisher)
+
+    await Effect.runPromise(publisher.publishDomainEvent(envelope))
+    await Effect.runPromise(publisher.close())
+
+    expect(calls).toEqual(["domain-events", "closed"])
   })
 })

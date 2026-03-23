@@ -11,7 +11,6 @@ import {
   sendEmail,
   signupExistingAccountMagicLinkTemplate,
 } from "@domain/email"
-import type { QueuePublisherShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
 import { UserRepository } from "@domain/users"
 import { createBetterAuth } from "@platform/auth-better"
@@ -27,7 +26,7 @@ import {
 } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
+import { type DomainEventsQueuePublisher, createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
 import { Effect } from "effect"
 
@@ -37,7 +36,7 @@ let redisClientInstance: RedisClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
-let queuePublisher: Promise<QueuePublisherShape> | undefined
+let queuePublisher: Promise<DomainEventsQueuePublisher> | undefined
 
 interface AuthIntentEmailContext {
   readonly type: AuthIntent["type"]
@@ -109,7 +108,7 @@ export const getStorageDisk = (): StorageDiskPort => {
   return storageDiskInstance
 }
 
-export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
+export const getQueuePublisher = (): Promise<DomainEventsQueuePublisher> => {
   if (!queuePublisher) {
     queuePublisher = (async () => {
       const config = Effect.runSync(loadBullMqConfig())

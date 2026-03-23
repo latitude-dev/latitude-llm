@@ -44,8 +44,26 @@ export const mapEnvelopeToQueueMessage = (envelope: EventEnvelope): QueueMessage
   ]),
 })
 
+export interface DomainEventsQueuePublisher extends QueuePublisherShape {
+  readonly publishDomainEvent: (envelope: EventEnvelope) => Effect.Effect<void, QueuePublishError>
+}
+
+export const publishDomainEvent = ({
+  queuePublisher,
+  envelope,
+}: {
+  readonly queuePublisher: QueuePublisherShape
+  readonly envelope: EventEnvelope
+}): Effect.Effect<void, QueuePublishError> =>
+  queuePublisher.publish("domain-events", mapEnvelopeToQueueMessage(envelope))
+
+export const withDomainEventsQueuePublisher = (queuePublisher: QueuePublisherShape): DomainEventsQueuePublisher => ({
+  ...queuePublisher,
+  publishDomainEvent: (envelope: EventEnvelope) => publishDomainEvent({ queuePublisher, envelope }),
+})
+
 export const createEventsPublisher = (queuePublisher: QueuePublisherShape): EventsPublisher<QueuePublishError> => ({
-  publish: (envelope: EventEnvelope) => queuePublisher.publish("domain-events", mapEnvelopeToQueueMessage(envelope)),
+  publish: (envelope: EventEnvelope) => publishDomainEvent({ queuePublisher, envelope }),
 })
 
 export const createEventHandler = (handler: EventHandler): MessageHandler => ({

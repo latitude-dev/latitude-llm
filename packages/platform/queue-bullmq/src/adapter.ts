@@ -4,6 +4,7 @@ import { base64Decode, base64Encode } from "@repo/utils"
 import { Queue, Worker } from "bullmq"
 import { Effect, Layer } from "effect"
 import { Redis } from "ioredis"
+import { type DomainEventsQueuePublisher, withDomainEventsQueuePublisher } from "./events.ts"
 
 export interface BullMqJobData {
   readonly body: string
@@ -48,7 +49,7 @@ export interface BullMqRedisConfig {
 
 export const createBullMqQueuePublisher = (
   config: BullMqRedisConfig,
-): Effect.Effect<QueuePublisherShape, QueueClientError> =>
+): Effect.Effect<DomainEventsQueuePublisher, QueueClientError> =>
   Effect.gen(function* () {
     const connection = new Redis({
       host: config.redis.host,
@@ -63,7 +64,7 @@ export const createBullMqQueuePublisher = (
       "span-ingestion": new Queue("span-ingestion", { connection }),
     }
 
-    return {
+    return withDomainEventsQueuePublisher({
       publish: (queue: QueueName, message: QueueMessage) =>
         Effect.tryPromise({
           try: async () => {
@@ -80,7 +81,7 @@ export const createBullMqQueuePublisher = (
           },
           catch: (cause: unknown) => new QueueClientError({ cause }),
         }).pipe(Effect.tapError(Effect.logError), Effect.ignore),
-    }
+    })
   })
 
 export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Effect<QueueConsumer, QueueClientError> =>
