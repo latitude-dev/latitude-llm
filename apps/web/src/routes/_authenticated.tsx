@@ -35,12 +35,17 @@ export const Route = createFileRoute("/_authenticated")({
 })
 
 function UserAvatar({ name }: { name: string }) {
-  const initials = name
-    .split(" ")
-    .map((part) => part[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
+  const trimmed = name.trim()
+  const initials =
+    trimmed.length === 0
+      ? "?"
+      : trimmed
+          .split(/\s+/)
+          .map((part) => part[0])
+          .filter(Boolean)
+          .slice(0, 2)
+          .join("")
+          .toUpperCase() || trimmed.slice(0, 2).toUpperCase()
 
   return (
     <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
@@ -160,7 +165,7 @@ function NavHeader() {
           trigger={() => (
             <DropdownMenuTrigger asChild>
               <button type="button" className="cursor-pointer">
-                <UserAvatar name={user.name ?? user.email} />
+                <UserAvatar name={user.name?.trim() ? user.name : user.email} />
               </button>
             </DropdownMenuTrigger>
           )}

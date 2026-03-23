@@ -181,7 +181,7 @@ function MembershipsSection() {
         <div className="flex flex-row items-center gap-2">
           <Text.H4 weight="bold">Workspace Members</Text.H4>
         </div>
-        <Button variant="outline" onClick={() => setInviteOpen(true)}>
+        <Button flat variant="outline" onClick={() => setInviteOpen(true)}>
           Add Member
         </Button>
       </div>
@@ -424,7 +424,7 @@ function ApiKeysSection() {
           </div>
         }
         actions={
-          <Button variant="outline" onClick={() => setCreateOpen(true)}>
+          <Button flat variant="outline" onClick={() => setCreateOpen(true)}>
             Create API Key
           </Button>
         }
