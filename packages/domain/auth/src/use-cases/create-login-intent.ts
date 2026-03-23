@@ -11,7 +11,7 @@ export class LoginUserNotFoundError extends Data.TaggedError("LoginUserNotFoundE
   readonly httpMessage = "No account found for this email"
 }
 
-export const createLoginIntentUseCase = (input: { email: string }) =>
+export const createLoginIntentUseCase = (input: { intentId?: string; email: string }) =>
   Effect.gen(function* () {
     const users = yield* UserRepository
     const intents = yield* AuthIntentRepository
@@ -23,6 +23,7 @@ export const createLoginIntentUseCase = (input: { email: string }) =>
       .pipe(Effect.catchTag("NotFoundError", () => Effect.fail(new LoginUserNotFoundError({ email }))))
 
     const intent = createAuthIntent({
+      id: input.intentId,
       type: "login",
       email,
       data: {},

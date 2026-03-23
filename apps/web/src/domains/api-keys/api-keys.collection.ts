@@ -17,6 +17,7 @@ const apiKeysCollection = createCollection(
         transaction.mutations.map((mutation) =>
           createApiKey({
             data: {
+              id: mutation.modified.id,
               name: mutation.modified.name ?? "API Key",
             },
           }),
@@ -49,8 +50,14 @@ const apiKeysCollection = createCollection(
   }),
 )
 
-export function invalidateApiKeys() {
-  void queryClient.invalidateQueries({ queryKey: ["apiKeys"] })
+export function updateApiKeyMutation(id: string, name: string) {
+  return apiKeysCollection.update(id, (draft) => {
+    draft.name = name
+  })
+}
+
+export function deleteApiKeyMutation(id: string) {
+  return apiKeysCollection.delete(id)
 }
 
 export const useApiKeysCollection = () => {

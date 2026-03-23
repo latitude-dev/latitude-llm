@@ -25,6 +25,7 @@ import {
   DatasetId,
   DatasetRowId,
   DatasetVersionId,
+  isValidId,
   OrganizationId,
   ProjectId,
   putInDisk,
@@ -400,13 +401,25 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
 
 export const createDatasetMutation = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ projectId: z.string(), name: z.string() }))
+  .inputValidator(
+    z.object({
+      id: z
+        .string()
+        .optional()
+        .refine((value) => value === undefined || isValidId(value), {
+          message: "Invalid dataset id",
+        }),
+      projectId: z.string(),
+      name: z.string(),
+    }),
+  )
   .handler(async ({ data }): Promise<DatasetRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
     const dataset = await Effect.runPromise(
       createDataset({
+        ...(data.id ? { id: DatasetId(data.id) } : {}),
         projectId: ProjectId(data.projectId),
         name: data.name,
       }).pipe(
@@ -620,6 +633,12 @@ export const createDatasetFromTracesMutation = createServerFn({
   .middleware([errorHandler])
   .inputValidator(
     z.object({
+      datasetId: z
+        .string()
+        .optional()
+        .refine((value) => value === undefined || isValidId(value), {
+          message: "Invalid dataset id",
+        }),
       projectId: z.string(),
       name: z.string().min(1),
       selection: rowSelectionSchema,
@@ -641,6 +660,7 @@ export const createDatasetFromTracesMutation = createServerFn({
 
       const result = await Effect.runPromise(
         createDatasetFromTraces({
+          ...(data.datasetId ? { datasetId: DatasetId(data.datasetId) } : {}),
           projectId: ProjectId(data.projectId),
           name: data.name,
           selection: toTraceSelection(data.selection),

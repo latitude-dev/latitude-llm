@@ -16,6 +16,7 @@ export {
   resolveMagicLinkEmailTemplateFromContext,
   shouldCreateOrganizationForIntent,
 } from "./use-cases/auth-intent-policy.ts"
+export { cancelInviteIntentUseCase } from "./use-cases/cancel-invite-intent.ts"
 export {
   AuthIntentEmailMismatchError,
   completeAuthIntentUseCase,

@@ -3,7 +3,8 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import { useState } from "react"
 import type { AuthIntentInfo } from "../../domains/auth/auth.functions.ts"
-import { completeAuthIntent, getAuthIntentInfo } from "../../domains/auth/auth.functions.ts"
+import { getAuthIntentInfo } from "../../domains/auth/auth.functions.ts"
+import { completeAuthIntentMutation } from "../../domains/auth/auth.mutations.ts"
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 
@@ -57,7 +58,8 @@ function AuthConfirmPage() {
   const [name, setName] = useState("")
 
   const completeAndRedirect = async (userName?: string) => {
-    return completeAuthIntent({ data: { intentId: authIntentId, name: userName } })
+    const transaction = completeAuthIntentMutation({ intentId: authIntentId, ...(userName ? { name: userName } : {}) })
+    return transaction.isPersisted.promise
       .then(() => {
         setState({ step: "completed" })
         if (cliSession) {

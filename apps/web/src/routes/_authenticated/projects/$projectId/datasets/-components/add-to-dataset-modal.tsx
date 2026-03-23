@@ -60,7 +60,11 @@ export function AddToDatasetModal({
       if (creatingNew) {
         if (!newDatasetName.trim()) return
         const result = await createDatasetFromTracesMutation({
-          data: { projectId, name: newDatasetName.trim(), selection },
+          data: {
+            projectId,
+            name: newDatasetName.trim(),
+            selection,
+          },
         })
         toast({
           title: "Dataset created",
