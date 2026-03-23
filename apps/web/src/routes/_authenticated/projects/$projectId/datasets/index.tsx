@@ -5,6 +5,7 @@ import {
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableSorting,
+  sortDirectionSchema,
   Tooltip,
   useToast,
 } from "@repo/ui"
@@ -20,10 +21,9 @@ import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 
 const DATASET_LIST_SORT_COLUMNS = ["name", "updatedAt"] as const
-const sortDirectionSchema = z.enum(["asc", "desc"])
 const datasetsListSearchSchema = z.object({
   sortBy: z.enum(DATASET_LIST_SORT_COLUMNS).optional(),
-  sortDirection: sortDirectionSchema.optional(),
+  sortDirection: sortDirectionSchema,
 })
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({

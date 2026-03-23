@@ -79,12 +79,14 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
   {
     key: "duration",
     header: "Duration",
+    align: "end",
     sortKey: "duration",
     render: (t) => formatDuration(t.durationNs),
   },
   {
     key: "cost",
     header: "Cost",
+    align: "end",
     sortKey: "cost",
     render: (t) => formatPrice(t.costTotalMicrocents / 100_000_000),
   },
@@ -128,6 +130,7 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
   {
     key: "spans",
     header: "Spans",
+    align: "end",
     sortKey: "spans",
     render: (t) => (
       <>
@@ -248,13 +251,16 @@ function TracesPage() {
         ) : null}
       </Layout>
 
-      <AddToDatasetModal
-        open={addToDatasetOpen}
-        onOpenChange={setAddToDatasetOpen}
-        projectId={projectId}
-        traceIds={selection.selectedRowIds}
-        onSuccess={selection.clearSelections}
-      />
+      {selection.bulkSelection && (
+        <AddToDatasetModal
+          open={addToDatasetOpen}
+          onOpenChange={setAddToDatasetOpen}
+          projectId={projectId}
+          selection={selection.bulkSelection}
+          selectedCount={selection.selectedCount}
+          onSuccess={selection.clearSelections}
+        />
+      )}
     </>
   )
 }

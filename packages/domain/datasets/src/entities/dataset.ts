@@ -45,3 +45,13 @@ export class DuplicateDatasetNameError extends Data.TaggedError("DuplicateDatase
     return `A dataset named "${this.name}" already exists in this project`
   }
 }
+
+export class TooManyTracesError extends Data.TaggedError("TooManyTracesError")<{
+  readonly count: number
+  readonly limit: number
+}> {
+  readonly httpStatus = 422
+  get httpMessage() {
+    return `Selection contains ${this.count} traces, but the limit is ${this.limit}`
+  }
+}

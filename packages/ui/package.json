@@ -33,12 +33,12 @@
     "@radix-ui/react-slot": "^1.1.2",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@tanstack/react-virtual": "^3.13.23",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "zod": "catalog:",
     "lucide-react": "^0.481.0",
-    "tailwind-merge": "^2.6.0",
-    "@domain/shared": "workspace:*"
+    "@tanstack/react-virtual": "^3.13.23",
+    "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

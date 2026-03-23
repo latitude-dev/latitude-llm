@@ -39,17 +39,19 @@ export function DetailSection({
   icon,
   label,
   children,
+  contentClassName,
 }: {
   readonly icon: ReactNode
   readonly label: string
   readonly children: ReactNode
+  readonly contentClassName?: string
 }) {
   const [open, setOpen] = useState(true)
 
   return (
     <div className="flex flex-col gap-2">
       <Header icon={icon} label={label} open={open} onClick={() => setOpen((prev) => !prev)} />
-      {open && <div className="flex flex-col pl-2 max-h-60 overflow-y-auto">{children}</div>}
+      {open && <div className={cn("flex flex-col pl-2 max-h-60 overflow-y-auto", contentClassName)}>{children}</div>}
     </div>
   )
 }

@@ -37,7 +37,10 @@ function useDrawerWidth({
   minWidth: number
   maxWidth: number
 }) {
-  const stored = useLocalStorage<number | null>({ key: storeKey, defaultValue: null })
+  const stored = useLocalStorage<number | null>({
+    key: storeKey,
+    defaultValue: null,
+  })
   const hasStore = storeKey !== undefined
 
   const initialWidth = hasStore && stored.value !== null ? stored.value : defaultWidth
@@ -60,21 +63,28 @@ export function DetailDrawer({
   onClose,
   header,
   actions,
+  rightActions,
   children,
   storeKey,
   minWidth = DEFAULT_MIN_WIDTH,
   defaultWidth = DEFAULT_DEFAULT_WIDTH,
 }: {
-  readonly onClose: () => void
-  readonly header?: ReactNode
-  readonly actions?: ReactNode
-  readonly children: ReactNode
-  readonly storeKey?: string
-  readonly minWidth?: number
-  readonly defaultWidth?: number
+  onClose: () => void
+  header?: ReactNode
+  actions?: ReactNode
+  rightActions?: ReactNode
+  children: ReactNode
+  storeKey?: string
+  minWidth?: number
+  defaultWidth?: number
 }) {
   const maxWidth = useMaxWidth()
-  const { width, setWidth } = useDrawerWidth({ storeKey, defaultWidth, minWidth, maxWidth })
+  const { width, setWidth } = useDrawerWidth({
+    storeKey,
+    defaultWidth,
+    minWidth,
+    maxWidth,
+  })
   const [isDragging, setIsDragging] = useState(false)
   const startX = useRef(0)
   const startWidth = useRef(0)
@@ -167,11 +177,14 @@ export function DetailDrawer({
 
       <div className="flex flex-col flex-1 min-w-0 h-full bg-background">
         <div className="flex flex-row items-center justify-between px-6 py-4 border-b shrink-0">
-          <div className="flex flex-row items-center gap-1">
-            <Button flat variant="outline" className="w-8 h-8 p-0" onClick={onClose}>
-              <PanelRightCloseIcon className="w-4 h-4 text-muted-foreground" />
-            </Button>
-            {actions}
+          <div className="w-full flex flex-row items-center justify-between gap-1">
+            <div className="flex flex-row items-center gap-x-1">
+              <Button flat variant="outline" className="w-8 h-8 p-0" onClick={onClose}>
+                <PanelRightCloseIcon className="w-4 h-4 text-muted-foreground" />
+              </Button>
+              {actions}
+            </div>
+            {rightActions ? <div className="flex flex-row items-center gap-x-1">{rightActions}</div> : null}
           </div>
         </div>
 
