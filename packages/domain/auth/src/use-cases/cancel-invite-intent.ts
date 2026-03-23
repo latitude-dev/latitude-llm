@@ -2,10 +2,7 @@ import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import { AuthIntentRepository } from "../ports/auth-intent-repository.ts"
 
-export const cancelInviteIntentUseCase = (input: {
-  intentId: string
-  organizationId: string
-}) =>
+export const cancelInviteIntentUseCase = (input: { intentId: string; organizationId: string }) =>
   Effect.gen(function* () {
     const intents = yield* AuthIntentRepository
     const intent = yield* intents.findById(input.intentId)
