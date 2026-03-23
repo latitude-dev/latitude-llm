@@ -27,7 +27,6 @@ if (import.meta.url) {
 
 await initializeObservability({
   serviceName: "workers",
-  environment: process.env.LAT_OBSERVABILITY_ENVIRONMENT || nodeEnv,
 })
 
 const pgClient = getPostgresClient(10)
