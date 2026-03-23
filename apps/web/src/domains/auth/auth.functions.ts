@@ -127,6 +127,9 @@ export const completeAuthIntent = createServerFn({ method: "POST" })
       ),
     )
 
+    // Better Auth session.cookieCache can keep serving the user object from before provisioning
+    // (e.g. empty name) even after the use case updates the user row. Bypassing the cache here
+    // reloads from the database and rewrites the session data cookie so the client sees fresh fields.
     const auth = getBetterAuth()
     await auth.api.getSession({
       headers: getRequestHeaders(),
