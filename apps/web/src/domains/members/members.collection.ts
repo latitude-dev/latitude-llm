@@ -1,8 +1,6 @@
 import { generateId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, createOptimisticAction, useLiveQuery } from "@tanstack/react-db"
-import { authClient } from "../../lib/auth-client.ts"
-import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { MemberRecord } from "./members.functions.ts"
 import { cancelMemberInvite, inviteMember, listMembers, removeMember } from "./members.functions.ts"
@@ -50,27 +48,17 @@ const inviteMemberIntentAction = createOptimisticAction<{ email: string; intentI
       },
     })
 
-    const { error } = await authClient.signIn.magicLink({
-      email,
-      callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
-    })
-
-    if (error) {
-      console.warn("Failed to send invitation email", {
-        email,
-        reason: error.message,
-      })
-    }
-
     await queryClient.invalidateQueries({ queryKey: ["members"] })
   },
 })
 
 export function createMemberInviteIntentMutation(email: string) {
-  return inviteMemberIntentAction({
+  const intentId = generateId()
+  const transaction = inviteMemberIntentAction({
     email,
-    intentId: generateId(),
+    intentId,
   })
+  return { intentId, transaction }
 }
 
 export function removeMemberMutation(membershipId: string) {

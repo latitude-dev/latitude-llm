@@ -139,7 +139,6 @@ export function addTracesToDataset(args: {
 }
 
 export function createDatasetFromTraces(args: {
-  readonly datasetId?: DatasetId
   readonly projectId: ProjectId
   readonly name: string
   readonly selection: TraceSelection
@@ -149,7 +148,6 @@ export function createDatasetFromTraces(args: {
     const datasetRepo = yield* DatasetRepository
 
     const dataset = yield* createDataset({
-      ...(args.datasetId ? { id: args.datasetId } : {}),
       projectId: args.projectId,
       name: args.name,
     })

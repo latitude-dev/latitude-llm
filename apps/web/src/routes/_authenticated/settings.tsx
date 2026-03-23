@@ -24,12 +24,11 @@ import { createFileRoute } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
-  createApiKeyMutation,
   deleteApiKeyMutation,
   updateApiKeyMutation,
   useApiKeysCollection,
 } from "../../domains/api-keys/api-keys.collection.ts"
-import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
+import { type ApiKeyRecord, createApiKey } from "../../domains/api-keys/api-keys.functions.ts"
 import {
   cancelMemberInviteMutation,
   createMemberInviteIntentMutation,
@@ -37,6 +36,8 @@ import {
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
+import { authClient } from "../../lib/auth-client.ts"
+import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
@@ -52,10 +53,21 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
     },
     onSubmit: async ({ value }) => {
       try {
-        const transaction = createMemberInviteIntentMutation(value.email)
+        const { intentId, transaction } = createMemberInviteIntentMutation(value.email)
         await transaction.isPersisted.promise
         setOpen(false)
-        toast({ description: "Invitation sent" })
+        const { error } = await authClient.signIn.magicLink({
+          email: value.email,
+          callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
+        })
+
+        if (error) {
+          toast({
+            description: "Invite created, but sending the email failed. Please retry from the members list.",
+          })
+        } else {
+          toast({ description: "Invitation sent" })
+        }
       } catch (error) {
         toast({
           variant: "destructive",
@@ -204,14 +216,21 @@ function MembershipsSection() {
 // --- API Keys Section ---
 
 function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
+  const { toast } = useToast()
   const form = useForm({
     defaultValues: {
       name: "",
     },
     onSubmit: async ({ value }) => {
-      const transaction = createApiKeyMutation(value.name)
-      await transaction.isPersisted.promise
-      setOpen(false)
+      try {
+        await createApiKey({ data: { name: value.name } })
+        setOpen(false)
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          description: toUserMessage(error),
+        })
+      }
     },
   })
 

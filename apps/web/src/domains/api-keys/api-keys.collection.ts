@@ -1,4 +1,3 @@
-import { generateId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
@@ -50,18 +49,6 @@ const apiKeysCollection = createCollection(
     },
   }),
 )
-
-export function createApiKeyMutation(name: string) {
-  return apiKeysCollection.insert({
-    id: generateId(),
-    organizationId: "",
-    name,
-    token: "",
-    lastUsedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  })
-}
 
 export function updateApiKeyMutation(id: string, name: string) {
   return apiKeysCollection.update(id, (draft) => {
