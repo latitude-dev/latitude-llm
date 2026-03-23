@@ -6,7 +6,7 @@ import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
-interface OrganizationRecord {
+export interface OrganizationRecord {
   readonly id: string
   readonly name: string
 }
@@ -36,6 +36,25 @@ export const getOrganization = createServerFn({ method: "GET" })
       Effect.gen(function* () {
         const repo = yield* OrganizationRepository
         return yield* repo.findById(organizationId)
+      }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
+    )
+    return { id: org.id, name: org.name }
+  })
+
+export const updateOrganizationName = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .validator((data: { name: string }) => data)
+  .handler(async ({ data }): Promise<OrganizationRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    const org = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* OrganizationRepository
+        const existing = yield* repo.findById(organizationId)
+        const updated = { ...existing, name: data.name, updatedAt: new Date() }
+        yield* repo.save(updated)
+        return updated
       }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
     )
     return { id: org.id, name: org.name }

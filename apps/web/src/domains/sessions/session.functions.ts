@@ -20,3 +20,22 @@ export const ensureSession = createServerFn({ method: "GET" }).handler(async () 
 
   return session
 })
+
+export const updateUserName = createServerFn({ method: "POST" })
+  .validator((data: { name: string }) => data)
+  .handler(async ({ data }) => {
+    const headers = getRequestHeaders()
+    const auth = getBetterAuth()
+
+    const session = await auth.api.getSession({ headers })
+    if (!session) {
+      throw new Error("Unauthorized")
+    }
+
+    const updated = await auth.api.updateUser({
+      headers,
+      body: { name: data.name },
+    })
+
+    return updated
+  })
