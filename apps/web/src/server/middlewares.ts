@@ -15,17 +15,9 @@ const logger = createLogger("server-fn")
  * `lib/errors.ts` on the client to decode them.
  */
 export const errorHandler = createMiddleware({ type: "function" }).server(async ({ next }) => {
-  const startedAt = Date.now()
-
   try {
-    const result = await next()
-    logger.info({
-      message: "server function succeeded",
-      durationMs: Date.now() - startedAt,
-    })
-    return result
+    return await next()
   } catch (e) {
-    const durationMs = Date.now() - startedAt
     const httpError = isHttpError(e)
     const tag =
       typeof e === "object" && e !== null && "_tag" in (e as DomainError) ? (e as DomainError)._tag : undefined
@@ -37,7 +29,7 @@ export const errorHandler = createMiddleware({ type: "function" }).server(async 
 
     if (e instanceof Error && e.stack) error.stack = e.stack
 
-    logger.error({ _tag: tag, message, status, durationMs })
+    logger.error({ _tag: tag, message, status })
 
     throw error
   }
