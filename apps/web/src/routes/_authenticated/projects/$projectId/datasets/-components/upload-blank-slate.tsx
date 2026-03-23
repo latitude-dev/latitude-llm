@@ -176,7 +176,6 @@ export function UploadBlankSlate({
         <RowDetailPanel
           key={addRowDraft.rowId}
           row={addRowDraft}
-          isDraft
           onSave={handleSaveNewRow}
           saveRef={addRowPanelSaveRef}
         />

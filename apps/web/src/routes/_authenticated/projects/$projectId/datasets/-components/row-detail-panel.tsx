@@ -1,6 +1,6 @@
 import { DetailSection, RichTextEditor } from "@repo/ui"
 import { ArrowDownRightIcon, ArrowUpRightIcon, TextIcon } from "lucide-react"
-import { useCallback, useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
+import { useCallback, useImperativeHandle, useMemo, useState } from "react"
 import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 
 export type RowDetailPanelSaveRef = { save: () => void }
@@ -20,47 +20,53 @@ export function RowDetailPanel({
   row,
   onSave,
   saveRef,
-  isDraft = false,
-  onSaveVisibilityChange,
+  onDirtyChange,
 }: {
   row: DatasetRowRecord
   onSave?: (data: { input: string; output: string; metadata: string }) => void
   saveRef?: React.RefObject<RowDetailPanelSaveRef | null>
-  isDraft?: boolean
-  onSaveVisibilityChange?: (visible: boolean) => void
+  onDirtyChange?: (isDirty: boolean) => void
 }) {
   const [inputText, setInputText] = useState(() => formatField(row.input))
   const [outputText, setOutputText] = useState(() => formatField(row.output))
   const [metadataText, setMetadataText] = useState(() => formatField(row.metadata))
 
-  const prevRowIdRef = useRef(row.rowId)
-  useLayoutEffect(() => {
-    if (prevRowIdRef.current === row.rowId) return
-    prevRowIdRef.current = row.rowId
-    setInputText(formatField(row.input))
-    setOutputText(formatField(row.output))
-    setMetadataText(formatField(row.metadata))
-  }, [row.rowId])
+  const baselineInput = useMemo(() => formatField(row.input), [row.input])
+  const baselineOutput = useMemo(() => formatField(row.output), [row.output])
+  const baselineMetadata = useMemo(() => formatField(row.metadata), [row.metadata])
+
+  const wrappedSetInputText = useCallback(
+    (value: string) => {
+      setInputText(value)
+      const newIsDirty = value !== baselineInput || outputText !== baselineOutput || metadataText !== baselineMetadata
+      onDirtyChange?.(newIsDirty)
+    },
+    [baselineInput, outputText, baselineOutput, metadataText, baselineMetadata, onDirtyChange],
+  )
+
+  const wrappedSetOutputText = useCallback(
+    (value: string) => {
+      setOutputText(value)
+      const newIsDirty = inputText !== baselineInput || value !== baselineOutput || metadataText !== baselineMetadata
+      onDirtyChange?.(newIsDirty)
+    },
+    [inputText, baselineInput, baselineOutput, metadataText, baselineMetadata, onDirtyChange],
+  )
+
+  const wrappedSetMetadataText = useCallback(
+    (value: string) => {
+      setMetadataText(value)
+      const newIsDirty = inputText !== baselineInput || outputText !== baselineOutput || value !== baselineMetadata
+      onDirtyChange?.(newIsDirty)
+    },
+    [inputText, baselineInput, outputText, baselineOutput, baselineMetadata, onDirtyChange],
+  )
 
   const handleSave = useCallback(() => {
     onSave?.({ input: inputText, output: outputText, metadata: metadataText })
   }, [inputText, outputText, metadataText, onSave])
 
   useImperativeHandle(saveRef, () => ({ save: handleSave }), [handleSave])
-
-  const baselineInput = formatField(row.input)
-  const baselineOutput = formatField(row.output)
-  const baselineMetadata = formatField(row.metadata)
-  const isDirty = inputText !== baselineInput || outputText !== baselineOutput || metadataText !== baselineMetadata
-  const showSaveButton = Boolean(onSave) && (isDraft || isDirty)
-
-  useLayoutEffect(() => {
-    if (!onSave) {
-      onSaveVisibilityChange?.(false)
-      return
-    }
-    onSaveVisibilityChange?.(showSaveButton)
-  }, [onSave, onSaveVisibilityChange, showSaveButton])
 
   return (
     <div className="flex flex-col gap-8">
@@ -69,21 +75,21 @@ export function RowDetailPanel({
         label="Input"
         contentClassName="max-h-none overflow-visible"
       >
-        <RichTextEditor value={inputText} onChange={setInputText} />
+        <RichTextEditor value={inputText} onChange={wrappedSetInputText} />
       </DetailSection>
       <DetailSection
         icon={<ArrowUpRightIcon className="h-4 w-4" />}
         label="Output"
         contentClassName="max-h-none overflow-visible"
       >
-        <RichTextEditor value={outputText} onChange={setOutputText} />
+        <RichTextEditor value={outputText} onChange={wrappedSetOutputText} />
       </DetailSection>
       <DetailSection
         icon={<TextIcon className="h-4 w-4" />}
         label="Metadata"
         contentClassName="max-h-none overflow-visible"
       >
-        <RichTextEditor value={metadataText} onChange={setMetadataText} />
+        <RichTextEditor value={metadataText} onChange={wrappedSetMetadataText} />
       </DetailSection>
     </div>
   )

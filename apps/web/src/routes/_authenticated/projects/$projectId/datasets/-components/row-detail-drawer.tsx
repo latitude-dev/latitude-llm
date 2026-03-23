@@ -33,7 +33,8 @@ export function RowDetailDrawer({
   readonly rowDisplayIndex?: number
 }) {
   const panelSaveRef = useRef<RowDetailPanelSaveRef | null>(null)
-  const [saveVisible, setSaveVisible] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const showSaveButton = Boolean(onSave) && (isDraft || isDirty)
 
   const canNavigatePrevRef = useRef(canNavigatePrev)
   const canNavigateNextRef = useRef(canNavigateNext)
@@ -99,7 +100,7 @@ export function RowDetailDrawer({
         </>
       }
       rightActions={
-        onSave && saveVisible ? (
+        onSave && showSaveButton ? (
           <Button onClick={() => panelSaveRef.current?.save()} variant="default" flat size="sm" disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save row
@@ -109,10 +110,10 @@ export function RowDetailDrawer({
     >
       <div className="flex flex-col py-8 px-6 overflow-y-auto flex-1">
         <RowDetailPanel
+          key={row.rowId}
           row={row}
           saveRef={panelSaveRef}
-          isDraft={isDraft}
-          onSaveVisibilityChange={setSaveVisible}
+          onDirtyChange={setIsDirty}
           {...(onSave !== undefined ? { onSave } : {})}
         />
       </div>
