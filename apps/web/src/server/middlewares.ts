@@ -19,7 +19,6 @@ export const errorHandler = createMiddleware({ type: "function" }).server(async 
   if (!observabilityInitialized) {
     await initializeObservability({
       serviceName: "web",
-      environment: process.env.LAT_OBSERVABILITY_ENVIRONMENT || process.env.NODE_ENV || "development",
     })
     observabilityInitialized = true
   }
