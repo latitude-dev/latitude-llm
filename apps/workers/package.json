@@ -17,7 +17,6 @@
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
     "@domain/events": "workspace:*",
-    "@domain/organizations": "workspace:*",
     "@domain/users": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",

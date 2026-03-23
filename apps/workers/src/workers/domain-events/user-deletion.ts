@@ -1,6 +1,5 @@
-import { cleanupUserMembershipsUseCase } from "@domain/organizations"
 import type { QueueConsumer } from "@domain/queue"
-import { UserRepository } from "@domain/users"
+import { deleteUserUseCase } from "@domain/users"
 import {
   MembershipRepositoryLive,
   OrganizationRepositoryLive,
@@ -21,19 +20,9 @@ export const createUserDeletionWorker = (consumer: QueueConsumer) => {
       handle: (event) => {
         const payload = event.event.payload as { userId: string }
         const pgClient = getPostgresClient()
-
         const repoLayer = Layer.mergeAll(MembershipRepositoryLive, OrganizationRepositoryLive, UserRepositoryLive)
 
-        const program = Effect.gen(function* () {
-          // Clean up memberships and sole-member organizations
-          yield* cleanupUserMembershipsUseCase({ userId: payload.userId })
-
-          // Delete the user record (cascades to sessions, accounts)
-          const userRepo = yield* UserRepository
-          yield* userRepo.delete(payload.userId)
-        })
-
-        return program.pipe(
+        return deleteUserUseCase({ userId: payload.userId }).pipe(
           withPostgres(repoLayer, pgClient),
           Effect.tap(() => Effect.sync(() => logger.info(`User ${payload.userId} permanently deleted`))),
           Effect.tapError((error) =>

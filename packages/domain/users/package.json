@@ -18,6 +18,7 @@
     "check:fix": "biome check --fix src"
   },
   "dependencies": {
+    "@domain/organizations": "workspace:*",
     "@domain/shared": "workspace:*",
     "effect": "catalog:"
   }

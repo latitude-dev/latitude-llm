@@ -419,9 +419,6 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../packages/domain/events
-      '@domain/organizations':
-        specifier: workspace:*
-        version: link:../../packages/domain/organizations
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
@@ -705,6 +702,9 @@ importers:
 
   packages/domain/users:
     dependencies:
+      '@domain/organizations':
+        specifier: workspace:*
+        version: link:../organizations
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
