@@ -1,8 +1,8 @@
 import {
-  createMembership,
-  createOrganizationUseCase,
+  createOrganizationWithOwnerUseCase,
   MembershipRepository,
   OrganizationRepository,
+  updateOrganizationNameUseCase,
 } from "@domain/organizations"
 import { UserId } from "@domain/shared"
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -56,13 +56,9 @@ export const updateOrganizationName = createServerFn({ method: "POST" })
     const client = getPostgresClient()
 
     const org = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* OrganizationRepository
-        const existing = yield* repo.findById(organizationId)
-        const updated = { ...existing, name: data.name, updatedAt: new Date() }
-        yield* repo.save(updated)
-        return updated
-      }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
+      updateOrganizationNameUseCase({ organizationId, name: data.name }).pipe(
+        withPostgres(OrganizationRepositoryLive, client, organizationId),
+      ),
     )
     return { id: org.id, name: org.name }
   })
@@ -77,22 +73,9 @@ export const createOrganization = createServerFn({ method: "POST" })
     const repoLayer = Layer.merge(OrganizationRepositoryLive, MembershipRepositoryLive)
 
     const org = await Effect.runPromise(
-      Effect.gen(function* () {
-        const organization = yield* createOrganizationUseCase({
-          name: data.name,
-          creatorId: UserId(userId),
-        })
-
-        // Add the creator as an owner member
-        const membershipRepo = yield* MembershipRepository
-        const membership = createMembership({
-          organizationId: organization.id,
-          userId: UserId(userId),
-          role: "owner",
-        })
-        yield* membershipRepo.save(membership)
-
-        return organization
+      createOrganizationWithOwnerUseCase({
+        name: data.name,
+        creatorId: UserId(userId),
       }).pipe(withPostgres(repoLayer, adminClient)),
     )
     return { id: org.id, name: org.name }

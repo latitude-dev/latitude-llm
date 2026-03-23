@@ -1,9 +1,8 @@
 import { generateId } from "@domain/shared"
-import { createOutboxWriter } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { z } from "zod"
-import { getAdminPostgresClient, getBetterAuth } from "../../server/clients.ts"
+import { getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
 
 export const getSession = createServerFn({ method: "GET" }).handler(async () => {
   const headers = getRequestHeaders()
@@ -53,8 +52,7 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
   }
 
   const userId = session.user.id
-  const adminClient = getAdminPostgresClient()
-  const outboxWriter = createOutboxWriter(adminClient)
+  const outboxWriter = getOutboxWriter()
 
   // Write a domain event for background deletion
   await outboxWriter.write({

@@ -9,5 +9,6 @@ export class UserRepository extends ServiceMap.Service<
   {
     findByEmail: (email: string) => Effect.Effect<User, NotFoundError | RepositoryError>
     setNameIfMissing: (params: { userId: string; name: string }) => Effect.Effect<void, RepositoryError>
+    delete: (userId: string) => Effect.Effect<void, RepositoryError>
   }
 >()("@domain/users/UserRepository") {}

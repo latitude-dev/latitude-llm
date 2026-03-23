@@ -53,6 +53,9 @@ export const UserRepositoryLive = Layer.effect(
               .where(and(eq(user.id, userId), or(isNull(user.name), eq(user.name, ""), sql`trim(${user.name}) = ''`))),
           )
         }),
+
+      delete: (userId: string) =>
+        sqlClient.query((db) => db.delete(user).where(eq(user.id, userId))).pipe(Effect.asVoid),
     }
   }),
 )
