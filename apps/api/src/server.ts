@@ -23,81 +23,88 @@ if (import.meta.url) {
   if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
 }
 
-await initializeObservability({
-  serviceName: "api",
-})
+const startServer = async () => {
+  await initializeObservability({
+    serviceName: "api",
+  })
 
-const app = new OpenAPIHono()
-const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
+  const app = new OpenAPIHono()
+  const port = Effect.runSync(parseEnv("LAT_API_PORT", "number", 3001))
 
-// Register global error handler
-app.use(
-  honoLogger((message: string, ...rest: string[]) => {
-    console.log(message, ...rest)
-  }),
-)
-app.onError(honoErrorHandler)
+  // Register global error handler
+  app.use(
+    honoLogger((message: string, ...rest: string[]) => {
+      console.log(message, ...rest)
+    }),
+  )
+  app.onError(honoErrorHandler)
 
-// OpenAPIHono extends Hono — the cast is safe
-registerCorsMiddleware(app as unknown as Hono, { nodeEnv })
+  // OpenAPIHono extends Hono — the cast is safe
+  registerCorsMiddleware(app as unknown as Hono, { nodeEnv })
 
-registerRoutes({
-  app,
-  database: getPostgresClient(),
-  clickhouse: getClickhouseClient(),
-  redis: getRedisClient(),
-})
+  registerRoutes({
+    app,
+    database: getPostgresClient(),
+    clickhouse: getClickhouseClient(),
+    redis: getRedisClient(),
+  })
 
-// Register security scheme via the OpenAPI registry
-app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", {
-  type: "http",
-  scheme: "bearer",
-  description: "Organization-scoped API key",
-})
+  // Register security scheme via the OpenAPI registry
+  app.openAPIRegistry.registerComponent("securitySchemes", "ApiKeyAuth", {
+    type: "http",
+    scheme: "bearer",
+    description: "Organization-scoped API key",
+  })
 
-// OpenAPI spec
-app.doc("/openapi.json", {
-  openapi: "3.1.0",
-  info: {
-    title: "Latitude API",
-    version: "1.0.0",
-    description: "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header.",
-  },
-  servers: [{ url: `http://localhost:${port}`, description: "Local development" }],
-})
+  // OpenAPI spec
+  app.doc("/openapi.json", {
+    openapi: "3.1.0",
+    info: {
+      title: "Latitude API",
+      version: "1.0.0",
+      description: "The Latitude public API. Authenticate using an API key via the `Authorization: Bearer` header.",
+    },
+    servers: [{ url: `http://localhost:${port}`, description: "Local development" }],
+  })
 
-// Swagger UI
-app.get("/docs", swaggerUI({ url: "/openapi.json" }))
+  // Swagger UI
+  app.get("/docs", swaggerUI({ url: "/openapi.json" }))
 
-// Graceful shutdown handler
-const handleShutdown = async (signal: string) => {
-  logger.info(`Received ${signal}, starting graceful shutdown...`)
+  // Graceful shutdown handler
+  const handleShutdown = async (signal: string) => {
+    logger.info(`Received ${signal}, starting graceful shutdown...`)
 
-  // Flush pending touch buffer updates
-  try {
-    await destroyTouchBuffer()
-    logger.info("Touch buffer flushed successfully")
-  } catch (error) {
-    logger.error(`Failed to flush touch buffer: ${error instanceof Error ? error.message : "Unknown error"}`)
+    // Flush pending touch buffer updates
+    try {
+      await destroyTouchBuffer()
+      logger.info("Touch buffer flushed successfully")
+    } catch (error) {
+      logger.error(`Failed to flush touch buffer: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+
+    await shutdownObservability()
+    logger.info("Graceful shutdown complete")
+    process.exit(0)
   }
 
-  await shutdownObservability()
-  logger.info("Graceful shutdown complete")
-  process.exit(0)
+  // Register shutdown handlers
+  process.on("SIGTERM", () => void handleShutdown("SIGTERM"))
+  process.on("SIGINT", () => void handleShutdown("SIGINT"))
+
+  serve(
+    {
+      fetch: app.fetch,
+      port,
+    },
+    (info) => {
+      logger.info(`api listening on http://localhost:${info.port}`)
+      logger.info(`OpenAPI spec: http://localhost:${info.port}/openapi.json`)
+      logger.info(`Swagger UI:   http://localhost:${info.port}/docs`)
+    },
+  )
 }
 
-// Register shutdown handlers
-process.on("SIGTERM", () => handleShutdown("SIGTERM"))
-process.on("SIGINT", () => handleShutdown("SIGINT"))
-
-serve(
-  {
-    fetch: app.fetch,
-    port,
-  },
-  (info) => {
-    logger.info(`api listening on http://localhost:${info.port}`)
-    logger.info(`OpenAPI spec: http://localhost:${info.port}/openapi.json`)
-    logger.info(`Swagger UI:   http://localhost:${info.port}/docs`)
-  },
-)
+void startServer().catch((error) => {
+  logger.error("Failed to start API server", error)
+  process.exit(1)
+})

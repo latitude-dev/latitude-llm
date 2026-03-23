@@ -26,87 +26,98 @@ if (import.meta.url) {
   }
 }
 
-await initializeObservability({
-  serviceName: "workers",
-})
+const bootstrap = async () => {
+  await initializeObservability({
+    serviceName: "workers",
+  })
 
-const pgClient = getPostgresClient(10)
-const logger = createLogger("workers")
-let ready = false
+  const pgClient = getPostgresClient(10)
+  const logger = createLogger("workers")
+  let ready = false
 
-const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
-const healthServer = createServer((req, res) => {
-  if (req.url === "/health" && req.method === "GET") {
-    const status = ready ? 200 : 503
-    res.writeHead(status, { "Content-Type": "application/json" })
-    res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
-  } else {
-    res.writeHead(404)
-    res.end()
+  const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
+  const healthServer = createServer((req, res) => {
+    if (req.url === "/health" && req.method === "GET") {
+      const status = ready ? 200 : 503
+      res.writeHead(status, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
+    } else {
+      res.writeHead(404)
+      res.end()
+    }
+  })
+
+  healthServer.listen(healthPort, () => {
+    logger.info(`workers health check listening on :${healthPort}/health`)
+  })
+
+  const initializeWorkers = async () => {
+    const bullMqConfig = Effect.runSync(loadBullMqConfig())
+    const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
+    const eventsPublisher = createEventsPublisher(queuePublisher)
+
+    const outboxConsumer = await Effect.runPromise(
+      createPollingOutboxConsumer(
+        {
+          pool: pgClient.pool,
+          pollIntervalMs: 1000,
+          batchSize: 100,
+        },
+        eventsPublisher,
+      ),
+    )
+
+    const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
+
+    createDomainEventsWorker(queueConsumer, queuePublisher)
+    createMagicLinkEmailWorker(queueConsumer)
+    createSpanIngestionWorker(queueConsumer)
+    createDatasetExportWorker(queueConsumer)
+
+    await Effect.runPromise(outboxConsumer.start())
+    await Effect.runPromise(queueConsumer.start())
+
+    ready = true
+    logger.info("workers ready - outbox consumer and queue consumer started")
+
+    return { consumers: { outboxConsumer, queueConsumer }, queuePublisher }
   }
-})
 
-healthServer.listen(healthPort, () => {
-  logger.info(`workers health check listening on :${healthPort}/health`)
-})
+  const workersPromise = initializeWorkers().catch((error) => {
+    logger.error("Failed to initialize workers", error)
+    process.exit(1)
+  })
 
-const initializeWorkers = async () => {
-  const bullMqConfig = Effect.runSync(loadBullMqConfig())
-  const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
-  const eventsPublisher = createEventsPublisher(queuePublisher)
+  const handleShutdown = async (signal: string) => {
+    logger.info(`Received ${signal}, shutting down workers...`)
+    ready = false
+    healthServer.close()
 
-  const outboxConsumer = await Effect.runPromise(
-    createPollingOutboxConsumer(
-      {
-        pool: pgClient.pool,
-        pollIntervalMs: 1000,
-        batchSize: 100,
-      },
-      eventsPublisher,
-    ),
-  )
+    try {
+      const { consumers, queuePublisher } = await workersPromise
 
-  const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
+      await Effect.runPromise(consumers.outboxConsumer.stop())
+      await Effect.runPromise(consumers.queueConsumer.stop())
+      await Effect.runPromise(queuePublisher.close())
+    } catch (error) {
+      logger.error("Error during shutdown (workers may not have started)", error)
+    }
 
-  createDomainEventsWorker(queueConsumer, queuePublisher)
-  createMagicLinkEmailWorker(queueConsumer)
-  createSpanIngestionWorker(queueConsumer)
-  createDatasetExportWorker(queueConsumer)
+    await shutdownObservability()
+    await pgClient.pool.end()
+    await getClickhouseClient().close()
+    process.exit(0)
+  }
 
-  await Effect.runPromise(outboxConsumer.start())
-  await Effect.runPromise(queueConsumer.start())
-
-  ready = true
-  logger.info("workers ready - outbox consumer and queue consumer started")
-
-  return { consumers: { outboxConsumer, queueConsumer }, queuePublisher }
+  process.on("SIGTERM", () => {
+    void handleShutdown("SIGTERM")
+  })
+  process.on("SIGINT", () => {
+    void handleShutdown("SIGINT")
+  })
 }
 
-const workersPromise = initializeWorkers().catch((error) => {
-  logger.error("Failed to initialize workers", error)
+void bootstrap().catch((error) => {
+  console.error(error)
   process.exit(1)
 })
-
-const handleShutdown = async (signal: string) => {
-  logger.info(`Received ${signal}, shutting down workers...`)
-  ready = false
-  healthServer.close()
-
-  try {
-    const { consumers, queuePublisher } = await workersPromise
-
-    await Effect.runPromise(consumers.outboxConsumer.stop())
-    await Effect.runPromise(consumers.queueConsumer.stop())
-    await Effect.runPromise(queuePublisher.close())
-  } catch (error) {
-    logger.error("Error during shutdown (workers may not have started)", error)
-  }
-
-  await shutdownObservability()
-  await pgClient.pool.end()
-  await getClickhouseClient().close()
-  process.exit(0)
-}
-
-process.on("SIGTERM", () => handleShutdown("SIGTERM"))
-process.on("SIGINT", () => handleShutdown("SIGINT"))
