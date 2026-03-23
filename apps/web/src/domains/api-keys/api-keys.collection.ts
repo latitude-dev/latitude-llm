@@ -51,10 +51,6 @@ const apiKeysCollection = createCollection(
   }),
 )
 
-export function invalidateApiKeys() {
-  void queryClient.invalidateQueries({ queryKey: ["apiKeys"] })
-}
-
 export function createApiKeyMutation(name: string) {
   return apiKeysCollection.insert({
     id: generateId(),
