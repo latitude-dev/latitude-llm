@@ -108,16 +108,16 @@ Settings remain attached to their owner domains:
 
 Provider/model configuration and provider credentials stay embedded inside those owner `settings` JSONB payloads.
 
-External provider integrations required by the system live in platform packages:
+Phase 0 introduces the external provider integrations required by the system as platform packages:
 
 - `@platform/ai-vercel` for calling LLMs
 - `@platform/ai-voyage` for embeddings and reranking
 - `@platform/db-weaviate` for issue projection storage/search
 
-Optimizer abstractions and concrete optimizer implementations live in domain packages:
+Optimizer abstractions live in domain packages, while concrete optimizer implementations live in platform packages:
 
 - `@domain/optimizations` for the optimizer interface/abstraction
-- `@platform/op-gepa` for the first GEPA implementation
+- `@platform/op-gepa` for the first GEPA implementation, including the Python engine bridge and GEPA-specific runtime details
 
 ## Product Surface Implementation Pattern
 
@@ -128,8 +128,9 @@ Use the repository product pattern for reliability surfaces:
 - reactive client state and optimistic sync live in `apps/web/src/domains/<domain>/*.collection.ts`
 - route-specific reliability UI components should live in the route directory's dedicated `-components/` subfolder so route files stay separate from their supporting UI
 - only rarely, when a component is genuinely shared across multiple routes, it may live in the shared `apps/web/src/components` folder
-- stable public or machine-facing reliability capabilities live in `apps/api/src/routes/*` modules
+- stable public or machine-facing reliability capabilities live in `apps/api/src/routes/*` modules under the existing versioned organization-scoped path shape `/v1/organizations/{organizationId}/...`
 - `apps/api` must not become the internal backend for `apps/web`; the web product should compose domain use-cases directly
+- MCP clients consume that public REST API surface; reliability does not need a separate MCP-only backend contract
 
 ## Background Task Pattern
 
@@ -143,18 +144,20 @@ Reliability background work should use the current repository async rail:
 Rules:
 
 - queue topics are the stable routing identity; BullMQ's per-job `name` is transport detail only
-- domain events use PascalCase names such as `TraceMaterialized`
+- domain events use PascalCase names such as `TraceFinished`
 - queue topics use lower-kebab-case names such as `evaluation-execution`
 - until a later explicit phase says otherwise, `apps/workers` is the execution home for these background paths; do not assume `apps/workflows` already owns them
 - queue payloads carry ids or opaque storage keys, not full mutable rows, and workers re-fetch current state before acting
 - each queue topic owns one typed payload contract and one worker module under `apps/workers/src/workers/`
-- BullMQ is transport, not lifecycle storage; debounce coordination, dedupe, ownership, and visible progress stay in Postgres/domain state
-- debounced or time-based work should be driven by persisted due-work scans plus enqueueing, not by assuming BullMQ delayed/repeat features already exist in the abstraction
+- BullMQ is transport, not lifecycle storage; durable progress, dedupe semantics, ownership, and visible progress stay in Postgres/domain state even when BullMQ delay is the chosen debounce mechanism
+- when a delayed queue topic semantically marks a lifecycle edge, that topic should publish a domain event through the outbox when the delay elapses rather than executing all downstream side effects inline
+- trace-finish detection is the canonical example of BullMQ-backed debounce in this system: each newly ingested span for a trace republishes the same delayed job and resets the debounce window
 - user-triggered async work that needs frontend progress feedback should also write a transient Redis key such as `<topic>:<jobId>`, with the UI polling an endpoint that reads Redis rather than BullMQ directly
 
 Initial reliability background contracts:
 
-- `TraceMaterialized` domain event for post-ingest/project-queryable trace fan-out
+- `trace-finish-detection`: delayed debounced task keyed by `(organizationId, projectId, traceId)`; each newly ingested span for the same trace replaces/reschedules the pending job using BullMQ delay mechanics, with the debounce window defined by a named constant whose initial default is `5 minutes`
+- `TraceFinished` domain event for post-ingest/project-queryable trace fan-out after that debounce window elapses
 - `issue-discovery`
 - `issue-refresh`
 - `score-draft-finalization`
@@ -191,8 +194,8 @@ Initial reliability background contracts:
 - each project starts with default system-created manual queues such as `Jailbreaking`, `Refusal`, `Frustration`, `Forgetting`, `Laziness`, `NSFW`, `Tool Call Errors`, and `Resource Outliers`
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table; session selection resolves to the newest trace and still creates `annotation_queue_items` with `trace_id` only and `completedAt = null`
 - system-created manual queues are marked with `system = true`, provision `settings.sampling` from a named default constant, and let users tune that sampling later without changing the canonical queue definitions
-- system-created manual queues are populated asynchronously from `TraceMaterialized`: a dedicated flagging handler applies per-queue sampling first, then deterministic routing or a cheap limited-context flagger model, and publishes one `annotation-queue-validation` task per flagged queue; that worker uses full context to confirm the match before it writes the queue item and pending-review draft annotation
-- queues are conceptually dynamic / live when they store the same future plain-string filter concept used by evaluation triggers inside queue settings, and a dedicated live-annotation-queue handler incrementally materializes new matching traces from `TraceMaterialized` with filter-before-sampling evaluation and direct batch inserts
+- system-created manual queues are populated asynchronously from `TraceFinished`: a dedicated flagging handler applies per-queue sampling first, then deterministic routing or a cheap limited-context flagger model, and publishes one `annotation-queue-validation` task per flagged queue; that worker uses full context to confirm the match before it writes the queue item and pending-review draft annotation
+- queues are conceptually dynamic / live when they store the same future plain-string filter concept used by evaluation triggers inside queue settings, and a dedicated live-annotation-queue handler incrementally materializes new matching traces from `TraceFinished` with filter-before-sampling evaluation and direct batch inserts
 - newly created dynamic annotation queues initialize `settings.sampling` from a named constant, with an initial default of `10%`
 - queue review is the focused in-product annotation workflow for fast human feedback
 
@@ -217,7 +220,7 @@ Initial reliability background contracts:
 - evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic issue-discovery side effect
 - issue-generated evaluation creation returns a `jobId` immediately and completes in the background; the frontend polls a Redis-backed status endpoint for that alignment job
 - issues may have several linked evaluations; explicit generation is not limited to a single linked monitor
-- live evaluation triggering is incremental on `TraceMaterialized`; a dedicated live-evaluation handler checks active evaluations project-wide, uses trigger order filter first, sampling second, then turn/debounce, and publishes `evaluation-execution` tasks for matches
+- live evaluation triggering is incremental on `TraceFinished`; a dedicated live-evaluation handler checks active evaluations project-wide, uses trigger order filter first, sampling second, then turn/debounce, and publishes `evaluation-execution` tasks for matches
 - initial issue-linked evaluation generation requires at least one failed, non-errored, non-draft human annotation linked to that issue and does not require any negative examples
 - sparse first-pass monitors may be weakly aligned at first, but annotation-driven realignment should improve them as more evidence accumulates
 - evaluations are script-native, GEPA-backed artifacts that run through a portable runtime shared with simulations
@@ -226,7 +229,7 @@ Initial reliability background contracts:
 - the optimizer abstraction uses ordered Pareto objectives: alignment (MCC), cost in dollars derived from stored microcents, duration in seconds derived from stored nanoseconds
 - only the confusion matrix is persisted; MCC, accuracy, F1, and other metrics are derived from it
 - unchanged scripts can refresh alignment incrementally before a full re-optimization run, and debounced/manual refresh work runs through `evaluation-alignment`
-- v1's useful architecture split remains: TypeScript owns orchestration and candidate execution, while Python can remain just the search engine behind a stdio JSON-RPC boundary
+- v1's useful architecture split remains: TypeScript owns orchestration and candidate execution, Node workers remain the primary runtime, and Python can remain just the search engine behind a stdio JSON-RPC boundary packaged into the workers image
 
 ### Simulations
 

@@ -44,7 +44,7 @@ Implementation constraints for this repository:
 - reliability background work should use the existing `@domain/queue` contracts, the BullMQ adapter in `@platform/queue-bullmq`, and `apps/workers`; do not assume `apps/workflows` is the execution runtime unless a later explicit phase introduces it
 - domain events should use PascalCase names, while BullMQ queue topics / `QueueName` entries should use lower-kebab-case names
 - queue payloads should carry ids or opaque storage keys rather than full mutable models, and workers should re-fetch current state before acting
-- debounce, delay, and other time-based work should rely on persisted Postgres eligibility state plus worker scans/enqueues rather than implicit BullMQ delay/repeat features
+- debounced or delayed work must choose an explicit mechanism per use-case: either persisted due-work scans or a dedicated BullMQ delayed job keyed by the logical entity identity; do not rely on opaque BullMQ job history as lifecycle storage
 - correctness, dedupe, and user-visible lifecycle state should live in Postgres/domain tables rather than in BullMQ job metadata or history
 - the Latitude reliability platform should be equally accessible to humans through the web app UI and to other LLM Agents through MCP/API
 - build reliability product management in `apps/web` first when that improves iteration speed, but design schemas, DTOs, use-cases, and public capabilities so the product does not dead-end into UI-only flows
@@ -106,16 +106,16 @@ packages/domain/annotation-queues
 
 Settings stay attached to their owner domains instead of becoming a standalone domain package.
 
-External provider integrations required by the system live in platform packages:
+Phase 0 should introduce the external provider integrations required by the system as platform packages:
 
 - `@platform/ai-vercel` for calling LLMs
 - `@platform/ai-voyage` for embeddings and reranking
 - `@platform/db-weaviate` for issue vector/text projection storage and search
 
-Optimizer abstractions and concrete optimizer implementations live in domain packages:
+Optimizer abstractions live in domain packages, while concrete optimizer implementations live in platform packages:
 
 - `@domain/optimizations` for the optimizer interface/abstraction
-- `@platform/op-gepa` for the first GEPA implementation
+- `@platform/op-gepa` for the first GEPA implementation, including the Python engine bridge and GEPA-specific runtime details
 
 ## Product Surface Implementation Pattern
 
@@ -126,8 +126,9 @@ Use the current repository product pattern for reliability surfaces:
 - reactive client state and optimistic sync live in `apps/web/src/domains/<domain>/*.collection.ts`
 - route-specific reliability UI components should live in the route directory's dedicated `-components/` subfolder so route files stay separate from their supporting UI
 - only rarely, when a component is genuinely shared across multiple routes, it may live in the shared `apps/web/src/components` folder
-- stable public or machine-facing reliability capabilities live in `apps/api/src/routes/*` modules
+- stable public or machine-facing reliability capabilities live in `apps/api/src/routes/*` modules under the existing versioned organization-scoped path shape `/v1/organizations/{organizationId}/...`
 - `apps/api` must not become the internal backend for `apps/web`; the web product should compose domain use-cases directly
+- MCP clients consume that public REST API surface; reliability does not need a separate MCP-only backend contract
 
 ## Background Task Implementation Pattern
 
@@ -143,18 +144,21 @@ Naming and ownership rules:
 - the durable routing identity is the queue topic name, not BullMQ's per-job `name`
 - each queue topic should map to one responsibility and one subscribed worker module in `apps/workers/src/workers/<topic>.ts`
 - queue topics use lower-kebab-case names such as `evaluation-execution`
-- domain events use PascalCase names such as `TraceMaterialized`
+- domain events use PascalCase names such as `TraceFinished`
 - when one upstream trigger needs several reactions, a dispatcher handler should fan out internally or publish secondary queue messages; do not rely on multiple independent subscribers for one queue topic because the current queue consumer binds one handler per topic
 - app boundaries that enqueue direct work should reuse the app-local queue-publisher helper pattern instead of instantiating BullMQ clients per request
 - post-commit reactions should start from domain events and the outbox bridge so queue delivery begins only after the canonical transaction or durable write has committed
 - queue payloads should carry ids or opaque storage keys, not full mutable models, and each topic should own a typed payload schema plus encode/decode helpers near the owning domain/topic
 - the same domain pipeline may run inline for intentionally synchronous user actions and through a queue topic for asynchronous refresh/retry paths
-- BullMQ is transport, not lifecycle storage; durable progress, debounce coordination, dedupe, and ownership live in Postgres/domain state
+- BullMQ is transport, not lifecycle storage; durable progress, dedupe semantics, and ownership live in Postgres/domain state even when BullMQ delay is the chosen debounce mechanism
+- when a delayed queue topic semantically marks a lifecycle edge, that topic should publish a domain event through the outbox when the delay elapses rather than executing all downstream side effects inline
+- trace-finish detection is the canonical example of BullMQ-backed debounce in this system: each newly ingested span for a trace republishes the same delayed job and resets the debounce window
 - user-triggered background work that needs UI progress feedback should write transient Redis status keys with a namespaced pattern such as `<topic>:<jobId>` and expose polling endpoints that read Redis directly rather than querying BullMQ
 
 Initial reliability background contracts:
 
-- `TraceMaterialized` domain event: emitted once a trace is durable and queryable for project-scoped reliability read paths
+- `trace-finish-detection`: delayed debounced task keyed by `(organizationId, projectId, traceId)`; each newly ingested span for the same trace replaces/reschedules the pending job using BullMQ delay mechanics, with the debounce window defined by a named constant whose initial default is `5 minutes`
+- `TraceFinished` domain event: emitted through the outbox after the trace-finish-detection task observes no new spans for that debounce window; downstream reliability side effects subscribe to this event rather than running inside the delayed task itself
 - `issue-discovery`: processes one eligible finalized score that still needs issue assignment
 - `issue-refresh`: regenerates issue name/description for one issue whose refresh debounce window has elapsed
 - `score-draft-finalization`: finalizes one human-editable draft score whose inactivity window has elapsed
@@ -162,9 +166,9 @@ Initial reliability background contracts:
 - `evaluation-alignment`: runs one evaluation generation or realignment pass against its current example set
 - `annotation-queue-validation`: validates one flagged `(queueId, traceId)` pair for a system-created queue and, if confirmed, writes the draft annotation plus queue item
 
-Trace-arrival fan-out:
+Trace-finish fan-out:
 
-- `TraceMaterialized` should be consumed through the existing `domain-events` rail
+- `TraceFinished` should be consumed through the existing `domain-events` rail
 - the domain-events worker dispatches separate reliability handlers for live evaluations, live annotation queues, and system-created queue flagging
 - those handlers may enqueue downstream BullMQ work such as `evaluation-execution` or `annotation-queue-validation`, or perform direct writes only when the action is intentionally cheap and synchronous, such as batch inserting dynamic queue items
 
@@ -204,7 +208,7 @@ type OrganizationSettings = {
 }
 ```
 
-These map to existing Postgres tables:
+These extend the existing Postgres owner tables by adding `settings` columns:
 
 ```typescript
 import { sql } from "drizzle-orm";
@@ -435,13 +439,15 @@ Incremental refresh behavior:
 
 The first optimizer should be GEPA, but the system must support future optimizers through a common interface.
 
+That abstraction lives in `@domain/optimizations`, while the first concrete implementation lives in `@platform/op-gepa`.
+
 The abstraction in `@domain/optimizations` must support Pareto-driven multi-objective optimization with this ordered priority model:
 
 1. maximize alignment (MCC) against human judgment
 2. minimize cost in dollars, derived from stored microcent values
 3. minimize duration in seconds, derived from stored nanosecond values
 
-Concrete optimizers may search the candidate space differently, but the abstraction must preserve that priority ordering when reporting and selecting candidate scripts. However, the optimization abstraction must not be converted to a fully optimizer algorithm by itself. In this case GEPA does support multi-objective optimization using a Pareto-driven approach, so the idea is that the abstractions is prepared to work for multiple objectives, but the actual implementation is left to the concrete optimizer.
+Concrete optimizers may search the candidate space differently, but the abstraction must preserve that priority ordering when reporting and selecting candidate scripts. The abstraction should model optimizer orchestration contracts and result comparison, not embed GEPA's concrete search algorithm.
 
 The optimizer-facing alignment objective is the derived MCC produced by the ground-truth evaluation run. The only persisted alignment primitive remains the confusion matrix, from which MCC, accuracy, F1, and other metrics can be computed.
 
@@ -460,8 +466,9 @@ Concrete v1 architecture notes worth carrying forward:
 
 - v1 was a queued lifecycle, not a one-shot function call: `start -> prepare -> execute -> validate -> end`, with explicit timestamps, job boundaries, status events, and cancellation across phases
 - TypeScript owned dataset/example curation, candidate execution, candidate evaluation, proposer prompting, persistence, and cancellation; Python only ran the GEPA search loop
-- the workers runtime bundled the Python engine inside the same container image, and TypeScript spawned it as a child process with `python -m app.main`
-- the transport was newline-delimited JSON-RPC over stdio, with Zod validation on the TypeScript side and strict schema validation on the Python side
+- the workers runtime stayed Node-based, but its container image bundled the Python engine runtime and source so TypeScript could spawn `python -m app.main` as a child process
+- the transport was bidirectional newline-delimited JSON-RPC over stdio, with Zod validation on the TypeScript side and strict schema validation on the Python side
+- the Python side registered handlers in `apps/engine/app/main.py` and `apps/engine/app/rpc/server.py`, while the TypeScript GEPA adapter registered `Evaluate` and `Propose` callbacks for the engine to call back into
 - the RPC boundary was intentionally skinny: examples crossed as ids, candidate artifacts crossed as hashes, and trajectories crossed back into Python only as ids plus scalar outputs; full traces and feedback stayed host-side and were rehydrated only when proposal generation needed them
 - `evaluate` validated candidate invariants, converted many candidate-specific failures into learnable feedback instead of crashing the whole run, executed the candidate, optionally simulated extra turns, selected spans by trigger, ran the evaluation, and aggregated the resulting scores/feedback/usage into a trajectory
 - `propose` sanitized trajectories, enriched model metadata when available, called a Copilot prompt template, cached by exact input hash, and returned the next candidate artifact text
@@ -493,6 +500,7 @@ The new optimizer differs from v1 in one critical way:
 Important v2 corrections relative to v1:
 
 - keep the host-driven lifecycle and child-process RPC split, but change the optimized artifact from prompt text to evaluation script text
+- keep Node workers as the primary runtime, and package the Python GEPA engine as a subordinate process inside the workers image rather than turning workers into a Python-native app
 - keep learnable feedback as a first-class concept, but redefine the invariant checks around script/runtime contracts rather than prompt provider/model/config compatibility
 - keep the narrow RPC payload design, but send script hashes / example ids / trajectory ids rather than prompt-document-specific payloads
 - do not copy prompt-specific scope semantics, prompt commit forking, or provider/model pinning as a hard optimizer invariant
@@ -514,7 +522,10 @@ The proposer and details-generator should use Latitude-owned prompts, stored in 
 - `@domain/optimizations`
 - `@platform/op-gepa`
 
-The current best model from OpenAI, `gpt-5.4`, with all its reasoning settings maxed up, will be used for the proposer. `gpt-5.4`, but with its reasoning settngs lowered, will be used for the details-generator.
+The proposer and details-generator model selections must live in named constants inside the owning optimizer implementation package rather than as inline magic strings. The initial defaults are:
+
+- proposer: OpenAI `gpt-5.4` with reasoning settings maximized
+- details-generator: OpenAI `gpt-5.4` with lower reasoning settings
 
 ### Evaluation Triggering
 
@@ -538,7 +549,7 @@ MVP status:
 
 Live evaluation triggering is incremental:
 
-- whenever a `TraceMaterialized` domain event is observed for a project, a dedicated live-evaluation handler lists all active evaluations in that project, meaning rows with `archivedAt = null` and `deletedAt = null`
+- whenever a `TraceFinished` domain event is observed for a project, a dedicated live-evaluation handler lists all active evaluations in that project, meaning rows with `archivedAt = null` and `deletedAt = null`
 - trigger checks run against the incoming trace rather than rescanning historical traces on each read
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
 - when an evaluation passes those trigger checks, the handler publishes one `evaluation-execution` queue message for that `(evaluationId, traceId)` pair; the payload carries ids plus trigger context only, and score generation/writes happen later in that worker
@@ -888,7 +899,7 @@ Queue population flows:
 - from the sessions dashboard table, users select sessions with row checkboxes and use a bulk action to add those sessions to an annotation queue
 - that session bulk action resolves each selected session to its newest trace and creates one `annotation_queue_items` row per `(queueId, latestTraceId)` pair with `completedAt = null`
 - system-created queues are also manual queues: they have no `settings.filter`, they are marked with `system = true`, and membership is inserted by the system instead of by user bulk selection or dynamic filter materialization
-- when a `TraceMaterialized` domain event is observed for a project, a dedicated system-annotation-queue flagging handler lists all non-deleted `system = true` queues in that project
+- when a `TraceFinished` domain event is observed for a project, a dedicated system-annotation-queue flagging handler lists all non-deleted `system = true` queues in that project
 - the flagging handler applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
 - among the sampled-in system queues, the flagging handler runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
 - for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue
@@ -897,7 +908,7 @@ Queue population flows:
 - the `annotation-queue-validation` worker uses a larger validator/drafter LLM with the full conversation context to validate the flag and create the draft annotation in the same call
 - only if the validation/annotation task confirms the match does the system create the draft annotation and add the trace to that queue
 - draft-annotation creation and queue-item creation should happen together so the queue always has a matching pending annotation artifact
-- dynamic / live queues are incremental: whenever a `TraceMaterialized` domain event is observed for a project, a dedicated live-annotation-queue handler lists all non-deleted dynamic queues in that project, matches `settings.filter` first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
+- dynamic / live queues are incremental: whenever a `TraceFinished` domain event is observed for a project, a dedicated live-annotation-queue handler lists all non-deleted dynamic queues in that project, matches `settings.filter` first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
 - the system-annotation-queue flagging handler, the `annotation-queue-validation` messages it publishes, and the live-annotation-queue handler are all separate from the live-evaluation handler
 - when a dynamic queue is created with `settings.filter` and no explicit sampling, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; the starting default for that constant is `10`
 - when a system queue is provisioned for a project, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; users may later edit that sampling value per queue
@@ -988,7 +999,7 @@ Queue invariants:
 - manual queue insertion creates `annotation_queue_items` rows with `completedAt = null`
 - system-created queue insertion creates `annotation_queue_items` rows with `completedAt = null` only after the asynchronous validation/annotation task confirms the queue match and creates the draft annotation
 - dynamic queue materialization also creates `annotation_queue_items` rows with `completedAt = null`
-- dynamic queue materialization is incremental on `TraceMaterialized`, and it evaluates `filter` before `sampling`
+- dynamic queue materialization is incremental on `TraceFinished`, and it evaluates `filter` before `sampling`
 - progress is derived from total queue items versus queue items with `completedAt` set
 - marking an item as fully annotated is queue-item state, not annotation-row state
 - `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic; there are no foreign keys
@@ -2173,7 +2184,7 @@ Row click opens a detailed view with:
 - reactive client state should use TanStack collections in `apps/web/src/domains/<domain>/*.collection.ts`
 - route-specific reliability UI should live in the route directory's dedicated `-components/` subfolder so route files stay separate from their supporting UI
 - only rarely, when a component is genuinely shared across multiple routes, it may live in the shared `apps/web/src/components` folder
-- `apps/api` work in this task list means stable public or machine-facing capabilities; it must not be used as an internal proxy for the web product
+- `apps/api` work in this task list means stable public or machine-facing capabilities under the existing versioned organization-scoped route shape `/v1/organizations/{organizationId}/...`; it must not be used as an internal proxy for the web product
 - background work in this task list should follow the queue/topic conventions defined above and use `apps/workers` as the default execution home unless a later explicit phase introduces a different runtime
 - each phase should include the tests, fixtures, and benchmarks needed to validate its risky behavior rather than deferring verification until the end of the roadmap
 - domain foundation phases (Settings, Scores, Annotations, Issues, Evaluations, Annotation Queues, Simulations) should define complete shapes, fields, and migrations from the start even if later phases only begin using some fields afterward
@@ -2188,7 +2199,7 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: Phases 1–7 can run in parallel once Phase 0 lands.
 
-- [ ] Define the reliability background-task foundation over `@domain/queue` and BullMQ, including the PascalCase domain-event and lower-kebab-case queue-topic naming rules, the `TraceMaterialized` trigger contract, typed payload schemas/helpers for `issue-discovery`, `issue-refresh`, `score-draft-finalization`, `evaluation-execution`, `evaluation-alignment`, and `annotation-queue-validation`, the `apps/workers` worker-module ownership pattern, the Redis job-status key convention for user-visible async work such as issue-generated evaluation creation, and the persisted due-work scanning model for debounced time-based jobs.
+- [ ] Define the reliability background-task foundation over `@domain/queue` and BullMQ, including the PascalCase domain-event and lower-kebab-case queue-topic naming rules, the delayed `trace-finish-detection` contract that resets on each new span for the same trace using a named debounce constant whose initial default is `5 minutes`, the `TraceFinished` domain event emitted through the outbox after that debounce window elapses, typed payload schemas/helpers for `issue-discovery`, `issue-refresh`, `score-draft-finalization`, `evaluation-execution`, `evaluation-alignment`, and `annotation-queue-validation`, the `apps/workers` worker-module ownership pattern, the Redis job-status key convention for user-visible async work such as issue-generated evaluation creation, and the explicit split between delayed detection tasks and downstream event-driven side effects.
 - [ ] Define the shared Zod schemas for background-job payloads, Redis job-status payloads, and reliability domain-event envelopes that cross domain boundaries, while leaving domain-owned entity schemas in their vertical foundation phases.
 - [ ] Introduce platform/domain interfaces for text generation, embeddings, reranking, and optimizer orchestration without yet shipping the full sandbox runtime.
 - [ ] Document migration impacts on existing spans/traces storage and ensure the spec/docs are authoritative enough for parallel implementation agents.
@@ -2370,15 +2381,15 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 - [ ] Implement canonical evaluation persistence, repository APIs, and lifecycle rules for active/archived/deleted evaluations, including ignore-driven archiving, resolution-driven `keepMonitoring` behavior, and support for several linked evaluations per issue.
 - [ ] Implement the baseline issue-monitor script generator from issue context and examples, using Latitude-owned prompts stored in this repository.
-- [ ] Adapt the v1 optimizer transport/orchestration for evaluation scripts, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the skinny id/hash-based RPC payloads, and ordered multi-objective support for alignment (MCC), cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds.
-- [ ] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the `gpt-5.4` high-reasoning proposer model choice from this spec.
+- [ ] Adapt the v1 optimizer transport/orchestration for evaluation scripts, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the worker-image packaging of the Python engine runtime/source, the skinny id/hash-based RPC payloads, and ordered multi-objective support for alignment (MCC), cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds.
+- [ ] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
 - [ ] Implement exact positive/negative ground-truth example selection from annotation-derived evidence, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
 - [ ] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
 - [ ] Implement user-triggered initial generation/alignment as a background `evaluation-alignment` job when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, immediate return of a `jobId`, Redis-backed status storage using a named key pattern for that job with at least `pending` / `running` / `completed` / `failed` states, and a polling endpoint that reads the status key for the frontend.
 - [ ] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
 - [ ] Implement annotation-driven debounced refresh with the one-hour / eight-hour cadence from the proposal through persisted due-work scans and the `evaluation-alignment` queue topic rather than BullMQ delayed/repeat jobs.
 - [ ] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` worker path and the same Redis-backed job-status contract where a user-triggered run needs polling feedback.
-- [ ] Implement the post-alignment name/description generation pass for evaluations, using Latitude-owned prompts stored in this repository and the `gpt-5.4` lower-reasoning details-generator model choice from this spec.
+- [ ] Implement the post-alignment name/description generation pass for evaluations, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
 - [ ] Implement curated example sizing plus deterministic train/test/validation splitting for alignment runs using the configured bounds and defaults from this spec.
 - [ ] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.
 
@@ -2390,13 +2401,13 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: can run in parallel with Phase 14 once Phase 12 lands.
 
-- [ ] Implement incremental live evaluation triggering over spans, traces, and sessions using `turn`, `debounce`, and `sampling`, including the `first` / `every` / `last` turn semantics from the model, the project-scoped scan of active evaluations on each `TraceMaterialized` event, and the dedicated trace-arrival handler under the `domain-events` rail that publishes `evaluation-execution` messages for matches instead of executing inline.
+- [ ] Implement incremental live evaluation triggering over spans, traces, and sessions using `turn`, `debounce`, and `sampling`, including the `first` / `every` / `last` turn semantics from the model, the project-scoped scan of active evaluations on each `TraceFinished` event, and the dedicated trace-finished handler under the `domain-events` rail that publishes `evaluation-execution` messages for matches instead of executing inline.
 - [ ] Implement provider/model resolution from evaluation settings to project settings to organization settings.
 - [ ] Implement evaluation execution result writing, including value/passed/feedback/error plus persisted nanosecond `duration` and microcent `cost`, Postgres-first canonical persistence, correct `error -> errored` semantics, immediate ClickHouse publication for immutable passed/errored results, and deferred publication for failed non-errored results until `issue_id` exists.
 - [ ] Ensure archived/deleted evaluations never trigger and paused evaluations use `sampling = 0`.
 - [ ] Implement direct `issue_id` assignment at write time for issue-linked monitor failures so those scores are immutable and can be projected to ClickHouse immediately.
 - [ ] Add the execution hooks needed later by the full portable runtime so the same evaluation artifact can move from the MVP executor into later runtimes without storage changes.
-- [ ] Add end-to-end monitor execution tests covering `TraceMaterialized`-driven enqueue behavior, turn selection, pause/archive behavior, direct issue assignment, immutable-score projection timing, and persisted usage accounting.
+- [ ] Add end-to-end monitor execution tests covering `trace-finish-detection` debounce reset behavior, `TraceFinished`-driven enqueue behavior, turn selection, pause/archive behavior, direct issue assignment, immutable-score projection timing, and persisted usage accounting.
 
 **Exit gate**: issue monitors run on live traffic; evaluation-generated scores land in the canonical score model with the right issue linkage.
 
@@ -2456,7 +2467,7 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 - [ ] Implement annotation queue persistence and orchestration for manual and dynamic queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, default sampling loaded from named constants when creating dynamic queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
 - [ ] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for dynamic queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
-- [ ] Connect manual trace/session selection, system-created queue population, and dynamic filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item, the dedicated system-annotation-queue flagging handler under the `domain-events` rail that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `annotation-queue-validation` message per flagged system queue, the separate `annotation-queue-validation` worker that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated live-annotation-queue handler that batch inserts matched dynamic queue items on each `TraceMaterialized` event, filter-before-sampling evaluation order for dynamic queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
+- [ ] Connect manual trace/session selection, system-created queue population, and dynamic filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item, the dedicated system-annotation-queue flagging handler under the `domain-events` rail that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `annotation-queue-validation` message per flagged system queue, the separate `annotation-queue-validation` worker that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated live-annotation-queue handler that batch inserts matched dynamic queue items on each `TraceFinished` event, filter-before-sampling evaluation order for dynamic queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
 - [ ] Build the focused queue annotation screen in `apps/web` with the collapsed sidebar, hotkey-backed bottom action bar, metadata/conversation/annotations columns, dataset-add action, conversation-level annotation creation, persisted selection highlights that focus the matching annotation card, derived queue-item position in the UI, and the congratulations empty state when no queue items remain pending.
 - [ ] Integrate queue context into annotation creation, including the canonical queue-provenance contract on annotation `source_id`, the shared `draftedAt` draft contract for system-created queue annotations, queue-item completion semantics, exclusion of drafts from issue discovery until human review, and any additional annotation metadata needed to reopen the annotation cleanly.
 - [ ] Add end-to-end tests covering manual trace selection, manual session selection resolved to newest trace, system queue tags and locked fields, system-created queue sampling seeded from defaults and later user edits, sampling-before-deterministic-check behavior, sampled low-cost flagger routing, one `annotation-queue-validation` message published per flagged system queue, full-context validator/drafter confirmation, zero-match and multi-match traces, `draftedAt`-based draft exclusion from issue discovery, dynamic incremental materialization, default dynamic queue sampling, filter-before-sampling behavior, duplicate-membership prevention, focused review navigation/hotkeys, queue completion, and progress updates.

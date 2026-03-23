@@ -85,7 +85,8 @@ Evaluation background work uses the repository queue stack in `@domain/queue`, `
 
 The main contracts are:
 
-- `TraceMaterialized` domain event for post-ingest/live-trigger fan-out
+- `trace-finish-detection`: delayed debounced task keyed by `(organizationId, projectId, traceId)`; each newly ingested span for the same trace replaces/reschedules the pending job using BullMQ delay mechanics, with the debounce window defined by a named constant whose initial default is `5 minutes`
+- `TraceFinished` domain event for post-ingest/live-trigger fan-out after that debounce window elapses
 - `evaluation-execution` for one `(evaluationId, traceId)` execution after trigger matching
 - `evaluation-alignment` for one generation or realignment pass against the current example set
 
@@ -95,6 +96,7 @@ Rules:
 - payloads carry ids plus minimal trigger/alignment context, not full evaluation rows or full traces
 - workers re-fetch current evaluation/example state before acting
 - user-triggered issue generation starts the same aligner pipeline through `evaluation-alignment` rather than running alignment in the request itself
+- when a delayed queue topic semantically marks a lifecycle edge, that topic should publish a domain event through the outbox when the delay elapses rather than executing all downstream side effects inline
 - debounced/manual alignment refresh uses persisted due-work scans plus `evaluation-alignment`, not implicit BullMQ delayed/repeat jobs
 
 User-triggered background generation contract:
@@ -193,7 +195,9 @@ Concrete v1 architecture that future agents should understand:
 - v1 was a queued lifecycle: start, prepare, execute, validate, end
 - TypeScript owned example curation, candidate execution, evaluation, proposer prompting, persistence, and cancellation
 - Python only ran the GEPA search loop
+- Node workers remained the primary runtime, while the worker image bundled the Python engine runtime and source so TypeScript could spawn `python -m app.main` as a child process
 - the transport was a bidirectional child-process JSON-RPC channel over stdio
+- the Python side registered handlers in `apps/engine/app/main.py` and `apps/engine/app/rpc/server.py`, while the TypeScript GEPA adapter registered `Evaluate` and `Propose` callbacks for the engine to call back into
 - the RPC payloads were intentionally skinny: example ids, prompt hashes, and trajectory ids instead of full traces
 - full trajectories stayed host-side and were rehydrated only when the proposer needed them
 
@@ -210,7 +214,9 @@ Important v2 adaptations:
 
 The proposer and details-generator use Latitude-owned prompts stored in this repository.
 
-Current model choice:
+The proposer and details-generator model selections must live in named constants inside the owning optimizer implementation package rather than as inline magic strings.
+
+Initial defaults:
 
 - the proposer uses `gpt-5.4` with reasoning settings maximized
 - the details-generator uses `gpt-5.4` with lower reasoning settings
@@ -242,7 +248,7 @@ Trigger semantics:
 
 Live evaluation triggering is incremental:
 
-- whenever a `TraceMaterialized` domain event is observed for a project, a dedicated live-evaluation handler lists all active evaluations in that project, meaning rows with `archivedAt = null` and `deletedAt = null`
+- whenever a `TraceFinished` domain event is observed for a project, a dedicated live-evaluation handler lists all active evaluations in that project, meaning rows with `archivedAt = null` and `deletedAt = null`
 - trigger checks run against the incoming trace rather than rescanning historical traces on each read
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
 - when an evaluation passes those trigger checks, the handler publishes one `evaluation-execution` task for that `(evaluationId, traceId)` pair; the worker later runs the evaluation and writes the resulting score

@@ -16,7 +16,7 @@ The current settings model is intentionally small and scoped by ownership:
 - `projects.settings`
 - `user.settings`
 
-These payloads are stored directly on the owner row. They are not nested under an extra `reliability` key.
+These payloads are stored directly on the owner row through `settings` columns added to the existing owner tables. They are not nested under an extra `reliability` key.
 
 ## Canonical Shapes
 

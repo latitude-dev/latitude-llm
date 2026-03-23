@@ -19,8 +19,22 @@ Reliability adds:
 - `simulation_id` on spans as an optional simulation link stored as a non-null `FixedString(24)` with the empty-string sentinel when absent
 - propagation of `simulation_id` into trace/session-level reporting where needed
 - a new session materialization, since the product explicitly talks about spans, traces, and sessions
+- a debounced `TraceFinished` domain event emitted after a trace has received no new spans for a named debounce window whose initial default is `5 minutes`
 
 Because v2 is still under development, this should be done by updating the existing `spans` ClickHouse migration files in place rather than by adding backwards-compatibility `ALTER TABLE` layers.
+
+## Trace Completion Signal
+
+Reliability should not treat each span arrival as the moment a trace is complete.
+
+Instead:
+
+- each span ingestion republishes a delayed `trace-finish-detection` queue job keyed by `(organizationId, projectId, traceId)`
+- if another span for that trace arrives before the delay elapses, the same delayed job is replaced/rescheduled so the debounce window starts over
+- when the debounce window elapses, that delayed task publishes `TraceFinished` through the outbox
+- the delayed task does not execute downstream reliability side effects inline; live evaluations, live annotation queues, and system-created queue flagging react to the resulting `TraceFinished` domain event
+
+This keeps the trace-completion boundary explicit while still using the existing BullMQ transport and outbox/domain-event fan-out pattern.
 
 ## Why Sessions Matter
 

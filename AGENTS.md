@@ -674,22 +674,22 @@ interface HttpError {
 ```typescript
 // Static message
 export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
-    readonly cause: unknown;
-    readonly queue: QueueName;
+  readonly cause: unknown;
+  readonly queue: QueueName;
 }> {
-    readonly httpStatus = 502;
-    readonly httpMessage = "Queue publish failed";
+  readonly httpStatus = 502;
+  readonly httpMessage = "Queue publish failed";
 }
 
 // Dynamic message computed from fields
 export class NotFoundError extends Data.TaggedError("NotFoundError")<{
-    readonly entity: string;
-    readonly id: string;
+  readonly entity: string;
+  readonly id: string;
 }> {
-    readonly httpStatus = 404;
-    get httpMessage() {
-        return `${this.entity} not found`;
-    }
+  readonly httpStatus = 404;
+  get httpMessage() {
+    return `${this.entity} not found`;
+  }
 }
 ```
 
@@ -779,9 +779,11 @@ const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"));
 
 ## Async and Background Task Guidance
 
-- Pass IDs in async jobs/queue payloads, not full mutable models
-- Re-fetch current state inside task handlers
+- Async jobs and queue payloads must never carry full mutable entities; pass ids or opaque storage keys instead
+- Re-fetch current state inside task handlers before acting
 - Make stale/deleted entity behavior explicit
+- When BullMQ delay is the chosen debounce mechanism, key the delayed job by the logical entity identity so newer writes replace or reschedule the pending job
+- When a delayed queue topic semantically marks a lifecycle edge, let the delayed task publish a domain event through the outbox after the delay elapses; downstream side effects should run from the domain-event consumers rather than inline in the delayed task
 
 ## Cloud Agent Environment Setup
 

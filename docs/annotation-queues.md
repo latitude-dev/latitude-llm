@@ -29,14 +29,16 @@ Queue population uses the repository queue stack in `@domain/queue`, `@platform/
 
 The main contracts are:
 
-- `TraceMaterialized` domain event for post-ingest/project-queryable trace fan-out
+- `trace-finish-detection`: delayed debounced task keyed by `(organizationId, projectId, traceId)`; each newly ingested span for the same trace replaces/reschedules the pending job using BullMQ delay mechanics, with the debounce window defined by a named constant whose initial default is `5 minutes`
+- `TraceFinished` domain event for post-ingest/project-queryable trace fan-out after that debounce window elapses
 - `annotation-queue-validation` for one flagged `(queue_id, trace_id)` pair on a system-created queue
 
 Rules:
 
 - queue topics are lower-kebab-case and are the durable routing identity
 - payloads carry ids only; workers re-fetch queue definitions and trace context before acting
-- live dynamic queue materialization stays direct and cheap inside the `TraceMaterialized` handler path, so it does not enqueue one BullMQ job per matching dynamic queue
+- when a delayed queue topic semantically marks a lifecycle edge, that topic should publish a domain event through the outbox when the delay elapses rather than executing all downstream side effects inline
+- live dynamic queue materialization stays direct and cheap inside the `TraceFinished` handler path, so it does not enqueue one BullMQ job per matching dynamic queue
 - system-created queue validation/draft creation is expensive enough to be pushed into `annotation-queue-validation`
 
 ## System-Created Default Queues
@@ -98,7 +100,7 @@ Every project starts with these system-created manual queues:
 ### System-Created Manual Queues
 
 - system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by dynamic filter materialization
-- whenever a `TraceMaterialized` domain event is observed for a project, a dedicated system-annotation-queue flagging handler lists all non-deleted `system = true` queues in that project
+- whenever a `TraceFinished` domain event is observed for a project, a dedicated system-annotation-queue flagging handler lists all non-deleted `system = true` queues in that project
 - the flagging handler applies each queue's `settings.sampling` first; if sampling does not pass for a queue, that queue is skipped entirely for the current trace
 - among the sampled-in system queues, the flagging handler first evaluates deterministic rules for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
 - for the remaining sampled-in system queues, the flagger uses limited conversation context, such as the last `N` messages, and receives the queue names, descriptions, and instructions for the LLM-classified system queues
@@ -112,7 +114,7 @@ Every project starts with these system-created manual queues:
 
 - a queue becomes dynamic / live when `settings.filter` is present
 - dynamic queues are incremental: they grow as new matching traces arrive
-- whenever a `TraceMaterialized` domain event is observed for a project, a dedicated live-annotation-queue handler lists all non-deleted dynamic queues in that project
+- whenever a `TraceFinished` domain event is observed for a project, a dedicated live-annotation-queue handler lists all non-deleted dynamic queues in that project
 - queue selection order is `settings.filter` first, then `settings.sampling`
 - if both pass, the handler batch inserts the matching `annotation_queue_items` rows for that `(queue_id, trace_id)` pair with `completedAt = null`
 - this live-annotation-queue handler is separate from the live-evaluation handler and does not enqueue per-queue execution tasks
@@ -204,7 +206,7 @@ Required Postgres indexes:
 - `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
 - manual queue insertion, system-created queue insertion, and dynamic queue materialization all create queue items with `completedAt = null`
 - system-created queue insertion happens only after a separate full-context validation/annotation task confirms the match and writes the pending-review annotation
-- dynamic queue materialization is incremental on `TraceMaterialized` and evaluates `filter` before `sampling`
+- dynamic queue materialization is incremental on `TraceFinished` and evaluates `filter` before `sampling`
 - queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
 
 ## Project Page
