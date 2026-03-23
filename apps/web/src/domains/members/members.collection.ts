@@ -29,10 +29,6 @@ const membersCollection = createCollection(
   }),
 )
 
-export function invalidateMembers() {
-  return queryClient.invalidateQueries({ queryKey: ["members"] })
-}
-
 const inviteMemberIntentAction = createOptimisticAction<{ email: string; intentId: string }>({
   onMutate: ({ email, intentId }) => {
     membersCollection.insert({
@@ -66,7 +62,7 @@ const inviteMemberIntentAction = createOptimisticAction<{ email: string; intentI
       })
     }
 
-    await invalidateMembers()
+    await queryClient.invalidateQueries({ queryKey: ["members"] })
   },
 })
 
@@ -89,7 +85,8 @@ const cancelInviteIntentAction = createOptimisticAction<{ inviteId: string }>({
     await cancelMemberInvite({
       data: { inviteId },
     })
-    await invalidateMembers()
+
+    await queryClient.invalidateQueries({ queryKey: ["members"] })
   },
 })
 
