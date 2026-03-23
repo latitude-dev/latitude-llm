@@ -8,6 +8,7 @@ import { IdentifiersSection } from "./identifiers-section.tsx"
 import { LlmSections } from "./llm-sections.tsx"
 import { OperationalMetadataSection } from "./operational-metadata-section.tsx"
 import { RawTelemetrySections } from "./raw-telemetry-sections.tsx"
+import { isToolExecutionSpan, ToolExecutionSection } from "./tool-execution-section.tsx"
 import { hasAnyUsage, UsageSummary } from "./usage-summary.tsx"
 import { UserContextSection } from "./user-context-section.tsx"
 
@@ -27,6 +28,7 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
       hasAnyUsage(span),
     [span],
   )
+  const isToolSpan = useMemo(() => isToolExecutionSpan(span), [span])
 
   return (
     <div className="flex flex-col gap-6">
@@ -49,6 +51,15 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
           { label: "Start Time", value: relativeTime(new Date(span.startTime)) },
           { label: "Duration", value: formatDuration(durationMs) },
           ...(span.operation ? [{ label: "Operation", value: span.operation }] : []),
+          ...(isLlmSpan ? [{ label: "Streaming", value: span.isStreaming ? "Yes" : "No" }] : []),
+          ...(isLlmSpan
+            ? [
+                {
+                  label: "Time to First Token",
+                  value: span.timeToFirstTokenNs > 0 ? formatDuration(span.timeToFirstTokenNs / 1_000_000) : "Unknown",
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -63,6 +74,9 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
 
       {/* ── LLM content ── */}
       {isLlmSpan && <LlmSections span={span} />}
+
+      {/* ── Tool execution ── */}
+      {isToolSpan && <ToolExecutionSection span={span} />}
 
       {/* ── Operational metadata ── */}
       <OperationalMetadataSection span={span} />

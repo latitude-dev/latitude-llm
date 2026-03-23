@@ -26,6 +26,8 @@ export interface SpanRecord {
   readonly tokensInput: number
   readonly tokensOutput: number
   readonly costTotalMicrocents: number
+  readonly timeToFirstTokenNs: number
+  readonly isStreaming: boolean
   readonly startTime: string
   readonly endTime: string
   readonly ingestedAt: string
@@ -63,6 +65,10 @@ export interface SpanDetailRecord extends SpanRecord {
   readonly outputMessages: readonly object[]
   readonly systemInstructions: readonly object[]
   readonly toolDefinitions: readonly object[]
+  readonly toolCallId: string
+  readonly toolName: string
+  readonly toolInput: string
+  readonly toolOutput: string
 }
 
 const serializeSpan = (span: Span): SpanRecord => ({
@@ -82,6 +88,8 @@ const serializeSpan = (span: Span): SpanRecord => ({
   tokensInput: span.tokensInput,
   tokensOutput: span.tokensOutput,
   costTotalMicrocents: span.costTotalMicrocents,
+  timeToFirstTokenNs: span.timeToFirstTokenNs,
+  isStreaming: span.isStreaming,
   startTime: span.startTime.toISOString(),
   endTime: span.endTime.toISOString(),
   ingestedAt: span.ingestedAt.toISOString(),
@@ -120,6 +128,10 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
   outputMessages: span.outputMessages as readonly object[],
   systemInstructions: span.systemInstructions as readonly object[],
   toolDefinitions: span.toolDefinitions as readonly object[],
+  toolCallId: span.toolCallId,
+  toolName: span.toolName,
+  toolInput: span.toolInput,
+  toolOutput: span.toolOutput,
 })
 
 export const listSpansByTrace = createServerFn({ method: "GET" })

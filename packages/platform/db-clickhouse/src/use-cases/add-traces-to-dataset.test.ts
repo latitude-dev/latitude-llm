@@ -174,7 +174,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         startTime: new Date(),
         endTime: new Date(),
         durationNs: 0,
-        status: "ok",
+        timeToFirstTokenNs: 0,
         tokensInput: 0,
         tokensOutput: 0,
         tokensCacheRead: 0,

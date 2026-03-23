@@ -68,6 +68,8 @@ export interface Span {
   readonly costOutputMicrocents: number
   readonly costTotalMicrocents: number
   readonly costIsEstimated: boolean
+  readonly timeToFirstTokenNs: number
+  readonly isStreaming: boolean
   readonly responseId: string
   readonly finishReasons: readonly string[]
   readonly attrString: Readonly<Record<string, string>>
@@ -90,4 +92,8 @@ export interface SpanDetail extends Span {
   readonly outputMessages: readonly GenAIMessage[]
   readonly systemInstructions: GenAISystem
   readonly toolDefinitions: readonly ToolDefinition[]
+  readonly toolCallId: string
+  readonly toolName: string
+  readonly toolInput: string
+  readonly toolOutput: string
 }

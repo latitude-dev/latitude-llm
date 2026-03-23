@@ -23,7 +23,6 @@ function mapTraceToRow(t: TraceDetail) {
       traceId: t.traceId,
       rootSpanName: t.rootSpanName,
       models: t.models,
-      status: t.status,
       durationNs: t.durationNs,
       tokensInput: t.tokensInput,
       tokensOutput: t.tokensOutput,

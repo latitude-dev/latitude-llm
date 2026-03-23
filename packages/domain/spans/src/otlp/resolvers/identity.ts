@@ -22,27 +22,28 @@ const PROVIDER_ALIASES: Record<string, string> = {
 const aliasProvider = (v: string) => PROVIDER_ALIASES[v] ?? v
 
 export const providerCandidates: Candidate<string>[] = [
-  fromString("gen_ai.provider.name", aliasProvider),
-  fromString("gen_ai.system", aliasProvider),
-  fromString("llm.system", aliasProvider),
+  fromString("gen_ai.provider.name", aliasProvider), // OTEL GenAI v1.37+
+  fromString("gen_ai.system", aliasProvider), // OTEL GenAI v1.36 deprecated
+  fromString("llm.system", aliasProvider), // OpenInference / Arize Phoenix
   fromString("ai.model.provider", (v) => {
+    // Vercel AI SDK
     const stripped = v.replace(VERCEL_PROVIDER_SUFFIX, "")
     return PROVIDER_ALIASES[stripped] ?? stripped
   }),
 ]
 
 export const modelCandidates = [
-  fromString("gen_ai.request.model"),
-  fromString("llm.model_name"),
-  fromString("ai.model.id"),
-  fromString("embedding.model_name"),
-  fromString("reranker.model_name"),
+  fromString("gen_ai.request.model"), // OTEL GenAI semconv
+  fromString("llm.model_name"), // OpenInference / Arize Phoenix
+  fromString("ai.model.id"), // Vercel AI SDK
+  fromString("embedding.model_name"), // OpenInference (embeddings)
+  fromString("reranker.model_name"), // OpenInference (reranker)
 ]
 
 export const responseModelCandidates = [
-  fromString("gen_ai.response.model"),
-  fromString("ai.response.model"),
-  fromString("llm.model_name"),
+  fromString("gen_ai.response.model"), // OTEL GenAI semconv
+  fromString("ai.response.model"), // Vercel AI SDK
+  fromString("llm.model_name"), // OpenInference / Arize Phoenix (shared key)
 ]
 
 export const sessionIdCandidates = [

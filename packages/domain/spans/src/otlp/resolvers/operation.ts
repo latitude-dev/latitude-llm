@@ -39,8 +39,8 @@ const VERCEL_OPERATION: Record<string, Operation> = {
 }
 
 export const operationCandidates = [
-  fromString("gen_ai.operation.name"),
-  fromString("openinference.span.kind", (v) => OPENINFERENCE_OPERATION[v] ?? v.toLowerCase()),
-  fromString("llm.request.type", (v) => OPENLLMETRY_OPERATION[v] ?? v),
-  fromString("ai.operationId", (v) => VERCEL_OPERATION[v] ?? v),
+  fromString("gen_ai.operation.name"), // OTEL GenAI semconv (v1.37+ and v1.36)
+  fromString("openinference.span.kind", (v) => OPENINFERENCE_OPERATION[v] ?? v.toLowerCase()), // OpenInference / Arize Phoenix
+  fromString("llm.request.type", (v) => OPENLLMETRY_OPERATION[v] ?? v), // OpenLLMetry / Traceloop
+  fromString("ai.operationId", (v) => VERCEL_OPERATION[v] ?? v), // Vercel AI SDK
 ]

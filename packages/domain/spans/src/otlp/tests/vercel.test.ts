@@ -186,7 +186,13 @@ function buildGetWeatherTool(): OtlpSpan {
     kind: 1,
     startTimeUnixNano: "1710590401600000000",
     endTimeUnixNano: "1710590402000000000",
-    attributes: [str("ai.operationId", "ai.toolCall")],
+    attributes: [
+      str("ai.operationId", "ai.toolCall"),
+      str("ai.toolCall.name", "get_weather"),
+      str("ai.toolCall.id", "call_weather_1"),
+      str("ai.toolCall.args", '{"city":"Barcelona"}'),
+      str("ai.toolCall.result", '{"temp":22,"condition":"sunny"}'),
+    ],
     status: { code: 1 },
   }
 }
@@ -254,8 +260,7 @@ function buildLlm2Inner(): OtlpSpan {
       str("ai.response.model", RESPONSE_MODEL),
       int("ai.usage.promptTokens", 1200),
       int("ai.usage.completionTokens", 120),
-      // ai.prompt (top-level) AND ai.prompt.messages (call-level) both present
-      // ai.prompt should take precedence
+      str("ai.settings.mode", "stream"),
       str(
         "ai.prompt",
         JSON.stringify({
@@ -811,6 +816,59 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
     it("agent and tool spans have no tool definitions", () => {
       expect(findSpan("agent").toolDefinitions).toHaveLength(0)
       expect(findSpan("getWeather").toolDefinitions).toHaveLength(0)
+    })
+  })
+
+  // ── Performance — streaming detection ──────────────
+
+  describe("performance — streaming detection", () => {
+    it("LLM call 2 inner (doStream) has isStreaming true (ai.settings.mode = stream)", () => {
+      expect(findSpan("llm2Inner").isStreaming).toBe(true)
+    })
+
+    it("LLM call 1 inner (doGenerate, no streaming attr) has isStreaming false", () => {
+      expect(findSpan("llm1Inner").isStreaming).toBe(false)
+    })
+
+    it("all spans have zero TTFT (no TTFT attributes or events)", () => {
+      expect(findSpan("llm1Inner").timeToFirstTokenNs).toBe(0)
+      expect(findSpan("llm2Inner").timeToFirstTokenNs).toBe(0)
+      expect(findSpan("agent").timeToFirstTokenNs).toBe(0)
+    })
+  })
+
+  // ── Tool execution — execute_tool span fields ──────
+
+  describe("tool execution — execute_tool span fields", () => {
+    it("get_weather tool span has toolCallId from ai.toolCall.id", () => {
+      expect(findSpan("getWeather").toolCallId).toBe("call_weather_1")
+    })
+
+    it("get_weather tool span has toolName from ai.toolCall.name", () => {
+      expect(findSpan("getWeather").toolName).toBe("get_weather")
+    })
+
+    it("get_weather tool span has toolInput from ai.toolCall.args", () => {
+      expect(findSpan("getWeather").toolInput).toBe('{"city":"Barcelona"}')
+    })
+
+    it("get_weather tool span has toolOutput from ai.toolCall.result", () => {
+      expect(findSpan("getWeather").toolOutput).toBe('{"temp":22,"condition":"sunny"}')
+    })
+
+    it("non-tool spans have empty tool execution fields", () => {
+      expect(findSpan("llm1Outer").toolCallId).toBe("")
+      expect(findSpan("llm1Outer").toolName).toBe("")
+      expect(findSpan("llm1Inner").toolInput).toBe("")
+      expect(findSpan("agent").toolCallId).toBe("")
+    })
+
+    it("tool spans without tool-call attributes have empty fields", () => {
+      expect(findSpan("bookHotel").toolCallId).toBe("")
+      expect(findSpan("bookHotel").toolName).toBe("")
+      expect(findSpan("bookHotel").toolInput).toBe("")
+      expect(findSpan("searchAttractions").toolName).toBe("")
+      expect(findSpan("searchAttractions").toolCallId).toBe("")
     })
   })
 })

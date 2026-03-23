@@ -10,19 +10,13 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Trace, TraceDetail, TraceListPage, TraceStatus } from "@domain/spans"
+import type { Trace, TraceDetail, TraceListPage } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
 const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
   date ? date.toISOString().replace("Z", "") : undefined
-
-const INT_TO_STATUS: Record<number, TraceStatus> = {
-  0: "unset",
-  1: "ok",
-  2: "error",
-}
 
 const LIST_SELECT = `
   organization_id,
@@ -34,7 +28,12 @@ const LIST_SELECT = `
   max(max_end_time)            AS end_time,
   reinterpretAsInt64(max(max_end_time))
     - reinterpretAsInt64(min(min_start_time)) AS duration_ns,
-  max(overall_status)          AS overall_status,
+  if(
+    min(time_of_first_token) < toDateTime64('2261-01-01', 9, 'UTC'),
+    reinterpretAsInt64(min(time_of_first_token))
+      - reinterpretAsInt64(min(min_start_time)),
+    0
+  )                              AS time_to_first_token_ns,
   sum(tokens_input)            AS tokens_input,
   sum(tokens_output)           AS tokens_output,
   sum(tokens_cache_read)       AS tokens_cache_read,
@@ -71,7 +70,7 @@ type TraceListRow = {
   start_time: string
   end_time: string
   duration_ns: string
-  overall_status: number
+  time_to_first_token_ns: string
   tokens_input: string
   tokens_output: string
   tokens_cache_read: string
@@ -127,7 +126,7 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   startTime: new Date(row.start_time),
   endTime: new Date(row.end_time),
   durationNs: Number(row.duration_ns),
-  status: INT_TO_STATUS[row.overall_status] ?? ("unset" as const),
+  timeToFirstTokenNs: Number(row.time_to_first_token_ns),
   tokensInput: Number(row.tokens_input),
   tokensOutput: Number(row.tokens_output),
   tokensCacheRead: Number(row.tokens_cache_read),
@@ -169,6 +168,7 @@ interface SortColumn {
 const SORT_COLUMNS: Record<string, SortColumn> = {
   startTime: { expr: "start_time", chType: "DateTime64(9, 'UTC')", rowKey: "start_time" },
   duration: { expr: "duration_ns", chType: "Int64", rowKey: "duration_ns" },
+  ttft: { expr: "time_to_first_token_ns", chType: "Int64", rowKey: "time_to_first_token_ns" },
   cost: { expr: "cost_total_microcents", chType: "UInt64", rowKey: "cost_total_microcents" },
   spans: { expr: "span_count", chType: "UInt64", rowKey: "span_count" },
 }

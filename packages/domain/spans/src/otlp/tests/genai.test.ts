@@ -11,6 +11,9 @@ function str(key: string, value: string): OtlpKeyValue {
 function int(key: string, value: number): OtlpKeyValue {
   return { key, value: { intValue: String(value) } }
 }
+function bool(key: string, value: boolean): OtlpKeyValue {
+  return { key, value: { boolValue: value } }
+}
 function strArray(key: string, values: string[]): OtlpKeyValue {
   return { key, value: { arrayValue: { values: values.map((v) => ({ stringValue: v })) } } }
 }
@@ -139,6 +142,8 @@ function buildLlmCall1(): OtlpSpan {
       int("gen_ai.usage.input_tokens", 800),
       int("gen_ai.usage.output_tokens", 50),
       int("gen_ai.usage.cache_read.input_tokens", 600),
+      int("gen_ai.server.time_to_first_token", 250_000_000),
+      bool("gen_ai.request.stream", true),
       str("gen_ai.system_instructions", JSON.stringify([{ type: "text", content: SYSTEM_PROMPT }])),
       str(
         "gen_ai.input.messages",
@@ -184,7 +189,13 @@ function buildGetWeatherTool(): OtlpSpan {
     kind: 1,
     startTimeUnixNano: "1710590401600000000",
     endTimeUnixNano: "1710590402000000000",
-    attributes: [str("gen_ai.operation.name", "execute_tool")],
+    attributes: [
+      str("gen_ai.operation.name", "execute_tool"),
+      str("gen_ai.tool.name", "get_weather"),
+      str("gen_ai.tool.call.id", "call_weather_1"),
+      structuredAttr("gen_ai.tool.call.arguments", { city: "Barcelona" }),
+      str("gen_ai.tool.call.result", '{"temp":22,"condition":"sunny"}'),
+    ],
     status: { code: 1 },
   }
 }
@@ -326,6 +337,11 @@ function buildLlmCall3(): OtlpSpan {
           },
         ]),
       ),
+    ],
+    events: [
+      { name: "gen_ai.content.completion", timeUnixNano: "1710590404500000000" },
+      { name: "gen_ai.content.completion", timeUnixNano: "1710590404700000000" },
+      { name: "gen_ai.content.completion", timeUnixNano: "1710590405000000000" },
     ],
     status: { code: 1 },
   }
@@ -707,6 +723,69 @@ describe("TravelPlanner trace — GenAI v1.37+ (current)", () => {
       expect(findSpan("agent").toolDefinitions).toHaveLength(0)
       expect(findSpan("getWeather").toolDefinitions).toHaveLength(0)
       expect(findSpan("bookHotel").toolDefinitions).toHaveLength(0)
+    })
+  })
+
+  // ── Performance — TTFT and streaming ────────────────
+
+  describe("performance — TTFT and streaming", () => {
+    it("LLM call 1 has TTFT from gen_ai.server.time_to_first_token attribute", () => {
+      expect(findSpan("llmCall1").timeToFirstTokenNs).toBe(250_000_000)
+    })
+
+    it("LLM call 1 has isStreaming true (gen_ai.request.stream = true)", () => {
+      expect(findSpan("llmCall1").isStreaming).toBe(true)
+    })
+
+    it("LLM call 3 has TTFT derived from gen_ai.content.completion events", () => {
+      expect(findSpan("llmCall3").timeToFirstTokenNs).toBe(200_000_000)
+    })
+
+    it("LLM call 3 has isStreaming true (heuristic: TTFT > 0)", () => {
+      expect(findSpan("llmCall3").isStreaming).toBe(true)
+    })
+
+    it("agent and tool spans have zero TTFT and isStreaming false", () => {
+      expect(findSpan("agent").timeToFirstTokenNs).toBe(0)
+      expect(findSpan("agent").isStreaming).toBe(false)
+      expect(findSpan("getWeather").timeToFirstTokenNs).toBe(0)
+      expect(findSpan("getWeather").isStreaming).toBe(false)
+    })
+  })
+
+  // ── Tool execution — execute_tool span fields ──────
+
+  describe("tool execution — execute_tool span fields", () => {
+    it("get_weather tool span has toolCallId from gen_ai.tool.call.id", () => {
+      expect(findSpan("getWeather").toolCallId).toBe("call_weather_1")
+    })
+
+    it("get_weather tool span has toolName from gen_ai.tool.name", () => {
+      expect(findSpan("getWeather").toolName).toBe("get_weather")
+    })
+
+    it("get_weather tool span has toolInput from gen_ai.tool.call.arguments (kvlistValue)", () => {
+      expect(findSpan("getWeather").toolInput).toBe(JSON.stringify({ city: "Barcelona" }))
+    })
+
+    it("get_weather tool span has toolOutput from gen_ai.tool.call.result", () => {
+      expect(findSpan("getWeather").toolOutput).toBe('{"temp":22,"condition":"sunny"}')
+    })
+
+    it("non-tool spans have empty tool execution fields", () => {
+      expect(findSpan("llmCall1").toolCallId).toBe("")
+      expect(findSpan("llmCall1").toolName).toBe("")
+      expect(findSpan("llmCall1").toolInput).toBe("")
+      expect(findSpan("llmCall1").toolOutput).toBe("")
+      expect(findSpan("agent").toolCallId).toBe("")
+    })
+
+    it("tool spans without tool-call attributes have empty fields", () => {
+      expect(findSpan("bookHotel").toolCallId).toBe("")
+      expect(findSpan("bookHotel").toolName).toBe("")
+      expect(findSpan("bookHotel").toolInput).toBe("")
+      expect(findSpan("searchAttractions").toolName).toBe("")
+      expect(findSpan("searchAttractions").toolCallId).toBe("")
     })
   })
 })

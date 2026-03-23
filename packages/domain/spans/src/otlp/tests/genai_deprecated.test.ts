@@ -150,7 +150,12 @@ function buildGetWeatherTool(): OtlpSpan {
     kind: 1,
     startTimeUnixNano: "1710590401600000000",
     endTimeUnixNano: "1710590402000000000",
-    attributes: [str("llm.request.type", "tool")],
+    attributes: [
+      str("llm.request.type", "tool"),
+      str("traceloop.entity.name", "get_weather"),
+      str("traceloop.entity.input", '{"city":"Barcelona"}'),
+      str("traceloop.entity.output", '{"temp":22,"condition":"sunny"}'),
+    ],
     status: { code: 1 },
   }
 }
@@ -618,6 +623,48 @@ describe("TravelPlanner trace — GenAI deprecated / OpenLLMetry", () => {
     it("agent and tool spans have no tool definitions", () => {
       expect(findSpan("agent").toolDefinitions).toHaveLength(0)
       expect(findSpan("getWeather").toolDefinitions).toHaveLength(0)
+    })
+  })
+
+  // ── Tool execution — execute_tool span fields ──────
+
+  describe("tool execution — execute_tool span fields (traceloop.entity.*)", () => {
+    it("get_weather tool span has toolName from traceloop.entity.name", () => {
+      expect(findSpan("getWeather").toolName).toBe("get_weather")
+    })
+
+    it("get_weather tool span has toolInput from traceloop.entity.input", () => {
+      expect(findSpan("getWeather").toolInput).toBe('{"city":"Barcelona"}')
+    })
+
+    it("get_weather tool span has toolOutput from traceloop.entity.output", () => {
+      expect(findSpan("getWeather").toolOutput).toBe('{"temp":22,"condition":"sunny"}')
+    })
+
+    it("non-tool spans have empty tool execution fields", () => {
+      expect(findSpan("llmCall1").toolCallId).toBe("")
+      expect(findSpan("llmCall1").toolName).toBe("")
+      expect(findSpan("llmCall1").toolInput).toBe("")
+      expect(findSpan("agent").toolCallId).toBe("")
+    })
+
+    it("tool spans without tool-call attributes have empty fields", () => {
+      expect(findSpan("bookHotel").toolCallId).toBe("")
+      expect(findSpan("bookHotel").toolName).toBe("")
+      expect(findSpan("bookHotel").toolInput).toBe("")
+      expect(findSpan("searchAttractions").toolName).toBe("")
+      expect(findSpan("searchAttractions").toolOutput).toBe("")
+    })
+  })
+
+  // ── Performance defaults ───────────────────────────
+
+  describe("performance defaults", () => {
+    it("all spans have zero TTFT and isStreaming false (no perf attributes)", () => {
+      expect(findSpan("llmCall1").timeToFirstTokenNs).toBe(0)
+      expect(findSpan("llmCall1").isStreaming).toBe(false)
+      expect(findSpan("agent").timeToFirstTokenNs).toBe(0)
+      expect(findSpan("getWeather").isStreaming).toBe(false)
     })
   })
 })
