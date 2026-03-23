@@ -60,6 +60,7 @@ export const createBullMqQueuePublisher = (
     const queues: Record<QueueName, Queue> = {
       "dataset-export": new Queue("dataset-export", { connection }),
       "domain-events": new Queue("domain-events", { connection }),
+      "magic-link-email": new Queue("magic-link-email", { connection }),
       "span-ingestion": new Queue("span-ingestion", { connection }),
     }
 

@@ -1,36 +1,43 @@
 import type { EventEnvelope } from "@domain/events"
-import type { QueueConsumer } from "@domain/queue"
-import { createEventHandler } from "@platform/queue-bullmq"
+import type { QueueConsumer, QueueName, QueuePublisherShape } from "@domain/queue"
+import { createEventHandler, mapEnvelopeToQueueMessage } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
-import { handleMagicLinkEmailRequested } from "./domain-events/magic-link-email.ts"
 
 const logger = createLogger("domain-events")
 
-type EventHandlerFn = (event: EventEnvelope) => Effect.Effect<void, unknown>
-
 /**
- * Maps event names to their handler functions.
- * An event can have multiple handlers; each runs concurrently.
- * To add a new event, add an entry here.
+ * Maps event names to the queues that should process them.
+ * Each queue has its own dedicated worker.
+ * To handle a new event, add an entry here and create a worker for the queue.
  */
-const eventHandlers: Record<string, EventHandlerFn[]> = {
-  MagicLinkEmailRequested: [handleMagicLinkEmailRequested],
+const eventHandlers: Record<string, QueueName[]> = {
+  MagicLinkEmailRequested: ["magic-link-email"],
 }
 
-const dispatch = (event: EventEnvelope): Effect.Effect<void, unknown> => {
-  const handlers = eventHandlers[event.event.name]
+const dispatch = (event: EventEnvelope, queuePublisher: QueuePublisherShape): Effect.Effect<void, unknown> => {
+  const queues = eventHandlers[event.event.name]
 
-  if (!handlers || handlers.length === 0) {
+  if (!queues || queues.length === 0) {
     return Effect.sync(() => logger.info(`No handlers for event ${event.event.name} (id=${event.id}), skipping`))
   }
 
+  const message = mapEnvelopeToQueueMessage(event)
+
   return Effect.all(
-    handlers.map((handler) => handler(event)),
+    queues.map((queue) =>
+      queuePublisher
+        .publish(queue, message)
+        .pipe(
+          Effect.tap(() =>
+            Effect.sync(() => logger.info(`Dispatched ${event.event.name} (id=${event.id}) to ${queue}`)),
+          ),
+        ),
+    ),
     { concurrency: "unbounded" },
   ).pipe(Effect.asVoid)
 }
 
-export const createDomainEventsWorker = (consumer: QueueConsumer) => {
-  consumer.subscribe("domain-events", createEventHandler({ handle: dispatch }))
+export const createDomainEventsWorker = (consumer: QueueConsumer, queuePublisher: QueuePublisherShape) => {
+  consumer.subscribe("domain-events", createEventHandler({ handle: (event) => dispatch(event, queuePublisher) }))
 }
