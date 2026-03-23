@@ -51,6 +51,10 @@ export default defineConfig({
         : [],
       output: {
         manualChunks(id) {
+          if (id.includes("icons/custom-icons/providers/")) {
+            return "vendor-provider-icons"
+          }
+
           if (!id.includes("node_modules")) {
             return undefined
           }

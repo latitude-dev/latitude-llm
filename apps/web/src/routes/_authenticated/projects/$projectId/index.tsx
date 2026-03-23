@@ -4,6 +4,7 @@ import {
   type InfiniteTableColumn,
   type InfiniteTableSorting,
   Input,
+  ProviderIcon,
   Text,
   Tooltip,
 } from "@repo/ui"
@@ -60,7 +61,9 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
     header: "Start Time",
     sortKey: "startTime",
     render: (t) => (
-      <Tooltip trigger={relativeTime(new Date(t.startTime))}>{new Date(t.startTime).toLocaleString()}</Tooltip>
+      <Tooltip asChild trigger={<span>{relativeTime(new Date(t.startTime))}</span>}>
+        {new Date(t.startTime).toLocaleString()}
+      </Tooltip>
     ),
   },
   {
@@ -103,7 +106,24 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
   {
     key: "models",
     header: "Models",
-    render: (t) => t.models.join(", "),
+    render: (t) => (
+      <div className="flex items-center gap-1.5">
+        {t.providers.map((p) => (
+          <Tooltip
+            asChild
+            key={p}
+            trigger={
+              <span>
+                <ProviderIcon provider={p} size="sm" />
+              </span>
+            }
+          >
+            {p}
+          </Tooltip>
+        ))}
+        <span className="truncate">{t.models.join(", ")}</span>
+      </div>
+    ),
   },
   {
     key: "spans",
