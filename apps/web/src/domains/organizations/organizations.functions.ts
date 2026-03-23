@@ -1,7 +1,13 @@
-import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
+import {
+  MembershipRepository,
+  OrganizationRepository,
+  createMembership,
+  createOrganizationUseCase,
+} from "@domain/organizations"
+import { UserId } from "@domain/shared"
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
@@ -57,6 +63,37 @@ export const updateOrganizationName = createServerFn({ method: "POST" })
         yield* repo.save(updated)
         return updated
       }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
+    )
+    return { id: org.id, name: org.name }
+  })
+
+export const createWorkspace = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
+  .handler(async ({ data }): Promise<OrganizationRecord> => {
+    const { userId } = await requireSession()
+    const adminClient = getAdminPostgresClient()
+
+    const repoLayer = Layer.merge(OrganizationRepositoryLive, MembershipRepositoryLive)
+
+    const org = await Effect.runPromise(
+      Effect.gen(function* () {
+        const organization = yield* createOrganizationUseCase({
+          name: data.name,
+          creatorId: UserId(userId),
+        })
+
+        // Add the creator as an owner member
+        const membershipRepo = yield* MembershipRepository
+        const membership = createMembership({
+          organizationId: organization.id,
+          userId: UserId(userId),
+          role: "owner",
+        })
+        yield* membershipRepo.save(membership)
+
+        return organization
+      }).pipe(withPostgres(repoLayer, adminClient)),
     )
     return { id: org.id, name: org.name }
   })

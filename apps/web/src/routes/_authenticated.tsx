@@ -153,6 +153,12 @@ function NavHeader() {
           align="end"
           options={[
             {
+              label: "User Settings",
+              onClick: () => {
+                void router.navigate({ to: "/user-settings" })
+              },
+            },
+            {
               label: "Log out",
               type: "destructive",
               onClick: () => {

@@ -13,6 +13,7 @@ const logger = createLogger("domain-events")
  */
 const eventHandlers: Record<string, QueueName[]> = {
   MagicLinkEmailRequested: ["magic-link-email"],
+  UserDeletionRequested: ["user-deletion"],
 }
 
 const dispatch = (event: EventEnvelope, queuePublisher: QueuePublisherShape): Effect.Effect<void, unknown> => {

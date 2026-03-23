@@ -1,7 +1,9 @@
+import { generateId } from "@domain/shared"
+import { createOutboxWriter } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { z } from "zod"
-import { getBetterAuth } from "../../server/clients.ts"
+import { getAdminPostgresClient, getBetterAuth } from "../../server/clients.ts"
 
 export const getSession = createServerFn({ method: "GET" }).handler(async () => {
   const headers = getRequestHeaders()
@@ -40,3 +42,32 @@ export const updateUserName = createServerFn({ method: "POST" })
 
     return updated
   })
+
+export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(async () => {
+  const headers = getRequestHeaders()
+  const auth = getBetterAuth()
+
+  const session = await auth.api.getSession({ headers })
+  if (!session) {
+    throw new Error("Unauthorized")
+  }
+
+  const userId = session.user.id
+  const adminClient = getAdminPostgresClient()
+  const outboxWriter = createOutboxWriter(adminClient)
+
+  // Write a domain event for background deletion
+  await outboxWriter.write({
+    id: generateId(),
+    eventName: "UserDeletionRequested",
+    aggregateId: userId,
+    organizationId: "system",
+    payload: { userId },
+    occurredAt: new Date(),
+  })
+
+  // Revoke the session so the user is logged out
+  await auth.api.revokeSession({ headers, body: { token: session.session.token } })
+
+  return { success: true }
+})

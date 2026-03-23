@@ -1,6 +1,6 @@
 import { Data, type Effect, ServiceMap } from "effect"
 
-export type QueueName = "dataset-export" | "domain-events" | "magic-link-email" | "span-ingestion"
+export type QueueName = "dataset-export" | "domain-events" | "magic-link-email" | "span-ingestion" | "user-deletion"
 
 export interface QueueMessage {
   readonly body: Uint8Array

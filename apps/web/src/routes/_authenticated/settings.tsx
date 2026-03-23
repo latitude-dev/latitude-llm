@@ -37,7 +37,6 @@ import {
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
 import { updateOrganizationName } from "../../domains/organizations/organizations.functions.ts"
-import { updateUserName } from "../../domains/sessions/session.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { toUserMessage } from "../../lib/errors.ts"
@@ -45,60 +44,6 @@ import { toUserMessage } from "../../lib/errors.ts"
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
-
-// --- Profile Section ---
-
-function ProfileSection() {
-  const { user } = Route.useRouteContext()
-  const { toast } = useToast()
-  const router = useRouter()
-
-  const form = useForm({
-    defaultValues: {
-      name: user.name ?? "",
-    },
-    onSubmit: async ({ value }) => {
-      try {
-        await updateUserName({ data: { name: value.name } })
-        toast({ description: "Name updated" })
-        void router.invalidate()
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          description: toUserMessage(error),
-        })
-      }
-    },
-  })
-
-  return (
-    <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Profile</Text.H4>
-      <form
-        className="flex flex-row items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <form.Field name="name">
-          {(field) => (
-            <Input
-              type="text"
-              label="Your Name"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="Your name"
-            />
-          )}
-        </form.Field>
-        <Button type="submit" disabled={form.state.isSubmitting}>
-          Save
-        </Button>
-      </form>
-    </div>
-  )
-}
 
 // --- Workspace Name Section ---
 
@@ -575,7 +520,6 @@ function ApiKeysSection() {
 function SettingsPage() {
   return (
     <Container className="pt-14">
-      <ProfileSection />
       <WorkspaceNameSection />
       <MembershipsSection />
       <ApiKeysSection />
