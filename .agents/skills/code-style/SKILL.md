@@ -29,6 +29,10 @@ Base config: `tsconfig.base.json`
 
 - `strict: true` is enabled; keep code strict-clean
 - Module system: `NodeNext` + ESM (`"type": "module"` in packages/apps)
+- For new domain data contracts, define the canonical shared shape as a Zod schema first when runtime validation is required, then infer TypeScript types from that schema or from Drizzle schemas where appropriate.
+- Enum-like contracts should use literal-string unions or `as const` objects, not TypeScript enums.
+- Use shared domain schemas to validate data crossing from app/platform boundaries into domain use-cases.
+- Configurable thresholds, weights, debounce windows, sentinel values, and similar tunables should live in named constants inside the owning domain package rather than as scattered inline literals.
 - Prefer explicit domain types/interfaces over loose objects
 - Methods/functions with more than one argument should default to a single named-arguments object rather than positional arguments
 - Use `readonly` fields for immutable domain data shapes

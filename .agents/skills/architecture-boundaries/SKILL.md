@@ -27,6 +27,13 @@ No business logic in handlers, controllers, or jobs.
 - For web product development, implement backend behavior in `apps/web` server functions by composing domain use-cases and platform adapters directly.
 - Keep iteration velocity in `apps/web` by adding web-private server functions/stores while preserving `apps/api` stability.
 - Shared business rules still belong in domain packages; `apps/web` and `apps/api` should both orchestrate domain use-cases rather than duplicating policy.
+- Latitude product capabilities should be equally accessible to humans through the web UI and to other LLM agents through MCP/API surfaces.
+- Do not dead-end product behavior into UI-only flows. Preserve the boundary rules above, but design schemas, use-cases, and public capabilities so machine-facing access can exist without redesign.
+
+## Cross-cutting implementation constraints
+
+- Public request/response schemas should remain boundary-specific; they may reuse shared domain schemas or narrower projections rather than forcing full domain entities onto every surface.
+- When a capability is part of the product contract, preserve a machine-facing MCP/API surface instead of making it web-only.
 
 ## Domain layer (`packages/domain/*`)
 

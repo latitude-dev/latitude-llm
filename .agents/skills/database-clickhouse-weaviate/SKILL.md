@@ -65,6 +65,8 @@ pnpm --filter @platform/db-clickhouse ch:seed
 
 - Each migration is a single `.sql` file with `-- +goose Up` and `-- +goose Down` sections
 - Always include `-- +goose NO TRANSACTION` (ClickHouse does not support transactions)
+- ClickHouse migration history is append-only in this repository. Do not edit existing Goose migration files; add a new migration in both `unclustered/` and `clustered/` instead.
+- For additive changes to existing tables, prefer ordinary `ALTER TABLE` or additive projection migrations with sensible defaults unless the change truly requires a table rebuild.
 - `unclustered/`: use standard table engines (e.g. `ReplacingMergeTree`)
 - `clustered/`: add `ON CLUSTER default` and use `Replicated*` engines
 
