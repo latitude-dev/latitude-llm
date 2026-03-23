@@ -4,6 +4,7 @@ import { TraceRepository } from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
@@ -70,18 +71,18 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
 })
 
 export interface TraceDetailRecord extends TraceRecord {
-  readonly systemInstructions: readonly object[]
-  readonly inputMessages: readonly object[]
-  readonly outputMessages: readonly object[]
-  readonly allMessages: readonly object[]
+  readonly systemInstructions: GenAISystem
+  readonly inputMessages: readonly GenAIMessage[]
+  readonly outputMessages: readonly GenAIMessage[]
+  readonly allMessages: readonly GenAIMessage[]
 }
 
 const serializeTraceDetail = (trace: TraceDetail): TraceDetailRecord => ({
   ...serializeTrace(trace),
-  systemInstructions: trace.systemInstructions as readonly object[],
-  inputMessages: trace.inputMessages as readonly object[],
-  outputMessages: trace.outputMessages as readonly object[],
-  allMessages: trace.allMessages as readonly object[],
+  systemInstructions: trace.systemInstructions,
+  inputMessages: trace.inputMessages,
+  outputMessages: trace.outputMessages,
+  allMessages: trace.allMessages,
 })
 
 const traceListCursorSchema = z.object({
@@ -157,11 +158,11 @@ export const countTracesByProject = createServerFn({ method: "GET" })
 export const getTraceDetail = createServerFn({ method: "GET" })
   .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
-  .handler(async ({ data }): Promise<TraceDetailRecord | null> => {
+  .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
-    return Effect.runPromise(
+    const result = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TraceRepository
         const detail = yield* repo.findByTraceId({
@@ -172,4 +173,11 @@ export const getTraceDetail = createServerFn({ method: "GET" })
         return detail ? serializeTraceDetail(detail) : null
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )
+
+    // rosetta-ai GenAI types use [x: string]: unknown index signatures, but
+    // TanStack Start's Serialize<T> transforms those to [x: string]: {}.
+    // Since unknown is not assignable to {}, the handler rejects the return type.
+    // The runtime values are correct — this is a type-only bridge across the
+    // serialization boundary. The consumer (useTraceDetail) casts back.
+    return result as never
   })

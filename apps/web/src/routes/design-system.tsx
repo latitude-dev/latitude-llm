@@ -15,6 +15,7 @@ import {
   CloudflareIcon,
   CloudflareWorkersIcon,
   CohereIcon,
+  Conversation,
   CopilotIcon,
   CopyButton,
   DeepseekIcon,
@@ -222,6 +223,14 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         </div>
       </ShowcaseSection>
 
+      <ShowcaseSection
+        theme={theme}
+        title="GenAI Conversation"
+        description="Renders a conversation with system instructions, user messages, assistant responses, and tool calls."
+      >
+        <GenAIConversationShowcase />
+      </ShowcaseSection>
+
       <Card className={`relative overflow-hidden border-border/70 shadow-xl ${surfaceClass}`}>
         <CardHeader className="relative">
           <CardTitle>
@@ -319,6 +328,222 @@ function RichTextEditorShowcase() {
         <RichTextEditor value={textValue} onChange={setTextValue} minHeight="80px" />
       </div>
     </div>
+  )
+}
+
+function GenAIConversationShowcase() {
+  return (
+    <Conversation
+      systemInstructions={[
+        {
+          type: "text" as const,
+          content:
+            "You are a multi-modal research assistant. Use tools to gather real-time information. Always verify facts before answering. When analyzing media, describe what you observe in detail.",
+        },
+      ]}
+      messages={[
+        {
+          role: "user" as const,
+          parts: [
+            { type: "text" as const, content: "Can you identify the landmark in this photo and tell me about it?" },
+            {
+              type: "uri" as const,
+              uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg/800px-Tour_Eiffel_Wikimedia_Commons.jpg",
+              modality: "image",
+            },
+          ],
+        },
+        {
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "reasoning" as const,
+              content:
+                "The image shows a tall iron lattice tower against a blue sky. This is clearly the Eiffel Tower in Paris, France.",
+            },
+            {
+              type: "reasoning" as const,
+              content:
+                "The user wants me to tell them about it. I should look up some current information rather than relying on my training data. Let me search for recent visitor stats and any current events.",
+            },
+            {
+              type: "reasoning" as const,
+              content: "I should also check the current weather in Paris since the user might want to visit.",
+            },
+            {
+              type: "text" as const,
+              content: "That's the **Eiffel Tower** in Paris! Let me look up some current details for you.",
+            },
+            {
+              type: "tool_call" as const,
+              name: "web_search",
+              id: "call_search_01",
+              arguments: { query: "Eiffel Tower current visitor information 2026" },
+            },
+            {
+              type: "tool_call" as const,
+              name: "get_weather",
+              id: "call_weather_01",
+              arguments: { location: "Paris, France", units: "metric" },
+            },
+          ],
+        },
+        {
+          role: "tool" as const,
+          parts: [
+            {
+              type: "tool_call_response" as const,
+              id: "call_search_01",
+              response:
+                '{"results": ["The Eiffel Tower welcomed 6.3 million visitors in 2025", "Current ticket price: €29.40 for adults to the summit", "Open daily 9:30 AM - 11:45 PM"]}',
+            },
+          ],
+        },
+        {
+          role: "tool" as const,
+          parts: [
+            {
+              type: "tool_call_response" as const,
+              id: "call_weather_01",
+              response: '{"temperature": 14, "condition": "Overcast", "wind": "12 km/h NW", "humidity": 78}',
+            },
+          ],
+        },
+        {
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "text" as const,
+              content:
+                "Here's what I found about the Eiffel Tower:\n\n\u2022 **Visitors**: 6.3 million in 2025\n\u2022 **Tickets**: \u20AC29.40 for adults to the summit\n\u2022 **Hours**: Open daily 9:30 AM \u2013 11:45 PM\n\nCurrent weather in Paris is 14\u00B0C, overcast with 78% humidity \u2014 bring a jacket if you're visiting!",
+            },
+          ],
+        },
+        {
+          role: "user" as const,
+          parts: [
+            { type: "text" as const, content: "Can you transcribe this audio clip?" },
+            {
+              type: "uri" as const,
+              uri: "https://www.example.com/sample-audio.mp3",
+              modality: "audio",
+              mime_type: "audio/mpeg",
+            },
+          ],
+        },
+        {
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "tool_call" as const,
+              name: "transcribe_audio",
+              id: "call_transcribe_01",
+              arguments: { url: "https://www.example.com/sample-audio.mp3", language: "auto" },
+            },
+          ],
+        },
+        {
+          role: "tool" as const,
+          parts: [
+            {
+              type: "tool_call_response" as const,
+              id: "call_transcribe_01",
+              response:
+                '{"error": "AudioProcessingError: Unable to decode audio stream. The file may be corrupted or in an unsupported format."}',
+              _provider_metadata: { _known_fields: { isError: true, toolName: "transcribe_audio" } },
+            },
+          ],
+        },
+        {
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "text" as const,
+              content:
+                "I wasn't able to transcribe that audio \u2014 the file appears to be corrupted or in an unsupported format. Could you try uploading it again, or share it in a different format (WAV, MP3, or M4A)?",
+            },
+          ],
+        },
+        {
+          role: "user" as const,
+          parts: [
+            {
+              type: "text" as const,
+              content: "Forget the audio. Here's a document and a short video for your analysis:",
+            },
+            { type: "file" as const, file_id: "file_abc123xyz", modality: "document" },
+            {
+              type: "uri" as const,
+              uri: "https://www.example.com/sample-video.mp4",
+              modality: "video",
+              mime_type: "video/mp4",
+            },
+          ],
+        },
+        {
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "reasoning" as const,
+              content:
+                "The user sent both a document and a video. I'll analyze the document first using the file reader tool, then describe the video.",
+            },
+            {
+              type: "tool_call" as const,
+              name: "read_document",
+              id: "call_read_doc_01",
+              arguments: { file_id: "file_abc123xyz", extract: "summary" },
+            },
+            {
+              type: "tool_call" as const,
+              name: "analyze_video",
+              id: "call_analyze_video_01",
+              arguments: { url: "https://www.example.com/sample-video.mp4", frames: 5 },
+            },
+          ],
+        },
+        {
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "text" as const,
+              content: "I'm sorry, but I can't process that content as it appears to violate our usage policies.",
+              _provider_metadata: { _known_fields: { isRefusal: true } },
+            },
+          ],
+        },
+        {
+          role: "user" as const,
+          parts: [
+            {
+              type: "uri" as const,
+              uri: "https://arxiv.org/abs/2301.07041",
+              modality: "document",
+              mime_type: "text/html",
+            },
+            { type: "text" as const, content: "What do you think of this paper?" },
+          ],
+        },
+        {
+          role: "system" as const,
+          parts: [
+            {
+              type: "text" as const,
+              content: "[Context updated: User has premium access. Extended tool usage enabled.]",
+            },
+          ],
+        },
+        {
+          role: "assistant" as const,
+          parts: [
+            {
+              type: "text" as const,
+              content: "I can see the link points to an arXiv paper. Let me look it up to give you a proper summary.",
+            },
+          ],
+        },
+      ]}
+    />
   )
 }
 

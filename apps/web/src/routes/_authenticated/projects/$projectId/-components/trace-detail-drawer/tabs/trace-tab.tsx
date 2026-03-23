@@ -1,4 +1,4 @@
-import { DetailSection, DetailSummary, Skeleton, Text } from "@repo/ui"
+import { Conversation, DetailSection, DetailSummary, Skeleton, Text } from "@repo/ui"
 import { formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, MessageSquareIcon, TextIcon } from "lucide-react"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
@@ -95,9 +95,9 @@ export function TraceTab({
         {isDetailLoading ? (
           <Skeleton className="h-20 w-full" />
         ) : traceDetail?.systemInstructions.length ? (
-          <pre className="overflow-auto rounded bg-muted p-3 text-xs">
-            {JSON.stringify(traceDetail.systemInstructions, null, 2)}
-          </pre>
+          <div className="flex flex-col border-dashed border-border border-2 rounded-lg p-4 bg-secondary">
+            <Conversation systemInstructions={traceDetail.systemInstructions} messages={[]} />
+          </div>
         ) : (
           <Text.H6 color="foregroundMuted">No system instructions</Text.H6>
         )}
@@ -107,9 +107,9 @@ export function TraceTab({
         {isDetailLoading ? (
           <Skeleton className="h-20 w-full" />
         ) : traceDetail?.inputMessages.length ? (
-          <pre className="overflow-auto rounded bg-muted p-3 text-xs">
-            {JSON.stringify(traceDetail.inputMessages, null, 2)}
-          </pre>
+          <div className="flex flex-col border-dashed border-border border-2 rounded-lg p-4 bg-secondary">
+            <Conversation messages={traceDetail.inputMessages} />
+          </div>
         ) : (
           <Text.H6 color="foregroundMuted">No input messages</Text.H6>
         )}
@@ -119,9 +119,9 @@ export function TraceTab({
         {isDetailLoading ? (
           <Skeleton className="h-20 w-full" />
         ) : traceDetail?.outputMessages.length ? (
-          <pre className="overflow-auto rounded bg-muted p-3 text-xs">
-            {JSON.stringify(traceDetail.outputMessages, null, 2)}
-          </pre>
+          <div className="flex flex-col border-dashed border-border border-2 rounded-lg p-4 bg-secondary">
+            <Conversation messages={traceDetail.outputMessages} />
+          </div>
         ) : (
           <Text.H6 color="foregroundMuted">No output messages</Text.H6>
         )}

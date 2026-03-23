@@ -154,14 +154,19 @@ function computeCost(tokens: number, costPerMToken: number): number {
 // Message builders (OTEL GenAI format)
 // ---------------------------------------------------------------------------
 
-type Message = { role: string; content?: string; parts?: unknown[] }
+type Part = { type: string; [key: string]: unknown }
+type Message = { role: string; parts: Part[] }
 
 function userMessage(content: string): Message {
-  return { role: "user", content }
+  return { role: "user", parts: [{ type: "text", content }] }
+}
+
+function systemMessage(content: string): Message {
+  return { role: "system", parts: [{ type: "text", content }] }
 }
 
 function assistantTextMessage(content: string): Message {
-  return { role: "assistant", content }
+  return { role: "assistant", parts: [{ type: "text", content }] }
 }
 
 function assistantToolCallMessage(toolCalls: { id: string; name: string; args: Record<string, unknown> }[]): Message {
@@ -179,7 +184,7 @@ function assistantToolCallMessage(toolCalls: { id: string; name: string; args: R
 function toolResultMessage(callId: string, result: unknown): Message {
   return {
     role: "tool",
-    parts: [{ type: "tool_call_response", id: callId, result: JSON.stringify(result) }],
+    parts: [{ type: "tool_call_response", id: callId, response: JSON.stringify(result) }],
   }
 }
 
@@ -589,7 +594,7 @@ function generateRagTrace(config: TraceConfig): SpanRow[] {
       modelConfig: chatModel,
       inputMessages: [
         userMessage(userPrompt),
-        { role: "system", content: "[Retrieved context: Document 1: ... Document 2: ... Document 3: ...]" },
+        systemMessage("[Retrieved context: Document 1: ... Document 2: ... Document 3: ...]"),
       ],
       outputMessages: [assistantTextMessage(pick(ASSISTANT_RESPONSES))],
       finishReason: chatModel.finishReasonStop,

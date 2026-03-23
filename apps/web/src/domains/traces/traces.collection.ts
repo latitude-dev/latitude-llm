@@ -70,8 +70,13 @@ export function useTracesCount({ projectId }: { readonly projectId: string }) {
 }
 
 export function useTraceDetail({ projectId, traceId }: { readonly projectId: string; readonly traceId: string }) {
-  return useQuery<TraceDetailRecord | null>({
+  return useQuery({
     queryKey: ["traceDetail", projectId, traceId],
-    queryFn: () => getTraceDetail({ data: { projectId, traceId } }),
+    // getTraceDetail returns `never` at the type level to satisfy TanStack Start's
+    // Serialize constraint (see traces.functions.ts); cast back to the actual type
+    queryFn: async () => {
+      const result = await getTraceDetail({ data: { projectId, traceId } })
+      return result as TraceDetailRecord | null
+    },
   })
 }
