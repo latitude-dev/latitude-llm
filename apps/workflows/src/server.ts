@@ -19,78 +19,89 @@ for (const envPath of [
   }
 }
 
-await initializeObservability({
-  serviceName: "workflows",
-})
+const bootstrap = async () => {
+  await initializeObservability({
+    serviceName: "workflows",
+  })
 
-const logger = createLogger("workflows")
-let ready = false
+  const logger = createLogger("workflows")
+  let ready = false
 
-const healthPort = Effect.runSync(parseEnv("LAT_WORKFLOWS_HEALTH_PORT", "number", 9091))
-const healthServer = createServer((req, res) => {
-  if (req.url === "/health" && req.method === "GET") {
-    const status = ready ? 200 : 503
-    res.writeHead(status, { "Content-Type": "application/json" })
-    res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
-  } else {
-    res.writeHead(404)
-    res.end()
+  const healthPort = Effect.runSync(parseEnv("LAT_WORKFLOWS_HEALTH_PORT", "number", 9091))
+  const healthServer = createServer((req, res) => {
+    if (req.url === "/health" && req.method === "GET") {
+      const status = ready ? 200 : 503
+      res.writeHead(status, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
+    } else {
+      res.writeHead(404)
+      res.end()
+    }
+  })
+
+  healthServer.listen(healthPort, () => {
+    logger.info(`workflows health check listening on :${healthPort}/health`)
+  })
+
+  const temporalAddress = Effect.runSync(parseEnv("LAT_TEMPORAL_ADDRESS", "string", "localhost:7233"))
+  const temporalNamespace = Effect.runSync(parseEnv("LAT_TEMPORAL_NAMESPACE", "string", "default"))
+  const temporalTaskQueue = Effect.runSync(parseEnv("LAT_TEMPORAL_TASK_QUEUE", "string", "latitude-workflows"))
+  const temporalApiKey = Effect.runSync(parseEnvOptional("LAT_TEMPORAL_API_KEY", "string"))
+
+  let shutdownTemporal: (() => Promise<void>) | undefined
+
+  const start = async () => {
+    const temporal = await runTemporalWorker({
+      address: temporalAddress,
+      namespace: temporalNamespace,
+      taskQueue: temporalTaskQueue,
+      ...(temporalApiKey !== undefined ? { apiKey: temporalApiKey } : {}),
+    })
+
+    shutdownTemporal = temporal.shutdown
+    ready = true
+    logger.info("workflows Temporal worker polling", {
+      address: temporalAddress,
+      namespace: temporalNamespace,
+      taskQueue: temporalTaskQueue,
+    })
+
+    await temporal.runPromise
   }
-})
 
-healthServer.listen(healthPort, () => {
-  logger.info(`workflows health check listening on :${healthPort}/health`)
-})
-
-const temporalAddress = Effect.runSync(parseEnv("LAT_TEMPORAL_ADDRESS", "string", "localhost:7233"))
-const temporalNamespace = Effect.runSync(parseEnv("LAT_TEMPORAL_NAMESPACE", "string", "default"))
-const temporalTaskQueue = Effect.runSync(parseEnv("LAT_TEMPORAL_TASK_QUEUE", "string", "latitude-workflows"))
-const temporalApiKey = Effect.runSync(parseEnvOptional("LAT_TEMPORAL_API_KEY", "string"))
-
-let shutdownTemporal: (() => Promise<void>) | undefined
-
-const start = async () => {
-  const temporal = await runTemporalWorker({
-    address: temporalAddress,
-    namespace: temporalNamespace,
-    taskQueue: temporalTaskQueue,
-    ...(temporalApiKey !== undefined ? { apiKey: temporalApiKey } : {}),
+  const runPromise = start().catch((error) => {
+    logger.error("Failed to start workflows worker", error)
+    process.exit(1)
   })
 
-  shutdownTemporal = temporal.shutdown
-  ready = true
-  logger.info("workflows Temporal worker polling", {
-    address: temporalAddress,
-    namespace: temporalNamespace,
-    taskQueue: temporalTaskQueue,
-  })
+  const handleShutdown = async (signal: string) => {
+    logger.info(`Received ${signal}, shutting down workflows worker...`)
+    ready = false
+    healthServer.close()
 
-  await temporal.runPromise
+    try {
+      if (shutdownTemporal) {
+        await shutdownTemporal()
+      } else {
+        await runPromise
+      }
+    } catch (error) {
+      logger.error("Error during shutdown (worker may not have started)", error)
+    }
+
+    await shutdownObservability()
+    process.exit(0)
+  }
+
+  process.on("SIGTERM", () => {
+    void handleShutdown("SIGTERM")
+  })
+  process.on("SIGINT", () => {
+    void handleShutdown("SIGINT")
+  })
 }
 
-const runPromise = start().catch((error) => {
-  logger.error("Failed to start workflows worker", error)
+void bootstrap().catch((error) => {
+  console.error(error)
   process.exit(1)
 })
-
-const handleShutdown = async (signal: string) => {
-  logger.info(`Received ${signal}, shutting down workflows worker...`)
-  ready = false
-  healthServer.close()
-
-  try {
-    if (shutdownTemporal) {
-      await shutdownTemporal()
-    } else {
-      await runPromise
-    }
-  } catch (error) {
-    logger.error("Error during shutdown (worker may not have started)", error)
-  }
-
-  await shutdownObservability()
-  process.exit(0)
-}
-
-process.on("SIGTERM", () => handleShutdown("SIGTERM"))
-process.on("SIGINT", () => handleShutdown("SIGINT"))
