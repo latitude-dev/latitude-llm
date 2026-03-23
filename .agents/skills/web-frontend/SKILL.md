@@ -4,8 +4,10 @@
 
 ## Components
 
-- **Always** use `Text` component from `@repo/ui` for all text content
-- **Always** use `Button` component from `@repo/ui` for all buttons
+- **Always** use `Text` from `@repo/ui` for text content
+- **Always** use `Button` from `@repo/ui` for buttons
+- **Do not** nest `Text` inside `Button`. `Button` already sets font size, weight, and color; use plain text (and optional icons) as direct children. Wrapping the label in `Text` duplicates styles (e.g. avoid `<Button><Text.H5>Save</Text.H5></Button>`).
+- **Lucide icons:** import from `lucide-react` and pass the component to `@repo/ui`’s `Icon` via the `icon` prop (e.g. `<Icon icon={Pencil} size="sm" />`). Prefer that over raw `<Pencil />` so shared sizing and color tokens apply. Buttons and other primitives that accept an `icon` prop follow the same pattern; otherwise wrap with `Icon`.
 - **Always** use `GoogleIcon` and `GitHubIcon` from `@repo/ui` for OAuth provider icons
 
 ## Route-level component organization
@@ -123,6 +125,18 @@ export const Route = createFileRoute("/_authenticated")({
 - **Never** use margin utilities (no `m-*`, `mx-*`, `my-*`, `mt-*`, etc.)
 - **Always** use `gap` utilities for spacing between elements (`gap-*`, `gap-x-*`, `gap-y-*`)
 - **Always** use `p-*` (padding) for internal spacing within containers
+
+## Conditional classes (`cn`)
+
+With `cn()`, use **object syntax** `{ "class-name": condition }` — not short-circuit `condition && "class-name"`.
+
+```tsx
+// ❌ Bad
+<div className={cn("base-class", isActive && "bg-accent")} />
+
+// ✅ Good
+<div className={cn("base-class", { "bg-accent": isActive })} />
+```
 
 ### Example
 
