@@ -22,6 +22,11 @@ export const createFakeUserRepository = (overrides?: Partial<UserRepositoryShape
           namesSet.push(params)
         }
       }),
+
+    delete: (userId) =>
+      Effect.sync(() => {
+        users.delete(userId)
+      }),
     ...overrides,
   }
 
