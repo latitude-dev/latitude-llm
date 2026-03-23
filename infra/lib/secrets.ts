@@ -14,25 +14,52 @@ function createSingleSecret(
   description: string,
   value: pulumi.Input<string>,
   environment: string,
+  resourceOptions?: {
+    readonly secret?: pulumi.CustomResourceOptions
+    readonly version?: pulumi.CustomResourceOptions
+  },
 ): {
   secret: SecretsmanagerSecret
   secretVersion: SecretsmanagerSecretVersion
 } {
-  const secret = new aws.secretsmanager.Secret(`${baseName}-${secretName}`, {
-    name: `${baseName}-${secretName}`,
-    description: description,
-    tags: {
-      Name: `${baseName}-${secretName}`,
-      Environment: environment,
+  const secret = new aws.secretsmanager.Secret(
+    `${baseName}-${secretName}`,
+    {
+      name: `${baseName}-${secretName}`,
+      description: description,
+      tags: {
+        Name: `${baseName}-${secretName}`,
+        Environment: environment,
+      },
     },
-  })
+    resourceOptions?.secret,
+  )
 
-  const secretVersion = new aws.secretsmanager.SecretVersion(`${baseName}-${secretName}-version`, {
-    secretId: secret.id,
-    secretString: value,
-  })
+  const secretVersion = new aws.secretsmanager.SecretVersion(
+    `${baseName}-${secretName}-version`,
+    {
+      secretId: secret.id,
+      secretString: value,
+    },
+    resourceOptions?.version,
+  )
 
   return { secret, secretVersion }
+}
+
+/** Values are managed in AWS (or via env at first create); avoid Pulumi replacing versions on drift. */
+const oauthSecretResourceOptions: {
+  secret: pulumi.CustomResourceOptions
+  version: pulumi.CustomResourceOptions
+} = {
+  secret: {
+    ignoreChanges: ["recoveryWindowInDays", "forceOverwriteReplicaSecret"],
+    protect: true,
+  },
+  version: {
+    ignoreChanges: ["secretString"],
+    protect: true,
+  },
 }
 
 export function createApplicationSecrets(baseName: string, environment: string): SecretsOutput {
@@ -185,6 +212,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Google OAuth client ID — replace placeholder-change-me in Secrets Manager",
     process.env.LAT_GOOGLE_CLIENT_ID ?? "placeholder-change-me",
     environment,
+    oauthSecretResourceOptions,
   )
   secrets["google-oauth-client-id"] = googleOauthClientId.secret
   secretVersions["google-oauth-client-id"] = googleOauthClientId.secretVersion
@@ -195,6 +223,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Google OAuth client secret — replace placeholder-change-me in Secrets Manager",
     process.env.LAT_GOOGLE_CLIENT_SECRET ?? "placeholder-change-me",
     environment,
+    oauthSecretResourceOptions,
   )
   secrets["google-oauth-client-secret"] = googleOauthClientSecret.secret
   secretVersions["google-oauth-client-secret"] = googleOauthClientSecret.secretVersion
@@ -205,6 +234,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "GitHub OAuth client ID — replace placeholder-change-me in Secrets Manager",
     process.env.LAT_GITHUB_CLIENT_ID ?? "placeholder-change-me",
     environment,
+    oauthSecretResourceOptions,
   )
   secrets["github-oauth-client-id"] = githubOauthClientId.secret
   secretVersions["github-oauth-client-id"] = githubOauthClientId.secretVersion
@@ -215,6 +245,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "GitHub OAuth client secret — replace placeholder-change-me in Secrets Manager",
     process.env.LAT_GITHUB_CLIENT_SECRET ?? "placeholder-change-me",
     environment,
+    oauthSecretResourceOptions,
   )
   secrets["github-oauth-client-secret"] = githubOauthClientSecret.secret
   secretVersions["github-oauth-client-secret"] = githubOauthClientSecret.secretVersion
