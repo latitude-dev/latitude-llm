@@ -5,6 +5,7 @@ import {
   type InfiniteTableSorting,
   Input,
   ProviderIcon,
+  TagBadge as TagBadgeUI,
   Text,
   Tooltip,
 } from "@repo/ui"
@@ -34,20 +35,12 @@ function StatusBadge({ status }: { status: string }) {
   return <Text.H5 color={color}>{status.toUpperCase()}</Text.H5>
 }
 
-function TagBadge({ tag }: { tag: string }) {
-  return (
-    <span className="inline-flex shrink-0 items-center rounded-md bg-muted px-1.5 py-0.5 text-xs leading-4 font-medium text-muted-foreground">
-      {tag}
-    </span>
-  )
-}
-
 function TagList({ tags }: { tags: readonly string[] }) {
   if (tags.length === 0) return <Text.H5 color="foregroundMuted">-</Text.H5>
   return (
     <div className="flex items-center justify-end gap-1 overflow-x-auto max-w-full">
       {tags.map((tag) => (
-        <TagBadge key={tag} tag={tag} />
+        <TagBadgeUI key={tag} tag={tag} />
       ))}
     </div>
   )
