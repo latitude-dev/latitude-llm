@@ -18,3 +18,19 @@ export interface EventEnvelope<TEvent extends DomainEvent = DomainEvent> {
 export interface EventsPublisher<TError = unknown> {
   publish(envelope: EventEnvelope): Effect.Effect<void, TError, never>
 }
+
+/**
+ * Port for writing domain events to the transactional outbox.
+ *
+ * Apps use this abstraction instead of inserting into the outbox table directly.
+ */
+export interface OutboxWriter {
+  write(event: {
+    readonly id: string
+    readonly eventName: string
+    readonly aggregateId: string
+    readonly organizationId: string
+    readonly payload: Record<string, unknown>
+    readonly occurredAt: Date
+  }): Promise<void>
+}
