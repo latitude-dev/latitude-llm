@@ -2,11 +2,12 @@ import { MembershipRepository, OrganizationRepository } from "@domain/organizati
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
+import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
-export interface OrganizationRecord {
+interface OrganizationRecord {
   readonly id: string
   readonly name: string
 }
@@ -43,7 +44,7 @@ export const getOrganization = createServerFn({ method: "GET" })
 
 export const updateOrganizationName = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .validator((data: { name: string }) => data)
+  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<OrganizationRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
