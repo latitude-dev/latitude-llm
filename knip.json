@@ -15,7 +15,7 @@
       "project": ["src/**/*.ts"]
     },
     "apps/web": {
-      "entry": ["src/router.tsx", "src/routes/**/*.tsx"],
+      "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"]
     },
     "infra": {
