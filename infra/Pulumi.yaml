@@ -4,7 +4,6 @@ runtime:
   name: nodejs
   options:
     typescript: true
-    nodeagent: npm
 backend:
   url: s3://latitude-pulumi-state-442420265876
 

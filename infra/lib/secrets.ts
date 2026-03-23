@@ -179,6 +179,46 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["mailgun-region"] = mailgunRegion.secret
   secretVersions["mailgun-region"] = mailgunRegion.secretVersion
 
+  const googleOauthClientId = createSingleSecret(
+    baseName,
+    "google-oauth-client-id",
+    "Google OAuth client ID — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GOOGLE_CLIENT_ID ?? "placeholder-change-me",
+    environment,
+  )
+  secrets["google-oauth-client-id"] = googleOauthClientId.secret
+  secretVersions["google-oauth-client-id"] = googleOauthClientId.secretVersion
+
+  const googleOauthClientSecret = createSingleSecret(
+    baseName,
+    "google-oauth-client-secret",
+    "Google OAuth client secret — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GOOGLE_CLIENT_SECRET ?? "placeholder-change-me",
+    environment,
+  )
+  secrets["google-oauth-client-secret"] = googleOauthClientSecret.secret
+  secretVersions["google-oauth-client-secret"] = googleOauthClientSecret.secretVersion
+
+  const githubOauthClientId = createSingleSecret(
+    baseName,
+    "github-oauth-client-id",
+    "GitHub OAuth client ID — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_CLIENT_ID ?? "placeholder-change-me",
+    environment,
+  )
+  secrets["github-oauth-client-id"] = githubOauthClientId.secret
+  secretVersions["github-oauth-client-id"] = githubOauthClientId.secretVersion
+
+  const githubOauthClientSecret = createSingleSecret(
+    baseName,
+    "github-oauth-client-secret",
+    "GitHub OAuth client secret — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_GITHUB_CLIENT_SECRET ?? "placeholder-change-me",
+    environment,
+  )
+  secrets["github-oauth-client-secret"] = githubOauthClientSecret.secret
+  secretVersions["github-oauth-client-secret"] = githubOauthClientSecret.secretVersion
+
   return {
     secrets,
     secretVersions,

@@ -283,6 +283,10 @@ function createTaskDefinition(
       secrets["mailgun-domain"].arn,
       secrets["mailgun-from"].arn,
       secrets["mailgun-region"].arn,
+      secrets["google-oauth-client-id"].arn,
+      secrets["google-oauth-client-secret"].arn,
+      secrets["github-oauth-client-id"].arn,
+      secrets["github-oauth-client-secret"].arn,
     ])
     .apply(
       ([
@@ -304,6 +308,10 @@ function createTaskDefinition(
         mailgunDomainArn,
         mailgunFromArn,
         mailgunRegionArn,
+        googleOauthClientIdArn,
+        googleOauthClientSecretArn,
+        githubOauthClientIdArn,
+        githubOauthClientSecretArn,
       ]) => {
         const def = {
           name: serviceConfig.name,
@@ -369,6 +377,14 @@ function createTaskDefinition(
             { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
             { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
             { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
+            ...(serviceConfig.name === "web"
+              ? [
+                  { name: "LAT_GOOGLE_CLIENT_ID", valueFrom: googleOauthClientIdArn },
+                  { name: "LAT_GOOGLE_CLIENT_SECRET", valueFrom: googleOauthClientSecretArn },
+                  { name: "LAT_GITHUB_CLIENT_ID", valueFrom: githubOauthClientIdArn },
+                  { name: "LAT_GITHUB_CLIENT_SECRET", valueFrom: githubOauthClientSecretArn },
+                ]
+              : []),
           ],
           healthCheck: {
             command: [
