@@ -14,6 +14,7 @@ import {
   ClaudeIcon,
   CloudflareIcon,
   CloudflareWorkersIcon,
+  CodeBlock,
   CohereIcon,
   Conversation,
   CopilotIcon,
@@ -210,6 +211,14 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         <RichTextEditorShowcase />
       </ShowcaseSection>
 
+      <ShowcaseSection
+        theme={theme}
+        title="Code Block"
+        description="Read-only syntax-highlighted code viewer, powered by CodeMirror."
+      >
+        <CodeBlockShowcase />
+      </ShowcaseSection>
+
       <ShowcaseSection theme={theme} title="Copy Button" description="Clipboard copy with feedback.">
         <div className="flex flex-col gap-3">
           <div className="flex flex-row items-center gap-2">
@@ -326,6 +335,34 @@ function RichTextEditorShowcase() {
       <div className="flex flex-col gap-1">
         <Text.H6 weight="bold">Plain text</Text.H6>
         <RichTextEditor value={textValue} onChange={setTextValue} minHeight="80px" />
+      </div>
+    </div>
+  )
+}
+
+const SAMPLE_JSON = JSON.stringify(
+  {
+    traceId: "abc123def456",
+    model: "gpt-4o",
+    provider: "openai",
+    tokens: { input: 1250, output: 384, reasoning: 0 },
+    tags: ["production", "chat"],
+    metadata: { userId: "usr_9x8y7z", sessionId: "sess_a1b2c3" },
+  },
+  null,
+  2,
+)
+
+function CodeBlockShowcase() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <Text.H6 weight="bold">JSON content (auto-highlighted, copyable)</Text.H6>
+        <CodeBlock value={SAMPLE_JSON} copyable />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Text.H6 weight="bold">Plain text (no copy button)</Text.H6>
+        <CodeBlock value={"SELECT id, name, status\nFROM spans\nWHERE trace_id = 'abc123'\nORDER BY start_time DESC"} />
       </div>
     </div>
   )

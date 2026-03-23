@@ -11,6 +11,21 @@ export interface ToolDefinition {
   readonly parameters: unknown
 }
 
+export type Operation =
+  | "chat"
+  | "text_completion"
+  | "embeddings"
+  | "execute_tool"
+  | "invoke_agent"
+  | "reranker"
+  | "chain"
+  | "prompt"
+  | "retrieval"
+  | "guardrail"
+  | "evaluator"
+  | "unspecified"
+  | (string & {})
+
 /**
  * Span — the listing/query shape returned by list and trace queries.
  *
@@ -40,7 +55,7 @@ export interface Span {
   readonly metadata: Readonly<Record<string, string>>
   readonly eventsJson: string
   readonly linksJson: string
-  readonly operation: string
+  readonly operation: Operation
   readonly provider: string
   readonly model: string
   readonly responseModel: string

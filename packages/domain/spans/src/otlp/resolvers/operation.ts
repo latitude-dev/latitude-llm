@@ -1,6 +1,7 @@
+import type { Operation } from "../../entities/span.ts"
 import { fromString } from "./utils.ts"
 
-const OPENINFERENCE_OPERATION: Record<string, string> = {
+const OPENINFERENCE_OPERATION: Record<string, Operation> = {
   LLM: "chat",
   EMBEDDING: "embeddings",
   RETRIEVER: "retrieval",
@@ -13,7 +14,7 @@ const OPENINFERENCE_OPERATION: Record<string, string> = {
   PROMPT: "prompt",
 }
 
-const OPENLLMETRY_OPERATION: Record<string, string> = {
+const OPENLLMETRY_OPERATION: Record<string, Operation> = {
   completion: "text_completion",
   embedding: "embeddings",
   rerank: "reranker",
@@ -21,7 +22,7 @@ const OPENLLMETRY_OPERATION: Record<string, string> = {
   tool: "execute_tool",
 }
 
-const VERCEL_OPERATION: Record<string, string> = {
+const VERCEL_OPERATION: Record<string, Operation> = {
   "ai.generateText": "chat",
   "ai.generateText.doGenerate": "chat",
   "ai.streamText": "chat",

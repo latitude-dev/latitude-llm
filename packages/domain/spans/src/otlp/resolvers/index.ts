@@ -33,7 +33,7 @@ export function resolveAttributes(spanAttrs: readonly OtlpKeyValue[], statusCode
   const model = first(modelCandidates, spanAttrs) ?? ""
 
   return {
-    operation: first(operationCandidates, spanAttrs) ?? "",
+    operation: first(operationCandidates, spanAttrs) ?? "unspecified",
     provider,
     model,
     responseModel: first(responseModelCandidates, spanAttrs) ?? "",

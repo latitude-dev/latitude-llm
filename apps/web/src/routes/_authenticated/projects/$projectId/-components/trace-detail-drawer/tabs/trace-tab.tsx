@@ -1,4 +1,4 @@
-import { Conversation, DetailSection, DetailSummary, Skeleton, Text } from "@repo/ui"
+import { CodeBlock, Conversation, DetailSection, DetailSummary, Skeleton, Text } from "@repo/ui"
 import { formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, MessageSquareIcon, TextIcon } from "lucide-react"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
@@ -75,9 +75,7 @@ export function TraceTab({
           )}
 
           <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata">
-            <pre className="overflow-auto rounded bg-muted p-3 text-xs">
-              {JSON.stringify(traceRecord.metadata, null, 2)}
-            </pre>
+            <CodeBlock value={JSON.stringify(traceRecord.metadata, null, 2)} copyable />
           </DetailSection>
         </>
       ) : (

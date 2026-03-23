@@ -590,7 +590,7 @@ describe("TravelPlanner trace — Vercel AI SDK", () => {
     })
 
     it("agent span has no operation (no ai.operationId)", () => {
-      expect(findSpan("agent").operation).toBe("")
+      expect(findSpan("agent").operation).toBe("unspecified")
     })
   })
 

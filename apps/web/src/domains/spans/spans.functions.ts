@@ -1,5 +1,5 @@
 import { NotFoundError, OrganizationId, SpanId, TraceId } from "@domain/shared"
-import type { Span, SpanDetail } from "@domain/spans"
+import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
@@ -17,10 +17,10 @@ export interface SpanRecord {
   readonly parentSpanId: string
   readonly name: string
   readonly serviceName: string
-  readonly kind: string
-  readonly statusCode: string
+  readonly kind: SpanKind
+  readonly statusCode: SpanStatusCode
   readonly statusMessage: string
-  readonly operation: string
+  readonly operation: Operation
   readonly provider: string
   readonly model: string
   readonly tokensInput: number
