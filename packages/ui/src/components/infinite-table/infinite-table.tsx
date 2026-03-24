@@ -24,6 +24,7 @@ export function InfiniteTable<T>({
   getRowKey,
   onRowClick,
   activeRowKey,
+  activeRowAutoScroll = true,
   selection,
   infiniteScroll,
   sorting,
@@ -107,7 +108,7 @@ export function InfiniteTable<T>({
   }, [layoutFixed, data.length])
 
   useLayoutEffect(() => {
-    if (activeRowIndex < 0) return
+    if (!activeRowAutoScroll || activeRowIndex < 0) return
 
     const scrollActiveRowIntoView = () => {
       virtualizer.scrollToIndex(activeRowIndex, {
@@ -119,7 +120,7 @@ export function InfiniteTable<T>({
     scrollActiveRowIntoView()
     const rafId = requestAnimationFrame(scrollActiveRowIntoView)
     return () => cancelAnimationFrame(rafId)
-  }, [activeRowIndex, virtualizer])
+  }, [activeRowAutoScroll, activeRowIndex, virtualizer])
 
   const paddingTop = virtualRows[0]?.start ?? 0
   const lastRow = virtualRows[virtualRows.length - 1]
