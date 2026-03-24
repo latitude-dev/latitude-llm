@@ -202,7 +202,7 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table; session selection resolves to the newest trace and still creates `annotation_queue_items` with `trace_id` only and `completedAt = null`
 - system-created manual queues are marked with `system = true`, provision `settings.sampling` from a named default constant, and let users tune that sampling later without changing the canonical queue definitions
 - system-created manual queues are populated asynchronously from `TraceEnded`: the `domain-events` dispatcher publishes `system-annotation-queues:flag`, which applies per-queue sampling first, then deterministic routing or a cheap limited-context flagger model, and publishes one `system-annotation-queues:annotate` task per flagged queue; that task uses full context to confirm the match before it writes the queue item and pending-review draft annotation
-- queues are conceptually dynamic / live when they store the same future plain-string filter concept used by evaluation triggers inside queue settings, and a dedicated `live-annotation-queues:curate` task incrementally materializes new matching traces from `TraceEnded` with filter-before-sampling evaluation and batched inserts
+- queues are conceptually dynamic / live when they store the shared `FilterSet` used by evaluation triggers inside queue settings, and a dedicated `live-annotation-queues:curate` task incrementally materializes new matching traces from `TraceEnded` with shared trace-filter matching before sampling and batched inserts
 - newly created dynamic annotation queues initialize `settings.sampling` from a named constant, with an initial default of `10%`
 - queue review is the focused in-product annotation workflow for fast human feedback
 
@@ -227,7 +227,7 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic issue-discovery side effect
 - issue-generated evaluation creation returns a `jobId` immediately and completes in the background; the frontend polls a Redis-backed status endpoint for that alignment job
 - issues may have several linked evaluations; explicit generation is not limited to a single linked monitor
-- live evaluation triggering is incremental on `TraceEnded`; the `domain-events` dispatcher publishes `live-evaluations:enqueue`, that task checks active evaluations project-wide, uses trigger order filter first, sampling second, then turn/debounce, and publishes `live-evaluations:execute` tasks for matches
+- live evaluation triggering is incremental on `TraceEnded`; the `domain-events` dispatcher publishes `live-evaluations:enqueue`, that task checks active evaluations project-wide, applies the shared `FilterSet` first, sampling second, then turn/debounce, and publishes `live-evaluations:execute` tasks for matches
 - initial issue-linked evaluation generation requires at least one failed, non-errored, non-draft human annotation linked to that issue and does not require any negative examples
 - sparse first-pass monitors may be weakly aligned at first, but annotation-driven realignment should improve them as more evidence accumulates
 - evaluations are script-native, GEPA-backed artifacts that run through a portable runtime shared with simulations

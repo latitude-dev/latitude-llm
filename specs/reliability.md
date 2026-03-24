@@ -1,6 +1,6 @@
 # Reliability
 
-> **Documentation**: `docs/reliability.md`, `docs/evaluations.md`, `docs/annotations.md`, `docs/scores.md`, `docs/issues.md`, `docs/simulations.md`, `docs/annotation-queues.md`, `docs/organizations.md`, `docs/projects.md`, `docs/users.md`, `docs/settings.md`, `docs/spans.md`
+> **Documentation**: `docs/reliability.md`, `docs/filters.md`, `docs/evaluations.md`, `docs/annotations.md`, `docs/scores.md`, `docs/issues.md`, `docs/simulations.md`, `docs/annotation-queues.md`, `docs/organizations.md`, `docs/projects.md`, `docs/users.md`, `docs/settings.md`, `docs/spans.md`
 
 ## Spec Contract
 
@@ -195,9 +195,32 @@ Trace-end fan-out:
 - the `domain-events` dispatcher reacts to `TraceEnded` by publishing `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:flag`
 - downstream tasks may publish further tasks such as `live-evaluations:execute` or `system-annotation-queues:annotate`, but the dispatcher itself never performs the work inline
 
+## Trace Filters
+
+The `filter` fields used in this specification use the trace filters defined in `packages/domain/shared/src/filter.ts` which are exported from `@domain/shared` as `FilterSet`.
+
+The canonical shared filter model looks like this (but the docs or its implementation must be looked up for specifics):
+
+```typescript
+type FilterOperator = (typeof FILTER_OPERATORS)[number];
+
+interface FilterCondition {
+  readonly op: FilterOperator;
+  readonly value: string | number | boolean | readonly (string | number)[];
+}
+
+type FilterSet = Readonly<Record<string, readonly FilterCondition[]>>;
+```
+
+Reliability must reuse this shared filter model instead of inventing a second free-form string filter language
+
+App and API boundaries that accept filters should validate them with the shared `filterSetSchema`
+
+Trace-oriented reliability filtering reuses the shared trace field registry in `packages/platform/db-clickhouse/src/registries/trace-fields.ts`.
+
 ## Settings
 
-There is no standalone settings domain. Settings are embedded JSONB on the owner entity where they are needed.
+There is no standalone settings domain. Settings stay attached to the owner entity only when a concrete reliability capability needs them.
 
 Conceptually there are three ownership layers:
 
@@ -205,46 +228,25 @@ Conceptually there are three ownership layers:
 - project-wide
 - user-wide
 
-The settings shapes should stay very close to the original proposal:
+For MVP, the only reliability owner settings required are the organization/project defaults for `keepMonitoring`.
+
+The MVP settings shapes should stay intentionally small:
 
 ```typescript
-type UserSettings = {
-  ... // User-wide settings. Still pending precise definition.
-}
-
 type ProjectSettings = {
-  defaultProvider?: string // if not provided, the organization's default provider will be used
-  defaultModel?: string // if not provided, the organization's default provider's model will be used
-  keepMonitoring?: boolean // if true, issue-linked evaluations keep running after resolution; if false they are archived
-}
+  keepMonitoring?: boolean; // if true, issue-linked evaluations keep running after resolution; if false they are archived
+};
 
 type OrganizationSettings = {
-  providers: {
-    [name: string]: {
-      apiKey: string // persisted using application-level encryption via repository crypto helpers
-      ...
-    }
-  }
-  defaultProvider?: string // if not provided, the first configured provider will be used
-  defaultModel?: string // if not provided, the first configured model for that provider will be used
-  keepMonitoring?: boolean // organization-wide default for post-resolution monitoring behavior
-}
+  keepMonitoring?: boolean; // organization-wide default for post-resolution monitoring behavior
+};
 ```
 
-These extend the existing Postgres owner tables by adding `settings` columns:
+These extend the existing Postgres owner tables by adding `settings` columns only where MVP behavior needs them:
 
 ```typescript
 import { sql } from "drizzle-orm";
 import { jsonb, varchar } from "drizzle-orm/pg-core";
-
-export const user = latitudeSchema.table("user", {
-  // existing Better Auth fields...
-  settings: jsonb("settings")
-    .$type<UserSettings>()
-    .notNull()
-    .default(sql`'{}'::jsonb`),
-  ...timestamps(),
-});
 
 export const organization = latitudeSchema.table("organization", {
   // existing Better Auth fields...
@@ -274,30 +276,28 @@ export const projects = latitudeSchema.table(
 );
 ```
 
-This includes provider/model configuration and provider credentials, which stay embedded in owner `settings` JSONB rather than moving into separate relational tables.
+MVP does not need:
 
-Important repository-specific notes:
+- `user.settings`
+- provider/model fields in `organization.settings` or `projects.settings`
+- evaluation-level provider/model settings
+
+Important MVP repository-specific notes:
 
 - `projects.settings` lives on an organization-scoped table and should use existing RLS protections.
-- `organization.settings` and `user.settings` live on Better Auth-owned tables, so they are protected by boundary auth/membership rules rather than `organizationRLSPolicy`.
-- Provider API keys must use application-level encryption via the repository crypto helpers before persistence. The spec does not lock a new JSON envelope format; it only requires app-level encryption so plaintext keys are never stored by the application.
+- `organization.settings` lives on a Better Auth-owned table, so it is protected by boundary auth/membership rules rather than `organizationRLSPolicy`.
+- user-scoped settings remain deferred until a concrete user preference requires them
 
-Indexing note:
+MVP indexing note:
 
-- do not add new secondary indexes on `user.settings`, `organization.settings`, or `projects.settings` in the settings foundation phase
+- do not add new secondary indexes on `organization.settings` or `projects.settings` in the settings foundation phase
 - those settings payloads are loaded through the existing owner-row primary/unique lookup paths, so speculative JSONB/GiN indexing would be premature
 
-UI placement must follow the proposal:
+MVP UI placement:
 
 - organization settings are accessible from the home dashboard
 - project settings are accessible from the project dashboard
-- user settings are accessible from the profile menu
-
-Credential resolution order for evaluation execution is:
-
-1. evaluation settings
-2. project settings
-3. organization settings
+- user settings stay deferred until they have concrete product value
 
 `keepMonitoring` is the exact field controlling post-resolution issue-monitor behavior:
 
@@ -311,6 +311,47 @@ Manual ignore behavior is separate from `keepMonitoring`:
 
 - when an issue is manually ignored, its linked evaluations are archived immediately
 - `keepMonitoring` only governs what happens on issue resolution, not on issue ignore
+
+### Post-MVP Provider/Model Settings
+
+The original provider/model settings plan is intentionally retained for post-MVP work.
+
+When that phase returns, the settings shapes should stay close to the original proposal:
+
+```typescript
+type UserSettings = {
+  ... // User-wide settings. Still pending precise definition.
+}
+
+type ProjectSettings = {
+  keepMonitoring?: boolean // retained from MVP
+  defaultProvider?: string // if not provided, the organization's default provider will be used
+  defaultModel?: string // if not provided, the organization's default provider's model will be used
+}
+
+type ProviderSettings = {
+  apiKey: string // persisted using application-level encryption via repository crypto helpers
+  ... // provider-specific fields remain extensible
+}
+
+type OrganizationSettings = {
+  keepMonitoring?: boolean // retained from MVP
+  providers: Record<string, ProviderSettings> // provider name to provider settings
+  defaultProvider?: string // if not provided, the first configured provider will be used
+  defaultModel?: string // if not provided, the first configured model for that provider will be used
+}
+
+type EvaluationSettings = {
+  provider?: string // if not provided, the project or organization post-MVP defaults will be used
+  model?: string // if not provided, the project or organization post-MVP defaults will be used
+}
+```
+
+Important post-MVP notes:
+
+- before implementing provider/model settings, explicitly define whether `OrganizationSettings.providers` stays embedded in `organization.settings` JSONB or moves to a dedicated organization-scoped table
+- Provider API keys must use application-level encryption via the repository crypto helpers before persistence. The spec does not lock a new JSON envelope format; it only requires app-level encryption so plaintext keys are never stored by the application.
+- once provider/model settings land, evaluation execution resolution order is evaluation settings, then project settings, then organization settings
 
 ## Evaluations
 
@@ -341,8 +382,6 @@ function Failed(score?: number, feedback: string): Score
 async function llm(
   prompt: string,
   options?: {
-    provider?: string
-    model?: string
     temperature?: number
     maxTokens?: number
     schema: z.ZodSchema
@@ -381,7 +420,8 @@ Rules:
 - the eventual runtime must be portable between backend execution and the simulation CLI
 - the eventual runtime must enforce resource limits for CPU, memory, loops, sleep, and other abuse patterns
 - the script should have access to `zod` and other host-approved globals or dependencies only
-- functions that require some user configuration (such as the `llm()` function provider and model), the system will search first in the specific evaluation settings, then for the project settings and lastly it will default for the organization's settings.
+- for MVP and early hosted execution, `llm()` runs through `@platform/ai-vercel` and the Vercel AI SDK with a Latitude-managed provider, model, and environment-managed API key rather than user-configured provider/model settings
+- if post-MVP provider/model settings return, they should extend `llm()` without changing the stored script artifact model, using evaluation -> project -> organization resolution
 
 The stored script must point toward the full JS-like runtime even before that runtime ships.
 
@@ -394,7 +434,7 @@ For MVP, evaluations generated from issues (by user demand) may be executed by a
 - the persisted artifact is still a script
 - the evaluation model, optimizer, APIs, and simulation architecture must already target the future JS-like runtime
 - the MVP implementation must not back the system into a hidden prompt-config model that later needs a migration
-- because the MVP script is constrained to a single `llm()` template call, the host runner may extract the prompt/options from the stored script and execute them directly through `@platform/ai-vercel`
+- because the MVP script is constrained to a single `llm()` template call, the host runner may extract the prompt/options from the stored script and execute them directly through `@platform/ai-vercel` and the Vercel AI SDK with the Latitude-managed provider/model/API-key configuration
 
 #### MVP target architecture
 
@@ -557,8 +597,10 @@ Not all spans/traces/sessions must be evaluated.
 The evaluation trigger shape stays aligned with the proposal:
 
 ```typescript
+import type { FilterSet } from "@domain/shared";
+
 type EvaluationTrigger = {
-  filter: string; // runs on traces that match this filter
+  filter: FilterSet; // trace/session filter over the shared trace field registry; `{}` matches all traces
   turn: "first" | "every" | "last"; // runs on the first, every, or last ingested trace/turn
   debounce: number; // debounce time in seconds
   sampling: number; // percentage [0, 100]
@@ -567,8 +609,9 @@ type EvaluationTrigger = {
 
 MVP status:
 
-- `turn`, `debounce`, and `sampling` are in MVP
-- `filter` belongs to the base model now, but its grammar/execution is deferred and remains pending definition for MVP
+- `filter`, `turn`, `debounce`, and `sampling` are all in MVP
+- `filter` reuses the shared `FilterSet` from `@domain/shared` rather than a reliability-only string grammar
+- live evaluation selection should reuse the shared trace filter semantics and field registry rather than inventing a parallel trigger-filter interpreter
 
 Live evaluation triggering is incremental:
 
@@ -578,7 +621,7 @@ Live evaluation triggering is incremental:
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
 - when an evaluation passes those trigger checks, `live-evaluations:enqueue` publishes one `live-evaluations` message with task `execute` for that `(evaluationId, traceId)` pair; the payload carries ids plus trigger context only, and score generation/writes happen later in that task
 - this `live-evaluations:enqueue` task is separate from `live-annotation-queues:curate`
-- in MVP, stored `filter` values remain inert until filter execution lands, but the live incremental triggering model still applies to active evaluations
+- an empty `trigger.filter` means "match all traces"
 
 Deleted or archived evaluations never trigger.
 
@@ -595,14 +638,13 @@ Archived and deleted are different states:
 
 ### Evaluation Model
 
+In MVP, evaluations do not need a `settings` JSONB column. Provider/model overrides are deferred to a post-MVP extension.
+
 ```typescript
-type EvaluationSettings = {
-  provider?: string; // if not provided, the organization's default provider will be used
-  model?: string; // if not provided, the organization's default provider's model will be used
-};
+import type { FilterSet } from "@domain/shared";
 
 type EvaluationTrigger = {
-  filter: string; // runs on traces that match this filter
+  filter: FilterSet; // trace/session filter over the shared trace field registry; `{}` matches all traces
   turn: "first" | "every" | "last"; // runs on the first, every, or last ingested trace/turn
   debounce: number; // debounce time in seconds
   sampling: number; // percentage [0, 100]
@@ -632,7 +674,6 @@ export const evaluations = latitudeSchema.table(
     name: varchar("name", { length: 128 }).notNull(), // unique name within the project among non-deleted rows
     description: text("description").notNull(),
     script: text("script").notNull(), // javascript-like evaluation script that runs inside a sandbox/runtime wrapper
-    settings: jsonb("settings").$type<EvaluationSettings>().notNull(),
     trigger: jsonb("trigger").$type<EvaluationTrigger>().notNull(),
     alignment: jsonb("alignment").$type<EvaluationAlignment>().notNull(),
     alignedAt: tzTimestamp("aligned_at").notNull(), // last time the evaluation was realigned
@@ -663,7 +704,7 @@ Required Postgres indexes:
 - btree on `(organization_id, project_id, deleted_at, archived_at, created_at)` for active/archived project list views
 - btree on `(organization_id, project_id, issue_id, deleted_at)` for issue-linked evaluation lookups and issue-driven lifecycle updates
 - do not add a unique issue-level constraint in MVP; issues may have several linked evaluations
-- do not add GIN/JSONB indexes on `settings`, `trigger`, or `alignment`, and do not add text indexes on `script` or `description` in the evaluations foundation phase
+- do not add GIN/JSONB indexes on `trigger` or `alignment`, and do not add text indexes on `script` or `description` in the evaluations foundation phase
 
 ### Evaluation Table
 
@@ -869,7 +910,7 @@ Queue concepts:
 - user-created queues are in MVP
 - each project also gets a default set of system-created manual annotation queues
 
-Queue filters intentionally reuse the same future filter grammar as `EvaluationTrigger.filter`, but until that grammar is finalized they should be stored as plain strings inside queue settings.
+Queue filters reuse the same shared `FilterSet` used by `EvaluationTrigger.filter`, applied against the shared trace field registry. Dynamic queues should omit `settings.filter` entirely when no conditions are configured so manual/dynamic semantics stay unambiguous.
 
 Queue assignees are optional. A queue may be assigned to none, one, or many existing Latitude users from the same organization.
 
@@ -933,15 +974,17 @@ Queue population flows:
 - `system-annotation-queues:annotate` uses a larger validator/drafter LLM with the full conversation context to validate the flag and create the draft annotation in the same call
 - only if the validation/annotation task confirms the match does the system create the draft annotation and add the trace to that queue
 - draft-annotation creation and queue-item creation should happen together so the queue always has a matching pending annotation artifact
-- dynamic / live queues are incremental: whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `live-annotation-queues` message with task `curate` for that trace; `live-annotation-queues:curate` lists all non-deleted dynamic queues in that project, matches `settings.filter` first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
+- dynamic / live queues are incremental: whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `live-annotation-queues` message with task `curate` for that trace; `live-annotation-queues:curate` lists all non-deleted dynamic queues in that project, applies `settings.filter` using the shared trace filter semantics first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
 - `system-annotation-queues:flag`, `system-annotation-queues:annotate`, and `live-annotation-queues:curate` are all separate from `live-evaluations:enqueue`
 - when a dynamic queue is created with `settings.filter` and no explicit sampling, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; the starting default for that constant is `10`
 - when a system queue is provisioned for a project, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; users may later edit that sampling value per queue
 - the unique `(organization_id, project_id, queue_id, trace_id)` constraint prevents duplicate queue membership when a trace is manually re-added, when a session resolves to the same latest trace, or when a dynamic materialization path retries
 
 ```typescript
+import type { FilterSet } from "@domain/shared";
+
 type AnnotationQueueSettings = {
-  filter?: string; // same future plain-string grammar as EvaluationTrigger.filter
+  filter?: FilterSet; // shared trace filter set; omit when the queue is manual
   sampling?: number; // optional percentage [0, 100]; used by dynamic queues and by system queues, with defaults seeded from named constants on queue creation/provisioning
 };
 ```
@@ -1012,6 +1055,7 @@ Queue invariants:
 - when a user manually adds a session to a queue, resolve that session to its newest trace and store only that `traceId`
 - a queue is conceptually `manual` when `settings.filter` is absent
 - a queue is conceptually `dynamic` / `live` when `settings.filter` is present
+- empty filter sets should be normalized to absent `settings.filter` so manual/dynamic queue semantics stay unambiguous
 - every project has a default set of system-created manual queues from the start
 - system-created default queues are manual queues with `system = true` even though the system inserts their members automatically
 - `system = true` queues keep their canonical `name`, `description`, `instructions`, and `settings.filter` non-editable, but they may still be deleted and their `settings.sampling` may still be edited
@@ -1036,7 +1080,7 @@ Required Postgres indexes:
 - on `annotation_queues`: btree on `(organization_id, project_id, deleted_at, created_at)` for project-scoped queue listing/management
 - on `annotation_queue_items`: btree on `(organization_id, project_id, queue_id, completed_at, created_at, trace_id)` for progress queries, pending-item navigation, and deterministic review order
 - on `annotation_queue_items`: unique btree on `(organization_id, project_id, queue_id, trace_id)` to prevent duplicate queue membership for the same trace
-- do not add GIN/array indexes on `assignees`, do not add GIN/JSONB indexes on `settings`, and do not add text indexes on `description`, `instructions`, or `settings.filter` until queue search/filter workloads are better defined
+- do not add GIN/array indexes on `assignees`, do not add GIN/JSONB indexes on `settings`, and do not add text indexes on `description` or `instructions` until queue search/filter workloads are better defined
 
 ### Annotation Queues Page
 
@@ -1057,7 +1101,7 @@ Interactions:
 - the edit quick action opens the queue settings modal
 - the delete quick action opens a confirmation modal
 - row click navigates to the focused queue annotation screen
-- the create modal edits `name`, `description`, `instructions`, `assignees`, and the optional `settings.filter` / `settings.sampling` fields for user-created queues
+- the create modal edits `name`, `description`, `instructions`, `assignees`, and the optional `settings.filter` / `settings.sampling` fields for user-created queues, using the shared trace-filter builder rather than a free-form text input
 - the edit modal keeps `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues while still allowing `assignees` and `settings.sampling` updates
 - when a queue is created with `settings.filter` and no explicit sampling, the UI/server path initializes `settings.sampling` from the named default constant
 - when a system queue is provisioned for a project, the UI/server path initializes `settings.sampling` from the named default constant and later lets users tune that sampling per queue
@@ -2228,18 +2272,18 @@ Row click opens a detailed view with:
 
 **Exit gate**: the shared queue/workflow substrate is settled enough that later phases can define their own concrete tasks, payloads, and workflows without reopening the core async abstractions.
 
-### (LAT-458) Phase 1 - Settings Foundations
+### (LAT-458) Phase 1 - Keep-Monitoring Settings Foundations
 
 **Depends on**: none
 
 **Parallelization notes**: can run in parallel with phases 2 through 7.
 
-- [ ] Define the canonical shared Zod schemas for settings (organization, project, user) and infer TypeScript types; use literal-string unions rather than TypeScript enums for enum-like contracts.
-- [ ] Extend `organization`, `user`, and `projects` with `settings` JSONB columns and application-level encryption for provider credentials, without adding speculative secondary JSONB indexes.
-- [ ] Include `keepMonitoring` in organization/project settings shapes from the start so downstream settings `apps/web` and public/machine-facing settings work can rely on it.
+- [ ] Define the canonical shared Zod schemas for the MVP reliability owner settings (`OrganizationSettings.keepMonitoring` and `ProjectSettings.keepMonitoring`) and infer TypeScript types; use literal-string unions rather than TypeScript enums for enum-like contracts.
+- [ ] Extend `organization` and `projects` with `settings` JSONB columns for `keepMonitoring`, without adding speculative secondary JSONB indexes.
+- [ ] Include `keepMonitoring` in organization/project settings shapes from the start so downstream settings `apps/web` and public/machine-facing settings work can rely on it, while deferring `user.settings` until a concrete user preference exists.
 - [ ] Keep settings reads on existing owner-row primary/unique paths and explicitly avoid speculative JSONB secondary indexes in the settings foundation phase.
 
-**Exit gate**: settings schema and migrations are complete; `keepMonitoring` is settled before downstream phases.
+**Exit gate**: organization/project settings schema and migrations are complete; `keepMonitoring` is settled before downstream phases; user/provider-model settings remain deferred.
 
 ### (LAT-459) Phase 2 - Scores Foundations
 
@@ -2291,7 +2335,7 @@ Row click opens a detailed view with:
 - [ ] Define the canonical shared Zod schemas for evaluations, triggers, and evaluation lifecycle; infer TypeScript types.
 - [ ] Add the Postgres `evaluations` table with full Drizzle definition using repo-convention helpers, support for multiple linked evaluations per issue, RLS, and the exact secondary indexes defined by this spec.
 - [ ] Define the evaluations-domain named constants for cadence, default sampling, alignment tolerances, and evaluation-generation job-status TTL.
-- [ ] Keep `trigger.filter` in the base model but defer runtime filter execution and grammar to a later phase.
+- [ ] Define `EvaluationTrigger.filter` as the shared `FilterSet` from `@domain/shared`, using the shared trace field registry semantics instead of a reliability-only string grammar.
 
 **Exit gate**: evaluations schema and table are complete; later phases can build generation, alignment, and execution.
 
@@ -2302,6 +2346,7 @@ Row click opens a detailed view with:
 **Parallelization notes**: can run in parallel with Phase 7 once phases 2 and 3 land.
 
 - [ ] Define the canonical shared Zod schemas for annotation queues, queue items, queue settings, and queue provenance; infer TypeScript types.
+- [ ] Define `AnnotationQueueSettings.filter` as an optional shared `FilterSet` over trace fields, keep it absent for manual/system queues, and normalize empty filter sets away at write time.
 - [ ] Add the Postgres `annotation_queues` and `annotation_queue_items` tables with full Drizzle definitions using repo-convention helpers, queue `system` flags, settings JSONB, assignee arrays, queue item completion/progress state, RLS, and the exact secondary indexes defined by this spec.
 - [ ] Define the annotation-queue-domain named constants for dynamic/system default sampling, context-window limits, and outlier thresholds.
 - [ ] Document the default system-created queue provisioning rules and canonical names/descriptions/instructions for later orchestration phases.
@@ -2423,8 +2468,8 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: can run in parallel with Phase 14 once Phase 12 lands.
 
-- [ ] Implement `SpanIngested` publication from successful span ingestion via direct `createEventsPublisher(queuePublisher)` publication into `domain-events`, the debounced `live-traces:end` task keyed by `(organizationId, projectId, traceId)`, the resulting `TraceEnded` domain event published through that same direct `domain-events` rail, and incremental live evaluation triggering over spans, traces, and sessions using `turn`, `debounce`, and `sampling`, including the `first` / `every` / `last` turn semantics from the model, the project-scoped scan of active evaluations on each `TraceEnded` event, the dedicated `live-evaluations` task `enqueue` dispatched from the `domain-events` rail, and the follow-up `live-evaluations` task `execute` published for each matching `(evaluationId, traceId)` pair.
-- [ ] Implement provider/model resolution from evaluation settings to project settings to organization settings.
+- [ ] Implement `SpanIngested` publication from successful span ingestion via direct `createEventsPublisher(queuePublisher)` publication into `domain-events`, the debounced `live-traces:end` task keyed by `(organizationId, projectId, traceId)`, the resulting `TraceEnded` domain event published through that same direct `domain-events` rail, and incremental live evaluation triggering over spans, traces, and sessions using the shared `FilterSet` for `trigger.filter` plus `turn`, `debounce`, and `sampling`, including the `first` / `every` / `last` turn semantics from the model, shared trace-field-registry filter matching, the project-scoped scan of active evaluations on each `TraceEnded` event, the dedicated `live-evaluations` task `enqueue` dispatched from the `domain-events` rail, and the follow-up `live-evaluations` task `execute` published for each matching `(evaluationId, traceId)` pair.
+- [ ] Implement hosted `llm()` execution for live evaluations through `@platform/ai-vercel` and the Vercel AI SDK, using Latitude-managed provider/model/API-key configuration rather than user-configured provider/model settings.
 - [ ] Implement `live-evaluations:execute` result writing, including value/passed/feedback/error plus persisted nanosecond `duration` and microcent `cost`, Postgres-first canonical persistence, correct `error -> errored` semantics, immediate ClickHouse publication for immutable passed/errored results, and deferred publication for failed non-errored results until `issue_id` exists.
 - [ ] Ensure archived/deleted evaluations never trigger and paused evaluations use `sampling = 0`.
 - [ ] Implement direct `issue_id` assignment at write time for issue-linked monitor failures so those scores are immutable and can be projected to ClickHouse immediately.
@@ -2458,28 +2503,25 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [ ] Build the project Evaluations page in `apps/web` with active evaluation analytics and the active evaluations table, backed by evaluation server functions/collections.
 - [ ] Build the custom score buckets continuation table for `source = 'custom'`.
 - [ ] Build the archived evaluations table in `apps/web` with unarchive behavior, backed by evaluation server functions/collections.
-- [ ] Build `apps/web` quick actions and confirmation modals for settings, pause/resume, archive, and delete.
+- [ ] Build `apps/web` quick actions and confirmation modals for trigger updates, pause/resume, archive, and delete, with trigger updates editing `filter`, `turn`, `debounce`, and `sampling` through the shared filter-builder/UI patterns where applicable.
 - [ ] Build the evaluation dashboard in `apps/web` with charts and aggregates backed by ClickHouse plus filters, score table, and score details modal backed by Postgres canonical scores, using evaluation server functions/collections.
 - [ ] Add the read-only script modal for evaluations in `apps/web`.
-- [ ] Expose the stable public/machine-facing APIs for evaluation listing, status changes, settings/trigger updates, dashboard reads, and custom bucket reads without routing internal web product flows through `apps/api`.
+- [ ] Expose the stable public/machine-facing APIs for evaluation listing, status changes, trigger updates, dashboard reads, and custom bucket reads without routing internal web product flows through `apps/api`, using the shared `FilterSet` payload shape for trigger filters.
 - [ ] Add UI/API regression tests covering lifecycle actions, archived/custom bucket visibility, dashboard filters, the Postgres/ClickHouse read split, and the default exclusion of simulation-generated scores.
 
 **Exit gate**: evaluation management works from both UI and API; custom score buckets are visible as first-class evaluation-like dashboards.
 
-### (LAT-473) Phase 16 - Settings Product Surface And API
+### (LAT-473) Phase 16 - Keep-Monitoring Settings Product Surface And API
 
 **Depends on**: Phase 1, Phase 15
 
 **Parallelization notes**: after this phase lands, Phase 17 can proceed.
 
-- [ ] Implement organization-wide reliability settings on the owner entity, with `apps/web` management flows plus matching public/machine-facing APIs for provider credentials and default provider/model management.
-- [ ] Implement project-wide reliability settings on the owner entity, with `apps/web` management flows plus matching public/machine-facing APIs for provider/model overrides.
-- [ ] Implement user-wide reliability settings on the owner entity, with an `apps/web` shell plus matching public/machine-facing APIs only for the explicitly approved user preference fields.
+- [ ] Implement organization/project reliability settings on the owner entities only for `keepMonitoring`, with `apps/web` management flows plus matching public/machine-facing APIs.
 - [ ] Implement `keepMonitoring` in organization/project settings, use it as the default state for the manual issue-resolution confirmation toggle, and enforce its effect on resolved issue-linked evaluation lifecycle behavior.
-- [ ] Place the settings entry points in the home dashboard, project dashboard, and user profile menu exactly as specified.
-- [ ] Implement write-only credential update flows, redacted reads, and replace/rotation semantics for provider secrets so encrypted credentials never round-trip as plaintext through UI or API responses.
+- [ ] Place the MVP settings entry points in the home dashboard and project dashboard exactly as specified.
 
-**Exit gate**: reliability settings live on the right owner entities; the same settings can be managed through both UI and API.
+**Exit gate**: MVP reliability settings live on the right owner entities; `keepMonitoring` can be managed through both UI and API.
 
 ### (LAT-474) Phase 17 - Annotation Queues Orchestration And Product Surface
 
@@ -2487,9 +2529,9 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: this is the final MVP phase; no later MVP phase should start after it.
 
-- [ ] Implement annotation queue persistence and orchestration for manual and dynamic queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, default sampling loaded from named constants when creating dynamic queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
-- [ ] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for dynamic queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
-- [ ] Connect manual trace/session selection, system-created queue population, and dynamic filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item, the dedicated `system-annotation-queues` task `flag` dispatched from `TraceEnded` that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `system-annotation-queues` task `annotate` per flagged system queue, the separate `system-annotation-queues:annotate` task that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated `live-annotation-queues:curate` task dispatched on each `TraceEnded` event that batch inserts matched dynamic queue items, filter-before-sampling evaluation order for dynamic queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
+- [ ] Implement annotation queue persistence and orchestration for manual and dynamic queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, optional shared `FilterSet` storage for dynamic queues, default sampling loaded from named constants when creating dynamic queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
+- [ ] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for dynamic queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, using the shared trace-filter builder for `settings.filter` while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
+- [ ] Connect manual trace/session selection, system-created queue population, and dynamic filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item, the dedicated `system-annotation-queues` task `flag` dispatched from `TraceEnded` that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `system-annotation-queues` task `annotate` per flagged system queue, the separate `system-annotation-queues:annotate` task that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated `live-annotation-queues:curate` task dispatched on each `TraceEnded` event that batch inserts matched dynamic queue items using shared `FilterSet` semantics, filter-before-sampling evaluation order for dynamic queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
 - [ ] Build the focused queue annotation screen in `apps/web` with the collapsed sidebar, hotkey-backed bottom action bar, metadata/conversation/annotations columns, dataset-add action, conversation-level annotation creation, persisted selection highlights that focus the matching annotation card, derived queue-item position in the UI, and the congratulations empty state when no queue items remain pending.
 - [ ] Integrate queue context into annotation creation, including the canonical queue-provenance contract on annotation `source_id`, the shared `draftedAt` draft contract for system-created queue annotations, queue-item completion semantics, exclusion of drafts from issue discovery until human review, and any additional annotation metadata needed to reopen the annotation cleanly.
 - [ ] Add end-to-end tests covering manual trace selection, manual session selection resolved to newest trace, system queue tags and locked fields, system-created queue sampling seeded from defaults and later user edits, sampling-before-deterministic-check behavior, sampled low-cost flagger routing, one `system-annotation-queues:annotate` task published per flagged system queue, full-context validator/drafter confirmation, zero-match and multi-match traces, `draftedAt`-based draft exclusion from issue discovery, dynamic incremental materialization through `live-annotation-queues:curate`, default dynamic queue sampling, filter-before-sampling behavior, duplicate-membership prevention, focused review navigation/hotkeys, queue completion, and progress updates.
@@ -2505,7 +2547,7 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 **Parallelization notes**: after this phase lands, phases 19 and 21 can proceed in parallel.
 
 - [ ] Implement the portable JavaScript-like sandbox runtime with resource limits and host-controlled syscalls.
-- [ ] Expose the full runtime helpers such as `Passed`, `Failed`, `llm`, `parse`, and `zod`, including feedback-required score helpers, optional `llm()` options, `parse(value, schema)`, and evaluation/project/organization settings resolution for runtime-configured functions.
+- [ ] Expose the full runtime helpers such as `Passed`, `Failed`, `llm`, `parse`, and `zod`, including feedback-required score helpers, the MVP `llm()` options shape, `parse(value, schema)`, and the hosted `llm()` bridge through `@platform/ai-vercel` and the Vercel AI SDK with Latitude-managed provider/model configuration.
 - [ ] Keep the runtime packaged and reusable so backend execution and the later simulation CLI can share the same portable implementation.
 - [ ] Keep the stored script artifact unchanged while swapping executors.
 - [ ] Add portability and resource-limit regression tests for the portable runtime and the later CLI-reuse contract.
@@ -2560,18 +2602,17 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Exit gate**: users can author and run their own evaluations directly in Latitude.
 
-### (LAT-479) Phase 22 - Advanced Trigger Filters And Query-Backed Datasets
+### (LAT-479) Phase 22 - Filter UX Hardening, Query-Backed Datasets, And Deferred Analytics Materializations
 
 **Depends on**: Phase 13, Phase 19
 
 **Parallelization notes**: can run in parallel with phases 20 and 23 once Phase 19 lands.
 
-- [ ] Integrate the shared filters domain into `EvaluationTrigger.filter`.
-- [ ] Add advanced filters to the `apps/web` evaluations and annotation-queue surfaces, plus matching approved public/machine-facing filters where required.
+- [ ] Harden the evaluation and annotation-queue filter UX around the shared `FilterSet`, including field/operator-aware affordances and approved public/machine-facing filter surfaces where richer UX is required.
 - [ ] Add query-backed simulation datasets and validate their performance characteristics.
 - [ ] Define and implement the exact ClickHouse materialized score analytics tables once the initial reporting/query shapes have stabilized.
 
-**Exit gate**: trigger filters, query-backed datasets, and deferred score analytics materializations are no longer pending definition.
+**Exit gate**: shared filters no longer rely on raw JSON editing where richer UX is required, and query-backed datasets plus deferred score analytics materializations are no longer pending definition.
 
 ### (LAT-480) Phase 23 - Additional Simulation SDKs
 
@@ -2598,3 +2639,18 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [ ] Validate that the stronger denoising workflow reduces duplicate/noisy issues without reintroducing the v1 merge system.
 
 **Exit gate**: the system supports a stronger provisional workflow without changing the canonical issue entity or bringing back issue merging.
+
+### (LAT-TBD) Phase 25 - Provider/Model Settings And Hosted Execution Configuration
+
+**Depends on**: Phase 15, Phase 18
+
+**Parallelization notes**: can run in parallel with later post-MVP product work once phases 15 and 18 land.
+
+- [ ] Before implementing provider/model settings, define the exact post-MVP storage model and shapes across organization/project/evaluation scopes, including whether `OrganizationSettings.providers` stays embedded in `organization.settings` JSONB or moves to a dedicated organization-scoped table.
+- [ ] Implement organization-wide provider credential storage plus default provider/model management, with application-level encryption, write-only credential updates, redacted reads, and replace/rotation semantics for provider secrets.
+- [ ] Implement project-wide provider/model overrides and evaluation-level provider/model overrides if the design phase keeps both scopes.
+- [ ] Extend the hosted `llm()` bridge and the portable runtime so provider/model selection resolves from evaluation settings to project settings to organization settings once this phase lands, without changing the stored script artifact.
+- [ ] Expose the matching `apps/web` and public/machine-facing APIs for provider/model settings management and evaluation execution-configuration updates.
+- [ ] Add regression tests covering secret redaction/rotation, scope resolution, and evaluation execution with configured providers/models.
+
+**Exit gate**: user-configurable provider/model execution is available end to end, and the `providers` storage shape is explicitly settled rather than left implicit.

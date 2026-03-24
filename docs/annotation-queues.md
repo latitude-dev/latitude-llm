@@ -11,7 +11,7 @@ Queue concepts:
 - a queue is conceptually `manual` when it has no filter configured and queue membership is created by explicit insertion rather than by stored filter materialization, always materialized as a trace id
 - a queue is conceptually `dynamic` / `live` when it has a filter configured and is populated incrementally over time from that filter plus optional sampling
 
-The filter field intentionally reuses the same future grammar as `EvaluationTrigger.filter`, but until that grammar is finalized it is stored as a plain string inside queue settings.
+The filter field reuses the shared `FilterSet` described in `docs/filters.md`, applied against the shared trace field registry also used by evaluation triggers.
 
 Creation sources:
 
@@ -126,8 +126,10 @@ Every project starts with these system-created manual queues:
 ## Canonical Model
 
 ```typescript
+import type { FilterSet } from "@domain/shared"
+
 type AnnotationQueueSettings = {
-  filter?: string // same future plain-string grammar as EvaluationTrigger.filter
+  filter?: FilterSet // shared trace filter set; omit when the queue is manual
   sampling?: number // optional percentage [0, 100], used by dynamic queues and by system queues, with defaults seeded on queue creation/provisioning
 }
 ```
@@ -155,7 +157,7 @@ The queue model is backed by two Postgres tables:
 - `name`: unique within the project among non-deleted queues
 - `description`: short summary for the queue list
 - `instructions`: reviewer guidance shown in the focused annotation screen and reused as classifier/validator context for system-created queues
-- `settings.filter`: plain-string filter expression for dynamic queues; it stays absent and read-only for system queues
+- `settings.filter`: shared `FilterSet` over the trace field registry for dynamic queues; it stays absent and read-only for system queues
 - `settings.sampling`: optional queue sampling percentage `[0, 100]`; dynamic queues use it after filter matching, and system queues use it before any deterministic or LLM flagging work. When omitted on queue creation/provisioning, initialize it from named constants with initial defaults of `10`
 - `assignees`: array of existing Latitude user ids from the same organization
 - `deletedAt`: soft delete marker
@@ -164,7 +166,7 @@ Required Postgres indexes:
 
 - soft-delete-aware unique btree on `(organization_id, project_id, name, deleted_at)` with nulls-not-distinct semantics
 - btree on `(organization_id, project_id, deleted_at, created_at)` for project-scoped queue listing
-- do not add GIN/array indexes on `assignees`, do not add GIN/JSONB indexes on `settings`, and do not add text indexes on `description`, `instructions`, or `settings.filter` until queue filtering/search workloads are clearer
+- do not add GIN/array indexes on `assignees`, do not add GIN/JSONB indexes on `settings`, and do not add text indexes on `description` or `instructions` until queue filtering/search workloads are clearer
 
 ### Queue Items
 
@@ -195,6 +197,7 @@ Required Postgres indexes:
 - when a user manually adds a session to a queue, resolve that session to its newest trace and store only that `trace_id`
 - a queue is conceptually `manual` when `settings.filter` is absent
 - a queue is conceptually `dynamic` / `live` when `settings.filter` is present
+- empty filter sets should be normalized to absent `settings.filter` so manual/dynamic queue semantics stay unambiguous
 - every project has a default set of system-created manual queues from the start
 - system-created default queues are manual queues with `system = true` even though the system inserts their members automatically
 - `system = true` queues keep their canonical `name`, `description`, `instructions`, and `settings.filter` non-editable, but they may still be deleted and their `settings.sampling` may still be edited
@@ -230,7 +233,7 @@ Interactions:
 - edit opens the queue settings modal
 - delete opens a confirmation modal
 - row click navigates to the focused queue review screen
-- the create modal edits `name`, `description`, `instructions`, `assignees`, and the optional `settings.filter` / `settings.sampling` fields for user-created queues
+- the create modal edits `name`, `description`, `instructions`, `assignees`, and the optional `settings.filter` / `settings.sampling` fields for user-created queues, using the shared trace-filter builder rather than a free-form text field
 - the edit modal keeps `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues while still allowing `assignees` and `settings.sampling` updates
 - when a queue is created with `settings.filter` and no explicit sampling, the UI/server path initializes `settings.sampling` from the named default constant
 - when a system queue is provisioned for a project, the UI/server path initializes `settings.sampling` from the named default constant and later lets users tune that sampling per queue
@@ -301,6 +304,5 @@ Queues do not replace the annotation model:
 
 ## Still Pending Precise Definition
 
-- exact dynamic filter grammar shared with `EvaluationTrigger.filter`
 - exact human approval/edit/replacement flow for system-created draft annotations after they appear in queue review
 - moderation/approval flows beyond the core queue review workflow
