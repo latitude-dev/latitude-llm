@@ -1,22 +1,25 @@
-import { useMountEffect } from "@repo/ui"
 import { useCallback, useRef } from "react"
+import { useTimeoutFn } from "react-use"
 
 export function useDebouncedCallback<T>(fn: (value: T) => void, delay: number): (value: T) => void {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const fnRef = useRef(fn)
   fnRef.current = fn
 
-  useMountEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current)
-    }
-  })
+  const pendingValueRef = useRef<{ value: T } | null>(null)
+
+  const [, , reset] = useTimeoutFn(() => {
+    const pending = pendingValueRef.current
+    if (!pending) return
+
+    pendingValueRef.current = null
+    fnRef.current(pending.value)
+  }, delay)
 
   return useCallback(
     (value: T) => {
-      if (timer.current) clearTimeout(timer.current)
-      timer.current = setTimeout(() => fnRef.current(value), delay)
+      pendingValueRef.current = { value }
+      reset()
     },
-    [delay],
+    [reset],
   )
 }
