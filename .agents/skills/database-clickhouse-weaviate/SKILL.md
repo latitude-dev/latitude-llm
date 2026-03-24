@@ -70,6 +70,30 @@ pnpm --filter @platform/db-clickhouse ch:seed
 - `unclustered/`: use standard table engines (e.g. `ReplacingMergeTree`)
 - `clustered/`: add `ON CLUSTER default` and use `Replicated*` engines
 
+### Clustered migration reliability (replica lag / Code 517)
+
+In clustered ClickHouse, replicas can temporarily lag DDL metadata propagation. A migration can fail with:
+
+- `code: 517`
+- `Code: 517`
+- `doesn't catchup with latest ALTER query updates`
+
+Use these authoring rules to reduce failures:
+
+- Keep migrations idempotent (`IF EXISTS` / `IF NOT EXISTS`) so retries are safe.
+- Prefer additive schema changes over destructive rewrites.
+- Keep DDL batches small; avoid chaining many dependent `ALTER` statements in one migration.
+- If statement B depends on metadata introduced by statement A, prefer splitting them into separate migration files.
+- Avoid coupling view rebuilds and many base-table changes in one large migration when possible.
+- Run one migration runner per environment (never concurrent `ch:up` against the same cluster).
+
+Execution safety:
+
+- `packages/platform/db-clickhouse/clickhouse/scripts/up.sh` retries transient replica lag errors from `goose ... up`.
+- Retry tuning env vars:
+  - `CLICKHOUSE_MIGRATION_MAX_RETRIES` (default `5`)
+  - `CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS` (default `5`)
+
 ## Weaviate collections and migrations
 
 Use the dedicated Weaviate package for connection and schema bootstrapping:
