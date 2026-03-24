@@ -60,6 +60,7 @@ function OrganizationNameSection() {
       try {
         await updateOrganizationName({ data: { name: value.name } })
         toast({ description: "Organization name updated" })
+        form.reset({ name: value.name })
         void router.invalidate()
       } catch (error) {
         toast({
@@ -83,6 +84,7 @@ function OrganizationNameSection() {
         <form.Field name="name">
           {(field) => (
             <Input
+              required
               type="text"
               label="Organization Name"
               value={field.state.value}
@@ -519,7 +521,7 @@ function ApiKeysSection() {
 
 function SettingsPage() {
   return (
-    <Container className="pt-14">
+    <Container className="flex flex-col gap-8 pt-14">
       <OrganizationNameSection />
       <MembershipsSection />
       <ApiKeysSection />

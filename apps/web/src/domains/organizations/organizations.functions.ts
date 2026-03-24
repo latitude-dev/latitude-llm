@@ -13,7 +13,7 @@ import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
-interface OrganizationRecord {
+export interface OrganizationRecord {
   readonly id: string
   readonly name: string
 }

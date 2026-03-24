@@ -9,7 +9,7 @@ import {
 import { createEventHandler } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getPostgresClient } from "../../clients.ts"
+import { getAdminPostgresClient } from "../../clients.ts"
 
 const logger = createLogger("user-deletion")
 
@@ -19,7 +19,7 @@ export const createUserDeletionWorker = (consumer: QueueConsumer) => {
     createEventHandler({
       handle: (event) => {
         const payload = event.event.payload as { userId: string }
-        const pgClient = getPostgresClient()
+        const pgClient = getAdminPostgresClient()
         const repoLayer = Layer.mergeAll(MembershipRepositoryLive, OrganizationRepositoryLive, UserRepositoryLive)
 
         return deleteUserUseCase({ userId: payload.userId }).pipe(

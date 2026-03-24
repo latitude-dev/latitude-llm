@@ -26,6 +26,7 @@ function ProfileSection() {
       try {
         await updateUserName({ data: { name: value.name } })
         toast({ description: "Name updated" })
+        form.reset({ name: value.name })
         void router.invalidate()
       } catch (error) {
         toast({
@@ -49,6 +50,7 @@ function ProfileSection() {
         <form.Field name="name">
           {(field) => (
             <Input
+              required
               type="text"
               label="Your Name"
               value={field.state.value}
@@ -204,7 +206,7 @@ function DeleteAccountSection() {
 
 function UserSettingsPage() {
   return (
-    <Container className="pt-14">
+    <Container className="flex flex-col gap-8 pt-14">
       <ProfileSection />
       <CreateOrganizationSection />
       <DeleteAccountSection />
