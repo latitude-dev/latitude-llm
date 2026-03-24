@@ -93,8 +93,8 @@ Recommended exact shape:
 ```typescript
 type AnnotationScoreMetadata = {
   rawFeedback: string; // original feedback text before enrichment; human-authored for reviewed annotations, model-authored for system-created drafts
-  messageIndex: number; // message index in the conversation being annotated
-  partIndex?: number; // optional GenAI `parts[]` index inside the target message
+  messageIndex?: number; // optional index in the canonical `TraceDetail.allMessages` conversation; omit for conversation-level annotations
+  partIndex?: number; // optional raw GenAI `parts[]` index inside the target message
   startOffset?: number; // optional start offset for substring annotations within a textual part
   endOffset?: number; // optional end offset for substring annotations within a textual part
 };
@@ -103,15 +103,22 @@ type AnnotationScoreMetadata = {
 This preserves:
 
 - the original feedback wording
+- conversation-level annotations when no specific message selection exists
 - message-level anchors
 - exact part-level anchors for GenAI `parts[]`
 - partial-text anchors inside textual parts
 
 Because conversations are stored as GenAI messages with `parts[]`, the minimal anchor is:
 
-- `messageIndex` for the message
+- no anchor fields for whole-conversation annotations
+- `messageIndex` for the target message in the canonical `TraceDetail.allMessages` array
 - `partIndex` only when a specific part is selected
 - `startOffset` / `endOffset` only when the selection is a substring inside a textual part
+
+Anchor coordinates must use the raw persisted conversation structure:
+
+- `messageIndex` is indexed against `TraceDetail.allMessages`, not against a UI-visible list after tool-response absorption
+- `partIndex` is indexed against the raw `GenAIMessage.parts[]` array, not against grouped reasoning blocks or other UI-only presentation transforms
 
 Do not store redundant quoted text when the selection can be reconstructed from the conversation plus these indices and offsets.
 

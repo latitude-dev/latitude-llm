@@ -107,7 +107,7 @@ Relationship fields:
 Source-specific metadata stays intentionally lightweight:
 
 - evaluation scores store `evaluationHash`
-- annotation scores store raw or drafted feedback plus the minimal GenAI anchor fields needed to reopen the selection
+- annotation scores store raw or drafted feedback plus the minimal GenAI anchor fields needed to reopen either the whole-conversation annotation or the exact selected message/text range
 - custom scores store arbitrary user-defined metadata
 
 The metadata field is not intended for heavy analytical querying.
@@ -119,12 +119,17 @@ Because most operational score reads now live in Postgres, score indexing is par
 - partial btree on `(organization_id, project_id, created_at, id)` where `drafted_at IS NULL` for default non-draft project score reads
 - partial btree on `(organization_id, project_id, source, source_id, created_at, id)` where `drafted_at IS NULL` for evaluation/custom bucket reads
 - partial btree on `(organization_id, project_id, issue_id, created_at, id)` where `issue_id IS NOT NULL AND drafted_at IS NULL` for issue drilldowns and issue-backed reads
-- partial btree on `(organization_id, project_id, trace_id, created_at, id)` where `trace_id IS NOT NULL` for trace-scoped score hydration
+- partial btree on `(organization_id, project_id, trace_id, created_at, id)` where `trace_id IS NOT NULL` for trace-scoped score hydration, including draft-aware annotation review/edit reads
 - partial btree on `(organization_id, project_id, session_id, created_at, id)` where `session_id IS NOT NULL` for session drilldowns
 - partial btree on `(organization_id, project_id, span_id, created_at, id)` where `span_id IS NOT NULL` for span-scoped score hydration
 - partial btree on `(organization_id, project_id, created_at, id)` where `drafted_at IS NULL AND errored = false AND passed = false AND issue_id IS NULL` for issue-discovery work selection
-- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-finalization scans
+- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-finalization scans and other draft-aware annotation maintenance
 - do not add GIN/JSONB indexes on `metadata`, and do not add text-search indexes on `feedback` or `error` in the scores foundation phase
+
+These draft-aware indexes are the minimal annotation foundations:
+
+- trace-scoped annotation reads keep reusing canonical `scores` rows from Postgres rather than introducing a standalone annotation table
+- queue review, in-product annotation editing, and draft finalization continue to read/write the same canonical score row
 
 ## ClickHouse Projection
 

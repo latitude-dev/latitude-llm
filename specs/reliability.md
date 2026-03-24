@@ -887,8 +887,8 @@ type BaseScoreMetadata = {};
 
 type AnnotationScoreMetadata = BaseScoreMetadata & {
   rawFeedback: string; // original feedback text before enrichment; human-authored for created annotations, model-authored for system-created drafts
-  messageIndex: number; // message index in the conversation being annotated
-  partIndex?: number; // optional GenAI `parts[]` index inside the target message
+  messageIndex?: number; // optional index in the canonical `TraceDetail.allMessages` conversation; omit for conversation-level annotations
+  partIndex?: number; // optional raw GenAI `parts[]` index inside the target message
   startOffset?: number; // optional start offset for substring annotations within a textual part
   endOffset?: number; // optional end offset for substring annotations within a textual part
 };
@@ -898,9 +898,15 @@ This keeps the metadata aligned with the proposal without over-abstracting it in
 
 Because conversation messages are GenAI messages with a `parts[]` array, the minimal anchor should be:
 
-- `messageIndex` to identify the message
+- no anchor fields for whole-conversation annotations
+- `messageIndex` to identify the target message in `TraceDetail.allMessages`
 - `partIndex` only when the annotation targets a specific part inside `parts[]`
 - `startOffset` / `endOffset` only when the annotation targets a substring inside a textual part
+
+Anchor coordinates must use the raw persisted conversation structure:
+
+- `messageIndex` is indexed against `TraceDetail.allMessages`, not against a UI-visible list after tool-response absorption
+- `partIndex` is indexed against the raw `GenAIMessage.parts[]` array, not against grouped reasoning blocks or other UI-only presentation transforms
 
 Do not store redundant quoted text when the selection can be reconstructed from the conversation plus these indices/offsets.
 
@@ -1271,8 +1277,8 @@ type EvaluationScoreMetadata = BaseScoreMetadata & {
 
 type AnnotationScoreMetadata = BaseScoreMetadata & {
   rawFeedback: string; // original feedback text before enrichment; human-authored for human drafts/final annotations, model-authored for system-created drafts
-  messageIndex: number; // message index used to anchor the annotation in the conversation UI
-  partIndex?: number; // optional GenAI `parts[]` index inside the target message
+  messageIndex?: number; // optional index in the canonical `TraceDetail.allMessages` conversation; omit for conversation-level annotations
+  partIndex?: number; // optional raw GenAI `parts[]` index inside the target message
   startOffset?: number; // optional start offset for substring annotations within a textual part
   endOffset?: number; // optional end offset for substring annotations within a textual part
 };
@@ -1367,12 +1373,14 @@ Required Postgres indexes:
 - btree on `(organization_id, project_id, created_at, id)` with a partial predicate `drafted_at IS NULL` for default non-draft project score reads
 - btree on `(organization_id, project_id, source, source_id, created_at, id)` with a partial predicate `drafted_at IS NULL` for evaluation/custom bucket reads
 - btree on `(organization_id, project_id, issue_id, created_at, id)` with a partial predicate `issue_id IS NOT NULL AND drafted_at IS NULL` for issue drilldowns and issue-backed reads
-- btree on `(organization_id, project_id, trace_id, created_at, id)` with a partial predicate `trace_id IS NOT NULL` for trace review and trace-scoped score hydration
+- btree on `(organization_id, project_id, trace_id, created_at, id)` with a partial predicate `trace_id IS NOT NULL` for trace review, trace-scoped score hydration, and draft-aware annotation reads
 - btree on `(organization_id, project_id, session_id, created_at, id)` with a partial predicate `session_id IS NOT NULL` for session drilldowns
 - btree on `(organization_id, project_id, span_id, created_at, id)` with a partial predicate `span_id IS NOT NULL` for span-scoped score hydration
 - partial btree on `(organization_id, project_id, created_at, id)` where `drafted_at IS NULL AND errored = false AND passed = false AND issue_id IS NULL` for issue-discovery work selection
-- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-finalization scans
+- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-finalization scans and other draft-aware annotation maintenance
 - do not add GIN/JSONB indexes on `metadata`, and do not add Postgres text-search indexes on `feedback` or `error` in the scores foundation phase
+
+These draft-aware score indexes are the minimal annotation-editing and queue-review foundation; keep reusing canonical `scores` rows rather than introducing a standalone annotation table.
 
 ### ClickHouse Analytics Projection
 
@@ -2307,11 +2315,11 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with phases 4 through 7 once Phase 2 lands.
 
-- [ ] Define the canonical shared Zod schemas for annotations, annotation anchors (messageIndex, partIndex, text offsets), and annotation score metadata; infer TypeScript types.
-- [ ] Implement the exact minimal GenAI-aware annotation anchor schema and persistence rules required to reopen annotations in the conversation UI.
-- [ ] Ensure annotation score metadata and `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance are defined in the scores schema; annotations produce scores via the canonical score model.
-- [ ] Add representative seed data for annotation-backed score examples covering UI, API, and annotation-queue provenance.
-- [ ] Define the minimal draft-aware query and index expectations for later annotation editing and queue review while continuing to reuse `scores` as the canonical store and avoiding a standalone annotation table.
+- [x] Define the canonical shared Zod schemas for annotations, annotation anchors (messageIndex, partIndex, text offsets), and annotation score metadata; infer TypeScript types.
+- [x] Implement the exact minimal GenAI-aware annotation anchor schema and persistence rules required to reopen annotations in the conversation UI.
+- [x] Ensure annotation score metadata and `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance are defined in the scores schema; annotations produce scores via the canonical score model.
+- [x] Add representative seed data for annotation-backed score examples covering UI, API, and annotation-queue provenance.
+- [x] Define the minimal draft-aware query and index expectations for later annotation editing and queue review while continuing to reuse `scores` as the canonical store and avoiding a standalone annotation table.
 
 **Exit gate**: annotation schema and anchor rules are complete; later phases can build in-product annotation creation and queue integration.
 
