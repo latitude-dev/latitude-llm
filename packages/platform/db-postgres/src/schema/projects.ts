@@ -1,6 +1,6 @@
-import type { ProjectSettings } from "@domain/shared";
-import { jsonb, varchar } from "drizzle-orm/pg-core";
-import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts";
+import type { ProjectSettings } from "@domain/shared"
+import { jsonb, varchar } from "drizzle-orm/pg-core"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const projects = latitudeSchema.table(
   "projects",

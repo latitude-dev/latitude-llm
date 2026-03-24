@@ -1,6 +1,6 @@
-import type { OrganizationSettings } from "@domain/shared";
-import { boolean, jsonb, text, varchar } from "drizzle-orm/pg-core";
-import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts";
+import type { OrganizationSettings } from "@domain/shared"
+import { boolean, jsonb, text, varchar } from "drizzle-orm/pg-core"
+import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 /**
  * Better Auth Schema - Drizzle ORM definitions
