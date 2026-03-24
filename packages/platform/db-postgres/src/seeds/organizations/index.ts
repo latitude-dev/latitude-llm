@@ -11,7 +11,7 @@ import {
   SEED_OWNER_USER_ID,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { postgresSchema } from "../../index.ts"
+import { user } from "../../schema/better-auth.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const seedUsers: Seeder = {
@@ -37,10 +37,10 @@ const seedUsers: Seeder = {
         ]
         for (const u of users) {
           await ctx.db
-            .insert(postgresSchema.user)
+            .insert(user)
             .values(u)
             .onConflictDoUpdate({
-              target: postgresSchema.user.id,
+              target: user.id,
               set: {
                 email: u.email,
                 name: u.name,

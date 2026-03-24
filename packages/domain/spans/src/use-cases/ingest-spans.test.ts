@@ -17,8 +17,7 @@ const validInput = {
 
 const runUseCase = (diskPort: StorageDiskPort, publisher: QueuePublisherShape) =>
   ingestSpansUseCase(validInput).pipe(
-    Effect.provide(Layer.succeed(StorageDisk, diskPort)),
-    Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+    Effect.provide(Layer.merge(Layer.succeed(StorageDisk, diskPort), Layer.succeed(QueuePublisher, publisher))),
   )
 
 describe("ingestSpansUseCase", () => {
@@ -44,8 +43,7 @@ describe("ingestSpansUseCase", () => {
 
     await Effect.runPromise(
       ingestSpansUseCase({ ...validInput, contentType: "application/x-protobuf" }).pipe(
-        Effect.provide(Layer.succeed(StorageDisk, disk)),
-        Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+        Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
       ),
     )
 
@@ -63,8 +61,7 @@ describe("ingestSpansUseCase", () => {
     const res = await Effect.runPromise(
       Effect.result(
         ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.succeed(StorageDisk, disk)),
-          Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+          Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
         ),
       ),
     )
@@ -86,8 +83,7 @@ describe("ingestSpansUseCase", () => {
     const res = await Effect.runPromise(
       Effect.result(
         ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.succeed(StorageDisk, disk)),
-          Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+          Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
         ),
       ),
     )
@@ -116,8 +112,7 @@ describe("ingestSpansUseCase", () => {
     await Effect.runPromise(
       Effect.result(
         ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.succeed(StorageDisk, disk)),
-          Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+          Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
         ),
       ),
     )
@@ -137,8 +132,7 @@ describe("ingestSpansUseCase", () => {
 
     await Effect.runPromise(
       ingestSpansUseCase(validInput).pipe(
-        Effect.provide(Layer.succeed(StorageDisk, disk)),
-        Effect.provide(Layer.succeed(QueuePublisher, publisher)),
+        Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
       ),
     )
 

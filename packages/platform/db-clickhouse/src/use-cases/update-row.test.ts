@@ -6,7 +6,8 @@ import {
   updateRow,
 } from "@domain/datasets"
 import { DatasetId, DatasetRowId, OrganizationId, ProjectId } from "@domain/shared"
-import { DatasetRepositoryLive, postgresSchema, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { datasets } from "@platform/db-postgres/schema/datasets"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
@@ -38,7 +39,7 @@ describe("updateRow", () => {
       }).pipe(withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID)),
     )
 
-    await pg.db.insert(postgresSchema.datasets).values({
+    await pg.db.insert(datasets).values({
       id: DATASET_ID,
       organizationId: ORG_ID,
       projectId: PROJECT_ID,

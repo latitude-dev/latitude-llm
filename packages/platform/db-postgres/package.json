@@ -7,6 +7,7 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./schema/*": "./src/schema/*.ts",
     "./testing": "./src/test/in-memory-postgres.ts"
   },
   "scripts": {

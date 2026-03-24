@@ -1,5 +1,5 @@
 import { ApiKeyRepository } from "@domain/api-keys"
-import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { MiddlewareHandler } from "hono"
@@ -95,7 +95,7 @@ const validateApiKey = (token: string) => {
     yield* cacheApiKeyResult(tokenHash, result, VALID_KEY_TTL_SECONDS)
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
     return result
-  }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(client)), Effect.orDie)
+  }).pipe(withPostgres(ApiKeyRepositoryLive, client), Effect.orDie)
 }
 
 export const authMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {

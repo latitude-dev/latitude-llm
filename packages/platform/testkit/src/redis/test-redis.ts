@@ -1,6 +1,8 @@
 import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import type { Redis } from "ioredis"
+
+class TestRedisError extends Data.TaggedError("TestRedisError")<{ cause: unknown }> {}
 
 /**
  * Test Redis configuration
@@ -46,10 +48,10 @@ export const createTestRedis = (config: TestRedisConfig = {}): TestRedis => {
 /**
  * Create a test Redis connection wrapped in Effect
  */
-export const createTestRedisEffect = (config: TestRedisConfig = {}): Effect.Effect<TestRedis, Error> => {
+export const createTestRedisEffect = (config: TestRedisConfig = {}): Effect.Effect<TestRedis, TestRedisError> => {
   return Effect.try({
     try: () => createTestRedis(config),
-    catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+    catch: (error) => new TestRedisError({ cause: error }),
   })
 }
 
@@ -63,10 +65,10 @@ export const clearTestRedis = async (testRedis: TestRedis): Promise<void> => {
 /**
  * Clear test Redis wrapped in Effect
  */
-export const clearTestRedisEffect = (testRedis: TestRedis): Effect.Effect<void, Error> => {
+export const clearTestRedisEffect = (testRedis: TestRedis): Effect.Effect<void, TestRedisError> => {
   return Effect.tryPromise({
     try: () => clearTestRedis(testRedis),
-    catch: (error) => (error instanceof Error ? error : new Error(`Failed to clear test Redis: ${String(error)}`)),
+    catch: (error) => new TestRedisError({ cause: error }),
   })
 }
 
@@ -80,9 +82,9 @@ export const closeTestRedis = async (testRedis: TestRedis): Promise<void> => {
 /**
  * Close test Redis connection wrapped in Effect
  */
-export const closeTestRedisEffect = (testRedis: TestRedis): Effect.Effect<void, Error> => {
+export const closeTestRedisEffect = (testRedis: TestRedis): Effect.Effect<void, TestRedisError> => {
   return Effect.tryPromise({
     try: () => closeTestRedis(testRedis),
-    catch: (error) => (error instanceof Error ? error : new Error(`Failed to close test Redis: ${String(error)}`)),
+    catch: (error) => new TestRedisError({ cause: error }),
   })
 }

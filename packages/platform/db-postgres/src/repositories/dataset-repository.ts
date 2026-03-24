@@ -12,7 +12,8 @@ import {
 import { and, asc, desc, eq, getColumns, gt, isNull, lt, ne, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { datasets, datasetVersions } from "../schema/index.ts"
+import { datasets } from "../schema/datasets.ts"
+import { datasetVersions } from "../schema/datasetVersions.ts"
 
 const toDomainDataset = (row: typeof datasets.$inferSelect, latestVersionId?: string | null): Dataset => ({
   id: DatasetId(row.id),

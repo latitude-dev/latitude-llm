@@ -3,7 +3,7 @@ import type { EmailMessage, EmailSender } from "@domain/email"
 import type { MessageHandler, QueueConsumer, QueueMessage, QueueName } from "@domain/queue"
 import { DatasetId, DatasetRowId, OrganizationId } from "@domain/shared"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { postgresSchema } from "@platform/db-postgres"
+import { datasets } from "@platform/db-postgres/schema/datasets"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
@@ -52,7 +52,7 @@ describe("createDatasetExportWorker", () => {
   })
 
   it("exports dataset rows to CSV, signs URL, and emails recipient", async () => {
-    await pg.db.insert(postgresSchema.datasets).values({
+    await pg.db.insert(datasets).values({
       id: DATASET_ID,
       organizationId: ORG_ID,
       projectId: PROJECT_ID,

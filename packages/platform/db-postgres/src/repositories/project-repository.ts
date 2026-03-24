@@ -12,7 +12,7 @@ import {
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { projects } from "../schema/index.ts"
+import { projects } from "../schema/projects.ts"
 
 const toDomainProject = (row: typeof projects.$inferSelect): Project => ({
   id: ProjectId(row.id),

@@ -1,7 +1,11 @@
 import type { EventEnvelope, EventsPublisher } from "@domain/events"
 import type { MessageHandler, QueueMessage, QueuePublishError, QueuePublisherShape } from "@domain/queue"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import { z } from "zod"
+
+class ParseEnvelopeError extends Data.TaggedError("ParseEnvelopeError")<{
+  cause: unknown
+}> {}
 
 export const DomainEventSchema = z.object({
   name: z.string(),
@@ -54,7 +58,7 @@ export const createEventHandler = (handler: EventHandler): MessageHandler => ({
       const body = new TextDecoder().decode(message.body)
       const envelope = yield* Effect.try({
         try: () => EventEnvelopeSchema.parse(JSON.parse(body)),
-        catch: (error) => error,
+        catch: (error) => new ParseEnvelopeError({ cause: error }),
       }).pipe(
         Effect.tapError((error) => Effect.logError(`Failed to parse domain event envelope: ${error}`)),
         Effect.orElseSucceed(() => null),

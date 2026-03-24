@@ -16,7 +16,6 @@ export { OrganizationRepositoryLive } from "./repositories/organization-reposito
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
-export * from "./schema/index.ts"
 // SqlClient implementation
 export { SqlClientLive } from "./sql-client.ts"
 export { withPostgres } from "./with-postgres.ts"

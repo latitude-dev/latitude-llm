@@ -11,7 +11,7 @@ import {
   SEED_SCORE_PENDING_ID,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { postgresSchema } from "../../index.ts"
+import { scores } from "../../schema/scores.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const scoreRows = [
@@ -153,8 +153,8 @@ const seedScores: Seeder = {
       try: async () => {
         for (const row of scoreRows) {
           const { id, ...set } = row
-          await ctx.db.insert(postgresSchema.scores).values(row).onConflictDoUpdate({
-            target: postgresSchema.scores.id,
+          await ctx.db.insert(scores).values(row).onConflictDoUpdate({
+            target: scores.id,
             set,
           })
         }

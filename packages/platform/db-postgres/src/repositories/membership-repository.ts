@@ -3,7 +3,7 @@ import { MembershipId, NotFoundError, OrganizationId, SqlClient, type SqlClientS
 import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { type MemberRole, member, user } from "../schema/index.ts"
+import { type MemberRole, member, user } from "../schema/better-auth.ts"
 
 const toDomainMembership = (memberRow: typeof member.$inferSelect) => ({
   id: MembershipId(memberRow.id),

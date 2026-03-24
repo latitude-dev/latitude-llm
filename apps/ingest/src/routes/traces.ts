@@ -2,7 +2,7 @@ import { OrganizationId, ProjectId } from "@domain/shared"
 import { ingestSpansUseCase } from "@domain/spans"
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { StorageDiskLive } from "@platform/storage-object"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import type { Hono } from "hono"
 import { getQueuePublisher, getStorageDisk } from "../clients.ts"
 import { authMiddleware } from "../middleware/auth.ts"
@@ -29,7 +29,7 @@ export const registerTracesRoute = ({ app }: TracesRouteContext) => {
         apiKeyId: c.get("apiKeyId"),
         payload: new Uint8Array(body),
         contentType,
-      }).pipe(Effect.provide(StorageDiskLive(disk)), Effect.provide(QueuePublisherLive(publisher))),
+      }).pipe(Effect.provide(Layer.merge(StorageDiskLive(disk), QueuePublisherLive(publisher)))),
     )
 
     return c.json({}, 202)

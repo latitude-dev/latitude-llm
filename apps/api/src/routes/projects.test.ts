@@ -1,5 +1,5 @@
 import { generateId } from "@domain/shared"
-import { postgresSchema } from "@platform/db-postgres"
+import { projects } from "@platform/db-postgres/schema/projects"
 import {
   closeInMemoryPostgres,
   createApiKeyAuthHeaders,
@@ -22,7 +22,7 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
   const id = generateId()
   const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${id.slice(0, 6)}`
 
-  await database.db.insert(postgresSchema.projects).values({
+  await database.db.insert(projects).values({
     id,
     organizationId,
     name,
@@ -98,9 +98,9 @@ describe("Projects Routes Integration", () => {
     expect(response.status).toBe(404)
 
     const rows = await database.db
-      .select({ deletedAt: postgresSchema.projects.deletedAt })
-      .from(postgresSchema.projects)
-      .where(eq(postgresSchema.projects.id, tenantBProject.id))
+      .select({ deletedAt: projects.deletedAt })
+      .from(projects)
+      .where(eq(projects.id, tenantBProject.id))
 
     expect(rows.length).toBe(1)
     expect(rows[0].deletedAt).toBeNull()

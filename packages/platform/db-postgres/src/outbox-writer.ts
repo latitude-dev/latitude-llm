@@ -1,6 +1,6 @@
 import type { OutboxWriter } from "@domain/events"
 import type { PostgresClient } from "./client.ts"
-import { outboxEvents } from "./schema/index.ts"
+import { outboxEvents } from "./schema/outbox-events.ts"
 
 export const createOutboxWriter = (client: PostgresClient): OutboxWriter => ({
   write: async (event) => {

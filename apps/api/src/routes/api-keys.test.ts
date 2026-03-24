@@ -1,5 +1,5 @@
 import { generateId } from "@domain/shared"
-import { postgresSchema } from "@platform/db-postgres"
+import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import {
   closeInMemoryPostgres,
   createApiKeyAuthHeaders,
@@ -31,7 +31,7 @@ const createApiKeyRecord = async (database: InMemoryPostgres, organizationId: st
   const tokenHash = await Effect.runPromise(hashToken(token))
   const encryptedToken = await Effect.runPromise(encrypt(token, TEST_ENCRYPTION_KEY))
 
-  await database.db.insert(postgresSchema.apiKeys).values({
+  await database.db.insert(apiKeys).values({
     id,
     organizationId,
     token: encryptedToken,
@@ -134,9 +134,9 @@ describe("API Keys Routes Integration", () => {
     expect(response.status).toBe(404)
 
     const rows = await database.db
-      .select({ deletedAt: postgresSchema.apiKeys.deletedAt })
-      .from(postgresSchema.apiKeys)
-      .where(eq(postgresSchema.apiKeys.id, tenantBKey.id))
+      .select({ deletedAt: apiKeys.deletedAt })
+      .from(apiKeys)
+      .where(eq(apiKeys.id, tenantBKey.id))
 
     expect(rows.length).toBe(1)
     expect(rows[0].deletedAt).toBeNull()

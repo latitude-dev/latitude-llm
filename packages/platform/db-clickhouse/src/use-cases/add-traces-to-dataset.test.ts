@@ -21,7 +21,8 @@ import {
 import type { TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
-import { DatasetRepositoryLive, postgresSchema, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { datasets } from "@platform/db-postgres/schema/datasets"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
@@ -73,7 +74,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
       }).pipe(withClickHouse(DatasetRowRepositoryLive, ch.client, ORG_ID)),
     )
 
-    await pg.db.insert(postgresSchema.datasets).values({
+    await pg.db.insert(datasets).values({
       id: DATASET_ID,
       organizationId: ORG_ID,
       projectId: PROJECT_ID,
