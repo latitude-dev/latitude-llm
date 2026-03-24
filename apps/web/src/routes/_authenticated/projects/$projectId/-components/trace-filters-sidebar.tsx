@@ -106,22 +106,20 @@ function DebouncedInput({
   readonly onDebouncedChange: (value: string) => void
 }) {
   const [local, setLocal] = useState(value)
-  const [pendingChange, setPendingChange] = useState<string | null>(null)
-
-  useDebounce(
+  const [, cancelDebounce] = useDebounce(
     () => {
-      if (pendingChange === null) return
-      onDebouncedChange(pendingChange)
+      if (local === value) return
+      onDebouncedChange(local)
     },
     300,
-    [pendingChange, onDebouncedChange],
+    [local, value, onDebouncedChange],
   )
 
   // TODO(frontend-use-effect-policy): keep local input state in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocal(value)
-    setPendingChange(null)
-  }, [value])
+    cancelDebounce()
+  }, [cancelDebounce, value])
 
   return (
     <div className="relative">
@@ -129,9 +127,7 @@ function DebouncedInput({
         {...props}
         value={local}
         onChange={(e) => {
-          const nextValue = e.target.value
-          setLocal(nextValue)
-          setPendingChange(nextValue)
+          setLocal(e.target.value)
         }}
       />
       {local && (
@@ -140,7 +136,7 @@ function DebouncedInput({
           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
           onClick={() => {
             setLocal("")
-            setPendingChange(null)
+            cancelDebounce()
             onDebouncedChange("")
           }}
         >
@@ -266,37 +262,39 @@ function NumberRangeFilter({
 }) {
   const [localMin, setLocalMin] = useState(minValue?.toString() ?? "")
   const [localMax, setLocalMax] = useState(maxValue?.toString() ?? "")
-  const [pendingMin, setPendingMin] = useState<number | undefined | null>(null)
-  const [pendingMax, setPendingMax] = useState<number | undefined | null>(null)
 
-  useDebounce(
+  const [, cancelMinDebounce] = useDebounce(
     () => {
-      if (pendingMin === null) return
-      onMinChange(pendingMin)
+      const parsedMin = localMin === "" ? undefined : Number(localMin)
+      const nextMin = parsedMin !== undefined && !Number.isNaN(parsedMin) ? parsedMin : undefined
+      if (nextMin === minValue) return
+      onMinChange(nextMin)
     },
     400,
-    [pendingMin, onMinChange],
+    [localMin, minValue, onMinChange],
   )
 
-  useDebounce(
+  const [, cancelMaxDebounce] = useDebounce(
     () => {
-      if (pendingMax === null) return
-      onMaxChange(pendingMax)
+      const parsedMax = localMax === "" ? undefined : Number(localMax)
+      const nextMax = parsedMax !== undefined && !Number.isNaN(parsedMax) ? parsedMax : undefined
+      if (nextMax === maxValue) return
+      onMaxChange(nextMax)
     },
     400,
-    [pendingMax, onMaxChange],
+    [localMax, maxValue, onMaxChange],
   )
 
   // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocalMin(minValue?.toString() ?? "")
-    setPendingMin(null)
-  }, [minValue])
+    cancelMinDebounce()
+  }, [cancelMinDebounce, minValue])
   // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocalMax(maxValue?.toString() ?? "")
-    setPendingMax(null)
-  }, [maxValue])
+    cancelMaxDebounce()
+  }, [cancelMaxDebounce, maxValue])
 
   return (
     <div className="flex items-center gap-2">
@@ -307,8 +305,6 @@ function NumberRangeFilter({
         value={localMin}
         onChange={(e) => {
           setLocalMin(e.target.value)
-          const n = e.target.value === "" ? undefined : Number(e.target.value)
-          setPendingMin(n !== undefined && !Number.isNaN(n) ? n : undefined)
         }}
         className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
       />
@@ -320,8 +316,6 @@ function NumberRangeFilter({
         value={localMax}
         onChange={(e) => {
           setLocalMax(e.target.value)
-          const n = e.target.value === "" ? undefined : Number(e.target.value)
-          setPendingMax(n !== undefined && !Number.isNaN(n) ? n : undefined)
         }}
         className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
       />
