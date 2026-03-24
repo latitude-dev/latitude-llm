@@ -18,10 +18,6 @@ permissions:
   contents: read
   packages: write
 
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   check:
     uses: ./.github/workflows/check.yml
@@ -43,9 +39,13 @@ jobs:
       push: true
     secrets: inherit
 
-  staging-migrate:
+  staging-apply:
     needs: staging-build
     runs-on: ubuntu-latest
+    # One end-to-end apply (migrate + ECS rollout) at a time per environment.
+    concurrency:
+      group: deploy-staging-apply
+      cancel-in-progress: false
     environment:
       name: staging
       deployment: false
@@ -158,70 +158,59 @@ jobs:
           fi
           echo "Migrations completed successfully"
 
-  staging-deploy:
-    needs: [staging-migrate, staging-build]
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      deployment: false
-    strategy:
-      matrix:
-        service: [web, api, ingest, workers, workflows]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: eu-central-1
-
-      - name: Deploy ${{ matrix.service }}
+      - name: Deploy all services
         env:
           CLUSTER: latitude-staging-cluster
           ENV_NAME: staging
-          SERVICE: ${{ matrix.service }}
           IMAGE_TAG: ${{ needs.staging-build.outputs.image_tag }}
           REGISTRY: ${{ needs.staging-build.outputs.registry }}
         run: |
-          FAMILY="latitude-${ENV_NAME}-${SERVICE}"
-          IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
-          SERVICE_ARN=$(aws ecs list-services \
-            --cluster "${CLUSTER}" \
-            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-            --output text)
-          aws ecs register-task-definition \
-            --family "${FAMILY}" \
-            --cli-input-json "$(aws ecs describe-task-definition \
-              --task-definition "${FAMILY}" \
-              --query 'taskDefinition' \
-              --output json | jq \
-                --arg image "${IMAGE}" '
-                .containerDefinitions[0].image = $image |
-                del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
-              ')" > /dev/null
-          aws ecs update-service \
-            --cluster "${CLUSTER}" \
-            --service "${SERVICE_ARN}" \
-            --task-definition "${FAMILY}" > /dev/null
+          set -euo pipefail
+          deploy_service() {
+            local SERVICE="$1"
+            set -euo pipefail
+            echo "::group::Deploy ${SERVICE}"
+            FAMILY="latitude-${ENV_NAME}-${SERVICE}"
+            IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
+            SERVICE_ARN=$(aws ecs list-services \
+              --cluster "${CLUSTER}" \
+              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+              --output text)
+            aws ecs register-task-definition \
+              --family "${FAMILY}" \
+              --cli-input-json "$(aws ecs describe-task-definition \
+                --task-definition "${FAMILY}" \
+                --query 'taskDefinition' \
+                --output json | jq \
+                  --arg image "${IMAGE}" '
+                  .containerDefinitions[0].image = $image |
+                  del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+                ')" > /dev/null
+            aws ecs update-service \
+              --cluster "${CLUSTER}" \
+              --service "${SERVICE_ARN}" \
+              --task-definition "${FAMILY}" > /dev/null
+            aws ecs wait services-stable \
+              --cluster "${CLUSTER}" \
+              --services "${SERVICE_ARN}"
+            echo "::endgroup::"
+          }
+          export -f deploy_service
+          export CLUSTER ENV_NAME IMAGE_TAG REGISTRY
 
-      - name: Wait for ${{ matrix.service }} to stabilize
-        env:
-          CLUSTER: latitude-staging-cluster
-          ENV_NAME: staging
-          SERVICE: ${{ matrix.service }}
-        run: |
-          SERVICE_ARN=$(aws ecs list-services \
-            --cluster "${CLUSTER}" \
-            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-            --output text)
-          aws ecs wait services-stable \
-            --cluster "${CLUSTER}" \
-            --services "${SERVICE_ARN}"
+          pids=()
+          for SERVICE in web api ingest workers workflows; do
+            ( deploy_service "${SERVICE}" ) &
+            pids+=($!)
+          done
+          ec=0
+          for pid in "${pids[@]}"; do
+            wait "${pid}" || ec=1
+          done
+          exit "${ec}"
 
   staging-deploy-complete:
-    needs: staging-deploy
+    needs: staging-apply
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -239,9 +228,13 @@ jobs:
       push: true
     secrets: inherit
 
-  production-migrate:
+  production-apply:
     needs: production-build
     runs-on: ubuntu-latest
+    # One end-to-end apply (migrate + ECS rollout) at a time per environment.
+    concurrency:
+      group: deploy-production-apply
+      cancel-in-progress: false
     environment:
       name: production
       deployment: false
@@ -354,70 +347,59 @@ jobs:
           fi
           echo "Migrations completed successfully"
 
-  production-deploy:
-    needs: [production-migrate, production-build]
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      deployment: false
-    strategy:
-      matrix:
-        service: [web, api, ingest, workers, workflows]
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: eu-central-1
-
-      - name: Deploy ${{ matrix.service }}
+      - name: Deploy all services
         env:
           CLUSTER: latitude-production-cluster
           ENV_NAME: production
-          SERVICE: ${{ matrix.service }}
           IMAGE_TAG: ${{ needs.production-build.outputs.image_tag }}
           REGISTRY: ${{ needs.production-build.outputs.registry }}
         run: |
-          FAMILY="latitude-${ENV_NAME}-${SERVICE}"
-          IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
-          SERVICE_ARN=$(aws ecs list-services \
-            --cluster "${CLUSTER}" \
-            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-            --output text)
-          aws ecs register-task-definition \
-            --family "${FAMILY}" \
-            --cli-input-json "$(aws ecs describe-task-definition \
-              --task-definition "${FAMILY}" \
-              --query 'taskDefinition' \
-              --output json | jq \
-                --arg image "${IMAGE}" '
-                .containerDefinitions[0].image = $image |
-                del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
-              ')" > /dev/null
-          aws ecs update-service \
-            --cluster "${CLUSTER}" \
-            --service "${SERVICE_ARN}" \
-            --task-definition "${FAMILY}" > /dev/null
+          set -euo pipefail
+          deploy_service() {
+            local SERVICE="$1"
+            set -euo pipefail
+            echo "::group::Deploy ${SERVICE}"
+            FAMILY="latitude-${ENV_NAME}-${SERVICE}"
+            IMAGE="${REGISTRY}/latitude-${ENV_NAME}-${SERVICE}:${IMAGE_TAG}"
+            SERVICE_ARN=$(aws ecs list-services \
+              --cluster "${CLUSTER}" \
+              --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
+              --output text)
+            aws ecs register-task-definition \
+              --family "${FAMILY}" \
+              --cli-input-json "$(aws ecs describe-task-definition \
+                --task-definition "${FAMILY}" \
+                --query 'taskDefinition' \
+                --output json | jq \
+                  --arg image "${IMAGE}" '
+                  .containerDefinitions[0].image = $image |
+                  del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+                ')" > /dev/null
+            aws ecs update-service \
+              --cluster "${CLUSTER}" \
+              --service "${SERVICE_ARN}" \
+              --task-definition "${FAMILY}" > /dev/null
+            aws ecs wait services-stable \
+              --cluster "${CLUSTER}" \
+              --services "${SERVICE_ARN}"
+            echo "::endgroup::"
+          }
+          export -f deploy_service
+          export CLUSTER ENV_NAME IMAGE_TAG REGISTRY
 
-      - name: Wait for ${{ matrix.service }} to stabilize
-        env:
-          CLUSTER: latitude-production-cluster
-          ENV_NAME: production
-          SERVICE: ${{ matrix.service }}
-        run: |
-          SERVICE_ARN=$(aws ecs list-services \
-            --cluster "${CLUSTER}" \
-            --query "serviceArns[?contains(@, 'latitude-${ENV_NAME}-${SERVICE}')]" \
-            --output text)
-          aws ecs wait services-stable \
-            --cluster "${CLUSTER}" \
-            --services "${SERVICE_ARN}"
+          pids=()
+          for SERVICE in web api ingest workers workflows; do
+            ( deploy_service "${SERVICE}" ) &
+            pids+=($!)
+          done
+          ec=0
+          for pid in "${pids[@]}"; do
+            wait "${pid}" || ec=1
+          done
+          exit "${ec}"
 
   production-deploy-complete:
-    needs: production-deploy
+    needs: production-apply
     runs-on: ubuntu-latest
     environment: production
     steps:
