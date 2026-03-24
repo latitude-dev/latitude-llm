@@ -16,7 +16,7 @@
     "knip:fix:files": "knip --fix-type files --allow-remove-files",
     "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate && pnpm build",
     "db:reset": "pnpm --filter \"@platform/db-postgres\" pg:reset && pnpm --filter \"@platform/db-clickhouse\" ch:reset",
-    "prepare": "pnpm hooks"
+    "prepare": "pnpm hooks && effect-language-service patch"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
