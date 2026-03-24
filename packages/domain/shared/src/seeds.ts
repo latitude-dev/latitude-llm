@@ -1,20 +1,7 @@
-import {
-  ApiKeyId,
-  DatasetId,
-  DatasetVersionId,
-  GrantId,
-  MembershipId,
-  OrganizationId,
-  ProjectId,
-  SubscriptionId,
-  UserId,
-} from "./id.ts"
+import { ApiKeyId, DatasetId, DatasetVersionId, MembershipId, OrganizationId, ProjectId, UserId } from "./id.ts"
 
 // Constants for seeding the database with initial data
 export const SEED_ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")
-export const SEED_SUBSCRIPTION_ID = SubscriptionId("ry0fy0n6qwszk3kk04zlfsuy")
-export const SEED_GRANT_SEATS_ID = GrantId("nkbbtxd5o7rbrr8miamhrnif")
-export const SEED_GRANT_RUNS_ID = GrantId("drkvcpudmblnqxgk48irmt94")
 export const SEED_OWNER_USER_ID = UserId("ye9d77pxi50nh1gyqljkffnb")
 export const SEED_ADMIN_USER_ID = UserId("uzm4d8pb5k0bd2oug9ud2xjs")
 export const SEED_PROJECT_ID = ProjectId("yvl1e78evmwfs2mosyjb08rc")
