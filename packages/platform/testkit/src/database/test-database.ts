@@ -1,5 +1,7 @@
 import { closePostgres, createPostgresClient, type PostgresClient, type PostgresConfig } from "@platform/db-postgres"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
+
+class TestDatabaseError extends Data.TaggedError("TestDatabaseError")<{ cause: unknown }> {}
 
 /**
  * Test database configuration
@@ -47,10 +49,12 @@ export const createTestDatabase = (config: TestDatabaseConfig = {}): TestDatabas
 /**
  * Create a test database connection wrapped in Effect
  */
-export const createTestDatabaseEffect = (config: TestDatabaseConfig = {}): Effect.Effect<TestDatabase, Error> => {
+export const createTestDatabaseEffect = (
+  config: TestDatabaseConfig = {},
+): Effect.Effect<TestDatabase, TestDatabaseError> => {
   return Effect.try({
     try: () => createTestDatabase(config),
-    catch: (error) => (error instanceof Error ? error : new Error(String(error))),
+    catch: (error) => new TestDatabaseError({ cause: error }),
   })
 }
 
@@ -64,10 +68,10 @@ export const closeTestDatabase = async (db: TestDatabase): Promise<void> => {
 /**
  * Close test database connection wrapped in Effect
  */
-export const closeTestDatabaseEffect = (db: TestDatabase): Effect.Effect<void, Error> => {
+export const closeTestDatabaseEffect = (db: TestDatabase): Effect.Effect<void, TestDatabaseError> => {
   return Effect.tryPromise({
     try: () => closeTestDatabase(db),
-    catch: (error) => (error instanceof Error ? error : new Error(`Failed to close test database: ${String(error)}`)),
+    catch: (error) => new TestDatabaseError({ cause: error }),
   })
 }
 

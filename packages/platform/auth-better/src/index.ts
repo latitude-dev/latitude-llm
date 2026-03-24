@@ -1,7 +1,16 @@
 import { stripe } from "@better-auth/stripe"
 import { MembershipRepository } from "@domain/organizations"
 import { generateId, UserId } from "@domain/shared"
-import { MembershipRepositoryLive, type PostgresClient, postgresSchema, SqlClientLive } from "@platform/db-postgres"
+import { MembershipRepositoryLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
+import {
+  account,
+  invitation,
+  member,
+  organization as organizationTable,
+  session,
+  user,
+  verification,
+} from "@platform/db-postgres/schema/better-auth"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
@@ -95,7 +104,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         Effect.gen(function* () {
           const repo = yield* MembershipRepository
           return yield* repo.findByUserId(UserId(user.id))
-        }).pipe(Effect.provide(MembershipRepositoryLive), Effect.provide(SqlClientLive(config.client))),
+        }).pipe(withPostgres(MembershipRepositoryLive, config.client)),
       )
       const activeOrganizationId = memberships[0]?.organizationId
 
@@ -171,13 +180,13 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     database: drizzleAdapter(config.client.db, {
       provider: "pg",
       schema: {
-        user: postgresSchema.user,
-        session: postgresSchema.session,
-        account: postgresSchema.account,
-        verification: postgresSchema.verification,
-        organization: postgresSchema.organization,
-        member: postgresSchema.member,
-        invitation: postgresSchema.invitation,
+        user,
+        session,
+        account,
+        verification,
+        organization: organizationTable,
+        member,
+        invitation,
       },
     }),
     baseURL: baseUrl,

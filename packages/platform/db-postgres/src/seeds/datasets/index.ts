@@ -1,6 +1,7 @@
 import { SEED_DATASET_ID, SEED_DATASET_VERSION_ID, SEED_ORG_ID, SEED_PROJECT_ID } from "@domain/shared"
 import { Effect } from "effect"
-import { postgresSchema } from "../../index.ts"
+import { datasets } from "../../schema/datasets.ts"
+import { datasetVersions } from "../../schema/datasetVersions.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const seedDatasets: Seeder = {
@@ -9,7 +10,7 @@ const seedDatasets: Seeder = {
     Effect.tryPromise({
       try: async () => {
         await ctx.db
-          .insert(postgresSchema.datasets)
+          .insert(datasets)
           .values({
             id: SEED_DATASET_ID,
             organizationId: SEED_ORG_ID,
@@ -19,7 +20,7 @@ const seedDatasets: Seeder = {
             currentVersion: 1,
           })
           .onConflictDoUpdate({
-            target: postgresSchema.datasets.id,
+            target: datasets.id,
             set: {
               name: "Big Comma Delimiter",
               description: "People directory with color identifiers",
@@ -28,7 +29,7 @@ const seedDatasets: Seeder = {
           })
 
         await ctx.db
-          .insert(postgresSchema.datasetVersions)
+          .insert(datasetVersions)
           .values({
             id: SEED_DATASET_VERSION_ID,
             organizationId: SEED_ORG_ID,

@@ -1,7 +1,7 @@
 import { ApiKeyRepository } from "@domain/api-keys"
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
 import type { PostgresClient } from "@platform/db-postgres"
-import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { hashToken } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
@@ -140,7 +140,7 @@ const validateApiKey = (
     // Enforce minimum time before returning
     yield* enforceMinimumTime(startTime, MIN_VALIDATION_TIME_MS)
     return result
-  }).pipe(Effect.provide(ApiKeyRepositoryLive), Effect.provide(SqlClientLive(adminClient)), Effect.orDie)
+  }).pipe(withPostgres(ApiKeyRepositoryLive, adminClient), Effect.orDie)
 }
 
 /**

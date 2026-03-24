@@ -1,9 +1,14 @@
 import { generateId, type OrganizationSettings, type ProjectSettings } from "@domain/shared"
 import type { PostgresDb } from "@platform/db-postgres"
-import { postgresSchema as schema } from "@platform/db-postgres"
+import { apiKeys } from "@platform/db-postgres/schema/api-keys"
+import { member, organization, user } from "@platform/db-postgres/schema/better-auth"
+import { projects } from "@platform/db-postgres/schema/projects"
 import { type CryptoError, encrypt, hashToken } from "@repo/utils"
 import type { Effect as EffectType } from "effect"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
+
+class FixtureError extends Data.TaggedError("FixtureError")<{ cause: unknown }> {}
+
 import type { TestDatabase } from "./test-database.ts"
 import { generateTestId } from "./test-database.ts"
 
@@ -31,7 +36,7 @@ export interface UserFixture {
 export const createUserFixture = (
   db: PostgresDb,
   input: UserFixtureInput = {},
-): EffectType.Effect<UserFixture, Error> => {
+): EffectType.Effect<UserFixture, FixtureError> => {
   const testId = generateTestId()
   const email = input.email ?? `test-${testId}@example.com`
   const name = input.name ?? `Test User ${testId}`
@@ -39,8 +44,8 @@ export const createUserFixture = (
   return Effect.tryPromise({
     try: async () => {
       const userId = generateId()
-      const [user] = await db
-        .insert(schema.user)
+      const [userRow] = await db
+        .insert(user)
         .values({
           id: userId,
           email,
@@ -48,14 +53,14 @@ export const createUserFixture = (
           emailVerified: input.emailVerified ?? true,
         })
         .returning({
-          id: schema.user.id,
-          email: schema.user.email,
-          name: schema.user.name,
+          id: user.id,
+          email: user.email,
+          name: user.name,
         })
 
-      return user
+      return userRow
     },
-    catch: (error) => (error instanceof Error ? error : new Error(`Failed to create user fixture: ${String(error)}`)),
+    catch: (error) => new FixtureError({ cause: error }),
   })
 }
 
@@ -85,7 +90,7 @@ export interface OrganizationFixture {
 export const createOrganizationFixture = (
   db: PostgresDb,
   input: OrganizationFixtureInput = {},
-): EffectType.Effect<OrganizationFixture, Error> => {
+): EffectType.Effect<OrganizationFixture, FixtureError> => {
   const testId = generateTestId()
   const name = input.name ?? `Test Organization ${testId}`
   const slug = input.slug ?? `test-org-${testId}`
@@ -94,7 +99,7 @@ export const createOrganizationFixture = (
     try: async () => {
       const orgId = generateId()
       const [org] = await db
-        .insert(schema.organization)
+        .insert(organization)
         .values({
           id: orgId,
           name,
@@ -103,17 +108,16 @@ export const createOrganizationFixture = (
           settings: null,
         })
         .returning({
-          id: schema.organization.id,
-          name: schema.organization.name,
-          slug: schema.organization.slug,
-          creatorId: schema.organization.creatorId,
-          settings: schema.organization.settings,
+          id: organization.id,
+          name: organization.name,
+          slug: organization.slug,
+          creatorId: organization.creatorId,
+          settings: organization.settings,
         })
 
       return org
     },
-    catch: (error) =>
-      error instanceof Error ? error : new Error(`Failed to create organization fixture: ${String(error)}`),
+    catch: (error) => new FixtureError({ cause: error }),
   })
 }
 
@@ -142,12 +146,12 @@ export interface MembershipFixture {
 export const createMembershipFixture = (
   db: PostgresDb,
   input: MembershipFixtureInput,
-): EffectType.Effect<MembershipFixture, Error> => {
+): EffectType.Effect<MembershipFixture, FixtureError> => {
   return Effect.tryPromise({
     try: async () => {
       const memberId = generateId()
-      const [member] = await db
-        .insert(schema.member)
+      const [memberRow] = await db
+        .insert(member)
         .values({
           id: memberId,
           organizationId: input.organizationId,
@@ -155,16 +159,15 @@ export const createMembershipFixture = (
           role: input.role ?? "member",
         })
         .returning({
-          id: schema.member.id,
-          organizationId: schema.member.organizationId,
-          userId: schema.member.userId,
-          role: schema.member.role,
+          id: member.id,
+          organizationId: member.organizationId,
+          userId: member.userId,
+          role: member.role,
         })
 
-      return member
+      return memberRow
     },
-    catch: (error) =>
-      error instanceof Error ? error : new Error(`Failed to create membership fixture: ${String(error)}`),
+    catch: (error) => new FixtureError({ cause: error }),
   })
 }
 
@@ -194,7 +197,7 @@ export interface ProjectFixture {
 export const createProjectFixture = (
   db: PostgresDb,
   input: ProjectFixtureInput,
-): EffectType.Effect<ProjectFixture, Error> => {
+): EffectType.Effect<ProjectFixture, FixtureError> => {
   const testId = generateTestId()
   const name = input.name ?? `Test Project ${testId}`
   const slug = input.slug ?? `test-project-${testId}`
@@ -202,8 +205,8 @@ export const createProjectFixture = (
   return Effect.tryPromise({
     try: async () => {
       const projectId = generateId()
-      const [project] = await db
-        .insert(schema.projects)
+      const [projectRow] = await db
+        .insert(projects)
         .values({
           id: projectId,
           name,
@@ -212,17 +215,16 @@ export const createProjectFixture = (
           settings: null,
         })
         .returning({
-          id: schema.projects.id,
-          name: schema.projects.name,
-          slug: schema.projects.slug,
-          organizationId: schema.projects.organizationId,
-          settings: schema.projects.settings,
+          id: projects.id,
+          name: projects.name,
+          slug: projects.slug,
+          organizationId: projects.organizationId,
+          settings: projects.settings,
         })
 
-      return project
+      return projectRow
     },
-    catch: (error) =>
-      error instanceof Error ? error : new Error(`Failed to create project fixture: ${String(error)}`),
+    catch: (error) => new FixtureError({ cause: error }),
   })
 }
 
@@ -252,7 +254,7 @@ export interface ApiKeyFixture {
 export const createApiKeyFixture = (
   db: PostgresDb,
   input: ApiKeyFixtureInput,
-): EffectType.Effect<ApiKeyFixture, Error | CryptoError> => {
+): EffectType.Effect<ApiKeyFixture, FixtureError | CryptoError> => {
   const testId = generateTestId()
   const name = input.name ?? `Test API Key ${testId}`
 
@@ -262,10 +264,10 @@ export const createApiKeyFixture = (
     const tokenHash = yield* hashToken(plaintextToken)
     const encryptedToken = yield* encrypt(plaintextToken, input.encryptionKey)
 
-    const [apiKey] = yield* Effect.tryPromise({
+    const [apiKeyRow] = yield* Effect.tryPromise({
       try: () =>
         db
-          .insert(schema.apiKeys)
+          .insert(apiKeys)
           .values({
             id: apiKeyId,
             token: encryptedToken,
@@ -274,15 +276,14 @@ export const createApiKeyFixture = (
             organizationId: input.organizationId,
           })
           .returning({
-            id: schema.apiKeys.id,
-            name: schema.apiKeys.name,
-            organizationId: schema.apiKeys.organizationId,
+            id: apiKeys.id,
+            name: apiKeys.name,
+            organizationId: apiKeys.organizationId,
           }),
-      catch: (error) =>
-        error instanceof Error ? error : new Error(`Failed to create API key fixture: ${String(error)}`),
+      catch: (error) => new FixtureError({ cause: error }),
     })
 
-    return { ...apiKey, token: plaintextToken }
+    return { ...apiKeyRow, token: plaintextToken }
   })
 }
 
@@ -298,7 +299,7 @@ export interface OrganizationSetup {
 /**
  * Create a complete organization setup with owner user
  */
-export const createOrganizationSetup = (testDb: TestDatabase): EffectType.Effect<OrganizationSetup, Error> => {
+export const createOrganizationSetup = (testDb: TestDatabase): EffectType.Effect<OrganizationSetup, FixtureError> => {
   return Effect.gen(function* () {
     const user = yield* createUserFixture(testDb.db)
     const organization = yield* createOrganizationFixture(testDb.db, {

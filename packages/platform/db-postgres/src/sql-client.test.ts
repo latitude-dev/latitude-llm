@@ -1,6 +1,9 @@
 import { OrganizationId, SqlClient } from "@domain/shared"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
+
+class TestError extends Data.TaggedError("TestError")<{ message: string }> {}
+
 import type { Operator, PostgresClient } from "./client.ts"
 import { SqlClientLive } from "./sql-client.ts"
 
@@ -298,7 +301,7 @@ describe("SqlClientLive", () => {
       const orgId = OrganizationId("org-fail")
 
       const effect = runWithSqlClient(client, orgId, (sql) =>
-        sql.transaction(Effect.fail(new Error("intentional failure"))),
+        sql.transaction(Effect.fail(new TestError({ message: "intentional failure" }))),
       )
 
       await expect(effect).rejects.toThrow("intentional failure")
@@ -309,7 +312,9 @@ describe("SqlClientLive", () => {
       const client = createMockPostgresClient(state)
       const orgId = OrganizationId("org-reset")
 
-      const failOnce = runWithSqlClient(client, orgId, (sql) => sql.transaction(Effect.fail(new Error("fail"))))
+      const failOnce = runWithSqlClient(client, orgId, (sql) =>
+        sql.transaction(Effect.fail(new TestError({ message: "fail" }))),
+      )
       await expect(failOnce).rejects.toThrow("fail")
 
       state.transactionCallCount = 0

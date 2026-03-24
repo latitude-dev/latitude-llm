@@ -5,7 +5,6 @@ import { drizzle } from "drizzle-orm/pglite"
 import { migrate } from "drizzle-orm/pglite/migrator"
 import { afterAll, beforeAll } from "vitest"
 import type { PostgresClient, PostgresDb } from "../client.ts"
-import { postgresSchema } from "../schema/index.ts"
 
 const MIGRATIONS_FOLDER = fileURLToPath(new URL("../../drizzle", import.meta.url))
 
@@ -62,7 +61,7 @@ export const createInMemoryPostgres = async (): Promise<InMemoryPostgres> => {
   const client = new PGlite()
   await client.exec("CREATE ROLE latitude_app NOLOGIN")
 
-  const db = drizzle({ client, schema: postgresSchema })
+  const db = drizzle({ client })
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER })
 
   const postgresDb = unsafeCast<PostgresDb>(db)

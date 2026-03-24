@@ -1,6 +1,6 @@
 import { ProjectRepository } from "@domain/projects"
 import { isNotFoundError, OrganizationId, ProjectId } from "@domain/shared"
-import { ProjectRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect } from "effect"
 import type { MiddlewareHandler } from "hono"
 import { getPostgresClient } from "../clients.ts"
@@ -24,10 +24,7 @@ export const projectMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) =
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
         return yield* repo.findById(ProjectId(projectId))
-      }).pipe(
-        Effect.provide(ProjectRepositoryLive),
-        Effect.provide(SqlClientLive(client, OrganizationId(organizationId))),
-      ),
+      }).pipe(withPostgres(ProjectRepositoryLive, client, OrganizationId(organizationId))),
     )
 
     c.set("projectId", project.id as string)

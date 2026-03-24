@@ -15,7 +15,7 @@ import { decrypt, encrypt } from "@repo/utils"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { apiKeys } from "../schema/index.ts"
+import { apiKeys } from "../schema/api-keys.ts"
 
 let encryptionKeyCache: Buffer | undefined
 
@@ -108,21 +108,17 @@ export const ApiKeyRepositoryLive = Layer.effect(
         }),
 
       delete: (id: ApiKeyIdType) =>
-        Effect.gen(function* () {
-          yield* sqlClient.query((db, organizationId) =>
-            db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
-          )
-        }),
+        sqlClient.query((db, organizationId) =>
+          db.delete(apiKeys).where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
+        ),
 
       touch: (id: ApiKeyIdType) =>
-        Effect.gen(function* () {
-          yield* sqlClient.query((db, organizationId) =>
-            db
-              .update(apiKeys)
-              .set({ lastUsedAt: new Date(), updatedAt: new Date() })
-              .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
-          )
-        }),
+        sqlClient.query((db, organizationId) =>
+          db
+            .update(apiKeys)
+            .set({ lastUsedAt: new Date(), updatedAt: new Date() })
+            .where(and(eq(apiKeys.id, id), eq(apiKeys.organizationId, organizationId))),
+        ),
 
       // Cross-org lookup — uses direct db access (bypasses RLS)
       save: (apiKey: ApiKey) =>

@@ -4,7 +4,7 @@ import { UserRepository } from "@domain/users"
 import { and, eq, isNull, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { user } from "../schema/index.ts"
+import { user } from "../schema/better-auth.ts"
 
 const toDomainUser = (row: typeof user.$inferSelect): User => ({
   id: row.id as UserId,

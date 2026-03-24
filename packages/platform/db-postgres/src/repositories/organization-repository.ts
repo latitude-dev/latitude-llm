@@ -12,7 +12,7 @@ import {
 import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { member, organization } from "../schema/index.ts"
+import { member, organization } from "../schema/better-auth.ts"
 
 const toDomainOrganization = (row: typeof organization.$inferSelect) => ({
   id: OrganizationId(row.id),

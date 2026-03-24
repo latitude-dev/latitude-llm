@@ -1,11 +1,13 @@
 import type { EventEnvelope } from "@domain/events"
-import { outboxEvents } from "@platform/db-postgres"
+import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { setupTestPostgres } from "@platform/testkit"
 import { asc, eq, inArray } from "drizzle-orm"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import type { Pool } from "pg"
 import { beforeEach, describe, expect, it } from "vitest"
 import { createPollingOutboxConsumer, type OutboxEventRow } from "./index.ts"
+
+class TestPublishError extends Data.TaggedError("TestPublishError")<{ message: string }> {}
 
 type QueryResult<Row> = { rows: Row[] }
 
@@ -153,7 +155,7 @@ describe("createPollingOutboxConsumer", () => {
       const publisher = {
         publish: (envelope: EventEnvelope) => {
           if (envelope.id === failedEventId) {
-            return Effect.fail(new Error("publish failed"))
+            return Effect.fail(new TestPublishError({ message: "publish failed" }))
           }
           return Effect.sync(() => {
             publishedEventIds.push(envelope.id)

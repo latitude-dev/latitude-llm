@@ -1,7 +1,7 @@
 import { ApiKeyRepository } from "@domain/api-keys"
 import { ApiKeyId } from "@domain/shared"
 import type { PostgresClient } from "@platform/db-postgres"
-import { ApiKeyRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 
@@ -99,16 +99,12 @@ class TouchBuffer {
 
     const startTime = Date.now()
 
-    // Use the live layer pattern for cross-org batch updates (bypasses RLS)
-    const sqlClientLayer = SqlClientLive(this.client)
-    const apiKeyRepoLayer = ApiKeyRepositoryLive
-
     try {
       await Effect.runPromise(
         Effect.gen(function* () {
           const repo = yield* ApiKeyRepository
           return yield* repo.touchBatch(keyIds)
-        }).pipe(Effect.provide(apiKeyRepoLayer), Effect.provide(sqlClientLayer)),
+        }).pipe(withPostgres(ApiKeyRepositoryLive, this.client)),
       )
 
       logger.info(`Flushed ${keyIds.length} touch updates in ${Date.now() - startTime}ms`)

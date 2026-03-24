@@ -1,5 +1,6 @@
 import { generateId } from "@domain/shared"
-import { postgresSchema } from "@platform/db-postgres"
+import { apiKeys } from "@platform/db-postgres/schema/api-keys"
+import { member, organization, user } from "@platform/db-postgres/schema/better-auth"
 import { createRlsMiddleware, type InMemoryPostgres } from "@platform/testkit"
 import { encrypt, hashToken, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
@@ -51,7 +52,7 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
   const authApiKeyId = generateId()
   const memberId = generateId()
 
-  await database.db.insert(postgresSchema.user).values({
+  await database.db.insert(user).values({
     id: userId,
     email: `${userId}@example.com`,
     name: "Test User",
@@ -60,14 +61,14 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
     banned: false,
   })
 
-  await database.db.insert(postgresSchema.organization).values({
+  await database.db.insert(organization).values({
     id: organizationId,
     name: `Organization ${organizationId}`,
     slug: `org-${organizationId}`,
     creatorId: userId,
   })
 
-  await database.db.insert(postgresSchema.member).values({
+  await database.db.insert(member).values({
     id: memberId,
     organizationId,
     userId,
@@ -77,7 +78,7 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
   const encryptedToken = await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY))
   const tokenHash = await Effect.runPromise(hashToken(apiKeyToken))
 
-  await database.db.insert(postgresSchema.apiKeys).values({
+  await database.db.insert(apiKeys).values({
     id: authApiKeyId,
     organizationId,
     token: encryptedToken,

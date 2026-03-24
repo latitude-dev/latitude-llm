@@ -3,7 +3,7 @@ import { NotFoundError, type OrganizationId, SqlClient, type SqlClientShape } fr
 import { and, eq, gt, isNull, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { authIntent } from "../schema/index.ts"
+import { authIntent } from "../schema/auth-intent.ts"
 
 const parseAuthIntentData = (rawData: unknown): Record<string, unknown> => {
   if (typeof rawData !== "object" || rawData === null) {
