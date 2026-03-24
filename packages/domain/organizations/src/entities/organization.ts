@@ -1,4 +1,4 @@
-import { generateId, OrganizationId, type SubscriptionId, type UserId } from "@domain/shared"
+import { generateId, OrganizationId, type OrganizationSettings, type SubscriptionId, type UserId } from "@domain/shared"
 
 /**
  * Organization entity - represents a tenant/workspace.
@@ -15,6 +15,7 @@ export interface Organization {
   readonly creatorId: UserId | null
   readonly currentSubscriptionId: SubscriptionId | null
   readonly stripeCustomerId: string | null
+  readonly settings: OrganizationSettings | null
   readonly createdAt: Date
   readonly updatedAt: Date
 }
@@ -31,6 +32,7 @@ export const createOrganization = (params: {
   creatorId?: UserId
   currentSubscriptionId?: SubscriptionId
   stripeCustomerId?: string
+  settings?: OrganizationSettings | null
   createdAt?: Date
   updatedAt?: Date
 }): Organization => {
@@ -44,6 +46,7 @@ export const createOrganization = (params: {
     creatorId: params.creatorId ?? null,
     currentSubscriptionId: params.currentSubscriptionId ?? null,
     stripeCustomerId: params.stripeCustomerId ?? null,
+    settings: params.settings ?? null,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
   }

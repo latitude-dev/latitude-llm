@@ -1,4 +1,4 @@
-import { generateId } from "@domain/shared"
+import { generateId, type OrganizationSettings, type ProjectSettings } from "@domain/shared"
 import type { PostgresDb } from "@platform/db-postgres"
 import { postgresSchema as schema } from "@platform/db-postgres"
 import { type CryptoError, encrypt, hashToken } from "@repo/utils"
@@ -76,6 +76,7 @@ export interface OrganizationFixture {
   readonly name: string
   readonly slug: string
   readonly creatorId: string | null
+  readonly settings: OrganizationSettings | null
 }
 
 /**
@@ -99,12 +100,14 @@ export const createOrganizationFixture = (
           name,
           slug,
           creatorId: input.creatorId ?? null,
+          settings: null,
         })
         .returning({
           id: schema.organization.id,
           name: schema.organization.name,
           slug: schema.organization.slug,
           creatorId: schema.organization.creatorId,
+          settings: schema.organization.settings,
         })
 
       return org
@@ -182,6 +185,7 @@ export interface ProjectFixture {
   readonly name: string
   readonly slug: string
   readonly organizationId: string
+  readonly settings: ProjectSettings | null
 }
 
 /**
@@ -205,12 +209,14 @@ export const createProjectFixture = (
           name,
           slug,
           organizationId: input.organizationId,
+          settings: null,
         })
         .returning({
           id: schema.projects.id,
           name: schema.projects.name,
           slug: schema.projects.slug,
           organizationId: schema.projects.organizationId,
+          settings: schema.projects.settings,
         })
 
       return project

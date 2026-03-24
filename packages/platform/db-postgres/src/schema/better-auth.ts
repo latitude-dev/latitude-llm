@@ -1,4 +1,4 @@
-import { boolean, text, varchar } from "drizzle-orm/pg-core"
+import { boolean, jsonb, text, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 /**
@@ -103,6 +103,7 @@ export const organization = latitudeSchema.table("organization", {
   creatorId: cuid("creator_id").references(() => user.id),
   currentSubscriptionId: cuid("current_subscription_id"),
   stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
+  settings: jsonb("settings").$type<{ keepMonitoring?: boolean | undefined }>(),
   ...timestamps(),
 })
 

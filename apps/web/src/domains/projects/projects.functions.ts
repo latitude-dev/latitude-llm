@@ -9,25 +9,20 @@ import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
-export interface ProjectRecord {
-  readonly id: string
-  readonly organizationId: string
-  readonly name: string
-  readonly slug: string
-  readonly deletedAt: string | null
-  readonly createdAt: string
-  readonly updatedAt: string
-}
-
-const toRecord = (project: Project): ProjectRecord => ({
+const toRecord = (project: Project) => ({
   id: project.id,
   organizationId: project.organizationId,
   name: project.name,
   slug: project.slug,
+  settings: {
+    keepMonitoring: project.settings?.keepMonitoring,
+  },
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),
   updatedAt: project.updatedAt.toISOString(),
 })
+
+export type ProjectRecord = ReturnType<typeof toRecord>
 
 export const listProjects = createServerFn({ method: "GET" })
   .middleware([errorHandler])
@@ -72,26 +67,30 @@ export const createProject = createServerFn({ method: "POST" })
     return toRecord(project)
   })
 
+const projectSettingsSchema = z.object({
+  keepMonitoring: z.boolean().optional(),
+})
+
 export const updateProject = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
       id: z.string(),
       name: z.string().optional(),
+      settings: projectSettingsSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
-    const updatedProject = await Effect.runPromise(
-      updateProjectUseCase({
-        id: ProjectId(data.id),
-        ...(data.name !== undefined ? { name: data.name } : {}),
-      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+    const project = await Effect.runPromise(
+      updateProjectUseCase({ id: ProjectId(data.id), name: data.name, settings: data.settings }).pipe(
+        withPostgres(ProjectRepositoryLive, client, organizationId),
+      ),
     )
 
-    return toRecord(updatedProject)
+    return toRecord(project)
   })
 
 export const deleteProject = createServerFn({ method: "POST" })

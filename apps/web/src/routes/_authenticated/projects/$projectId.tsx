@@ -11,6 +11,7 @@ import {
   MessageSquareText,
   PanelLeft,
   PanelLeftClose,
+  Settings,
   ShieldAlert,
 } from "lucide-react"
 import { useState } from "react"
@@ -159,6 +160,7 @@ function ProjectSidebar({
     pathname.startsWith(`/projects/${projectId}/traces`)
   const isIssuesActive = pathname.startsWith(`/projects/${projectId}/issues`)
   const isDatasetsActive = pathname.startsWith(`/projects/${projectId}/datasets`)
+  const isSettingsActive = pathname.startsWith(`/projects/${projectId}/settings`)
 
   return (
     <aside
@@ -212,6 +214,13 @@ function ProjectSidebar({
             label="Datasets"
             to={`/projects/${projectId}/datasets`}
             active={isDatasetsActive}
+            collapsed={collapsed}
+          />
+          <NavItem
+            icon={Settings}
+            label="Settings"
+            to={`/projects/${projectId}/settings`}
+            active={isSettingsActive}
             collapsed={collapsed}
           />
         </nav>

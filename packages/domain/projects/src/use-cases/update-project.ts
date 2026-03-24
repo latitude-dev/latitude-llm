@@ -3,6 +3,7 @@ import {
   type NotFoundError,
   type OrganizationId,
   type ProjectId,
+  type ProjectSettings,
   type RepositoryError,
   SqlClient,
   type ValidationError,
@@ -13,7 +14,8 @@ import { ProjectRepository } from "../ports/project-repository.ts"
 
 export interface UpdateProjectInput {
   readonly id: ProjectId
-  readonly name?: string
+  readonly name?: string | undefined
+  readonly settings?: ProjectSettings | undefined
 }
 
 export class ProjectNotFoundError extends Data.TaggedError("ProjectNotFoundError")<{
@@ -94,6 +96,7 @@ export const updateProjectUseCase = (input: UpdateProjectInput) =>
         const updatedProject: Project = {
           ...existingProject,
           name: nextName,
+          ...(input.settings !== undefined ? { settings: input.settings } : {}),
           lastEditedAt: now,
           updatedAt: now,
         }

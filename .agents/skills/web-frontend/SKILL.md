@@ -8,6 +8,28 @@
 - Reuse as much as possible when the old implementation is still solid.
 - Do not copy v1 UI blindly; review it critically and improve it to match v2 conventions, architecture, and quality expectations when needed.
 
+## React 19
+
+The project uses **React 19**. Follow modern patterns and avoid deprecated APIs:
+
+- **No `forwardRef`** — `ref` is a regular prop in React 19. Declare it in the props type and destructure it directly.
+- **No `ElementRef`** — use `React.ComponentRef<typeof SomeComponent>` instead (the `ElementRef` alias is deprecated).
+- **No gratuitous `useMemo` / `useCallback` / `React.memo`** — the React Compiler (enabled in the build) auto-memoizes. Only add manual memoization when profiling shows a concrete bottleneck; remove existing wrappers when they have no measured benefit.
+- **Prefer `use()`** for consuming promises and context where appropriate.
+
+```tsx
+// ❌ Deprecated React 18 pattern
+const Input = forwardRef<ElementRef<typeof Primitive>, InputProps>(({ className, ...props }, ref) => (
+  <Primitive ref={ref} {...props} />
+))
+Input.displayName = "Input"
+
+// ✅ React 19 — ref is a regular prop
+function Input({ className, ref, ...props }: InputProps & { ref?: React.Ref<React.ComponentRef<typeof Primitive>> }) {
+  return <Primitive ref={ref} {...props} />
+}
+```
+
 ## Components
 
 - **Always** use `Text` from `@repo/ui` for text content

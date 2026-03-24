@@ -1,8 +1,9 @@
+import type { Organization } from "@domain/organizations"
 import {
   createOrganizationWithOwnerUseCase,
   MembershipRepository,
   OrganizationRepository,
-  updateOrganizationNameUseCase,
+  updateOrganizationUseCase,
 } from "@domain/organizations"
 import { UserId } from "@domain/shared"
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -13,10 +14,15 @@ import { requireSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
-export interface OrganizationRecord {
-  readonly id: string
-  readonly name: string
-}
+const toRecord = (org: Organization) => ({
+  id: org.id,
+  name: org.name,
+  settings: {
+    keepMonitoring: org.settings?.keepMonitoring,
+  },
+})
+
+export type OrganizationRecord = ReturnType<typeof toRecord>
 
 export const countUserOrganizations = createServerFn({ method: "GET" })
   .middleware([errorHandler])
@@ -45,22 +51,32 @@ export const getOrganization = createServerFn({ method: "GET" })
         return yield* repo.findById(organizationId)
       }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
     )
-    return { id: org.id, name: org.name }
+    return toRecord(org)
   })
 
-export const updateOrganizationName = createServerFn({ method: "POST" })
+const organizationSettingsSchema = z.object({
+  keepMonitoring: z.boolean().optional(),
+})
+
+export const updateOrganization = createServerFn({ method: "POST" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
+  .inputValidator(
+    z.object({
+      name: z.string().min(1).max(256).optional(),
+      settings: organizationSettingsSchema.optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<OrganizationRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
     const org = await Effect.runPromise(
-      updateOrganizationNameUseCase({ organizationId, name: data.name }).pipe(
+      updateOrganizationUseCase({ name: data.name, settings: data.settings }).pipe(
         withPostgres(OrganizationRepositoryLive, client, organizationId),
       ),
     )
-    return { id: org.id, name: org.name }
+
+    return toRecord(org)
   })
 
 export const createOrganization = createServerFn({ method: "POST" })
@@ -78,5 +94,5 @@ export const createOrganization = createServerFn({ method: "POST" })
         creatorId: UserId(userId),
       }).pipe(withPostgres(repoLayer, adminClient)),
     )
-    return { id: org.id, name: org.name }
+    return toRecord(org)
   })
