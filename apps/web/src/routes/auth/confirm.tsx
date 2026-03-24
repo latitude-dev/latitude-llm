@@ -115,7 +115,7 @@ function AuthConfirmPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-      <div className="flex flex-col items-center justify-center gap-6 max-w-88 w-full">
+      <div className="flex flex-col items-center justify-center gap-6 max-w-modal-sm w-full">
         <LatitudeLogo />
 
         {state.step === "error" ? (
