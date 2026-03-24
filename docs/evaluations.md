@@ -22,7 +22,7 @@ The contract should stay aligned with the proposal:
 
 - `Passed(score?, feedback)` and `Failed(score?, feedback)` always require feedback
 - if present, the score value is passed before the feedback
-- `llm(prompt, options?)` accepts an optional configuration object
+- `llm(prompt, options?)` accepts an optional host-approved configuration object
 - `parse(value, schema)` validates an unknown value against a schema
 - the stored script body evaluates a conversation and returns a `Score`
 - `zod` is available inside the host-controlled runtime
@@ -32,7 +32,8 @@ The runtime is portable between backend execution and the simulation CLI.
 Runtime rules:
 
 - the script should have access to `zod` and other host-approved globals or dependencies only
-- functions that require user configuration, such as the `llm()` provider/model choice, resolve first from the evaluation settings, then the project settings, and finally the organization settings
+- for MVP and early hosted execution, `llm()` runs through `@platform/ai-vercel` and the Vercel AI SDK with Latitude-managed provider/model/API-key configuration rather than stored provider/model settings
+- user-configurable provider/model selection is a post-MVP extension and must not force a storage migration for the script artifact
 
 ## Runtime Architecture
 
@@ -42,20 +43,22 @@ The important invariants are:
 
 - the persisted artifact is always script source text
 - the runtime exposes only host-controlled helpers such as `Passed`, `Failed`, `llm`, `parse`, and `zod`
-- provider/model resolution for runtime-configured helpers flows from evaluation settings to project settings to organization settings
+- the MVP hosted bridge keeps provider/model selection Latitude-managed
+- if post-MVP runtime-configured execution lands, provider/model resolution should flow from evaluation settings to project settings to organization settings
 - the runtime must enforce resource limits and stay portable across executors
 - issue-generated evaluations may often be simple `llm()`-as-judge scripts, but the runtime is not limited to that subset
 
 ## Evaluation Model
 
+MVP evaluation rows do not need a `settings` payload.
+
+The required persisted shapes are:
+
 ```typescript
-type EvaluationSettings = {
-  provider?: string; // if not provided, resolution falls back through project settings and then organization settings
-  model?: string; // if not provided, resolution falls back through project settings and then organization settings
-};
+import type { FilterSet } from "@domain/shared"
 
 type EvaluationTrigger = {
-  filter: string; // runs on traces that match this filter
+  filter: FilterSet; // trace/session filter over the shared trace field registry; `{}` matches all traces
   turn: "first" | "every" | "last"; // runs on the first, every, or last ingested trace/turn
   debounce: number; // debounce time in seconds
   sampling: number; // percentage [0, 100]
@@ -76,8 +79,19 @@ Evaluation rows live in Postgres with:
 
 - optional `issue_id` for issue-linked evaluations
 - multiple evaluations may link to the same issue
-- `script`, `settings`, `trigger`, and `alignment`
+- `script`, `trigger`, and `alignment`
 - `aligned_at`, `archived_at`, and `deleted_at`
+
+Post-MVP, the model may grow a narrow execution-settings payload:
+
+```typescript
+type EvaluationSettings = {
+  provider?: string
+  model?: string
+}
+```
+
+That extension is intentionally limited to provider/model selection and should only land when the later provider-settings phase is implemented.
 
 ## Background Tasks
 
@@ -113,7 +127,7 @@ Required Postgres indexes:
 - btree on `(organization_id, project_id, deleted_at, archived_at, created_at)` for active/archived project list views
 - btree on `(organization_id, project_id, issue_id, deleted_at)` for issue-linked evaluation lookups and issue-driven lifecycle updates
 - do not add a unique issue-level constraint; issues may have several linked evaluations
-- do not add GIN/JSONB indexes on `settings`, `trigger`, or `alignment`, and do not add text indexes on `script` or `description` in the evaluations foundation phase
+- do not add GIN/JSONB indexes on `trigger` or `alignment`, and do not add text indexes on `script` or `description` in the evaluations foundation phase
 
 ## Generation And Alignment
 
@@ -243,7 +257,8 @@ The base trigger model includes:
 Trigger semantics:
 
 - `turn`, `debounce`, `sampling`, and `filter` are all part of the evaluation trigger model
-- the exact filter grammar is still pending precise definition, but filters are part of the final trigger shape
+- `filter` uses the shared `FilterSet` described in `docs/filters.md`, applied against the shared trace field registry
+- an empty `filter` means "match all traces"
 - new evaluations generated from issues initialize `sampling` from a named constant in `packages/domain/evaluations`, with an initial default of `10`
 
 Live evaluation triggering is incremental:
@@ -253,7 +268,7 @@ Live evaluation triggering is incremental:
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
 - when an evaluation passes those trigger checks, `live-evaluations:enqueue` publishes one `live-evaluations:execute` task for that `(evaluationId, traceId)` pair; that task later runs the evaluation and writes the resulting score
 - `live-evaluations:enqueue` is separate from `live-annotation-queues:curate`
-- trigger filters participate in the same live incremental model once the shared filter grammar is fully defined
+- trigger filters participate in the same live incremental model through the shared trace-filter semantics defined in `docs/filters.md`
 
 ## Lifecycle
 
@@ -281,11 +296,13 @@ The active evaluations table includes:
 - `Description`
 - `Issue`
 - `Trend`
-- quick actions for settings, pause/resume, archive, and delete
+- quick actions for trigger updates, pause/resume, archive, and delete
+
+Trigger updates should edit the shared `FilterSet` plus `turn`, `debounce`, and `sampling` through the shared filter-builder patterns rather than a free-form text field.
 
 Pause/resume/archive/delete actions require confirmation flows.
 
-Custom score buckets remain a continuation of the same table surface, but they have no settings editor, no trigger editor, and no script viewer.
+Custom score buckets remain a continuation of the same table surface, but they have no execution-settings editor, no trigger editor, and no script viewer.
 
 Archived evaluations are shown in a lighter table and can be unarchived.
 
@@ -308,7 +325,7 @@ Dashboard and score-table reads should exclude simulation-generated scores by de
 
 For custom score buckets:
 
-- there is no settings editor
+- there is no execution-settings editor
 - there is no trigger editor
 - there is no script viewer
 
@@ -317,11 +334,11 @@ Stable machine-facing/public API scope includes:
 - evaluation listing
 - evaluation creation and editing
 - status changes
-- settings/trigger updates
+- trigger updates
 - dashboard reads
 - custom bucket reads
+- post-MVP execution-settings updates if runtime-configured provider/model support lands
 
 ## Still Pending Precise Definition
 
 - exact user-authored evaluation editor/copilot UX
-- exact shared trigger-filter grammar
