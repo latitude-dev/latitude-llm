@@ -1,5 +1,6 @@
-import type { MessageHandler, QueueConsumer, QueueMessage } from "@domain/queue"
-import { deleteFromDisk, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import type { EventsPublisher } from "@domain/events"
+import type { QueueConsumer, QueuePublishError } from "@domain/queue"
+import { deleteFromDisk, generateId, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { SpanRepository } from "@domain/spans"
 import { decodeOtlpProtobuf, type OtlpExportTraceServiceRequest, transformOtlpToSpans } from "@domain/spans/otlp"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -13,6 +14,7 @@ const logger = createLogger("span-ingestion")
 interface SpanIngestionWorkerDependencies {
   readonly clickhouseClient?: ClickHouseClient
   readonly disk?: StorageDiskPort
+  readonly eventsPublisher?: EventsPublisher<QueuePublishError>
   readonly logger?: Pick<typeof logger, "error">
 }
 
@@ -27,18 +29,22 @@ function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceS
   }
 }
 
-export const createSpanIngestionWorker = (consumer: QueueConsumer, deps: SpanIngestionWorkerDependencies = {}) => {
+export const createSpanIngestionWorker = (
+  consumer: QueueConsumer,
+  eventsPublisher: EventsPublisher<QueuePublishError>,
+  deps: SpanIngestionWorkerDependencies = {},
+) => {
   const chClient = deps.clickhouseClient ?? getClickhouseClient()
   const disk = deps.disk ?? getStorageDisk()
+  const pub = deps.eventsPublisher ?? eventsPublisher
   const workerLogger = deps.logger ?? logger
 
-  const handler: MessageHandler = {
-    handle: (message: QueueMessage) => {
-      const fileKey = new TextDecoder().decode(message.body)
-      const contentType = message.headers.get("content-type") ?? "application/json"
+  consumer.subscribe("span-ingestion", {
+    ingest: (wire) => {
+      const contentType = wire.contentType || "application/json"
 
       return Effect.gen(function* () {
-        const payload = yield* getFromDisk(disk, fileKey)
+        const payload = yield* getFromDisk(disk, wire.fileKey)
         const request = decodeRequest(payload, contentType)
         if (!request) {
           workerLogger.error("Span ingestion: failed to decode message")
@@ -49,15 +55,14 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer, deps: SpanIng
           return
         }
 
-        const organizationId = message.headers.get("organization-id") ?? ""
-        const projectId = message.headers.get("project-id") ?? ""
+        const organizationId = wire.organizationId
+        const projectId = wire.projectId
         if (!organizationId || !projectId) {
-          workerLogger.error("Span ingestion: missing organization-id or project-id header")
+          workerLogger.error("Span ingestion: missing organizationId or projectId in message")
           return
         }
-        const apiKeyId = message.headers.get("api-key-id") ?? ""
-        const ingestedAtStr = message.headers.get("ingested-at")
-        const ingestedAt = ingestedAtStr ? new Date(ingestedAtStr) : new Date()
+        const apiKeyId = wire.apiKeyId
+        const ingestedAt = wire.ingestedAt ? new Date(wire.ingestedAt) : new Date()
 
         const spans = transformOtlpToSpans(request, {
           organizationId,
@@ -71,13 +76,23 @@ export const createSpanIngestionWorker = (consumer: QueueConsumer, deps: SpanIng
 
         const repo = yield* SpanRepository
         yield* repo.insert(spans)
-        yield* deleteFromDisk(disk, fileKey).pipe(Effect.ignore)
+        yield* deleteFromDisk(disk, wire.fileKey).pipe(Effect.ignore)
+
+        const traceIds = new Set(spans.map((s) => s.traceId))
+        yield* Effect.all(
+          [...traceIds].map((traceId) =>
+            pub.publish({
+              id: generateId(),
+              event: { name: "SpanIngested", organizationId, payload: { organizationId, projectId, traceId } },
+              occurredAt: new Date(),
+            }),
+          ),
+          { concurrency: "unbounded" },
+        )
       }).pipe(
         Effect.tapError((error) => Effect.sync(() => workerLogger.error("Span ingestion failed", error))),
-        withClickHouse(SpanRepositoryLive, chClient, OrganizationId(message.headers.get("organization-id") ?? "")),
+        withClickHouse(SpanRepositoryLive, chClient, OrganizationId(wire.organizationId)),
       )
     },
-  }
-
-  consumer.subscribe("span-ingestion", handler)
+  })
 }

@@ -1,4 +1,5 @@
-import type { MessageHandler, QueueConsumer, QueueMessage, QueueName } from "@domain/queue"
+import type { EventEnvelope, EventsPublisher } from "@domain/events"
+import type { QueueConsumer, QueueName, QueuePublishError, TaskHandlers } from "@domain/queue"
 import { queryClickhouse } from "@platform/db-clickhouse"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse } from "@platform/testkit"
@@ -6,11 +7,13 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { createSpanIngestionWorker } from "./span-ingestion.ts"
 
-class TestQueueConsumer implements QueueConsumer {
-  private readonly handlers = new Map<QueueName, MessageHandler>()
+type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
 
-  subscribe(queue: QueueName, handler: MessageHandler): void {
-    this.handlers.set(queue, handler)
+class TestQueueConsumer implements QueueConsumer {
+  private readonly registered = new Map<QueueName, AnyTaskHandlers>()
+
+  subscribe<T extends QueueName>(queue: T, handlers: TaskHandlers<T>): void {
+    this.registered.set(queue, handlers as unknown as AnyTaskHandlers)
   }
 
   start() {
@@ -21,14 +24,29 @@ class TestQueueConsumer implements QueueConsumer {
     return Effect.void
   }
 
-  async dispatch(queue: QueueName, message: QueueMessage): Promise<void> {
-    const handler = this.handlers.get(queue)
-    if (!handler) throw new Error(`No handler registered for queue ${queue}`)
-    await Effect.runPromise(handler.handle(message))
+  async dispatchTask(queue: QueueName, task: string, payload: unknown): Promise<void> {
+    const handlers = this.registered.get(queue)
+    if (!handlers) throw new Error(`No handlers registered for queue ${queue}`)
+    const handler = handlers[task]
+    if (!handler) throw new Error(`No handler for task ${task} on queue ${queue}`)
+    await Effect.runPromise(handler(payload))
   }
 }
 
 const ch = setupTestClickHouse()
+
+function createFakeEventsPublisher(): EventsPublisher<QueuePublishError> & {
+  readonly published: EventEnvelope[]
+} {
+  const published: EventEnvelope[] = []
+  return {
+    published,
+    publish: (envelope) => {
+      published.push(envelope)
+      return Effect.void
+    },
+  }
+}
 
 const validRequest = {
   resourceSpans: [
@@ -61,25 +79,23 @@ describe("createSpanIngestionWorker", () => {
   it("ingests JSON OTLP messages and inserts spans into ClickHouse", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
     const fileKey = "span-ingestion/test-valid.json"
     disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
 
-    createSpanIngestionWorker(consumer, {
+    createSpanIngestionWorker(consumer, pub, {
       clickhouseClient: ch.client,
       disk,
       logger: { error: () => undefined },
     })
 
-    await consumer.dispatch("span-ingestion", {
-      body: Buffer.from(fileKey, "utf-8"),
-      headers: new Map([
-        ["content-type", "application/json"],
-        ["organization-id", "org_span_ingestion_test"],
-        ["project-id", "proj_span_ingestion_test"],
-        ["api-key-id", "api_key_span_ingestion_test"],
-        ["ingested-at", "2026-03-18T10:00:00.000Z"],
-      ]),
-      key: null,
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      contentType: "application/json",
+      organizationId: "org_span_ingestion_test",
+      projectId: "proj_span_ingestion_test",
+      apiKeyId: "api_key_span_ingestion_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
     })
 
     const rows = await Effect.runPromise(
@@ -105,28 +121,36 @@ describe("createSpanIngestionWorker", () => {
     expect(rows[0]?.name).toBe("test-span")
     expect(rows[0]?.trace_id).toBe("0af7651916cd43dd8448eb211c80319c")
     expect(rows[0]?.ingested_at).toContain("2026-03-18 10:00:00")
+
+    expect(pub.published).toHaveLength(1)
+    expect(pub.published[0]?.event.name).toBe("SpanIngested")
+    expect(pub.published[0]?.event.payload).toEqual({
+      organizationId: "org_span_ingestion_test",
+      projectId: "proj_span_ingestion_test",
+      traceId: "0af7651916cd43dd8448eb211c80319c",
+    })
   })
 
   it("drops invalid payloads without inserting spans", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
     const fileKey = "span-ingestion/test-invalid.json"
     disk.putBytes(fileKey, Buffer.from("not-json", "utf-8"))
 
-    createSpanIngestionWorker(consumer, {
+    createSpanIngestionWorker(consumer, pub, {
       clickhouseClient: ch.client,
       disk,
       logger: { error: () => undefined },
     })
 
-    await consumer.dispatch("span-ingestion", {
-      body: Buffer.from(fileKey, "utf-8"),
-      headers: new Map([
-        ["content-type", "application/json"],
-        ["organization-id", "org_span_ingestion_test"],
-        ["project-id", "proj_span_ingestion_test"],
-      ]),
-      key: null,
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey,
+      contentType: "application/json",
+      organizationId: "org_span_ingestion_test",
+      projectId: "proj_span_ingestion_test",
+      apiKeyId: "api_key_span_ingestion_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
     })
 
     const [count] = await Effect.runPromise(

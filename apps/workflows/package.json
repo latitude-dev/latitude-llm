@@ -6,15 +6,17 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsx watch src/server.ts",
+    "triggerWorkflowTest": "tsx src/trigger-test.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/issues": "workspace:*",
     "@platform/env": "workspace:*",
+    "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
-    "@temporalio/worker": "catalog:",
     "@temporalio/workflow": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",

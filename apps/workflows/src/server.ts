@@ -1,11 +1,12 @@
 import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { join } from "node:path"
-import { parseEnv, parseEnvOptional } from "@platform/env"
+import { parseEnv } from "@platform/env"
+import { loadTemporalConfig, runTemporalWorker } from "@platform/workflows-temporal"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
-import { runTemporalWorker } from "./temporal/create-worker.ts"
+import * as activities from "./activities/index.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
 for (const envPath of [
@@ -17,6 +18,22 @@ for (const envPath of [
     loadDotenv({ path: envPath, quiet: true })
     break
   }
+}
+
+function resolveWorkflowsPath(): string {
+  const override = process.env.LAT_TEMPORAL_WORKFLOWS_PATH
+  if (override !== undefined && override.length > 0) {
+    return override
+  }
+  const fromPackage = join(process.cwd(), "src", "workflows")
+  if (existsSync(fromPackage)) {
+    return fromPackage
+  }
+  const fromRepoRoot = join(process.cwd(), "apps", "workflows", "src", "workflows")
+  if (existsSync(fromRepoRoot)) {
+    return fromRepoRoot
+  }
+  return fromPackage
 }
 
 const bootstrap = async () => {
@@ -43,27 +60,22 @@ const bootstrap = async () => {
     logger.info(`workflows health check listening on :${healthPort}/health`)
   })
 
-  const temporalAddress = Effect.runSync(parseEnv("LAT_TEMPORAL_ADDRESS", "string", "localhost:7233"))
-  const temporalNamespace = Effect.runSync(parseEnv("LAT_TEMPORAL_NAMESPACE", "string", "default"))
-  const temporalTaskQueue = Effect.runSync(parseEnv("LAT_TEMPORAL_TASK_QUEUE", "string", "latitude-workflows"))
-  const temporalApiKey = Effect.runSync(parseEnvOptional("LAT_TEMPORAL_API_KEY", "string"))
-
+  const config = loadTemporalConfig()
   let shutdownTemporal: (() => Promise<void>) | undefined
 
   const start = async () => {
     const temporal = await runTemporalWorker({
-      address: temporalAddress,
-      namespace: temporalNamespace,
-      taskQueue: temporalTaskQueue,
-      ...(temporalApiKey !== undefined ? { apiKey: temporalApiKey } : {}),
+      config,
+      workflowsPath: resolveWorkflowsPath(),
+      activities,
     })
 
     shutdownTemporal = temporal.shutdown
     ready = true
     logger.info("workflows Temporal worker polling", {
-      address: temporalAddress,
-      namespace: temporalNamespace,
-      taskQueue: temporalTaskQueue,
+      address: config.address,
+      namespace: config.namespace,
+      taskQueue: config.taskQueue,
     })
 
     await temporal.runPromise

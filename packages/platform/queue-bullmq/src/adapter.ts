@@ -1,41 +1,19 @@
-import type { MessageHandler, QueueConsumer, QueueMessage, QueueName, QueuePublisherShape } from "@domain/queue"
-import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError } from "@domain/queue"
-import { base64Decode, base64Encode } from "@repo/utils"
+import type {
+  PublishOptions,
+  QueueConsumer,
+  QueueName,
+  QueuePublisherShape,
+  TaskHandlers,
+  TaskName,
+  TaskPayload,
+} from "@domain/queue"
+import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
 import { Queue, Worker } from "bullmq"
 import { Effect, Layer } from "effect"
 import { Redis } from "ioredis"
 
-export interface BullMqJobData {
-  readonly body: string
-  readonly headers: Record<string, string>
-}
-
-export const mapQueueMessageToJob = (message: QueueMessage) => {
-  const headers: Record<string, string> = {}
-  for (const [key, value] of message.headers) {
-    headers[key] = value
-  }
-  return {
-    name: "default",
-    data: { body: base64Encode(message.body), headers } satisfies BullMqJobData,
-  }
-}
-
-export const mapJobToQueueMessage = (job: { id: string; data: BullMqJobData }): QueueMessage | null => {
-  if (!job.data?.body) return null
-
-  const headers = new Map<string, string>()
-  if (job.data.headers) {
-    for (const [key, value] of Object.entries(job.data.headers)) {
-      headers.set(key, value)
-    }
-  }
-
-  return {
-    body: base64Decode(job.data.body),
-    key: job.id,
-    headers,
-  }
+interface BullMqJobData {
+  readonly payload: unknown
 }
 
 export interface BullMqRedisConfig {
@@ -57,33 +35,57 @@ export const createBullMqQueuePublisher = (
       maxRetriesPerRequest: null,
     })
 
-    const queues: Record<QueueName, Queue> = {
-      "dataset-export": new Queue("dataset-export", { connection }),
-      "domain-events": new Queue("domain-events", { connection }),
-      "magic-link-email": new Queue("magic-link-email", { connection }),
-      "span-ingestion": new Queue("span-ingestion", { connection }),
-      "user-deletion": new Queue("user-deletion", { connection }),
+    const queues = new Map<string, Queue>()
+
+    const getQueue = (name: QueueName): Queue => {
+      let queue = queues.get(name)
+      if (!queue) {
+        queue = new Queue(name, { connection })
+        queues.set(name, queue)
+      }
+      return queue
     }
 
     return {
-      publish: (queue: QueueName, message: QueueMessage) =>
+      publish: <T extends QueueName, K extends TaskName<T>>(
+        queue: T,
+        task: K,
+        payload: TaskPayload<T, K>,
+        options?: PublishOptions,
+      ) =>
         Effect.tryPromise({
           try: async () => {
-            const jobData = mapQueueMessageToJob(message)
-            await queues[queue].add(jobData.name, jobData.data)
+            const bullmqOptions: Record<string, unknown> = {}
+            if (options?.dedupeKey) {
+              bullmqOptions.jobId = options.dedupeKey
+            }
+            if (options?.debounceMs) {
+              bullmqOptions.delay = options.debounceMs
+              if (options.dedupeKey) {
+                bullmqOptions.deduplication = {
+                  id: options.dedupeKey,
+                  ttl: options.debounceMs,
+                  extend: true,
+                  replace: true,
+                }
+              }
+            }
+            await getQueue(queue).add(task, { payload } satisfies BullMqJobData, bullmqOptions)
           },
           catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
         }),
       close: () =>
         Effect.tryPromise({
           try: async () => {
-            await Promise.allSettled(Object.values(queues).map((queue) => queue.close()))
+            await Promise.allSettled(Array.from(queues.values()).map((queue) => queue.close()))
             await connection.quit()
           },
           catch: (cause: unknown) => new QueueClientError({ cause }),
         }).pipe(Effect.tapError(Effect.logError), Effect.ignore),
     }
   })
+
+type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
 
 export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Effect<QueueConsumer, QueueClientError> =>
   Effect.gen(function* () {
@@ -95,26 +97,40 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
     }
 
     const workers: Map<QueueName, Worker> = new Map()
-    const subscriptions = new Map<QueueName, MessageHandler>()
+    const subscriptions = new Map<QueueName, AnyTaskHandlers>()
     let isRunning = false
 
-    const start = () =>
-      Effect.tryPromise({
+    const start = () => {
+      const missing = TOPIC_NAMES.filter((t) => !subscriptions.has(t))
+      if (missing.length > 0) {
+        return Effect.fail(
+          new QueueSubscribeError({
+            cause: new Error(`Missing handlers for topics: ${missing.join(", ")}`),
+          }),
+        )
+      }
+
+      return Effect.tryPromise({
         try: async () => {
           if (isRunning) return
           isRunning = true
 
-          for (const [queue, handler] of subscriptions.entries()) {
+          for (const [queue, handlers] of subscriptions.entries()) {
             const worker = new Worker(
               queue,
               async (job) => {
-                const queueMessage = mapJobToQueueMessage({
-                  id: job.id ?? "",
-                  data: job.data as BullMqJobData,
-                })
-                if (!queueMessage) return
+                const task = job.name ?? "default"
+                const handler = handlers[task]
+                if (!handler) {
+                  throw new Error(`Unknown task "${task}" on topic "${queue}" — no handler registered`)
+                }
 
-                await Effect.runPromise(handler.handle(queueMessage))
+                const payload = (job.data as BullMqJobData)?.payload
+                if (payload === undefined) {
+                  throw new Error(`Missing payload for task "${task}" on topic "${queue}"`)
+                }
+
+                await Effect.runPromise(handler(payload))
               },
               {
                 connection: new Redis(redisConfig),
@@ -138,6 +154,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
         },
         catch: (cause: unknown) => new QueueSubscribeError({ cause }),
       })
+    }
 
     const stop = () =>
       Effect.gen(function* () {
@@ -153,11 +170,11 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
         isRunning = false
       })
 
-    const subscribe = (queue: QueueName, handler: MessageHandler): void => {
+    const subscribe = <T extends QueueName>(queue: T, handlers: TaskHandlers<T>): void => {
       if (isRunning) {
         throw new Error(`Cannot subscribe to queue "${queue}" after consumer has started`)
       }
-      subscriptions.set(queue, handler)
+      subscriptions.set(queue, handlers as unknown as AnyTaskHandlers)
     }
 
     return { start, stop, subscribe }

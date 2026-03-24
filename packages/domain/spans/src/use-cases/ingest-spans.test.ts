@@ -33,8 +33,8 @@ describe("ingestSpansUseCase", () => {
 
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("span-ingestion")
-    const body = new TextDecoder().decode(published[0]?.message.body)
-    expect(body).toBe(written[0]?.key)
+    expect(published[0]?.task).toBe("ingest")
+    expect((published[0]?.payload as { fileKey: string }).fileKey).toBe(written[0]?.key)
   })
 
   it("uses protobuf extension for protobuf content type", async () => {
@@ -120,15 +120,9 @@ describe("ingestSpansUseCase", () => {
     expect(published).toHaveLength(0)
   })
 
-  it("passes correct headers in queue message", async () => {
+  it("passes ingest fields in queue payload", async () => {
     const { disk } = createFakeStorageDisk()
-    const capturedHeaders: Map<string, string>[] = []
-    const { publisher } = createFakeQueuePublisher({
-      publish: (_queue, message) => {
-        capturedHeaders.push(new Map(message.headers))
-        return Effect.void
-      },
-    })
+    const { publisher, published } = createFakeQueuePublisher()
 
     await Effect.runPromise(
       ingestSpansUseCase(validInput).pipe(
@@ -136,12 +130,18 @@ describe("ingestSpansUseCase", () => {
       ),
     )
 
-    expect(capturedHeaders).toHaveLength(1)
-    const headers = capturedHeaders[0] as Map<string, string>
-    expect(headers.get("content-type")).toBe("application/json")
-    expect(headers.get("organization-id")).toBe("org-1")
-    expect(headers.get("project-id")).toBe("proj-1")
-    expect(headers.get("api-key-id")).toBe("key-1")
-    expect(headers.get("ingested-at")).toBeDefined()
+    expect(published).toHaveLength(1)
+    const payload = published[0]?.payload as {
+      contentType: string
+      organizationId: string
+      projectId: string
+      apiKeyId: string
+      ingestedAt: string
+    }
+    expect(payload.contentType).toBe("application/json")
+    expect(payload.organizationId).toBe("org-1")
+    expect(payload.projectId).toBe("proj-1")
+    expect(payload.apiKeyId).toBe("key-1")
+    expect(payload.ingestedAt).toBeDefined()
   })
 })

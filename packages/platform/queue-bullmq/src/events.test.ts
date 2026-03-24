@@ -1,6 +1,6 @@
 import type { EventEnvelope } from "@domain/events"
 import { describe, expect, it } from "vitest"
-import { EventEnvelopeSchema, mapEnvelopeToQueueMessage } from "./events.ts"
+import { EventEnvelopeSchema, mapEnvelopeToDispatchPayload } from "./events.ts"
 
 const validWireMessage = {
   id: "evt-123",
@@ -68,13 +68,12 @@ describe("EventEnvelopeSchema", () => {
   })
 })
 
-describe("mapEnvelopeToQueueMessage", () => {
+describe("mapEnvelopeToDispatchPayload", () => {
   it("serializes envelope with nested event structure", () => {
     const envelope = makeEnvelope()
-    const message = mapEnvelopeToQueueMessage(envelope)
-    const body = JSON.parse(new TextDecoder().decode(message.body))
+    const payload = mapEnvelopeToDispatchPayload(envelope)
 
-    expect(body).toEqual({
+    expect(payload).toEqual({
       id: "evt-123",
       event: {
         name: "user.created",
@@ -85,27 +84,10 @@ describe("mapEnvelopeToQueueMessage", () => {
     })
   })
 
-  it("uses organizationId as message key for partition routing", () => {
-    const envelope = makeEnvelope()
-    const message = mapEnvelopeToQueueMessage(envelope)
-
-    expect(message.key).toBe("org-456")
-  })
-
-  it("sets event metadata headers", () => {
-    const envelope = makeEnvelope()
-    const message = mapEnvelopeToQueueMessage(envelope)
-
-    expect(message.headers.get("event-id")).toBe("evt-123")
-    expect(message.headers.get("event-name")).toBe("user.created")
-    expect(message.headers.get("organization-id")).toBe("org-456")
-  })
-
   it("wire format is parseable by EventEnvelopeSchema", () => {
     const envelope = makeEnvelope()
-    const message = mapEnvelopeToQueueMessage(envelope)
-    const body = JSON.parse(new TextDecoder().decode(message.body))
-    const parsed = EventEnvelopeSchema.parse(body)
+    const payload = mapEnvelopeToDispatchPayload(envelope)
+    const parsed = EventEnvelopeSchema.parse(payload)
 
     expect(parsed.id).toBe(envelope.id)
     expect(parsed.event.name).toBe(envelope.event.name)

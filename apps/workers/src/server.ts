@@ -12,12 +12,18 @@ import {
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresClient } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
+import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
+import { createIssuesWorker } from "./workers/issues.ts"
+import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
+import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
+import { createLiveTracesWorker } from "./workers/live-traces.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
+import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
 
 const nodeEnv = process.env.NODE_ENV || "development"
 if (import.meta.url) {
@@ -70,11 +76,18 @@ const bootstrap = async () => {
 
     const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
 
-    createDomainEventsWorker(queueConsumer, queuePublisher)
+    const workflowStarter = await getWorkflowStarter()
+    createDomainEventsWorker(queueConsumer, queuePublisher, workflowStarter)
     createMagicLinkEmailWorker(queueConsumer)
     createUserDeletionWorker(queueConsumer)
-    createSpanIngestionWorker(queueConsumer)
+    createSpanIngestionWorker(queueConsumer, eventsPublisher)
     createDatasetExportWorker(queueConsumer)
+    createLiveTracesWorker(queueConsumer)
+    createIssuesWorker(queueConsumer)
+    createAnnotationScoresWorker(queueConsumer)
+    createLiveEvaluationsWorker(queueConsumer)
+    createLiveAnnotationQueuesWorker(queueConsumer)
+    createSystemAnnotationQueuesWorker(queueConsumer)
 
     await Effect.runPromise(outboxConsumer.start())
     await Effect.runPromise(queueConsumer.start())

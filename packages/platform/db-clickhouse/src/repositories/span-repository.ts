@@ -12,6 +12,7 @@ import {
 } from "@domain/shared"
 import type { Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
+import { parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
@@ -138,8 +139,8 @@ const toBaseFields = (row: SpanListRow) => ({
   spanId: SpanId(row.span_id),
   parentSpanId: row.parent_span_id,
   apiKeyId: row.api_key_id,
-  startTime: new Date(row.start_time),
-  endTime: new Date(row.end_time),
+  startTime: parseCHDate(row.start_time),
+  endTime: parseCHDate(row.end_time),
   name: row.name,
   serviceName: row.service_name,
   kind: INT_TO_SPAN_KIND[row.kind] ?? ("unspecified" as const),
@@ -176,7 +177,7 @@ const toBaseFields = (row: SpanListRow) => ({
   resourceString: row.resource_string,
   scopeName: row.scope_name,
   scopeVersion: row.scope_version,
-  ingestedAt: new Date(row.ingested_at),
+  ingestedAt: parseCHDate(row.ingested_at),
 })
 
 const toDomainSpan = (row: SpanListRow): Span => toBaseFields(row)
@@ -292,7 +293,12 @@ export const SpanRepositoryLive = Layer.effect(
             if (spans.length === 0) return
             await client.insert({ table: "spans", values: spans.map(toInsertRow), format: "JSONEachRow" })
           })
-          .pipe(Effect.mapError((error) => toRepositoryError(error, "insert"))),
+          .pipe(
+            Effect.mapError((error) => {
+              console.log("Error inserting spans", error)
+              return toRepositoryError(error, "insert")
+            }),
+          ),
 
       findByTraceId: ({ organizationId, traceId }) =>
         chSqlClient
