@@ -1,5 +1,5 @@
 import type { OtlpKeyValue } from "../types.ts"
-import { type Candidate, fromString } from "./utils.ts"
+import { type Candidate, first, fromString } from "./utils.ts"
 
 const toolCallIdCandidates: Candidate<string>[] = [
   fromString("gen_ai.tool.call.id"), // OTEL GenAI v1.37+
@@ -68,14 +68,6 @@ const EMPTY_TOOL_EXECUTION: ResolvedToolExecution = {
   toolName: "",
   toolInput: "",
   toolOutput: "",
-}
-
-function first<T>(candidates: readonly Candidate<T>[], attrs: readonly OtlpKeyValue[]): T | undefined {
-  for (const c of candidates) {
-    const v = c.resolve(attrs)
-    if (v !== undefined) return v
-  }
-  return undefined
 }
 
 export function resolveToolExecution(spanAttrs: readonly OtlpKeyValue[], operation: string): ResolvedToolExecution {

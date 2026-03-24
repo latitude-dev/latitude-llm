@@ -75,16 +75,19 @@ export function resolvePerformance({
   ]
 
   let isStreaming = false
+  let explicitStreamingFound = false
   for (const c of streamingCandidates) {
     const v = c.resolve(spanAttrs)
     if (v !== undefined) {
       isStreaming = v
+      explicitStreamingFound = true
       break
     }
   }
 
-  // Heuristic: presence of completion chunk events implies streaming
-  if (!isStreaming && timeToFirstTokenNs > 0) {
+  // Heuristic: presence of completion chunk events implies streaming,
+  // but only when no explicit streaming attribute was found.
+  if (!explicitStreamingFound && !isStreaming && timeToFirstTokenNs > 0) {
     isStreaming = true
   }
 
