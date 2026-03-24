@@ -20,7 +20,7 @@ import {
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -36,14 +36,72 @@ import {
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
+import { updateOrganizationName } from "../../domains/organizations/organizations.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsPage,
 })
 
-// --- Workspace Members Section ---
+// --- Organization Name Section ---
+
+function OrganizationNameSection() {
+  const { organizationName } = Route.useRouteContext()
+  const { toast } = useToast()
+  const router = useRouter()
+
+  const form = useForm({
+    defaultValues: {
+      name: organizationName ?? "",
+    },
+    onSubmit: async ({ value }) => {
+      try {
+        await updateOrganizationName({ data: { name: value.name } })
+        toast({ description: "Organization name updated" })
+        form.reset({ name: value.name })
+        void router.invalidate()
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          description: toUserMessage(error),
+        })
+      }
+    },
+  })
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Text.H4 weight="bold">Organization Name</Text.H4>
+      <form
+        className="flex flex-row items-end gap-3"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void form.handleSubmit()
+        }}
+      >
+        <form.Field name="name">
+          {(field) => (
+            <Input
+              required
+              type="text"
+              label="Organization Name"
+              value={field.state.value}
+              onChange={(e) => field.handleChange(e.target.value)}
+              placeholder="Organization name"
+            />
+          )}
+        </form.Field>
+        <Button type="submit" disabled={form.state.isSubmitting}>
+          Save
+        </Button>
+      </form>
+    </div>
+  )
+}
+
+// --- Organization Members Section ---
 
 function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
@@ -83,7 +141,7 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       open={open}
       onOpenChange={setOpen}
       title="Add New Member"
-      description="Invite a new member to this workspace by email."
+      description="Invite a new member to this organization by email."
       footer={
         <>
           <CloseTrigger />
@@ -199,7 +257,7 @@ function MembershipsSection() {
       <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
       <div className="flex flex-row items-center justify-between">
         <div className="flex flex-row items-center gap-2">
-          <Text.H4 weight="bold">Workspace Members</Text.H4>
+          <Text.H4 weight="bold">Organization Members</Text.H4>
         </div>
         <Button flat variant="outline" onClick={() => setInviteOpen(true)}>
           Add Member
@@ -240,7 +298,7 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
       open={open}
       onOpenChange={setOpen}
       title="Create API Key"
-      description="Create a new API key for your workspace to access the Latitude API."
+      description="Create a new API key for your organization to access the Latitude API."
       footer={
         <>
           <CloseTrigger />
@@ -463,7 +521,8 @@ function ApiKeysSection() {
 
 function SettingsPage() {
   return (
-    <Container className="pt-14">
+    <Container className="flex flex-col gap-8 pt-14">
+      <OrganizationNameSection />
       <MembershipsSection />
       <ApiKeysSection />
     </Container>

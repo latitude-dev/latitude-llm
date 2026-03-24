@@ -15,6 +15,7 @@ import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "./clients.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
+import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 
@@ -71,6 +72,7 @@ const bootstrap = async () => {
 
     createDomainEventsWorker(queueConsumer, queuePublisher)
     createMagicLinkEmailWorker(queueConsumer)
+    createUserDeletionWorker(queueConsumer)
     createSpanIngestionWorker(queueConsumer)
     createDatasetExportWorker(queueConsumer)
 

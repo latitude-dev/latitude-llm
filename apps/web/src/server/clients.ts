@@ -17,6 +17,7 @@ let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let queuePublisher: Promise<QueuePublisherShape> | undefined
+let outboxWriterInstance: ReturnType<typeof createOutboxWriter> | undefined
 
 const getAuthIntentIdFromMagicLinkUrl = ({
   magicLinkUrl,
@@ -80,6 +81,13 @@ export const getStorageDisk = (): StorageDiskPort => {
   return storageDiskInstance
 }
 
+export const getOutboxWriter = (): ReturnType<typeof createOutboxWriter> => {
+  if (!outboxWriterInstance) {
+    outboxWriterInstance = createOutboxWriter(getAdminPostgresClient())
+  }
+  return outboxWriterInstance
+}
+
 export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
   if (!queuePublisher) {
     queuePublisher = (async () => {
@@ -106,7 +114,7 @@ export const getBetterAuth = () => {
           .filter(Boolean)
       : [webUrl]
 
-    const outboxWriter = createOutboxWriter(adminClient)
+    const outboxWriter = getOutboxWriter()
 
     betterAuthInstance = createBetterAuth({
       client: adminClient,

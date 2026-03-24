@@ -22,12 +22,20 @@ export { OrganizationRepository } from "./ports/organization-repository.ts"
 
 // Use cases
 export {
+  type CleanupUserMembershipsInput,
+  cleanupUserMembershipsUseCase,
+} from "./use-cases/cleanup-user-memberships.ts"
+export {
   type CreateOrganizationError,
   type CreateOrganizationInput,
   createOrganizationUseCase,
   InvalidOrganizationNameError,
   OrganizationAlreadyExistsError,
 } from "./use-cases/create-organization.ts"
+export {
+  type CreateOrganizationWithOwnerInput,
+  createOrganizationWithOwnerUseCase,
+} from "./use-cases/create-organization-with-owner.ts"
 export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
 export {
   CannotRemoveSelfError,
@@ -36,3 +44,7 @@ export {
   type RemoveMemberInput,
   removeMemberUseCase,
 } from "./use-cases/remove-member.ts"
+export {
+  type UpdateOrganizationNameInput,
+  updateOrganizationNameUseCase,
+} from "./use-cases/update-organization-name.ts"

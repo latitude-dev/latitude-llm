@@ -62,6 +62,7 @@ export const createBullMqQueuePublisher = (
       "domain-events": new Queue("domain-events", { connection }),
       "magic-link-email": new Queue("magic-link-email", { connection }),
       "span-ingestion": new Queue("span-ingestion", { connection }),
+      "user-deletion": new Queue("user-deletion", { connection }),
     }
 
     return {
