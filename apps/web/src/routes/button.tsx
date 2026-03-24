@@ -9,17 +9,10 @@ import {
   Input,
   Label,
   Text,
+  useMountEffect,
 } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import {
-  Check,
-  Copy,
-  type LucideIcon,
-  Plus,
-  Send,
-  Sparkles,
-  Trash2,
-} from "lucide-react"
+import { Check, Copy, type LucideIcon, Moon, Plus, Send, Sparkles, Sun, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 const VARIANTS = [
@@ -60,26 +53,57 @@ export const Route = createFileRoute("/button")({
 })
 
 function ButtonPage() {
-  const [variant, setVariant] = useState<
-    "default" | "secondary" | "outline" | "ghost" | "destructive" | "link"
-  >("default")
+  const [theme, setTheme] = useState<"light" | "dark">("light")
+  const pageSurfaceClass = theme === "dark" ? "bg-black" : "bg-white"
+
+  const applyTheme = (nextTheme: "light" | "dark") => {
+    const root = document.documentElement
+    root.classList.toggle("dark", nextTheme === "dark")
+    root.style.colorScheme = nextTheme
+  }
+
+  const restoreHostTheme = () => {
+    const root = document.documentElement
+    const hostTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    root.classList.toggle("dark", hostTheme === "dark")
+    root.style.colorScheme = hostTheme
+  }
+
+  useMountEffect(() => {
+    applyTheme(theme)
+    return () => {
+      restoreHostTheme()
+    }
+  })
+
+  const [variant, setVariant] = useState<"default" | "secondary" | "outline" | "ghost" | "destructive" | "link">(
+    "default",
+  )
   const [size, setSize] = useState<"sm" | "default" | "lg" | "icon" | "full">("default")
   const [state, setState] = useState<"normal" | "loading" | "disabled">("normal")
-  const [flat, setFlat] = useState(false)
   const [label, setLabel] = useState("Button")
   const [iconKey, setIconKey] = useState("none")
 
   const iconEntry = ICONS.find((i) => i.value === iconKey)
   const IconComponent = iconEntry?.Component
-  const showIcon = IconComponent && iconKey !== "none"
+  const showIcon = Boolean(IconComponent && iconKey !== "none")
   const showLabel = size !== "icon"
   const buttonLabel = size === "icon" ? "" : label || " "
-  const iconForButton = size === "icon" && !showIcon ? Check : IconComponent
+  const previewIcon: LucideIcon | null =
+    size === "icon"
+      ? iconKey === "none"
+        ? Check
+        : (iconEntry?.Component ?? Check)
+      : showIcon && iconEntry
+        ? iconEntry.Component
+        : null
 
   return (
-    <main className="flex min-h-screen flex-col gap-6 p-4 text-foreground sm:p-6 lg:p-8">
+    <main className={`flex min-h-screen flex-col gap-6 p-4 text-foreground sm:p-6 lg:p-8 ${pageSurfaceClass}`}>
       <div className="flex w-full max-w-4xl flex-col gap-6 self-center">
-        <header className="flex flex-col gap-4 rounded-2xl border border-border/70 bg-background p-5 shadow-xl sm:p-6">
+        <header
+          className={`flex flex-col gap-4 rounded-2xl border border-border/70 p-5 shadow-xl sm:p-6 ${pageSurfaceClass}`}
+        >
           <Link
             to="/design-system"
             className="inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
@@ -94,8 +118,28 @@ function ButtonPage() {
             <Text.H2 className="text-balance">Button</Text.H2>
           </div>
           <Text.H6 color="foregroundMuted">
-            Configure variant, size, state, label, and icon to preview button updates.
+            Configure variant, size, state, label, and icon to preview button updates. Toggle theme to validate light
+            and dark styles.
           </Text.H6>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setTheme((currentTheme) => {
+                  const nextTheme = currentTheme === "light" ? "dark" : "light"
+                  applyTheme(nextTheme)
+                  return nextTheme
+                })
+              }}
+            >
+              <Icon icon={theme === "light" ? Moon : Sun} size="sm" />
+              {theme === "light" ? "Switch to Dark" : "Switch to Light"}
+            </Button>
+            <div className={`flex items-center gap-2 rounded-lg border border-border/60 p-2 ${pageSurfaceClass}`}>
+              <Text.H6 color="foregroundMuted">Theme</Text.H6>
+              <Text.Mono>{theme}</Text.Mono>
+            </div>
+          </div>
         </header>
 
         <div className="grid gap-6 lg:grid-cols-[1fr,1fr]">
@@ -117,15 +161,7 @@ function ButtonPage() {
                   id="button-variant"
                   value={variant}
                   onChange={(e) =>
-                    setVariant(
-                      e.target.value as
-                        | "default"
-                        | "secondary"
-                        | "outline"
-                        | "ghost"
-                        | "destructive"
-                        | "link",
-                    )
+                    setVariant(e.target.value as "default" | "secondary" | "outline" | "ghost" | "destructive" | "link")
                   }
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
@@ -144,11 +180,7 @@ function ButtonPage() {
                 <select
                   id="button-size"
                   value={size}
-                  onChange={(e) =>
-                    setSize(
-                      e.target.value as "sm" | "default" | "lg" | "icon" | "full",
-                    )
-                  }
+                  onChange={(e) => setSize(e.target.value as "sm" | "default" | "lg" | "icon" | "full")}
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {SIZES.map((s) => (
@@ -166,9 +198,7 @@ function ButtonPage() {
                 <select
                   id="button-state"
                   value={state}
-                  onChange={(e) =>
-                    setState(e.target.value as "normal" | "loading" | "disabled")
-                  }
+                  onChange={(e) => setState(e.target.value as "normal" | "loading" | "disabled")}
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   {STATES.map((s) => (
@@ -177,19 +207,6 @@ function ButtonPage() {
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="button-flat"
-                  checked={flat}
-                  onChange={(e) => setFlat(e.target.checked)}
-                  className="h-4 w-4 rounded border-input"
-                />
-                <Label htmlFor="button-flat">
-                  <Text.H6>Flat (no 3D shadow)</Text.H6>
-                </Label>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -240,28 +257,25 @@ function ButtonPage() {
                 <Button
                   variant={variant}
                   size={size}
-                  flat={flat}
                   isLoading={state === "loading"}
                   disabled={state === "disabled"}
                   aria-label={size === "icon" ? label || "Icon button" : undefined}
                 >
-                  {(size === "icon" ? iconForButton : showIcon ? IconComponent : null) && (
-                    <Icon icon={size === "icon" ? iconForButton : IconComponent!} size="sm" />
-                  )}
+                  {previewIcon ? <Icon icon={previewIcon} size="sm" /> : null}
                   {showLabel && buttonLabel}
                 </Button>
               </div>
-              <div className="rounded-md bg-muted/30 p-3">
-                <Text.Mono className="block text-xs">
-                  {`<Button variant="${variant}" size="${size}"${flat ? " flat" : ""}${state === "loading" ? " isLoading" : ""}${state === "disabled" ? " disabled" : ""}>`}
+              <div className="flex flex-col gap-1 rounded-md bg-muted/30 p-3">
+                <Text.Mono size="h6" display="block">
+                  {`<Button variant="${variant}" size="${size}"${state === "loading" ? " isLoading" : ""}${state === "disabled" ? " disabled" : ""}>`}
                 </Text.Mono>
                 {(IconComponent && iconKey !== "none") || showLabel ? (
-                  <Text.Mono className="mt-1 block text-xs">
+                  <Text.Mono size="h6" display="block">
                     {IconComponent && iconKey !== "none" && "<Icon ... />"}
                     {showLabel && (label ? ` "${label}"` : " (empty)")}
                   </Text.Mono>
                 ) : null}
-                <Text.Mono className="block text-xs">{`</Button>`}</Text.Mono>
+                <Text.Mono size="h6" display="block">{`</Button>`}</Text.Mono>
               </div>
             </CardContent>
           </Card>

@@ -25,7 +25,7 @@ const TriggerButton = ({ label, variant = "outline", className: cln, ...buttonPr
   const className = cln ?? "w-8 px-1"
   return (
     <DropdownMenuTrigger asChild className="flex focus:outline-none cursor-pointer">
-      <Button flat asChild={false} className={className} variant={variant} {...buttonProps}>
+      <Button asChild={false} className={className} variant={variant} {...buttonProps}>
         {label ? <div>{label}</div> : <Icon icon={Ellipsis} size="sm" color="foregroundMuted" />}
       </Button>
     </DropdownMenuTrigger>

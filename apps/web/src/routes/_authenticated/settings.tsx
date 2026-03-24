@@ -140,7 +140,6 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
             <TableCell align="right">
               {member.status === "active" && (
                 <Button
-                  flat
                   variant="ghost"
                   onClick={() => {
                     void removeMember({ data: { membershipId: member.id } })
@@ -343,7 +342,6 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   asChild
                   trigger={
                     <Button
-                      flat
                       variant="ghost"
                       onClick={() => {
                         navigator.clipboard.writeText(apiKey.token)
@@ -371,7 +369,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   <Tooltip
                     asChild
                     trigger={
-                      <Button flat variant="ghost" onClick={() => setApiKeyToEdit(apiKey)}>
+                      <Button variant="ghost" onClick={() => setApiKeyToEdit(apiKey)}>
                         <Icon icon={Pencil} size="sm" />
                       </Button>
                     }
@@ -382,7 +380,6 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                     asChild
                     trigger={
                       <Button
-                        flat
                         disabled={apiKeys.length === 1}
                         variant="ghost"
                         onClick={() => {

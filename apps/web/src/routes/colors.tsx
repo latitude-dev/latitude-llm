@@ -1,14 +1,4 @@
-import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Icon,
-  Text,
-  useMountEffect,
-} from "@repo/ui"
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Icon, Text, useMountEffect } from "@repo/ui"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Moon, Sun } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
@@ -19,7 +9,10 @@ function rgbToHex(rgb: string): string {
   const r = Number.parseInt(match[1], 10)
   const g = Number.parseInt(match[2], 10)
   const b = Number.parseInt(match[3], 10)
-  const hex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, "0")
+  const hex = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, "0")
   return `#${hex(r)}${hex(g)}${hex(b)}`.toUpperCase()
 }
 
@@ -174,9 +167,7 @@ function ColorsPage() {
   })
 
   return (
-    <main
-      className={`flex min-h-screen flex-col gap-6 p-4 text-foreground sm:p-6 lg:p-8 ${surfaceClass}`}
-    >
+    <main className={`flex min-h-screen flex-col gap-6 p-4 text-foreground sm:p-6 lg:p-8 ${surfaceClass}`}>
       <div className="flex w-full max-w-6xl flex-col gap-6 self-center">
         <header
           className={`flex flex-col gap-4 rounded-2xl border border-border/70 p-5 shadow-xl sm:p-6 ${surfaceClass}`}
@@ -195,13 +186,12 @@ function ColorsPage() {
             <Text.H2 className="text-balance">Colors</Text.H2>
           </div>
           <Text.H6 color="foregroundMuted">
-            All design system colors from <Text.Mono className="text-xs">@repo/ui</Text.Mono> and
-            theme CSS variables. Toggle theme to see light/dark values.
+            All design system colors from <Text.Mono size="h6">@repo/ui</Text.Mono> and theme CSS variables. Toggle
+            theme to see light/dark values.
           </Text.H6>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
               variant="outline"
-              flat
               onClick={() => {
                 setTheme((t) => {
                   const next = t === "light" ? "dark" : "light"
@@ -222,10 +212,7 @@ function ColorsPage() {
 
         <div className="flex flex-col gap-8" ref={swatchesRef}>
           {COLOR_GROUPS.map((group) => (
-            <Card
-              key={group.title}
-              className={`overflow-hidden border-border/70 shadow-xl ${surfaceClass}`}
-            >
+            <Card key={group.title} className={`overflow-hidden border-border/70 shadow-xl ${surfaceClass}`}>
               <CardHeader>
                 <CardTitle>
                   <Text.H4>{group.title}</Text.H4>
@@ -238,9 +225,7 @@ function ColorsPage() {
                 <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   {group.colors.map(({ token, label, fgToken }) => {
                     const bgStyle = { backgroundColor: `hsl(var(--${token}))` }
-                    const fgStyle = fgToken
-                      ? { color: `hsl(var(--${fgToken}))` }
-                      : { color: "hsl(var(--foreground))" }
+                    const fgStyle = fgToken ? { color: `hsl(var(--${fgToken}))` } : { color: "hsl(var(--foreground))" }
                     const hex = hexByToken[token]
                     return (
                       <div
@@ -253,20 +238,17 @@ function ColorsPage() {
                           data-color-swatch
                           data-token={token}
                         >
-                          <span
-                            className="inline-block p-2 text-xs font-medium"
-                            style={fgStyle}
-                          >
+                          <span className="inline-block p-2 text-xs font-medium" style={fgStyle}>
                             {label}
                           </span>
                         </div>
                         <div className="flex flex-col gap-0.5 px-2 pb-2">
-                          <Text.Mono className="text-xs">{token}</Text.Mono>
+                          <Text.Mono size="h6">{token}</Text.Mono>
                           <Text.H6 color="foregroundMuted" className="text-xs">
                             --{token}
                           </Text.H6>
                           {hex && (
-                            <Text.Mono className="text-xs font-medium">
+                            <Text.Mono size="h6" weight="semibold">
                               {hex}
                             </Text.Mono>
                           )}

@@ -91,7 +91,7 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
       <ShowcaseSection
         theme={theme}
         title="Buttons"
-        description="Sizes, variants (colors), fancy vs flat, and states."
+        description="Sizes, variants, and states."
       >
         <div className="flex flex-col gap-6">
           <Link
@@ -114,7 +114,7 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Text.H6 weight="semibold">Variants — Fancy (raised / 3D)</Text.H6>
+            <Text.H6 weight="semibold">Variants</Text.H6>
             <div className="flex flex-wrap gap-3">
               <Button>Default</Button>
               <Button variant="secondary">Secondary</Button>
@@ -122,28 +122,6 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
               <Button variant="ghost">Ghost</Button>
               <Button variant="destructive">Destructive</Button>
               <Button variant="link">Link</Button>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Text.H6 weight="semibold">Variants — Flat (no shadow)</Text.H6>
-            <div className="flex flex-wrap gap-3">
-              <Button flat>Default</Button>
-              <Button variant="secondary" flat>
-                Secondary
-              </Button>
-              <Button variant="outline" flat>
-                Outline
-              </Button>
-              <Button variant="ghost" flat>
-                Ghost
-              </Button>
-              <Button variant="destructive" flat>
-                Destructive
-              </Button>
-              <Button variant="link" flat>
-                Link
-              </Button>
             </div>
           </div>
 
@@ -407,7 +385,6 @@ function DesignSystemPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
-                  flat
                   onClick={() => {
                     setTheme((currentTheme) => {
                       const nextTheme = currentTheme === "light" ? "dark" : "light"

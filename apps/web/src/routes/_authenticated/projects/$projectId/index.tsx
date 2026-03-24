@@ -141,22 +141,22 @@ function TracesPage() {
         {/* Action buttons */}
         <div className="flex flex-row gap-2 items-center justify-between">
           <div className="flex flex-row gap-2 items-center">
-            <Button variant="outline" size="sm" flat disabled>
+            <Button variant="outline" size="sm" disabled>
               <AppWindowIcon className="h-4 w-4" />
               <Text.H6>All logs</Text.H6>
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" flat disabled>
+            <Button variant="outline" size="sm" disabled>
               <CalendarIcon className="h-4 w-4" />
               <Text.H6>Last 7 days</Text.H6>
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" flat disabled>
+            <Button variant="outline" size="sm" disabled>
               <Columns2Icon className="h-4 w-4" />
               <Text.H6>Columns</Text.H6>
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" flat disabled>
+            <Button variant="ghost" size="sm" disabled>
               <FilterIcon className="h-4 w-4" />
               <Text.H6>Filters</Text.H6>
             </Button>

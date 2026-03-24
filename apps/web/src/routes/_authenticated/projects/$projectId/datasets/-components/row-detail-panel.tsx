@@ -70,7 +70,7 @@ export function RowDetailPanel({
             <Text.H6 color="white">Save Data</Text.H6>
           </Button>
         )}
-        <Button flat variant="ghost" onClick={onClose}>
+        <Button variant="ghost" onClick={onClose}>
           <X className="w-4 h-4" />
         </Button>
       </div>
