@@ -32,6 +32,11 @@ The system uses:
 Implementation constraints for this repository:
 
 - canonical reliability domain data contracts should be defined as shared Zod schemas first, with TypeScript types inferred from those schemas or from Drizzle table schemas where appropriate
+- shared base schemas/types that are extended into discriminated unions or related variants should use `baseXxxSchema` / `BaseXxx` naming rather than `xxxCommonSchema` / `XxxCommon`
+- canonical entity schemas should treat system-managed fields such as `id`, `createdAt`, and `updatedAt` as core entity fields; do not split an entity into a business payload plus an appended "persistence" wrapper unless a later phase introduces a truly distinct boundary/input DTO that explicitly needs that split
+- when first translating spec-defined fields into domain types, schema models, or migrations, carry over the original per-field code comments from the spec alongside those fields so intent stays attached to the initial implementation
+- when a phase first introduces an entity/model/table, add representative seed data for that entity in the same phase following the repository seeding conventions, so local development and staged rollouts have realistic sample data from day one
+- if a phase needs to introduce a type, variable, schema, or other export before the codebase uses it, precede that intentionally temporary unused export with `/** @knipignore - TODO: unignore once used */` so automated `knip` checks tolerate the staged rollout
 - enum-like domain contracts should use literal-string unions or `as const` objects, not TypeScript enums
 - shared domain schemas should validate data crossing from app/platform boundaries into domain use-cases
 - external request/response schemas should stay boundary-specific; they may reuse shared domain schemas or narrower projections of them
@@ -1427,11 +1432,7 @@ ORDER BY (
     trace_id,
     span_id,
     id
-)
-TTL toDateTime(created_at) + INTERVAL 3 MONTH TO VOLUME 'cold'
-SETTINGS
-    ttl_only_drop_parts = 1,
-    storage_policy      = 'tiered';
+);
 
 -- +goose Down
 DROP TABLE IF EXISTS scores;
@@ -2278,10 +2279,10 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with phases 2 through 7.
 
-- [ ] Define the canonical shared Zod schemas for the MVP reliability owner settings (`OrganizationSettings.keepMonitoring` and `ProjectSettings.keepMonitoring`) and infer TypeScript types; use literal-string unions rather than TypeScript enums for enum-like contracts.
-- [ ] Extend `organization` and `projects` with `settings` JSONB columns for `keepMonitoring`, without adding speculative secondary JSONB indexes.
-- [ ] Include `keepMonitoring` in organization/project settings shapes from the start so downstream settings `apps/web` and public/machine-facing settings work can rely on it, while deferring `user.settings` until a concrete user preference exists.
-- [ ] Keep settings reads on existing owner-row primary/unique paths and explicitly avoid speculative JSONB secondary indexes in the settings foundation phase.
+- [x] Define the canonical shared Zod schemas for the MVP reliability owner settings (`OrganizationSettings.keepMonitoring` and `ProjectSettings.keepMonitoring`) and infer TypeScript types; use literal-string unions rather than TypeScript enums for enum-like contracts.
+- [x] Extend `organization` and `projects` with `settings` JSONB columns for `keepMonitoring`, without adding speculative secondary JSONB indexes.
+- [x] Include `keepMonitoring` in organization/project settings shapes from the start so downstream settings `apps/web` and public/machine-facing settings work can rely on it, while deferring `user.settings` until a concrete user preference exists.
+- [x] Keep settings reads on existing owner-row primary/unique paths and explicitly avoid speculative JSONB secondary indexes in the settings foundation phase.
 
 **Exit gate**: organization/project settings schema and migrations are complete; `keepMonitoring` is settled before downstream phases; user/provider-model settings remain deferred.
 
@@ -2291,11 +2292,12 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with phases 1 and 3 through 7.
 
-- [ ] Define the canonical shared Zod schemas for scores and score metadata (evaluation, annotation, custom); infer TypeScript types from those schemas or matching Drizzle schemas; use literal-string unions for enum-like contracts.
-- [ ] Add the Postgres `scores` table with full Drizzle definition using repo-convention helpers, the exact secondary indexes defined by this spec, RLS, no foreign keys, `scores.drafted_at`, nullable `issue_id` / `simulation_id`, write-time-maintained `errored`, and all metadata/feedback/usage fields.
-- [ ] Add the immutable ClickHouse `scores` analytics projection table in both `unclustered/` and `clustered/` migration variants, with the fixed-width identifier contract, non-null issue/simulation links using empty-string sentinels, `UInt64` duration/tokens/cost fields, no mutable replacement/version columns, spans-style TTL/storage policy, and revalidated CODECs/skip indexes.
-- [ ] Define the score-domain named constants for draft-finalization debounce, immutable publication timing, and other score-lifecycle thresholds inside the owning package.
-- [ ] Document the score/telemetry analytics query requirements that later ClickHouse materializations must satisfy; defer the exact materialized-table definitions until a later phase.
+- [x] Define the canonical shared Zod schemas for scores and score metadata (evaluation, annotation, custom); infer TypeScript types from those schemas or matching Drizzle schemas; use literal-string unions for enum-like contracts.
+- [x] Add the Postgres `scores` table with full Drizzle definition using repo-convention helpers, the exact secondary indexes defined by this spec, RLS, no foreign keys, `scores.drafted_at`, nullable `issue_id` / `simulation_id`, write-time-maintained `errored`, and all metadata/feedback/usage fields.
+- [x] Add the immutable ClickHouse `scores` analytics projection table in both `unclustered/` and `clustered/` migration variants, with the fixed-width identifier contract, non-null issue/simulation links using empty-string sentinels, `UInt64` duration/tokens/cost fields, no mutable replacement/version columns, spans-style TTL/storage policy, and revalidated CODECs/skip indexes.
+- [x] Add representative Postgres and ClickHouse seed data for scores, reflecting the canonical lifecycle and publication/projection rules from this spec.
+- [x] Define the score-domain named constants for score-lifecycle debounce thresholds inside the owning package.
+- [x] Document the score/telemetry analytics query requirements that later ClickHouse materializations must satisfy; defer the exact materialized-table definitions until a later phase.
 
 **Exit gate**: scores schema, Postgres table, and ClickHouse projection are complete; later phases can build ingestion and analytics on top.
 
@@ -2308,6 +2310,7 @@ Row click opens a detailed view with:
 - [ ] Define the canonical shared Zod schemas for annotations, annotation anchors (messageIndex, partIndex, text offsets), and annotation score metadata; infer TypeScript types.
 - [ ] Implement the exact minimal GenAI-aware annotation anchor schema and persistence rules required to reopen annotations in the conversation UI.
 - [ ] Ensure annotation score metadata and `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance are defined in the scores schema; annotations produce scores via the canonical score model.
+- [ ] Add representative seed data for annotation-backed score examples covering UI, API, and annotation-queue provenance.
 - [ ] Define the minimal draft-aware query and index expectations for later annotation editing and queue review while continuing to reuse `scores` as the canonical store and avoiding a standalone annotation table.
 
 **Exit gate**: annotation schema and anchor rules are complete; later phases can build in-product annotation creation and queue integration.
@@ -2321,6 +2324,7 @@ Row click opens a detailed view with:
 - [ ] Define the canonical shared Zod schemas for issues, `IssueCentroid`, and issue lifecycle; infer TypeScript types.
 - [ ] Add the Postgres `issues` table with full Drizzle definition using repo-convention helpers, the stored `issues.uuid` used to link with Weaviate, centroid JSONB, `clusteredAt`, lifecycle timestamps, RLS, and the exact secondary indexes defined by this spec.
 - [ ] Add the Weaviate `Issues` collection definition with the required BM25, vector, and multi-tenancy settings.
+- [ ] Add representative seed data for issues and their initial search/projection state.
 - [ ] Define the issues-domain named constants for discovery thresholds, centroid decay/weights, refresh debounce, and denoising visibility in the owning package.
 - [ ] Document the centroid math, decay anchor (`clusteredAt`), and source-weight rules for later discovery phases.
 
@@ -2334,6 +2338,7 @@ Row click opens a detailed view with:
 
 - [ ] Define the canonical shared Zod schemas for evaluations, triggers, and evaluation lifecycle; infer TypeScript types.
 - [ ] Add the Postgres `evaluations` table with full Drizzle definition using repo-convention helpers, support for multiple linked evaluations per issue, RLS, and the exact secondary indexes defined by this spec.
+- [ ] Add representative seed data for evaluations, including linked-issue examples where the schema supports them.
 - [ ] Define the evaluations-domain named constants for cadence, default sampling, alignment tolerances, and evaluation-generation job-status TTL.
 - [ ] Define `EvaluationTrigger.filter` as the shared `FilterSet` from `@domain/shared`, using the shared trace field registry semantics instead of a reliability-only string grammar.
 
@@ -2348,6 +2353,7 @@ Row click opens a detailed view with:
 - [ ] Define the canonical shared Zod schemas for annotation queues, queue items, queue settings, and queue provenance; infer TypeScript types.
 - [ ] Define `AnnotationQueueSettings.filter` as an optional shared `FilterSet` over trace fields, keep it absent for manual/system queues, and normalize empty filter sets away at write time.
 - [ ] Add the Postgres `annotation_queues` and `annotation_queue_items` tables with full Drizzle definitions using repo-convention helpers, queue `system` flags, settings JSONB, assignee arrays, queue item completion/progress state, RLS, and the exact secondary indexes defined by this spec.
+- [ ] Add representative seed data for annotation queues and queue items across manual, system, and dynamic queue shapes.
 - [ ] Define the annotation-queue-domain named constants for dynamic/system default sampling, context-window limits, and outlier thresholds.
 - [ ] Document the default system-created queue provisioning rules and canonical names/descriptions/instructions for later orchestration phases.
 
@@ -2362,6 +2368,7 @@ Row click opens a detailed view with:
 - [ ] Define the canonical shared Zod schemas for simulations and simulation runs; infer TypeScript types.
 - [ ] Add the Postgres `simulations` table with full Drizzle definition using repo-convention helpers, RLS, and the exact secondary indexes defined by this spec.
 - [ ] Extend telemetry storage with `simulation_id` as a non-null fixed-width CUID link using the empty-string sentinel when absent through a new ClickHouse migration rather than by editing existing migration history.
+- [ ] Add representative seed data for simulations and simulation-linked score/telemetry examples.
 - [ ] Define the simulations-domain named constants for reporting defaults and upload/local-only behavior.
 - [ ] Add the missing session materialization boundary needed for later reliability queries.
 

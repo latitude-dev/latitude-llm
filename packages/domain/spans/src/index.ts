@@ -1,5 +1,13 @@
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
+export {
+  SESSION_ID_MAX_LENGTH,
+  SPAN_ID_LENGTH,
+  sessionIdSchema,
+  spanIdSchema,
+  TRACE_ID_LENGTH,
+  traceIdSchema,
+} from "./ids.ts"
 export type { SpanListOptions, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {

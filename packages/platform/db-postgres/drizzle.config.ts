@@ -22,6 +22,7 @@ export default defineConfig({
     "./src/schema/datasets.ts",
     "./src/schema/datasetVersions.ts",
     "./src/schema/projects.ts",
+    "./src/schema/scores.ts",
     "./src/schema/api-keys.ts",
     "./src/schema/outbox-events.ts",
   ],

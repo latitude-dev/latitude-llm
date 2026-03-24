@@ -1,0 +1,83 @@
+import {
+  SEED_ANNOTATION_QUEUE_ID,
+  SEED_EVALUATION_ID,
+  SEED_ISSUE_ID,
+  SEED_ORG_ID,
+  SEED_PROJECT_ID,
+  SEED_SCORE_ERRORED_ID,
+  SEED_SCORE_ISSUE_LINKED_ID,
+  SEED_SCORE_PASSED_ID,
+} from "@domain/shared"
+import { Effect } from "effect"
+import { insertJsonEachRow } from "../../sql.ts"
+import type { Seeder } from "../types.ts"
+
+const projectedScoreRows = [
+  {
+    id: SEED_SCORE_PASSED_ID,
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "seed-score-session-1",
+    trace_id: "11111111111111111111111111111111",
+    span_id: "aaaaaaaaaaaaaaaa",
+    source: "evaluation",
+    source_id: SEED_EVALUATION_ID,
+    simulation_id: "",
+    issue_id: "",
+    value: 0.98,
+    passed: true,
+    errored: false,
+    duration: 850_000_000,
+    tokens: 1_820,
+    cost: 245_000,
+    created_at: "2026-03-20 10:00:00.000",
+  },
+  {
+    id: SEED_SCORE_ERRORED_ID,
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "seed-score-session-1",
+    trace_id: "22222222222222222222222222222222",
+    span_id: "bbbbbbbbbbbbbbbb",
+    source: "evaluation",
+    source_id: SEED_EVALUATION_ID,
+    simulation_id: "",
+    issue_id: "",
+    value: 0,
+    passed: false,
+    errored: true,
+    duration: 120_000_000,
+    tokens: 0,
+    cost: 0,
+    created_at: "2026-03-20 11:00:00.000",
+  },
+  {
+    id: SEED_SCORE_ISSUE_LINKED_ID,
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "seed-score-session-3",
+    trace_id: "55555555555555555555555555555555",
+    span_id: "dddddddddddddddd",
+    source: "annotation",
+    source_id: SEED_ANNOTATION_QUEUE_ID,
+    simulation_id: "",
+    issue_id: SEED_ISSUE_ID,
+    value: 0.12,
+    passed: false,
+    errored: false,
+    duration: 15_000_000,
+    tokens: 0,
+    cost: 0,
+    created_at: "2026-03-23 14:15:00.000",
+  },
+] as const
+
+const seedScores: Seeder = {
+  name: "scores/projected-lifecycle-samples",
+  run: (ctx) =>
+    insertJsonEachRow(ctx.client, "scores", projectedScoreRows).pipe(
+      Effect.tap(() => Effect.sync(() => console.log(`  -> scores: ${projectedScoreRows.length} projected samples`))),
+    ),
+}
+
+export const scoreSeeders: readonly Seeder[] = [seedScores]
