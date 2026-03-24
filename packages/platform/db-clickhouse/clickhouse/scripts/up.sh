@@ -41,24 +41,48 @@ fi
 # Strip scheme to get host:port
 CH_HOST_PORT="${CLICKHOUSE_MIGRATION_URL#clickhouse://}"
 
-# ClickHouse Cloud requires TLS on native protocol (port 9440)
-# Add secure=true parameter for TLS connections
-if [[ "$CH_HOST_PORT" == *":9440"* ]] || [[ "$CH_HOST_PORT" == *".clickhouse.cloud"* ]]; then
-  DBSTRING="clickhouse://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${CLICKHOUSE_DB}?secure=true"
+if [ "${CLICKHOUSE_CLUSTER_ENABLED:-false}" = "true" ]; then
+  MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/clustered"
+  IS_CLUSTERED=true
 else
-  DBSTRING="clickhouse://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${CLICKHOUSE_DB}"
+  MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/unclustered"
+  IS_CLUSTERED=false
+fi
+
+# Build connection query parameters used by goose.
+DB_QUERY_PARAMS=()
+
+# ClickHouse Cloud requires TLS on native protocol (port 9440).
+if [[ "$CH_HOST_PORT" == *":9440"* ]] || [[ "$CH_HOST_PORT" == *".clickhouse.cloud"* ]]; then
+  DB_QUERY_PARAMS+=("secure=true")
+fi
+
+# Clustered DDL should wait for replica metadata propagation.
+if [ "$IS_CLUSTERED" = "true" ]; then
+  DDL_ALTER_SYNC="${CLICKHOUSE_MIGRATION_ALTER_SYNC:-2}"
+  DDL_TASK_TIMEOUT_SECONDS="${CLICKHOUSE_MIGRATION_DISTRIBUTED_DDL_TASK_TIMEOUT_SECONDS:-300}"
+  DDL_INACTIVE_REPLICA_WAIT_SECONDS="${CLICKHOUSE_MIGRATION_REPLICA_WAIT_TIMEOUT_SECONDS:-300}"
+
+  DB_QUERY_PARAMS+=("alter_sync=${DDL_ALTER_SYNC}")
+  DB_QUERY_PARAMS+=("distributed_ddl_task_timeout=${DDL_TASK_TIMEOUT_SECONDS}")
+  DB_QUERY_PARAMS+=("replication_wait_for_inactive_replica_timeout=${DDL_INACTIVE_REPLICA_WAIT_SECONDS}")
+fi
+
+DBSTRING="clickhouse://${CLICKHOUSE_USER}:${CLICKHOUSE_PASSWORD}@${CH_HOST_PORT}/${CLICKHOUSE_DB}"
+if [ "${#DB_QUERY_PARAMS[@]}" -gt 0 ]; then
+  DB_QUERY_STRING="$(IFS='&'; echo "${DB_QUERY_PARAMS[*]}")"
+  DBSTRING="${DBSTRING}?${DB_QUERY_STRING}"
 fi
 
 echo "Running ClickHouse migrations on database: ${CLICKHOUSE_DB}"
-
-if [ "${CLICKHOUSE_CLUSTER_ENABLED:-false}" = "true" ]; then
-  MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/clustered"
-else
-  MIGRATIONS_DIR="$PKG_DIR/clickhouse/migrations/unclustered"
+if [ "$IS_CLUSTERED" = "true" ]; then
+  echo "Clustered DDL settings: alter_sync=${DDL_ALTER_SYNC}, distributed_ddl_task_timeout=${DDL_TASK_TIMEOUT_SECONDS}, replication_wait_for_inactive_replica_timeout=${DDL_INACTIVE_REPLICA_WAIT_SECONDS}"
 fi
 
-MAX_RETRIES="${CLICKHOUSE_MIGRATION_MAX_RETRIES:-5}"
+MAX_RETRIES="${CLICKHOUSE_MIGRATION_MAX_RETRIES:-20}"
 RETRY_DELAY_SECONDS="${CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS:-5}"
+MAX_RETRY_DELAY_SECONDS="${CLICKHOUSE_MIGRATION_MAX_RETRY_DELAY_SECONDS:-30}"
+current_delay_seconds="$RETRY_DELAY_SECONDS"
 
 attempt=1
 while true; do
@@ -81,11 +105,20 @@ while true; do
 
   if [ "$attempt" -ge "$MAX_RETRIES" ] || [ "$is_retryable_replica_lag" != "true" ]; then
     echo "ClickHouse migrations failed after ${attempt} attempt(s)." >&2
+    if [ "$is_retryable_replica_lag" = "true" ]; then
+      echo "Hint: increase CLICKHOUSE_MIGRATION_MAX_RETRIES or CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS for heavily loaded clusters." >&2
+    fi
     exit "$goose_status"
   fi
 
   echo "ClickHouse replica metadata lag detected (code 517)." >&2
-  echo "Retrying migrations in ${RETRY_DELAY_SECONDS}s (attempt ${attempt}/${MAX_RETRIES})..." >&2
-  sleep "$RETRY_DELAY_SECONDS"
+  echo "Retrying migrations in ${current_delay_seconds}s (attempt ${attempt}/${MAX_RETRIES})..." >&2
+  sleep "$current_delay_seconds"
+  if [ "$current_delay_seconds" -lt "$MAX_RETRY_DELAY_SECONDS" ]; then
+    current_delay_seconds=$((current_delay_seconds * 2))
+    if [ "$current_delay_seconds" -gt "$MAX_RETRY_DELAY_SECONDS" ]; then
+      current_delay_seconds="$MAX_RETRY_DELAY_SECONDS"
+    fi
+  fi
   attempt=$((attempt + 1))
 done

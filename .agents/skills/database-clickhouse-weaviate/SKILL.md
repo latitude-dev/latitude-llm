@@ -90,9 +90,15 @@ Use these authoring rules to reduce failures:
 Execution safety:
 
 - `packages/platform/db-clickhouse/clickhouse/scripts/up.sh` retries transient replica lag errors from `goose ... up`.
+- In clustered mode, migration sessions set `alter_sync`, `distributed_ddl_task_timeout`, and `replication_wait_for_inactive_replica_timeout` to improve DDL convergence.
 - Retry tuning env vars:
-  - `CLICKHOUSE_MIGRATION_MAX_RETRIES` (default `5`)
+  - `CLICKHOUSE_MIGRATION_MAX_RETRIES` (default `20`)
   - `CLICKHOUSE_MIGRATION_RETRY_DELAY_SECONDS` (default `5`)
+  - `CLICKHOUSE_MIGRATION_MAX_RETRY_DELAY_SECONDS` (default `30`)
+- Clustered DDL tuning env vars:
+  - `CLICKHOUSE_MIGRATION_ALTER_SYNC` (default `2`)
+  - `CLICKHOUSE_MIGRATION_DISTRIBUTED_DDL_TASK_TIMEOUT_SECONDS` (default `300`)
+  - `CLICKHOUSE_MIGRATION_REPLICA_WAIT_TIMEOUT_SECONDS` (default `300`)
 
 ## Weaviate collections and migrations
 
