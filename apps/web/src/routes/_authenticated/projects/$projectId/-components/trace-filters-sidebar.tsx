@@ -2,8 +2,8 @@ import type { FilterCondition, FilterSet } from "@domain/shared"
 import { Button, Checkbox, Input, Skeleton, Text } from "@repo/ui"
 import { ChevronDown, ChevronUp, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { useDebounce } from "react-use"
 import { useTraceDistinctValues } from "../../../../../domains/traces/traces.collection.ts"
-import { useDebouncedCallback } from "../../../../../lib/hooks/useDebouncedCallback.ts"
 
 const STATUS_OPTIONS = ["ok", "error", "unset"] as const
 const TRACE_MULTI_SELECT_FIELDS = [
@@ -106,11 +106,21 @@ function DebouncedInput({
   readonly onDebouncedChange: (value: string) => void
 }) {
   const [local, setLocal] = useState(value)
-  const debouncedChange = useDebouncedCallback(onDebouncedChange, 300)
+  const [pendingChange, setPendingChange] = useState<string | null>(null)
+
+  useDebounce(
+    () => {
+      if (pendingChange === null) return
+      onDebouncedChange(pendingChange)
+    },
+    300,
+    [pendingChange, onDebouncedChange],
+  )
 
   // TODO(frontend-use-effect-policy): keep local input state in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocal(value)
+    setPendingChange(null)
   }, [value])
 
   return (
@@ -119,8 +129,9 @@ function DebouncedInput({
         {...props}
         value={local}
         onChange={(e) => {
-          setLocal(e.target.value)
-          debouncedChange(e.target.value)
+          const nextValue = e.target.value
+          setLocal(nextValue)
+          setPendingChange(nextValue)
         }}
       />
       {local && (
@@ -129,6 +140,7 @@ function DebouncedInput({
           className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
           onClick={() => {
             setLocal("")
+            setPendingChange(null)
             onDebouncedChange("")
           }}
         >
@@ -152,7 +164,14 @@ function MultiSelectFilter({
 }) {
   const [search, setSearch] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
-  const debouncedSetSearch = useDebouncedCallback(setDebouncedSearch, 300)
+
+  useDebounce(
+    () => {
+      setDebouncedSearch(search)
+    },
+    300,
+    [search],
+  )
 
   // Initial fetch without search to check if there are more than 50 results
   const { data: initialOptions = [], isLoading: initialLoading } = useTraceDistinctValues({
@@ -178,14 +197,6 @@ function MultiSelectFilter({
     return initialOptions.filter((o) => o.toLowerCase().includes(lower))
   }, [search, initialOptions, needsServerSearch, searchedOptions])
 
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setSearch(value)
-      debouncedSetSearch(value)
-    },
-    [debouncedSetSearch],
-  )
-
   const toggle = useCallback(
     (value: string) => {
       const next = selected.includes(value) ? selected.filter((s) => s !== value) : [...selected, value]
@@ -201,7 +212,7 @@ function MultiSelectFilter({
         <input
           type="text"
           value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Search..."
           className="flex h-6 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
         />
@@ -255,16 +266,36 @@ function NumberRangeFilter({
 }) {
   const [localMin, setLocalMin] = useState(minValue?.toString() ?? "")
   const [localMax, setLocalMax] = useState(maxValue?.toString() ?? "")
-  const debouncedMin = useDebouncedCallback(onMinChange, 400)
-  const debouncedMax = useDebouncedCallback(onMaxChange, 400)
+  const [pendingMin, setPendingMin] = useState<number | undefined | null>(null)
+  const [pendingMax, setPendingMax] = useState<number | undefined | null>(null)
+
+  useDebounce(
+    () => {
+      if (pendingMin === null) return
+      onMinChange(pendingMin)
+    },
+    400,
+    [pendingMin, onMinChange],
+  )
+
+  useDebounce(
+    () => {
+      if (pendingMax === null) return
+      onMaxChange(pendingMax)
+    },
+    400,
+    [pendingMax, onMaxChange],
+  )
 
   // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocalMin(minValue?.toString() ?? "")
+    setPendingMin(null)
   }, [minValue])
   // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocalMax(maxValue?.toString() ?? "")
+    setPendingMax(null)
   }, [maxValue])
 
   return (
@@ -277,7 +308,7 @@ function NumberRangeFilter({
         onChange={(e) => {
           setLocalMin(e.target.value)
           const n = e.target.value === "" ? undefined : Number(e.target.value)
-          debouncedMin(n !== undefined && !Number.isNaN(n) ? n : undefined)
+          setPendingMin(n !== undefined && !Number.isNaN(n) ? n : undefined)
         }}
         className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
       />
@@ -290,7 +321,7 @@ function NumberRangeFilter({
         onChange={(e) => {
           setLocalMax(e.target.value)
           const n = e.target.value === "" ? undefined : Number(e.target.value)
-          debouncedMax(n !== undefined && !Number.isNaN(n) ? n : undefined)
+          setPendingMax(n !== undefined && !Number.isNaN(n) ? n : undefined)
         }}
         className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
       />

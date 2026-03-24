@@ -45,8 +45,9 @@
     "lucide-react": "^0.481.0",
     "nitro": "3.0.260311-beta",
     "react": "catalog:",
-    "rosetta-ai": "catalog:",
     "react-dom": "catalog:",
+    "react-use": "^17.6.0",
+    "rosetta-ai": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
