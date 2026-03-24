@@ -12,6 +12,10 @@ ensure_env_files() {
   if [[ ! -f "$REPO_ROOT/.env.test" ]]; then
     cp "$REPO_ROOT/.env.example" "$REPO_ROOT/.env.test"
   fi
+
+  if ! rg "^LAT_ADMIN_DATABASE_URL=" "$REPO_ROOT/.env.development" >/dev/null 2>&1; then
+    printf "\nLAT_ADMIN_DATABASE_URL=postgres://latitude:secret@localhost:5432/latitude_development\n" >> "$REPO_ROOT/.env.development"
+  fi
 }
 
 ensure_goose() {

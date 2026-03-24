@@ -59,6 +59,25 @@ ensure_env_files() {
     info "Creating .env.test from .env.example"
     cp ".env.example" ".env.test"
   fi
+
+  # Keep old cloned env files compatible with current migration requirements.
+  if ! rg -q "^LAT_ADMIN_DATABASE_URL=" ".env.development"; then
+    info "Adding missing LAT_ADMIN_DATABASE_URL to .env.development"
+    echo "LAT_ADMIN_DATABASE_URL=postgres://latitude:secret@localhost:5432/latitude_development" >> ".env.development"
+  fi
+
+  if ! rg -q "^LAT_MASTER_ENCRYPTION_KEY=" ".env.development"; then
+    if rg -q "^LAT_API_KEY_ENCRYPTION_KEY=" ".env.development"; then
+      local legacy_key
+      legacy_key="$(rg -m 1 "^LAT_API_KEY_ENCRYPTION_KEY=" ".env.development")"
+      legacy_key="${legacy_key#LAT_API_KEY_ENCRYPTION_KEY=}"
+      info "Promoting LAT_API_KEY_ENCRYPTION_KEY to LAT_MASTER_ENCRYPTION_KEY in .env.development"
+      echo "LAT_MASTER_ENCRYPTION_KEY=${legacy_key}" >> ".env.development"
+    else
+      info "Adding default LAT_MASTER_ENCRYPTION_KEY to .env.development"
+      echo "LAT_MASTER_ENCRYPTION_KEY=75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b" >> ".env.development"
+    fi
+  fi
 }
 
 load_development_env() {
