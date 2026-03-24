@@ -36,6 +36,7 @@ export const scores = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("scores"),
+    index("scores_organization_id_idx").on(t.organizationId),
     index("scores_project_list_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),

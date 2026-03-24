@@ -7,8 +7,8 @@ import { generateId } from "@domain/shared"
  * Note: The actual membership data is stored by Better Auth in the member table.
  * This is a domain representation used for business logic.
  *
- * Invitation and confirmation state is tracked via the AuthIntent flow,
- * not on the membership record itself.
+ * Invitation and confirmation state is tracked by Better Auth invitation
+ * records, not on the membership record itself.
  */
 export interface Membership {
   readonly id: string

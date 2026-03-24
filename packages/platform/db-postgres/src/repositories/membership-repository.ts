@@ -3,9 +3,9 @@ import { MembershipId, NotFoundError, OrganizationId, SqlClient, type SqlClientS
 import { and, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { type MemberRole, member, user } from "../schema/better-auth.ts"
+import { type MemberRole, members, users } from "../schema/better-auth.ts"
 
-const toDomainMembership = (memberRow: typeof member.$inferSelect) => ({
+const toDomainMembership = (memberRow: typeof members.$inferSelect) => ({
   id: MembershipId(memberRow.id),
   organizationId: OrganizationId(memberRow.organizationId),
   userId: UserId(memberRow.userId),
@@ -24,7 +24,7 @@ export const MembershipRepositoryLive = Layer.effect(
     return {
       findById: (id: string) =>
         sqlClient
-          .query((db) => db.select().from(member).where(eq(member.id, id)).limit(1))
+          .query((db) => db.select().from(members).where(eq(members.id, id)).limit(1))
           .pipe(
             Effect.flatMap((results) => {
               const [result] = results
@@ -37,12 +37,12 @@ export const MembershipRepositoryLive = Layer.effect(
 
       findByOrganizationId: (organizationId: OrganizationId) =>
         sqlClient
-          .query((db) => db.select().from(member).where(eq(member.organizationId, organizationId)))
+          .query((db) => db.select().from(members).where(eq(members.organizationId, organizationId)))
           .pipe(Effect.map((members) => members.map(toDomainMembership))),
 
       findByUserId: (userId: string) =>
         sqlClient
-          .query((db) => db.select().from(member).where(eq(member.userId, userId)))
+          .query((db) => db.select().from(members).where(eq(members.userId, userId)))
           .pipe(Effect.map((members) => members.map(toDomainMembership))),
 
       findByOrganizationAndUser: (organizationId: OrganizationId, userId: string) =>
@@ -50,8 +50,8 @@ export const MembershipRepositoryLive = Layer.effect(
           .query((db) =>
             db
               .select()
-              .from(member)
-              .where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
+              .from(members)
+              .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)))
               .limit(1),
           )
           .pipe(
@@ -69,17 +69,17 @@ export const MembershipRepositoryLive = Layer.effect(
           .query((db) =>
             db
               .select({
-                id: member.id,
-                organizationId: member.organizationId,
-                userId: member.userId,
-                role: member.role,
-                createdAt: member.createdAt,
-                name: user.name,
-                email: user.email,
+                id: members.id,
+                organizationId: members.organizationId,
+                userId: members.userId,
+                role: members.role,
+                createdAt: members.createdAt,
+                name: users.name,
+                email: users.email,
               })
-              .from(member)
-              .innerJoin(user, eq(member.userId, user.id))
-              .where(eq(member.organizationId, organizationId)),
+              .from(members)
+              .innerJoin(users, eq(members.userId, users.id))
+              .where(eq(members.organizationId, organizationId)),
           )
           .pipe(Effect.map((rows) => rows as MemberWithUser[])),
 
@@ -87,9 +87,9 @@ export const MembershipRepositoryLive = Layer.effect(
         sqlClient
           .query((db) =>
             db
-              .select({ id: member.id })
-              .from(member)
-              .where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
+              .select({ id: members.id })
+              .from(members)
+              .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)))
               .limit(1),
           )
           .pipe(Effect.map((results) => results.length > 0)),
@@ -98,9 +98,9 @@ export const MembershipRepositoryLive = Layer.effect(
         sqlClient
           .query((db) =>
             db
-              .select({ role: member.role })
-              .from(member)
-              .where(and(eq(member.organizationId, organizationId), eq(member.userId, userId)))
+              .select({ role: members.role })
+              .from(members)
+              .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)))
               .limit(1),
           )
           .pipe(
@@ -114,7 +114,7 @@ export const MembershipRepositoryLive = Layer.effect(
       save: (membership: { id: string; organizationId: string; userId: string; role: MemberRole }) =>
         sqlClient.query((db) =>
           db
-            .insert(member)
+            .insert(members)
             .values({
               id: membership.id,
               organizationId: membership.organizationId,
@@ -122,14 +122,14 @@ export const MembershipRepositoryLive = Layer.effect(
               role: membership.role,
             })
             .onConflictDoUpdate({
-              target: member.id,
+              target: members.id,
               set: {
                 role: membership.role,
               },
             }),
         ),
 
-      delete: (id: string) => sqlClient.query((db) => db.delete(member).where(eq(member.id, id))),
+      delete: (id: string) => sqlClient.query((db) => db.delete(members).where(eq(members.id, id))),
     }
   }),
 )

@@ -16,7 +16,7 @@ import { useCallback, useMemo, useState } from "react"
 import { z } from "zod"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
-import { createDatasetIntentMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
+import { createDatasetMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 
@@ -113,12 +113,11 @@ function DatasetsPage() {
     setCreating(true)
     try {
       const datasetId = generateId()
-      const transaction = createDatasetIntentMutation({
+      await createDatasetMutation({
         id: datasetId,
         projectId,
         name: `Dataset ${new Date().toLocaleString()}`,
       })
-      await transaction.isPersisted.promise
       navigate({
         to: "/projects/$projectId/datasets/$datasetId",
         params: { projectId, datasetId },

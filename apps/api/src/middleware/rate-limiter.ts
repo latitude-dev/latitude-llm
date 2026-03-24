@@ -97,27 +97,6 @@ const createRedisRateLimiter = (config: RateLimitConfig) => {
 }
 
 /**
- * Rate limiter for sign-up attempts by IP address
- * 3 attempts per hour in production, 100 attempts per hour in development (to prevent mass account creation)
- */
-export const createSignUpIpRateLimiter = () => {
-  // In development, be more permissive
-  const nodeEnv = Effect.runSync(parseEnv("NODE_ENV", "string", "development"))
-  const isDevelopment = nodeEnv === "development"
-
-  return createRedisRateLimiter({
-    maxRequests: isDevelopment ? 100 : 3,
-    windowSeconds: 60 * 60, // 1 hour
-    keyPrefix: "ratelimit:signup:ip",
-    keyGenerator: (c: Context) => {
-      const ip = c.req.header("X-Forwarded-For") || c.req.header("X-Real-IP") || "unknown"
-      return ip.split(",")[0].trim()
-    },
-    errorMessage: "Too many account creation attempts. Please try again later.",
-  })
-}
-
-/**
  * Rate limiter for authentication attempts by IP address
  * 10 attempts per 15 minutes in production, 100 attempts per 15 minutes in development
  * This protects against brute force attacks on API keys and JWT tokens

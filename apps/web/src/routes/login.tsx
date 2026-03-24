@@ -1,25 +1,26 @@
-import { generateId } from "@domain/shared"
 import { Button, GitHubIcon, GoogleIcon, Icon, LatitudeLogo, Text } from "@repo/ui"
-import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { AlertCircle, Mail } from "lucide-react"
 import { useState } from "react"
-import { createLoginIntentMutation } from "../domains/auth/auth.mutations.ts"
+import z from "zod"
+import { sendMagicLink } from "../domains/auth/auth.functions.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { WEB_BASE_URL } from "../lib/auth-config.ts"
-import { parseServerError } from "../lib/errors.ts"
+import { toUserMessage } from "../lib/errors.ts"
+
+const loginSearchParams = z.object({
+  redirect: z.string().optional(),
+  email: z.string().optional(),
+})
+
+const LOGIN_URL = `${WEB_BASE_URL}/login`
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    cliSession: (search.cliSession as string) || undefined,
-  }),
-  beforeLoad: async ({ search }) => {
+  validateSearch: loginSearchParams,
+  beforeLoad: async () => {
     const session = await getSession()
-
     if (session) {
-      if (search.cliSession) {
-        throw redirect({ to: "/auth/cli", search: { session: search.cliSession } })
-      }
       throw redirect({ to: "/" })
     }
   },
@@ -27,50 +28,40 @@ export const Route = createFileRoute("/login")({
 })
 
 function LoginPage() {
-  const { cliSession } = Route.useSearch()
-  const navigate = useNavigate()
+  const { redirect: redirectPath, email: prefilledEmail } = Route.useSearch()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>()
   const [isSent, setIsSent] = useState(false)
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(prefilledEmail ?? "")
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isLoading) return
 
     const formData = new FormData(e.currentTarget)
-    const email = String(formData.get("email") ?? "")
-    setEmail(email)
+    const emailValue = String(formData.get("email") ?? "")
+    setEmail(emailValue)
 
     setIsLoading(true)
     setError(undefined)
 
+    const callbackPath = redirectPath ?? "/"
+    const emailFlow = redirectPath ? "signin" : undefined
+    const separator = callbackPath.includes("?") ? "&" : "?"
+    const callbackURL = emailFlow ? `${callbackPath}${separator}emailFlow=${emailFlow}` : callbackPath
+
     try {
-      const intentId = generateId()
-      const transaction = createLoginIntentMutation({ email, intentId })
-      await transaction.isPersisted.promise
-
-      const callbackURL = cliSession
-        ? `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}&cliSession=${encodeURIComponent(cliSession)}`
-        : `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`
-
-      const { error: signInError } = await authClient.signIn.magicLink({
-        email,
-        callbackURL,
+      await sendMagicLink({
+        data: {
+          email: emailValue,
+          callbackURL,
+          newUserCallbackURL: redirectPath ?? "/welcome",
+        },
       })
-
-      if (signInError) {
-        throw new Error(signInError.message ?? "Failed to send magic link")
-      }
 
       setIsSent(true)
     } catch (err) {
-      const { _tag, message } = parseServerError(err)
-      if (_tag === "LoginUserNotFoundError") {
-        navigate({ to: "/signup", search: { reason: "no-account", cliSession } })
-        return
-      }
-      setError(message)
+      setError(toUserMessage(err))
     } finally {
       setIsLoading(false)
     }
@@ -82,20 +73,22 @@ function LoginPage() {
     setIsLoading(true)
     setError(undefined)
 
-    const callbackURL = cliSession ? `${WEB_BASE_URL}/auth/cli?session=${encodeURIComponent(cliSession)}` : WEB_BASE_URL
+    const callbackURL = redirectPath ? `${WEB_BASE_URL}${redirectPath}` : `${WEB_BASE_URL}/`
+    const newUserCallbackURL = redirectPath ? `${WEB_BASE_URL}${redirectPath}` : `${WEB_BASE_URL}/welcome`
 
     try {
       const { error: signInError } = await authClient.signIn.social({
         provider,
         callbackURL,
+        newUserCallbackURL,
+        errorCallbackURL: LOGIN_URL,
       })
 
       if (signInError) {
         throw new Error(signInError.message ?? "Failed to sign in with OAuth provider")
       }
     } catch (err) {
-      const { message } = parseServerError(err)
-      setError(message)
+      setError(toUserMessage(err))
       setIsLoading(false)
     }
   }
@@ -116,10 +109,10 @@ function LoginPage() {
             </div>
             <Text.H3 align="center">Check your email</Text.H3>
             <Text.H5 color="foregroundMuted" align="center">
-              We sent a magic link to <strong>{email}</strong>
+              We sent a link to <strong>{email}</strong>
             </Text.H5>
             <Text.H6 color="foregroundMuted" align="center">
-              Click the link in the email to sign in. The link will expire in 1 hour.
+              Click the link in the email to continue. The link will expire in 1 hour.
             </Text.H6>
             <Button
               variant="ghost"
@@ -140,7 +133,6 @@ function LoginPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
       <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
-        {/* Header with logo */}
         <div className="flex flex-col items-center justify-center gap-y-6">
           <LatitudeLogo />
           <div className="flex flex-col items-center justify-center gap-y-2">
@@ -148,7 +140,6 @@ function LoginPage() {
           </div>
         </div>
 
-        {/* Card container */}
         <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <label htmlFor="email" className="flex flex-col gap-2">
@@ -161,6 +152,7 @@ function LoginPage() {
                 required
                 autoComplete="email"
                 data-autofocus="true"
+                defaultValue={email}
                 className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </label>
@@ -178,18 +170,16 @@ function LoginPage() {
               disabled={isLoading}
               className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
             >
-              {isLoading ? "Sending..." : "Login"}
+              {isLoading ? "Sending…" : "Continue with email"}
             </Button>
           </form>
 
-          {/* Or divider */}
           <div className="flex items-center gap-2">
             <div className="flex-1 h-[1px] bg-border" />
             <span className="bg-muted/50 px-2 text-xs leading-4 text-muted-foreground">Or</span>
             <div className="flex-1 h-[1px] bg-border" />
           </div>
 
-          {/* OAuth buttons */}
           <div className="flex flex-col gap-2">
             <Button
               variant="ghost"
@@ -214,7 +204,6 @@ function LoginPage() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex flex-col items-center justify-center gap-y-4">
           <Text.H6 color="foregroundMuted" align="center">
             If you have any problem or suggestion check our{" "}
@@ -240,21 +229,6 @@ function LoginPage() {
               Slack
             </a>
             .
-          </Text.H6>
-
-          <Text.H6 color="foregroundMuted" align="center">
-            Do not have an account yet?{" "}
-            <Link
-              to="/signup"
-              search={cliSession ? { cliSession } : {}}
-              className="text-accent-foreground underline hover:no-underline inline-flex items-center gap-1"
-            >
-              Sign up
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                <title>Arrow right</title>
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </Link>
           </Text.H6>
         </div>
       </div>

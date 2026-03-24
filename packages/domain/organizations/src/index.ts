@@ -5,6 +5,7 @@ export {
   type MembershipRole,
 } from "./entities/membership.ts"
 export { createOrganization, type Organization } from "./entities/organization.ts"
+export type { PublicInvitationPreview } from "./entities/public-invitation-preview.ts"
 export {
   createMemberJoinedEvent,
   type MemberJoinedEvent,
@@ -14,6 +15,7 @@ export {
   type OrganizationCreatedEvent,
 } from "./events/organization-created.ts"
 // Repositories - Service definitions (implementations in @platform/db-postgres)
+export { InvitationRepository } from "./ports/invitation-repository.ts"
 export {
   MembershipRepository,
   type MemberWithUser,
@@ -25,17 +27,6 @@ export {
   type CleanupUserMembershipsInput,
   cleanupUserMembershipsUseCase,
 } from "./use-cases/cleanup-user-memberships.ts"
-export {
-  type CreateOrganizationError,
-  type CreateOrganizationInput,
-  createOrganizationUseCase,
-  InvalidOrganizationNameError,
-  OrganizationAlreadyExistsError,
-} from "./use-cases/create-organization.ts"
-export {
-  type CreateOrganizationWithOwnerInput,
-  createOrganizationWithOwnerUseCase,
-} from "./use-cases/create-organization-with-owner.ts"
 export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
 export {
   CannotRemoveSelfError,

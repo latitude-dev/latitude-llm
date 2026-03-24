@@ -12,7 +12,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/auth": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
     "@domain/events": "workspace:*",
@@ -24,7 +23,6 @@
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",
     "@platform/env": "workspace:*",
-    "@platform/events-outbox": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
     "@platform/storage-object": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",

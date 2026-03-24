@@ -25,14 +25,6 @@ export const cleanupUserMembershipsUseCase = (
         yield* orgRepo.delete(membership.organizationId)
       } else {
         yield* membershipRepo.delete(membership.id)
-
-        // Clear creator reference if this user created the org
-        const org = yield* orgRepo
-          .findById(membership.organizationId)
-          .pipe(E.catchTag("NotFoundError", () => E.succeed(null)))
-        if (org && org.creatorId === input.userId) {
-          yield* orgRepo.save({ ...org, creatorId: null, updatedAt: new Date() })
-        }
       }
     }
   })

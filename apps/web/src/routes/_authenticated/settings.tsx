@@ -21,8 +21,9 @@ import {
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useRouteContext } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -33,17 +34,15 @@ import {
 import { type ApiKeyRecord, createApiKey } from "../../domains/api-keys/api-keys.functions.ts"
 import {
   cancelMemberInviteMutation,
-  createMemberInviteIntentMutation,
+  inviteMemberMutation,
   removeMemberMutation,
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
 import {
   updateOrganizationMutation,
-  useOrganizationCollection,
+  useOrganizationsCollection,
 } from "../../domains/organizations/organizations.collection.ts"
-import { authClient } from "../../lib/auth-client.ts"
-import { WEB_BASE_URL } from "../../lib/auth-config.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -51,7 +50,10 @@ export const Route = createFileRoute("/_authenticated/settings")({
 })
 
 function OrganizationSection() {
-  const { data: org } = useOrganizationCollection((orgs) => orgs.findOne())
+  const { organizationId } = useRouteContext({ from: "/_authenticated/settings" })
+  const { data: org } = useOrganizationsCollection((orgs) =>
+    orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
+  )
 
   if (!org) return null
 
@@ -75,7 +77,7 @@ function OrganizationSection() {
         </div>
         <Switch
           id="keep-monitoring"
-          checked={org.settings.keepMonitoring ?? true}
+          checked={org.settings?.keepMonitoring ?? true}
           onCheckedChange={handleKeepMonitoringChange}
         />
       </div>
@@ -124,21 +126,9 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
     },
     onSubmit: async ({ value }) => {
       try {
-        const { intentId, transaction } = createMemberInviteIntentMutation(value.email)
-        await transaction.isPersisted.promise
+        await inviteMemberMutation(value.email)
         setOpen(false)
-        const { error } = await authClient.signIn.magicLink({
-          email: value.email,
-          callbackURL: `${WEB_BASE_URL}/auth/confirm?authIntentId=${intentId}`,
-        })
-
-        if (error) {
-          toast({
-            description: "Invite created, but sending the email failed. Please retry from the members list.",
-          })
-        } else {
-          toast({ description: "Invitation sent" })
-        }
+        toast({ description: "Invitation sent" })
       } catch (error) {
         toast({
           variant: "destructive",
@@ -149,49 +139,40 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
   })
 
   return (
-    <Modal
-      dismissible
-      open={open}
-      onOpenChange={setOpen}
-      title="Add New Member"
-      description="Invite a new member to this organization by email."
-      footer={
-        <>
-          <CloseTrigger />
-          <Button
-            type="button"
-            disabled={form.state.isSubmitting}
-            onClick={() => {
-              void form.handleSubmit()
-            }}
-          >
-            Send invite
-          </Button>
-        </>
-      }
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <FormWrapper>
-          <form.Field name="email">
-            {(field) => (
-              <Input
-                required
-                type="email"
-                label="Email"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="jon@latitude.so"
-              />
-            )}
-          </form.Field>
-        </FormWrapper>
-      </form>
-    </Modal>
+    <Modal.Root open={open} onOpenChange={setOpen}>
+      <Modal.Content dismissible>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <Modal.Header title="Add New Member" description="Invite a new member to this organization by email." />
+          <Modal.Body>
+            <FormWrapper>
+              <form.Field name="email">
+                {(field) => (
+                  <Input
+                    required
+                    type="email"
+                    label="Email"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="jon@latitude.so"
+                  />
+                )}
+              </form.Field>
+            </FormWrapper>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button type="submit" disabled={form.state.isSubmitting}>
+              Send invite
+            </Button>
+            <CloseTrigger />
+          </Modal.Footer>
+        </form>
+      </Modal.Content>
+    </Modal.Root>
   )
 }
 
@@ -306,49 +287,44 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
   })
 
   return (
-    <Modal
-      dismissible
-      open={open}
-      onOpenChange={setOpen}
-      title="Create API Key"
-      description="Create a new API key for your organization to access the Latitude API."
-      footer={
-        <>
-          <CloseTrigger />
-          <Button
-            type="submit"
-            onClick={() => {
-              void form.handleSubmit()
-            }}
-          >
-            Create API Key
-          </Button>
-        </>
-      }
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <FormWrapper>
-          <form.Field name="name">
-            {(field) => (
-              <Input
-                required
-                type="text"
-                label="Name"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="My API Key"
-                description="A descriptive name for this API key"
-              />
-            )}
-          </form.Field>
-        </FormWrapper>
-      </form>
-    </Modal>
+    <Modal.Root open={open} onOpenChange={setOpen}>
+      <Modal.Content dismissible>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <Modal.Header
+            title="Create API Key"
+            description="Create a new API key for your organization to access the Latitude API."
+          />
+          <Modal.Body>
+            <FormWrapper>
+              <form.Field name="name">
+                {(field) => (
+                  <Input
+                    required
+                    type="text"
+                    label="Name"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="My API Key"
+                    description="A descriptive name for this API key"
+                  />
+                )}
+              </form.Field>
+            </FormWrapper>
+          </Modal.Body>
+          <Modal.Footer>
+            <CloseTrigger />
+            <Button type="submit" disabled={form.state.isSubmitting}>
+              Create API Key
+            </Button>
+          </Modal.Footer>
+        </form>
+      </Modal.Content>
+    </Modal.Root>
   )
 }
 
@@ -371,48 +347,40 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
   })
 
   return (
-    <Modal
-      open
-      dismissible
-      onOpenChange={onClose}
-      title="Update API Key"
-      description="Update the name for your API key."
-      footer={
-        <>
-          <CloseTrigger />
-          <Button
-            type="submit"
-            onClick={() => {
-              void form.handleSubmit()
-            }}
-          >
-            Update API Key
-          </Button>
-        </>
-      }
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <FormWrapper>
-          <form.Field name="name">
-            {(field) => (
-              <Input
-                required
-                type="text"
-                label="Name"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="API key name"
-              />
-            )}
-          </form.Field>
-        </FormWrapper>
-      </form>
-    </Modal>
+    <Modal.Root open onOpenChange={onClose}>
+      <Modal.Content dismissible>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <Modal.Header title="Update API Key" description="Update the name for your API key." />
+          <Modal.Body>
+            <FormWrapper>
+              <form.Field name="name">
+                {(field) => (
+                  <Input
+                    required
+                    type="text"
+                    label="Name"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="API key name"
+                  />
+                )}
+              </form.Field>
+            </FormWrapper>
+          </Modal.Body>
+          <Modal.Footer>
+            <CloseTrigger />
+            <Button type="submit" disabled={form.state.isSubmitting}>
+              Update API Key
+            </Button>
+          </Modal.Footer>
+        </form>
+      </Modal.Content>
+    </Modal.Root>
   )
 }
 

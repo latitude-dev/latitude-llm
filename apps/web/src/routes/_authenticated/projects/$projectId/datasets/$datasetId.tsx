@@ -22,14 +22,14 @@ import {
   DATASET_ROW_SORT_COLUMNS,
   type DatasetRecord,
   type DatasetRowRecord,
-  deleteRowsMutation,
+  deleteDatasetRows,
   getDatasetDownload,
   getDatasetQuery,
   getRowQuery,
-  insertDatasetRowMutation,
+  insertDatasetRow,
   listRowsQuery,
   saveDatasetCsv,
-  updateRowMutation,
+  updateDatasetRow,
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
@@ -125,7 +125,7 @@ function DatasetDetailPage() {
   const handleInsertFirstRow = useCallback(
     async (data: { input: string; output: string; metadata: string }) => {
       try {
-        const result = await insertDatasetRowMutation({
+        const result = await insertDatasetRow({
           data: {
             datasetId,
             input: data.input,
@@ -415,7 +415,7 @@ function DatasetRowsView({
       setSaving(true)
       try {
         if (isDatasetDraftRowId(rid)) {
-          const result = await insertDatasetRowMutation({
+          const result = await insertDatasetRow({
             data: {
               datasetId,
               input: data.input,
@@ -446,7 +446,7 @@ function DatasetRowsView({
           return
         }
 
-        await updateRowMutation({
+        await updateDatasetRow({
           data: {
             datasetId,
             rowId: rid,
@@ -500,7 +500,7 @@ function DatasetRowsView({
 
     setDeleting(true)
     try {
-      await deleteRowsMutation({
+      await deleteDatasetRows({
         data: { datasetId, selection: serverSelection },
       })
 

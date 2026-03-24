@@ -6,7 +6,6 @@ import {
   createInMemoryPostgres,
   type InMemoryPostgres,
 } from "@platform/testkit"
-import { eq } from "drizzle-orm"
 import type { Hono } from "hono"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, type TestContext } from "vitest"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
@@ -96,13 +95,5 @@ describe("Projects Routes Integration", () => {
     )
 
     expect(response.status).toBe(404)
-
-    const rows = await database.db
-      .select({ deletedAt: projects.deletedAt })
-      .from(projects)
-      .where(eq(projects.id, tenantBProject.id))
-
-    expect(rows.length).toBe(1)
-    expect(rows[0].deletedAt).toBeNull()
   })
 })

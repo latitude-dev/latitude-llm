@@ -13,6 +13,16 @@ export function organizationRLSPolicy(tableName: string) {
   })
 }
 
+/** RLS for Better Auth Stripe `subscriptions` rows scoped by `reference_id` (org or user id). */
+export function subscriptionReferenceRLSPolicy() {
+  return pgPolicy("subscriptions_organization_policy", {
+    for: "all",
+    to: "public",
+    using: sql`reference_id = get_current_organization_id()`,
+    withCheck: sql`reference_id = get_current_organization_id()`,
+  })
+}
+
 export function tzTimestamp(name: string) {
   return timestamp(name, { withTimezone: true })
 }

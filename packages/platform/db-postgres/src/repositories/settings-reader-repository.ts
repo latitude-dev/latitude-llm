@@ -2,7 +2,7 @@ import { type ProjectId, SettingsReader, SqlClient, type SqlClientShape } from "
 import { and, eq, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { organization } from "../schema/better-auth.ts"
+import { organizations } from "../schema/better-auth.ts"
 import { projects } from "../schema/projects.ts"
 
 export const SettingsReaderLive = Layer.effect(
@@ -15,9 +15,9 @@ export const SettingsReaderLive = Layer.effect(
         sqlClient
           .query((db) =>
             db
-              .select({ settings: organization.settings })
-              .from(organization)
-              .where(eq(organization.id, sqlClient.organizationId))
+              .select({ settings: organizations.settings })
+              .from(organizations)
+              .where(eq(organizations.id, sqlClient.organizationId))
               .limit(1),
           )
           .pipe(Effect.map((results) => results[0]?.settings ?? null)),

@@ -4,7 +4,11 @@ export interface EventPayloads {
   MagicLinkEmailRequested: {
     readonly email: string
     readonly magicLinkUrl: string
-    readonly authIntentId: string | null
+    readonly emailFlow: string | null
+    readonly organizationId: string
+    readonly organizationName: string
+    readonly inviterName: string | null
+    readonly invitationId: string | null
   }
   UserDeletionRequested: {
     readonly userId: string

@@ -32,5 +32,10 @@
   "engines": {
     "node": ">=25"
   },
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "pnpm": {
+    "overrides": {
+      "drizzle-orm": "1.0.0-beta.15-859cf75"
+    }
+  }
 }

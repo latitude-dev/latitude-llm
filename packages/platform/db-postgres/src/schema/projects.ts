@@ -1,5 +1,5 @@
 import type { ProjectSettings } from "@domain/shared"
-import { jsonb, varchar } from "drizzle-orm/pg-core"
+import { index, jsonb, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
 export const projects = latitudeSchema.table(
@@ -14,5 +14,5 @@ export const projects = latitudeSchema.table(
     lastEditedAt: tzTimestamp("last_edited_at").notNull().defaultNow(),
     ...timestamps(),
   },
-  () => [organizationRLSPolicy("projects")],
+  (t) => [organizationRLSPolicy("projects"), index("projects_organization_id_idx").on(t.organizationId)],
 )

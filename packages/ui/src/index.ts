@@ -56,7 +56,17 @@ export type {
 } from "./components/infinite-table/types.ts"
 export { Input, type InputProps } from "./components/input/input.tsx"
 export { Label } from "./components/label/label.tsx"
-export { CloseTrigger, Modal, type ModalProps } from "./components/modal/modal.tsx"
+export {
+  CloseTrigger,
+  Modal,
+  type ModalBodyProps,
+  type ModalContentProps,
+  type ModalFooterProps,
+  type ModalHeaderProps,
+  type ModalProps,
+  type ModalRootProps,
+  type ModalSize,
+} from "./components/modal/modal.tsx"
 export {
   Dialog,
   DialogClose,

@@ -1,57 +1,53 @@
-import type { Organization } from "@domain/organizations"
 import {
-  createOrganizationWithOwnerUseCase,
-  MembershipRepository,
+  generateUniqueOrganizationSlugUseCase,
   OrganizationRepository,
   updateOrganizationUseCase,
 } from "@domain/organizations"
 import { UserId } from "@domain/shared"
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
+import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
-import { requireSession } from "../../server/auth.ts"
-import { getAdminPostgresClient, getPostgresClient } from "../../server/clients.ts"
+import { requireSession, requireUserSession } from "../../server/auth.ts"
+import { getAdminPostgresClient, getBetterAuth, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
-const toRecord = (org: Organization) => ({
-  id: org.id,
-  name: org.name,
-  settings: {
-    keepMonitoring: org.settings?.keepMonitoring,
-  },
-})
-
-export type OrganizationRecord = ReturnType<typeof toRecord>
-
-export const countUserOrganizations = createServerFn({ method: "GET" })
+export const listOrganizations = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .handler(async (): Promise<number> => {
-    const { userId } = await requireSession()
-    const adminClient = getAdminPostgresClient()
-
-    const members = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* MembershipRepository
-        return yield* repo.findByUserId(userId)
-      }).pipe(withPostgres(MembershipRepositoryLive, adminClient)),
-    )
-    return members.length
-  })
-
-export const getOrganization = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
-  .handler(async (): Promise<OrganizationRecord> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-
-    const org = await Effect.runPromise(
+  .handler(async () => {
+    const userId = await requireUserSession()
+    const client = getAdminPostgresClient()
+    const repoLayer = Layer.merge(OrganizationRepositoryLive, MembershipRepositoryLive)
+    return await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* OrganizationRepository
-        return yield* repo.findById(organizationId)
-      }).pipe(withPostgres(OrganizationRepositoryLive, client, organizationId)),
+        return yield* repo.findByUserId(UserId(userId))
+      }).pipe(withPostgres(repoLayer, client)),
     )
-    return toRecord(org)
+  })
+
+export const createOrganization = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
+  .handler(async ({ data }) => {
+    const userId = await requireUserSession()
+    const adminClient = getAdminPostgresClient()
+    const slug = await Effect.runPromise(
+      generateUniqueOrganizationSlugUseCase({ name: data.name }).pipe(
+        withPostgres(OrganizationRepositoryLive, adminClient),
+      ),
+    )
+
+    await getBetterAuth().api.createOrganization({
+      body: {
+        name: data.name,
+        slug,
+        userId,
+        keepCurrentActiveOrganization: false,
+      },
+      headers: await getRequestHeaders(),
+    })
   })
 
 const organizationSettingsSchema = z.object({
@@ -66,33 +62,13 @@ export const updateOrganization = createServerFn({ method: "POST" })
       settings: organizationSettingsSchema.optional(),
     }),
   )
-  .handler(async ({ data }): Promise<OrganizationRecord> => {
+  .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
 
-    const org = await Effect.runPromise(
+    return await Effect.runPromise(
       updateOrganizationUseCase({ name: data.name, settings: data.settings }).pipe(
         withPostgres(OrganizationRepositoryLive, client, organizationId),
       ),
     )
-
-    return toRecord(org)
-  })
-
-export const createOrganization = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
-  .inputValidator(z.object({ name: z.string().min(1).max(256) }))
-  .handler(async ({ data }): Promise<OrganizationRecord> => {
-    const { userId } = await requireSession()
-    const adminClient = getAdminPostgresClient()
-
-    const repoLayer = Layer.merge(OrganizationRepositoryLive, MembershipRepositoryLive)
-
-    const org = await Effect.runPromise(
-      createOrganizationWithOwnerUseCase({
-        name: data.name,
-        creatorId: UserId(userId),
-      }).pipe(withPostgres(repoLayer, adminClient)),
-    )
-    return toRecord(org)
   })
