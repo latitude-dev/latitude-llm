@@ -3,18 +3,15 @@ import { fileURLToPath } from "node:url"
 import { ApiKeyRepository } from "@domain/api-keys"
 import { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import { ProjectRepository } from "@domain/projects"
-import { GrantRepository, SubscriptionRepository } from "@domain/subscriptions"
 import { UserRepository } from "@domain/users"
 import { parseEnv } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
 import { Effect, Layer } from "effect"
 import { closePostgres, createPostgresClient } from "../client.ts"
 import { ApiKeyRepositoryLive } from "../repositories/api-key-repository.ts"
-import { GrantRepositoryLive } from "../repositories/grant-repository.ts"
 import { MembershipRepositoryLive } from "../repositories/membership-repository.ts"
 import { OrganizationRepositoryLive } from "../repositories/organization-repository.ts"
 import { ProjectRepositoryLive } from "../repositories/project-repository.ts"
-import { SubscriptionRepositoryLive } from "../repositories/subscription-repository.ts"
 import { UserRepositoryLive } from "../repositories/user-repository.ts"
 import { SqlClientLive } from "../sql-client.ts"
 import { allSeeders } from "./all.ts"
@@ -39,11 +36,9 @@ const main = async () => {
     // Build a layer that provides all repositories using SqlClient
     const repositoriesLayer = Layer.mergeAll(
       ApiKeyRepositoryLive,
-      GrantRepositoryLive,
       MembershipRepositoryLive,
       OrganizationRepositoryLive,
       ProjectRepositoryLive,
-      SubscriptionRepositoryLive,
       UserRepositoryLive,
     ).pipe(Layer.provide(SqlClientLive(client)))
 
@@ -51,11 +46,9 @@ const main = async () => {
     const buildContext = Effect.gen(function* () {
       const repositories: Repositories = {
         apiKey: yield* ApiKeyRepository,
-        grant: yield* GrantRepository,
         membership: yield* MembershipRepository,
         organization: yield* OrganizationRepository,
         project: yield* ProjectRepository,
-        subscription: yield* SubscriptionRepository,
         user: yield* UserRepository,
       }
       return { db: client.db, repositories } as SeedContext

@@ -1,7 +1,6 @@
 import type { ApiKeyRepository } from "@domain/api-keys"
 import type { MembershipRepository, OrganizationRepository } from "@domain/organizations"
 import type { ProjectRepository } from "@domain/projects"
-import type { GrantRepository, SubscriptionRepository } from "@domain/subscriptions"
 import type { UserRepository } from "@domain/users"
 import { Data, type Effect } from "effect"
 import type { PostgresDb } from "../client.ts"
@@ -11,8 +10,6 @@ export interface Repositories {
   readonly project: ProjectRepository["Service"]
   readonly apiKey: ApiKeyRepository["Service"]
   readonly membership: MembershipRepository["Service"]
-  readonly subscription: SubscriptionRepository["Service"]
-  readonly grant: GrantRepository["Service"]
   readonly user: UserRepository["Service"]
 }
 

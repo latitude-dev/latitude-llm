@@ -102,8 +102,6 @@ export const organization = latitudeSchema.table("organization", {
   logo: text("logo"),
   metadata: text("metadata"),
   creatorId: cuid("creator_id").references(() => user.id),
-  currentSubscriptionId: cuid("current_subscription_id"),
-  stripeCustomerId: varchar("stripe_customer_id", { length: 256 }),
   settings: jsonb("settings").$type<OrganizationSettings>(),
   ...timestamps(),
 })

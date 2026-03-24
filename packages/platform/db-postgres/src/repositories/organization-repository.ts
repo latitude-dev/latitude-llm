@@ -6,7 +6,6 @@ import {
   type OrganizationSettings,
   SqlClient,
   type SqlClientShape,
-  SubscriptionId,
   UserId,
   type UserId as UserIdType,
 } from "@domain/shared"
@@ -22,8 +21,6 @@ const toDomainOrganization = (row: typeof organization.$inferSelect) => ({
   logo: row.logo,
   metadata: row.metadata,
   creatorId: row.creatorId ? UserId(row.creatorId) : null,
-  currentSubscriptionId: row.currentSubscriptionId ? SubscriptionId(row.currentSubscriptionId) : null,
-  stripeCustomerId: row.stripeCustomerId,
   settings: (row.settings as OrganizationSettings | null) ?? null,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
@@ -36,8 +33,6 @@ const toOrganizationInsertRow = (org: {
   logo: string | null
   metadata: string | null
   creatorId: string | null
-  currentSubscriptionId: string | null
-  stripeCustomerId: string | null
   settings: OrganizationSettings | null
 }) => ({
   id: org.id,
@@ -46,8 +41,6 @@ const toOrganizationInsertRow = (org: {
   logo: org.logo,
   metadata: org.metadata,
   creatorId: org.creatorId,
-  currentSubscriptionId: org.currentSubscriptionId,
-  stripeCustomerId: org.stripeCustomerId,
   settings: org.settings,
 })
 
@@ -92,8 +85,6 @@ export const OrganizationRepositoryLive = Layer.effect(
         logo: string | null
         metadata: string | null
         creatorId: string | null
-        currentSubscriptionId: string | null
-        stripeCustomerId: string | null
         settings: OrganizationSettings | null
       }) =>
         Effect.gen(function* () {
@@ -111,8 +102,6 @@ export const OrganizationRepositoryLive = Layer.effect(
                   logo: row.logo,
                   metadata: row.metadata,
                   creatorId: row.creatorId,
-                  currentSubscriptionId: row.currentSubscriptionId,
-                  stripeCustomerId: row.stripeCustomerId,
                   settings: row.settings,
                   updatedAt: new Date(),
                 },

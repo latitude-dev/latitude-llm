@@ -175,7 +175,6 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         organization: postgresSchema.organization,
         member: postgresSchema.member,
         invitation: postgresSchema.invitation,
-        subscription: postgresSchema.subscription,
       },
     }),
     baseURL: baseUrl,

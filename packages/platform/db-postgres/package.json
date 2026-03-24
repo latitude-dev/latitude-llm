@@ -33,7 +33,6 @@
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/shared": "workspace:*",
-    "@domain/subscriptions": "workspace:*",
     "@domain/users": "workspace:*",
     "@platform/env": "workspace:*",
     "@repo/utils": "workspace:*",

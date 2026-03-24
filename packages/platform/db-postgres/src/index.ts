@@ -11,12 +11,10 @@ export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 // Repository implementations
 export { AuthIntentRepositoryLive } from "./repositories/auth-intent-repository.ts"
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
-export { GrantRepositoryLive } from "./repositories/grant-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
 export { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
-export { SubscriptionRepositoryLive } from "./repositories/subscription-repository.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
 export * from "./schema/index.ts"
 // SqlClient implementation

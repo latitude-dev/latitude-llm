@@ -19,12 +19,10 @@ export default defineConfig({
   schema: [
     "./src/schema/better-auth.ts",
     "./src/schema/auth-intent.ts",
-    "./src/schema/subscription.ts",
     "./src/schema/datasets.ts",
     "./src/schema/datasetVersions.ts",
     "./src/schema/projects.ts",
     "./src/schema/api-keys.ts",
-    "./src/schema/grants.ts",
     "./src/schema/outbox-events.ts",
   ],
   out: "./drizzle",
