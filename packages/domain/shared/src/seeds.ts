@@ -24,6 +24,7 @@ export const SEED_SCORE_ERRORED_ID = ScoreId("araxu4s45cudpufdqiioo5a5")
 export const SEED_SCORE_DRAFT_ID = ScoreId("n1hjgos7a7dxb61plvmiigcu")
 export const SEED_SCORE_PENDING_ID = ScoreId("hiy75x2kq8hjhi27qkl9zaeb")
 export const SEED_SCORE_ISSUE_LINKED_ID = ScoreId("qr25ftbv6q70ahxt690a7460")
+export const SEED_SCORE_API_REVIEWED_ID = ScoreId("hvtb8yzxjjrudvhrme7aejiq")
 export const SEED_EVALUATION_ID = "y0zr3gtsous6knd2qwdj1dit"
 export const SEED_ANNOTATION_QUEUE_ID = "w9pkzh13vu8ntru7ii5ved08"
 export const SEED_ISSUE_ID = "dds0rt8sqgpuku4u4wabze9r"

@@ -282,6 +282,8 @@ The screen has three vertical sections:
    - list of annotations for the current trace
    - button to create a conversation-level annotation
 
+Conversation-level annotations omit the anchor coordinates entirely. Message/text selections persist `messageIndex`, `partIndex`, and text offsets against the raw `allMessages` / `parts[]` conversation structure rather than against any UI-only grouping.
+
 Annotation cards show:
 
 - linked issue name or pending-discovery state

@@ -22,6 +22,63 @@ export type AnnotationScoreSourceId = z.infer<typeof annotationScoreSourceIdSche
 
 export const scoreValueSchema = z.number().min(0).max(1)
 
+type AnnotationAnchorInput = {
+  readonly messageIndex?: number | undefined
+  readonly partIndex?: number | undefined
+  readonly startOffset?: number | undefined
+  readonly endOffset?: number | undefined
+}
+
+const annotationAnchorFields = {
+  messageIndex: z.number().int().nonnegative().optional(), // optional message index in the canonical conversation; omit for conversation-level annotations
+  partIndex: z.number().int().nonnegative().optional(), // optional raw GenAI `parts[]` index inside the target message
+  startOffset: z.number().int().nonnegative().optional(), // optional start offset for substring annotations within a textual part
+  endOffset: z.number().int().nonnegative().optional(), // optional end offset for substring annotations within a textual part
+} as const
+
+function validateAnnotationAnchor(anchor: AnnotationAnchorInput, ctx: z.core.$RefinementCtx<unknown>) {
+  const hasMessageIndex = anchor.messageIndex !== undefined
+  const hasPartIndex = anchor.partIndex !== undefined
+  const hasStartOffset = anchor.startOffset !== undefined
+  const hasEndOffset = anchor.endOffset !== undefined
+  const hasTextRange = hasStartOffset || hasEndOffset
+
+  if (!hasMessageIndex && hasPartIndex) {
+    ctx.addIssue({
+      code: "custom",
+      message: "partIndex requires messageIndex",
+      path: ["partIndex"],
+    })
+  }
+
+  if (hasStartOffset !== hasEndOffset) {
+    ctx.addIssue({
+      code: "custom",
+      message: "startOffset and endOffset must be provided together",
+      path: hasStartOffset ? ["endOffset"] : ["startOffset"],
+    })
+  }
+
+  if (hasTextRange && !hasPartIndex) {
+    ctx.addIssue({
+      code: "custom",
+      message: "startOffset and endOffset require partIndex",
+      path: ["partIndex"],
+    })
+  }
+
+  if (anchor.startOffset !== undefined && anchor.endOffset !== undefined && anchor.startOffset > anchor.endOffset) {
+    ctx.addIssue({
+      code: "custom",
+      message: "endOffset must be greater than or equal to startOffset",
+      path: ["endOffset"],
+    })
+  }
+}
+
+export const annotationAnchorSchema = z.object(annotationAnchorFields).superRefine(validateAnnotationAnchor)
+export type AnnotationAnchor = z.infer<typeof annotationAnchorSchema>
+
 export const baseScoreMetadataSchema = z.object({
   // common metadata shared by all score sources
 })
@@ -35,32 +92,9 @@ export type EvaluationScoreMetadata = z.infer<typeof evaluationScoreMetadataSche
 export const annotationScoreMetadataSchema = baseScoreMetadataSchema
   .extend({
     rawFeedback: z.string(), // original feedback text before enrichment; human-authored for human drafts/final annotations, model-authored for system-created drafts
-    messageIndex: z.number().int().nonnegative(), // message index used to anchor the annotation in the conversation UI
-    partIndex: z.number().int().nonnegative().optional(), // optional GenAI `parts[]` index inside the target message
-    startOffset: z.number().int().nonnegative().optional(), // optional start offset for substring annotations within a textual part
-    endOffset: z.number().int().nonnegative().optional(), // optional end offset for substring annotations within a textual part
+    ...annotationAnchorFields,
   })
-  .superRefine((metadata, ctx) => {
-    const { endOffset, startOffset } = metadata
-    const hasStartOffset = startOffset !== undefined
-    const hasEndOffset = endOffset !== undefined
-
-    if (hasStartOffset !== hasEndOffset) {
-      ctx.addIssue({
-        code: "custom",
-        message: "startOffset and endOffset must be provided together",
-        path: hasStartOffset ? ["endOffset"] : ["startOffset"],
-      })
-    }
-
-    if (startOffset !== undefined && endOffset !== undefined && startOffset > endOffset) {
-      ctx.addIssue({
-        code: "custom",
-        message: "endOffset must be greater than or equal to startOffset",
-        path: ["endOffset"],
-      })
-    }
-  })
+  .superRefine(validateAnnotationAnchor)
 export type AnnotationScoreMetadata = z.infer<typeof annotationScoreMetadataSchema>
 
 export const customScoreMetadataSchema = z.record(z.string(), z.unknown()) // whatever the user wants to store in custom score metadata

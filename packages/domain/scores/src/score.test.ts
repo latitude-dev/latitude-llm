@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  annotationAnchorSchema,
   annotationScoreSchema,
   customScoreSchema,
   evaluationScoreSchema,
@@ -78,6 +79,12 @@ describe("scoreSchema", () => {
 })
 
 describe("annotationScoreSchema", () => {
+  it("accepts a conversation-level anchor with no message coordinates", () => {
+    const result = annotationAnchorSchema.safeParse({})
+
+    expect(result.success).toBe(true)
+  })
+
   it("accepts the UI sentinel source id", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),
@@ -89,6 +96,19 @@ describe("annotationScoreSchema", () => {
         partIndex: 0,
         startOffset: 5,
         endOffset: 22,
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it("accepts the API sentinel source id for conversation-level annotations", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      source: "annotation",
+      sourceId: "API",
+      metadata: {
+        rawFeedback: "This whole conversation handled the request correctly.",
       },
     })
 
@@ -118,6 +138,36 @@ describe("annotationScoreSchema", () => {
         rawFeedback: "Missing end offset",
         messageIndex: 1,
         startOffset: 4,
+      },
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects part-level anchors without a message index", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      source: "annotation",
+      sourceId: "UI",
+      metadata: {
+        rawFeedback: "Missing message index",
+        partIndex: 0,
+      },
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects text offsets without a part index", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      source: "annotation",
+      sourceId: thirdCuid,
+      metadata: {
+        rawFeedback: "Offsets need a part index",
+        messageIndex: 1,
+        startOffset: 4,
+        endOffset: 12,
       },
     })
 
