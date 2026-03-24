@@ -658,6 +658,18 @@ importers:
         specifier: ^5.7.0
         version: 5.8.3
 
+  packages/domain/scores:
+    dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@domain/spans':
+        specifier: workspace:*
+        version: link:../spans
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
   packages/domain/shared:
     dependencies:
       '@paralleldrive/cuid2':
@@ -690,6 +702,9 @@ importers:
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/domain/users:
     dependencies:
@@ -817,6 +832,9 @@ importers:
       '@domain/projects':
         specifier: workspace:*
         version: link:../../domain/projects
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../../domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared

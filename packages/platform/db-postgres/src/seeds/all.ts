@@ -2,6 +2,7 @@ import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
 import { projectSeeders } from "./projects/index.ts"
+import { scoreSeeders } from "./scores/index.ts"
 import type { Seeder } from "./types.ts"
 
 export const allSeeders: readonly Seeder[] = [
@@ -9,4 +10,5 @@ export const allSeeders: readonly Seeder[] = [
   ...projectSeeders,
   ...apiKeySeeders,
   ...datasetSeeders,
+  ...scoreSeeders,
 ]

@@ -32,6 +32,7 @@
     "@domain/events": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/users": "workspace:*",
     "@platform/env": "workspace:*",

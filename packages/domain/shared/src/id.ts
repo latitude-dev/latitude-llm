@@ -7,9 +7,14 @@
  */
 
 import { createId, isCuid } from "@paralleldrive/cuid2"
+import { z } from "zod"
 
 // Base branded type helper
 type Branded<T, B> = T & { readonly __brand: B }
+
+export const CUID_LENGTH = 24
+
+export const cuidSchema = z.string().length(CUID_LENGTH)
 
 // User-related IDs
 export type UserId = Branded<string, "UserId">
@@ -29,6 +34,9 @@ export type DatasetId = Branded<string, "DatasetId">
 export type DatasetRowId = Branded<string, "DatasetRowId">
 export type DatasetVersionId = Branded<string, "DatasetVersionId">
 
+// Reliability-related IDs
+export type ScoreId = Branded<string, "ScoreId">
+
 // Telemetry-related IDs
 export type TraceId = Branded<string, "TraceId">
 export type SpanId = Branded<string, "SpanId">
@@ -44,6 +52,7 @@ export const OrganizationId = (value: string): OrganizationId => value as Organi
 export const MembershipId = (value: string): MembershipId => value as MembershipId
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
+export const ScoreId = (value: string): ScoreId => value as ScoreId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId

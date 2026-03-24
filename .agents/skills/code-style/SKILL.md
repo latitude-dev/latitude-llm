@@ -30,6 +30,7 @@ Base config: `tsconfig.base.json`
 - `strict: true` is enabled; keep code strict-clean
 - Module system: `NodeNext` + ESM (`"type": "module"` in packages/apps)
 - For new domain data contracts, define the canonical shared shape as a Zod schema first when runtime validation is required, then infer TypeScript types from that schema or from Drizzle schemas where appropriate.
+- Canonical entity schemas should treat system-managed fields such as `id`, `createdAt`, and `updatedAt` as core entity fields. Do not split an entity into a business payload plus an appended "persistence" wrapper unless there is a truly distinct boundary/input DTO that needs that separation.
 - Enum-like contracts should use literal-string unions or `as const` objects, not TypeScript enums.
 - Use shared domain schemas to validate data crossing from app/platform boundaries into domain use-cases.
 - Configurable thresholds, weights, debounce windows, sentinel values, and similar tunables should live in named constants inside the owning domain package rather than as scattered inline literals.
@@ -50,6 +51,7 @@ Base config: `tsconfig.base.json`
 - Types/interfaces/classes: `PascalCase`
 - Variables/functions/methods: `camelCase`
 - Constants: `UPPER_SNAKE_CASE` only for true constants; otherwise `camelCase` + `as const`
+- Shared base schemas/types that are extended into discriminated unions or related variants should use `baseXxxSchema` / `BaseXxx` naming rather than `xxxCommonSchema` / `XxxCommon`.
 - File names favor concise module roots (`src/index.ts`, `src/server.ts`, `src/main.tsx`)
 - React component files use **kebab-case**: `my-component.tsx` or `my-component/index.tsx` — never `PascalCase` file names (e.g. `MyComponent.tsx`). This matches the `@repo/ui` convention (`table-skeleton.tsx`, `form-field.tsx`, etc.)
 - Package names follow scoped workspace style (`@app/*`, `@domain/*`, etc.)

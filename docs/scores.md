@@ -153,8 +153,6 @@ Recommended initial physical layout:
 - monthly partition on `created_at`
 - primary key `(organization_id, project_id, created_at)`
 - order by `(organization_id, project_id, created_at, source, source_id, session_id, trace_id, span_id, id)`
-- `TTL toDateTime(created_at) + INTERVAL 3 MONTH TO VOLUME 'cold'`
-- `ttl_only_drop_parts = 1` and `storage_policy = 'tiered'`
 - keep `duration`, `tokens`, and `cost` as `UInt64`
 
 ClickHouse fixed-width identifier rule:
