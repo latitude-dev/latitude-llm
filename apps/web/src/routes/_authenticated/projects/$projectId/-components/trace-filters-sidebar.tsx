@@ -1,0 +1,545 @@
+import type { FilterCondition, FilterSet } from "@domain/shared"
+import { Button, Checkbox, Input, Skeleton, Text } from "@repo/ui"
+import { ChevronDown, ChevronUp, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
+import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { useTraceDistinctValues } from "../../../../../domains/traces/traces.collection.ts"
+import { useDebouncedCallback } from "../../../../../lib/hooks/useDebouncedCallback.ts"
+
+const STATUS_OPTIONS = ["ok", "error", "unset"] as const
+const TRACE_MULTI_SELECT_FIELDS = [
+  { label: "Tags", field: "tags" },
+  { label: "Models", field: "models" },
+  { label: "Providers", field: "providers" },
+  { label: "Services", field: "serviceNames" },
+] as const
+
+const TRACE_NUMBER_RANGE_FIELDS = [
+  { label: "Cost (microcents)", field: "cost" },
+  { label: "Span Count", field: "spanCount" },
+  { label: "Error Count", field: "errorCount" },
+  { label: "Tokens Input", field: "tokensInput" },
+  { label: "Tokens Output", field: "tokensOutput" },
+] as const
+
+const TRACE_TEXT_FILTER_FIELDS = [
+  { label: "Name", field: "name", placeholder: "Enter name..." },
+  { label: "Session ID", field: "sessionId", placeholder: "Filter by session..." },
+  { label: "User ID", field: "userId", placeholder: "Filter by user..." },
+] as const
+
+interface TraceFiltersSidebarProps {
+  readonly projectId: string
+  readonly filters: FilterSet
+  readonly onFiltersChange: (filters: FilterSet) => void
+  readonly onClose: () => void
+}
+
+// ---------------------------------------------------------------------------
+// FilterSet <-> UI state helpers
+// ---------------------------------------------------------------------------
+
+/** Get the "in" array values for a field, coerced to strings */
+function getInValues(filters: FilterSet, field: string): readonly string[] {
+  const cond = filters[field]?.find((c) => c.op === "in")
+  return Array.isArray(cond?.value) ? cond.value.map(String) : []
+}
+
+/** Get a contains value for a text field */
+function getTextFilterValue(filters: FilterSet, field: string): string {
+  const cond = filters[field]?.find((c) => c.op === "contains")
+  return typeof cond?.value === "string" ? cond.value : ""
+}
+
+/** Get min (gte) and max (lte) for a numeric range */
+function getRangeValues(filters: FilterSet, field: string): { min: number | undefined; max: number | undefined } {
+  const conditions = filters[field]
+  const minVal = conditions?.find((c) => c.op === "gte")?.value
+  const maxVal = conditions?.find((c) => c.op === "lte")?.value
+  return {
+    min: typeof minVal === "number" ? minVal : undefined,
+    max: typeof maxVal === "number" ? maxVal : undefined,
+  }
+}
+
+/** Set a field to conditions, or remove it if empty */
+function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
+  if (conditions.length === 0) {
+    const { [field]: _, ...rest } = filters
+    return rest
+  }
+  return { ...filters, [field]: conditions }
+}
+
+function CollapsibleSection({
+  label,
+  defaultOpen = false,
+  children,
+}: {
+  readonly label: string
+  readonly defaultOpen?: boolean
+  readonly children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const ChevronIcon = open ? ChevronUp : ChevronDown
+
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        className="flex items-center justify-between py-2 cursor-pointer"
+        onClick={() => setOpen(!open)}
+      >
+        <Text.H5>{label}</Text.H5>
+        <ChevronIcon className="h-4 w-4 text-muted-foreground" />
+      </button>
+      {open && <div className="flex flex-col gap-2 pb-2">{children}</div>}
+    </div>
+  )
+}
+
+function DebouncedInput({
+  value,
+  onDebouncedChange,
+  ...props
+}: Omit<ComponentProps<typeof Input>, "onChange" | "value"> & {
+  readonly value: string
+  readonly onDebouncedChange: (value: string) => void
+}) {
+  const [local, setLocal] = useState(value)
+  const debouncedChange = useDebouncedCallback(onDebouncedChange, 300)
+
+  // TODO(frontend-use-effect-policy): keep local input state in sync with externally-controlled filter updates.
+  useEffect(() => {
+    setLocal(value)
+  }, [value])
+
+  return (
+    <div className="relative">
+      <Input
+        {...props}
+        value={local}
+        onChange={(e) => {
+          setLocal(e.target.value)
+          debouncedChange(e.target.value)
+        }}
+      />
+      {local && (
+        <button
+          type="button"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+          onClick={() => {
+            setLocal("")
+            onDebouncedChange("")
+          }}
+        >
+          <XIcon className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  )
+}
+
+function MultiSelectFilter({
+  projectId,
+  column,
+  selected,
+  onChange,
+}: {
+  readonly projectId: string
+  readonly column: "tags" | "models" | "providers" | "serviceNames"
+  readonly selected: readonly string[]
+  readonly onChange: (values: string[]) => void
+}) {
+  const [search, setSearch] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const debouncedSetSearch = useDebouncedCallback(setDebouncedSearch, 300)
+
+  // Initial fetch without search to check if there are more than 50 results
+  const { data: initialOptions = [], isLoading: initialLoading } = useTraceDistinctValues({
+    projectId,
+    column,
+  })
+  const needsServerSearch = initialOptions.length >= 50
+
+  // Only query with search term when there are 50+ values
+  const { data: searchedOptions, isLoading: searchLoading } = useTraceDistinctValues({
+    projectId,
+    column,
+    ...(needsServerSearch && debouncedSearch ? { search: debouncedSearch } : {}),
+  })
+
+  const isLoading = initialLoading || (needsServerSearch && debouncedSearch ? searchLoading : false)
+
+  // Use server results when searching with 50+ values, otherwise filter client-side
+  const displayOptions = useMemo(() => {
+    if (!search) return initialOptions
+    if (needsServerSearch) return searchedOptions ?? initialOptions
+    const lower = search.toLowerCase()
+    return initialOptions.filter((o) => o.toLowerCase().includes(lower))
+  }, [search, initialOptions, needsServerSearch, searchedOptions])
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value)
+      debouncedSetSearch(value)
+    },
+    [debouncedSetSearch],
+  )
+
+  const toggle = useCallback(
+    (value: string) => {
+      const next = selected.includes(value) ? selected.filter((s) => s !== value) : [...selected, value]
+      onChange(next)
+    },
+    [selected, onChange],
+  )
+
+  return (
+    <div className="flex flex-col border rounded-md overflow-hidden">
+      <div className="flex items-center gap-2 border-b px-2 py-1.5">
+        <Search className="h-3.5 w-3.5 shrink-0 opacity-50" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="Search..."
+          className="flex h-6 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      <div className="max-h-40 overflow-y-auto p-1">
+        {isLoading ? (
+          <div className="flex flex-col gap-1 p-1">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-2 px-2 py-1">
+                <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
+                <Skeleton className="h-4 flex-1 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : displayOptions.length === 0 ? (
+          <div className="flex items-center justify-center py-2">
+            <Text.H6 color="foregroundMuted">{debouncedSearch ? "No matches" : "No values"}</Text.H6>
+          </div>
+        ) : (
+          displayOptions.map((value) => (
+            <button
+              key={value}
+              type="button"
+              className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-accent cursor-pointer"
+              onClick={() => toggle(value)}
+            >
+              <Checkbox checked={selected.includes(value)} onCheckedChange={() => toggle(value)} />
+              <span className="truncate">{value}</span>
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+function NumberRangeFilter({
+  minValue,
+  maxValue,
+  onMinChange,
+  onMaxChange,
+  minPlaceholder = "Min",
+  maxPlaceholder = "Max",
+}: {
+  readonly minValue: number | undefined
+  readonly maxValue: number | undefined
+  readonly onMinChange: (v: number | undefined) => void
+  readonly onMaxChange: (v: number | undefined) => void
+  readonly minPlaceholder?: string
+  readonly maxPlaceholder?: string
+}) {
+  const [localMin, setLocalMin] = useState(minValue?.toString() ?? "")
+  const [localMax, setLocalMax] = useState(maxValue?.toString() ?? "")
+  const debouncedMin = useDebouncedCallback(onMinChange, 400)
+  const debouncedMax = useDebouncedCallback(onMaxChange, 400)
+
+  // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
+  useEffect(() => {
+    setLocalMin(minValue?.toString() ?? "")
+  }, [minValue])
+  // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
+  useEffect(() => {
+    setLocalMax(maxValue?.toString() ?? "")
+  }, [maxValue])
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        min={0}
+        placeholder={minPlaceholder}
+        value={localMin}
+        onChange={(e) => {
+          setLocalMin(e.target.value)
+          const n = e.target.value === "" ? undefined : Number(e.target.value)
+          debouncedMin(n !== undefined && !Number.isNaN(n) ? n : undefined)
+        }}
+        className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+      />
+      <span className="text-xs text-muted-foreground">to</span>
+      <input
+        type="number"
+        min={0}
+        placeholder={maxPlaceholder}
+        value={localMax}
+        onChange={(e) => {
+          setLocalMax(e.target.value)
+          const n = e.target.value === "" ? undefined : Number(e.target.value)
+          debouncedMax(n !== undefined && !Number.isNaN(n) ? n : undefined)
+        }}
+        className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+      />
+    </div>
+  )
+}
+
+function MetadataFilter({
+  entries: committedEntries,
+  onChange,
+}: {
+  readonly entries: readonly { key: string; value: string }[]
+  readonly onChange: (entries: { key: string; value: string }[]) => void
+}) {
+  // Local state includes incomplete entries (empty key or value)
+  const [localEntries, setLocalEntries] = useState<{ key: string; value: string }[]>([...committedEntries])
+
+  // Sync when parent entries change externally (e.g. clear all)
+  // TODO(frontend-use-effect-policy): keep draft metadata rows in sync with externally-controlled filter updates.
+  useEffect(() => {
+    setLocalEntries([...committedEntries])
+  }, [committedEntries])
+
+  const propagate = useCallback(
+    (entries: { key: string; value: string }[]) => {
+      setLocalEntries(entries)
+      const valid = entries.filter((e) => e.key !== "" && e.value !== "")
+      onChange(valid)
+    },
+    [onChange],
+  )
+
+  const addEntry = useCallback(() => {
+    setLocalEntries((prev) => [...prev, { key: "", value: "" }])
+  }, [])
+
+  const removeEntry = useCallback(
+    (index: number) => {
+      propagate(localEntries.filter((_, i) => i !== index))
+    },
+    [localEntries, propagate],
+  )
+
+  const updateEntry = useCallback(
+    (index: number, field: "key" | "value", val: string) => {
+      propagate(localEntries.map((e, i) => (i === index ? { ...e, [field]: val } : e)))
+    },
+    [localEntries, propagate],
+  )
+
+  return (
+    <div className="flex flex-col gap-2">
+      {localEntries.map((entry, i) => (
+        <div key={i} className="flex items-center gap-1">
+          <input
+            type="text"
+            placeholder="Key"
+            value={entry.key}
+            onChange={(e) => updateEntry(i, "key", e.target.value)}
+            className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+          />
+          <span className="text-xs text-muted-foreground">=</span>
+          <input
+            type="text"
+            placeholder="Value"
+            value={entry.value}
+            onChange={(e) => updateEntry(i, "value", e.target.value)}
+            className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
+          />
+          <button
+            type="button"
+            className="shrink-0 p-1 text-muted-foreground hover:text-foreground cursor-pointer"
+            onClick={() => removeEntry(i)}
+          >
+            <Trash2Icon className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+        onClick={addEntry}
+      >
+        <PlusIcon className="h-3 w-3" />
+        Add condition
+      </button>
+    </div>
+  )
+}
+
+export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClose }: TraceFiltersSidebarProps) {
+  /** Update a field's conditions, or remove it if empty */
+  const setField = useCallback(
+    (field: string, conditions: FilterCondition[]) => {
+      onFiltersChange(setFieldConditions(filters, field, conditions))
+    },
+    [filters, onFiltersChange],
+  )
+
+  /** Toggle a value in an "in" array for a field */
+  const toggleInValue = useCallback(
+    (field: string, value: string) => {
+      const current = [...getInValues(filters, field)]
+      const next = current.includes(value) ? current.filter((s) => s !== value) : [...current, value]
+      setField(field, next.length > 0 ? [{ op: "in", value: next }] : [])
+    },
+    [filters, setField],
+  )
+
+  /** Set a contains filter for a text field */
+  const setContainsFilter = useCallback(
+    (field: string, value: string) => {
+      setField(field, value ? [{ op: "contains", value }] : [])
+    },
+    [setField],
+  )
+
+  /** Set min/max range for a numeric field */
+  const setRangeFilter = useCallback(
+    (field: string, min: number | undefined, max: number | undefined) => {
+      const conditions: FilterCondition[] = []
+      if (min !== undefined) conditions.push({ op: "gte", value: min })
+      if (max !== undefined) conditions.push({ op: "lte", value: max })
+      setField(field, conditions)
+    },
+    [setField],
+  )
+
+  const clearAll = useCallback(() => {
+    onFiltersChange({})
+  }, [onFiltersChange])
+
+  const hasActiveFilters = Object.keys(filters).length > 0
+  const statusValues = getInValues(filters, "status")
+
+  // Collect metadata.* fields for the metadata filter
+  const metadataEntries = useMemo(() => {
+    const entries: { key: string; value: string }[] = []
+    for (const [field, conditions] of Object.entries(filters)) {
+      if (!field.startsWith("metadata.")) continue
+      const key = field.slice("metadata.".length)
+      for (const cond of conditions) {
+        if (cond.op === "eq" && typeof cond.value === "string") {
+          entries.push({ key, value: cond.value })
+        }
+      }
+    }
+    return entries
+  }, [filters])
+
+  const handleMetadataChange = useCallback(
+    (entries: { key: string; value: string }[]) => {
+      // Remove existing metadata.* fields, keep the rest
+      const next: Record<string, readonly FilterCondition[]> = {}
+      for (const [key, value] of Object.entries(filters)) {
+        if (!key.startsWith("metadata.")) next[key] = value
+      }
+      // Add new entries
+      for (const entry of entries) {
+        next[`metadata.${entry.key}`] = [{ op: "eq", value: entry.value }]
+      }
+      onFiltersChange(next)
+    },
+    [filters, onFiltersChange],
+  )
+
+  return (
+    <div className="flex flex-col h-full w-[280px] min-w-[280px] shrink-0 border-r bg-background">
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <Text.H5>Filters</Text.H5>
+        <div className="flex items-center gap-1">
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" flat onClick={clearAll}>
+              <Text.H6>Clear all</Text.H6>
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" flat onClick={onClose}>
+            <XIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-col px-4 overflow-y-auto flex-1">
+        <CollapsibleSection label="Status" defaultOpen={statusValues.length > 0}>
+          {STATUS_OPTIONS.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => toggleInValue("status", status)}
+            >
+              <Checkbox
+                checked={statusValues.includes(status)}
+                onCheckedChange={() => toggleInValue("status", status)}
+              />
+              <Text.H5 color="foregroundMuted">{status.toUpperCase()}</Text.H5>
+            </button>
+          ))}
+        </CollapsibleSection>
+
+        {TRACE_TEXT_FILTER_FIELDS.map(({ label, field, placeholder }) => {
+          const value = getTextFilterValue(filters, field)
+
+          return (
+            <CollapsibleSection key={field} label={label} defaultOpen={!!value}>
+              <DebouncedInput
+                placeholder={placeholder}
+                size="sm"
+                value={value}
+                onDebouncedChange={(nextValue) => setContainsFilter(field, nextValue)}
+              />
+            </CollapsibleSection>
+          )
+        })}
+
+        {TRACE_MULTI_SELECT_FIELDS.map(({ label, field }) => {
+          const selectedValues = getInValues(filters, field)
+
+          return (
+            <CollapsibleSection key={field} label={label} defaultOpen={selectedValues.length > 0}>
+              <MultiSelectFilter
+                projectId={projectId}
+                column={field}
+                selected={selectedValues}
+                onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
+              />
+            </CollapsibleSection>
+          )
+        })}
+
+        {TRACE_NUMBER_RANGE_FIELDS.map(({ label, field }) => {
+          const range = getRangeValues(filters, field)
+
+          return (
+            <CollapsibleSection key={field} label={label} defaultOpen={!!filters[field]}>
+              <NumberRangeFilter
+                minValue={range.min}
+                maxValue={range.max}
+                onMinChange={(min) => setRangeFilter(field, min, range.max)}
+                onMaxChange={(max) => setRangeFilter(field, range.min, max)}
+              />
+            </CollapsibleSection>
+          )
+        })}
+
+        <CollapsibleSection label="Metadata" defaultOpen={metadataEntries.length > 0}>
+          <MetadataFilter entries={metadataEntries} onChange={handleMetadataChange} />
+        </CollapsibleSection>
+      </div>
+    </div>
+  )
+}

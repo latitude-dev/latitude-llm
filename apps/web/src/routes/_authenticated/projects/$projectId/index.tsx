@@ -1,3 +1,4 @@
+import { type FilterSet, filterSetSchema } from "@domain/shared"
 import {
   Button,
   InfiniteTable,
@@ -11,19 +12,46 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { createFileRoute } from "@tanstack/react-router"
-import { AppWindowIcon, CalendarIcon, ChevronDown, Columns2Icon, DatabaseIcon, FilterIcon } from "lucide-react"
+import { AppWindowIcon, ChevronDown, Columns2Icon, DatabaseIcon, FilterIcon } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { z } from "zod"
 import { useTracesCount, useTracesInfiniteScroll } from "../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useSelectableRows } from "../../../../lib/hooks/useSelectableRows.ts"
+import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
+import { TraceFiltersSidebar } from "./-components/trace-filters-sidebar.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
 
 const tracesSearchSchema = z.object({
   traceId: z.string().optional(),
+  filtersOpen: z.boolean().optional(),
+  filters: z.string().optional(), // JSON-encoded FilterSet
 })
+
+type TracesSearch = z.infer<typeof tracesSearchSchema>
+
+function parseFilters(raw?: string): FilterSet {
+  if (!raw) return {}
+  try {
+    return filterSetSchema.parse(JSON.parse(raw))
+  } catch {
+    return {}
+  }
+}
+
+function serializeFilters(filters: FilterSet): string | undefined {
+  const keys = Object.keys(filters)
+  return keys.length > 0 ? JSON.stringify(filters) : undefined
+}
+
+function getTimeFilterValue(filters: FilterSet, op: "gte" | "lte"): string | undefined {
+  const conds = filters.startTime
+  if (!conds) return undefined
+  const match = conds.find((c) => c.op === op)
+  return match ? String(match.value) : undefined
+}
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   component: TracesPage,
@@ -134,15 +162,40 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
   },
 ]
 
+function useTraceFiltersFromSearch(): {
+  filters: FilterSet
+  filtersOpen: boolean
+  activeTraceId: string | undefined
+} {
+  const search = Route.useSearch()
+  const filters = useMemo(() => parseFilters(search.filters), [search.filters])
+  return { filters, filtersOpen: search.filtersOpen ?? false, activeTraceId: search.traceId }
+}
+
 function TracesPage() {
   const { projectId } = Route.useParams()
-  const { traceId: activeTraceId } = Route.useSearch()
+  const { filters, filtersOpen, activeTraceId } = useTraceFiltersFromSearch()
   const navigate = Route.useNavigate()
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
 
-  const { data: traces, isLoading, infiniteScroll } = useTracesInfiniteScroll({ projectId, sorting })
-  const { totalCount } = useTracesCount({ projectId })
+  const hasActiveFilters = Object.keys(filters).length > 0
+  const timeFrom = getTimeFilterValue(filters, "gte")
+  const timeTo = getTimeFilterValue(filters, "lte")
+
+  const {
+    data: traces,
+    isLoading,
+    infiniteScroll,
+  } = useTracesInfiniteScroll({
+    projectId,
+    sorting,
+    ...(hasActiveFilters ? { filters } : {}),
+  })
+  const { totalCount } = useTracesCount({
+    projectId,
+    ...(hasActiveFilters ? { filters } : {}),
+  })
 
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
   const selection = useSelectableRows({
@@ -159,8 +212,14 @@ function TracesPage() {
 
   const onRowClick = useCallback(
     (t: TraceRecord) => {
+      const selection = window.getSelection()
+      if (selection && selection.toString().length > 0) return
+
       navigate({
-        search: t.traceId === activeTraceId ? {} : { traceId: t.traceId },
+        search: (prev: TracesSearch) => ({
+          ...prev,
+          traceId: t.traceId === activeTraceId ? undefined : t.traceId,
+        }),
         replace: true,
       })
     },
@@ -169,8 +228,7 @@ function TracesPage() {
 
   const closeDrawer = useCallback(() => {
     navigate({
-      to: ".",
-      search: {},
+      search: (prev: TracesSearch) => ({ ...prev, traceId: undefined }),
       replace: true,
     })
   }, [navigate])
@@ -187,19 +245,52 @@ function TracesPage() {
                   <Text.H6>All logs</Text.H6>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm" flat disabled>
-                  <CalendarIcon className="h-4 w-4" />
-                  <Text.H6>Last 7 days</Text.H6>
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
+                <TimeFilterDropdown
+                  {...(timeFrom ? { startTimeFrom: timeFrom } : {})}
+                  {...(timeTo ? { startTimeTo: timeTo } : {})}
+                  onChange={(from, to) => {
+                    const next = { ...filters }
+                    if (from || to) {
+                      const conditions = [
+                        ...(from ? [{ op: "gte" as const, value: from }] : []),
+                        ...(to ? [{ op: "lte" as const, value: to }] : []),
+                      ]
+                      next.startTime = conditions
+                    } else {
+                      delete next.startTime
+                    }
+                    navigate({
+                      search: (prev: TracesSearch) => ({
+                        ...prev,
+                        filters: serializeFilters(next),
+                      }),
+                      replace: true,
+                    })
+                  }}
+                />
                 <Button variant="outline" size="sm" flat disabled>
                   <Columns2Icon className="h-4 w-4" />
                   <Text.H6>Columns</Text.H6>
                   <ChevronDown className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="sm" flat disabled>
+                <Button
+                  variant={filtersOpen ? "outline" : "ghost"}
+                  size="sm"
+                  flat
+                  onClick={() =>
+                    navigate({
+                      search: (prev: TracesSearch) => ({ ...prev, filtersOpen: !filtersOpen || undefined }),
+                      replace: true,
+                    })
+                  }
+                >
                   <FilterIcon className="h-4 w-4" />
                   <Text.H6>Filters</Text.H6>
+                  {hasActiveFilters && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
+                      {Object.keys(filters).length}
+                    </span>
+                  )}
                 </Button>
                 {selection.selectedCount > 0 && (
                   <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
@@ -212,25 +303,47 @@ function TracesPage() {
                 <Input placeholder="Search traces" size="sm" className="w-60" disabled />
               </Layout.ActionRowItem>
             </Layout.ActionsRow>
-            <div className="w-full flex flex-col bg-secondary rounded-lg p-4 min-h-[144px] items-center justify-center">
-              <Text.H5 color="foregroundMuted">Coming soon</Text.H5>
-            </div>
           </Layout.Actions>
-          <Layout.List>
-            <InfiniteTable
-              data={traces}
-              isLoading={isLoading}
-              columns={columns}
-              getRowKey={getRowKey}
-              onRowClick={onRowClick}
-              activeRowKey={activeTraceId}
-              selection={selection}
-              infiniteScroll={infiniteScroll}
-              sorting={sorting}
-              defaultSorting={DEFAULT_SORTING}
-              onSortChange={setSorting}
-            />
-          </Layout.List>
+          <div className="flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden">
+            {filtersOpen && (
+              <TraceFiltersSidebar
+                projectId={projectId}
+                filters={filters}
+                onFiltersChange={(next) => {
+                  navigate({
+                    search: (prev: TracesSearch) => ({
+                      ...prev,
+                      filtersOpen: true,
+                      filters: serializeFilters(next),
+                    }),
+                    replace: true,
+                  })
+                }}
+                onClose={() =>
+                  navigate({
+                    search: (prev: TracesSearch) => ({ ...prev, filtersOpen: undefined }),
+                    replace: true,
+                  })
+                }
+              />
+            )}
+            <Layout.List>
+              <InfiniteTable
+                data={traces}
+                isLoading={isLoading}
+                columns={columns}
+                getRowKey={getRowKey}
+                onRowClick={onRowClick}
+                {...(activeTraceId ? { activeRowKey: activeTraceId } : {})}
+                selection={selection}
+                infiniteScroll={infiniteScroll}
+                sorting={sorting}
+                defaultSorting={DEFAULT_SORTING}
+                onSortChange={setSorting}
+                blankSlate={hasActiveFilters ? "No traces match the current filters" : "No traces found"}
+              />
+            </Layout.List>
+          </div>
         </Layout.Content>
         {activeTraceId ? (
           <Layout.Aside>

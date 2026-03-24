@@ -1,9 +1,11 @@
+import type { FilterSet } from "@domain/shared"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   countTracesByProject,
   getTraceDetail,
+  getTraceDistinctValues,
   listTracesByProject,
   type TraceDetailRecord,
   type TraceRecord,
@@ -14,9 +16,11 @@ const BATCH_SIZE = 50
 export function useTracesInfiniteScroll({
   projectId,
   sorting,
+  filters,
 }: {
   readonly projectId: string
   readonly sorting: InfiniteTableSorting
+  readonly filters?: FilterSet
 }) {
   const {
     data: paginatedData,
@@ -25,7 +29,7 @@ export function useTracesInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["traces", projectId, sorting],
+    queryKey: ["traces", projectId, sorting, filters],
     queryFn: async ({ pageParam }) => {
       const result = await listTracesByProject({
         data: {
@@ -34,6 +38,7 @@ export function useTracesInfiniteScroll({
           cursor: pageParam,
           sortBy: sorting.column,
           sortDirection: sorting.direction,
+          filters,
         },
       })
       return result ?? { traces: [], hasMore: false }
@@ -59,14 +64,30 @@ export function useTracesInfiniteScroll({
   return { data, isLoading, infiniteScroll }
 }
 
-export function useTracesCount({ projectId }: { readonly projectId: string }) {
+export function useTracesCount({ projectId, filters }: { readonly projectId: string; readonly filters?: FilterSet }) {
   const { data: totalCount = 0, isLoading } = useQuery({
-    queryKey: ["traces-count", projectId],
-    queryFn: () => countTracesByProject({ data: { projectId } }),
+    queryKey: ["traces-count", projectId, filters],
+    queryFn: () => countTracesByProject({ data: { projectId, filters } }),
     staleTime: 30_000,
   })
 
   return { totalCount, isLoading }
+}
+
+export function useTraceDistinctValues({
+  projectId,
+  column,
+  search,
+}: {
+  readonly projectId: string
+  readonly column: "tags" | "models" | "providers" | "serviceNames"
+  readonly search?: string
+}) {
+  return useQuery({
+    queryKey: ["trace-distinct", projectId, column, search],
+    queryFn: () => getTraceDistinctValues({ data: { projectId, column, limit: 50, ...(search ? { search } : {}) } }),
+    staleTime: 60_000,
+  })
 }
 
 export function useTraceDetail({ projectId, traceId }: { readonly projectId: string; readonly traceId: string }) {

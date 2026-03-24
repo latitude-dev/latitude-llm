@@ -1,5 +1,5 @@
-import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import type { Trace, TraceDetail } from "@domain/spans"
+import { filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import type { Trace, TraceDetail, TraceDistinctColumn } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
@@ -105,6 +105,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       cursor: traceListCursorSchema.optional(),
       sortBy: z.string().optional(),
       sortDirection: z.enum(["asc", "desc"]).optional(),
+      filters: filterSetSchema.optional(),
     }),
   )
   .handler(async ({ data }): Promise<TraceListResult> => {
@@ -122,6 +123,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
             ...(data.cursor ? { cursor: data.cursor } : {}),
             ...(data.sortBy ? { sortBy: data.sortBy } : {}),
             ...(data.sortDirection ? { sortDirection: data.sortDirection } : {}),
+            ...(data.filters ? { filters: data.filters } : {}),
           },
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
@@ -139,7 +141,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
 
 export const countTracesByProject = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ projectId: z.string() }))
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<number> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -150,6 +152,7 @@ export const countTracesByProject = createServerFn({ method: "GET" })
         return yield* repo.countByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )
@@ -180,4 +183,34 @@ export const getTraceDetail = createServerFn({ method: "GET" })
     // The runtime values are correct — this is a type-only bridge across the
     // serialization boundary. The consumer (useTraceDetail) casts back.
     return result as never
+  })
+
+const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
+
+export const getTraceDistinctValues = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      column: z.enum(DISTINCT_COLUMNS),
+      limit: z.number().optional(),
+      search: z.string().optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<readonly string[]> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.distinctFilterValues({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          column: data.column as TraceDistinctColumn,
+          ...(data.limit !== undefined ? { limit: data.limit } : {}),
+          ...(data.search ? { search: data.search } : {}),
+        })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
   })

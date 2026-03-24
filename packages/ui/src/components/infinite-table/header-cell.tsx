@@ -160,7 +160,7 @@ export function HeaderCell({
     <th
       ref={thRef}
       className={cn(
-        "relative h-12 align-middle",
+        "relative h-12 align-middle overflow-hidden",
         "px-4", // matches TH_HORIZONTAL_PADDING
         className,
       )}
