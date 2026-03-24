@@ -665,6 +665,7 @@ function DatasetRowsView({
               getRowKey={getRowKey}
               onRowClick={openRow}
               activeRowKey={rid ?? undefined}
+              activeRowAutoScroll
               selection={selection}
               infiniteScroll={infiniteScroll}
               sorting={sorting}

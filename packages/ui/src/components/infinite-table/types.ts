@@ -38,6 +38,7 @@ export interface InfiniteTableProps<T> {
   getRowKey: (row: T) => string
   onRowClick?: (row: T) => void
   activeRowKey?: string
+  activeRowAutoScroll?: boolean
   selection?: InfiniteTableSelection
   infiniteScroll?: InfiniteTableInfiniteScroll
   sorting?: InfiniteTableSorting
