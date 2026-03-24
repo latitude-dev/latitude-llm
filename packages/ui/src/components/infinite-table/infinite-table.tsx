@@ -24,7 +24,7 @@ export function InfiniteTable<T>({
   getRowKey,
   onRowClick,
   activeRowKey,
-  activeRowAutoScroll = true,
+  activeRowAutoScroll = false,
   selection,
   infiniteScroll,
   sorting,

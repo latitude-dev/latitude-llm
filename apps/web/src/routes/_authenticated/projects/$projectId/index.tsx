@@ -332,7 +332,6 @@ function TracesPage() {
                 getRowKey={getRowKey}
                 onRowClick={onRowClick}
                 {...(activeTraceId ? { activeRowKey: activeTraceId } : {})}
-                activeRowAutoScroll={false}
                 selection={selection}
                 infiniteScroll={infiniteScroll}
                 sorting={sorting}
