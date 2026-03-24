@@ -19,7 +19,7 @@ export interface TraceRecord {
   readonly startTime: string
   readonly endTime: string
   readonly durationNs: number
-  readonly status: string
+  readonly timeToFirstTokenNs: number
   readonly tokensInput: number
   readonly tokensOutput: number
   readonly tokensCacheRead: number
@@ -49,7 +49,7 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
   startTime: trace.startTime.toISOString(),
   endTime: trace.endTime.toISOString(),
   durationNs: trace.durationNs,
-  status: trace.status,
+  timeToFirstTokenNs: trace.timeToFirstTokenNs,
   tokensInput: trace.tokensInput,
   tokensOutput: trace.tokensOutput,
   tokensCacheRead: trace.tokensCacheRead,

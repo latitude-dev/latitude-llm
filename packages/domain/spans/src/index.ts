@@ -1,5 +1,5 @@
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
-export type { Trace, TraceDetail, TraceStatus } from "./entities/trace.ts"
+export type { Trace, TraceDetail } from "./entities/trace.ts"
 export type { SpanListOptions, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
-import type { OtlpKeyValue } from "../types.ts"
+import type { OtlpEvent, OtlpKeyValue } from "../types.ts"
 import { resolveAttributes } from "./index.ts"
+import { resolvePerformance } from "./performance.ts"
+import { resolveToolExecution } from "./tool-execution.ts"
 import { first, fromFloat, fromInt, fromString, fromStringArray } from "./utils.ts"
 
 function strAttr(key: string, value: string): OtlpKeyValue {
@@ -15,12 +17,35 @@ function floatAttr(key: string, value: number): OtlpKeyValue {
   return { key, value: { doubleValue: value } }
 }
 
+function boolAttr(key: string, value: boolean): OtlpKeyValue {
+  return { key, value: { boolValue: value } }
+}
+
 function arrayAttr(key: string, values: string[]): OtlpKeyValue {
   return {
     key,
     value: {
       arrayValue: {
         values: values.map((v) => ({ stringValue: v })),
+      },
+    },
+  }
+}
+
+function kvlistAttr(key: string, values: Record<string, string | number>): OtlpKeyValue {
+  return {
+    key,
+    value: {
+      kvlistValue: {
+        values: Object.entries(values).map(([k, v]) => ({
+          key: k,
+          value:
+            typeof v === "string"
+              ? { stringValue: v }
+              : Number.isInteger(v)
+                ? { intValue: String(v) }
+                : { doubleValue: v },
+        })),
       },
     },
   }
@@ -419,6 +444,299 @@ describe("resolveAttributes", () => {
       const attrs: OtlpKeyValue[] = [strAttr("error.type", "TimeoutError")]
       const result = resolveAttributes(attrs, "ok")
       expect(result.errorType).toBe("")
+    })
+  })
+})
+
+describe("resolvePerformance", () => {
+  describe("TTFT from attributes", () => {
+    it("resolves from gen_ai.server.time_to_first_token", () => {
+      const result = resolvePerformance({
+        spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 500_000_000)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(500_000_000)
+    })
+
+    it("resolves from llm.latency.time_to_first_token", () => {
+      const result = resolvePerformance({
+        spanAttrs: [intAttr("llm.latency.time_to_first_token", 300_000_000)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(300_000_000)
+    })
+
+    it("ignores zero TTFT attribute", () => {
+      const result = resolvePerformance({
+        spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 0)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(0)
+    })
+  })
+
+  describe("TTFT from events", () => {
+    it("computes TTFT from gen_ai.content.completion event timestamp", () => {
+      const events: OtlpEvent[] = [{ name: "gen_ai.content.completion", timeUnixNano: "1710590400500000000" }]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(500_000_000)
+    })
+
+    it("computes TTFT from gen_ai.choice event (deprecated)", () => {
+      const events: OtlpEvent[] = [{ name: "gen_ai.choice", timeUnixNano: "1710590400200000000" }]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(200_000_000)
+    })
+
+    it("picks the earliest completion event when multiple exist", () => {
+      const events: OtlpEvent[] = [
+        { name: "gen_ai.content.completion", timeUnixNano: "1710590400800000000" },
+        { name: "gen_ai.content.completion", timeUnixNano: "1710590400300000000" },
+        { name: "gen_ai.content.completion", timeUnixNano: "1710590400600000000" },
+      ]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(300_000_000)
+    })
+
+    it("ignores events with missing names or timestamps", () => {
+      const events: OtlpEvent[] = [
+        { timeUnixNano: "1710590400300000000" },
+        { name: "gen_ai.content.completion" },
+        { name: "unrelated.event", timeUnixNano: "1710590400100000000" },
+      ]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(0)
+    })
+
+    it("returns 0 when startTimeUnixNano is empty", () => {
+      const events: OtlpEvent[] = [{ name: "gen_ai.content.completion", timeUnixNano: "1710590400300000000" }]
+      const result = resolvePerformance({ spanAttrs: [], events, startTimeUnixNano: "" })
+      expect(result.timeToFirstTokenNs).toBe(0)
+    })
+  })
+
+  describe("TTFT precedence", () => {
+    it("attribute takes precedence over events", () => {
+      const events: OtlpEvent[] = [{ name: "gen_ai.content.completion", timeUnixNano: "1710590400500000000" }]
+      const result = resolvePerformance({
+        spanAttrs: [intAttr("gen_ai.server.time_to_first_token", 123_000_000)],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(123_000_000)
+    })
+  })
+
+  describe("isStreaming detection", () => {
+    it("detects streaming from gen_ai.request.stream bool true", () => {
+      const result = resolvePerformance({
+        spanAttrs: [boolAttr("gen_ai.request.stream", true)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.isStreaming).toBe(true)
+    })
+
+    it("detects non-streaming from gen_ai.request.stream bool false", () => {
+      const result = resolvePerformance({
+        spanAttrs: [boolAttr("gen_ai.request.stream", false)],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.isStreaming).toBe(false)
+    })
+
+    it("detects streaming from gen_ai.request.stream string 'true'", () => {
+      const result = resolvePerformance({
+        spanAttrs: [strAttr("gen_ai.request.stream", "true")],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.isStreaming).toBe(true)
+    })
+
+    it("detects streaming from ai.settings.mode = 'stream'", () => {
+      const result = resolvePerformance({
+        spanAttrs: [strAttr("ai.settings.mode", "stream")],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.isStreaming).toBe(true)
+    })
+
+    it("does not detect streaming from ai.settings.mode = 'generate'", () => {
+      const result = resolvePerformance({
+        spanAttrs: [strAttr("ai.settings.mode", "generate")],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.isStreaming).toBe(false)
+    })
+  })
+
+  describe("streaming heuristic", () => {
+    it("infers streaming when TTFT > 0 and no explicit streaming attribute", () => {
+      const events: OtlpEvent[] = [{ name: "gen_ai.content.completion", timeUnixNano: "1710590400500000000" }]
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events,
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(500_000_000)
+      expect(result.isStreaming).toBe(true)
+    })
+
+    it("does not infer streaming when TTFT is 0", () => {
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(0)
+      expect(result.isStreaming).toBe(false)
+    })
+  })
+
+  describe("defaults", () => {
+    it("returns zero TTFT and false streaming when no data present", () => {
+      const result = resolvePerformance({
+        spanAttrs: [],
+        events: [],
+        startTimeUnixNano: "1710590400000000000",
+      })
+      expect(result.timeToFirstTokenNs).toBe(0)
+      expect(result.isStreaming).toBe(false)
+    })
+  })
+})
+
+describe("resolveToolExecution", () => {
+  it("returns empty when operation is not execute_tool", () => {
+    const attrs: OtlpKeyValue[] = [
+      strAttr("gen_ai.tool.call.id", "call_123"),
+      strAttr("gen_ai.tool.name", "get_weather"),
+      strAttr("gen_ai.tool.call.arguments", '{"city":"Barcelona"}'),
+      strAttr("gen_ai.tool.call.result", '{"temp":22}'),
+    ]
+    const result = resolveToolExecution(attrs, "chat")
+    expect(result.toolCallId).toBe("")
+    expect(result.toolName).toBe("")
+    expect(result.toolInput).toBe("")
+    expect(result.toolOutput).toBe("")
+  })
+
+  describe("GenAI v1.37+ convention", () => {
+    it("extracts from gen_ai.tool.* string attributes", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.tool.call.id", "call_weather_1"),
+        strAttr("gen_ai.tool.name", "get_weather"),
+        strAttr("gen_ai.tool.call.arguments", '{"city":"Barcelona"}'),
+        strAttr("gen_ai.tool.call.result", '{"temp":22,"condition":"sunny"}'),
+      ]
+      const result = resolveToolExecution(attrs, "execute_tool")
+      expect(result.toolCallId).toBe("call_weather_1")
+      expect(result.toolName).toBe("get_weather")
+      expect(result.toolInput).toBe('{"city":"Barcelona"}')
+      expect(result.toolOutput).toBe('{"temp":22,"condition":"sunny"}')
+    })
+
+    it("handles gen_ai.tool.call.arguments as kvlistValue", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.tool.call.id", "call_1"),
+        strAttr("gen_ai.tool.name", "calculate"),
+        kvlistAttr("gen_ai.tool.call.arguments", { a: 23, b: 87 }),
+        strAttr("gen_ai.tool.call.result", "2001"),
+      ]
+      const result = resolveToolExecution(attrs, "execute_tool")
+      expect(result.toolCallId).toBe("call_1")
+      expect(result.toolName).toBe("calculate")
+      // OTLP intValues are strings, so kvlist integers serialize as strings
+      expect(result.toolInput).toBe('{"a":"23","b":"87"}')
+      expect(result.toolOutput).toBe("2001")
+    })
+
+    it("handles gen_ai.tool.call.result as kvlistValue", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("gen_ai.tool.name", "get_weather"),
+        kvlistAttr("gen_ai.tool.call.result", { temp: 22, condition: "sunny" }),
+      ]
+      const result = resolveToolExecution(attrs, "execute_tool")
+      expect(result.toolOutput).toBe('{"temp":"22","condition":"sunny"}')
+    })
+  })
+
+  describe("Vercel AI SDK convention", () => {
+    it("extracts from ai.toolCall.* attributes", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("ai.toolCall.id", "call_abc"),
+        strAttr("ai.toolCall.name", "search"),
+        strAttr("ai.toolCall.args", '{"query":"hotels"}'),
+        strAttr("ai.toolCall.result", '{"results":[]}'),
+      ]
+      const result = resolveToolExecution(attrs, "execute_tool")
+      expect(result.toolCallId).toBe("call_abc")
+      expect(result.toolName).toBe("search")
+      expect(result.toolInput).toBe('{"query":"hotels"}')
+      expect(result.toolOutput).toBe('{"results":[]}')
+    })
+  })
+
+  describe("OpenInference convention", () => {
+    it("extracts from tool.name, tool_call.id, input.value, output.value", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("tool_call.id", "call_xyz"),
+        strAttr("tool.name", "get_weather"),
+        strAttr("input.value", '{"city":"Paris"}'),
+        strAttr("output.value", '{"temp":18}'),
+      ]
+      const result = resolveToolExecution(attrs, "execute_tool")
+      expect(result.toolCallId).toBe("call_xyz")
+      expect(result.toolName).toBe("get_weather")
+      expect(result.toolInput).toBe('{"city":"Paris"}')
+      expect(result.toolOutput).toBe('{"temp":18}')
+    })
+  })
+
+  describe("OpenLLMetry / Traceloop convention", () => {
+    it("extracts from traceloop.entity.* attributes", () => {
+      const attrs: OtlpKeyValue[] = [
+        strAttr("traceloop.entity.name", "get_weather"),
+        strAttr("traceloop.entity.input", '{"city":"London"}'),
+        strAttr("traceloop.entity.output", '{"temp":15,"rain":true}'),
+      ]
+      const result = resolveToolExecution(attrs, "execute_tool")
+      expect(result.toolName).toBe("get_weather")
+      expect(result.toolInput).toBe('{"city":"London"}')
+      expect(result.toolOutput).toBe('{"temp":15,"rain":true}')
+    })
+  })
+
+  describe("defaults", () => {
+    it("returns empty strings when no matching attributes are present", () => {
+      const result = resolveToolExecution([], "execute_tool")
+      expect(result.toolCallId).toBe("")
+      expect(result.toolName).toBe("")
+      expect(result.toolInput).toBe("")
+      expect(result.toolOutput).toBe("")
     })
   })
 })

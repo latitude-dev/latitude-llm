@@ -78,22 +78,17 @@ export function TraceDetailDrawer({
               )}
               {isRecordLoading ? (
                 <Skeleton className="h-6 w-12" />
-              ) : (
+              ) : traceRecord && traceRecord.errorCount > 0 ? (
                 <span
                   className={cn(
                     "inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5",
                     "text-xs leading-4 font-medium",
-                    "bg-muted text-muted-foreground",
-                    {
-                      "bg-red-500 text-white": traceRecord?.status === "error",
-                      "bg-green-500 text-white": traceRecord?.status === "success",
-                      "bg-yellow-500 text-white": traceRecord?.status === "warning",
-                    },
+                    "bg-red-500 text-white",
                   )}
                 >
-                  {traceRecord?.status?.toUpperCase() ?? "UNKNOWN"}
+                  {traceRecord.errorCount} {traceRecord.errorCount === 1 ? "error" : "errors"}
                 </span>
-              )}
+              ) : null}
             </div>
             <button
               type="button"

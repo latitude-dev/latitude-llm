@@ -48,12 +48,18 @@ export type SpanRow = {
   cost_output_microcents: number
   cost_total_microcents: number
   cost_is_estimated: number
+  time_to_first_token_ns: number
+  is_streaming: number
   response_id: string
   finish_reasons: string[]
   input_messages: string
   output_messages: string
   system_instructions: string
   tool_definitions: string
+  tool_call_id: string
+  tool_name: string
+  tool_input: string
+  tool_output: string
   attr_string: Record<string, string>
   attr_int: Record<string, number>
   attr_float: Record<string, number>
@@ -240,12 +246,18 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     cost_output_microcents: 0,
     cost_total_microcents: 0,
     cost_is_estimated: 0,
+    time_to_first_token_ns: 0,
+    is_streaming: 0,
     response_id: "",
     finish_reasons: [],
     input_messages: "",
     output_messages: "",
     system_instructions: "",
     tool_definitions: "",
+    tool_call_id: "",
+    tool_name: "",
+    tool_input: "",
+    tool_output: "",
     attr_string: {},
     attr_int: {},
     attr_float: {},
@@ -307,17 +319,30 @@ function makeLlmSpan({
   if (temperature !== undefined) {
     span.attr_float = { "gen_ai.request.temperature": temperature }
   }
+
+  const isStreaming = Math.random() > 0.4
+  if (isStreaming && outputTokens > 0) {
+    span.is_streaming = 1
+    const durationNs = base.durationMs * 1_000_000
+    span.time_to_first_token_ns = Math.floor(durationNs * randFloat(0.05, 0.3))
+  }
+
   return span
 }
 
 function makeToolSpan({ base, tool }: { base: SpanBase; tool: ToolConfig }): SpanRow {
   const span = makeBaseSpan(base)
+  const callId = `call_${randomHex(24)}`
   span.name = `execute_tool ${tool.name}`
   span.operation = "execute_tool"
   span.kind = 2 // INTERNAL
+  span.tool_call_id = callId
+  span.tool_name = tool.name
+  span.tool_input = JSON.stringify(tool.sampleArgs)
+  span.tool_output = JSON.stringify(tool.sampleResult)
   span.attr_string = {
     "gen_ai.tool.name": tool.name,
-    "gen_ai.tool.call.id": `call_${randomHex(24)}`,
+    "gen_ai.tool.call.id": callId,
     "gen_ai.tool.type": "function",
   }
   return span

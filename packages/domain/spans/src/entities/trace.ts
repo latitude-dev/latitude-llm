@@ -1,8 +1,6 @@
 import type { ExternalUserId, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
-export type TraceStatus = "unset" | "ok" | "error"
-
 /**
  * Trace — the listing shape returned by project-scoped queries.
  *
@@ -20,8 +18,7 @@ export interface Trace {
   readonly startTime: Date
   readonly endTime: Date
   readonly durationNs: number
-
-  readonly status: TraceStatus
+  readonly timeToFirstTokenNs: number
 
   readonly tokensInput: number
   readonly tokensOutput: number

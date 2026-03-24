@@ -61,6 +61,7 @@ const LIST_COLUMNS = `
   tokens_cache_create, tokens_reasoning,
   cost_input_microcents, cost_output_microcents,
   cost_total_microcents, cost_is_estimated,
+  time_to_first_token_ns, is_streaming,
   response_id, finish_reasons,
   attr_string, attr_int, attr_float, attr_bool,
   resource_string, scope_name, scope_version,
@@ -103,6 +104,8 @@ type SpanListRow = {
   cost_output_microcents: string
   cost_total_microcents: string
   cost_is_estimated: number
+  time_to_first_token_ns: string
+  is_streaming: number
   response_id: string
   finish_reasons: string[]
   attr_string: Record<string, string>
@@ -120,6 +123,10 @@ type SpanDetailRow = SpanListRow & {
   output_messages: string
   system_instructions: string
   tool_definitions: string
+  tool_call_id: string
+  tool_name: string
+  tool_input: string
+  tool_output: string
 }
 
 const toBaseFields = (row: SpanListRow) => ({
@@ -158,6 +165,8 @@ const toBaseFields = (row: SpanListRow) => ({
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
   costIsEstimated: row.cost_is_estimated !== 0,
+  timeToFirstTokenNs: Number(row.time_to_first_token_ns),
+  isStreaming: row.is_streaming !== 0,
   responseId: row.response_id,
   finishReasons: row.finish_reasons,
   attrString: row.attr_string,
@@ -207,6 +216,10 @@ const toDomainSpanDetail = (row: SpanDetailRow): SpanDetail => ({
   outputMessages: parseMessages(row.output_messages),
   systemInstructions: parseSystem(row.system_instructions),
   toolDefinitions: parseToolDefinitions(row.tool_definitions),
+  toolCallId: row.tool_call_id,
+  toolName: row.tool_name,
+  toolInput: row.tool_input,
+  toolOutput: row.tool_output,
 })
 
 const toInsertRow = (span: SpanDetail) => ({
@@ -245,6 +258,8 @@ const toInsertRow = (span: SpanDetail) => ({
   cost_output_microcents: span.costOutputMicrocents,
   cost_total_microcents: span.costTotalMicrocents,
   cost_is_estimated: span.costIsEstimated ? 1 : 0,
+  time_to_first_token_ns: span.timeToFirstTokenNs,
+  is_streaming: span.isStreaming ? 1 : 0,
   response_id: span.responseId,
   finish_reasons: span.finishReasons,
   attr_string: span.attrString,
@@ -258,6 +273,10 @@ const toInsertRow = (span: SpanDetail) => ({
   output_messages: span.outputMessages.length > 0 ? JSON.stringify(span.outputMessages) : "",
   system_instructions: span.systemInstructions.length > 0 ? JSON.stringify(span.systemInstructions) : "",
   tool_definitions: span.toolDefinitions.length > 0 ? JSON.stringify(span.toolDefinitions) : "",
+  tool_call_id: span.toolCallId,
+  tool_name: span.toolName,
+  tool_input: span.toolInput,
+  tool_output: span.toolOutput,
   ingested_at: toClickhouseDateTime(span.ingestedAt),
 })
 

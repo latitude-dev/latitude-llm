@@ -58,11 +58,6 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   validateSearch: tracesSearchSchema,
 })
 
-function StatusBadge({ status }: { status: string }) {
-  const color = status === "error" ? "destructive" : "foregroundMuted"
-  return <Text.H5 color={color}>{status.toUpperCase()}</Text.H5>
-}
-
 function TagList({ tags }: { tags: readonly string[] }) {
   if (tags.length === 0) return <Text.H5 color="foregroundMuted">-</Text.H5>
   return (
@@ -105,6 +100,13 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
     render: (t) => formatDuration(t.durationNs),
   },
   {
+    key: "ttft",
+    header: "Time To First Token",
+    align: "end",
+    sortKey: "ttft",
+    render: (t) => (t.timeToFirstTokenNs > 0 ? formatDuration(t.timeToFirstTokenNs) : "-"),
+  },
+  {
     key: "cost",
     header: "Cost",
     align: "end",
@@ -120,11 +122,6 @@ const columns: InfiniteTableColumn<TraceRecord>[] = [
     key: "userId",
     header: "User ID",
     render: (t) => t.userId,
-  },
-  {
-    key: "status",
-    header: "Status",
-    render: (t) => <StatusBadge status={t.status} />,
   },
   {
     key: "models",

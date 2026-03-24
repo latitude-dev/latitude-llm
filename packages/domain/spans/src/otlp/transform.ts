@@ -3,6 +3,8 @@ import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import { stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
 import { resolveAttributes } from "./resolvers/index.ts"
+import { resolvePerformance } from "./resolvers/performance.ts"
+import { resolveToolExecution } from "./resolvers/tool-execution.ts"
 import type { OtlpAnyValue, OtlpExportTraceServiceRequest, OtlpResource, OtlpSpan } from "./types.ts"
 
 const INT_TO_SPAN_KIND: Record<number, SpanKind> = {
@@ -71,12 +73,19 @@ function transformSpan({
   ingestedAt: Date
 }): SpanDetail {
   const spanAttrs = span.attributes ?? []
+  const spanEvents = span.events ?? []
   const resourceAttrs = resource?.attributes ?? []
   const statusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
 
   const resolved = resolveAttributes(spanAttrs, statusCode)
   const content = parseContent(spanAttrs)
   const serviceName = stringAttr(resourceAttrs, "service.name") ?? ""
+  const performance = resolvePerformance({
+    spanAttrs,
+    events: spanEvents,
+    startTimeUnixNano: span.startTimeUnixNano,
+  })
+  const toolExecution = resolveToolExecution(spanAttrs, resolved.operation)
 
   const attrString: Record<string, string> = {}
   const attrInt: Record<string, number> = {}
@@ -138,6 +147,8 @@ function transformSpan({
     costOutputMicrocents: resolved.costOutputMicrocents,
     costTotalMicrocents: resolved.costTotalMicrocents,
     costIsEstimated: resolved.costIsEstimated,
+    timeToFirstTokenNs: performance.timeToFirstTokenNs,
+    isStreaming: performance.isStreaming,
     responseId: resolved.responseId,
     finishReasons: resolved.finishReasons,
     attrString,
@@ -151,6 +162,10 @@ function transformSpan({
     outputMessages: content.outputMessages,
     systemInstructions: content.systemInstructions,
     toolDefinitions: content.toolDefinitions,
+    toolCallId: toolExecution.toolCallId,
+    toolName: toolExecution.toolName,
+    toolInput: toolExecution.toolInput,
+    toolOutput: toolExecution.toolOutput,
     ingestedAt,
   }
 }
