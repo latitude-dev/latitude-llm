@@ -6,7 +6,7 @@ import { font } from "../../tokens/font.ts"
 import { boxShadow } from "../../tokens/shadow.ts"
 import { cn } from "../../utils/cn.ts"
 
-const outerElevation = cn("border-0 transition-shadow duration-200", boxShadow.sm, `hover:${boxShadow.lg}`)
+const outerElevation = cn("border-0 transition-shadow duration-200", boxShadow.sm, "hover:shadow-lg")
 
 const insetFaceHighlight =
   "shadow-[var(--button-face-inset-shadow)] group-hover:shadow-[var(--button-face-inset-shadow-hover)]"
@@ -82,10 +82,7 @@ export interface ButtonProps
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    { className, variant, size, asChild = false, isLoading = false, children, disabled, type = "button", ...props },
-    ref,
-  ) => {
+  ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
     const effectiveVariant = variant ?? "default"
 
     if (asChild) {
@@ -98,6 +95,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             className,
             isLoading && "animate-pulse",
           )}
+          disabled={disabled || isLoading}
+          aria-busy={isLoading ? "true" : undefined}
           {...props}
         >
           {children}
@@ -109,7 +108,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         {...props}
-        type={type}
         className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
         disabled={disabled || isLoading}
         aria-busy={isLoading ? "true" : undefined}
