@@ -8,6 +8,9 @@ latitude-lock.json
 .claude
 .codex
 .cursor
+!.cursor/
+.cursor/*
+!.cursor/environment.json
 .idea
 .vscode
 .opencode
