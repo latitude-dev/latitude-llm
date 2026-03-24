@@ -4,7 +4,11 @@ import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
 import { useState } from "react"
-import { countUserOrganizations, getOrganization } from "../domains/organizations/organizations.functions.ts"
+import {
+  countUserOrganizations,
+  getOrganization,
+  type OrganizationRecord,
+} from "../domains/organizations/organizations.functions.ts"
 import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
@@ -22,7 +26,10 @@ export const Route = createFileRoute("/_authenticated")({
     const organizationId =
       typeof sessionData.activeOrganizationId === "string" ? sessionData.activeOrganizationId : null
 
-    const [organization, orgCount] = await Promise.all([getOrganization(), countUserOrganizations()])
+    const [organization, orgCount]: [OrganizationRecord, number] = await Promise.all([
+      getOrganization(),
+      countUserOrganizations(),
+    ])
 
     return {
       user: session.user,
