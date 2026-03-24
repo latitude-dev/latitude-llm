@@ -61,6 +61,14 @@ ensure_env_files() {
   fi
 }
 
+load_development_env() {
+  info "Loading environment variables from .env.development."
+  set -a
+  # shellcheck disable=SC1091
+  source ".env.development"
+  set +a
+}
+
 start_infra_services() {
   info "Starting infrastructure services for web auth+traces manual testing."
   NODE_ENV=development docker compose up -d \
@@ -94,6 +102,7 @@ run_optional_seeds() {
 
 main() {
   ensure_env_files
+  load_development_env
   start_docker_daemon
   start_infra_services
   run_migrations
