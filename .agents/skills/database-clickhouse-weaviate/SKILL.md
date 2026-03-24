@@ -83,6 +83,7 @@ Use these authoring rules to reduce failures:
 - Keep migrations idempotent (`IF EXISTS` / `IF NOT EXISTS`) so retries are safe.
 - Prefer additive schema changes over destructive rewrites.
 - Keep DDL batches small; avoid chaining many dependent `ALTER` statements in one migration.
+- For tightly-coupled changes on the same table in replicated clusters, prefer one `ALTER TABLE ...` with multiple actions over multiple dependent ALTER statements.
 - If statement B depends on metadata introduced by statement A, prefer splitting them into separate migration files.
 - Avoid coupling view rebuilds and many base-table changes in one large migration when possible.
 - Run one migration runner per environment (never concurrent `ch:up` against the same cluster).
