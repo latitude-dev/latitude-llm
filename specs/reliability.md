@@ -2640,7 +2640,7 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Exit gate**: the system supports a stronger provisional workflow without changing the canonical issue entity or bringing back issue merging.
 
-### (LAT-TBD) Phase 25 - Provider/Model Settings And Hosted Execution Configuration
+### (LAT-486) Phase 25 - Provider/Model Settings And Hosted Execution Configuration
 
 **Depends on**: Phase 15, Phase 18
 
