@@ -13,6 +13,9 @@ warn() {
   echo "[cloud-start] WARNING: $*" >&2
 }
 
+did_pg_reset=0
+did_ch_reset=0
+
 is_docker_ready() {
   docker info >/dev/null 2>&1
 }
@@ -101,18 +104,59 @@ start_infra_services() {
     temporal-ui
 }
 
+run_postgres_migrations() {
+  if pnpm --filter @platform/db-postgres pg:migrate; then
+    return
+  fi
+
+  if [ "${LAT_CLOUD_RESET_ON_MIGRATION_FAILURE:-1}" != "1" ]; then
+    echo "[cloud-start] ERROR: Postgres migration failed and automatic reset is disabled." >&2
+    exit 1
+  fi
+
+  warn "Postgres migration failed, running pg:reset to reconcile existing volume state."
+  pnpm --filter @platform/db-postgres pg:reset
+  did_pg_reset=1
+}
+
+run_clickhouse_migrations() {
+  if pnpm --filter @platform/db-clickhouse ch:up; then
+    return
+  fi
+
+  if [ "${LAT_CLOUD_RESET_ON_MIGRATION_FAILURE:-1}" != "1" ]; then
+    echo "[cloud-start] ERROR: ClickHouse migration failed and automatic reset is disabled." >&2
+    exit 1
+  fi
+
+  warn "ClickHouse migration failed, running ch:reset to reconcile existing volume state."
+  pnpm --filter @platform/db-clickhouse ch:reset
+  did_ch_reset=1
+}
+
 run_migrations() {
   info "Running database migrations."
-  pnpm --filter @platform/db-postgres pg:migrate
-  pnpm --filter @platform/db-clickhouse ch:up
+  run_postgres_migrations
+  run_clickhouse_migrations
   pnpm --filter @platform/db-weaviate wv:migrate
 }
 
 run_optional_seeds() {
   if [ "${LAT_CLOUD_SEED_DATABASES:-1}" = "1" ]; then
     info "Seeding Postgres and ClickHouse defaults (LAT_CLOUD_SEED_DATABASES=1)."
-    pnpm --filter @platform/db-postgres pg:seed
-    pnpm --filter @platform/db-clickhouse ch:seed
+
+    if [ "$did_pg_reset" = "0" ]; then
+      pnpm --filter @platform/db-postgres pg:seed
+    else
+      info "Skipping pg:seed because pg:reset already seeded Postgres."
+    fi
+
+    if [ "$did_ch_reset" = "0" ]; then
+      pnpm --filter @platform/db-clickhouse ch:seed
+    else
+      info "Skipping ch:seed because ch:reset already seeded ClickHouse."
+    fi
+
     return
   fi
 
