@@ -1,0 +1,26 @@
+{
+  "install": "bash ./scripts/cloud-install.sh",
+  "start": "bash ./scripts/cloud-start.sh",
+  "terminals": [
+    {
+      "name": "web",
+      "command": "pnpm --filter @app/web dev"
+    },
+    {
+      "name": "api",
+      "command": "pnpm --filter @app/api dev"
+    },
+    {
+      "name": "ingest",
+      "command": "pnpm --filter @app/ingest dev"
+    },
+    {
+      "name": "workers",
+      "command": "pnpm --filter @app/workers dev"
+    },
+    {
+      "name": "workflows",
+      "command": "pnpm --filter @app/workflows dev"
+    }
+  ]
+}
