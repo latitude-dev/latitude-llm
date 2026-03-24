@@ -12,8 +12,18 @@ export const Route = createFileRoute("/auth/confirm")({
   validateSearch: (search: Record<string, unknown>) => ({
     authIntentId: (search.authIntentId as string) ?? "",
     cliSession: (search.cliSession as string) || undefined,
+    error: (search.error as string) || undefined,
   }),
   beforeLoad: async ({ search }) => {
+    if (search.error) {
+      return {
+        intentInfo: null,
+        authIntentId: search.authIntentId,
+        cliSession: search.cliSession,
+        initialError: toMagicLinkErrorMessage(search.error),
+      }
+    }
+
     const session = await getSession()
     if (!session) {
       throw redirect({ to: "/login" })
@@ -37,6 +47,19 @@ export const Route = createFileRoute("/auth/confirm")({
   },
   component: AuthConfirmPage,
 })
+
+const MAGIC_LINK_ERROR_MESSAGES = {
+  ATTEMPTS_EXCEEDED: "This sign-in link was opened too many times. Please request a new one.",
+  EXPIRED_TOKEN: "This sign-in link has expired. Please request a new one.",
+  INVALID_TOKEN: "This sign-in link is invalid or has already been used. Please request a new one.",
+} as const
+
+function toMagicLinkErrorMessage(error: string) {
+  return (
+    MAGIC_LINK_ERROR_MESSAGES[error as keyof typeof MAGIC_LINK_ERROR_MESSAGES] ??
+    "We could not verify this sign-in link. Please request a new one."
+  )
+}
 
 type ConfirmState =
   | { step: "loading" }
@@ -92,7 +115,7 @@ function AuthConfirmPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-      <div className="flex flex-col items-center justify-center gap-6 max-w-[22rem] w-full">
+      <div className="flex flex-col items-center justify-center gap-6 max-w-modal-sm w-full">
         <LatitudeLogo />
 
         {state.step === "error" ? (

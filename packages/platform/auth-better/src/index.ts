@@ -117,6 +117,9 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         await sendMagicLinkFn({ email, url, token })
       },
       expiresIn: 3600, // 1 hour
+      // Allow a few verification attempts so mail scanners/prefetchers do not
+      // burn the link before the user clicks it.
+      allowedAttempts: 5,
     }) as BetterAuthPlugin
     plugins.push(magicLinkPlugin)
   }
