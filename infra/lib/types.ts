@@ -28,7 +28,7 @@ export type MemorydbParameterGroup = aws.memorydb.ParameterGroup
 export type RedisParameterGroup = aws.elasticache.ParameterGroup | aws.memorydb.ParameterGroup
 
 export type S3Bucket = aws.s3.Bucket
-export type S3BucketLifecycleConfigurationV2 = aws.s3.BucketLifecycleConfigurationV2
+export type S3BucketLifecycleConfiguration = aws.s3.BucketLifecycleConfiguration
 
 export type LbLoadBalancer = aws.lb.LoadBalancer
 export type LbTargetGroup = aws.lb.TargetGroup

@@ -68,57 +68,6 @@ export function createSecurityGroups(name: string, config: EnvironmentConfig, vp
     },
   })
 
-  const rdsSg = new aws.ec2.SecurityGroup(`${name}-rds-sg`, {
-    vpcId: vpc.id,
-    description: "RDS security group",
-    ingress: [
-      {
-        protocol: "TCP",
-        fromPort: 5432,
-        toPort: 5432,
-        securityGroups: [ecsSg.id],
-      },
-    ],
-    tags: {
-      Name: `${name}-rds-sg`,
-      Environment: config.name,
-    },
-  })
-
-  const redisSg = new aws.ec2.SecurityGroup(`${name}-redis-sg`, {
-    vpcId: vpc.id,
-    description: "Redis security group",
-    ingress: [
-      {
-        protocol: "TCP",
-        fromPort: 6379,
-        toPort: 6379,
-        securityGroups: [ecsSg.id],
-      },
-    ],
-    tags: {
-      Name: `${name}-redis-sg`,
-      Environment: config.name,
-    },
-  })
-
-  const vpcEndpointsSg = new aws.ec2.SecurityGroup(`${name}-vpc-endpoints-sg`, {
-    vpcId: vpc.id,
-    description: "VPC endpoints security group",
-    ingress: [
-      {
-        protocol: "TCP",
-        fromPort: 443,
-        toPort: 443,
-        securityGroups: [ecsSg.id],
-      },
-    ],
-    tags: {
-      Name: `${name}-vpc-endpoints-sg`,
-      Environment: config.name,
-    },
-  })
-
   const bastionSg = new aws.ec2.SecurityGroup(`${name}-bastion-sg`, {
     vpcId: vpc.id,
     description: "Bastion instance security group (access via Tailscale VPN)",
@@ -136,22 +85,80 @@ export function createSecurityGroups(name: string, config: EnvironmentConfig, vp
     },
   })
 
-  new aws.ec2.SecurityGroupRule(`${name}-bastion-to-rds`, {
-    type: "ingress",
-    fromPort: 5432,
-    toPort: 5432,
-    protocol: "TCP",
-    securityGroupId: rdsSg.id,
-    sourceSecurityGroupId: bastionSg.id,
+  // RDS/Redis ingress use aws.vpc.SecurityGroupIngressRule (one referenced SG per rule).
+  // Inline `ingress` with multiple securityGroups is unreliable in the AWS provider and can
+  // leave Pulumi state out of sync with EC2 (no drift on `pulumi preview`).
+  const rdsSg = new aws.ec2.SecurityGroup(`${name}-rds-sg`, {
+    vpcId: vpc.id,
+    description: "RDS security group",
+    ingress: [],
+    tags: {
+      Name: `${name}-rds-sg`,
+      Environment: config.name,
+    },
   })
 
-  new aws.ec2.SecurityGroupRule(`${name}-bastion-to-redis`, {
-    type: "ingress",
+  const redisSg = new aws.ec2.SecurityGroup(`${name}-redis-sg`, {
+    vpcId: vpc.id,
+    description: "Redis security group",
+    ingress: [],
+    tags: {
+      Name: `${name}-redis-sg`,
+      Environment: config.name,
+    },
+  })
+
+  new aws.vpc.SecurityGroupIngressRule(`${name}-rds-from-ecs`, {
+    securityGroupId: rdsSg.id,
+    referencedSecurityGroupId: ecsSg.id,
+    ipProtocol: "tcp",
+    fromPort: 5432,
+    toPort: 5432,
+    description: "PostgreSQL from ECS tasks",
+  })
+
+  new aws.vpc.SecurityGroupIngressRule(`${name}-rds-from-bastion`, {
+    securityGroupId: rdsSg.id,
+    referencedSecurityGroupId: bastionSg.id,
+    ipProtocol: "tcp",
+    fromPort: 5432,
+    toPort: 5432,
+    description: "PostgreSQL from bastion",
+  })
+
+  new aws.vpc.SecurityGroupIngressRule(`${name}-redis-from-ecs`, {
+    securityGroupId: redisSg.id,
+    referencedSecurityGroupId: ecsSg.id,
+    ipProtocol: "tcp",
     fromPort: 6379,
     toPort: 6379,
-    protocol: "TCP",
+    description: "Redis from ECS tasks",
+  })
+
+  new aws.vpc.SecurityGroupIngressRule(`${name}-redis-from-bastion`, {
     securityGroupId: redisSg.id,
-    sourceSecurityGroupId: bastionSg.id,
+    referencedSecurityGroupId: bastionSg.id,
+    ipProtocol: "tcp",
+    fromPort: 6379,
+    toPort: 6379,
+    description: "Redis from bastion",
+  })
+
+  const vpcEndpointsSg = new aws.ec2.SecurityGroup(`${name}-vpc-endpoints-sg`, {
+    vpcId: vpc.id,
+    description: "VPC endpoints security group",
+    ingress: [
+      {
+        protocol: "TCP",
+        fromPort: 443,
+        toPort: 443,
+        securityGroups: [ecsSg.id],
+      },
+    ],
+    tags: {
+      Name: `${name}-vpc-endpoints-sg`,
+      Environment: config.name,
+    },
   })
 
   return {
