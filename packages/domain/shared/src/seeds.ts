@@ -1,12 +1,4 @@
-import {
-  ApiKeyId,
-  DatasetId,
-  DatasetVersionId,
-  MembershipId,
-  OrganizationId,
-  ProjectId,
-  UserId,
-} from "./id.ts"
+import { ApiKeyId, DatasetId, DatasetVersionId, MembershipId, OrganizationId, ProjectId, UserId } from "./id.ts"
 
 // Constants for seeding the database with initial data
 export const SEED_ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")

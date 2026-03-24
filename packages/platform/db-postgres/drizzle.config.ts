@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs"
 import { fileURLToPath } from "node:url"
-import { parseEnv } from "@platform/env"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import { config as loadDotenv } from "dotenv"
 import { defineConfig } from "drizzle-kit"
 import { Effect } from "effect"
@@ -12,7 +12,7 @@ if (existsSync(envFilePath)) {
   loadDotenv({ path: envFilePath, quiet: true })
 }
 
-const url = Effect.runSync(parseEnv("LAT_ADMIN_DATABASE_URL", "string"))
+const url = Effect.runSync(parseEnvOptional("LAT_ADMIN_DATABASE_URL", "string")) ?? ""
 
 export default defineConfig({
   dialect: "postgresql",
