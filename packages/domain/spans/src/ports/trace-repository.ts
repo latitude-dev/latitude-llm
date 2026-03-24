@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import type { FilterSet, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 
@@ -18,7 +18,7 @@ export interface TraceRepositoryShape {
   countByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
-    readonly options?: TraceFilterOptions
+    readonly filters?: FilterSet
   }): Effect.Effect<number, RepositoryError>
 
   findByTraceId(input: {
@@ -32,23 +32,29 @@ export interface TraceRepositoryShape {
     readonly projectId: ProjectId
     readonly traceIds: readonly TraceId[]
   }): Effect.Effect<readonly TraceDetail[], RepositoryError>
+
+  distinctFilterValues(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly column: TraceDistinctColumn
+    readonly limit?: number
+    readonly search?: string
+  }): Effect.Effect<readonly string[], RepositoryError>
 }
 
-export interface TraceFilterOptions {
-  readonly startTimeFrom?: Date
-  readonly startTimeTo?: Date
-}
+export type TraceDistinctColumn = "tags" | "models" | "providers" | "serviceNames"
 
 export interface TraceListCursor {
   readonly sortValue: string
   readonly traceId: string
 }
 
-export interface TraceListOptions extends TraceFilterOptions {
+export interface TraceListOptions {
   readonly limit?: number
   readonly cursor?: TraceListCursor
   readonly sortBy?: string
   readonly sortDirection?: "asc" | "desc"
+  readonly filters?: FilterSet
 }
 
 export interface TraceListPage {

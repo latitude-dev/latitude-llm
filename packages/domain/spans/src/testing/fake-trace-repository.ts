@@ -7,6 +7,7 @@ export const createFakeTraceRepository = (overrides?: Partial<TraceRepositorySha
     countByProjectId: () => Effect.succeed(0),
     findByTraceId: () => Effect.succeed(null),
     findByTraceIds: () => Effect.succeed([]),
+    distinctFilterValues: () => Effect.succeed([]),
     ...overrides,
   }
 

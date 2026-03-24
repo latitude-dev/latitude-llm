@@ -80,7 +80,7 @@ describe("cleanupUserMembershipsUseCase", () => {
     expect(organizations.size).toBe(1)
     const remainingMembers = [...memberships.values()]
     expect(remainingMembers).toHaveLength(1)
-    expect(remainingMembers[0]!.userId).toBe(OTHER_USER_ID)
+    expect(remainingMembers[0]?.userId).toBe(OTHER_USER_ID)
   })
 
   it("clears creator reference when user was the org creator", async () => {
@@ -91,7 +91,7 @@ describe("cleanupUserMembershipsUseCase", () => {
 
     await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
 
-    expect(organizations.get(ORG_1)!.creatorId).toBeNull()
+    expect(organizations.get(ORG_1)?.creatorId).toBeNull()
   })
 
   it("handles multiple organizations", async () => {
@@ -114,7 +114,7 @@ describe("cleanupUserMembershipsUseCase", () => {
     // ORG_2 membership for USER_ID should be removed
     const org2Members = [...memberships.values()].filter((m) => m.organizationId === ORG_2)
     expect(org2Members).toHaveLength(1)
-    expect(org2Members[0]!.userId).toBe(OTHER_USER_ID)
+    expect(org2Members[0]?.userId).toBe(OTHER_USER_ID)
 
     // ORG_1 membership may still exist in fake (no cascade), but the org is gone
     // In a real DB, cascade would remove it too

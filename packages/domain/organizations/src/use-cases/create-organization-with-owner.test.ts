@@ -41,9 +41,9 @@ describe("createOrganizationWithOwnerUseCase", () => {
 
     const membershipList = [...memberships.values()]
     expect(membershipList).toHaveLength(1)
-    expect(membershipList[0]!.userId).toBe(USER_ID)
-    expect(membershipList[0]!.role).toBe("owner")
-    expect(membershipList[0]!.organizationId).toBe(result.id)
+    expect(membershipList[0]?.userId).toBe(USER_ID)
+    expect(membershipList[0]?.role).toBe("owner")
+    expect(membershipList[0]?.organizationId).toBe(result.id)
   })
 
   it("creates unique slugs for different organizations", async () => {

@@ -50,6 +50,8 @@ function DataRowInner<T>({
         "focus-visible:outline-none": onClick,
       })}
       onClick={onClick ? () => onClick(row) : undefined}
+      // Prevent focus-on-click so the browser doesn't scroll the row into view
+      onMouseDown={onClick ? (e) => e.preventDefault() : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? handleKeyDown : undefined}
     >

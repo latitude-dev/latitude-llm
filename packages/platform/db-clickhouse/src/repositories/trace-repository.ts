@@ -3,6 +3,7 @@ import {
   ChSqlClient,
   type ChSqlClientShape,
   ExternalUserId,
+  type FilterSet,
   SessionId,
   SpanId,
   OrganizationId as toOrganizationId,
@@ -14,9 +15,8 @@ import type { Trace, TraceDetail, TraceListPage, TraceStatus } from "@domain/spa
 import { TraceRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
-
-const toClickhouseDateTime = (date: Date | undefined): string | undefined =>
-  date ? date.toISOString().replace("Z", "") : undefined
+import { buildClickHouseWhere } from "../filter-builder.ts"
+import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
 
 const INT_TO_STATUS: Record<number, TraceStatus> = {
   0: "unset",
@@ -173,6 +173,16 @@ const SORT_COLUMNS: Record<string, SortColumn> = {
   spans: { expr: "span_count", chType: "UInt64", rowKey: "span_count" },
 }
 
+function buildTraceFilterClauses(filters: FilterSet | undefined): {
+  clauses: string[]
+  params: Record<string, unknown>
+} {
+  if (!filters || Object.keys(filters).length === 0) {
+    return { clauses: [], params: {} }
+  }
+  return buildClickHouseWhere(filters, TRACE_FIELD_REGISTRY)
+}
+
 const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
 
 export const TraceRepositoryLive = Layer.effect(
@@ -187,11 +197,17 @@ export const TraceRepositoryLive = Layer.effect(
         const cmp = orderDir === "DESC" ? "<" : ">"
         const limit = options.limit ?? 50
 
-        const cursorClause = options.cursor
-          ? `HAVING (${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
+        const { clauses: filterClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
+
+        const havingParts: string[] = [...filterClauses]
+        if (options.cursor) {
+          havingParts.push(
+            `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
               OR (${sort.expr} = {cursorSortValue:${sort.chType}}
-                  AND trace_id ${cmp} {cursorTraceId:FixedString(32)}))`
-          : ""
+                  AND trace_id ${cmp} {cursorTraceId:FixedString(32)}))`,
+          )
+        }
+        const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
 
         return chSqlClient
           .query(async (client) => {
@@ -200,20 +216,15 @@ export const TraceRepositoryLive = Layer.effect(
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
-                        AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
-                        AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
                       GROUP BY organization_id, project_id, trace_id
-                      ${cursorClause}
+                      ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
                       LIMIT {limit:UInt32}`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                hasStartFrom: options.startTimeFrom !== undefined,
-                startTimeFrom: toClickhouseDateTime(options.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
-                hasStartTo: options.startTimeTo !== undefined,
-                startTimeTo: toClickhouseDateTime(options.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
                 limit: limit + 1,
+                ...filterParams,
                 ...(options.cursor
                   ? {
                       cursorSortValue: options.cursor.sortValue,
@@ -242,27 +253,26 @@ export const TraceRepositoryLive = Layer.effect(
           )
       },
 
-      countByProjectId: ({ organizationId, projectId, options }) =>
-        chSqlClient
+      countByProjectId: ({ organizationId, projectId, filters }) => {
+        const { clauses: filterClauses, params: filterParams } = buildTraceFilterClauses(filters)
+        const havingClause = filterClauses.length > 0 ? `HAVING ${filterClauses.join(" AND ")}` : ""
+
+        return chSqlClient
           .query(async (client) => {
             const result = await client.query({
               query: `SELECT count() AS total
                       FROM (
-                        SELECT trace_id
+                        SELECT trace_id, ${LIST_SELECT}
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
-                          AND ({hasStartFrom:Bool} = false OR min_start_time >= {startTimeFrom:DateTime64(9, 'UTC')})
-                          AND ({hasStartTo:Bool} = false OR min_start_time <= {startTimeTo:DateTime64(9, 'UTC')})
                         GROUP BY organization_id, project_id, trace_id
+                        ${havingClause}
                       )`,
               query_params: {
                 organizationId: organizationId as string,
                 projectId: projectId as string,
-                hasStartFrom: options?.startTimeFrom !== undefined,
-                startTimeFrom: toClickhouseDateTime(options?.startTimeFrom) ?? "1970-01-01 00:00:00.000000000",
-                hasStartTo: options?.startTimeTo !== undefined,
-                startTimeTo: toClickhouseDateTime(options?.startTimeTo) ?? "2100-01-01 00:00:00.000000000",
+                ...filterParams,
               },
               format: "JSONEachRow",
             })
@@ -271,7 +281,8 @@ export const TraceRepositoryLive = Layer.effect(
           .pipe(
             Effect.map((rows) => Number(rows[0]?.total ?? 0)),
             Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
-          ),
+          )
+      },
 
       findByTraceId: ({ organizationId, projectId, traceId }) =>
         chSqlClient
@@ -325,6 +336,47 @@ export const TraceRepositoryLive = Layer.effect(
           .pipe(
             Effect.map((rows) => rows.map(toDomainTraceDetail)),
             Effect.mapError((error) => toRepositoryError(error, "findByTraceIds")),
+          )
+      },
+
+      distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) => {
+        const COLUMN_EXPRS: Record<string, string> = {
+          tags: "arrayJoin(groupUniqArrayArray(tags))",
+          models: "arrayJoin(groupUniqArrayIfMerge(models))",
+          providers: "arrayJoin(groupUniqArrayIfMerge(providers))",
+          serviceNames: "arrayJoin(groupUniqArrayIfMerge(service_names))",
+        }
+        const expr = COLUMN_EXPRS[column]
+        if (!expr) return Effect.succeed([])
+
+        const searchClause = search ? " AND val ILIKE {search:String}" : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT DISTINCT val FROM (
+                        SELECT ${expr} AS val
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                        GROUP BY organization_id, project_id, trace_id
+                      )
+                      WHERE val != ''${searchClause}
+                      ORDER BY val
+                      LIMIT {limit:UInt32}`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                limit: maxValues ?? 50,
+                ...(search ? { search: `%${search}%` } : {}),
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{ val: string }>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map((r) => r.val)),
+            Effect.mapError((error) => toRepositoryError(error, "distinctFilterValues")),
           )
       },
     }

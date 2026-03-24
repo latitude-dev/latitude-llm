@@ -7,6 +7,8 @@ export {
   createClickhouseClient,
   createClickhouseClientEffect,
 } from "./client.ts"
+export type { ChFieldMapping, ChFieldRegistry } from "./filter-builder.ts"
+export { buildClickHouseWhere } from "./filter-builder.ts"
 export { healthcheckClickhouse } from "./health.ts"
 export { DatasetRowRepositoryLive } from "./repositories/dataset-row-repository.ts"
 export { SpanRepositoryLive } from "./repositories/span-repository.ts"
