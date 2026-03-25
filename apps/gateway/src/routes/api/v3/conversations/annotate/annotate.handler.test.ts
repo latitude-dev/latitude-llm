@@ -317,6 +317,7 @@ describe('POST /conversations/:conversationUuid/evaluations/:evaluationUuid/anno
         context: undefined,
         versionUuid: HEAD_COMMIT,
         resultUuid: data.resultUuid,
+        isUpdate: false,
       })
     })
 

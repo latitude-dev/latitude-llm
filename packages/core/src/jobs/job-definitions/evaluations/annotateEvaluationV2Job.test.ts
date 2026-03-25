@@ -54,7 +54,11 @@ describe('annotateEvaluationV2Job', () => {
     commitUuid: 'span-commit-uuid',
     documentUuid: 'document-uuid',
   }
-  const spanMetadata = { traceId: 'trace-id', spanId: 'span-id', type: 'prompt' }
+  const spanMetadata = {
+    traceId: 'trace-id',
+    spanId: 'span-id',
+    type: 'prompt',
+  }
   const document = { documentUuid: 'document-uuid' }
   const project = { id: 42, name: 'Test project' }
   const commit = { id: 8, uuid: 'resolved-commit-uuid', projectId: project.id }
