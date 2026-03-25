@@ -71,7 +71,7 @@ interface ActionRowItemProps {
 }
 
 function ActionRowItem({ children, className }: ActionRowItemProps) {
-  return <div className={cn("flex flex-row gap-2 items-center min-w-0", className)}>{children}</div>
+  return <div className={cn("flex flex-row gap-2 items-center min-w-0 shrink-0", className)}>{children}</div>
 }
 
 interface ListProps {
@@ -80,12 +80,26 @@ interface ListProps {
 }
 
 function List({ children, className }: ListProps) {
-  return <div className={cn("min-h-0 grow p-6 pt-0 pr-0 flex flex-col", className)}>{children}</div>
+  return <div className={cn("min-h-0 min-w-0 grow p-6 pt-0 pr-0 flex flex-col", className)}>{children}</div>
+}
+
+function Body({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
+  return <div className={cn("flex flex-row flex-1 min-h-0 min-w-0 overflow-hidden", className)}>{children}</div>
+}
+
+function Sidebar({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
+  return (
+    <div className={cn("flex flex-col h-full w-[280px] min-w-[280px] shrink-0 border-r bg-background", className)}>
+      {children}
+    </div>
+  )
 }
 
 ListingLayout.ActionRowItem = ActionRowItem
 ListingLayout.ActionsRow = ActionsRow
 ListingLayout.Actions = Actions
+ListingLayout.Body = Body
+ListingLayout.Sidebar = Sidebar
 ListingLayout.List = List
 
 export { ListingLayout }

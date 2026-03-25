@@ -10,6 +10,7 @@ import type { InfiniteTableProps } from "./types.ts"
 
 const ROW_HEIGHT = 40
 const SKELETON_ROW_COUNT = 8
+const EXPANDED_SKELETON_COUNT = 3
 
 function nextSortDirection(current: SortDirection | null): SortDirection | null {
   if (current === null) return "desc"
@@ -32,8 +33,11 @@ export function InfiniteTable<T>({
   onSortChange,
   blankSlate,
   className,
+  expandedRowKeys,
+  getExpandedRows,
 }: InfiniteTableProps<T>) {
-  const colCount = columns.length + (selection ? 1 : 0)
+  const hasExpansion = !!expandedRowKeys && !!getExpandedRows
+  const colCount = columns.length + (selection ? 1 : 0) + (hasExpansion ? 1 : 0)
   const hasMore = infiniteScroll?.hasMore ?? false
   const totalVirtualRows = data.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)
 
@@ -155,6 +159,7 @@ export function InfiniteTable<T>({
           >
             <thead className="sticky top-0 z-10 bg-background">
               <tr>
+                {hasExpansion && <HeaderCell resizable={false} className="w-8" />}
                 {selection && (
                   <HeaderCell resizable={false} className="w-10">
                     <Checkbox checked={selection.headerState} onCheckedChange={() => selection.toggleAll()} />
@@ -183,69 +188,104 @@ export function InfiniteTable<T>({
                 })}
               </tr>
             </thead>
-            <tbody>
-              {paddingTop > 0 && (
+            {paddingTop > 0 && (
+              <tbody>
                 <tr>
                   <td colSpan={colCount} style={{ height: paddingTop, padding: 0, border: "none" }} />
                 </tr>
-              )}
-              {virtualRows.map((virtualRow) => {
-                const index = virtualRow.index
+              </tbody>
+            )}
+            {virtualRows.map((virtualRow) => {
+              const index = virtualRow.index
 
-                if (index >= data.length) {
-                  const skeletonIndex = index - data.length
-                  return (
-                    <tr
-                      key={`skeleton-${skeletonIndex}`}
-                      ref={virtualizer.measureElement}
-                      data-index={virtualRow.index}
-                      className="bg-secondary"
-                      style={{
-                        opacity: 1 - skeletonIndex / SKELETON_ROW_COUNT,
-                      }}
-                    >
+              if (index >= data.length) {
+                const skeletonIndex = index - data.length
+                return (
+                  <tbody
+                    key={`skeleton-${skeletonIndex}`}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualRow.index}
+                  >
+                    <tr className="bg-secondary" style={{ opacity: 1 - skeletonIndex / SKELETON_ROW_COUNT }}>
                       <td colSpan={colCount} className="h-9" />
                     </tr>
-                  )
-                }
+                  </tbody>
+                )
+              }
 
-                const row = data[index]
-                const rowKey = rowKeys[index]
-                if (!row || rowKey === undefined) return null
+              const row = data[index]
+              const rowKey = rowKeys[index]
+              if (!row || rowKey === undefined) return null
 
-                return (
+              const isExpanded = expandedRowKeys?.has(rowKey) ?? false
+              const expanded = isExpanded && getExpandedRows ? getExpandedRows(row) : undefined
+
+              return (
+                <tbody key={rowKey} ref={virtualizer.measureElement} data-index={virtualRow.index}>
                   <DataRow
-                    key={rowKey}
                     row={row}
                     rowKey={rowKey}
                     columns={columns}
                     hasSelection={!!selection}
+                    hasExpansion={hasExpansion}
+                    isExpandable={hasExpansion}
+                    isExpanded={isExpanded}
                     isActive={activeRowKey === rowKey}
                     {...(selection
                       ? {
-                          isSelected: selection.isSelected(rowKey),
+                          checkedState: selection.getCheckedState?.(rowKey) ?? selection.isSelected(rowKey),
                           onToggleRow: selection.toggleRow,
                         }
                       : {})}
                     {...(onRowClick ? { onClick: onRowClick } : {})}
                     dataIndex={virtualRow.index}
-                    measureRef={virtualizer.measureElement}
                   />
-                )
-              })}
-              {paddingBottom > 0 && (
+                  {expanded?.isLoading &&
+                    Array.from({ length: EXPANDED_SKELETON_COUNT }).map((_, i) => (
+                      <tr key={`exp-skel-${i}`} style={{ opacity: 1 - i / EXPANDED_SKELETON_COUNT }}>
+                        <td colSpan={colCount} className="h-9" />
+                      </tr>
+                    ))}
+                  {expanded &&
+                    !expanded.isLoading &&
+                    expanded.data.map((subRow) => {
+                      const subKey = getRowKey(subRow)
+                      return (
+                        <DataRow
+                          key={subKey}
+                          row={subRow}
+                          rowKey={subKey}
+                          columns={columns}
+                          hasSelection={!!selection}
+                          hasExpansion={hasExpansion}
+                          isActive={activeRowKey === subKey}
+                          {...(selection
+                            ? {
+                                checkedState: selection.getCheckedState?.(subKey) ?? selection.isSelected(subKey),
+                                onToggleRow: selection.toggleRow,
+                              }
+                            : {})}
+                          {...(onRowClick ? { onClick: onRowClick } : {})}
+                          dataIndex={virtualRow.index}
+                          isSubRow
+                        />
+                      )
+                    })}
+                  {isExpanded && (
+                    <tr>
+                      <td colSpan={colCount} className="h-px p-0 border-t border-border pb-2" />
+                    </tr>
+                  )}
+                </tbody>
+              )
+            })}
+            {paddingBottom > 0 && (
+              <tbody>
                 <tr>
-                  <td
-                    colSpan={colCount}
-                    style={{
-                      height: paddingBottom,
-                      padding: 0,
-                      border: "none",
-                    }}
-                  />
+                  <td colSpan={colCount} style={{ height: paddingBottom, padding: 0, border: "none" }} />
                 </tr>
-              )}
-            </tbody>
+              </tbody>
+            )}
           </table>
         </div>
       )}

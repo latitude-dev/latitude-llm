@@ -442,7 +442,7 @@ function newTraceCtx(config: TraceConfig): TraceContext {
     projectId: config.projectId,
     apiKeyId: config.apiKeyId,
     startTime: randomTimeInWindow(config.timeWindow.from, config.timeWindow.to),
-    sessionId: Math.random() > 0.55 ? `session-${randomHex(8)}` : "",
+    sessionId: "",
     userId: Math.random() > 0.4 ? pick(USER_IDS) : "",
     serviceName: pick(SERVICE_NAMES),
     tags:
@@ -822,32 +822,26 @@ function generateTrace(pattern: TracePattern, config: TraceConfig): SpanRow[] {
 
 function assignSessions(allSpans: SpanRow[]): void {
   const traceIds = [...new Set(allSpans.map((s) => s.trace_id))]
-  const sessionBuckets = Math.floor(traceIds.length * 0.15)
-  const sessions: { id: string; traces: string[] }[] = []
 
-  for (let i = 0; i < sessionBuckets; i++) {
-    sessions.push({ id: `session-${randomHex(8)}`, traces: [] })
-  }
+  // Shuffle and pick ~1/3 of all traces to be included in sessions
+  const shuffled = [...traceIds].sort(() => Math.random() - 0.5)
+  const sessionTraces = shuffled.slice(0, Math.floor(traceIds.length / 3))
 
-  for (const traceId of traceIds) {
-    if (Math.random() < 0.35 && sessions.length > 0) {
-      const session = pick(sessions)
-      session.traces.push(traceId)
-    }
-  }
-
+  // Group the selected traces into sessions of 2-8 traces each
   const traceToSession = new Map<string, string>()
-  for (const session of sessions) {
-    for (const traceId of session.traces) {
-      traceToSession.set(traceId, session.id)
+  let i = 0
+  while (i < sessionTraces.length) {
+    const sessionSize = randInt(2, 8)
+    const sessionId = `session-${randomHex(8)}`
+    const end = Math.min(i + sessionSize, sessionTraces.length)
+    for (let j = i; j < end; j++) {
+      traceToSession.set(sessionTraces[j] as string, sessionId)
     }
+    i = end
   }
 
   for (const span of allSpans) {
-    const sessionId = traceToSession.get(span.trace_id)
-    if (sessionId) {
-      span.session_id = sessionId
-    }
+    span.session_id = traceToSession.get(span.trace_id) ?? ""
   }
 }
 

@@ -3,56 +3,112 @@
   "workspaces": {
     ".": {},
     "apps/api": {
-      "project": ["src/**/*.ts"]
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "apps/ingest": {
-      "project": ["src/**/*.ts"]
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "apps/workers": {
-      "project": ["src/**/*.ts"]
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "apps/workflows": {
-      "project": ["src/**/*.ts"],
-      "ignore": ["src/workflows/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/workflow"]
+      "project": [
+        "src/**/*.ts"
+      ],
+      "ignore": [
+        "src/workflows/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "@temporalio/workflow"
+      ]
     },
     "apps/web": {
-      "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
-      "project": ["src/**/*.ts", "src/**/*.tsx"]
+      "entry": [
+        "src/router.tsx",
+        "src/start.ts",
+        "src/routes/**/*.tsx"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ]
     },
     "infra": {
       "entry": [],
       "project": []
     },
     "packages/domain/email": {
-      "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignoreDependencies": ["@react-email/preview-server"]
+      "project": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ],
+      "ignoreDependencies": [
+        "@react-email/preview-server"
+      ]
     },
     "packages/domain/*": {
-      "project": ["src/**/*.ts"]
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/platform/db-postgres": {
-      "entry": ["src/seeds/index.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/seeds/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/platform/*": {
-      "project": ["src/**/*.ts"]
+      "project": [
+        "src/**/*.ts"
+      ]
     },
     "packages/ui": {
-      "project": ["src/**/*.ts", "src/**/*.tsx"]
+      "project": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+      ]
     },
     "packages/vitest-config": {
-      "project": ["**/*.ts"]
+      "project": [
+        "**/*.ts"
+      ]
     },
     "packages/tsconfig": {
       "entry": [],
       "project": []
     }
   },
-  "ignoreBinaries": ["tmuxinator", "pulumi"],
-  "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"],
+  "ignoreBinaries": [
+    "tmuxinator",
+    "pulumi"
+  ],
+  "ignoreDependencies": [
+    "@pulumi/awsx",
+    "@pulumi/aws",
+    "@pulumi/pulumi",
+    "@pulumi/random"
+  ],
   "ignoreIssues": {
-    "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"]
+    "packages/domain/email/src/templates/**/EmailTemplate.tsx": [
+      "exports",
+      "duplicates"
+    ],
+    "apps/web/src/domains/sessions/sessions.collection.ts": [
+      "files"
+    ],
+    "apps/web/src/domains/sessions/sessions.functions.ts": [
+      "files"
+    ]
   },
-  "tags": ["-knipignore"]
+  "tags": [
+    "-knipignore"
+  ]
 }
