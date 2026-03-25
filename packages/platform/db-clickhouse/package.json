@@ -18,10 +18,9 @@
     "ch:schema:dump": "bash clickhouse/scripts/dump-schema.sh",
     "ch:seed": "node --import tsx src/seeds/run.ts",
     "check": "biome check src",
-    "format": "biome format --write src",
+    "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "check:fix": "biome check --fix src"
+    "test": "vitest run"
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",

@@ -11,8 +11,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "biome check .",
-    "typecheck": "tsc --noEmit",
-    "check:fix": "biome check --fix ."
+    "format": "biome format --write . && biome check --fix .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "effect": "catalog:"

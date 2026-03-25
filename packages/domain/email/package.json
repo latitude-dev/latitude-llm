@@ -8,8 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "dev": "email dev -d ./src/templates -p 3001",
     "check": "biome check .",
-    "typecheck": "tsc --noEmit",
-    "check:fix": "biome check --fix ."
+    "format": "biome format --write . && biome check --fix .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@react-email/components": "^1.0.9",

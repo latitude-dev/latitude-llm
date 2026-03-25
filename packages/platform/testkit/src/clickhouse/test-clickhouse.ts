@@ -1,8 +1,8 @@
-import type { ClickHouseClient } from "@clickhouse/client"
 import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { afterAll, beforeAll, beforeEach } from "vitest"
+import type { ClickHouseClient } from "@clickhouse/client"
 import { Session } from "chdb"
+import { afterAll, beforeAll, beforeEach } from "vitest"
 
 type ChdbSession = InstanceType<typeof Session>
 
