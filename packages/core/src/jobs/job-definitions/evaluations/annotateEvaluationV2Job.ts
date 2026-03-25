@@ -42,6 +42,7 @@ export type AnnotateEvaluationV2JobData = {
   }
   context?: AnnotationContext
   resultUuid: string
+  isUpdate?: boolean
 }
 
 export async function annotateEvaluationV2Job(
@@ -55,7 +56,8 @@ export async function annotateEvaluationV2Job(
     metadata: resultMetadata,
     context,
     resultUuid,
-    versionUuid = HEAD_COMMIT,
+    isUpdate,
+    versionUuid,
   } = job.data
 
   try {
@@ -106,24 +108,26 @@ export async function annotateEvaluationV2Job(
     }
 
     const commitsRepo = new CommitsRepository(workspace.id)
+    const resolvedVersionUuid = versionUuid ?? HEAD_COMMIT
+    const shouldFallbackToInitialDraft = resolvedVersionUuid === HEAD_COMMIT
     const commit = await commitsRepo
       .getCommitByUuid({
-        uuid: versionUuid,
+        uuid: resolvedVersionUuid,
         projectId: project.id,
+        includeInitialDraft: shouldFallbackToInitialDraft,
       })
       .then((r) => r.unwrap())
     if (!commit) {
       throw new NotFoundError(
-        `Could not find version ${versionUuid} in project ${project.name}`,
+        `Could not find version ${resolvedVersionUuid} in project ${project.name}`,
       )
     }
 
     const evaluation = await evaluationsRepo
       .getAtCommitByDocument({
+        commitId: commit.id,
         documentUuid: document.documentUuid,
-        commitUuid: versionUuid,
         evaluationUuid,
-        projectId: project.id,
       })
       .then((r) => r.unwrap())
     if (!evaluation) {
@@ -141,6 +145,7 @@ export async function annotateEvaluationV2Job(
       commit,
       workspace,
       resultUuid,
+      isUpdate,
     }).then((r) => r.unwrap())
   } catch (error) {
     if (isRetryableError(error as Error)) throw error

@@ -40,6 +40,7 @@ export async function annotateEvaluationV2<
     resultMetadata,
     currentUser,
     resultUuid: existingResultUuid,
+    isUpdate: isUpdateParam,
   }: {
     workspace: Workspace
     commit: Commit
@@ -49,6 +50,7 @@ export async function annotateEvaluationV2<
     resultMetadata?: Partial<EvaluationResultMetadata<T, M>>
     currentUser?: User
     resultUuid?: string
+    isUpdate?: boolean
   },
   transaction = new Transaction(),
 ) {
@@ -59,7 +61,7 @@ export async function annotateEvaluationV2<
   }
 
   const resultUuid = existingResultUuid ?? generateUUIDIdentifier()
-  const isUpdate = !!existingResultUuid
+  const isUpdate = isUpdateParam ?? !!existingResultUuid
   const typeSpecification = EVALUATION_SPECIFICATIONS[evaluation.type]
   if (!typeSpecification) {
     return Result.error(new BadRequestError('Invalid evaluation type'))

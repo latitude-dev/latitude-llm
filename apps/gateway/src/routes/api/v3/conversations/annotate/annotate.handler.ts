@@ -24,6 +24,7 @@ export const annotateHandler: AppRouteHandler<AnnotateRoute> = async (c) => {
     context,
     versionUuid,
     resultUuid,
+    isUpdate: false,
   }).then((r) => r.unwrap())
 
   return c.json(
