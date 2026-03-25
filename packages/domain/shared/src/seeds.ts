@@ -2,6 +2,7 @@ import {
   ApiKeyId,
   DatasetId,
   DatasetVersionId,
+  IssueId,
   MembershipId,
   OrganizationId,
   ProjectId,
@@ -27,7 +28,8 @@ export const SEED_SCORE_ISSUE_LINKED_ID = ScoreId("qr25ftbv6q70ahxt690a7460")
 export const SEED_SCORE_API_REVIEWED_ID = ScoreId("hvtb8yzxjjrudvhrme7aejiq")
 export const SEED_EVALUATION_ID = "y0zr3gtsous6knd2qwdj1dit"
 export const SEED_ANNOTATION_QUEUE_ID = "w9pkzh13vu8ntru7ii5ved08"
-export const SEED_ISSUE_ID = "dds0rt8sqgpuku4u4wabze9r"
+export const SEED_ISSUE_ID = IssueId("dds0rt8sqgpuku4u4wabze9r")
+export const SEED_ISSUE_UUID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
 
 // Additional constants for seeding
 export const SEED_ORG_NAME = "Acme Inc."

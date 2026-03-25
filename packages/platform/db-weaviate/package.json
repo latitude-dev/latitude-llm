@@ -7,15 +7,22 @@
   "types": "src/index.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "wv:migrate": "node src/migrate.ts",
+    "wv:migrate": "tsx src/migrate.ts",
+    "wv:query": "tsx src/scripts/query.ts",
+    "wv:seed": "tsx src/seeds/run.ts",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/issues": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
     "weaviate-client": "catalog:"
+  },
+  "devDependencies": {
+    "tsx": "catalog:"
   }
 }
