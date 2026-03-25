@@ -6,33 +6,22 @@ import {
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableSorting,
-  sortDirectionSchema,
+  type SortDirection,
   Tooltip,
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { createFileRoute } from "@tanstack/react-router"
-import { useCallback, useMemo, useState } from "react"
-import { z } from "zod"
+import { useCallback, useState } from "react"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
-
-const DATASET_LIST_SORT_COLUMNS = ["name", "updatedAt"] as const
-const datasetsListSearchSchema = z.object({
-  sortBy: z.enum(DATASET_LIST_SORT_COLUMNS).optional(),
-  sortDirection: sortDirectionSchema,
-})
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
   component: DatasetsPage,
-  validateSearch: (search: Record<string, unknown>) => {
-    const parsed = datasetsListSearchSchema.safeParse(search)
-    if (!parsed.success) return {}
-    return parsed.data
-  },
 })
 
 const DEFAULT_SORTING: InfiniteTableSorting = {
@@ -64,31 +53,20 @@ const columns: InfiniteTableColumn<DatasetRecord>[] = [
 
 function DatasetsPage() {
   const { projectId } = Route.useParams()
-  const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
 
-  const sorting: InfiniteTableSorting = useMemo(
-    () => ({
-      column: search.sortBy ?? DEFAULT_SORTING.column,
-      direction: search.sortDirection ?? DEFAULT_SORTING.direction,
-    }),
-    [search.sortBy, search.sortDirection],
-  )
+  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_SORTING.column)
+  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SORTING.direction, {
+    validate: (v): v is SortDirection => v === "asc" || v === "desc",
+  })
+  const sorting: InfiniteTableSorting = { column: sortBy, direction: sortDirection }
 
-  const handleSortChange = useCallback(
-    (next: InfiniteTableSorting) => {
-      navigate({
-        params: { projectId },
-        search: {
-          sortBy: next.column,
-          sortDirection: next.direction,
-        },
-      })
-    },
-    [navigate, projectId],
-  )
+  const handleSortChange = (next: InfiniteTableSorting) => {
+    setSortBy(next.column)
+    setSortDirection(next.direction)
+  }
 
   const {
     data: datasets,

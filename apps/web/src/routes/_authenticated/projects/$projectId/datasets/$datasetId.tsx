@@ -7,7 +7,7 @@ import {
   type InfiniteTableSorting,
   Input,
   Skeleton,
-  sortDirectionSchema,
+  type SortDirection,
   Text,
   toast,
 } from "@repo/ui"
@@ -16,10 +16,8 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CirclePlus, Download, FileDownIcon, Trash2 } from "lucide-react"
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
-import { z } from "zod"
 import { useDatasetRowsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import {
-  DATASET_ROW_SORT_COLUMNS,
   type DatasetRecord,
   type DatasetRowRecord,
   deleteDatasetRows,
@@ -33,6 +31,7 @@ import {
 } from "../../../../../domains/datasets/datasets.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
 import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
 import { createDraftRowRecord, isDatasetDraftRowId } from "./-components/dataset-draft-row.ts"
@@ -41,22 +40,8 @@ import { DeleteRowsModal } from "./-components/delete-rows-modal.tsx"
 import { RowDetailDrawer } from "./-components/row-detail-drawer.tsx"
 import { UploadBlankSlate } from "./-components/upload-blank-slate.tsx"
 
-const datasetDetailSearchSchema = z.object({
-  rid: z.string().optional(),
-  q: z.string().optional(),
-  sortBy: z.enum(DATASET_ROW_SORT_COLUMNS).optional(),
-  sortDirection: sortDirectionSchema.optional(),
-})
-
-type DatasetDetailSearch = z.infer<typeof datasetDetailSearchSchema>
-
 export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/$datasetId")({
   component: DatasetDetailPage,
-  validateSearch: (search: Record<string, unknown>) => {
-    const parsed = datasetDetailSearchSchema.safeParse(search)
-    if (!parsed.success) return {}
-    return parsed.data
-  },
 })
 
 const DEFAULT_ROW_SORTING: InfiniteTableSorting = {
@@ -98,7 +83,7 @@ const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
 
 function DatasetDetailPage() {
   const { projectId, datasetId } = Route.useParams()
-  const navigate = Route.useNavigate()
+  const [, setRid] = useParamState("rid", "")
 
   const { data: dataset, isLoading } = useQuery({
     queryKey: ["dataset", datasetId],
@@ -140,13 +125,7 @@ function DatasetDetailPage() {
         await qc.invalidateQueries({
           queryKey: ["datasetRowCount", datasetId],
         })
-        navigate({
-          search: (prev: DatasetDetailSearch) => ({
-            ...prev,
-            rid: result.rowId,
-          }),
-          replace: true,
-        })
+        setRid(result.rowId)
       } catch (e) {
         toast({
           variant: "destructive",
@@ -155,7 +134,7 @@ function DatasetDetailPage() {
         throw e
       }
     },
-    [datasetId, projectId, navigate],
+    [datasetId, projectId, setRid],
   )
 
   if (isLoading) {
@@ -277,17 +256,15 @@ function DatasetRowsView({
   dataset: DatasetRecord
   onImport: (csv: ParsedCsv) => void
 }) {
-  const navigate = Route.useNavigate()
-  const routeSearch = Route.useSearch()
-  const { rid } = routeSearch
-  const listQuery = routeSearch.q?.trim() ? routeSearch.q.trim() : undefined
-  const sorting: InfiniteTableSorting = useMemo(
-    () => ({
-      column: routeSearch.sortBy ?? DEFAULT_ROW_SORTING.column,
-      direction: routeSearch.sortDirection ?? DEFAULT_ROW_SORTING.direction,
-    }),
-    [routeSearch.sortBy, routeSearch.sortDirection],
-  )
+  const [rid, setRid] = useParamState("rid", "")
+  const [q, setQ] = useParamState("q", "")
+  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_ROW_SORTING.column)
+  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_ROW_SORTING.direction, {
+    validate: (v): v is SortDirection => v === "asc" || v === "desc",
+  })
+
+  const listQuery = q.trim() || undefined
+  const sorting: InfiniteTableSorting = { column: sortBy, direction: sortDirection }
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -325,15 +302,9 @@ function DatasetRowsView({
 
   useLayoutEffect(() => {
     if (rid && isDatasetDraftRowId(rid) && draftRow?.rowId !== rid) {
-      navigate({
-        search: (prev: DatasetDetailSearch) => {
-          const { rid: _r, ...rest } = prev
-          return rest
-        },
-        replace: true,
-      })
+      setRid("")
     }
-  }, [rid, draftRow, navigate])
+  }, [rid, draftRow, setRid])
 
   const { data: selectedRowFromQuery } = useQuery({
     queryKey: ["datasetRow", datasetId, rid],
@@ -345,18 +316,12 @@ function DatasetRowsView({
 
   const importFileRef = useRef<HTMLInputElement>(null)
 
-  const openRow = useCallback(
-    (row: DatasetRowRecord) => {
-      if (!isDatasetDraftRowId(row.rowId)) {
-        setDraftRow(null)
-      }
-      navigate({
-        search: (prev: DatasetDetailSearch) => ({ ...prev, rid: row.rowId }),
-        replace: true,
-      })
-    },
-    [navigate],
-  )
+  const openRow = (row: DatasetRowRecord) => {
+    if (!isDatasetDraftRowId(row.rowId)) {
+      setDraftRow(null)
+    }
+    setRid(row.rowId)
+  }
 
   const rowNavIndex = useMemo(() => (rid ? displayRows.findIndex((r) => r.rowId === rid) : -1), [rid, displayRows])
   const canNavigatePrev = rowNavIndex > 0
@@ -373,41 +338,23 @@ function DatasetRowsView({
     [rid, displayRows, openRow],
   )
 
-  const handleAddRow = useCallback(() => {
+  const handleAddRow = () => {
     const draft = createDraftRowRecord(datasetId)
     setDraftRow(draft)
-    navigate({
-      search: (prev: DatasetDetailSearch) => ({ ...prev, rid: draft.rowId }),
-      replace: true,
-    })
-  }, [datasetId, navigate])
+    setRid(draft.rowId)
+  }
 
-  const closeRow = useCallback(() => {
+  const closeRow = () => {
     if (rid && isDatasetDraftRowId(rid)) {
       setDraftRow(null)
     }
-    navigate({
-      search: (prev: DatasetDetailSearch) => {
-        const { rid: _rid, ...rest } = prev
-        return rest
-      },
-      replace: true,
-    })
-  }, [navigate, rid])
+    setRid("")
+  }
 
-  const handleSortChange = useCallback(
-    (next: InfiniteTableSorting) => {
-      navigate({
-        search: (prev: DatasetDetailSearch) => ({
-          ...prev,
-          sortBy: next.column as (typeof DATASET_ROW_SORT_COLUMNS)[number],
-          sortDirection: next.direction,
-        }),
-        replace: true,
-      })
-    },
-    [navigate],
-  )
+  const handleSortChange = (next: InfiniteTableSorting) => {
+    setSortBy(next.column)
+    setSortDirection(next.direction)
+  }
 
   const handleSaveRow = useCallback(
     async (data: { input: string; output: string; metadata: string }) => {
@@ -424,13 +371,7 @@ function DatasetRowsView({
             },
           })
           setDraftRow(null)
-          navigate({
-            search: (prev: DatasetDetailSearch) => ({
-              ...prev,
-              rid: result.rowId,
-            }),
-            replace: true,
-          })
+          setRid(result.rowId)
           getQueryClient().invalidateQueries({
             queryKey: ["datasets", projectId],
           })
@@ -471,7 +412,7 @@ function DatasetRowsView({
         setSaving(false)
       }
     },
-    [rid, datasetId, projectId, navigate],
+    [rid, datasetId, projectId, setRid],
   )
 
   const handleDeleteRows = useCallback(async () => {
@@ -620,22 +561,7 @@ function DatasetRowsView({
                 )}
               </Layout.ActionRowItem>
               <Layout.ActionRowItem>
-                <Input
-                  type="text"
-                  placeholder="Search rows..."
-                  value={routeSearch.q ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    navigate({
-                      search: (prev: DatasetDetailSearch) => {
-                        if (v.trim()) return { ...prev, q: v }
-                        const { q: _q, ...rest } = prev
-                        return rest
-                      },
-                      replace: true,
-                    })
-                  }}
-                />
+                <Input type="text" placeholder="Search rows..." value={q} onChange={(e) => setQ(e.target.value)} />
                 <Button flat variant="outline" size="sm" onClick={() => importFileRef.current?.click()}>
                   <FileDownIcon className="h-4 w-4" />
                   <Text.H6>Import</Text.H6>
@@ -664,7 +590,7 @@ function DatasetRowsView({
               columns={rowColumns}
               getRowKey={getRowKey}
               onRowClick={openRow}
-              activeRowKey={rid ?? undefined}
+              activeRowKey={rid}
               activeRowAutoScroll
               selection={selection}
               infiniteScroll={infiniteScroll}

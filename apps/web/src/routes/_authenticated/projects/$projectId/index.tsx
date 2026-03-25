@@ -11,24 +11,15 @@ import {
   TextIcon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
-import { z } from "zod"
 import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
+import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
-
-const searchSchema = z.object({
-  tab: z.enum(["traces", "sessions"]).optional(),
-  traceId: z.string().optional(),
-  filtersOpen: z.boolean().optional(),
-  filters: z.string().optional(),
-})
-
-type SearchParams = z.infer<typeof searchSchema>
 
 function parseFilters(raw?: string): FilterSet {
   if (!raw) return {}
@@ -79,23 +70,21 @@ function getBulkSelection(state: SelectionState<string>): BulkSelection<string> 
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   component: ProjectPage,
-  validateSearch: searchSchema,
 })
-
-type ActiveTab = "traces" | "sessions"
 
 function ProjectPage() {
   const { projectId } = Route.useParams()
-  const search = Route.useSearch()
-  const navigate = Route.useNavigate()
+  const [activeTab, setActiveTab] = useParamState("tab", "traces", {
+    validate: (v): v is "traces" | "sessions" => v === "traces" || v === "sessions",
+  })
+  const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
+  const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
+  const [rawFilters, setRawFilters] = useParamState("filters", "")
 
-  const activeTab: ActiveTab = search.tab ?? "traces"
-  const filters = useMemo(() => parseFilters(search.filters), [search.filters])
-  const filtersOpen = search.filtersOpen ?? false
+  const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
   const timeTo = getTimeFilterValue(filters, "lte")
-  const activeTraceId = search.traceId
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
@@ -108,39 +97,13 @@ function ProjectPage() {
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
   const bulkSelection = getBulkSelection(selectionState)
 
-  const onTabChange = (tab: ActiveTab) => {
-    navigate({
-      search: (prev: SearchParams) => ({
-        ...prev,
-        tab: tab === "traces" ? undefined : tab,
-      }),
-      replace: true,
-    })
-  }
-
   const onFiltersChange = (next: FilterSet) => {
-    navigate({
-      search: (prev: SearchParams) => ({
-        ...prev,
-        filtersOpen: true,
-        filters: serializeFilters(next),
-      }),
-      replace: true,
-    })
-  }
-
-  const onFiltersClose = () => {
-    navigate({
-      search: (prev: SearchParams) => ({ ...prev, filtersOpen: undefined }),
-      replace: true,
-    })
+    setFiltersOpen(true)
+    setRawFilters(serializeFilters(next) ?? "")
   }
 
   const onActiveTraceChange = (traceId: string | undefined) => {
-    navigate({
-      search: (prev: SearchParams) => ({ ...prev, traceId }),
-      replace: true,
-    })
+    setActiveTraceId(traceId ?? "")
   }
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
@@ -149,12 +112,12 @@ function ProjectPage() {
     projectId,
     filters,
     filtersOpen,
-    activeTraceId,
+    activeTraceId: activeTraceId || undefined,
     selectionState,
     onSelectionChange: setSelectionState,
     totalTraceCount,
     onFiltersChange,
-    onFiltersClose,
+    onFiltersClose: () => setFiltersOpen(false),
     onActiveTraceChange,
   }
 
@@ -182,13 +145,7 @@ function ProjectPage() {
                 } else {
                   delete next.startTime
                 }
-                navigate({
-                  search: (prev: SearchParams) => ({
-                    ...prev,
-                    filters: serializeFilters(next),
-                  }),
-                  replace: true,
-                })
+                setRawFilters(serializeFilters(next) ?? "")
               }}
             />
             <Button variant="outline" size="sm" flat disabled>
@@ -200,12 +157,7 @@ function ProjectPage() {
               variant={filtersOpen ? "outline" : "ghost"}
               size="sm"
               flat
-              onClick={() =>
-                navigate({
-                  search: (prev: SearchParams) => ({ ...prev, filtersOpen: !filtersOpen || undefined }),
-                  replace: true,
-                })
-              }
+              onClick={() => setFiltersOpen(!filtersOpen)}
             >
               <FilterIcon className="h-4 w-4" />
               Filters
@@ -233,7 +185,7 @@ function ProjectPage() {
                 },
               ]}
               active={activeTab}
-              onSelect={(id) => onTabChange(id as ActiveTab)}
+              onSelect={(id) => setActiveTab(id)}
             />
             <Input
               placeholder={activeTab === "sessions" ? "Search sessions" : "Search traces"}
@@ -258,11 +210,7 @@ function ProjectPage() {
 
       {activeTraceId ? (
         <Layout.Aside>
-          <TraceDetailDrawer
-            traceId={activeTraceId}
-            projectId={projectId}
-            onClose={() => onActiveTraceChange(undefined)}
-          />
+          <TraceDetailDrawer traceId={activeTraceId} projectId={projectId} onClose={() => setActiveTraceId("")} />
         </Layout.Aside>
       ) : null}
 
