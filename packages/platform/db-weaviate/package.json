@@ -9,10 +9,9 @@
     "build": "tsc -p tsconfig.json",
     "wv:migrate": "node src/migrate.ts",
     "check": "biome check src",
-    "format": "biome format --write src",
+    "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "check:fix": "biome check --fix src"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@platform/env": "workspace:*",

@@ -5,7 +5,6 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "check": "turbo check",
-    "check:fix": "turbo check:fix",
     "hooks": "node ./scripts/setup-git-hooks.mjs",
     "format": "turbo format",
     "tmux": "tmuxinator start .",

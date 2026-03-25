@@ -10,10 +10,9 @@
     "check:bundle-size": "node ./scripts/check-bundle-size.mjs",
     "start": "node .output/server/index.mjs",
     "check": "biome check src",
-    "format": "biome format --write src",
+    "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "check:fix": "biome check --fix src"
+    "test": "vitest run"
   },
   "dependencies": {
     "@domain/api-keys": "workspace:*",
