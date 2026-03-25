@@ -46,6 +46,8 @@ import {
   QwenIcon,
   ReplitIcon,
   RichTextEditor,
+  type TabOption,
+  Tabs,
   TagBadge,
   TagBadgeList,
   Text,
@@ -92,6 +94,18 @@ const PROVIDER_ICONS: { name: string; icon: ComponentType<LucideProps> }[] = [
   { name: "v0", icon: V0Icon },
   { name: "Vercel", icon: VercelIcon },
   { name: "xAI", icon: XaiIcon },
+]
+
+const TEXT_TABS: readonly TabOption<"overview" | "activity" | "settings">[] = [
+  { id: "overview", label: "Overview", icon: <Icon icon={Sparkles} size="sm" /> },
+  { id: "activity", label: "Activity", icon: <Icon icon={Sun} size="sm" /> },
+  { id: "settings", label: "Settings", icon: <Icon icon={Moon} size="sm" /> },
+]
+
+const ICON_TABS: readonly TabOption<"palette" | "light" | "dark">[] = [
+  { id: "palette", label: "Palette", icon: <Icon icon={Palette} size="sm" /> },
+  { id: "light", label: "Light", icon: <Icon icon={Sun} size="sm" /> },
+  { id: "dark", label: "Dark", icon: <Icon icon={Moon} size="sm" /> },
 ]
 
 export const Route = createFileRoute("/design-system")({
@@ -169,6 +183,14 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           <Button variant="destructive">Destructive</Button>
           <Button isLoading>Loading…</Button>
         </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Tabs"
+        description="Secondary and bordered variants with optional hidden labels."
+      >
+        <TabsShowcase />
       </ShowcaseSection>
 
       <ShowcaseSection theme={theme} title="Badge" description="Status and label chips.">
@@ -338,6 +360,32 @@ function CheckboxShowcase() {
       <div className="flex items-center gap-2">
         <Checkbox checked={showHitArea} onCheckedChange={(v) => setShowHitArea(v === true)} />
         <Text.H6>Show hit area debug overlay</Text.H6>
+      </div>
+    </div>
+  )
+}
+
+function TabsShowcase() {
+  const [textTab, setTextTab] = useState<"overview" | "activity" | "settings">("overview")
+  const [iconTab, setIconTab] = useState<"palette" | "light" | "dark">("palette")
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <Text.H6 weight="bold">Secondary</Text.H6>
+        <Tabs options={TEXT_TABS} active={textTab} onSelect={setTextTab} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Text.H6 weight="bold">Secondary, Hidden Labels</Text.H6>
+        <Tabs options={ICON_TABS} active={iconTab} onSelect={setIconTab} hideLabels />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Text.H6 weight="bold">Bordered</Text.H6>
+        <Tabs options={TEXT_TABS} active={textTab} onSelect={setTextTab} variant="bordered" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Text.H6 weight="bold">Bordered, Hidden Labels</Text.H6>
+        <Tabs options={ICON_TABS} active={iconTab} onSelect={setIconTab} variant="bordered" hideLabels />
       </div>
     </div>
   )

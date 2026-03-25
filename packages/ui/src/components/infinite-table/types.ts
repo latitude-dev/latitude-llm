@@ -16,6 +16,7 @@ export interface InfiniteTableColumn<T> {
 export interface InfiniteTableSelection {
   headerState: CheckedState
   isSelected: (key: string) => boolean
+  getCheckedState?: (key: string) => CheckedState
   toggleRow: (key: string, checked: CheckedState, options?: { shiftKey?: boolean }) => void
   toggleAll: () => void
 }
@@ -29,6 +30,11 @@ export interface InfiniteTableInfiniteScroll {
 export interface InfiniteTableSorting {
   column: string
   direction: SortDirection
+}
+
+export interface ExpandedRows<T> {
+  data: readonly T[]
+  isLoading?: boolean
 }
 
 export interface InfiniteTableProps<T> {
@@ -46,4 +52,6 @@ export interface InfiniteTableProps<T> {
   onSortChange?: (sorting: InfiniteTableSorting) => void
   blankSlate?: ReactNode | string
   className?: string
+  expandedRowKeys?: ReadonlySet<string>
+  getExpandedRows?: (row: T) => ExpandedRows<T>
 }

@@ -1,3 +1,4 @@
+export type { Session } from "./entities/session.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export {
@@ -8,6 +9,14 @@ export {
   TRACE_ID_LENGTH,
   traceIdSchema,
 } from "./ids.ts"
+export type {
+  SessionDistinctColumn,
+  SessionListCursor,
+  SessionListOptions,
+  SessionListPage,
+  SessionRepositoryShape,
+} from "./ports/session-repository.ts"
+export { SessionRepository } from "./ports/session-repository.ts"
 export type { SpanListOptions, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {

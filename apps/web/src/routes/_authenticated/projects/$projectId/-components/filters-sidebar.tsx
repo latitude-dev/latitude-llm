@@ -3,54 +3,69 @@ import { Button, Checkbox, Input, Skeleton, Text } from "@repo/ui"
 import { ChevronDown, ChevronUp, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useDebounce } from "react-use"
+import { useSessionDistinctValues } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceDistinctValues } from "../../../../../domains/traces/traces.collection.ts"
+import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+
+export type FilterMode = "traces" | "sessions"
+
+type DistinctColumn = "tags" | "models" | "providers" | "serviceNames"
 
 const STATUS_OPTIONS = ["ok", "error", "unset"] as const
-const TRACE_MULTI_SELECT_FIELDS = [
+
+const MULTI_SELECT_FIELDS: readonly { label: string; field: DistinctColumn }[] = [
   { label: "Tags", field: "tags" },
   { label: "Models", field: "models" },
   { label: "Providers", field: "providers" },
   { label: "Services", field: "serviceNames" },
-] as const
+]
 
-const TRACE_NUMBER_RANGE_FIELDS = [
+const NUMBER_RANGE_FIELDS = [
   { label: "Cost (microcents)", field: "cost" },
   { label: "Span Count", field: "spanCount" },
   { label: "Error Count", field: "errorCount" },
   { label: "Tokens Input", field: "tokensInput" },
   { label: "Tokens Output", field: "tokensOutput" },
-] as const
+]
 
-const TRACE_TEXT_FILTER_FIELDS = [
+interface TextFilterField {
+  label: string
+  field: string
+  placeholder: string
+}
+
+const TRACES_TEXT_FIELDS: TextFilterField[] = [
   { label: "Name", field: "name", placeholder: "Enter name..." },
   { label: "Session ID", field: "sessionId", placeholder: "Filter by session..." },
   { label: "User ID", field: "userId", placeholder: "Filter by user..." },
-] as const
+]
 
-interface TraceFiltersSidebarProps {
+const SESSIONS_TEXT_FIELDS: TextFilterField[] = [
+  { label: "User ID", field: "userId", placeholder: "Filter by user..." },
+]
+
+function getTextFieldsForMode(mode: FilterMode): TextFilterField[] {
+  return mode === "sessions" ? SESSIONS_TEXT_FIELDS : TRACES_TEXT_FIELDS
+}
+
+interface FiltersSidebarProps {
+  readonly mode: FilterMode
   readonly projectId: string
   readonly filters: FilterSet
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onClose: () => void
 }
 
-// ---------------------------------------------------------------------------
-// FilterSet <-> UI state helpers
-// ---------------------------------------------------------------------------
-
-/** Get the "in" array values for a field, coerced to strings */
 function getInValues(filters: FilterSet, field: string): readonly string[] {
   const cond = filters[field]?.find((c) => c.op === "in")
   return Array.isArray(cond?.value) ? cond.value.map(String) : []
 }
 
-/** Get a contains value for a text field */
 function getTextFilterValue(filters: FilterSet, field: string): string {
   const cond = filters[field]?.find((c) => c.op === "contains")
   return typeof cond?.value === "string" ? cond.value : ""
 }
 
-/** Get min (gte) and max (lte) for a numeric range */
 function getRangeValues(filters: FilterSet, field: string): { min: number | undefined; max: number | undefined } {
   const conditions = filters[field]
   const minVal = conditions?.find((c) => c.op === "gte")?.value
@@ -61,7 +76,6 @@ function getRangeValues(filters: FilterSet, field: string): { min: number | unde
   }
 }
 
-/** Set a field to conditions, or remove it if empty */
 function setFieldConditions(filters: FilterSet, field: string, conditions: FilterCondition[]): FilterSet {
   if (conditions.length === 0) {
     const { [field]: _, ...rest } = filters
@@ -151,14 +165,25 @@ function DebouncedInput({
   )
 }
 
+function useDistinctValues(mode: FilterMode, args: { projectId: string; column: DistinctColumn; search?: string }) {
+  const traceResult = useTraceDistinctValues(args)
+  const sessionResult = useSessionDistinctValues(args)
+
+  // Both hooks always run (React rules of hooks), but only the active mode's result is used.
+  // The inactive query still fires — the data is small and benefits from being pre-cached for tab switches.
+  return mode === "sessions" ? sessionResult : traceResult
+}
+
 function MultiSelectFilter({
+  mode,
   projectId,
   column,
   selected,
   onChange,
 }: {
+  readonly mode: FilterMode
   readonly projectId: string
-  readonly column: "tags" | "models" | "providers" | "serviceNames"
+  readonly column: DistinctColumn
   readonly selected: readonly string[]
   readonly onChange: (values: string[]) => void
 }) {
@@ -173,15 +198,13 @@ function MultiSelectFilter({
     [search],
   )
 
-  // Initial fetch without search to check if there are more than 50 results
-  const { data: initialOptions = [], isLoading: initialLoading } = useTraceDistinctValues({
+  const { data: initialOptions = [], isLoading: initialLoading } = useDistinctValues(mode, {
     projectId,
     column,
   })
   const needsServerSearch = initialOptions.length >= 50
 
-  // Only query with search term when there are 50+ values
-  const { data: searchedOptions, isLoading: searchLoading } = useTraceDistinctValues({
+  const { data: searchedOptions, isLoading: searchLoading } = useDistinctValues(mode, {
     projectId,
     column,
     ...(needsServerSearch && debouncedSearch ? { search: debouncedSearch } : {}),
@@ -189,7 +212,6 @@ function MultiSelectFilter({
 
   const isLoading = initialLoading || (needsServerSearch && debouncedSearch ? searchLoading : false)
 
-  // Use server results when searching with 50+ values, otherwise filter client-side
   const displayOptions = useMemo(() => {
     if (!search) return initialOptions
     if (needsServerSearch) return searchedOptions ?? initialOptions
@@ -336,10 +358,8 @@ function MetadataFilter({
   readonly entries: readonly { key: string; value: string }[]
   readonly onChange: (entries: { key: string; value: string }[]) => void
 }) {
-  // Local state includes incomplete entries (empty key or value)
   const [localEntries, setLocalEntries] = useState<{ key: string; value: string }[]>([...committedEntries])
 
-  // Sync when parent entries change externally (e.g. clear all)
   // TODO(frontend-use-effect-policy): keep draft metadata rows in sync with externally-controlled filter updates.
   useEffect(() => {
     setLocalEntries([...committedEntries])
@@ -412,8 +432,7 @@ function MetadataFilter({
   )
 }
 
-export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClose }: TraceFiltersSidebarProps) {
-  /** Update a field's conditions, or remove it if empty */
+export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onClose }: FiltersSidebarProps) {
   const setField = useCallback(
     (field: string, conditions: FilterCondition[]) => {
       onFiltersChange(setFieldConditions(filters, field, conditions))
@@ -421,7 +440,6 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
     [filters, onFiltersChange],
   )
 
-  /** Toggle a value in an "in" array for a field */
   const toggleInValue = useCallback(
     (field: string, value: string) => {
       const current = [...getInValues(filters, field)]
@@ -431,7 +449,6 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
     [filters, setField],
   )
 
-  /** Set a contains filter for a text field */
   const setContainsFilter = useCallback(
     (field: string, value: string) => {
       setField(field, value ? [{ op: "contains", value }] : [])
@@ -439,7 +456,6 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
     [setField],
   )
 
-  /** Set min/max range for a numeric field */
   const setRangeFilter = useCallback(
     (field: string, min: number | undefined, max: number | undefined) => {
       const conditions: FilterCondition[] = []
@@ -456,8 +472,8 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
 
   const hasActiveFilters = Object.keys(filters).length > 0
   const statusValues = getInValues(filters, "status")
+  const textFields = getTextFieldsForMode(mode)
 
-  // Collect metadata.* fields for the metadata filter
   const metadataEntries = useMemo(() => {
     const entries: { key: string; value: string }[] = []
     for (const [field, conditions] of Object.entries(filters)) {
@@ -474,12 +490,10 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
 
   const handleMetadataChange = useCallback(
     (entries: { key: string; value: string }[]) => {
-      // Remove existing metadata.* fields, keep the rest
       const next: Record<string, readonly FilterCondition[]> = {}
       for (const [key, value] of Object.entries(filters)) {
         if (!key.startsWith("metadata.")) next[key] = value
       }
-      // Add new entries
       for (const entry of entries) {
         next[`metadata.${entry.key}`] = [{ op: "eq", value: entry.value }]
       }
@@ -489,13 +503,13 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
   )
 
   return (
-    <div className="flex flex-col h-full w-[280px] min-w-[280px] shrink-0 border-r bg-background">
+    <Layout.Sidebar>
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <Text.H5>Filters</Text.H5>
         <div className="flex items-center gap-1">
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" flat onClick={clearAll}>
-              <Text.H6>Clear all</Text.H6>
+              Clear all
             </Button>
           )}
           <Button variant="ghost" size="sm" flat onClick={onClose}>
@@ -522,9 +536,8 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
           ))}
         </CollapsibleSection>
 
-        {TRACE_TEXT_FILTER_FIELDS.map(({ label, field, placeholder }) => {
+        {textFields.map(({ label, field, placeholder }) => {
           const value = getTextFilterValue(filters, field)
-
           return (
             <CollapsibleSection key={field} label={label} defaultOpen={!!value}>
               <DebouncedInput
@@ -537,12 +550,12 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
           )
         })}
 
-        {TRACE_MULTI_SELECT_FIELDS.map(({ label, field }) => {
+        {MULTI_SELECT_FIELDS.map(({ label, field }) => {
           const selectedValues = getInValues(filters, field)
-
           return (
             <CollapsibleSection key={field} label={label} defaultOpen={selectedValues.length > 0}>
               <MultiSelectFilter
+                mode={mode}
                 projectId={projectId}
                 column={field}
                 selected={selectedValues}
@@ -552,9 +565,8 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
           )
         })}
 
-        {TRACE_NUMBER_RANGE_FIELDS.map(({ label, field }) => {
+        {NUMBER_RANGE_FIELDS.map(({ label, field }) => {
           const range = getRangeValues(filters, field)
-
           return (
             <CollapsibleSection key={field} label={label} defaultOpen={!!filters[field]}>
               <NumberRangeFilter
@@ -571,6 +583,6 @@ export function TraceFiltersSidebar({ projectId, filters, onFiltersChange, onClo
           <MetadataFilter entries={metadataEntries} onChange={handleMetadataChange} />
         </CollapsibleSection>
       </div>
-    </div>
+    </Layout.Sidebar>
   )
 }

@@ -89,6 +89,8 @@ export const CLICKHOUSE_SCHEMA_PATH = resolve(import.meta.dirname, "schema.sql")
 /**
  * Load a SQL schema file into a chdb session.
  * Strips SQL comments and executes each semicolon-delimited statement.
+ * Base tables are created before materialized views so that MV source
+ * references resolve correctly regardless of alphabetical file ordering.
  */
 export function loadClickHouseSchema(ch: TestClickHouse, schemaPath: string = CLICKHOUSE_SCHEMA_PATH): void {
   const raw = readFileSync(schemaPath, "utf-8")
@@ -97,7 +99,12 @@ export function loadClickHouseSchema(ch: TestClickHouse, schemaPath: string = CL
     .split(";")
     .map((s) => s.trim())
     .filter(Boolean)
-  for (const stmt of statements) {
+
+  const tables = statements.filter((s) => /^CREATE\s+TABLE\b/i.test(s))
+  const views = statements.filter((s) => /^CREATE\s+MATERIALIZED\s+VIEW\b/i.test(s))
+  const rest = statements.filter((s) => !/^CREATE\s+TABLE\b/i.test(s) && !/^CREATE\s+MATERIALIZED\s+VIEW\b/i.test(s))
+
+  for (const stmt of [...tables, ...views, ...rest]) {
     ch.session.query(stmt)
   }
 }

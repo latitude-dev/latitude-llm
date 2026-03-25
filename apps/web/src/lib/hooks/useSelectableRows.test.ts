@@ -382,4 +382,138 @@ describe("useSelectableRows", () => {
       expect(result.current.selectedCount).toBe(5)
     })
   })
+
+  describe("selectMany", () => {
+    it("is a no-op for empty array", () => {
+      const { result } = setup()
+      act(() => result.current.selectMany([]))
+      expect(result.current.selectionMode).toBe("none")
+      expect(result.current.selectedCount).toBe(0)
+    })
+
+    it("selects multiple rows from none mode", () => {
+      const { result } = setup()
+      act(() => result.current.selectMany(["a", "c", "e"]))
+
+      expect(result.current.selectionMode).toBe("partial")
+      expect(result.current.selectedCount).toBe(3)
+      expect(result.current.isSelected("a")).toBe(true)
+      expect(result.current.isSelected("b")).toBe(false)
+      expect(result.current.isSelected("c")).toBe(true)
+      expect(result.current.isSelected("e")).toBe(true)
+    })
+
+    it("adds to existing partial selection", () => {
+      const { result } = setup()
+      act(() => result.current.toggleRow("a", true))
+      act(() => result.current.selectMany(["c", "d"]))
+
+      expect(result.current.selectionMode).toBe("partial")
+      expect(result.current.selectedCount).toBe(3)
+      expect(result.current.isSelected("a")).toBe(true)
+      expect(result.current.isSelected("c")).toBe(true)
+      expect(result.current.isSelected("d")).toBe(true)
+    })
+
+    it("removes ids from excludedIds in allExcept mode", () => {
+      const { result } = setup()
+      act(() => result.current.toggleAll())
+      act(() => result.current.toggleRow("a", false))
+      act(() => result.current.toggleRow("b", false))
+      act(() => result.current.toggleRow("c", false))
+      expect(result.current.selectionMode).toBe("allExcept")
+      expect(result.current.selectedCount).toBe(2)
+
+      act(() => result.current.selectMany(["a", "c"]))
+
+      expect(result.current.selectionMode).toBe("allExcept")
+      expect(result.current.selectedCount).toBe(4)
+      expect(result.current.isSelected("a")).toBe(true)
+      expect(result.current.isSelected("b")).toBe(false)
+      expect(result.current.isSelected("c")).toBe(true)
+    })
+
+    it("transitions allExcept to all when all excluded ids are re-selected", () => {
+      const { result } = setup()
+      act(() => result.current.toggleAll())
+      act(() => result.current.toggleRow("b", false))
+      act(() => result.current.toggleRow("d", false))
+      expect(result.current.selectionMode).toBe("allExcept")
+
+      act(() => result.current.selectMany(["b", "d"]))
+
+      expect(result.current.selectionMode).toBe("all")
+      expect(result.current.selectedCount).toBe(5)
+    })
+  })
+
+  describe("deselectMany", () => {
+    it("is a no-op for empty array", () => {
+      const { result } = setup()
+      act(() => result.current.toggleAll())
+      act(() => result.current.deselectMany([]))
+      expect(result.current.selectionMode).toBe("all")
+      expect(result.current.selectedCount).toBe(5)
+    })
+
+    it("removes rows from partial selection", () => {
+      const { result } = setup()
+      act(() => result.current.selectMany(["a", "b", "c"]))
+      act(() => result.current.deselectMany(["a", "c"]))
+
+      expect(result.current.selectionMode).toBe("partial")
+      expect(result.current.selectedCount).toBe(1)
+      expect(result.current.isSelected("b")).toBe(true)
+      expect(result.current.isSelected("a")).toBe(false)
+      expect(result.current.isSelected("c")).toBe(false)
+    })
+
+    it("transitions partial to none when all are deselected", () => {
+      const { result } = setup()
+      act(() => result.current.selectMany(["a", "b"]))
+      act(() => result.current.deselectMany(["a", "b"]))
+
+      expect(result.current.selectionMode).toBe("none")
+      expect(result.current.selectedCount).toBe(0)
+    })
+
+    it("transitions all to allExcept", () => {
+      const { result } = setup()
+      act(() => result.current.toggleAll())
+      act(() => result.current.deselectMany(["b", "d"]))
+
+      expect(result.current.selectionMode).toBe("allExcept")
+      expect(result.current.selectedCount).toBe(3)
+      expect(result.current.isSelected("a")).toBe(true)
+      expect(result.current.isSelected("b")).toBe(false)
+      expect(result.current.isSelected("c")).toBe(true)
+      expect(result.current.isSelected("d")).toBe(false)
+      expect(result.current.isSelected("e")).toBe(true)
+    })
+
+    it("adds to excludedIds in allExcept mode", () => {
+      const { result } = setup()
+      act(() => result.current.toggleAll())
+      act(() => result.current.toggleRow("a", false))
+      expect(result.current.selectionMode).toBe("allExcept")
+
+      act(() => result.current.deselectMany(["c", "e"]))
+
+      expect(result.current.selectionMode).toBe("allExcept")
+      expect(result.current.selectedCount).toBe(2)
+      expect(result.current.isSelected("a")).toBe(false)
+      expect(result.current.isSelected("b")).toBe(true)
+      expect(result.current.isSelected("c")).toBe(false)
+      expect(result.current.isSelected("d")).toBe(true)
+      expect(result.current.isSelected("e")).toBe(false)
+    })
+
+    it("is a no-op in none mode", () => {
+      const { result } = setup()
+      act(() => result.current.deselectMany(["a", "b"]))
+
+      expect(result.current.selectionMode).toBe("none")
+      expect(result.current.selectedCount).toBe(0)
+    })
+  })
 })

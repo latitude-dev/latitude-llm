@@ -126,7 +126,7 @@ export function HeaderCell({
   sortDirection,
   onSortClick,
 }: {
-  children: ReactNode
+  children?: ReactNode
   align?: "start" | "end"
   resizable?: boolean
   minWidth?: number

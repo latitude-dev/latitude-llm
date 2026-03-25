@@ -8,26 +8,52 @@ export type BulkSelection<T extends string | number> =
   | { readonly mode: "all" }
   | { readonly mode: "allExcept"; readonly rowIds: T[] }
 
-interface SelectionState<T extends string | number> {
+export interface SelectionState<T extends string | number> {
   mode: SelectionMode
   selectedIds: Set<T>
   excludedIds: Set<T>
+}
+
+export const EMPTY_SELECTION: SelectionState<string> = {
+  mode: "none",
+  selectedIds: new Set(),
+  excludedIds: new Set(),
 }
 
 export function useSelectableRows<T extends string | number>({
   rowIds,
   initialSelection = [],
   totalRowCount,
+  controlledState,
+  onStateChange,
 }: {
   rowIds: T[]
   initialSelection?: T[]
   totalRowCount: number
+  controlledState?: SelectionState<T>
+  onStateChange?: (state: SelectionState<T>) => void
 }) {
-  const [selectionState, setSelectionState] = useState<SelectionState<T>>(() => ({
+  const [internalState, setInternalState] = useState<SelectionState<T>>(() => ({
     mode: initialSelection.length > 0 ? "partial" : "none",
     selectedIds: new Set(initialSelection),
     excludedIds: new Set(),
   }))
+
+  const selectionState = controlledState ?? internalState
+  const setSelectionState = useCallback(
+    (updater: SelectionState<T> | ((prev: SelectionState<T>) => SelectionState<T>)) => {
+      if (onStateChange) {
+        if (typeof updater === "function") {
+          onStateChange(updater(selectionState))
+        } else {
+          onStateChange(updater)
+        }
+      } else {
+        setInternalState(updater as SelectionState<T> | ((prev: SelectionState<T>) => SelectionState<T>))
+      }
+    },
+    [onStateChange, selectionState],
+  )
 
   const lastClickedIdRef = useRef<T | null>(null)
 
@@ -158,7 +184,59 @@ export function useSelectableRows<T extends string | number>({
         return newState
       })
     },
-    [rowIds],
+    [rowIds, setSelectionState],
+  )
+
+  const selectMany = useCallback(
+    (ids: T[]) => {
+      if (ids.length === 0) return
+      setSelectionState((prev) => {
+        const newState: SelectionState<T> = {
+          mode: prev.mode,
+          selectedIds: new Set<T>(prev.selectedIds),
+          excludedIds: new Set<T>(prev.excludedIds),
+        }
+        for (const id of ids) {
+          if (prev.mode === "all" || prev.mode === "allExcept") {
+            newState.excludedIds.delete(id)
+          } else {
+            newState.selectedIds.add(id)
+            if (newState.mode === "none") newState.mode = "partial"
+          }
+        }
+        if (newState.mode === "allExcept" && newState.excludedIds.size === 0) {
+          newState.mode = "all"
+        }
+        return newState
+      })
+    },
+    [setSelectionState],
+  )
+
+  const deselectMany = useCallback(
+    (ids: T[]) => {
+      if (ids.length === 0) return
+      setSelectionState((prev) => {
+        const newState: SelectionState<T> = {
+          mode: prev.mode,
+          selectedIds: new Set<T>(prev.selectedIds),
+          excludedIds: new Set<T>(prev.excludedIds),
+        }
+        for (const id of ids) {
+          if (prev.mode === "all" || prev.mode === "allExcept") {
+            newState.excludedIds.add(id)
+            if (newState.mode === "all") newState.mode = "allExcept"
+          } else if (prev.mode === "partial") {
+            newState.selectedIds.delete(id)
+          }
+        }
+        if (newState.mode === "partial" && newState.selectedIds.size === 0) {
+          newState.mode = "none"
+        }
+        return newState
+      })
+    },
+    [setSelectionState],
   )
 
   const clearSelections = useCallback(() => {
@@ -167,24 +245,16 @@ export function useSelectableRows<T extends string | number>({
       selectedIds: new Set(),
       excludedIds: new Set(),
     })
-  }, [])
+  }, [setSelectionState])
 
   const toggleAll = useCallback(() => {
     setSelectionState((prev) => {
       if (prev.mode === "all") {
-        return {
-          mode: "none",
-          selectedIds: new Set(),
-          excludedIds: new Set(),
-        }
+        return { mode: "none", selectedIds: new Set(), excludedIds: new Set() }
       }
-      return {
-        mode: "all",
-        selectedIds: new Set(),
-        excludedIds: new Set(),
-      }
+      return { mode: "all", selectedIds: new Set(), excludedIds: new Set() }
     })
-  }, [])
+  }, [setSelectionState])
 
   const selectedRowIds = useMemo(() => {
     switch (selectionState.mode) {
@@ -251,6 +321,8 @@ export function useSelectableRows<T extends string | number>({
       bulkSelection,
       toggleRow,
       toggleAll,
+      selectMany,
+      deselectMany,
       clearSelections,
       isSelected,
       headerState,
@@ -264,6 +336,8 @@ export function useSelectableRows<T extends string | number>({
     bulkSelection,
     toggleRow,
     toggleAll,
+    selectMany,
+    deselectMany,
     clearSelections,
     headerState,
   ])

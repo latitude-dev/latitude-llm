@@ -47,6 +47,7 @@ export * from "./components/icons/custom-icons/index.tsx"
 export { Icon, type IconProps, type IconSize } from "./components/icons/icons.tsx"
 export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
 export type {
+  ExpandedRows,
   InfiniteTableColumn,
   InfiniteTableInfiniteScroll,
   InfiniteTableProps,
@@ -78,13 +79,14 @@ export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 export { TableBlankSlate } from "./components/table-blank-slate/table-blank-slate.tsx"
 export { TableSkeleton } from "./components/table-skeleton/table-skeleton.tsx"
 export { TableWithHeader, TitleWithActions } from "./components/table-with-header/table-with-header.tsx"
-export { type TabOption, Tabs } from "./components/tabs/tabs.tsx"
+export { type TabOption, Tabs, type TabsProps } from "./components/tabs/tabs.tsx"
 export {
   TagBadge,
   TagBadgeList,
   type TagBadgeListProps,
   type TagBadgeProps,
 } from "./components/tag-badge/tag-badge.tsx"
+export { TagList, type TagListProps } from "./components/tag-badge/tag-list.tsx"
 export { type Common as TextCommonProps, Text, TextAtom, type TextProps } from "./components/text/text.tsx"
 export type { ToastActionElement, ToastProps } from "./components/toast/toast.tsx"
 export {

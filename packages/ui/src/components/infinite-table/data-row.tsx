@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react"
 import { type KeyboardEvent, memo, useCallback } from "react"
 import { cn } from "../../utils/cn.ts"
 import { Checkbox, type CheckedState } from "../checkbox/checkbox.tsx"
@@ -8,26 +9,32 @@ interface DataRowProps<T> {
   row: T
   rowKey: string
   columns: InfiniteTableColumn<T>[]
-  isSelected?: boolean
+  checkedState?: CheckedState
   isActive?: boolean
   onToggleRow?: (key: string, checked: CheckedState, options?: { shiftKey?: boolean }) => void
   hasSelection: boolean
+  hasExpansion: boolean
+  isExpandable?: boolean
+  isExpanded?: boolean
   onClick?: (row: T) => void
   dataIndex: number
-  measureRef: (node: Element | null) => void
+  isSubRow?: boolean
 }
 
 function DataRowInner<T>({
   row,
   rowKey,
   columns,
-  isSelected,
+  checkedState,
   isActive,
   onToggleRow,
   hasSelection,
+  hasExpansion,
+  isExpandable,
+  isExpanded,
   onClick,
   dataIndex,
-  measureRef,
+  isSubRow,
 }: DataRowProps<T>) {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTableRowElement>) => {
@@ -41,31 +48,52 @@ function DataRowInner<T>({
 
   return (
     <tr
-      ref={measureRef}
       data-index={dataIndex}
-      className={cn("bg-secondary transition-colors", {
+      className={cn("transition-colors", {
+        "bg-secondary": !isSubRow && !isExpanded,
+        "bg-muted": isExpanded && !isActive,
         "bg-accent": isActive,
-        "hover:bg-muted cursor-pointer": onClick,
-        "hover:bg-accent": onClick && isActive,
+        "hover:bg-muted cursor-pointer": onClick && !isExpanded && !isActive,
+        "hover:bg-accent cursor-pointer": onClick && (isExpanded || isActive),
         "focus-visible:outline-none": onClick,
       })}
       onClick={onClick ? () => onClick(row) : undefined}
-      // Prevent focus-on-click so the browser doesn't scroll the row into view
       onMouseDown={onClick ? (e) => e.preventDefault() : undefined}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? handleKeyDown : undefined}
     >
+      {hasExpansion && (
+        <td
+          className={cn(
+            "px-2 py-2 w-8",
+            "first:rounded-l-lg last:rounded-r-lg",
+            "align-middle text-sm leading-5 whitespace-nowrap",
+          )}
+        >
+          {isExpandable && (
+            <ChevronRight
+              className={cn("h-4 w-4 text-muted-foreground transition-transform", {
+                "rotate-90": isExpanded,
+              })}
+            />
+          )}
+        </td>
+      )}
       {hasSelection && (
         <td
-          className="px-4 py-2 align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis"
+          className={cn(
+            "px-4 py-2",
+            "first:rounded-l-lg last:rounded-r-lg overflow-hidden",
+            "align-middle text-sm leading-5 font-normal whitespace-nowrap text-ellipsis",
+          )}
           onClick={(e) => {
             e.stopPropagation()
-            const next = !isSelected
+            const next = checkedState !== true
             onToggleRow?.(rowKey, next, { shiftKey: e.shiftKey })
           }}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          <Checkbox checked={isSelected ?? false} className="pointer-events-none" />
+          <Checkbox checked={checkedState ?? false} className="pointer-events-none" />
         </td>
       )}
       {columns.map((col) => {
@@ -74,7 +102,9 @@ function DataRowInner<T>({
           <td
             key={col.key}
             className={cn(
-              "px-4 py-2 align-middle text-sm leading-5 font-normal whitespace-nowrap overflow-hidden text-ellipsis max-w-0",
+              "px-4 py-2 max-w-0",
+              "first:rounded-l-lg last:rounded-r-lg overflow-hidden",
+              "align-middle text-sm leading-5 font-normal whitespace-nowrap text-ellipsis",
               { "text-right": col.align === "end" },
             )}
           >

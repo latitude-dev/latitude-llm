@@ -20,6 +20,135 @@ PRIMARY KEY (organization_id, dataset_id)
 ORDER BY (organization_id, dataset_id, row_id, xact_id)
 SETTINGS index_granularity = 8192;
 
+CREATE TABLE scores
+(
+    `id` FixedString(24) CODEC(ZSTD(1)),
+    `organization_id` LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(FixedString(24)) CODEC(ZSTD(1)),
+    `session_id` FixedString(128) DEFAULT '' CODEC(ZSTD(1)),
+    `trace_id` FixedString(32) DEFAULT '' CODEC(ZSTD(1)),
+    `span_id` FixedString(16) DEFAULT '' CODEC(ZSTD(1)),
+    `source` FixedString(32) CODEC(ZSTD(1)),
+    `source_id` FixedString(128) CODEC(ZSTD(1)),
+    `simulation_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
+    `issue_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
+    `value` Float32 CODEC(Gorilla, ZSTD(1)),
+    `passed` Bool CODEC(T64, LZ4),
+    `errored` Bool CODEC(T64, LZ4),
+    `duration` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `tokens` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `cost` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
+    `created_at` DateTime64(3, 'UTC') CODEC(Delta(8), ZSTD(1)),
+    INDEX idx_source source TYPE set(3) GRANULARITY 4,
+    INDEX idx_source_id source_id TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_issue_id issue_id TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_simulation_id simulation_id TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_trace_id trace_id TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_span_id span_id TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_passed passed TYPE bloom_filter(0.01) GRANULARITY 1,
+    INDEX idx_errored errored TYPE bloom_filter(0.01) GRANULARITY 1
+)
+ENGINE = MergeTree
+PARTITION BY toYYYYMM(created_at)
+PRIMARY KEY (organization_id, project_id, created_at)
+ORDER BY (organization_id, project_id, created_at, source, source_id, session_id, trace_id, span_id, id)
+SETTINGS index_granularity = 8192;
+
+CREATE TABLE sessions
+(
+    `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `project_id` LowCardinality(String) CODEC(ZSTD(1)),
+    `session_id` String CODEC(ZSTD(1)),
+    `trace_count` AggregateFunction(uniqExact, FixedString(32)) CODEC(ZSTD(1)),
+    `trace_ids` AggregateFunction(groupUniqArray, FixedString(32)) CODEC(ZSTD(1)),
+    `span_count` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `error_count` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `min_start_time` SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
+    `max_end_time` SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
+    `duration_ns` Int64 ALIAS reinterpretAsInt64(max_end_time) - reinterpretAsInt64(min_start_time),
+    `tokens_input` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `tokens_output` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `tokens_cache_read` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `tokens_cache_create` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `tokens_reasoning` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `tokens_total` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `cost_input_microcents` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `cost_output_microcents` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `cost_total_microcents` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
+    `user_id` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
+    `tags` SimpleAggregateFunction(groupUniqArrayArray, Array(String)) CODEC(ZSTD(1)),
+    `metadata` SimpleAggregateFunction(maxMap, Map(String, String)) CODEC(ZSTD(1)),
+    `models` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
+    `providers` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
+    `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
+    INDEX idx_start_time min_start_time TYPE minmax GRANULARITY 1
+)
+ENGINE = AggregatingMergeTree
+PARTITION BY toYYYYMM(min_start_time)
+PRIMARY KEY (organization_id, project_id)
+ORDER BY (organization_id, project_id, session_id)
+SETTINGS index_granularity = 8192;
+
+CREATE MATERIALIZED VIEW sessions_mv TO sessions
+(
+    `organization_id` LowCardinality(String),
+    `project_id` LowCardinality(String),
+    `session_id` String,
+    `trace_count` AggregateFunction(uniqExact, FixedString(32)),
+    `trace_ids` AggregateFunction(groupUniqArray, FixedString(32)),
+    `span_count` UInt64,
+    `error_count` UInt64,
+    `min_start_time` DateTime64(9, 'UTC'),
+    `max_end_time` DateTime64(9, 'UTC'),
+    `tokens_input` UInt64,
+    `tokens_output` UInt64,
+    `tokens_cache_read` UInt64,
+    `tokens_cache_create` UInt64,
+    `tokens_reasoning` UInt64,
+    `tokens_total` UInt64,
+    `cost_input_microcents` UInt64,
+    `cost_output_microcents` UInt64,
+    `cost_total_microcents` UInt64,
+    `user_id` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
+    `tags` Array(String),
+    `metadata` Map(String, String),
+    `models` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `providers` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8)
+)
+AS SELECT
+    s.organization_id,
+    s.project_id,
+    s.session_id,
+    uniqExactState(s.trace_id) AS trace_count,
+    groupUniqArrayState(s.trace_id) AS trace_ids,
+    count() AS span_count,
+    countIf(s.status_code = 2) AS error_count,
+    min(s.start_time) AS min_start_time,
+    max(s.end_time) AS max_end_time,
+    sum(s.tokens_input) AS tokens_input,
+    sum(s.tokens_output) AS tokens_output,
+    sum(s.tokens_cache_read) AS tokens_cache_read,
+    sum(s.tokens_cache_create) AS tokens_cache_create,
+    sum(s.tokens_reasoning) AS tokens_reasoning,
+    sum(s.tokens_total) AS tokens_total,
+    sum(s.cost_input_microcents) AS cost_input_microcents,
+    sum(s.cost_output_microcents) AS cost_output_microcents,
+    sum(s.cost_total_microcents) AS cost_total_microcents,
+    argMaxIfState(s.user_id, s.start_time, s.user_id != '') AS user_id,
+    groupUniqArrayArray(s.tags) AS tags,
+    maxMap(s.metadata) AS metadata,
+    groupUniqArrayIfState(s.model, s.model != '') AS models,
+    groupUniqArrayIfState(s.provider, s.provider != '') AS providers,
+    groupUniqArrayIfState(s.service_name, s.service_name != '') AS service_names
+FROM spans AS s
+WHERE s.session_id != ''
+GROUP BY
+    s.organization_id,
+    s.project_id,
+    s.session_id;
+
 CREATE TABLE spans
 (
     `organization_id` LowCardinality(String) CODEC(ZSTD(1)),
@@ -61,8 +190,8 @@ CREATE TABLE spans
     `cost_is_estimated` UInt8 DEFAULT 0 CODEC(T64, LZ4),
     `time_to_first_token_ns` UInt64 DEFAULT 0 CODEC(T64, ZSTD(1)),
     `is_streaming` UInt8 DEFAULT 0 CODEC(T64, LZ4),
-    `tokens_per_second` Float64 ALIAS if(duration_ns > 0 AND tokens_output > 0, tokens_output * 1000000000.0 / duration_ns, 0),
-    `inter_token_latency_ns` Float64 ALIAS if(tokens_output > 1 AND duration_ns > 0, toFloat64(if(time_to_first_token_ns > 0, duration_ns - time_to_first_token_ns, duration_ns)) / (tokens_output - 1), 0),
+    `tokens_per_second` Float64 ALIAS if((duration_ns > 0) AND (tokens_output > 0), (tokens_output * 1000000000.) / duration_ns, 0),
+    `inter_token_latency_ns` Float64 ALIAS if((tokens_output > 1) AND (duration_ns > 0), toFloat64(if(time_to_first_token_ns > 0, duration_ns - time_to_first_token_ns, duration_ns)) / (tokens_output - 1), 0),
     `response_id` String DEFAULT '' CODEC(ZSTD(1)),
     `finish_reasons` Array(LowCardinality(String)) DEFAULT [] CODEC(ZSTD(1)),
     `attr_string` Map(LowCardinality(String), String) CODEC(ZSTD(1)),
@@ -83,14 +212,14 @@ CREATE TABLE spans
     `ingested_at` DateTime64(3, 'UTC') DEFAULT now64(3) CODEC(Delta(8), LZ4),
     INDEX idx_trace_id trace_id TYPE bloom_filter(0.01) GRANULARITY 1,
     INDEX idx_session_id session_id TYPE bloom_filter(0.01) GRANULARITY 2,
-    INDEX idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_model model TYPE bloom_filter(0.01) GRANULARITY 4,
     INDEX idx_provider provider TYPE bloom_filter(0.01) GRANULARITY 4,
     INDEX idx_status status_code TYPE set(3) GRANULARITY 1,
     INDEX idx_operation operation TYPE bloom_filter(0.01) GRANULARITY 4,
     INDEX idx_error_type error_type TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_service service_name TYPE bloom_filter(0.01) GRANULARITY 4,
-    INDEX idx_tags tags TYPE bloom_filter(0.01) GRANULARITY 2
+    INDEX idx_tags tags TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 2
 )
 ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(start_time)
@@ -107,9 +236,9 @@ CREATE TABLE traces
     `error_count` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
     `min_start_time` SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
     `max_end_time` SimpleAggregateFunction(max, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
-    `duration_ns` Int64 ALIAS reinterpretAsInt64(max_end_time) - reinterpretAsInt64(min_start_time),
     `time_of_first_token` SimpleAggregateFunction(min, DateTime64(9, 'UTC')) CODEC(Delta(8), ZSTD(1)),
     `time_to_first_token_ns` Int64 ALIAS if(time_of_first_token < toDateTime64('2261-01-01', 9, 'UTC'), reinterpretAsInt64(time_of_first_token) - reinterpretAsInt64(min_start_time), 0),
+    `duration_ns` Int64 ALIAS reinterpretAsInt64(max_end_time) - reinterpretAsInt64(min_start_time),
     `tokens_input` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
     `tokens_output` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
     `tokens_cache_read` SimpleAggregateFunction(sum, UInt64) CODEC(T64, ZSTD(1)),
@@ -140,41 +269,73 @@ PRIMARY KEY (organization_id, project_id)
 ORDER BY (organization_id, project_id, trace_id)
 SETTINGS index_granularity = 8192;
 
--- chdb resolves SELECT aliases eagerly, so aliases that shadow source-table
--- column names cause "nested aggregate" false positives. Table-qualifying
--- all column references forces chdb to resolve against the source table.
 CREATE MATERIALIZED VIEW traces_mv TO traces
+(
+    `organization_id` LowCardinality(String),
+    `project_id` LowCardinality(String),
+    `trace_id` FixedString(32),
+    `span_count` UInt64,
+    `error_count` UInt64,
+    `min_start_time` DateTime64(9, 'UTC'),
+    `max_end_time` DateTime64(9, 'UTC'),
+    `time_of_first_token` DateTime64(9, 'UTC'),
+    `tokens_input` UInt64,
+    `tokens_output` UInt64,
+    `tokens_cache_read` UInt64,
+    `tokens_cache_create` UInt64,
+    `tokens_reasoning` UInt64,
+    `tokens_total` UInt64,
+    `cost_input_microcents` UInt64,
+    `cost_output_microcents` UInt64,
+    `cost_total_microcents` UInt64,
+    `session_id` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
+    `user_id` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
+    `tags` Array(String),
+    `metadata` Map(String, String),
+    `models` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `providers` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `root_span_id` AggregateFunction(argMinIf, FixedString(16), DateTime64(9, 'UTC'), UInt8),
+    `root_span_name` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
+    `input_messages` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8),
+    `last_input_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
+    `output_messages` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
+    `system_instructions` AggregateFunction(argMinIf, String, DateTime64(9, 'UTC'), UInt8)
+)
 AS SELECT
-    s.organization_id,
-    s.project_id,
-    s.trace_id,
+    organization_id,
+    project_id,
+    trace_id,
     count() AS span_count,
-    countIf(s.status_code = 2) AS error_count,
-    min(s.start_time) AS min_start_time,
-    max(s.end_time) AS max_end_time,
-    min(if(s.time_to_first_token_ns > 0, addNanoseconds(s.start_time, toInt64(s.time_to_first_token_ns)), toDateTime64('2261-01-01 00:00:00.000000000', 9, 'UTC'))) AS time_of_first_token,
-    sum(s.tokens_input) AS tokens_input,
-    sum(s.tokens_output) AS tokens_output,
-    sum(s.tokens_cache_read) AS tokens_cache_read,
-    sum(s.tokens_cache_create) AS tokens_cache_create,
-    sum(s.tokens_reasoning) AS tokens_reasoning,
-    sum(s.tokens_total) AS tokens_total,
-    sum(s.cost_input_microcents) AS cost_input_microcents,
-    sum(s.cost_output_microcents) AS cost_output_microcents,
-    sum(s.cost_total_microcents) AS cost_total_microcents,
-    argMaxIfState(s.session_id, s.start_time, s.session_id != '') AS session_id,
-    argMaxIfState(s.user_id, s.start_time, s.user_id != '') AS user_id,
-    groupUniqArrayArray(s.tags) AS tags,
-    maxMap(s.metadata) AS metadata,
-    groupUniqArrayIfState(s.model, s.model != '') AS models,
-    groupUniqArrayIfState(s.provider, s.provider != '') AS providers,
-    groupUniqArrayIfState(s.service_name, s.service_name != '') AS service_names,
-    argMinIfState(s.span_id, s.start_time, s.parent_span_id = '') AS root_span_id,
-    argMinIfState(s.name, s.start_time, s.parent_span_id = '') AS root_span_name,
-    argMinIfState(s.input_messages, s.start_time, s.input_messages != '') AS input_messages,
-    argMaxIfState(s.input_messages, s.end_time, s.output_messages != '') AS last_input_messages,
-    argMaxIfState(s.output_messages, s.end_time, s.output_messages != '') AS output_messages,
-    argMinIfState(s.system_instructions, s.start_time, s.system_instructions != '') AS system_instructions
-FROM spans AS s
-GROUP BY s.organization_id, s.project_id, s.trace_id;
+    countIf(status_code = 2) AS error_count,
+    min(start_time) AS min_start_time,
+    max(end_time) AS max_end_time,
+    min(if(time_to_first_token_ns > 0, addNanoseconds(start_time, toInt64(time_to_first_token_ns)), toDateTime64('2261-01-01 00:00:00.000000000', 9, 'UTC'))) AS time_of_first_token,
+    sum(tokens_input) AS tokens_input,
+    sum(tokens_output) AS tokens_output,
+    sum(tokens_cache_read) AS tokens_cache_read,
+    sum(tokens_cache_create) AS tokens_cache_create,
+    sum(tokens_reasoning) AS tokens_reasoning,
+    sum(tokens_total) AS tokens_total,
+    sum(cost_input_microcents) AS cost_input_microcents,
+    sum(cost_output_microcents) AS cost_output_microcents,
+    sum(cost_total_microcents) AS cost_total_microcents,
+    argMaxIfState(session_id, start_time, session_id != '') AS session_id,
+    argMaxIfState(user_id, start_time, user_id != '') AS user_id,
+    groupUniqArrayArray(tags) AS tags,
+    maxMap(metadata) AS metadata,
+    groupUniqArrayIfState(model, model != '') AS models,
+    groupUniqArrayIfState(provider, provider != '') AS providers,
+    groupUniqArrayIfState(service_name, service_name != '') AS service_names,
+    argMinIfState(span_id, start_time, parent_span_id = '') AS root_span_id,
+    argMinIfState(name, start_time, parent_span_id = '') AS root_span_name,
+    argMinIfState(spans.input_messages, start_time, spans.input_messages != '') AS input_messages,
+    argMaxIfState(spans.input_messages, end_time, spans.output_messages != '') AS last_input_messages,
+    argMaxIfState(spans.output_messages, end_time, spans.output_messages != '') AS output_messages,
+    argMinIfState(spans.system_instructions, start_time, spans.system_instructions != '') AS system_instructions
+FROM spans
+GROUP BY
+    organization_id,
+    project_id,
+    trace_id;
 
