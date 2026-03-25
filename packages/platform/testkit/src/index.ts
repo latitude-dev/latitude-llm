@@ -1,4 +1,13 @@
 // Database exports
+
+// Postgres test utilities (implementation lives in db-postgres to avoid cycle)
+export {
+  closeInMemoryPostgres,
+  createInMemoryPostgres,
+  createRlsMiddleware,
+  type InMemoryPostgres,
+  setupTestPostgres,
+} from "@platform/db-postgres/testing"
 export {
   createApiKeyAuthHeaders,
   createAuthHeaders,
@@ -8,7 +17,15 @@ export {
   type TestAuthContext,
   withAuthContext,
 } from "./auth/auth-helpers.ts"
-
+// ClickHouse test utilities exports
+export {
+  CLICKHOUSE_SCHEMA_PATH,
+  createTestClickHouse,
+  loadClickHouseSchema,
+  setupTestClickHouse,
+  type TestClickHouse,
+  truncateClickHouseTables,
+} from "./clickhouse/test-clickhouse.ts"
 // Fixture exports
 export {
   type ApiKeyFixture,
@@ -38,15 +55,6 @@ export {
   type TestDatabase,
   type TestDatabaseConfig,
 } from "./database/test-database.ts"
-// Postgres test utilities (implementation lives in db-postgres to avoid cycle)
-export {
-  closeInMemoryPostgres,
-  createInMemoryPostgres,
-  createRlsMiddleware,
-  type InMemoryPostgres,
-  setupTestPostgres,
-} from "@platform/db-postgres/testing"
-
 // Hono test client exports
 export {
   createTestClient,
@@ -55,16 +63,6 @@ export {
   type TestRequestOptions,
   type TestResponse,
 } from "./hono/test-client.ts"
-
-// ClickHouse test utilities exports
-export {
-  CLICKHOUSE_SCHEMA_PATH,
-  createTestClickHouse,
-  loadClickHouseSchema,
-  setupTestClickHouse,
-  truncateClickHouseTables,
-  type TestClickHouse,
-} from "./clickhouse/test-clickhouse.ts"
 
 // Redis test utilities exports
 export {
