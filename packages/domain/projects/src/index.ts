@@ -5,10 +5,6 @@ export {
   type Project,
   restoreProject,
 } from "./entities/project.ts"
-export {
-  createProjectCreatedEvent,
-  type ProjectCreatedEvent,
-} from "./events/project-created.ts"
 export { ProjectRepository } from "./ports/project-repository.ts"
 export {
   type CreateProjectError,

@@ -4,21 +4,11 @@ import { join } from "node:path"
 import { parseEnv } from "@platform/env"
 import { loadTemporalConfig, runTemporalWorker } from "@platform/workflows-temporal"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
-import { config as loadDotenv } from "dotenv"
+import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import * as activities from "./activities/index.ts"
 
-const nodeEnv = process.env.NODE_ENV || "development"
-for (const envPath of [
-  join(process.cwd(), `.env.${nodeEnv}`),
-  join(process.cwd(), "..", "..", `.env.${nodeEnv}`),
-  join(process.cwd(), "apps", "workflows", `.env.${nodeEnv}`),
-]) {
-  if (existsSync(envPath)) {
-    loadDotenv({ path: envPath, quiet: true })
-    break
-  }
-}
+loadDevelopmentEnvironments(import.meta.url)
 
 function resolveWorkflowsPath(): string {
   const override = process.env.LAT_TEMPORAL_WORKFLOWS_PATH

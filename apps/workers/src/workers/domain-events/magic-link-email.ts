@@ -16,7 +16,11 @@ import { getPostgresClient } from "../../clients.ts"
 const logger = createLogger("magic-link-email")
 const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
-export const createMagicLinkEmailWorker = (consumer: QueueConsumer) => {
+interface MagicLinkEmailDeps {
+  consumer: QueueConsumer
+}
+
+export const createMagicLinkEmailWorker = ({ consumer }: MagicLinkEmailDeps) => {
   consumer.subscribe("magic-link-email", {
     send: (payload) => {
       const pgClient = getPostgresClient()

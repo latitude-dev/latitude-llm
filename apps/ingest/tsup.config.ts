@@ -9,6 +9,7 @@ export default defineConfig({
   noExternal: [/@(platform|domain|repo)\/.*/],
   splitting: false,
   sourcemap: true,
+  shims: true,
   clean: true,
   esbuildOptions(options) {
     options.plugins = [

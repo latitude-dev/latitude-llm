@@ -21,19 +21,25 @@ const BATCH_SIZE = 1000
 const SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
 
 interface DatasetExportDeps {
-  readonly postgresClient: PostgresClient
-  readonly clickhouseClient: ClickHouseClient
-  readonly disk: StorageDiskPort
-  readonly emailSender: EmailSender
-  readonly logger: { info: (...args: unknown[]) => void; error: (...args: unknown[]) => void }
+  consumer: QueueConsumer
+  postgresClient?: PostgresClient
+  clickhouseClient?: ClickHouseClient
+  disk?: StorageDiskPort
+  emailSender?: EmailSender
 }
 
-export const createDatasetExportWorker = (consumer: QueueConsumer, deps?: Partial<DatasetExportDeps>) => {
-  const pgClient = deps?.postgresClient ?? getPostgresClient()
-  const chClient = deps?.clickhouseClient ?? getClickhouseClient()
-  const disk = deps?.disk ?? createStorageDisk()
-  const sendEmailUseCase = sendEmail({ emailSender: deps?.emailSender ?? createEmailTransportSender() })
-  const workerLogger = deps?.logger ?? logger
+export const createDatasetExportWorker = ({
+  consumer,
+  postgresClient,
+  clickhouseClient,
+  disk: diskDep,
+  emailSender,
+}: DatasetExportDeps) => {
+  const pgClient = postgresClient ?? getPostgresClient()
+  const chClient = clickhouseClient ?? getClickhouseClient()
+  const disk = diskDep ?? createStorageDisk()
+  const sendEmailUseCase = sendEmail({ emailSender: emailSender ?? createEmailTransportSender() })
+  const workerLogger = logger
 
   consumer.subscribe("dataset-export", {
     export: (payload) => {

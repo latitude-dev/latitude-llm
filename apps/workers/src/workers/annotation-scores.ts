@@ -4,7 +4,11 @@ import { Effect } from "effect"
 
 const logger = createLogger("annotation-scores")
 
-export const createAnnotationScoresWorker = (consumer: QueueConsumer) => {
+interface AnnotationScoresDeps {
+  consumer: QueueConsumer
+}
+
+export const createAnnotationScoresWorker = ({ consumer }: AnnotationScoresDeps) => {
   consumer.subscribe("annotation-scores", {
     publish: () => Effect.sync(() => logger.info("Stub handler for annotation-scores:publish")),
   })

@@ -1,4 +1,4 @@
-import type { EventEnvelope, EventsPublisher } from "@domain/events"
+import type { DomainEvent, EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueueName, QueuePublishError, TaskHandlers } from "@domain/queue"
 import { queryClickhouse } from "@platform/db-clickhouse"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
@@ -36,13 +36,13 @@ class TestQueueConsumer implements QueueConsumer {
 const ch = setupTestClickHouse()
 
 function createFakeEventsPublisher(): EventsPublisher<QueuePublishError> & {
-  readonly published: EventEnvelope[]
+  readonly published: DomainEvent[]
 } {
-  const published: EventEnvelope[] = []
+  const published: DomainEvent[] = []
   return {
     published,
-    publish: (envelope) => {
-      published.push(envelope)
+    publish: (event) => {
+      published.push(event)
       return Effect.void
     },
   }
@@ -83,11 +83,7 @@ describe("createSpanIngestionWorker", () => {
     const fileKey = "span-ingestion/test-valid.json"
     disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
 
-    createSpanIngestionWorker(consumer, pub, {
-      clickhouseClient: ch.client,
-      disk,
-      logger: { error: () => undefined },
-    })
+    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
 
     await consumer.dispatchTask("span-ingestion", "ingest", {
       fileKey,
@@ -123,8 +119,8 @@ describe("createSpanIngestionWorker", () => {
     expect(rows[0]?.ingested_at).toContain("2026-03-18 10:00:00")
 
     expect(pub.published).toHaveLength(1)
-    expect(pub.published[0]?.event.name).toBe("SpanIngested")
-    expect(pub.published[0]?.event.payload).toEqual({
+    expect(pub.published[0]?.name).toBe("SpanIngested")
+    expect(pub.published[0]?.payload).toEqual({
       organizationId: "org_span_ingestion_test",
       projectId: "proj_span_ingestion_test",
       traceId: "0af7651916cd43dd8448eb211c80319c",
@@ -138,11 +134,7 @@ describe("createSpanIngestionWorker", () => {
     const fileKey = "span-ingestion/test-invalid.json"
     disk.putBytes(fileKey, Buffer.from("not-json", "utf-8"))
 
-    createSpanIngestionWorker(consumer, pub, {
-      clickhouseClient: ch.client,
-      disk,
-      logger: { error: () => undefined },
-    })
+    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
 
     await consumer.dispatchTask("span-ingestion", "ingest", {
       fileKey,

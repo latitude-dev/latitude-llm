@@ -8,12 +8,14 @@ import { getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("api-keys")
 
-interface ApiKeysWorkerDeps {
-  readonly postgresClient: PostgresClient
-}
-
-export const createApiKeysWorker = (consumer: QueueConsumer, deps?: Partial<ApiKeysWorkerDeps>) => {
-  const pgClient = deps?.postgresClient ?? getPostgresClient()
+export const createApiKeysWorker = ({
+  consumer,
+  postgresClient,
+}: {
+  consumer: QueueConsumer
+  postgresClient?: PostgresClient
+}) => {
+  const pgClient = postgresClient ?? getPostgresClient()
 
   consumer.subscribe("api-keys", {
     create: (payload) => {

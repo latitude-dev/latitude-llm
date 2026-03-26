@@ -12,7 +12,11 @@ import { getAdminPostgresClient } from "../../clients.ts"
 
 const logger = createLogger("user-deletion")
 
-export const createUserDeletionWorker = (consumer: QueueConsumer) => {
+interface UserDeletionDeps {
+  consumer: QueueConsumer
+}
+
+export const createUserDeletionWorker = ({ consumer }: UserDeletionDeps) => {
   consumer.subscribe("user-deletion", {
     delete: (payload) => {
       const pgClient = getAdminPostgresClient()

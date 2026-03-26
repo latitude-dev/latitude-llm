@@ -1,4 +1,4 @@
-import type { EventEnvelope, EventsPublisher } from "@domain/events"
+import type { DomainEvent, EventsPublisher } from "@domain/events"
 import { Data, Effect, Fiber, Result, Schedule } from "effect"
 import type { Pool, PoolClient } from "pg"
 
@@ -30,7 +30,7 @@ export interface OutboxConsumer {
 }
 
 const SELECT_UNPUBLISHED_EVENTS = `
-  SELECT 
+  SELECT
     id,
     event_name,
     aggregate_id,
@@ -68,17 +68,13 @@ const processBatchEffect = <TPublishError>(
     const processedIds: string[] = []
 
     for (const row of result.rows) {
-      const envelope: EventEnvelope = {
-        id: row.id,
-        event: {
-          name: row.event_name,
-          organizationId: row.workspace_id,
-          payload: row.payload,
-        },
-        occurredAt: row.occurred_at,
-      }
+      const event = {
+        name: row.event_name,
+        organizationId: row.workspace_id,
+        payload: row.payload,
+      } as DomainEvent
 
-      const publishResult = yield* Effect.result(publisher.publish(envelope))
+      const publishResult = yield* Effect.result(publisher.publish(event))
 
       if (Result.isSuccess(publishResult)) {
         processedIds.push(row.id)

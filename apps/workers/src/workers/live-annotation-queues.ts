@@ -4,7 +4,11 @@ import { Effect } from "effect"
 
 const logger = createLogger("live-annotation-queues")
 
-export const createLiveAnnotationQueuesWorker = (consumer: QueueConsumer) => {
+interface LiveAnnotationQueuesDeps {
+  consumer: QueueConsumer
+}
+
+export const createLiveAnnotationQueuesWorker = ({ consumer }: LiveAnnotationQueuesDeps) => {
   consumer.subscribe("live-annotation-queues", {
     curate: () => Effect.sync(() => logger.info("Stub handler for live-annotation-queues:curate")),
   })

@@ -4,7 +4,11 @@ import { Effect } from "effect"
 
 const logger = createLogger("live-evaluations")
 
-export const createLiveEvaluationsWorker = (consumer: QueueConsumer) => {
+interface LiveEvaluationsDeps {
+  consumer: QueueConsumer
+}
+
+export const createLiveEvaluationsWorker = ({ consumer }: LiveEvaluationsDeps) => {
   consumer.subscribe("live-evaluations", {
     enqueue: () => Effect.sync(() => logger.info("Stub handler for live-evaluations:enqueue")),
     execute: () => Effect.sync(() => logger.info("Stub handler for live-evaluations:execute")),

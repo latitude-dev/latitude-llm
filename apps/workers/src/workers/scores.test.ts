@@ -75,7 +75,8 @@ describe("createScoresWorker", () => {
     const projectId = ProjectId("qqqqqqqqqqqqqqqqqqqqqqqq")
     const consumer = new TestQueueConsumer()
 
-    createScoresWorker(consumer, {
+    createScoresWorker({
+      consumer,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       logger: { info: () => undefined, error: () => undefined },
@@ -115,7 +116,8 @@ describe("createScoresWorker", () => {
     const projectId = ProjectId("nnnnnnnnnnnnnnnnnnnnnnnn")
     const consumer = new TestQueueConsumer()
 
-    createScoresWorker(consumer, {
+    createScoresWorker({
+      consumer,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       logger: { info: () => undefined, error: () => undefined },

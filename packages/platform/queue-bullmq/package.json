@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/shared": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
     "@platform/env": "workspace:*",

@@ -46,7 +46,7 @@ describe("createApiKeysWorker", () => {
 
   it("persists an API key for the organization", async () => {
     const consumer = new TestQueueConsumer()
-    createApiKeysWorker(consumer, { postgresClient: pg.appPostgresClient })
+    createApiKeysWorker({ consumer, postgresClient: pg.appPostgresClient })
 
     await consumer.dispatchTask("api-keys", "create", {
       organizationId: ORG_ID,

@@ -1,11 +1,9 @@
-import { existsSync } from "node:fs"
-import { fileURLToPath } from "node:url"
 import { serve } from "@hono/node-server"
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { parseEnv } from "@platform/env"
 import { initializeObservability, shutdownObservability } from "@repo/observability"
-import { config as loadDotenv } from "dotenv"
+import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { logger as honoLogger } from "hono/logger"
@@ -16,13 +14,7 @@ import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
 import { logger } from "./utils/logger.ts"
 
-const nodeEnv = process.env.NODE_ENV || "development"
-// Load .env file for local development; skipped in production containers where the file won't exist
-if (import.meta.url) {
-  const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-  if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
-}
-
+const { nodeEnv } = loadDevelopmentEnvironments(import.meta.url)
 const startServer = async () => {
   await initializeObservability({
     serviceName: "api",
