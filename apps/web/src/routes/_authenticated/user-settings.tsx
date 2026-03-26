@@ -186,9 +186,11 @@ function DeleteAccountSection() {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   return (
-    <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Delete Account</Text.H4>
-      <Text.H5 color="foregroundMuted">
+    <div className="flex flex-col gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+      <Text.H4 weight="bold" color="destructive">
+        Delete Account
+      </Text.H4>
+      <Text.H5 color="destructive">
         Permanently delete your account and all associated data. If you are the sole member of an organization, that
         organization will also be deleted.
       </Text.H5>
