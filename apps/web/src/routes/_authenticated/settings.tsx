@@ -73,6 +73,7 @@ function OrganizationSection() {
 
   return (
     <div className="flex max-w-lg flex-col gap-6">
+      <Text.H4 weight="bold">Organization settings</Text.H4>
       <Input
         required
         type="text"
@@ -483,7 +484,7 @@ function ApiKeysSection() {
 
 function SettingsPage() {
   return (
-    <Container>
+    <Container className="flex flex-col gap-8 pt-14">
       <OrganizationSection />
       <MembershipsSection />
       <ApiKeysSection />
