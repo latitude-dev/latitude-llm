@@ -2,6 +2,7 @@ import { Button, Container, FormWrapper, Input, Modal, Text, useToast } from "@r
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
+import { setActiveOrganization } from "../../domains/auth/auth.functions.ts"
 import { createOrganization } from "../../domains/organizations/organizations.functions.ts"
 import { deleteCurrentUser, updateUserName } from "../../domains/sessions/session.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
@@ -71,7 +72,6 @@ function ProfileSection() {
 
 function CreateOrganizationSection() {
   const { toast } = useToast()
-  const router = useRouter()
 
   const form = useForm({
     defaultValues: {
@@ -79,10 +79,16 @@ function CreateOrganizationSection() {
     },
     onSubmit: async ({ value }) => {
       try {
-        await createOrganization({ data: { name: value.name } })
+        const org = await createOrganization({ data: { name: value.name } })
         toast({ description: "Organization created" })
         form.reset()
-        void router.invalidate()
+        await setActiveOrganization({
+          data: {
+            organizationId: org.id,
+            organizationSlug: org.slug,
+          },
+        })
+        window.location.href = "/"
       } catch (error) {
         toast({
           variant: "destructive",

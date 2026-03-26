@@ -92,10 +92,7 @@ function OrganizationSection() {
         <Switch
           id="keep-monitoring"
           checked={org.settings?.keepMonitoring ?? true}
-          onCheckedChange={(checked) => {
-            updateOrganizationMutation(org.id, { settings: { keepMonitoring: checked } })
-            toast({ description: "Monitoring preference updated" })
-          }}
+          onCheckedChange={(checked) => saveField({ settings: { keepMonitoring: checked } })}
         />
       </div>
     </div>
