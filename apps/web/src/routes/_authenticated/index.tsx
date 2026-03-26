@@ -19,9 +19,11 @@ import {
   useToast,
 } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
+import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
+import { useOrganizationsCollection } from "../../domains/organizations/organizations.collection.ts"
 import {
   createProjectMutation,
   deleteProjectMutation,
@@ -245,7 +247,10 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
 
 function DashboardPageContent() {
   const [createOpen, setCreateOpen] = useState(false)
-  const { organizationName } = Route.useRouteContext()
+  const { organizationId } = Route.useRouteContext()
+  const { data: org } = useOrganizationsCollection((orgs) =>
+    orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
+  )
   const { data, isLoading } = useProjectsCollection()
   const projects = data ?? []
 
@@ -259,7 +264,7 @@ function DashboardPageContent() {
               Projects in{" "}
             </Text.H4>
             <Text.H4 weight="bold" display="inline">
-              {organizationName}
+              {org?.name}
             </Text.H4>
           </span>
         }

@@ -120,6 +120,14 @@ function NavHeader() {
 
   if (!org) return null
 
+  const handleOrgSwitch = async (newOrgId: string) => {
+    if (newOrgId === organizationId) return
+    await authClient.organization.setActive({
+      organizationId: newOrgId,
+    })
+    window.location.href = "/"
+  }
+
   return (
     <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0">
       <div className="flex items-center gap-2 flex-1">
@@ -128,10 +136,27 @@ function NavHeader() {
         </Link>
         <span className="text-muted-foreground text-sm select-none">/</span>
         {hasMultipleOrgs ? (
-          <button type="button" className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors">
-            <span className="text-sm font-medium text-foreground">{org.name}</span>
-            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-          </button>
+          <DropdownMenu
+            side="bottom"
+            align="start"
+            options={
+              allOrgs?.map((o) => ({
+                label: o.name,
+                onClick: () => void handleOrgSwitch(o.id),
+              })) ?? []
+            }
+            trigger={() => (
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <span className="text-sm font-medium text-foreground">{org.name}</span>
+                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+            )}
+          />
         ) : (
           <span className="text-sm font-medium text-foreground px-2 py-1">{org.name}</span>
         )}

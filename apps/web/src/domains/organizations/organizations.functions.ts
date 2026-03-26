@@ -60,6 +60,8 @@ export const createOrganization = createServerFn({ method: "POST" })
         slug,
       },
     })
+
+    return organization
   })
 
 const organizationSettingsSchema = z.object({

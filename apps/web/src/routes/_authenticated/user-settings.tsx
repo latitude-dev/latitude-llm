@@ -2,6 +2,7 @@ import { Button, Container, FormWrapper, Input, Modal, Text, useToast } from "@r
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
+import { setActiveOrganization } from "../../domains/auth/auth.functions.ts"
 import { createOrganization } from "../../domains/organizations/organizations.functions.ts"
 import { deleteCurrentUser, updateUserName } from "../../domains/sessions/session.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
@@ -71,7 +72,6 @@ function ProfileSection() {
 
 function CreateOrganizationSection() {
   const { toast } = useToast()
-  const router = useRouter()
 
   const form = useForm({
     defaultValues: {
@@ -79,10 +79,16 @@ function CreateOrganizationSection() {
     },
     onSubmit: async ({ value }) => {
       try {
-        await createOrganization({ data: { name: value.name } })
+        const org = await createOrganization({ data: { name: value.name } })
         toast({ description: "Organization created" })
         form.reset()
-        void router.invalidate()
+        await setActiveOrganization({
+          data: {
+            organizationId: org.id,
+            organizationSlug: org.slug,
+          },
+        })
+        window.location.href = "/"
       } catch (error) {
         toast({
           variant: "destructive",
@@ -186,9 +192,11 @@ function DeleteAccountSection() {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   return (
-    <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Delete Account</Text.H4>
-      <Text.H5 color="foregroundMuted">
+    <div className="flex flex-col gap-4 rounded-lg border border-destructive/30 bg-destructive/5 p-6">
+      <Text.H4 weight="bold" color="destructive">
+        Delete Account
+      </Text.H4>
+      <Text.H5 color="destructive">
         Permanently delete your account and all associated data. If you are the sole member of an organization, that
         organization will also be deleted.
       </Text.H5>
