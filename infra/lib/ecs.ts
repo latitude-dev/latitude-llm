@@ -370,16 +370,22 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
         ]
 
+        const temporalEnvironment = [
+          ...baseEnvironment,
+          { name: "LAT_TEMPORAL_ADDRESS", value: temporalCloud.address },
+          { name: "LAT_TEMPORAL_NAMESPACE", value: temporalCloud.namespace },
+          { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
+        ]
+
         const workflowsEnvironment =
           serviceConfig.name === "workflows"
             ? [
-                ...baseEnvironment,
+                ...temporalEnvironment,
                 { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
-                { name: "LAT_TEMPORAL_ADDRESS", value: temporalCloud.address },
-                { name: "LAT_TEMPORAL_NAMESPACE", value: temporalCloud.namespace },
-                { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
               ]
-            : baseEnvironment
+            : serviceConfig.name === "workers"
+              ? temporalEnvironment
+              : baseEnvironment
 
         const oauthSecrets: { name: string; valueFrom: string }[] = [
           { name: "LAT_GOOGLE_CLIENT_ID", valueFrom: googleOauthClientIdArn },
@@ -388,11 +394,13 @@ function createTaskDefinition(
           { name: "LAT_GITHUB_CLIENT_SECRET", valueFrom: githubOauthClientSecretArn },
         ]
 
+        const temporalSecrets = [...baseSecrets, { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }]
+
         const serviceSecrets =
           serviceConfig.name === "web"
             ? [...baseSecrets, ...oauthSecrets]
-            : serviceConfig.name === "workflows"
-              ? [...baseSecrets, { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }]
+            : serviceConfig.name === "workflows" || serviceConfig.name === "workers"
+              ? temporalSecrets
               : baseSecrets
 
         const def = {
