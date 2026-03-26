@@ -25,7 +25,7 @@ import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouteContext } from "@tanstack/react-router"
 import { Clipboard, Pencil, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import {
   deleteApiKeyMutation,
   updateApiKeyMutation,
@@ -51,23 +51,36 @@ export const Route = createFileRoute("/_authenticated/settings")({
 
 function OrganizationSection() {
   const { organizationId } = useRouteContext({ from: "/_authenticated/settings" })
+  const { toast } = useToast()
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
+  )
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+
+  const saveField = useCallback(
+    (patch: { name?: string; settings?: { keepMonitoring: boolean } }) => {
+      if (!org) return
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        updateOrganizationMutation(org.id, patch)
+        toast({ description: patch.name ? "Organization name updated" : "Monitoring preference updated" })
+      }, 600)
+    },
+    [org, toast],
   )
 
   if (!org) return null
 
-  const handleNameSubmit = (name: string) => {
-    updateOrganizationMutation(org.id, { name })
-  }
-
-  const handleKeepMonitoringChange = (checked: boolean) => {
-    updateOrganizationMutation(org.id, { settings: { keepMonitoring: checked } })
-  }
-
   return (
-    <div className="flex flex-col gap-6">
-      <OrganizationNameForm name={org.name} onSubmit={handleNameSubmit} />
+    <div className="flex max-w-lg flex-col gap-6">
+      <Input
+        required
+        type="text"
+        label="Organization Name"
+        defaultValue={org.name}
+        onChange={(e) => saveField({ name: e.target.value })}
+        placeholder="Organization name"
+      />
       <div className="flex flex-row items-center justify-between">
         <div className="flex flex-col gap-1">
           <Label htmlFor="keep-monitoring">Keep monitoring after resolution</Label>
@@ -78,43 +91,13 @@ function OrganizationSection() {
         <Switch
           id="keep-monitoring"
           checked={org.settings?.keepMonitoring ?? true}
-          onCheckedChange={handleKeepMonitoringChange}
+          onCheckedChange={(checked) => {
+            updateOrganizationMutation(org.id, { settings: { keepMonitoring: checked } })
+            toast({ description: "Monitoring preference updated" })
+          }}
         />
       </div>
     </div>
-  )
-}
-
-function OrganizationNameForm({ name, onSubmit }: { name: string; onSubmit: (name: string) => void }) {
-  const form = useForm({
-    defaultValues: { name },
-    onSubmit: ({ value }) => {
-      onSubmit(value.name)
-    },
-  })
-
-  return (
-    <form
-      className="flex flex-row items-end gap-3"
-      onSubmit={(e) => {
-        e.preventDefault()
-        void form.handleSubmit()
-      }}
-    >
-      <form.Field name="name">
-        {(field) => (
-          <Input
-            required
-            type="text"
-            label="Organization Name"
-            value={field.state.value}
-            onChange={(e) => field.handleChange(e.target.value)}
-            placeholder="Organization name"
-          />
-        )}
-      </form.Field>
-      <Button type="submit">Save</Button>
-    </form>
   )
 }
 
