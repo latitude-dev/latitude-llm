@@ -130,7 +130,6 @@ export const getBetterAuth = () => {
         const aggregateId = invitationInfo.invitationId ?? generateId()
 
         await outboxWriter.write({
-          id: generateId(),
           eventName: "MagicLinkEmailRequested",
           aggregateId,
           organizationId: "system",
@@ -138,10 +137,11 @@ export const getBetterAuth = () => {
             email,
             magicLinkUrl: url,
             invitationId: invitationInfo.invitationId,
-            organizationName: invitationInfo.organizationName,
+            organizationId: "system",
+            organizationName: invitationInfo.organizationName ?? "",
+            inviterName: null,
             emailFlow: invitationInfo.emailFlow,
           },
-          occurredAt: new Date(),
         })
       },
       sendInvitationEmail: async (data) => {
@@ -150,14 +150,14 @@ export const getBetterAuth = () => {
             ? data.inviter.user.name.trim()
             : "A teammate"
         await outboxWriter.write({
-          id: generateId(),
           eventName: "MagicLinkEmailRequested",
-          aggregateId: data.id ?? generateId(),
+          aggregateId: data.id,
           organizationId: "system",
           payload: {
             email: data.email,
             magicLinkUrl: `${webUrl}/auth/invite?invitationId=${encodeURIComponent(data.id)}`,
             invitationId: data.id,
+            organizationId: "system",
             organizationName: data.organization.name,
             inviterName,
             emailFlow: null,

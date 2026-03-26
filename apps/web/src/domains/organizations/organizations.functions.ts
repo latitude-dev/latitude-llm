@@ -3,14 +3,14 @@ import {
   OrganizationRepository,
   updateOrganizationUseCase,
 } from "@domain/organizations"
-import { UserId } from "@domain/shared"
+import { OrganizationId, UserId } from "@domain/shared"
 import { MembershipRepositoryLive, OrganizationRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession, requireUserSession } from "../../server/auth.ts"
-import { getAdminPostgresClient, getBetterAuth, getPostgresClient } from "../../server/clients.ts"
+import { getAdminPostgresClient, getBetterAuth, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 import { errorHandler } from "../../server/middlewares.ts"
 
 export const listOrganizations = createServerFn({ method: "GET" })
@@ -39,7 +39,7 @@ export const createOrganization = createServerFn({ method: "POST" })
       ),
     )
 
-    await getBetterAuth().api.createOrganization({
+    const organization = await getBetterAuth().api.createOrganization({
       body: {
         name: data.name,
         slug,
@@ -47,6 +47,18 @@ export const createOrganization = createServerFn({ method: "POST" })
         keepCurrentActiveOrganization: false,
       },
       headers: await getRequestHeaders(),
+    })
+
+    const outboxWriter = getOutboxWriter()
+    await outboxWriter.write({
+      eventName: "OrganizationCreated",
+      aggregateId: organization.id,
+      organizationId: OrganizationId(organization.id),
+      payload: {
+        organizationId: organization.id,
+        name: data.name,
+        slug,
+      },
     })
   })
 

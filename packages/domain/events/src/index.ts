@@ -27,11 +27,12 @@ export interface EventPayloads {
     readonly scoreId: string
     readonly issueId: string
   }
+  OrganizationCreated: {
+    readonly organizationId: string
+    readonly name: string
+    readonly slug: string
+  }
 }
-
-export type KnownDomainEvent = {
-  [E in keyof EventPayloads]: DomainEvent<E, EventPayloads[E]>
-}[keyof EventPayloads]
 
 export interface DomainEvent<
   TName extends string = string,
@@ -57,13 +58,13 @@ export interface EventsPublisher<TError = unknown> {
  *
  * Apps use this abstraction instead of inserting into the outbox table directly.
  */
-export interface OutboxWriter {
-  write(event: {
-    readonly id: string
-    readonly eventName: string
+export type OutboxWriter = {
+  write<TEventName extends keyof EventPayloads>(event: {
+    readonly id?: string
+    readonly eventName: TEventName
     readonly aggregateId: string
     readonly organizationId: string
-    readonly payload: Record<string, unknown>
-    readonly occurredAt: Date
+    readonly payload: EventPayloads[TEventName]
+    readonly occurredAt?: Date
   }): Promise<void>
 }

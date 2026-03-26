@@ -1,7 +1,8 @@
-import type { KnownDomainEvent } from "@domain/events"
-
 // Phantom type helper: returns an empty object at runtime but carries type T
 // at compile time. This lets us define the registry as a single const object
+
+import type { DomainEvent } from "@domain/events"
+
 // from which both TopicRegistry (the type) and TOPIC_NAMES (runtime) are derived.
 function payloads<T extends Record<string, unknown>>(): T {
   return {} as T
@@ -11,7 +12,7 @@ const _registry = {
   "domain-events": payloads<{
     dispatch: {
       readonly id: string
-      readonly event: KnownDomainEvent
+      readonly event: DomainEvent
       readonly occurredAt: string
     }
   }>(),
@@ -105,6 +106,13 @@ const _registry = {
       readonly organizationId: string
       readonly queueId: string
       readonly traceId: string
+    }
+  }>(),
+
+  "api-keys": payloads<{
+    create: {
+      readonly organizationId: string
+      readonly name: string
     }
   }>(),
 }

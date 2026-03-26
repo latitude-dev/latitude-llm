@@ -7,10 +7,9 @@ import type { OrganizationId, UserId } from "@domain/shared"
 export type OrganizationCreatedEvent = DomainEvent<
   "OrganizationCreated",
   {
-    organizationId: OrganizationId
+    organizationId: string
     name: string
     slug: string
-    creatorId: UserId
   }
 >
 
@@ -26,6 +25,5 @@ export const createOrganizationCreatedEvent = (params: {
     organizationId: params.organizationId,
     name: params.name,
     slug: params.slug,
-    creatorId: params.creatorId,
   },
 })

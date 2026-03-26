@@ -1,4 +1,4 @@
-import type { EventEnvelope, EventsPublisher, KnownDomainEvent } from "@domain/events"
+import type { EventEnvelope, EventsPublisher } from "@domain/events"
 import type { QueuePublishError, QueuePublisherShape } from "@domain/queue"
 import { z } from "zod"
 
@@ -20,7 +20,7 @@ export const EventEnvelopeSchema = z
 // Safe because events originate from typed domain code before reaching the outbox.
 export const mapEnvelopeToDispatchPayload = (envelope: EventEnvelope) => ({
   id: envelope.id,
-  event: envelope.event as KnownDomainEvent,
+  event: envelope.event,
   occurredAt: envelope.occurredAt.toISOString(),
 })
 

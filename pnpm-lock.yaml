@@ -395,6 +395,9 @@ importers:
 
   apps/workers:
     dependencies:
+      '@domain/api-keys':
+        specifier: workspace:*
+        version: link:../../packages/domain/api-keys
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets

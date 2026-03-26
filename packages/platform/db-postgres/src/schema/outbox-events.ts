@@ -1,3 +1,4 @@
+import type { EventPayloads } from "@domain/events"
 import { boolean, index, jsonb, text } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -14,7 +15,7 @@ export const outboxEvents = latitudeSchema.table(
     eventName: text("event_name").notNull(),
     aggregateId: cuid("aggregate_id").notNull(),
     organizationId: cuid("workspace_id").notNull(),
-    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    payload: jsonb("payload").$type<EventPayloads[keyof EventPayloads]>().notNull(),
     published: boolean("published").notNull().default(false),
     publishedAt: tzTimestamp("published_at"),
     occurredAt: tzTimestamp("occurred_at").notNull(),
