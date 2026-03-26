@@ -1,6 +1,6 @@
 import type { DomainEvent, EventPayloads } from "@domain/events"
 import { RouteError } from "@domain/events"
-import type { QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueuePublisherShape } from "@domain/queue"
 import { Effect } from "effect"
 import type { EventHandlerMap, EventRouter } from "./types.ts"
 
@@ -9,10 +9,7 @@ const ISSUE_REFRESH_DEBOUNCE_MS = 8 * 60 * 60 * 1000 // 8 hours
 
 type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
 
-export const createEventRouter = (
-  queuePublisher: QueuePublisherShape,
-  workflowStarter: WorkflowStarterShape,
-): EventRouter => {
+export const createEventRouter = (queuePublisher: QueuePublisherShape): EventRouter => {
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) => queuePublisher.publish("magic-link-email", "send", event.payload),
 
@@ -34,20 +31,28 @@ export const createEventRouter = (
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    ScoreFinalized: (event) =>
+    ScoreImmutable: (event) =>
       Effect.all(
         [
-          workflowStarter.start(
-            "issueDiscoveryWorkflow",
-            { ...event.payload, organizationId: event.organizationId },
-            { workflowId: `issue-discovery:${event.payload.scoreId}` },
-          ),
-          queuePublisher.publish(
-            "issues",
-            "refresh",
-            { organizationId: event.organizationId, issueId: event.payload.issueId },
-            { dedupeKey: `issues:refresh:${event.payload.issueId}`, debounceMs: ISSUE_REFRESH_DEBOUNCE_MS },
-          ),
+          queuePublisher.publish("analytic-scores", "save", {
+            organizationId: event.payload.organizationId,
+            projectId: event.payload.projectId,
+            scoreId: event.payload.scoreId,
+          }),
+          ...(event.payload.issueId === null
+            ? []
+            : [
+                queuePublisher.publish(
+                  "issues",
+                  "refresh",
+                  {
+                    organizationId: event.payload.organizationId,
+                    projectId: event.payload.projectId,
+                    issueId: event.payload.issueId,
+                  },
+                  { dedupeKey: `issues:refresh:${event.payload.issueId}`, debounceMs: ISSUE_REFRESH_DEBOUNCE_MS },
+                ),
+              ]),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),

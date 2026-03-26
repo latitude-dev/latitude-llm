@@ -5,7 +5,7 @@ import { createBullMqQueueConsumer, createBullMqQueuePublisher, loadBullMqConfig
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient } from "./clients.ts"
 import { createEventRouter } from "./events/event-router.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
@@ -50,11 +50,8 @@ const bootstrap = async () => {
   const initializeWorkers = async () => {
     const bullMqConfig = Effect.runSync(loadBullMqConfig())
     const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
-
     const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
-
-    const workflowStarter = await getWorkflowStarter()
-    const eventRouter = createEventRouter(queuePublisher, workflowStarter)
+    const eventRouter = createEventRouter(queuePublisher)
 
     const outboxConsumer = await Effect.runPromise(
       createPollingOutboxConsumer(
