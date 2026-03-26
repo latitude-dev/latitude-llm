@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/api-keys": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
     "@domain/events": "workspace:*",

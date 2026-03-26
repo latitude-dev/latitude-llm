@@ -14,6 +14,7 @@ import { config as loadDotenv } from "dotenv"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
+import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
@@ -80,6 +81,7 @@ const bootstrap = async () => {
     createDomainEventsWorker(queueConsumer, queuePublisher, workflowStarter)
     createMagicLinkEmailWorker(queueConsumer)
     createUserDeletionWorker(queueConsumer)
+    createApiKeysWorker(queueConsumer)
     createSpanIngestionWorker(queueConsumer, eventsPublisher)
     createDatasetExportWorker(queueConsumer)
     createLiveTracesWorker(queueConsumer)
