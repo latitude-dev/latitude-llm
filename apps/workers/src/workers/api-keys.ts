@@ -1,18 +1,22 @@
 import { generateApiKeyUseCase } from "@domain/api-keys"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
-import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, type PostgresClient, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("api-keys")
 
-export const createApiKeysWorker = (consumer: QueueConsumer) => {
+interface ApiKeysWorkerDeps {
+  readonly postgresClient: PostgresClient
+}
+
+export const createApiKeysWorker = (consumer: QueueConsumer, deps?: Partial<ApiKeysWorkerDeps>) => {
+  const pgClient = deps?.postgresClient ?? getPostgresClient()
+
   consumer.subscribe("api-keys", {
     create: (payload) => {
-      const pgClient = getPostgresClient()
-
       return generateApiKeyUseCase({ name: payload.name }).pipe(
         withPostgres(ApiKeyRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
         Effect.tap(() => Effect.sync(() => logger.info(`API key created for organization ${payload.organizationId}`))),
