@@ -60,7 +60,10 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
     eventName: "UserDeletionRequested",
     aggregateId: userId,
     organizationId: "system",
-    payload: { userId },
+    payload: {
+      organizationId: session.session.activeOrganizationId ?? "system",
+      userId,
+    },
     occurredAt: new Date(),
   })
 

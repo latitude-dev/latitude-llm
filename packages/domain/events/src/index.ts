@@ -11,6 +11,7 @@ export interface EventPayloads {
     readonly invitationId: string | null
   }
   UserDeletionRequested: {
+    readonly organizationId: string
     readonly userId: string
   }
   SpanIngested: {
@@ -23,9 +24,11 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
   }
-  ScoreFinalized: {
+  ScoreImmutable: {
+    readonly organizationId: string
+    readonly projectId: string
     readonly scoreId: string
-    readonly issueId: string
+    readonly issueId: string | null
   }
   OrganizationCreated: {
     readonly organizationId: string

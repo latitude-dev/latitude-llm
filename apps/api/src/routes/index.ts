@@ -9,6 +9,7 @@ import type { ProtectedEnv } from "../types.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
+import { createScoresRoutes } from "./scores.ts"
 
 interface RoutesContext {
   app: OpenAPIHono
@@ -43,6 +44,7 @@ export const registerRoutes = (context: RoutesContext) => {
   protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
 
   protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
+  protectedRoutes.route("/:organizationId/projects/:projectId/scores", createScoresRoutes())
   protectedRoutes.route("/:organizationId/api-keys", createApiKeysRoutes())
 
   v1.route("/organizations", protectedRoutes)

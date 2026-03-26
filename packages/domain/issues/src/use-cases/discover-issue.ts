@@ -3,6 +3,7 @@ import { Effect } from "effect"
 
 export interface DiscoverIssueInput {
   readonly organizationId: string
+  readonly projectId: string
   readonly scoreId: string
 }
 
@@ -54,6 +55,7 @@ export interface AssignmentResult {
 export const createOrAssignIssueUseCase = (
   input: {
     readonly organizationId: string
+    readonly projectId: string
     readonly scoreId: string
     readonly matchedIssueId: string | null
   },

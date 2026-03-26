@@ -54,6 +54,8 @@ const projectsCollection = createCollection(
 )
 
 export function createProjectMutation(name: string) {
+  const now = new Date().toISOString()
+
   return projectsCollection.insert({
     id: ProjectId(generateId()),
     organizationId: OrganizationId(""),
@@ -61,8 +63,8 @@ export function createProjectMutation(name: string) {
     slug: "",
     settings: { keepMonitoring: undefined },
     deletedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   })
 }
 

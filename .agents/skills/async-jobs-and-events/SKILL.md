@@ -20,6 +20,7 @@
 - Queue topics may own several related **lower-kebab-case** task names; one worker module owns the topic and dispatches by task name.
 - Queue publication should expose logical **dedupe/debounce** keyed by the relevant entity identity when the transport supports it.
 - Use **queue topics** for single-step tasks and the **workflow abstraction** for long-running or multi-step orchestration.
+- For reliability async contracts, include both `organizationId` and `projectId` in domain-event payloads, topic/task payloads, and workflow inputs by default. Exceptions: `MagicLinkEmailRequested`, `UserDeletionRequested`, the `domain-events` topic payload, the `magic-link-email` topic payload, and the `user-deletion` topic payload.
 - When BullMQ delay is the chosen debounce mechanism, key the delayed job by the logical entity identity so newer writes replace or reschedule the pending job.
 - When a delayed queue topic semantically marks a lifecycle edge, let the delayed task publish a domain event through the appropriate rail after the delay elapses: use `OutboxWriter` for transactional boundaries and direct `EventsPublisher` publication for non-transactional or high-volume worker flows. Downstream side effects should run from the domain-event consumers rather than inline in the delayed task.
 

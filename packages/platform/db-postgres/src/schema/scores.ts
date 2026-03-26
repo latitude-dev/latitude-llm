@@ -40,7 +40,7 @@ export const scores = latitudeSchema.table(
     index("scores_project_list_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),
-    index("scores_source_bucket_idx")
+    index("scores_source_lookup_idx")
       .on(t.organizationId, t.projectId, t.source, t.sourceId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),
     index("scores_issue_lookup_idx")

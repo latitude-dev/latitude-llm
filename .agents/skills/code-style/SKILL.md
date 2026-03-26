@@ -30,10 +30,13 @@ Base config: `tsconfig.base.json`
 - `strict: true` is enabled; keep code strict-clean
 - Module system: `NodeNext` + ESM (`"type": "module"` in packages/apps)
 - For new domain data contracts, define the canonical shared shape as a Zod schema first when runtime validation is required, then infer TypeScript types from that schema or from Drizzle schemas where appropriate.
+- Treat schemas in `src/entities/<entity>.ts` as the canonical domain contract. Schemas and types elsewhere in the same domain or at app/platform boundaries should derive from or reuse those entity shapes whenever practical instead of restating identical fields.
 - Canonical entity schemas should treat system-managed fields such as `id`, `createdAt`, and `updatedAt` as core entity fields. Do not split an entity into a business payload plus an appended "persistence" wrapper unless there is a truly distinct boundary/input DTO that needs that separation.
 - Enum-like contracts should use literal-string unions or `as const` objects, not TypeScript enums.
 - Use shared domain schemas to validate data crossing from app/platform boundaries into domain use-cases.
+- If a boundary schema must differ materially from the entity shape, reuse domain constants, field schemas, and literal unions before introducing duplicated inline limits or sentinel values.
 - Configurable thresholds, weights, debounce windows, sentinel values, and similar tunables should live in named constants inside the owning domain package rather than as scattered inline literals.
+- Types and schemas that exist only as the inputs of one use-case should stay in that use-case file unless several use-cases truly share the same contract.
 - Prefer explicit domain types/interfaces over loose objects
 - Methods/functions with more than one argument should default to a single named-arguments object rather than positional arguments
 - Use `readonly` fields for immutable domain data shapes
@@ -45,6 +48,13 @@ Base config: `tsconfig.base.json`
 
 - Prefer minimal, explicit abstractions — YAGNI
 - Avoid comments except for genuinely non-obvious reasoning
+
+## Domain module layout
+
+- Canonical entity schemas and inferred entity types belong in `src/entities/<entity>.ts`.
+- Domain package constants belong in `src/constants.ts`.
+- Domain package errors belong in `src/errors.ts`.
+- Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `src/helpers.ts`.
 
 ## Naming conventions
 

@@ -6,7 +6,7 @@ import {
   evaluationScoreSchema,
   SCORE_PUBLICATION_DEBOUNCE,
   scoreSchema,
-} from "./index.ts"
+} from "../index.ts"
 
 const cuid = "a".repeat(24)
 const otherCuid = "b".repeat(24)
@@ -67,7 +67,7 @@ describe("scoreSchema", () => {
     const result = scoreSchema.safeParse({
       ...buildBaseScoreInput(),
       source: "custom",
-      sourceId: "manual-bucket",
+      sourceId: "manual-source",
       metadata: { reviewer: "user" },
       passed: false,
       error: "execution failed",

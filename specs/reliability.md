@@ -26,14 +26,16 @@ It must:
 The system uses:
 
 - PostgreSQL for configuration, lifecycle, relational ownership data, and canonical mutable score rows
-- ClickHouse for immutable score projection and analytical queries
+- ClickHouse for immutable score rows and analytical queries
 - Weaviate for issue search and clustering projections
 
 Implementation constraints for this repository:
 
 - canonical reliability domain data contracts should be defined as shared Zod schemas first, with TypeScript types inferred from those schemas or from Drizzle table schemas where appropriate
+- canonical entity schemas and inferred entity types should live in `entities/<entity>.ts`, and schemas/types elsewhere in the same domain plus app/platform boundary schemas should derive from or reuse those entity shapes whenever practical instead of re-declaring the same fields
 - shared base schemas/types that are extended into discriminated unions or related variants should use `baseXxxSchema` / `BaseXxx` naming rather than `xxxCommonSchema` / `XxxCommon`
 - canonical entity schemas should treat system-managed fields such as `id`, `createdAt`, and `updatedAt` as core entity fields; do not split an entity into a business payload plus an appended "persistence" wrapper unless a later phase introduces a truly distinct boundary/input DTO that explicitly needs that split
+- when a boundary schema must differ materially from the entity shape, it should still reuse the relevant domain constants, field schemas, and literal unions rather than hardcoding duplicated lengths or sentinel values again
 - when first translating spec-defined fields into domain types, schema models, or migrations, carry over the original per-field code comments from the spec alongside those fields so intent stays attached to the initial implementation
 - when a phase first introduces an entity/model/table, add representative seed data for that entity in the same phase following the repository seeding conventions, so local development and staged rollouts have realistic sample data from day one
 - if a phase needs to introduce a type, variable, schema, or other export before the codebase uses it, precede that intentionally temporary unused export with `/** @knipignore - TODO: unignore once used */` so automated `knip` checks tolerate the staged rollout
@@ -42,10 +44,12 @@ Implementation constraints for this repository:
 - external request/response schemas should stay boundary-specific; they may reuse shared domain schemas or narrower projections of them
 - app boundaries should only orchestrate auth, validation, tenancy, and use-cases
 - business logic should live in dedicated domain packages, not in routes or jobs
+- domain package constants should live in `constants.ts`, domain package errors in `errors.ts`, and small domain-scoped shared helpers in `helpers.ts`
+- schemas and types that exist only as the inputs to one domain use-case should live in the same file as that use-case unless several use-cases truly share the same contract
 - configurable thresholds, weights, debounce windows, sentinel values, and similar tunables should live in named constants inside the owning domain package rather than as scattered inline literals
 - new reliability Postgres tables must not add foreign key constraints
 - organization-scoped Postgres tables must use the repo RLS conventions
-- ClickHouse tables in this system should stay append-only analytics projections rather than mutable source-of-truth rows
+- ClickHouse tables in this system should stay append-only analytics tables rather than mutable source-of-truth rows
 - reliability background work should use single-step queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers`, plus the workflow abstraction in `apps/workflows` for long-running or multi-step orchestration
 - domain events should use PascalCase names, while queue topics / `QueueName` entries and per-topic task names should use lower-kebab-case names
 - queue payloads should carry ids or opaque storage keys rather than full mutable models, and workers should re-fetch current state before acting
@@ -54,7 +58,7 @@ Implementation constraints for this repository:
 - correctness, dedupe, and user-visible lifecycle state should live in Postgres/domain tables rather than in BullMQ job metadata or history
 - the Latitude reliability platform should be equally accessible to humans through the web app UI and to other LLM Agents through MCP/API
 - build reliability product management in `apps/web` first when that improves iteration speed, but design schemas, DTOs, use-cases, and public capabilities so the product does not dead-end into UI-only flows
-- inbound machine-facing contracts that are core to reliability, especially annotation and custom score ingestion, should still exist as public APIs in MVP
+- inbound machine-facing contracts that are core to reliability, especially annotation and score ingestion, should still exist as public APIs in MVP
 
 Postgres indexing rules for this spec:
 
@@ -213,11 +217,18 @@ Initial reliability domain-event contracts:
 
 - `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to publish `live-traces:end`
 - `TraceEnded`: published directly into `domain-events` by `live-traces:end` through `createEventsPublisher(queuePublisher)` after its debounce window elapses; consumed by the `domain-events` dispatcher to publish `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:flag`
+- `ScoreImmutable`: written transactionally after a canonical score row reaches immutability; consumed by the `domain-events` dispatcher to publish `analytic-scores:save`, and to publish `issues:refresh` as well when the immutable score already carries an `issue_id`
+
+Rationale for the mixed publication rails:
+
+- `SpanIngested` and `TraceEnded` stay on direct `createEventsPublisher(queuePublisher)` publication because they are high-volume append-only flows whose upstream writes are already durable before publication.
+- `ScoreImmutable` intentionally uses the transactional outbox rail so score persistence and immutable-save intent are atomic; this avoids losing immutable-score analytics save intent if a process crashes between score commit and queue publication.
 
 Initial reliability topic/task contracts:
 
 - `live-traces` / `end`: debounced end-of-trace detection keyed by `(organizationId, projectId, traceId)`; each new `SpanIngested` event for the same trace replaces/reschedules the pending task using BullMQ-backed dedupe/debounce, with the debounce window defined by a named constant whose initial default is `5 minutes`
-- `annotation-scores` / `publish`: debounced finalization/publication of one human-editable draft annotation score after its inactivity window elapses
+- `analytic-scores` / `save`: retry-safe ClickHouse analytics save for one canonical immutable score, keyed by the canonical score id
+- `annotation-scores` / `publish`: debounced finalization of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
 - `live-evaluations` / `enqueue`: lists active evaluations for one ended trace and publishes `execute` tasks for matches
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
 - `live-annotation-queues` / `curate`: materializes dynamic queue membership for one ended trace
@@ -772,10 +783,10 @@ The active evaluations table must include:
 
 Pause/resume/archive/delete actions require confirmation modals with explanation text.
 
-Below the active evaluations table, continue with the custom score buckets table:
+Below the active evaluations table, continue with the custom score sources table:
 
 - it is a continuation of the same headless table
-- it shows `source = 'custom'` buckets grouped by `source_id`
+- it shows `source = 'custom'` rows grouped by `source_id`
 - `Name` is the `source_id` plus a custom tag
 - `Description` is `Pushed through the API`
 - `Issue` is `-`
@@ -804,7 +815,7 @@ Header area:
 - trigger button
 - read-only script button
 
-If the dashboard is for a custom score bucket:
+If the dashboard is for a custom score source:
 
 - there is no settings button
 - there is no trigger button
@@ -867,6 +878,7 @@ Annotations are not a standalone canonical fact table. They are scores with:
 ### Annotation Requirements
 
 - the API for pushing annotations must be simple and agent-friendly
+- annotation ingestion lives under `POST /v1/organizations/:organizationId/projects/:projectId/annotations` rather than the generic scores endpoint, even though annotations still persist canonical `source = "annotation"` score rows
 - users must be able to build their own annotation UI outside Latitude
 - annotations are attached to spans/traces/sessions and to message-level or text-range anchors in the conversation UI
 - the original feedback must be preserved
@@ -1182,7 +1194,7 @@ Bottom bar:
 
 Main layout:
 
-- `Metadata`: timestamp, duration, tokens, cost, and current related scores bucketed by `source_id`
+- `Metadata`: timestamp, duration, tokens, cost, and current related scores grouped by `source_id`
 - `Conversation`: full message list using the existing web conversation/message components, with support for message-level or text-range selection to create annotations
 - `Annotations`: queue name and instructions at the top, then the trace's annotations list, plus a button to create a conversation-level annotation
 
@@ -1217,7 +1229,7 @@ Everything else is built around them:
 
 Operational truth lives in Postgres.
 
-ClickHouse stores an immutable analytics projection of finalized scores only.
+ClickHouse stores immutable score analytics rows only.
 
 That split is intentional:
 
@@ -1257,7 +1269,7 @@ Score lifecycle states:
 
 Rules:
 
-- drafts are excluded from default score listings, aggregates, issue discovery, evaluation alignment, and ClickHouse projection
+- drafts are excluded from default score listings, aggregates, issue discovery, evaluation alignment, and ClickHouse analytics
 - draft-aware surfaces such as in-progress annotation editing and queue review explicitly read drafts from Postgres
 - writers must never emit a passed score with a non-empty `error`
 - errored scores are observability-relevant, but they should not participate in issue discovery or evaluation alignment
@@ -1284,11 +1296,20 @@ type ScoreSource = "evaluation" | "annotation" | "custom";
 - `annotation`
 - `custom`
 
-`source_id` buckets scores from the same source:
+`source_id` groups scores from the same source:
 
 - evaluation: evaluation CUID
 - annotation: annotation queue CUID or sentinel `"UI"` / `"API"` values
 - custom: user-defined source tag
+
+### Public API Surface
+
+Machine-facing score ingestion uses:
+
+- `POST /v1/organizations/:organizationId/projects/:projectId/scores` for project score uploads that should land as canonical scores
+- the shared `/scores` route defaults to `source = "custom"` for ordinary user-facing uploads
+- the same `/scores` route may accept `_evaluation: true` for uploads of locally executed Latitude evaluation scores; in that branch `source_id` must be the evaluation CUID and metadata must satisfy evaluation-score rules
+- annotation ingestion remains on `POST /v1/organizations/:organizationId/projects/:projectId/annotations`, even though it still writes canonical score rows with `source = "annotation"`
 
 ### Score Relations
 
@@ -1376,7 +1397,7 @@ export const scores = latitudeSchema.table(
     index("scores_project_list_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),
-    index("scores_source_bucket_idx")
+    index("scores_source_lookup_idx")
       .on(t.organizationId, t.projectId, t.source, t.sourceId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL`),
     index("scores_issue_lookup_idx")
@@ -1406,13 +1427,13 @@ Postgres-specific rules:
 - `simulation_id` and `issue_id` are nullable in Postgres; do not use empty-string sentinels there
 - `errored` is maintained in application/domain code on every create or update
 - drafts update the same canonical Postgres row in place instead of deleting and recreating scores
-- once a score is no longer a draft, it becomes immutable; it may later be deleted, but it should not be edited again
+- once a score is no longer a draft, it may later be deleted, but it should not be edited again; failed non-errored scores may still receive later `issue_id` assignment before they become fully immutable
 - new Postgres `scores` rows must use repository conventions: `latitudeSchema`, `cuid("id")`, `tzTimestamp(...)`, `...timestamps()`, `organizationRLSPolicy("scores")`, and no foreign keys
 
 Required Postgres indexes:
 
 - btree on `(organization_id, project_id, created_at, id)` with a partial predicate `drafted_at IS NULL` for default non-draft project score reads
-- btree on `(organization_id, project_id, source, source_id, created_at, id)` with a partial predicate `drafted_at IS NULL` for evaluation/custom bucket reads
+- btree on `(organization_id, project_id, source, source_id, created_at, id)` with a partial predicate `drafted_at IS NULL` for evaluation/custom source reads
 - btree on `(organization_id, project_id, issue_id, created_at, id)` with a partial predicate `issue_id IS NOT NULL AND drafted_at IS NULL` for issue drilldowns and issue-backed reads
 - btree on `(organization_id, project_id, trace_id, created_at, id)` with a partial predicate `trace_id IS NOT NULL` for trace review, trace-scoped score hydration, and draft-aware annotation reads
 - btree on `(organization_id, project_id, session_id, created_at, id)` with a partial predicate `session_id IS NOT NULL` for session drilldowns
@@ -1423,9 +1444,9 @@ Required Postgres indexes:
 
 These draft-aware score indexes are the minimal annotation-editing and queue-review foundation; keep reusing canonical `scores` rows rather than introducing a standalone annotation table.
 
-### ClickHouse Analytics Projection
+### ClickHouse Score Analytics
 
-ClickHouse stores a second `scores` table, but it is an immutable analytics projection rather than the canonical score store.
+ClickHouse stores a second `scores` table, but it is an immutable score analytics table rather than the canonical score store.
 
 Its row shape intentionally keeps only aggregation-relevant fields:
 
@@ -1489,12 +1510,12 @@ DROP TABLE IF EXISTS scores;
 
 ClickHouse-specific rules:
 
-- do not store `feedback`, `metadata`, `error`, `drafted_at`, or `updated_at` in the ClickHouse projection
+- do not store `feedback`, `metadata`, `error`, `drafted_at`, or `updated_at` in the ClickHouse analytics table
 - do not update or replace score rows in ClickHouse after insertion
 - do not allow duplicate rows for the same score id; analytics must remain correct without `FINAL`
 - failed non-errored scores are not inserted into ClickHouse until `issue_id` is assigned and the score becomes immutable
 
-ClickHouse deployments in this repository have both `unclustered/` and `clustered/` migration variants. The `scores` projection table must follow the same pattern:
+ClickHouse deployments in this repository have both `unclustered/` and `clustered/` migration variants. The `scores` analytics table must follow the same pattern:
 
 - `unclustered/`: keep the schema above with `CREATE TABLE IF NOT EXISTS scores` and `ENGINE = MergeTree()`
 - `clustered/`: use `CREATE TABLE IF NOT EXISTS scores ON CLUSTER default`, switch the engine to `ReplicatedMergeTree()`, and use `DROP TABLE IF EXISTS scores ON CLUSTER default`
@@ -1514,12 +1535,13 @@ All score writes happen in Postgres first.
 
 Publication rules:
 
-- if a score is a draft (`draftedAt != null`), do not project it to ClickHouse
-- if a score is non-draft and either passed or errored, project it to ClickHouse immediately because it is already immutable
+- if a score is a draft (`draftedAt != null`), do not write it to ClickHouse analytics
+- if a score is non-draft and either passed or errored, write it to ClickHouse analytics immediately because it is already immutable
 - if a score is non-draft, failed, and non-errored, keep it only in Postgres until issue discovery or direct issue assignment sets `issue_id`
 - when a draft becomes non-draft and still has `issue_id = null`, it may now participate in issue discovery
-- when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then projected to ClickHouse
-- publishing to ClickHouse must be retry-safe and preserve at-most-one projected row per score id
+- when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
+- publishing to ClickHouse analytics must be retry-safe and preserve at-most-one row per score id
+- the canonical Postgres write transaction should request immutable-score analytics save through a transactional `ScoreImmutable` domain event; the downstream `analytic-scores:save` task must re-fetch the canonical score row and insert into ClickHouse only if it is still immutable and not already present in analytics so retries remain safe and stale save requests become no-ops
 
 Draft-specific rules:
 
@@ -1533,7 +1555,7 @@ Draft-specific rules:
 Delete behavior:
 
 - if a canonical score must be deleted, delete it from Postgres first
-- if that score was already projected, issue a rare ClickHouse `DELETE` mutation by `id`
+- if that score was already stored in ClickHouse analytics, issue a rare ClickHouse `DELETE` mutation by `id`
 - if the deleted score had contributed to an issue, run the corresponding centroid/member removal flow and refresh any dependent derived issue state
 
 ### Score Reads And Analytics
@@ -1554,7 +1576,7 @@ Those later materializations will likely need to support responsibilities such a
 - filtering spans by score state/value/issue/source
 - filtering traces by aggregated score properties
 - filtering sessions by aggregated score properties
-- evaluation/custom bucket trend charts
+- evaluation/custom source trend charts
 - issue occurrence charts and counts
 
 The repository currently materializes `traces` but not `sessions`, so reliability must add a session-level materialization built from spans.
@@ -1651,7 +1673,7 @@ All similarity, rerank, visibility, and debounce thresholds must be configurable
 
 Discovery/refresh execution rules:
 
-- eligible finalized scores should start the `issue-discovery` workflow after commit rather than running embeddings/search inline in request or annotation-edit paths
+- eligible non-draft failed non-errored scores should start the `issue-discovery` workflow after commit rather than running embeddings/search inline in request or annotation-edit paths
 - issue name/description regeneration should run through a debounced BullMQ task on the `issue-refresh` topic once the refresh window elapses
 - workflows and debounced tasks should recheck persisted Postgres eligibility and current ownership state for correctness and idempotency rather than trusting queue or workflow history alone
 
@@ -1690,7 +1712,7 @@ Concurrency and ownership rules learned from v1:
 - dedupe discovery work per score/result id before heavy search starts
 - re-check ownership before doing expensive discovery work
 - revalidate under lock before the final assignment write
-- only publish the score to ClickHouse after that final Postgres ownership write makes it immutable
+- only save the score to ClickHouse after that final Postgres ownership write makes it immutable
 - do not recreate the v1 race where one failing result could end up attached to multiple active issues at once; in v2, canonical ownership must be the single `scores.issue_id` contract
 - preserve resolved-issue rematching so regressions can be surfaced again, but do not blindly copy all other inactive/ignored matching behavior without an explicit product decision
 
@@ -2055,7 +2077,7 @@ Simulation execution must follow the proposal:
 - spawns a temporary local HTTP bridge to communicate with the SDK
 - reuses the ingest pipeline as a local OTEL-compatible collector
 - can capture simulation-related traces/sessions when the agent/s is/are instrumented
-- can still run without instrumentation by accepting custom scores only
+- can still run without instrumentation by accepting score-only uploads, where default uploads are custom scores and later Latitude-evaluation uploads reuse the same `/scores` API with `_evaluation: true`
 - can generate a local-only report or optionally upload results to Latitude
 
 The CLI and SDK are intentionally local-first and should feel useful even without the hosted Latitude platform:
@@ -2343,12 +2365,12 @@ Row click opens a detailed view with:
 
 - [x] Define the canonical shared Zod schemas for scores and score metadata (evaluation, annotation, custom); infer TypeScript types from those schemas or matching Drizzle schemas; use literal-string unions for enum-like contracts.
 - [x] Add the Postgres `scores` table with full Drizzle definition using repo-convention helpers, the exact secondary indexes defined by this spec, RLS, no foreign keys, `scores.drafted_at`, nullable `issue_id` / `simulation_id`, write-time-maintained `errored`, and all metadata/feedback/usage fields.
-- [x] Add the immutable ClickHouse `scores` analytics projection table in both `unclustered/` and `clustered/` migration variants, with the fixed-width identifier contract, non-null issue/simulation links using empty-string sentinels, `UInt64` duration/tokens/cost fields, no mutable replacement/version columns, spans-style TTL/storage policy, and revalidated CODECs/skip indexes.
-- [x] Add representative Postgres and ClickHouse seed data for scores, reflecting the canonical lifecycle and publication/projection rules from this spec.
+- [x] Add the immutable ClickHouse `scores` analytics table in both `unclustered/` and `clustered/` migration variants, with the fixed-width identifier contract, non-null issue/simulation links using empty-string sentinels, `UInt64` duration/tokens/cost fields, no mutable replacement/version columns, spans-style TTL/storage policy, and revalidated CODECs/skip indexes.
+- [x] Add representative Postgres and ClickHouse seed data for scores, reflecting the canonical lifecycle and publication/analytics rules from this spec.
 - [x] Define the score-domain named constants for score-lifecycle debounce thresholds inside the owning package.
 - [x] Document the score/telemetry analytics query requirements that later ClickHouse materializations must satisfy; defer the exact materialized-table definitions until a later phase.
 
-**Exit gate**: scores schema, Postgres table, and ClickHouse projection are complete; later phases can build ingestion and analytics on top.
+**Exit gate**: scores schema, Postgres table, and ClickHouse analytics storage are complete; later phases can build ingestion and analytics on top.
 
 ### (LAT-460) Phase 3 - Annotations Foundations
 
@@ -2429,15 +2451,15 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: Phase 9 can start once Phase 8 exposes base reads.
 
-- [ ] Implement the canonical score write path into Postgres with source-aware validation, plus retry-safe append-only ClickHouse publication for finalized immutable scores only.
-- [ ] Implement the public API for custom score ingestion, including arbitrary custom metadata storage.
-- [ ] Implement the internal score writer used by evaluation execution and simulations, with Postgres-first writes and immutable-score projection into ClickHouse only when publication rules are satisfied.
-- [ ] Enforce exact metadata validation for evaluation, annotation, and custom scores before persistence.
-- [ ] Support instrumented and uninstrumented score creation paths, including optional `session_id`, `trace_id`, and `span_id`.
-- [ ] Expose base read/query contracts over canonical Postgres scores for project scores, evaluation buckets, and custom score buckets, with draft exclusion by default and explicit opt-in for draft-aware surfaces.
-- [ ] Add contract/integration tests for UI, API, and internal score writers covering provenance, metadata validation, in-place draft edits, projection gating, retry-safe publication, and instrumented/uninstrumented ingestion paths.
+- [x] Implement the canonical score write path into Postgres with source-aware validation, plus retry-safe append-only ClickHouse save for finalized immutable scores only.
+- [x] Implement the project-scoped public `/scores` API for score ingestion, defaulting to custom scores while reserving `_evaluation: true` for later locally executed Latitude evaluation uploads, including arbitrary custom metadata storage.
+- [x] Implement the internal score writer used by evaluation execution and simulations, with Postgres-first writes and immutable-score analytics save into ClickHouse only when save rules are satisfied.
+- [x] Enforce exact metadata validation for evaluation, annotation, and custom scores before persistence.
+- [x] Support instrumented and uninstrumented score creation paths, including optional `session_id`, `trace_id`, and `span_id`.
+- [x] Expose base read/query contracts over canonical Postgres scores for project scores, evaluation sources, and custom score sources, with draft exclusion by default and explicit opt-in for draft-aware surfaces.
+- [x] Add contract/integration tests for UI, API, and internal score writers covering provenance, metadata validation, in-place draft edits, analytics save gating, retry-safe save behavior, and instrumented/uninstrumented ingestion paths.
 
-**Exit gate**: custom scores and internal evaluation scores land in the same canonical score model; later annotation phases can reuse the same storage path without reworking score ingestion.
+**Exit gate**: public `/scores` ingestion and internal evaluation writes land in the same canonical score model; later annotation phases can reuse the same storage path without reworking score ingestion.
 
 ### (LAT-466) Phase 9 - Scores Analytics And Telemetry Queries
 
@@ -2445,13 +2467,13 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: Phase 10 can continue in parallel while this phase finishes; phases 11 and 15 should wait for it.
 
-- [ ] Implement repositories and query primitives over canonical Postgres scores plus the initial ClickHouse score projection query layer, while keeping the exact later materialized analytics tables deferred.
+- [ ] Implement repositories and query primitives over canonical Postgres scores plus the initial ClickHouse score analytics query layer, while keeping the exact later materialized analytics tables deferred.
 - [ ] Implement score-aware filtering for spans using rollups instead of hot joins against raw scores.
 - [ ] Implement trace and session drilldowns filtered by score state, value, source, and issue.
-- [ ] Implement evaluation/custom bucket trend queries and project-wide score aggregates from the immutable ClickHouse projection, while keeping score-table and drilldown reads in Postgres.
+- [ ] Implement evaluation/custom source trend queries and project-wide score aggregates from the immutable ClickHouse score analytics rows, while keeping score-table and drilldown reads in Postgres.
 - [ ] Implement issue occurrence/time-series aggregates used by issue lifecycle and UI.
 - [ ] Ensure score queries can include or exclude simulation-generated scores where the product requires it.
-- [ ] Benchmark and tune ClickHouse projection sort keys, partitions, and skip indexes against realistic reliability workloads.
+- [ ] Benchmark and tune the ClickHouse score analytics table sort keys, partitions, and skip indexes against realistic reliability workloads.
 - [ ] Add query regression tests and benchmark fixtures for Postgres-backed score drilldowns, ClickHouse-backed project aggregates, and include/exclude simulation behavior.
 
 **Exit gate**: spans, traces, and sessions can be filtered by score-derived properties; evaluation, issue, and simulation analytics have a working query path without prematurely locking the final materialized-table design.
@@ -2462,7 +2484,7 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with Phase 9 once phases 0, 3, and 8 land.
 
-- [ ] Implement the public API for annotation ingestion with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
+- [ ] Implement the public API for annotation ingestion under `/:organizationId/projects/:projectId/annotations` with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
 - [ ] Introduce the shared text-generation capability in the first phase that needs it, and define the concrete `annotation-scores:publish` topic-task payload/schema plus dedupe key semantics keyed by the canonical score id.
 - [ ] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, inline manual issue creation, debounced draft finalization through `annotation-scores:publish` keyed by the canonical score id, and post-finalization immutability after the debounce window closes.
 - [ ] Implement annotation feedback enrichment using surrounding context before issue discovery, persist the enriched canonical feedback, and preserve the original raw human text separately in metadata.
@@ -2485,12 +2507,12 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
 - [ ] Implement feedback embedding with `voyage-4-large` at `2048` dimensions and caching.
 - [ ] Implement hybrid search in Weaviate with `RelativeScore` fusion over centroid vectors plus BM25 text search, including explicit tenant-existence guards on read/search paths.
 - [ ] Implement reranking with `rerank-2.5`, configurable thresholds, and the v1-style search sequence of hybrid retrieval first and rerank second.
-- [ ] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, retrieval/rerank, issue creation or assignment, Weaviate projection sync, and post-immutability ClickHouse publication, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse publication after the score becomes immutable.
+- [ ] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, retrieval/rerank, issue creation or assignment, Weaviate projection sync, and post-immutability ClickHouse save, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable.
 - [ ] Implement the running centroid math with source weights and decay, adapting the v1 math to the new `IssueCentroid` shape while using `clusteredAt` as the decay anchor instead of generic row `updatedAt`.
 - [ ] Implement asynchronous issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issue-refresh` topic with dedupe/debounce options, using retry-safe coordination between Postgres state and Weaviate projection updates.
 - [ ] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
-- [ ] Implement finalized-score publication into ClickHouse after issue assignment without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
-- [ ] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue rematching, one-time immutable ClickHouse publication, and explicit human annotation assignment bypasses.
+- [ ] Implement immutable-score save into ClickHouse after issue assignment without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
+- [ ] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue rematching, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
 
 **Exit gate**: new failed scores can match existing issues or create new ones; issue centroids move correctly over time; canonical score ownership cannot race into multiple active issues; issue visibility is denoised without reintroducing the v1 merge system.
 
@@ -2526,11 +2548,11 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 - [ ] Implement `SpanIngested` publication from successful span ingestion via direct `createEventsPublisher(queuePublisher)` publication into `domain-events`, the debounced `live-traces:end` task keyed by `(organizationId, projectId, traceId)`, the resulting `TraceEnded` domain event published through that same direct `domain-events` rail, and incremental live evaluation triggering over spans, traces, and sessions using the shared `FilterSet` for `trigger.filter` plus `turn`, `debounce`, and `sampling`, including the `first` / `every` / `last` turn semantics from the model, shared trace-field-registry filter matching, the project-scoped scan of active evaluations on each `TraceEnded` event, the dedicated `live-evaluations` task `enqueue` dispatched from the `domain-events` rail, and the follow-up `live-evaluations` task `execute` published for each matching `(evaluationId, traceId)` pair.
 - [ ] Implement hosted `llm()` execution for live evaluations through `@platform/ai-vercel` and the Vercel AI SDK, using Latitude-managed provider/model/API-key configuration rather than user-configured provider/model settings.
-- [ ] Implement `live-evaluations:execute` result writing, including value/passed/feedback/error plus persisted nanosecond `duration` and microcent `cost`, Postgres-first canonical persistence, correct `error -> errored` semantics, immediate ClickHouse publication for immutable passed/errored results, and deferred publication for failed non-errored results until `issue_id` exists.
+- [ ] Implement `live-evaluations:execute` result writing, including value/passed/feedback/error plus persisted nanosecond `duration` and microcent `cost`, Postgres-first canonical persistence, correct `error -> errored` semantics, immediate ClickHouse save for immutable passed/errored results, and deferred save for failed non-errored results until `issue_id` exists.
 - [ ] Ensure archived/deleted evaluations never trigger and paused evaluations use `sampling = 0`.
-- [ ] Implement direct `issue_id` assignment at write time for issue-linked monitor failures so those scores are immutable and can be projected to ClickHouse immediately.
+- [ ] Implement direct `issue_id` assignment at write time for issue-linked monitor failures so those scores are immutable and can be written to ClickHouse analytics immediately.
 - [ ] Add the execution hooks needed later by the full portable runtime so the same evaluation artifact can move from the MVP executor into later runtimes without storage changes.
-- [ ] Add end-to-end monitor execution tests covering `live-traces:end` debounce reset behavior, `TraceEnded`-driven `live-evaluations:enqueue` behavior, downstream `live-evaluations:execute` publication, turn selection, pause/archive behavior, direct issue assignment, immutable-score projection timing, and persisted usage accounting.
+- [ ] Add end-to-end monitor execution tests covering `live-traces:end` debounce reset behavior, `TraceEnded`-driven `live-evaluations:enqueue` behavior, downstream `live-evaluations:execute` behavior, turn selection, pause/archive behavior, direct issue assignment, immutable-score analytics save timing, and persisted usage accounting.
 
 **Exit gate**: issue monitors run on live traffic; evaluation-generated scores land in the canonical score model with the right issue linkage.
 
@@ -2557,15 +2579,15 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 **Parallelization notes**: after this phase lands, Phase 16 can proceed while post-MVP evaluation work still waits for the MVP cutoff.
 
 - [ ] Build the project Evaluations page in `apps/web` with active evaluation analytics and the active evaluations table, backed by evaluation server functions/collections.
-- [ ] Build the custom score buckets continuation table for `source = 'custom'`.
+- [ ] Build the custom score sources continuation table for `source = 'custom'`.
 - [ ] Build the archived evaluations table in `apps/web` with unarchive behavior, backed by evaluation server functions/collections.
 - [ ] Build `apps/web` quick actions and confirmation modals for trigger updates, pause/resume, archive, and delete, with trigger updates editing `filter`, `turn`, `debounce`, and `sampling` through the shared filter-builder/UI patterns where applicable.
 - [ ] Build the evaluation dashboard in `apps/web` with charts and aggregates backed by ClickHouse plus filters, score table, and score details modal backed by Postgres canonical scores, using evaluation server functions/collections.
 - [ ] Add the read-only script modal for evaluations in `apps/web`.
-- [ ] Expose the stable public/machine-facing APIs for evaluation listing, status changes, trigger updates, dashboard reads, and custom bucket reads without routing internal web product flows through `apps/api`, using the shared `FilterSet` payload shape for trigger filters.
-- [ ] Add UI/API regression tests covering lifecycle actions, archived/custom bucket visibility, dashboard filters, the Postgres/ClickHouse read split, and the default exclusion of simulation-generated scores.
+- [ ] Expose the stable public/machine-facing APIs for evaluation listing, status changes, trigger updates, dashboard reads, and custom source reads without routing internal web product flows through `apps/api`, using the shared `FilterSet` payload shape for trigger filters.
+- [ ] Add UI/API regression tests covering lifecycle actions, archived/custom source visibility, dashboard filters, the Postgres/ClickHouse read split, and the default exclusion of simulation-generated scores.
 
-**Exit gate**: evaluation management works from both UI and API; custom score buckets are visible as first-class evaluation-like dashboards.
+**Exit gate**: evaluation management works from both UI and API; custom score sources are visible as first-class evaluation-like dashboards.
 
 ### (LAT-473) Phase 16 - Keep-Monitoring Settings Product Surface And API
 
@@ -2621,8 +2643,8 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [ ] Build the local-first CLI runner that can be used as a standalone simulation runner without requiring the hosted Latitude platform, accepts a user-configured command, loads entrypoints, runs scenarios with or without instrumentation, prints reports, and exits with CI-friendly status codes.
 - [ ] Implement the local HTTP bridge between SDK and CLI.
 - [ ] Reuse the ingest pipeline as a local OTEL-compatible collector with `simulation_id` propagation.
-- [ ] Download Latitude evaluations as sandboxed JavaScript-like scripts and run them locally through the shared portable runtime against captured conversations, only pushing resulting scores back through the API when the user chooses to upload them.
-- [ ] Execute user-defined custom code evaluations and push the resulting scores through the public API.
+- [ ] Download Latitude evaluations as sandboxed JavaScript-like scripts and run them locally through the shared portable runtime against captured conversations, only pushing resulting scores back through the shared project-scoped `/scores` API when the user chooses to upload them; those uploads must use `_evaluation: true` plus evaluation-score metadata and evaluation CUID `source_id` values.
+- [ ] Execute user-defined custom code evaluations and push the resulting scores through the same public `/scores` API using the default custom-score contract.
 - [ ] Support both fully local-only reports and optional upload of resulting scores/traces back to Latitude.
 - [ ] Support dataset sources by dataset id and custom function loaders in the initial simulations phase, while keeping query-backed datasets explicitly deferred.
 - [ ] Support non-instrumented simulations by still accepting score-only reporting paths.

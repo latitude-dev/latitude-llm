@@ -271,7 +271,7 @@ The screen has three vertical sections:
    - duration
    - tokens
    - cost
-   - current related scores bucketed by `source_id`, read from canonical Postgres scores so drafts on the current trace are visible immediately
+   - current related scores grouped by `source_id`, read from canonical Postgres scores so drafts on the current trace are visible immediately
 2. `Conversation`
    - full message list for the current trace
    - message-level or text-range selection to create annotations

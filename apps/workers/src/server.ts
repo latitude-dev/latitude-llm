@@ -23,6 +23,7 @@ import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createLiveTracesWorker } from "./workers/live-traces.ts"
+import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
 
@@ -86,6 +87,7 @@ const bootstrap = async () => {
     createDatasetExportWorker(queueConsumer)
     createLiveTracesWorker(queueConsumer)
     createIssuesWorker(queueConsumer)
+    createScoresWorker(queueConsumer)
     createAnnotationScoresWorker(queueConsumer)
     createLiveEvaluationsWorker(queueConsumer)
     createLiveAnnotationQueuesWorker(queueConsumer)

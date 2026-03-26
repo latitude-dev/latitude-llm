@@ -30,7 +30,10 @@ const _registry = {
   }>(),
 
   "user-deletion": payloads<{
-    delete: { readonly userId: string }
+    delete: {
+      readonly organizationId: string
+      readonly userId: string
+    }
   }>(),
 
   "span-ingestion": payloads<{
@@ -64,13 +67,23 @@ const _registry = {
   issues: payloads<{
     refresh: {
       readonly organizationId: string
+      readonly projectId: string
       readonly issueId: string
+    }
+  }>(),
+
+  "analytic-scores": payloads<{
+    save: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
     }
   }>(),
 
   "annotation-scores": payloads<{
     publish: {
       readonly organizationId: string
+      readonly projectId: string
       readonly scoreId: string
     }
   }>(),
@@ -83,6 +96,7 @@ const _registry = {
     }
     execute: {
       readonly organizationId: string
+      readonly projectId: string
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -104,6 +118,7 @@ const _registry = {
     }
     annotate: {
       readonly organizationId: string
+      readonly projectId: string
       readonly queueId: string
       readonly traceId: string
     }

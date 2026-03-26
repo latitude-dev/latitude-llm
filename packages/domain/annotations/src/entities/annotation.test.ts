@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { annotationAnchorSchema, annotationSchema } from "./index.ts"
+import { annotationAnchorSchema, annotationSchema } from "../index.ts"
 
 const cuid = "a".repeat(24)
 const otherCuid = "b".repeat(24)
