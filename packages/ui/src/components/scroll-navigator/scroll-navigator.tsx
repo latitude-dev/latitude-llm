@@ -65,15 +65,16 @@ function NavigatorButtons({
   readonly onNext: () => void
 }) {
   return (
-    <div className="sticky top-4 z-10 self-end">
+    <div className="sticky bottom-4 z-10 self-end">
       <div className="flex flex-row items-center gap-1.5">
         <Tooltip
-          side="bottom"
+          side="top"
           trigger={
             <Button
+              flat
               variant="outline"
               size="icon"
-              className="rounded-full shadow-sm"
+              className="h-8 w-8 rounded-full shadow-sm"
               disabled={!canScrollUp}
               onClick={onPrevious}
             >
@@ -85,12 +86,13 @@ function NavigatorButtons({
         </Tooltip>
 
         <Tooltip
-          side="bottom"
+          side="top"
           trigger={
             <Button
+              flat
               variant="outline"
               size="icon"
-              className="rounded-full shadow-sm"
+              className="h-8 w-8 rounded-full shadow-sm"
               disabled={!canScrollDown}
               onClick={onNext}
             >

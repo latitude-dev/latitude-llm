@@ -34,9 +34,17 @@ export function TraceDetailDrawer({
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
   const [activeTab, setActiveTab] = useState<TabId>("trace")
-  const [_, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
+  const [lastTraceId, setLastTraceId] = useState(traceId)
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
 
+  // Reset tab state when navigating to a different trace (inline state adjustment
+  // avoids a useEffect and its extra render cycle after paint).
+  if (lastTraceId !== traceId) {
+    setLastTraceId(traceId)
+    setActiveTab("trace")
+    setVisitedTabs(new Set(["trace"]))
+  }
   function handleSetActiveTab(tab: TabId) {
     setActiveTab(tab)
     setVisitedTabs((prev) => new Set([...prev, tab]))
@@ -123,26 +131,32 @@ export function TraceDetailDrawer({
         </>
       }
     >
-      {activeTab === "trace" && (
-        <TraceTab
-          traceId={traceId}
-          traceRecord={traceRecord}
-          traceDetail={traceDetail}
-          isRecordLoading={isRecordLoading}
-          isDetailLoading={isDetailLoading}
-        />
-      )}
-      {activeTab === "conversation" && (
-        <ConversationTab
-          projectId={projectId}
-          traceDetail={traceDetail}
-          isDetailLoading={isDetailLoading}
-          navigateToSpan={navigateToSpan}
-        />
-      )}
-      {activeTab === "spans" && (
-        <SpansTab key={traceId} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} traceId={traceId} />
-      )}
+      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "trace" })}>
+        {visitedTabs.has("trace") && (
+          <TraceTab
+            traceId={traceId}
+            traceRecord={traceRecord}
+            traceDetail={traceDetail}
+            isRecordLoading={isRecordLoading}
+            isDetailLoading={isDetailLoading}
+          />
+        )}
+      </div>
+      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "conversation" })}>
+        {visitedTabs.has("conversation") && (
+          <ConversationTab
+            traceDetail={traceDetail}
+            isDetailLoading={isDetailLoading}
+            navigateToSpan={navigateToSpan}
+            projectId={projectId}
+          />
+        )}
+      </div>
+      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "spans" })}>
+        {visitedTabs.has("spans") && (
+          <SpansTab traceId={traceId} selectedSpanId={selectedSpanId} onSelectSpan={navigateToSpan} />
+        )}
+      </div>
     </DetailDrawer>
   )
 }

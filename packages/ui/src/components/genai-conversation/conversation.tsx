@@ -1,5 +1,5 @@
 import { cn, Text } from "@repo/ui"
-import { type RefObject, useMemo, useRef } from "react"
+import { type RefObject, useRef } from "react"
 import type { GenAIMessage, GenAIPart, GenAISystem } from "rosetta-ai"
 import { ScrollNavigator } from "../scroll-navigator/scroll-navigator.tsx"
 import { Message, type ToolCallActions } from "./message.tsx"
@@ -97,21 +97,18 @@ export function Conversation({
   const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const hasSystem = !!(systemInstructions && systemInstructions.length > 0)
+  const { resultMap, absorbedIndexes } = buildToolResultsMap(messages)
 
-  const { resultMap, visibleMessages } = useMemo(() => {
-    const { resultMap: map, absorbedIndexes } = buildToolResultsMap(messages)
-    const visible = messages.reduce<{ message: GenAIMessage; index: number }[]>((acc, msg, i) => {
-      if (!msg) return acc
-      if (absorbedIndexes.has(i)) return acc
+  const visibleMessages = messages.reduce<{ message: GenAIMessage; index: number }[]>((acc, msg, i) => {
+    if (!msg) return acc
+    if (absorbedIndexes.has(i)) return acc
 
-      acc.push({
-        message: normalizeMessage(msg),
-        index: i,
-      })
-      return acc
-    }, [])
-    return { resultMap: map, visibleMessages: visible }
-  }, [messages])
+    acc.push({
+      message: normalizeMessage(msg),
+      index: i,
+    })
+    return acc
+  }, [])
 
   const totalNavItems = (hasSystem ? 1 : 0) + visibleMessages.length
   navItemRefs.current.length = totalNavItems
