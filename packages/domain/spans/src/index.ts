@@ -17,7 +17,7 @@ export type {
   SessionRepositoryShape,
 } from "./ports/session-repository.ts"
 export { SessionRepository } from "./ports/session-repository.ts"
-export type { SpanListOptions, SpanRepositoryShape } from "./ports/span-repository.ts"
+export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {
   TraceDistinctColumn,

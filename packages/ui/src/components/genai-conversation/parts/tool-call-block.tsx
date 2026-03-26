@@ -1,4 +1,4 @@
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon, WrenchIcon, XIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, ScanSearchIcon, WrenchIcon, XIcon } from "lucide-react"
 import { useState } from "react"
 import { cn } from "../../../utils/cn.ts"
 import { CopyButton } from "../../copy-button/index.tsx"
@@ -27,9 +27,11 @@ function ToolCallStatusIcon({ result }: { readonly result: ToolCallResult | unde
 export function ToolCallBlock({
   call,
   result,
+  onNavigateToSpan,
 }: {
   readonly call: ToolCallPart
-  readonly result: ToolCallResult | undefined
+  readonly result?: ToolCallResult | undefined
+  readonly onNavigateToSpan?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const isError = result?.isError === true
@@ -52,6 +54,24 @@ export function ToolCallBlock({
         </span>
         <ToolCallStatusIcon result={result} />
         {call.id && <CopyButton value={call.id} tooltip={call.id} />}
+        {onNavigateToSpan && (
+          <Tooltip
+            trigger={
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onNavigateToSpan()
+                }}
+                className="flex items-center text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <ScanSearchIcon className="w-4 h-4" />
+              </button>
+            }
+          >
+            <Text.H6>View execution span</Text.H6>
+          </Tooltip>
+        )}
         {open ? (
           <ChevronDownIcon className="w-3.5 h-3.5 text-muted-foreground" />
         ) : (

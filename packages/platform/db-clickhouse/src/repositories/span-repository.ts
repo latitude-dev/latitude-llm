@@ -10,7 +10,7 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "@domain/spans"
+import type { Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode, ToolDefinition } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
 import { parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -211,6 +211,22 @@ const parseToolDefinitions = (json: string): ToolDefinition[] => {
   }
 }
 
+type SpanMessagesRow = {
+  span_id: string
+  operation: string
+  tool_call_id: string
+  input_messages: string
+  output_messages: string
+}
+
+const toDomainSpanMessages = (row: SpanMessagesRow): SpanMessagesData => ({
+  spanId: SpanId(row.span_id),
+  operation: row.operation,
+  toolCallId: row.tool_call_id,
+  inputMessages: parseMessages(row.input_messages),
+  outputMessages: parseMessages(row.output_messages),
+})
+
 const toDomainSpanDetail = (row: SpanDetailRow): SpanDetail => ({
   ...toBaseFields(row),
   inputMessages: parseMessages(row.input_messages),
@@ -373,6 +389,26 @@ export const SpanRepositoryLive = Layer.effect(
               return first ? toDomainSpanDetail(first) : null
             }),
             Effect.mapError((error) => toRepositoryError(error, "findBySpanId")),
+          ),
+
+      findMessagesForTrace: ({ organizationId, traceId }) =>
+        chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT span_id, operation, tool_call_id, input_messages, output_messages
+                      FROM spans FINAL
+                      WHERE organization_id = {organizationId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                        AND operation IN ('chat', 'text_completion', 'execute_tool')
+                      ORDER BY start_time ASC`,
+              query_params: { organizationId: organizationId as string, traceId },
+              format: "JSONEachRow",
+            })
+            return result.json<SpanMessagesRow>()
+          })
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainSpanMessages)),
+            Effect.mapError((error) => toRepositoryError(error, "findMessagesForTrace")),
           ),
     }
   }),
