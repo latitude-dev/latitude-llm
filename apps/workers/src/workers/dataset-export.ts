@@ -28,18 +28,13 @@ interface DatasetExportDeps {
   emailSender?: EmailSender
 }
 
-export const createDatasetExportWorker = ({
-  consumer,
-  postgresClient,
-  clickhouseClient,
-  disk: diskDep,
-  emailSender,
-}: DatasetExportDeps) => {
-  const pgClient = postgresClient ?? getPostgresClient()
-  const chClient = clickhouseClient ?? getClickhouseClient()
-  const disk = diskDep ?? createStorageDisk()
-  const sendEmailUseCase = sendEmail({ emailSender: emailSender ?? createEmailTransportSender() })
-  const workerLogger = logger
+// TODO(workers): worker handlers are thin app boundaries that route data to business
+// logic implementation within domains. Refactor this handler.
+export const createDatasetExportWorker = (consumer: QueueConsumer, deps?: Partial<DatasetExportDeps>) => {
+  const pgClient = deps?.postgresClient ?? getPostgresClient()
+  const chClient = deps?.clickhouseClient ?? getClickhouseClient()
+  const disk = deps?.disk ?? createStorageDisk()
+  const sendEmailUseCase = sendEmail({ emailSender: deps?.emailSender ?? createEmailTransportSender() })
 
   consumer.subscribe("dataset-export", {
     export: (payload) => {
@@ -102,11 +97,9 @@ export const createDatasetExportWorker = ({
           text: rendered.text,
         })
       }).pipe(
-        Effect.tap(() =>
-          Effect.sync(() => workerLogger.info(`Dataset export completed: datasetId=${payload.datasetId}`)),
-        ),
+        Effect.tap(() => Effect.sync(() => logger.info(`Dataset export completed: datasetId=${payload.datasetId}`))),
         Effect.tapError((error) =>
-          Effect.sync(() => workerLogger.error(`Dataset export failed: datasetId=${payload.datasetId}`, error)),
+          Effect.sync(() => logger.error(`Dataset export failed: datasetId=${payload.datasetId}`, error)),
         ),
         withPostgres(DatasetRepositoryLive, pgClient, organizationId),
         withClickHouse(DatasetRowRepositoryLive, chClient, organizationId),

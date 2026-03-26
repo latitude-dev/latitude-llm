@@ -629,9 +629,6 @@ importers:
 
   packages/domain/queue:
     dependencies:
-      '@domain/events':
-        specifier: workspace:*
-        version: link:../events
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0

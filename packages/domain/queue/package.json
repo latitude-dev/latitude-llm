@@ -15,7 +15,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@domain/events": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

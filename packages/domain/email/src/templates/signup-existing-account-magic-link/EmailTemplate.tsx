@@ -12,10 +12,7 @@ interface SignupExistingAccountMagicLinkEmailProps {
   readonly magicLinkUrl: string
 }
 
-export function SignupExistingAccountMagicLinkEmail({
-  userName,
-  magicLinkUrl,
-}: SignupExistingAccountMagicLinkEmailProps) {
+function SignupExistingAccountMagicLinkEmail({ userName, magicLinkUrl }: SignupExistingAccountMagicLinkEmailProps) {
   return (
     <ContainerLayout previewText="Sign in to your existing Latitude account">
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${userName},`}</EmailText>

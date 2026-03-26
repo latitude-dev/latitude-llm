@@ -12,7 +12,7 @@ interface MagicLinkEmailProps {
   readonly magicLinkUrl: string
 }
 
-export function MagicLinkEmail({ userName, magicLinkUrl }: MagicLinkEmailProps) {
+function MagicLinkEmail({ userName, magicLinkUrl }: MagicLinkEmailProps) {
   return (
     <ContainerLayout previewText="Log in with this magic link">
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${userName},`}</EmailText>

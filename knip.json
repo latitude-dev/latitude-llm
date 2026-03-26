@@ -52,10 +52,5 @@
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],
   "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"],
-  "ignoreIssues": {
-    "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"],
-    "apps/web/src/domains/sessions/sessions.collection.ts": ["files"],
-    "apps/web/src/domains/sessions/sessions.functions.ts": ["files"]
-  },
   "tags": ["-knipignore"]
 }

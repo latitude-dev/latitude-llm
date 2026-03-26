@@ -11,16 +11,14 @@ import { SqlClientLive, UserRepositoryLive } from "@platform/db-postgres"
 import { createEmailTransportSender } from "@platform/email-transport"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getPostgresClient } from "../../clients.ts"
+import { getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("magic-link-email")
 const normalizeEmail = (email: string) => email.trim().toLowerCase()
 
-interface MagicLinkEmailDeps {
-  consumer: QueueConsumer
-}
-
-export const createMagicLinkEmailWorker = ({ consumer }: MagicLinkEmailDeps) => {
+// TODO(workers): worker handlers are thin app boundaries that route data to business
+// logic implementation within domains. Refactor this handler.
+export const createMagicLinkEmailWorker = (consumer: QueueConsumer) => {
   consumer.subscribe("magic-link-email", {
     send: (payload) => {
       const pgClient = getPostgresClient()

@@ -1,5 +1,5 @@
-import type { DomainEvent, EventsPublisher } from "@domain/events"
-import { Data, Effect, Fiber, Result, Schedule } from "effect"
+import type { DomainEvent, EventRouter } from "@domain/events"
+import { Data, Effect, Fiber, Schedule } from "effect"
 import type { Pool, PoolClient } from "pg"
 
 export interface OutboxEventRow {
@@ -53,9 +53,9 @@ const MARK_EVENTS_PUBLISHED = `
   WHERE id = ANY($1::text[])
 `
 
-const processBatchEffect = <TPublishError>(
+const processBatchEffect = (
   client: PoolClient,
-  publisher: EventsPublisher<TPublishError>,
+  router: EventRouter,
   batchSize: number,
 ): Effect.Effect<number, unknown, never> =>
   Effect.gen(function* () {
@@ -65,23 +65,27 @@ const processBatchEffect = <TPublishError>(
       return 0
     }
 
-    const processedIds: string[] = []
+    const processedIds = yield* Effect.forEach(
+      result.rows,
+      (row) =>
+        Effect.gen(function* () {
+          const event: DomainEvent = {
+            name: row.event_name,
+            organizationId: row.workspace_id,
+            payload: row.payload,
+          }
 
-    for (const row of result.rows) {
-      const event = {
-        name: row.event_name,
-        organizationId: row.workspace_id,
-        payload: row.payload,
-      } as DomainEvent
+          const routeResult = yield* Effect.result(router(event))
 
-      const publishResult = yield* Effect.result(publisher.publish(event))
+          if (routeResult._tag === "Success") {
+            return row.id
+          }
 
-      if (Result.isSuccess(publishResult)) {
-        processedIds.push(row.id)
-      } else {
-        yield* Effect.logError(`Failed to publish event ${row.id}: ${publishResult.failure}`)
-      }
-    }
+          yield* Effect.logError(`Failed to route event ${row.id} (${row.event_name})`)
+          return null
+        }),
+      { concurrency: 10 },
+    ).pipe(Effect.map((ids) => ids.filter((id): id is string => id !== null)))
 
     if (processedIds.length > 0) {
       yield* Effect.tryPromise(() => client.query(MARK_EVENTS_PUBLISHED, [processedIds]))
@@ -90,17 +94,14 @@ const processBatchEffect = <TPublishError>(
     return processedIds.length
   })
 
-const pollEffect = <TPublishError>(
-  config: PollingOutboxConsumerConfig,
-  publisher: EventsPublisher<TPublishError>,
-): Effect.Effect<number, unknown, never> =>
+const pollEffect = (config: PollingOutboxConsumerConfig, router: EventRouter): Effect.Effect<number, unknown, never> =>
   Effect.gen(function* () {
     const client = yield* Effect.tryPromise(() => config.pool.connect())
 
     const result = yield* Effect.gen(function* () {
       yield* Effect.tryPromise(() => client.query("BEGIN"))
 
-      const processedCount = yield* processBatchEffect(client, publisher, config.batchSize)
+      const processedCount = yield* processBatchEffect(client, router, config.batchSize)
 
       yield* Effect.tryPromise(() => client.query("COMMIT"))
 
@@ -117,20 +118,20 @@ const pollEffect = <TPublishError>(
     return result
   })
 
-export const createPollingOutboxConsumer = <TPublishError>(
+export const createPollingOutboxConsumer = (
   config: PollingOutboxConsumerConfig,
-  publisher: EventsPublisher<TPublishError>,
+  router: EventRouter,
 ): Effect.Effect<OutboxConsumer, OutboxConsumerError> =>
   Effect.gen(function* () {
     let fiber: Fiber.Fiber<void, unknown> | null = null
 
-    const schedule = Schedule.spaced(config.pollIntervalMs)
+    const schedule = Schedule.fixed(config.pollIntervalMs)
 
     const start = (): Effect.Effect<void, OutboxConsumerError> =>
       Effect.gen(function* () {
         if (fiber !== null) return
 
-        const pollingEffect = Effect.repeat(pollEffect(config, publisher), schedule).pipe(Effect.asVoid)
+        const pollingEffect = Effect.repeat(pollEffect(config, router), schedule).pipe(Effect.asVoid)
 
         fiber = yield* Effect.forkDetach(pollingEffect)
 

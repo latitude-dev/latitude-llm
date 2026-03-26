@@ -13,7 +13,7 @@ interface InviteMagicLinkEmailProps {
   readonly magicLinkUrl: string
 }
 
-export function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkUrl }: InviteMagicLinkEmailProps) {
+function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkUrl }: InviteMagicLinkEmailProps) {
   return (
     <ContainerLayout previewText={`${inviterName} invited you to join ${organizationName} on Latitude`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>

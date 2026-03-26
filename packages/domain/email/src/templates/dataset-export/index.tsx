@@ -3,7 +3,7 @@
 import React from "react"
 import { renderEmail } from "../../utils/render.ts"
 import type { RenderedEmail } from "../types.ts"
-import { DatasetExportEmail } from "./EmailTemplate.tsx"
+import DatasetExportEmail from "./EmailTemplate.tsx"
 
 export interface DatasetExportEmailData {
   readonly datasetName: string
