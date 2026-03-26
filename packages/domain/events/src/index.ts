@@ -1,5 +1,34 @@
 import type { Effect } from "effect"
 
+export interface EventPayloads {
+  MagicLinkEmailRequested: {
+    readonly email: string
+    readonly magicLinkUrl: string
+    readonly authIntentId: string | null
+  }
+  UserDeletionRequested: {
+    readonly userId: string
+  }
+  SpanIngested: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceId: string
+  }
+  TraceEnded: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceId: string
+  }
+  ScoreFinalized: {
+    readonly scoreId: string
+    readonly issueId: string
+  }
+}
+
+export type KnownDomainEvent = {
+  [E in keyof EventPayloads]: DomainEvent<E, EventPayloads[E]>
+}[keyof EventPayloads]
+
 export interface DomainEvent<
   TName extends string = string,
   TPayload extends Record<string, unknown> = Record<string, unknown>,

@@ -111,13 +111,9 @@ describe("cleanupUserMembershipsUseCase", () => {
     expect(organizations.has(ORG_1)).toBe(false)
     expect(organizations.has(ORG_2)).toBe(true)
 
-    // ORG_2 membership for USER_ID should be removed
     const org2Members = [...memberships.values()].filter((m) => m.organizationId === ORG_2)
     expect(org2Members).toHaveLength(1)
     expect(org2Members[0]?.userId).toBe(OTHER_USER_ID)
-
-    // ORG_1 membership may still exist in fake (no cascade), but the org is gone
-    // In a real DB, cascade would remove it too
   })
 
   it("is a no-op when user has no memberships", async () => {

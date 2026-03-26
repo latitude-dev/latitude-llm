@@ -2,7 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type { DatasetRow } from "@domain/datasets"
 import { DatasetRowRepository, RowNotFoundError } from "@domain/datasets"
 import { ChSqlClient, type ChSqlClientShape, DatasetId, DatasetRowId, TraceId } from "@domain/shared"
-import { safeParseJson, safeStringifyJson } from "@repo/utils"
+import { parseCHDate, safeParseJson, safeStringifyJson } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 const serializeField = (value: unknown): string => {
@@ -27,7 +27,7 @@ const toDomainRow = (row: DatasetRowCH, datasetId: string): DatasetRow => ({
   input: safeParseJson(row.input, { fallback: "string" }),
   output: safeParseJson(row.output, { fallback: "string" }),
   metadata: safeParseJson(row.metadata, { fallback: "string" }),
-  createdAt: new Date(row.created_at),
+  createdAt: parseCHDate(row.created_at),
   version: Number(row.latest_xact_id),
 })
 

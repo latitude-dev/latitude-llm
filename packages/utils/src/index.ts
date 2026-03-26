@@ -5,6 +5,7 @@ export {
   formatCount,
   formatDuration,
   formatPrice,
+  parseCHDate,
   safeParseJson,
   safeStringifyJson,
 } from "./format.ts"

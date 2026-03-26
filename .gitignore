@@ -131,3 +131,6 @@ packages/cli/prompts
 .output
 
 slate.json
+
+# Workflow test output
+workflow-test-output.txt

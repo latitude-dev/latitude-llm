@@ -1,1 +1,1 @@
-export { greetWorkflow } from "./greet-workflow.ts"
+export { issueDiscoveryWorkflow } from "./issue-discovery-workflow.ts"

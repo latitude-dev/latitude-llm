@@ -34,16 +34,13 @@ export const ingestSpansUseCase = (
     })
 
     yield* publisher
-      .publish("span-ingestion", {
-        body: new TextEncoder().encode(fileKey),
-        key: input.organizationId,
-        headers: new Map([
-          ["content-type", input.contentType],
-          ["organization-id", input.organizationId],
-          ["project-id", input.projectId],
-          ["api-key-id", input.apiKeyId],
-          ["ingested-at", new Date().toISOString()],
-        ]),
+      .publish("span-ingestion", "ingest", {
+        fileKey,
+        contentType: input.contentType,
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        apiKeyId: input.apiKeyId,
+        ingestedAt: new Date().toISOString(),
       })
       .pipe(Effect.tapError(() => deleteFromDisk(disk, fileKey).pipe(Effect.ignore)))
   })

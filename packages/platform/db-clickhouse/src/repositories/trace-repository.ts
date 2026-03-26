@@ -13,6 +13,7 @@ import {
 } from "@domain/shared"
 import type { Trace, TraceDetail, TraceListPage } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
+import { parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
@@ -123,8 +124,8 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   traceId: toTraceId(row.trace_id),
   spanCount: Number(row.span_count),
   errorCount: Number(row.error_count),
-  startTime: new Date(row.start_time),
-  endTime: new Date(row.end_time),
+  startTime: parseCHDate(row.start_time),
+  endTime: parseCHDate(row.end_time),
   durationNs: Number(row.duration_ns),
   timeToFirstTokenNs: Number(row.time_to_first_token_ns),
   tokensInput: Number(row.tokens_input),

@@ -1,6 +1,6 @@
 import { DatasetRowRepository } from "@domain/datasets"
 import type { EmailMessage, EmailSender } from "@domain/email"
-import type { MessageHandler, QueueConsumer, QueueMessage, QueueName } from "@domain/queue"
+import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
 import { DatasetId, DatasetRowId, OrganizationId } from "@domain/shared"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { datasets } from "@platform/db-postgres/schema/datasets"
@@ -10,11 +10,13 @@ import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { createDatasetExportWorker } from "./dataset-export.ts"
 
-class TestQueueConsumer implements QueueConsumer {
-  private readonly handlers = new Map<QueueName, MessageHandler>()
+type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
 
-  subscribe(queue: QueueName, handler: MessageHandler): void {
-    this.handlers.set(queue, handler)
+class TestQueueConsumer implements QueueConsumer {
+  private readonly registered = new Map<QueueName, AnyTaskHandlers>()
+
+  subscribe<T extends QueueName>(queue: T, handlers: TaskHandlers<T>): void {
+    this.registered.set(queue, handlers as unknown as AnyTaskHandlers)
   }
 
   start() {
@@ -25,10 +27,12 @@ class TestQueueConsumer implements QueueConsumer {
     return Effect.void
   }
 
-  async dispatch(queue: QueueName, message: QueueMessage): Promise<void> {
-    const handler = this.handlers.get(queue)
-    if (!handler) throw new Error(`No handler registered for queue ${queue}`)
-    await Effect.runPromise(handler.handle(message))
+  async dispatchTask(queue: QueueName, task: string, payload: unknown): Promise<void> {
+    const handlers = this.registered.get(queue)
+    if (!handlers) throw new Error(`No handlers registered for queue ${queue}`)
+    const handler = handlers[task]
+    if (!handler) throw new Error(`No handler for task ${task} on queue ${queue}`)
+    await Effect.runPromise(handler(payload))
   }
 }
 
@@ -93,18 +97,11 @@ describe("createDatasetExportWorker", () => {
       logger: { info: () => undefined, error: () => undefined },
     })
 
-    await consumer.dispatch("dataset-export", {
-      body: Buffer.from(
-        JSON.stringify({
-          datasetId: DATASET_ID,
-          organizationId: ORG_ID,
-          projectId: PROJECT_ID,
-          recipientEmail: RECIPIENT_EMAIL,
-        }),
-        "utf-8",
-      ),
-      headers: new Map(),
-      key: null,
+    await consumer.dispatchTask("dataset-export", "export", {
+      datasetId: DATASET_ID,
+      organizationId: ORG_ID,
+      projectId: PROJECT_ID,
+      recipientEmail: RECIPIENT_EMAIL,
     })
 
     expect(disk.files.size).toBe(1)
@@ -126,34 +123,5 @@ describe("createDatasetExportWorker", () => {
     expect(sentEmails[0]?.to).toBe(RECIPIENT_EMAIL)
     expect(sentEmails[0]?.subject.length).toBeGreaterThan(0)
     expect(sentEmails[0]?.html).toContain("https://download.test/")
-  })
-
-  it("ignores invalid payloads without exporting or emailing", async () => {
-    const consumer = new TestQueueConsumer()
-    const disk = new FakeStorageDisk()
-    const sentEmails: EmailMessage[] = []
-    const emailSender: EmailSender = {
-      send: (message) =>
-        Effect.sync(() => {
-          sentEmails.push(message)
-        }),
-    }
-
-    createDatasetExportWorker(consumer, {
-      postgresClient: pg.appPostgresClient,
-      clickhouseClient: ch.client,
-      disk,
-      emailSender,
-      logger: { info: () => undefined, error: () => undefined },
-    })
-
-    await consumer.dispatch("dataset-export", {
-      body: Buffer.from("not-json", "utf-8"),
-      headers: new Map(),
-      key: null,
-    })
-
-    expect(disk.files.size).toBe(0)
-    expect(sentEmails).toHaveLength(0)
   })
 })

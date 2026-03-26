@@ -1,6 +1,6 @@
 import { csvExportHeader, DatasetRepository, DatasetRowRepository, rowsToCsvFragment } from "@domain/datasets"
 import { datasetExportTemplate, type EmailSender, type RenderedEmail, sendEmail } from "@domain/email"
-import type { MessageHandler, QueueConsumer, QueueMessage } from "@domain/queue"
+import type { QueueConsumer } from "@domain/queue"
 import { DatasetId, OrganizationId, putInDisk, type StorageDiskPort } from "@domain/shared"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { DatasetRowRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -10,7 +10,6 @@ import { createStorageDisk } from "@platform/storage-object"
 import { createLogger } from "@repo/observability"
 import { Data, Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
-import { parseDatasetExportPayload } from "./dataset-export-payload.ts"
 
 class DatasetExportError extends Data.TaggedError("DatasetExportError")<{
   readonly cause: unknown
@@ -21,30 +20,23 @@ const logger = createLogger("dataset-export")
 const BATCH_SIZE = 1000
 const SIGNED_URL_EXPIRY_SECONDS = 7 * 24 * 60 * 60
 
-interface DatasetExportWorkerDependencies {
-  readonly postgresClient?: PostgresClient
-  readonly clickhouseClient?: ClickHouseClient
-  readonly disk?: StorageDiskPort
-  readonly emailSender?: EmailSender
-  readonly logger?: Pick<typeof logger, "info" | "error">
+interface DatasetExportDeps {
+  readonly postgresClient: PostgresClient
+  readonly clickhouseClient: ClickHouseClient
+  readonly disk: StorageDiskPort
+  readonly emailSender: EmailSender
+  readonly logger: { info: (...args: unknown[]) => void; error: (...args: unknown[]) => void }
 }
 
-export const createDatasetExportWorker = (consumer: QueueConsumer, deps: DatasetExportWorkerDependencies = {}) => {
-  const pgClient = deps.postgresClient ?? getPostgresClient()
-  const chClient = deps.clickhouseClient ?? getClickhouseClient()
-  const disk = deps.disk ?? createStorageDisk()
-  const emailSender = deps.emailSender ?? createEmailTransportSender()
-  const sendEmailUseCase = sendEmail({ emailSender })
-  const workerLogger = deps.logger ?? logger
+export const createDatasetExportWorker = (consumer: QueueConsumer, deps?: Partial<DatasetExportDeps>) => {
+  const pgClient = deps?.postgresClient ?? getPostgresClient()
+  const chClient = deps?.clickhouseClient ?? getClickhouseClient()
+  const disk = deps?.disk ?? createStorageDisk()
+  const sendEmailUseCase = sendEmail({ emailSender: deps?.emailSender ?? createEmailTransportSender() })
+  const workerLogger = deps?.logger ?? logger
 
-  const handler: MessageHandler = {
-    handle: (message: QueueMessage) => {
-      const payload = parseDatasetExportPayload(message.body)
-      if (!payload) {
-        workerLogger.error("Dataset export: failed to parse payload")
-        return Effect.void
-      }
-
+  consumer.subscribe("dataset-export", {
+    export: (payload) => {
       const organizationId = OrganizationId(payload.organizationId)
       const datasetId = DatasetId(payload.datasetId)
 
@@ -114,7 +106,5 @@ export const createDatasetExportWorker = (consumer: QueueConsumer, deps: Dataset
         withClickHouse(DatasetRowRepositoryLive, chClient, organizationId),
       )
     },
-  }
-
-  consumer.subscribe("dataset-export", handler)
+  })
 }

@@ -6,7 +6,6 @@ import {
   UserRepositoryLive,
   withPostgres,
 } from "@platform/db-postgres"
-import { createEventHandler } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getAdminPostgresClient } from "../../clients.ts"
@@ -14,23 +13,19 @@ import { getAdminPostgresClient } from "../../clients.ts"
 const logger = createLogger("user-deletion")
 
 export const createUserDeletionWorker = (consumer: QueueConsumer) => {
-  consumer.subscribe(
-    "user-deletion",
-    createEventHandler({
-      handle: (event) => {
-        const payload = event.event.payload as { userId: string }
-        const pgClient = getAdminPostgresClient()
-        const repoLayer = Layer.mergeAll(MembershipRepositoryLive, OrganizationRepositoryLive, UserRepositoryLive)
+  consumer.subscribe("user-deletion", {
+    delete: (payload) => {
+      const pgClient = getAdminPostgresClient()
+      const repoLayer = Layer.mergeAll(MembershipRepositoryLive, OrganizationRepositoryLive, UserRepositoryLive)
 
-        return deleteUserUseCase({ userId: payload.userId }).pipe(
-          withPostgres(repoLayer, pgClient),
-          Effect.tap(() => Effect.sync(() => logger.info(`User ${payload.userId} permanently deleted`))),
-          Effect.tapError((error) =>
-            Effect.sync(() => logger.error(`User deletion failed for ${payload.userId}`, error)),
-          ),
-          Effect.asVoid,
-        )
-      },
-    }),
-  )
+      return deleteUserUseCase({ userId: payload.userId }).pipe(
+        withPostgres(repoLayer, pgClient),
+        Effect.tap(() => Effect.sync(() => logger.info(`User ${payload.userId} permanently deleted`))),
+        Effect.tapError((error) =>
+          Effect.sync(() => logger.error(`User deletion failed for ${payload.userId}`, error)),
+        ),
+        Effect.asVoid,
+      )
+    },
+  })
 }

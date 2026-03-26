@@ -20,7 +20,6 @@ import {
   updateDatasetDetails,
   updateRow,
 } from "@domain/datasets"
-import type { QueueMessage } from "@domain/queue"
 import {
   DatasetId,
   DatasetRowId,
@@ -240,7 +239,12 @@ export const listRowsQuery = createServerFn({ method: "GET" })
           sortDirection: sortDirectionForRows,
           limit: data.limit,
           ...(data.cursor
-            ? { cursor: { createdAt: data.cursor.createdAt, rowId: DatasetRowId(data.cursor.rowId) } }
+            ? {
+                cursor: {
+                  createdAt: data.cursor.createdAt,
+                  rowId: DatasetRowId(data.cursor.rowId),
+                },
+              }
             : { offset: data.offset }),
         }).pipe(
           withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
@@ -258,7 +262,13 @@ export const listRowsQuery = createServerFn({ method: "GET" })
 
 export const getRowQuery = createServerFn({ method: "GET" })
   .middleware([errorHandler])
-  .inputValidator(z.object({ datasetId: z.string(), rowId: z.string(), versionId: z.string().optional() }))
+  .inputValidator(
+    z.object({
+      datasetId: z.string(),
+      rowId: z.string(),
+      versionId: z.string().optional(),
+    }),
+  )
   .handler(async ({ data }): Promise<DatasetRowRecord | null> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
@@ -360,21 +370,14 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
 
     if (effectiveCount > DATASET_DOWNLOAD_DIRECT_THRESHOLD) {
       const publisher = await getQueuePublisher()
-      const payload = {
-        datasetId: data.datasetId,
-        organizationId,
-        projectId: dataset.projectId,
-        recipientEmail: email,
-      }
-      const message: QueueMessage = {
-        body: new TextEncoder().encode(JSON.stringify(payload)),
-        key: orgId,
-        headers: new Map([
-          ["organization-id", payload.organizationId],
-          ["project-id", payload.projectId],
-        ]),
-      }
-      await Effect.runPromise(publisher.publish("dataset-export", message))
+      await Effect.runPromise(
+        publisher.publish("dataset-export", "export", {
+          datasetId: data.datasetId,
+          organizationId,
+          projectId: dataset.projectId,
+          recipientEmail: email,
+        }),
+      )
       return { type: "enqueued" }
     }
 
@@ -500,7 +503,13 @@ export const insertDatasetRowMutation = createServerFn({ method: "POST" })
     }),
   )
   .handler(
-    async ({ data }): Promise<{ readonly versionId: string; readonly version: number; readonly rowId: string }> => {
+    async ({
+      data,
+    }): Promise<{
+      readonly versionId: string
+      readonly version: number
+      readonly rowId: string
+    }> => {
       const { organizationId } = await requireSession()
       const orgId = OrganizationId(organizationId)
 
@@ -574,7 +583,10 @@ export const deleteRowsMutation = createServerFn({ method: "POST" })
     const selection: DeleteRowsSelection =
       data.selection.mode === "all"
         ? { mode: "all" }
-        : { mode: data.selection.mode, rowIds: data.selection.rowIds.map(DatasetRowId) }
+        : {
+            mode: data.selection.mode,
+            rowIds: data.selection.rowIds.map(DatasetRowId),
+          }
 
     const result = await Effect.runPromise(
       deleteRows({

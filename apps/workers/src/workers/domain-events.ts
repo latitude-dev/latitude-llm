@@ -1,44 +1,92 @@
-import type { EventEnvelope } from "@domain/events"
-import type { QueueConsumer, QueueName, QueuePublisherShape } from "@domain/queue"
-import { createEventHandler, mapEnvelopeToQueueMessage } from "@platform/queue-bullmq"
+import type { DomainEvent, EventEnvelope, EventPayloads, KnownDomainEvent } from "@domain/events"
+import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
+
+class UnhandledEventError extends Data.TaggedError("UnhandledEventError")<{
+  readonly name: string
+  readonly eventId: string
+}> {}
 
 const logger = createLogger("domain-events")
 
-/**
- * Maps event names to the queues that should process them.
- * Each queue has its own dedicated worker.
- * To handle a new event, add an entry here and create a worker for the queue.
- */
-const eventHandlers: Record<string, QueueName[]> = {
-  MagicLinkEmailRequested: ["magic-link-email"],
-  UserDeletionRequested: ["user-deletion"],
+export const TRACE_END_DEBOUNCE_MS = 5 * 60 * 1000
+export const ISSUE_REFRESH_DEBOUNCE_MS = 8 * 60 * 60 * 1000
+
+type EventHandlerMap = {
+  [E in keyof EventPayloads]: (event: DomainEvent<E, EventPayloads[E]>) => Effect.Effect<void, unknown>
 }
 
-const dispatch = (event: EventEnvelope, queuePublisher: QueuePublisherShape): Effect.Effect<void, unknown> => {
-  const queues = eventHandlers[event.event.name]
+type EventHandlerFn = (e: KnownDomainEvent) => Effect.Effect<void, unknown>
 
-  if (!queues || queues.length === 0) {
-    return Effect.sync(() => logger.info(`No handlers for event ${event.event.name} (id=${event.id}), skipping`))
+export const createDomainEventsWorker = (
+  consumer: QueueConsumer,
+  pub: QueuePublisherShape,
+  workflows: WorkflowStarterShape,
+) => {
+  const handlers: EventHandlerMap = {
+    MagicLinkEmailRequested: (event) => pub.publish("magic-link-email", "send", event.payload),
+
+    UserDeletionRequested: (event) => pub.publish("user-deletion", "delete", event.payload),
+
+    SpanIngested: (event) =>
+      pub.publish("live-traces", "end", event.payload, {
+        dedupeKey: `live-traces:end:${event.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
+        debounceMs: TRACE_END_DEBOUNCE_MS,
+      }),
+
+    TraceEnded: (event) =>
+      Effect.all(
+        [
+          pub.publish("live-evaluations", "enqueue", event.payload),
+          pub.publish("live-annotation-queues", "curate", event.payload),
+          pub.publish("system-annotation-queues", "flag", event.payload),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
+
+    ScoreFinalized: (event) =>
+      Effect.all(
+        [
+          workflows.start(
+            "issueDiscoveryWorkflow",
+            { ...event.payload, organizationId: event.organizationId },
+            { workflowId: `issue-discovery:${event.payload.scoreId}` },
+          ),
+          pub.publish(
+            "issues",
+            "refresh",
+            { organizationId: event.organizationId, issueId: event.payload.issueId },
+            { dedupeKey: `issues:refresh:${event.payload.issueId}`, debounceMs: ISSUE_REFRESH_DEBOUNCE_MS },
+          ),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(Effect.asVoid),
   }
 
-  const message = mapEnvelopeToQueueMessage(event)
+  consumer.subscribe("domain-events", {
+    dispatch: (payload) => {
+      const parsed = EventEnvelopeSchema.safeParse(payload)
+      if (!parsed.success) {
+        logger.error(`Failed to parse domain event envelope: ${parsed.error}`)
+        return Effect.void
+      }
 
-  return Effect.all(
-    queues.map((queue) =>
-      queuePublisher
-        .publish(queue, message)
-        .pipe(
-          Effect.tap(() =>
-            Effect.sync(() => logger.info(`Dispatched ${event.event.name} (id=${event.id}) to ${queue}`)),
-          ),
-        ),
-    ),
-    { concurrency: "unbounded" },
-  ).pipe(Effect.asVoid)
-}
+      const envelope = parsed.data as EventEnvelope<KnownDomainEvent>
+      const { event } = envelope
+      const name = event.name as keyof EventPayloads
 
-export const createDomainEventsWorker = (consumer: QueueConsumer, queuePublisher: QueuePublisherShape) => {
-  consumer.subscribe("domain-events", createEventHandler({ handle: (event) => dispatch(event, queuePublisher) }))
+      const maybeHandler = handlers[name]
+
+      if (!maybeHandler) {
+        const err = new UnhandledEventError({ name: event.name, eventId: envelope.id })
+        return Effect.fail(err)
+      }
+
+      // Force type in runtime
+      const handler = maybeHandler as EventHandlerFn
+      return handler(event)
+    },
+  })
 }

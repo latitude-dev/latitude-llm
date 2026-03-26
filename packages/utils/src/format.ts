@@ -55,6 +55,17 @@ export function safeParseJson(
   }
 }
 
+/**
+ * Parse a ClickHouse timestamp string (e.g. `"2026-03-25 10:00:00.000"`) as UTC.
+ *
+ * ClickHouse `DateTime`/`DateTime64` columns return strings without a timezone
+ * marker, so `new Date(str)` would parse them as local time. Appending " UTC"
+ * forces correct interpretation.
+ */
+export function parseCHDate(value: string): Date {
+  return new Date(`${value} UTC`)
+}
+
 export function safeStringifyJson(value: unknown, fallback = ""): string {
   if (value === undefined || value === null) return fallback
   if (typeof value === "string") return value

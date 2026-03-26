@@ -66,7 +66,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-latitude}
       POSTGRES_PWD: ${POSTGRES_PASSWORD:-secret}
       POSTGRES_SEEDS: postgres
-      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+      TEMPORAL_ADDRESS: temporal:7233
     ports:
       - "7233:7233"
 

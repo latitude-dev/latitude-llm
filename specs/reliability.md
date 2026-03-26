@@ -138,36 +138,76 @@ Use the current repository product pattern for reliability surfaces:
 
 ## Background Task and Workflow Implementation Pattern
 
-Reliability background work should use the existing repository async stack:
+Reliability background work uses the shared async substrate built in Phase 0:
 
-- `@domain/queue` for single-step topic/task contracts
-- `@platform/queue-bullmq` for BullMQ transport, including transport-level dedupe and delay primitives surfaced through the topic/task abstraction
-- `apps/workers` for topic consumers and task dispatchers
-- the existing `domain-events` topic as the domain-event rail, with direct publication through `createEventsPublisher(queuePublisher)` for the reliability events introduced here
-- the workflow abstraction plus the existing `apps/workflows` worker service for durable multi-step orchestration; Temporal is the first configured provider behind that abstraction
+- `@domain/queue` for type-safe topic/task contracts, workflow contracts, and publisher/consumer interfaces
+- `@platform/queue-bullmq` for BullMQ transport with built-in dedupe and debounce
+- `@domain/events` for typed domain event definitions (`EventPayloads`, `KnownDomainEvent`)
+- `apps/workers` for topic consumers with typed `TaskHandlers<T>` maps
+- `apps/workflows` for durable multi-step Temporal workflows
+- `@platform/workflows-temporal` for Temporal client, worker, and typed `WorkflowStarterShape`
 
-Naming and ownership rules:
+### TopicRegistry — single source of truth for queue topics
 
-- the durable routing identity is the queue topic name, not BullMQ's per-job `name`
-- each queue topic should map to one subscribed worker module in `apps/workers/src/workers/<topic>.ts`
-- each topic may define several related lower-kebab-case task names such as `enqueue`, `execute`, `flag`, or `annotate`, and the topic worker dispatches by that task name
-- queue topic names should be added to `packages/domain/queue/src/index.ts`, while transport-facing topic constants or aliases belong in `packages/platform/queue-bullmq/src/topics.ts`
-- when a topic needs payload parsing/validation for one worker only, keep that parser/validator next to the worker, for example `apps/workers/src/workers/<topic>-payload.ts`; only promote a payload contract into a domain package when several apps or phases truly share it
+All topics, tasks, and payload types are defined in a single `const _registry` object in `packages/domain/queue/src/topic-registry.ts`. Both the `TopicRegistry` type and the `TOPIC_NAMES` runtime array are derived from it — no duplication.
+
+To add a new topic:
+
+1. Add an entry to `_registry` in `packages/domain/queue/src/topic-registry.ts` using the `payloads<T>()` helper
+2. Create a worker in `apps/workers/src/workers/<topic>.ts` exporting a function that calls `consumer.subscribe("<topic>", { taskHandlers })`
+3. Register the worker in `apps/workers/src/server.ts`
+
+The system enforces completeness at two levels:
+
+- **Compile time**: `subscribe<T>(queue, handlers)` requires a handler for every task in the topic. Missing handlers are a type error.
+- **Runtime**: `start()` checks all `TOPIC_NAMES` have registered handlers before opening BullMQ workers. Missing topics fail with `QueueSubscribeError`.
+
+### WorkflowRegistry — single source of truth for Temporal workflows
+
+Workflow names and typed inputs are defined in `packages/domain/queue/src/workflow-registry.ts`. `WorkflowStarterShape` (in `@domain/queue`) is the domain-level typed contract for starting workflows.
+
+To add a new workflow:
+
+1. Add an entry to `_registry` in `packages/domain/queue/src/workflow-registry.ts` using the `input<T>()` helper
+2. Implement the workflow in `apps/workflows/src/workflows/`
+3. Register activities in `apps/workflows/src/activities/`
+4. Trigger via `workflows.start("yourWorkflow", input, { workflowId })` from the dispatcher or a use-case
+
+### Typed domain events
+
+`EventPayloads` in `@domain/events` maps event names to payload shapes. `KnownDomainEvent` is a discriminated union derived from it.
+
+To add a new domain event:
+
+1. Add an entry to `EventPayloads` in `packages/domain/events/src/index.ts`
+2. Add a `case` branch in the dispatcher switch in `apps/workers/src/workers/domain-events.ts`
+
+The dispatcher is a `switch` on `event.name` with full TypeScript narrowing — no routing table, no builders, no casts. Unknown events fail with `UnhandledEventError`.
+
+### Dedupe and debounce
+
+`publish()` accepts optional `dedupeKey` and `debounceMs`. BullMQ maps these to `jobId` and `delay` + `deduplication` with sliding-window semantics (`extend: true, replace: true`).
+
+```typescript
+pub.publish("issues", "refresh", payload, {
+  dedupeKey: `issues:refresh:${issueId}`,
+  debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
+})
+```
+
+### Naming and ownership rules
+
 - queue topics use lower-kebab-case names such as `live-evaluations`
 - domain events use PascalCase names such as `SpanIngested` and `TraceEnded`
+- each queue topic maps to one subscribed worker module in `apps/workers/src/workers/<topic>.ts`
+- each topic may define several related lower-kebab-case task names such as `enqueue`, `execute`, `flag`, or `annotate`
 - the `domain-events` worker is a dispatcher only: it maps each domain event name to downstream topic tasks or workflow starts and never runs synchronous business logic inline
-- the domain-event routing map belongs in `apps/workers/src/workers/domain-events.ts`; later phases should add new event-to-topic or event-to-workflow routes there rather than creating parallel event-consumer rails
-- when one upstream trigger needs several reactions, the dispatcher publishes several downstream tasks; do not rely on multiple independent subscribers for one queue topic because the current queue consumer binds one handler per topic
-- app boundaries that enqueue direct work should reuse the app-local queue-publisher helper pattern instead of instantiating BullMQ clients per request
-- the new reliability domain events should publish directly through `createEventsPublisher(queuePublisher)` into `domain-events` only after their upstream writes are durable
-- queue payloads should carry ids or opaque storage keys, not full mutable models, and each topic should own typed payload schemas plus encode/decode helpers near the owning domain/topic
-- BullMQ is transport, not lifecycle storage; durable progress, correctness, and ownership live in Postgres/domain state even when BullMQ provides the dedupe/debounce primitive
-- the topic/task abstraction should accept optional dedupe and debounce options keyed by logical entity identity so BullMQ can reuse delayed jobs or job ids internally without exposing transport-specific details to callers
-- user-triggered background work that needs UI progress feedback should write transient Redis status keys named by the logical background contract, for example `evaluation-alignment:<jobId>`, and expose polling endpoints that read Redis directly rather than querying BullMQ
-- queues are for single-step tasks; long-running or multi-step orchestration should move into workflows whose activities own the individual steps, retries, timers, and progress reporting
-- reliability work should extend the existing `apps/workflows` Temporal service and the existing `domain-events` dispatcher rail rather than introduce a parallel workflow runner or ad-hoc event-execution path
-- workflow orchestration definitions should live in `apps/workflows/src/workflows/*.ts`, activity implementations should live in `apps/workflows/src/activities/*.ts`, and both should be re-exported from the local `index.ts` files so the worker bootstrap stays infrastructure-only
-- the phase that first introduces a workflow should also introduce that workflow's concrete input schema and activity contracts; if several later phases truly need the same shared workflow contract before any one phase can own it cleanly, introduce a tiny intermediate phase then rather than speculating in Phase 0
+- later phases should add new event-to-topic or event-to-workflow routes in the dispatcher switch rather than creating parallel event-consumer rails
+- queue payloads should carry ids or opaque storage keys, not full mutable models
+- BullMQ is transport, not lifecycle storage; durable progress, correctness, and ownership live in Postgres/domain state
+- queues are for single-step tasks; long-running or multi-step orchestration should use Temporal workflows
+- workflow definitions live in `apps/workflows/src/workflows/*.ts`, activities in `apps/workflows/src/activities/*.ts`
+- user-triggered background work that needs UI progress feedback should write transient Redis status keys and expose polling endpoints rather than querying BullMQ
 
 Initial reliability domain-event contracts:
 
@@ -187,8 +227,9 @@ Initial reliability topic/task contracts:
 Initial reliability workflows:
 
 - `issue-discovery`: multi-activity workflow for create-or-match issue discovery, assignment, projection sync, and post-immutability publication
-- `issue-refresh`: single-activity debounced workflow for issue name/description regeneration
 - `evaluation-alignment`: multi-activity workflow for evaluation generation or realignment; for now the GEPA optimization pass stays a single activity, while example collection and post-alignment regeneration are separate activities
+
+Issue name/description regeneration (`issue-refresh`) is a single-step debounced task, not a multi-step orchestration. It uses a BullMQ delayed job via the `@domain/queue` topic/task abstraction with dedupe/debounce options, not a Temporal workflow.
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
@@ -1611,8 +1652,8 @@ All similarity, rerank, visibility, and debounce thresholds must be configurable
 Discovery/refresh execution rules:
 
 - eligible finalized scores should start the `issue-discovery` workflow after commit rather than running embeddings/search inline in request or annotation-edit paths
-- issue name/description regeneration should run through the debounced `issue-refresh` workflow once the refresh window elapses
-- both workflows should recheck persisted Postgres eligibility and current ownership state for correctness and idempotency rather than trusting queue or workflow history alone
+- issue name/description regeneration should run through a debounced BullMQ task on the `issue-refresh` topic once the refresh window elapses
+- workflows and debounced tasks should recheck persisted Postgres eligibility and current ownership state for correctness and idempotency rather than trusting queue or workflow history alone
 
 Proven v1 retrieval defaults to carry forward and revalidate:
 
@@ -2271,15 +2312,15 @@ Row click opens a detailed view with:
 >
 > Each phase is intended to become one GitHub PR and one Linear issue. Before Linear sync, phase headings use the placeholder id `LAT-XXX`; after sync, they should use the created Linear issue ids. Task bullets are local checklist items.
 
-### (LAT-457) Phase 0 - Reliability Async Foundations
+### (LAT-457) Phase 0 - Reliability Async Foundations ✅
 
 **Depends on**: none
 
 **Parallelization notes**: Phase 0 can run in parallel with phases 1–9; the async-heavy implementation phases should wait for it before wiring shared queue/workflow execution behavior.
 
-- [ ] Extend the shared async substrate over `@domain/queue`, BullMQ, the existing `domain-events` dispatcher rail, and the existing Temporal-backed `apps/workflows` service, including PascalCase domain-event names, lower-kebab-case topic/task names, dispatcher-only `domain-events` handling, per-message dedupe/debounce options keyed by logical identity, the `apps/workers` topic-dispatcher pattern, the direct `createEventsPublisher(queuePublisher)` publication path for the reliability domain events introduced by this spec, and the generic workflow-start capabilities later phases will use.
+- [x] Extend the shared async substrate over `@domain/queue`, BullMQ, the existing `domain-events` dispatcher rail, and the existing Temporal-backed `apps/workflows` service, including PascalCase domain-event names, lower-kebab-case topic/task names, dispatcher-only `domain-events` handling, per-message dedupe/debounce options keyed by logical identity, the `apps/workers` topic-dispatcher pattern, the direct `createEventsPublisher(queuePublisher)` publication path for the reliability domain events introduced by this spec, and the generic workflow-start capabilities later phases will use.
 
-**Exit gate**: the shared queue/workflow substrate is settled enough that later phases can define their own concrete tasks, payloads, and workflows without reopening the core async abstractions.
+**Exit gate**: met. Centralized `TopicRegistry` + `WorkflowRegistry` in `@domain/queue`, typed `EventPayloads` + `KnownDomainEvent` in `@domain/events`, typed publish/subscribe/workflow-start APIs, runtime topic validation, BullMQ dedupe/debounce, all 11 topics with workers, domain-events dispatcher with full type narrowing, `@platform/workflows-temporal` package, and a working issue-discovery workflow scaffold. Later phases add registry entries and handler implementations — no core changes needed.
 
 ### (LAT-458) Phase 1 - Keep-Monitoring Settings Foundations
 
@@ -2446,7 +2487,7 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
 - [ ] Implement reranking with `rerank-2.5`, configurable thresholds, and the v1-style search sequence of hybrid retrieval first and rerank second.
 - [ ] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, retrieval/rerank, issue creation or assignment, Weaviate projection sync, and post-immutability ClickHouse publication, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse publication after the score becomes immutable.
 - [ ] Implement the running centroid math with source weights and decay, adapting the v1 math to the new `IssueCentroid` shape while using `clusteredAt` as the decay anchor instead of generic row `updatedAt`.
-- [ ] Implement asynchronous issue name/description generation and eight-hour refresh debounce through the debounced `issue-refresh` workflow in the existing Temporal-backed `apps/workflows` service as a single-activity workflow with retry-safe coordination between Postgres state and Weaviate projection updates rather than BullMQ delayed/repeat jobs or persisted due-work scans.
+- [ ] Implement asynchronous issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issue-refresh` topic with dedupe/debounce options, using retry-safe coordination between Postgres state and Weaviate projection updates.
 - [ ] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
 - [ ] Implement finalized-score publication into ClickHouse after issue assignment without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
 - [ ] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue rematching, one-time immutable ClickHouse publication, and explicit human annotation assignment bypasses.
