@@ -3,6 +3,7 @@ import { ArrowDownIcon, ArrowUpIcon, CopyIcon, GroupIcon, ListTreeIcon, Messages
 import { useState } from "react"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
+import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
 import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
@@ -33,6 +34,18 @@ export function TraceDetailDrawer({
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
   const [activeTab, setActiveTab] = useState<TabId>("trace")
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
+  const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
+
+  function handleSetActiveTab(tab: TabId) {
+    setActiveTab(tab)
+    setVisitedTabs((prev) => new Set([...prev, tab]))
+  }
+
+  function navigateToSpan(spanId: string | null) {
+    handleSetActiveTab("spans")
+    setSelectedSpanId(spanId ?? "")
+  }
 
   return (
     <DetailDrawer
@@ -106,21 +119,41 @@ export function TraceDetailDrawer({
             </button>
           </div>
 
-          <Tabs options={TABS} active={activeTab} onSelect={setActiveTab} />
+          <Tabs options={TABS} active={activeTab} onSelect={handleSetActiveTab} />
         </>
       }
     >
-      {activeTab === "trace" && (
-        <TraceTab
-          traceId={traceId}
-          traceRecord={traceRecord}
-          traceDetail={traceDetail}
-          isRecordLoading={isRecordLoading}
-          isDetailLoading={isDetailLoading}
-        />
-      )}
-      {activeTab === "conversation" && <ConversationTab traceDetail={traceDetail} isDetailLoading={isDetailLoading} />}
-      {activeTab === "spans" && <SpansTab key={traceId} projectId={projectId} traceId={traceId} />}
+      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "trace" })}>
+        {visitedTabs.has("trace") && (
+          <TraceTab
+            traceId={traceId}
+            traceRecord={traceRecord}
+            traceDetail={traceDetail}
+            isRecordLoading={isRecordLoading}
+            isDetailLoading={isDetailLoading}
+          />
+        )}
+      </div>
+      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "conversation" })}>
+        {visitedTabs.has("conversation") && (
+          <ConversationTab
+            traceDetail={traceDetail}
+            isDetailLoading={isDetailLoading}
+            navigateToSpan={navigateToSpan}
+            projectId={projectId}
+          />
+        )}
+      </div>
+      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "spans" })}>
+        {visitedTabs.has("spans") && (
+          <SpansTab
+            projectId={projectId}
+            traceId={traceId}
+            selectedSpanId={selectedSpanId}
+            onSelectSpan={navigateToSpan}
+          />
+        )}
+      </div>
     </DetailDrawer>
   )
 }

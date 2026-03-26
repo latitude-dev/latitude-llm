@@ -17,7 +17,7 @@ export type {
   SessionRepositoryShape,
 } from "./ports/session-repository.ts"
 export { SessionRepository } from "./ports/session-repository.ts"
-export type { SpanListOptions, SpanRepositoryShape } from "./ports/span-repository.ts"
+export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {
   TraceDistinctColumn,
@@ -29,3 +29,4 @@ export type {
 export { TraceRepository } from "./ports/trace-repository.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
+export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"

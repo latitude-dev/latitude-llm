@@ -16,7 +16,7 @@ export function SpanTree({
   onToggleMinimized,
 }: {
   readonly spans: readonly SpanRecord[]
-  readonly selectedSpanId: string | null
+  readonly selectedSpanId: string
   readonly onSelectSpan: (spanId: string) => void
   readonly isMinimized: boolean
   readonly onToggleMinimized: () => void
@@ -89,7 +89,7 @@ export function SpanTree({
               )}
             </button>
           )}
-          {selectedSpanId && (
+          {selectedSpanId !== "" && (
             <button
               type="button"
               className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground transition-colors"
