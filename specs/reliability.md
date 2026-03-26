@@ -231,7 +231,7 @@ Initial reliability topic/task contracts:
 - `annotation-scores` / `publish`: debounced finalization of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
 - `live-evaluations` / `enqueue`: lists active evaluations for one ended trace and publishes `execute` tasks for matches
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
-- `live-annotation-queues` / `curate`: materializes dynamic queue membership for one ended trace
+- `live-annotation-queues` / `curate`: materializes live queue membership for one ended trace
 - `system-annotation-queues` / `flag`: evaluates system queue routing for one ended trace and publishes `annotate` tasks for matches
 - `system-annotation-queues` / `annotate`: validates one flagged `(queueId, traceId)` pair and, if confirmed, writes the draft annotation plus queue item
 
@@ -970,11 +970,11 @@ Annotation queues are the managed workflow surface through which users review tr
 Queue concepts:
 
 - a queue is considered `manual` when it has no filter configured and queue membership is created by explicit insertion rather than by stored filter materialization
-- a queue is considered `dynamic` / `live` when it has a filter configured and materializes traces incrementally over time from that filter plus optional sampling
+- a queue is considered `live` when it has a filter configured and materializes traces incrementally over time from that filter plus optional sampling
 - user-created queues are in MVP
 - each project also gets a default set of system-created manual annotation queues
 
-Queue filters reuse the same shared `FilterSet` used by `EvaluationTrigger.filter`, applied against the shared trace field registry. Dynamic queues should omit `settings.filter` entirely when no conditions are configured so manual/dynamic semantics stay unambiguous.
+Queue filters reuse the same shared `FilterSet` used by `EvaluationTrigger.filter`, applied against the shared trace field registry. Live queues should omit `settings.filter` entirely when no conditions are configured so manual/live semantics stay unambiguous.
 
 Queue assignees are optional. A queue may be assigned to none, one, or many existing Latitude users from the same organization.
 
@@ -1027,7 +1027,7 @@ Queue population flows:
 - that trace bulk action creates one `annotation_queue_items` row per selected `(queueId, traceId)` pair with `completedAt = null`
 - from the sessions dashboard table, users select sessions with row checkboxes and use a bulk action to add those sessions to an annotation queue
 - that session bulk action resolves each selected session to its newest trace and creates one `annotation_queue_items` row per `(queueId, latestTraceId)` pair with `completedAt = null`
-- system-created queues are also manual queues: they have no `settings.filter`, they are marked with `system = true`, and membership is inserted by the system instead of by user bulk selection or dynamic filter materialization
+- system-created queues are also manual queues: they have no `settings.filter`, they are marked with `system = true`, and membership is inserted by the system instead of by user bulk selection or live filter materialization
 - when a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `system-annotation-queues` message with task `flag` for that trace
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
@@ -1038,18 +1038,18 @@ Queue population flows:
 - `system-annotation-queues:annotate` uses a larger validator/drafter LLM with the full conversation context to validate the flag and create the draft annotation in the same call
 - only if the validation/annotation task confirms the match does the system create the draft annotation and add the trace to that queue
 - draft-annotation creation and queue-item creation should happen together so the queue always has a matching pending annotation artifact
-- dynamic / live queues are incremental: whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `live-annotation-queues` message with task `curate` for that trace; `live-annotation-queues:curate` lists all non-deleted dynamic queues in that project, applies `settings.filter` using the shared trace filter semantics first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
+- live queues are incremental: whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `live-annotation-queues` message with task `curate` for that trace; `live-annotation-queues:curate` lists all non-deleted live queues in that project, applies `settings.filter` using the shared trace filter semantics first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
 - `system-annotation-queues:flag`, `system-annotation-queues:annotate`, and `live-annotation-queues:curate` are all separate from `live-evaluations:enqueue`
-- when a dynamic queue is created with `settings.filter` and no explicit sampling, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; the starting default for that constant is `10`
+- when a live queue is created with `settings.filter` and no explicit sampling, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; the starting default for that constant is `10`
 - when a system queue is provisioned for a project, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; users may later edit that sampling value per queue
-- the unique `(organization_id, project_id, queue_id, trace_id)` constraint prevents duplicate queue membership when a trace is manually re-added, when a session resolves to the same latest trace, or when a dynamic materialization path retries
+- the unique `(organization_id, project_id, queue_id, trace_id)` constraint prevents duplicate queue membership when a trace is manually re-added, when a session resolves to the same latest trace, or when a live materialization path retries
 
 ```typescript
 import type { FilterSet } from "@domain/shared";
 
 type AnnotationQueueSettings = {
   filter?: FilterSet; // shared trace filter set; omit when the queue is manual
-  sampling?: number; // optional percentage [0, 100]; used by dynamic queues and by system queues, with defaults seeded from named constants on queue creation/provisioning
+  sampling?: number; // optional percentage [0, 100]; used by live queues and by system queues, with defaults seeded from named constants on queue creation/provisioning
 };
 ```
 
@@ -1070,7 +1070,7 @@ export const annotationQueues = latitudeSchema.table(
     settings: jsonb("settings")
       .$type<AnnotationQueueSettings>()
       .notNull()
-      .default(sql`'{}'::jsonb`), // queue is conceptually "dynamic" when settings.filter is present; system queues keep filter absent but may still store sampling
+      .default(sql`'{}'::jsonb`), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
     assignees: varchar("assignees", { length: 24 })
       .array()
       .notNull()
@@ -1118,21 +1118,21 @@ Queue invariants:
 - queues always work with traces; when session context matters, it is derived from related traces sharing the current trace's `session_id`
 - when a user manually adds a session to a queue, resolve that session to its newest trace and store only that `traceId`
 - a queue is conceptually `manual` when `settings.filter` is absent
-- a queue is conceptually `dynamic` / `live` when `settings.filter` is present
-- empty filter sets should be normalized to absent `settings.filter` so manual/dynamic queue semantics stay unambiguous
+- a queue is conceptually `live` when `settings.filter` is present
+- empty filter sets should be normalized to absent `settings.filter` so manual/live queue semantics stay unambiguous
 - every project has a default set of system-created manual queues from the start
 - system-created default queues are manual queues with `system = true` even though the system inserts their members automatically
 - `system = true` queues keep their canonical `name`, `description`, `instructions`, and `settings.filter` non-editable, but they may still be deleted and their `settings.sampling` may still be edited
 - `settings.filter` is only editable for `system = false` queues
-- `settings.sampling` is valid for dynamic queues and for `system = true` queues
-- when a dynamic queue is created with no explicit sampling, `settings.sampling` is initialized from a named constant with an initial default of `10%`
+- `settings.sampling` is valid for live queues and for `system = true` queues
+- when a live queue is created with no explicit sampling, `settings.sampling` is initialized from a named constant with an initial default of `10%`
 - when a system queue is provisioned, `settings.sampling` is initialized from a named constant with an initial default of `10%`
-- both manual and dynamic queues use the same `annotation_queue_items` table once a trace has entered the queue
+- both manual and live queues use the same `annotation_queue_items` table once a trace has entered the queue
 - `annotation_queue_items` stores `traceId` only; it does not store `sessionId`, because the newest trace of a session already contains the full incremental conversation context
 - manual queue insertion creates `annotation_queue_items` rows with `completedAt = null`
 - system-created queue insertion creates `annotation_queue_items` rows with `completedAt = null` only after the asynchronous validation/annotation task confirms the queue match and creates the draft annotation
-- dynamic queue materialization also creates `annotation_queue_items` rows with `completedAt = null`
-- dynamic queue materialization is incremental on `TraceEnded`, and it evaluates `filter` before `sampling`
+- live queue materialization also creates `annotation_queue_items` rows with `completedAt = null`
+- live queue materialization is incremental on `TraceEnded`, and it evaluates `filter` before `sampling`
 - progress is derived from total queue items versus queue items with `completedAt` set
 - marking an item as fully annotated is queue-item state, not annotation-row state
 - `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic; there are no foreign keys
@@ -1693,7 +1693,7 @@ Current v2 starting defaults layered on top of those v1 learnings:
 - rerank limit to `100` candidates
 - issue details regeneration debounce: `8 hours`
 - issue-linked evaluation default sampling: `10%`
-- dynamic annotation queue default sampling: `10%`
+- live annotation queue default sampling: `10%`
 - source weights: annotations `1.0`, evaluations `0.8`, custom `0.8`
 
 Exact v1-backed discovery mechanics that coding agents should understand:
@@ -2421,12 +2421,12 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with Phase 7 once phases 2 and 3 land.
 
-- [ ] Define the canonical shared Zod schemas for annotation queues, queue items, queue settings, and queue provenance; infer TypeScript types.
-- [ ] Define `AnnotationQueueSettings.filter` as an optional shared `FilterSet` over trace fields, keep it absent for manual/system queues, and normalize empty filter sets away at write time.
-- [ ] Add the Postgres `annotation_queues` and `annotation_queue_items` tables with full Drizzle definitions using repo-convention helpers, queue `system` flags, settings JSONB, assignee arrays, queue item completion/progress state, RLS, and the exact secondary indexes defined by this spec.
-- [ ] Add representative seed data for annotation queues and queue items across manual, system, and dynamic queue shapes.
-- [ ] Define the annotation-queue-domain named constants for dynamic/system default sampling, context-window limits, and outlier thresholds.
-- [ ] Document the default system-created queue provisioning rules and canonical names/descriptions/instructions for later orchestration phases.
+- [x] Define the canonical shared Zod schemas for annotation queues, queue items, queue settings, and queue provenance; infer TypeScript types.
+- [x] Define `AnnotationQueueSettings.filter` as an optional shared `FilterSet` over trace fields, keep it absent for manual/system queues, and normalize empty filter sets away at write time.
+- [x] Add the Postgres `annotation_queues` and `annotation_queue_items` tables with full Drizzle definitions using repo-convention helpers, queue `system` flags, settings JSONB, assignee arrays, queue item completion/progress state, RLS, and the exact secondary indexes defined by this spec.
+- [x] Add representative seed data for annotation queues and queue items across manual, system, and live queue shapes.
+- [x] Define the annotation-queue-domain named constants for live/system default sampling, context-window limits, and outlier thresholds.
+- [x] Document the default system-created queue provisioning rules and canonical names/descriptions/instructions for later orchestration phases.
 
 **Exit gate**: annotation queue schema and tables are complete; later phases can build queue CRUD, population, and product surface.
 
@@ -2607,12 +2607,12 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: this is the final MVP phase; no later MVP phase should start after it.
 
-- [ ] Implement annotation queue persistence and orchestration for manual and dynamic queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, optional shared `FilterSet` storage for dynamic queues, default sampling loaded from named constants when creating dynamic queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
-- [ ] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for dynamic queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, using the shared trace-filter builder for `settings.filter` while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
-- [ ] Connect manual trace/session selection, system-created queue population, and dynamic filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item, the dedicated `system-annotation-queues` task `flag` dispatched from `TraceEnded` that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `system-annotation-queues` task `annotate` per flagged system queue, the separate `system-annotation-queues:annotate` task that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated `live-annotation-queues:curate` task dispatched on each `TraceEnded` event that batch inserts matched dynamic queue items using shared `FilterSet` semantics, filter-before-sampling evaluation order for dynamic queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
+- [ ] Implement annotation queue persistence and orchestration for manual and live queues, including queue CRUD, repository/query surfaces for queue lists, progress, assignee hydration, next/previous navigation, assignee-array management with set semantics, optional shared `FilterSet` storage for live queues, default sampling loaded from named constants when creating live queues and provisioning system queues, project provisioning of the default system-created manual queues with their canonical names/descriptions/instructions, deterministic queue ordering derived from query order, and per-item completion tracking.
+- [ ] Build the project `Annotation Queues` page in `apps/web` with the non-deleted queue table, `live` tags for live queues, `system` tags for system queues, progress bars, assignee avatars, pagination, and create/edit/delete modals, using the shared trace-filter builder for `settings.filter` while keeping `name`, `description`, `instructions`, and `settings.filter` read-only for `system = true` queues.
+- [ ] Connect manual trace/session selection, system-created queue population, and live filter/sampling materialization to the set of traces awaiting annotation, including the trace-dashboard bulk action that inserts manual queue items with `completedAt = null`, the sessions-dashboard bulk action that resolves each selected session to its newest trace before inserting the queue item, the dedicated `system-annotation-queues` task `flag` dispatched from `TraceEnded` that applies per-queue sampling first then deterministic checks or the low-cost flagger model and publishes one `system-annotation-queues` task `annotate` per flagged system queue, the separate `system-annotation-queues:annotate` task that uses full context to confirm the flag and create the draft annotation plus queue item, the dedicated `live-annotation-queues:curate` task dispatched on each `TraceEnded` event that batch inserts matched live queue items using shared `FilterSet` semantics, filter-before-sampling evaluation order for live queues, zero-or-many queue matches per trace, and deterministic pending-trace ordering.
 - [ ] Build the focused queue annotation screen in `apps/web` with the collapsed sidebar, hotkey-backed bottom action bar, metadata/conversation/annotations columns, dataset-add action, conversation-level annotation creation, persisted selection highlights that focus the matching annotation card, derived queue-item position in the UI, and the congratulations empty state when no queue items remain pending.
 - [ ] Integrate queue context into annotation creation, including the canonical queue-provenance contract on annotation `source_id`, the shared `draftedAt` draft contract for system-created queue annotations, queue-item completion semantics, exclusion of drafts from issue discovery until human review, and any additional annotation metadata needed to reopen the annotation cleanly.
-- [ ] Add end-to-end tests covering manual trace selection, manual session selection resolved to newest trace, system queue tags and locked fields, system-created queue sampling seeded from defaults and later user edits, sampling-before-deterministic-check behavior, sampled low-cost flagger routing, one `system-annotation-queues:annotate` task published per flagged system queue, full-context validator/drafter confirmation, zero-match and multi-match traces, `draftedAt`-based draft exclusion from issue discovery, dynamic incremental materialization through `live-annotation-queues:curate`, default dynamic queue sampling, filter-before-sampling behavior, duplicate-membership prevention, focused review navigation/hotkeys, queue completion, and progress updates.
+- [ ] Add end-to-end tests covering manual trace selection, manual session selection resolved to newest trace, system queue tags and locked fields, system-created queue sampling seeded from defaults and later user edits, sampling-before-deterministic-check behavior, sampled low-cost flagger routing, one `system-annotation-queues:annotate` task published per flagged system queue, full-context validator/drafter confirmation, zero-match and multi-match traces, `draftedAt`-based draft exclusion from issue discovery, live incremental materialization through `live-annotation-queues:curate`, default live queue sampling, filter-before-sampling behavior, duplicate-membership prevention, focused review navigation/hotkeys, queue completion, and progress updates.
 
 **Exit gate**: annotation queues are no longer just a base model; managed annotation workflows exist before MVP; default system-created queues provide immediate project value; both the queue-management page and the focused queue-review screen are usable end to end.
 

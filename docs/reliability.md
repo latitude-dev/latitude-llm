@@ -207,8 +207,8 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table; session selection resolves to the newest trace and still creates `annotation_queue_items` with `trace_id` only and `completedAt = null`
 - system-created manual queues are marked with `system = true`, provision `settings.sampling` from a named default constant, and let users tune that sampling later without changing the canonical queue definitions
 - system-created manual queues are populated asynchronously from `TraceEnded`: the `domain-events` dispatcher publishes `system-annotation-queues:flag`, which applies per-queue sampling first, then deterministic routing or a cheap limited-context flagger model, and publishes one `system-annotation-queues:annotate` task per flagged queue; that task uses full context to confirm the match before it writes the queue item and pending-review draft annotation
-- queues are conceptually dynamic / live when they store the shared `FilterSet` used by evaluation triggers inside queue settings, and a dedicated `live-annotation-queues:curate` task incrementally materializes new matching traces from `TraceEnded` with shared trace-filter matching before sampling and batched inserts
-- newly created dynamic annotation queues initialize `settings.sampling` from a named constant, with an initial default of `10%`
+- queues are conceptually live when they store the shared `FilterSet` used by evaluation triggers inside queue settings, and a dedicated `live-annotation-queues:curate` task incrementally materializes new matching traces from `TraceEnded` with shared trace-filter matching before sampling and batched inserts
+- newly created live annotation queues initialize `settings.sampling` from a named constant, with an initial default of `10%`
 - queue review is the focused in-product annotation workflow for fast human feedback
 
 ### Issue discovery

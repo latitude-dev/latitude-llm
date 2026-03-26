@@ -9,7 +9,7 @@ They exist to aggregate telemetry into a focused annotation UX with as little di
 Queue concepts:
 
 - a queue is conceptually `manual` when it has no filter configured and queue membership is created by explicit insertion rather than by stored filter materialization, always materialized as a trace id
-- a queue is conceptually `dynamic` / `live` when it has a filter configured and is populated incrementally over time from that filter plus optional sampling
+- a queue is conceptually `live` when it has a filter configured and is populated incrementally over time from that filter plus optional sampling
 
 The filter field reuses the shared `FilterSet` described in `docs/filters.md`, applied against the shared trace field registry also used by evaluation triggers.
 
@@ -38,7 +38,7 @@ Rules:
 - each topic may define several lower-kebab-case task names, and the topic worker dispatches by task name
 - payloads carry ids only; workers re-fetch queue definitions and trace context before acting
 - the `domain-events` worker is a dispatcher only: it publishes downstream queue tasks and never performs queue curation or annotation writes inline
-- dynamic queue materialization stays batched per trace inside `live-annotation-queues:curate`, so the system does not need one queue task per matching dynamic queue
+- live queue materialization stays batched per trace inside `live-annotation-queues:curate`, so the system does not need one queue task per matching live queue
 - system-created queue validation/draft creation is expensive enough to live in `system-annotation-queues:annotate`
 
 ## System-Created Default Queues
@@ -99,7 +99,7 @@ Every project starts with these system-created manual queues:
 
 ### System-Created Manual Queues
 
-- system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by dynamic filter materialization
+- system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by live filter materialization
 - whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:flag` for that trace
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if sampling does not pass for a queue, that queue is skipped entirely for the current trace
@@ -111,17 +111,17 @@ Every project starts with these system-created manual queues:
 - only if that validation/annotation task confirms the match does the system both create the draft annotation and add the trace to the queue
 - system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user
 
-### Dynamic / Live Queues
+### Live Queues
 
-- a queue becomes dynamic / live when `settings.filter` is present
-- dynamic queues are incremental: they grow as new matching traces arrive
+- a queue becomes live when `settings.filter` is present
+- live queues are incremental: they grow as new matching traces arrive
 - whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `live-annotation-queues:curate` for that trace
-- `live-annotation-queues:curate` lists all non-deleted dynamic queues in that project
+- `live-annotation-queues:curate` lists all non-deleted live queues in that project
 - queue selection order is `settings.filter` first, then `settings.sampling`
 - if both pass, `live-annotation-queues:curate` batch inserts the matching `annotation_queue_items` rows for that `(queue_id, trace_id)` pair with `completedAt = null`
 - `live-annotation-queues:curate` is separate from `live-evaluations:enqueue` and does not fan out per-queue execution tasks
-- when a dynamic queue is created with `settings.filter` and no explicit sampling, `settings.sampling` is initialized from a named constant in `packages/domain/annotation-queues`; the initial default is `10`
-- dynamic queues do not need a full historical rescan on every read; they materialize queue items incrementally as traces arrive
+- when a live queue is created with `settings.filter` and no explicit sampling, `settings.sampling` is initialized from a named constant in `packages/domain/annotation-queues`; the initial default is `10`
+- live queues do not need a full historical rescan on every read; they materialize queue items incrementally as traces arrive
 
 ## Canonical Model
 
@@ -130,7 +130,7 @@ import type { FilterSet } from "@domain/shared"
 
 type AnnotationQueueSettings = {
   filter?: FilterSet // shared trace filter set; omit when the queue is manual
-  sampling?: number // optional percentage [0, 100], used by dynamic queues and by system queues, with defaults seeded on queue creation/provisioning
+  sampling?: number // optional percentage [0, 100], used by live queues and by system queues, with defaults seeded on queue creation/provisioning
 }
 ```
 
@@ -142,6 +142,8 @@ The main queue row stores:
 - `instructions`
 - `settings`
 - `assignees`
+- `totalItems`
+- `completedItems`
 - `deletedAt`
 
 The queue model is backed by two Postgres tables:
@@ -157,9 +159,11 @@ The queue model is backed by two Postgres tables:
 - `name`: unique within the project among non-deleted queues
 - `description`: short summary for the queue list
 - `instructions`: reviewer guidance shown in the focused annotation screen and reused as classifier/validator context for system-created queues
-- `settings.filter`: shared `FilterSet` over the trace field registry for dynamic queues; it stays absent and read-only for system queues
-- `settings.sampling`: optional queue sampling percentage `[0, 100]`; dynamic queues use it after filter matching, and system queues use it before any deterministic or LLM flagging work. When omitted on queue creation/provisioning, initialize it from named constants with initial defaults of `10`
+- `settings.filter`: shared `FilterSet` over the trace field registry for live queues; it stays absent and read-only for system queues
+- `settings.sampling`: optional queue sampling percentage `[0, 100]`; live queues use it after filter matching, and system queues use it before any deterministic or LLM flagging work. When omitted on queue creation/provisioning, initialize it from named constants with initial defaults of `10`
 - `assignees`: array of existing Latitude user ids from the same organization
+- `totalItems`: denormalized count of queue items; maintained by item insert/delete operations
+- `completedItems`: denormalized count of completed queue items; maintained by item complete/uncomplete/delete operations
 - `deletedAt`: soft delete marker
 
 Required Postgres indexes:
@@ -170,7 +174,7 @@ Required Postgres indexes:
 
 ### Queue Items
 
-`annotation_queue_items` materialize the actual review backlog for both manual and dynamic queues.
+`annotation_queue_items` materialize the actual review backlog for both manual and live queues.
 
 Fields:
 
@@ -183,7 +187,7 @@ Creation rules:
 - manual queue insertion creates the row from the trace dashboard bulk action
 - manual session insertion creates the row from the sessions dashboard bulk action after resolving the session to its newest trace
 - system-created queue insertion creates the row only after the asynchronous validation/annotation task confirms the match and creates the draft annotation
-- dynamic queue insertion creates the row when a new trace passes the queue filter and then the queue sampling check
+- live queue insertion creates the row when a new trace passes the queue filter and then the queue sampling check
 - all paths create queue items with `completedAt = null`
 
 Required Postgres indexes:
@@ -196,22 +200,23 @@ Required Postgres indexes:
 - queues always work with traces; when session context matters, it is derived from related traces sharing the current trace's `session_id`
 - when a user manually adds a session to a queue, resolve that session to its newest trace and store only that `trace_id`
 - a queue is conceptually `manual` when `settings.filter` is absent
-- a queue is conceptually `dynamic` / `live` when `settings.filter` is present
-- empty filter sets should be normalized to absent `settings.filter` so manual/dynamic queue semantics stay unambiguous
+- a queue is conceptually `live` when `settings.filter` is present
+- empty filter sets should be normalized to absent `settings.filter` so manual/live queue semantics stay unambiguous
 - every project has a default set of system-created manual queues from the start
 - system-created default queues are manual queues with `system = true` even though the system inserts their members automatically
 - `system = true` queues keep their canonical `name`, `description`, `instructions`, and `settings.filter` non-editable, but they may still be deleted and their `settings.sampling` may still be edited
 - `settings.filter` is only editable for `system = false` queues
-- `settings.sampling` is valid for dynamic queues and for `system = true` queues
-- when a dynamic queue is created with no explicit sampling, `settings.sampling` is initialized from a named constant with initial default `10%`
+- `settings.sampling` is valid for live queues and for `system = true` queues
+- when a live queue is created with no explicit sampling, `settings.sampling` is initialized from a named constant with initial default `10%`
 - when a system queue is provisioned, `settings.sampling` is initialized from a named constant with initial default `10%`
-- progress is derived from total queue items versus queue items with `completedAt` set
+- progress is derived from the denormalized `totalItems` and `completedItems` counters on the queue row, avoiding per-queue aggregation on list pages
+- `totalItems` and `completedItems` are maintained by the use-cases that add, remove, or complete queue items; any code path that mutates `annotation_queue_items` must also update these counters on the parent queue
 - completion is queue-item state, not annotation-row state
 - `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic
 - `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
-- manual queue insertion, system-created queue insertion, and dynamic queue materialization all create queue items with `completedAt = null`
+- manual queue insertion, system-created queue insertion, and live queue materialization all create queue items with `completedAt = null`
 - system-created queue insertion happens only after a separate full-context validation/annotation task confirms the match and writes the pending-review annotation
-- dynamic queue materialization is incremental on `TraceEnded` and evaluates `filter` before `sampling`
+- live queue materialization is incremental on `TraceEnded` and evaluates `filter` before `sampling`
 - queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
 
 ## Project Page
@@ -242,8 +247,7 @@ Interactions:
 
 Pagination:
 
-- limit/offset
-- sorted by `created_at DESC`
+- keyset pagination follow implementation details on dataset list.
 
 ## Focused Review Screen
 
@@ -260,7 +264,9 @@ The screen operates on one queued trace at a time.
 - previous / next queue-item navigation
 - mark current item as fully annotated
 
-Every action must also have a visible hotkey label.
+Every action must also have a visible hotkey label. Introduce hotkeys using
+https://tanstack.com/hotkeys/latest initial hotkeys. Implement
+`QUEUE_REVIEW_HOTKEYS`. After real hotkeys is done remove that constant.
 
 ### Main Layout
 

@@ -1,4 +1,6 @@
 import {
+  AnnotationQueueId,
+  AnnotationQueueItemId,
   ApiKeyId,
   DatasetId,
   DatasetVersionId,
@@ -30,6 +32,13 @@ export const SEED_EVALUATION_ID = "y0zr3gtsous6knd2qwdj1dit"
 export const SEED_ANNOTATION_QUEUE_ID = "w9pkzh13vu8ntru7ii5ved08"
 export const SEED_ISSUE_ID = IssueId("dds0rt8sqgpuku4u4wabze9r")
 export const SEED_ISSUE_UUID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+export const SEED_ANNOTATION_QUEUE_MANUAL_ID = AnnotationQueueId("w9pkzh13vu8ntru7ii5ved08")
+export const SEED_ANNOTATION_QUEUE_SYSTEM_ID = AnnotationQueueId("aq2sys0jailbreak00000000")
+export const SEED_ANNOTATION_QUEUE_LIVE_ID = AnnotationQueueId("aq3dyn0highcost000000000")
+export const SEED_ANNOTATION_QUEUE_ITEM_PENDING_ID = AnnotationQueueItemId("aqi1pending0000000000000")
+export const SEED_ANNOTATION_QUEUE_ITEM_COMPLETED_ID = AnnotationQueueItemId("aqi2completed00000000000")
+export const SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_ID = AnnotationQueueItemId("aqi3system00000000000000")
+export const SEED_ANNOTATION_QUEUE_ITEM_LIVE_ID = AnnotationQueueItemId("aqi4dynamic0000000000000")
 
 // Additional constants for seeding
 export const SEED_ORG_NAME = "Acme Inc."

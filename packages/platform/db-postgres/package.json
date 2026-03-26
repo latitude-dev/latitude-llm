@@ -18,7 +18,7 @@
     "pg:push": "drizzle-kit push --config=drizzle.config.ts",
     "pg:check": "drizzle-kit check --config=drizzle.config.ts",
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
-    "pg:seed": "npx tsx src/seeds/run.ts",
+    "pg:seed": "node --import tsx src/seeds/run.ts",
     "pg:reset": "bash ../../../docker/reset-postgres.sh",
     "auth:generate-schema-reference": "better-auth generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",
     "check": "biome check src",
@@ -29,6 +29,7 @@
   "dependencies": {
     "@better-auth/core": "^1.5.6",
     "@better-auth/stripe": "^1.5.6",
+    "@domain/annotation-queues": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
