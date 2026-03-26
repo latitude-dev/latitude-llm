@@ -13,7 +13,7 @@ import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { Seeder } from "../types.ts"
 
-const projectedScoreRows = [
+const analyticsScoreRows = [
   {
     id: SEED_SCORE_PASSED_ID,
     organization_id: SEED_ORG_ID,
@@ -93,10 +93,10 @@ const projectedScoreRows = [
 ] as const
 
 const seedScores: Seeder = {
-  name: "scores/projected-lifecycle-samples",
+  name: "scores/analytics-lifecycle-samples",
   run: (ctx) =>
-    insertJsonEachRow(ctx.client, "scores", projectedScoreRows).pipe(
-      Effect.tap(() => Effect.sync(() => console.log(`  -> scores: ${projectedScoreRows.length} projected samples`))),
+    insertJsonEachRow(ctx.client, "scores", analyticsScoreRows).pipe(
+      Effect.tap(() => Effect.sync(() => console.log(`  -> scores: ${analyticsScoreRows.length} analytics samples`))),
     ),
 }
 

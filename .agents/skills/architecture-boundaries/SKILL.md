@@ -40,8 +40,18 @@ No business logic in handlers, controllers, or jobs.
 Business logic lives here. Domain packages expose:
 
 - Use-cases
+- Canonical entity schemas and inferred entity types
 - Domain types and errors
 - Dependency ports (interfaces/tags)
+
+## Domain package layout
+
+- Canonical entity schemas and their inferred entity types belong in `packages/domain/*/src/entities/<entity>.ts`.
+- Domain package constants belong in `packages/domain/*/src/constants.ts`.
+- Domain package errors belong in `packages/domain/*/src/errors.ts`.
+- Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `packages/domain/*/src/helpers.ts`.
+- Types and schemas that exist only as inputs to one domain use-case belong in that use-case file rather than a generic side module, unless several use-cases truly share the exact same contract.
+- App and platform layers should build boundary-specific schemas by reusing or deriving from domain entity/use-case schemas whenever practical rather than redefining the same contract from scratch.
 
 ## Infrastructure (`packages/platform/*`)
 
@@ -69,6 +79,7 @@ When writing a utility function that is not specific to a single domain or packa
 - Platform packages implement adapters
 - Composition roots in apps provide live layers
 - Domain must never import concrete DB/cache/queue/object storage clients
+- Reliability async contracts should stay project-scoped as well as organization-scoped: include both `organizationId` and `projectId` in event/task/workflow payloads by default (except `MagicLinkEmailRequested`, `UserDeletionRequested`, `domain-events`, `magic-link-email`, and `user-deletion` payloads).
 
 ## Web standards first (domain, utils, shared)
 

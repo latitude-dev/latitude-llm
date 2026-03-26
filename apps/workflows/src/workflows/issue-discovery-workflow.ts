@@ -7,6 +7,7 @@ const { recheckEligibility, retrieveAndRerank, createOrAssignIssue, syncProjecti
 
 export const issueDiscoveryWorkflow = async (input: {
   readonly organizationId: string
+  readonly projectId: string
   readonly scoreId: string
   readonly logFile?: string
 }) => {
@@ -18,6 +19,7 @@ export const issueDiscoveryWorkflow = async (input: {
   const assignment = await createOrAssignIssue(
     {
       organizationId: input.organizationId,
+      projectId: input.projectId,
       scoreId: input.scoreId,
       matchedIssueId: retrieval.matchedIssueId,
     },

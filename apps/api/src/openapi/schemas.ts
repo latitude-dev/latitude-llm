@@ -15,5 +15,10 @@ export const OrgAndIdParamsSchema = z.object({
   id: z.string().openapi({ description: "Resource ID" }),
 })
 
+export const OrgAndProjectParamsSchema = z.object({
+  organizationId: z.string().openapi({ description: "Organization ID" }),
+  projectId: z.string().openapi({ description: "Project ID" }),
+})
+
 /** Security scheme applied to protected endpoints. */
 export const PROTECTED_SECURITY = [{ ApiKeyAuth: [] }]

@@ -9,22 +9,22 @@ They group similar failed, non-errored, non-draft scores into actionable failure
 - Postgres stores the issue row and lifecycle state.
 - Weaviate stores the searchable text projection and centroid vector.
 - Postgres also stores the canonical score rows and issue assignment state that discovery mutates.
-- ClickHouse stores immutable score projection rows plus issue trend analytics.
+- ClickHouse stores immutable score analytics rows plus issue trend analytics.
 
 ## Background Tasks
 
-Issue discovery and issue-refresh use the existing Temporal-backed workflow abstraction in `apps/workflows`, while queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers` continue to dispatch the upstream single-step triggers.
+Issue discovery uses the existing Temporal-backed workflow abstraction in `apps/workflows`, while queue tasks in `@domain/queue`, `@platform/queue-bullmq`, and `apps/workers` continue to dispatch the upstream single-step triggers, including debounced `issues:refresh`.
 
 The main contracts are:
 
-- `issue-discovery` as a multi-activity workflow for one eligible finalized score that still needs issue assignment
-- `issue-refresh` as a debounced single-activity workflow for one issue whose name/description debounce window has elapsed
+- `issue-discovery` as a multi-activity workflow for one eligible non-draft failed non-errored score that still needs issue assignment
+- `issues:refresh` as a debounced single-step task for one issue whose name/description debounce window has elapsed
 
 Rules:
 
-- eligible finalized scores start `issue-discovery` after commit instead of running embedding/search inline in request or annotation-edit paths
+- eligible non-draft failed non-errored scores start `issue-discovery` after commit instead of running embedding/search inline in request or annotation-edit paths
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
-- debounced issue refresh relies on workflow timers inside `issue-refresh`, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
+- debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - issue-generated evaluation creation is also asynchronous: kickoff returns a `jobId`, and the frontend polls a status endpoint backed by a Redis job-status key for that alignment run
 
@@ -115,9 +115,9 @@ Issue discovery should follow the original proposal closely:
 
 Execution rules:
 
-- `issue-discovery` runs after a finalized eligible score exists and still has no `issue_id`
-- `issue-refresh` runs after the configured debounce window elapses for an existing issue
-- both workflows must re-check current ownership/lifecycle state before doing expensive work
+- `issue-discovery` runs after an eligible non-draft failed non-errored score exists and still has no `issue_id`
+- `issues:refresh` runs after the configured debounce window elapses for an existing issue
+- both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 
 Concrete v1 mechanics worth carrying forward:
 

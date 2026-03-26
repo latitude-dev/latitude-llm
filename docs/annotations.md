@@ -28,6 +28,7 @@ Rationale:
 - many users will build their own feedback UI
 - end-user annotations should not depend on Latitude UI
 - the contract must stay simple and agent-friendly
+- the public route should live at `POST /v1/organizations/:organizationId/projects/:projectId/annotations` rather than the generic `/scores` endpoint, even though the write still lands in the canonical scores model with `source = "annotation"`
 
 ## Draft Annotations
 
@@ -150,12 +151,12 @@ Important v2 carry-forward:
 2. write or update the canonical Postgres score row, keeping `draftedAt` set while the annotation is still a draft
 3. preserve raw human text in metadata
 4. enrich the canonical feedback when needed
-5. while `draftedAt` is still set, keep the score out of issue discovery, evaluation alignment, and ClickHouse projection
+5. while `draftedAt` is still set, keep the score out of issue discovery, evaluation alignment, and ClickHouse analytics
 6. when the human-editable draft becomes due, the `annotation-scores:publish` task clears `draftedAt`
 7. if the annotator linked an existing issue, keep direct `issue_id` ownership on the canonical score row
 8. if the annotator created a new issue inline, persist it and keep direct `issue_id` ownership on the canonical score row
 9. if the finalized annotation is failed and non-errored with no direct issue ownership, run issue discovery against the enriched canonical score
-10. if the finalized annotation is now immutable and eligible for analytics projection, publish it to ClickHouse
+10. if the finalized annotation is now immutable and ready for analytics save, save it to ClickHouse analytics
 
 ## Relationship To Issues
 

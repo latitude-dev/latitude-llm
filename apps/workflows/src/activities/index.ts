@@ -17,7 +17,12 @@ export const retrieveAndRerank = (input: DiscoverIssueInput, logFile?: string): 
   Effect.runPromise(retrieveAndRerankUseCase(input, logFile))
 
 export const createOrAssignIssue = (
-  input: { readonly organizationId: string; readonly scoreId: string; readonly matchedIssueId: string | null },
+  input: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly scoreId: string
+    readonly matchedIssueId: string | null
+  },
   logFile?: string,
 ): Promise<AssignmentResult> => Effect.runPromise(createOrAssignIssueUseCase(input, logFile))
 

@@ -30,13 +30,19 @@ The execution architecture follows the original proposal:
 - local HTTP bridge between CLI and SDK
 - local OTEL-compatible collector reused from the ingest pipeline
 - simulation-related traces/sessions can be captured when the agent is instrumented
-- simulations can still run without instrumentation by accepting custom scores only
+- simulations can still run without instrumentation by accepting score-only uploads
 - optional upload to Latitude
 - local-only mode when upload is not desired
 
 The simulation system must reuse the same evaluation artifact as backend monitoring. It should not invent a second evaluation format.
 
 Because Latitude evaluations are sandboxed JavaScript-like scripts, the CLI can download those evaluation artifacts, execute them locally, and only push the resulting scores back through the API if the user wants to upload them.
+
+When the CLI uploads score results:
+
+- it should reuse `POST /v1/organizations/:organizationId/projects/:projectId/scores`
+- ordinary custom-code outputs use the default custom-score contract on that route
+- downloaded Latitude evaluation results use the same route with `_evaluation: true`, evaluation-score metadata, and the evaluation CUID as `source_id`
 
 The CLI should print a testing-style summary and return CI-friendly exit codes.
 

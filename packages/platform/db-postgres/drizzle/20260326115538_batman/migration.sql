@@ -213,7 +213,7 @@ CREATE INDEX "outbox_events_workspace_id_idx" ON "latitude"."outbox_events" ("wo
 CREATE INDEX "projects_organization_id_idx" ON "latitude"."projects" ("organization_id");--> statement-breakpoint
 CREATE INDEX "scores_organization_id_idx" ON "latitude"."scores" ("organization_id");--> statement-breakpoint
 CREATE INDEX "scores_project_list_idx" ON "latitude"."scores" ("organization_id","project_id","created_at","id") WHERE "drafted_at" IS NULL;--> statement-breakpoint
-CREATE INDEX "scores_source_bucket_idx" ON "latitude"."scores" ("organization_id","project_id","source","source_id","created_at","id") WHERE "drafted_at" IS NULL;--> statement-breakpoint
+CREATE INDEX "scores_source_lookup_idx" ON "latitude"."scores" ("organization_id","project_id","source","source_id","created_at","id") WHERE "drafted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "scores_issue_lookup_idx" ON "latitude"."scores" ("organization_id","project_id","issue_id","created_at","id") WHERE "issue_id" IS NOT NULL AND "drafted_at" IS NULL;--> statement-breakpoint
 CREATE INDEX "scores_trace_lookup_idx" ON "latitude"."scores" ("organization_id","project_id","trace_id","created_at","id") WHERE "trace_id" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX "scores_session_lookup_idx" ON "latitude"."scores" ("organization_id","project_id","session_id","created_at","id") WHERE "session_id" IS NOT NULL;--> statement-breakpoint

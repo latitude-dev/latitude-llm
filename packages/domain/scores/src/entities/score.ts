@@ -6,7 +6,7 @@ import {
   SCORE_PUBLICATION_DEBOUNCE,
   SCORE_SOURCE_ID_MAX_LENGTH,
   SCORE_SOURCES,
-} from "./constants.ts"
+} from "../constants.ts"
 
 const scoreSourceIdSchema = z.string().min(1).max(SCORE_SOURCE_ID_MAX_LENGTH)
 export const scoreIdSchema = cuidSchema.transform(ScoreId)
@@ -106,7 +106,7 @@ export const scoreMetadataSchemas = {
   custom: customScoreMetadataSchema,
 } as const
 
-const baseScoreSchema = z.object({
+export const baseScoreSchema = z.object({
   id: scoreIdSchema, // CUID score identifier
   organizationId: cuidSchema, // owning organization
   projectId: cuidSchema, // owning project

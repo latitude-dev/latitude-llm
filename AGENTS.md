@@ -56,3 +56,22 @@ Use this to explore APIs, find usage examples, and understand implementation
 details when the documentation isn't enough.
 
 <!-- effect-solutions:end -->
+
+<!-- domain-schema-and-module-conventions:start -->
+
+## Domain Schema And Module Conventions
+
+- Treat canonical domain entity schemas as the source of truth. Schemas and types elsewhere in the same domain, plus app/platform boundary schemas, should derive from or reuse the entity shapes whenever practical instead of re-declaring the same fields.
+- When a boundary schema must differ materially from the entity shape, still reuse the relevant domain constants, field schemas, and literal unions rather than hardcoding duplicated lengths or sentinel values again.
+- Domain entity schemas and their inferred entity types belong in `src/entities/<entity>.ts`.
+- Domain package constants belong in `src/constants.ts`.
+- Domain package errors belong in `src/errors.ts`.
+- Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `src/helpers.ts`.
+- Schemas and types that exist only as inputs to one domain use-case should be defined in that use-case file. Only promote them into shared modules when several use-cases truly share the same contract.
+
+## Async Contract Scoping Convention
+
+- Reliability domain-event payloads, queue topic/task payloads, and workflow inputs should include both `organizationId` and `projectId` by default so async execution remains project-scoped end-to-end.
+- Explicit exceptions: the `domain-events` topic payload, the `magic-link-email` topic payload, the `MagicLinkEmailRequested` domain event, the `UserDeletionRequested` domain event, and the `user-deletion` topic payload do not require `projectId`.
+
+<!-- domain-schema-and-module-conventions:end -->

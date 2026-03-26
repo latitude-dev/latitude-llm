@@ -44,17 +44,6 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
   occurredAt: envelope.occurredAt.toISOString(),
 })
 
-function createFakeWorkflowStarter() {
-  const starts: { workflow: string; input: unknown; workflowId: string }[] = []
-  const starter: WorkflowStarterShape = {
-    start: (workflow, input, options) => {
-      starts.push({ workflow, input, workflowId: options.workflowId })
-      return Effect.void
-    },
-  }
-  return { starter, starts }
-}
-
 const noopStarter: WorkflowStarterShape = {
   start: () => Effect.void,
 }
@@ -113,14 +102,20 @@ describe("domain-events dispatcher", () => {
 
     createDomainEventsWorker(consumer, publisher, noopStarter)
 
-    const envelope = makeEnvelope("UserDeletionRequested", { userId: "u-1" })
+    const envelope = makeEnvelope("UserDeletionRequested", {
+      organizationId: "org-1",
+      userId: "u-1",
+    })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("user-deletion")
     expect(published[0]?.task).toBe("delete")
-    expect(published[0]?.payload).toEqual({ userId: "u-1" })
+    expect(published[0]?.payload).toEqual({
+      organizationId: "org-1",
+      userId: "u-1",
+    })
   })
 
   it("routes SpanIngested to live-traces:end with dedupeKey and debounceMs", async () => {
@@ -191,26 +186,49 @@ describe("domain-events dispatcher", () => {
     }
   })
 
-  it("routes ScoreFinalized to issue-discovery workflow and issue-refresh queue", async () => {
+  it("routes ScoreImmutable to analytic-scores:save and issue refresh when issue ownership exists", async () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
-    const { starter, starts } = createFakeWorkflowStarter()
 
-    createDomainEventsWorker(consumer, publisher, starter)
+    createDomainEventsWorker(consumer, publisher, noopStarter)
 
-    const envelope = makeEnvelope("ScoreFinalized", { scoreId: "score-1", issueId: "issue-42" })
+    const envelope = makeEnvelope("ScoreImmutable", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+      issueId: "issue-42",
+    })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(starts).toHaveLength(1)
-    expect(starts[0]?.workflow).toBe("issueDiscoveryWorkflow")
-    expect(starts[0]?.workflowId).toBe("issue-discovery:score-1")
-    expect(starts[0]?.input).toEqual({ organizationId: "org-1", scoreId: "score-1", issueId: "issue-42" })
+    expect(published).toHaveLength(2)
+    expect(published[0]?.queue).toBe("analytic-scores")
+    expect(published[0]?.task).toBe("save")
+    expect(published[0]?.payload).toEqual({ organizationId: "org-1", projectId: "proj-1", scoreId: "score-1" })
+    expect(published[1]?.queue).toBe("issues")
+    expect(published[1]?.task).toBe("refresh")
+    expect(published[1]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
+    expect(published[1]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
+  })
+
+  it("routes ScoreImmutable to analytic-scores:save without issue refresh when no issue is attached", async () => {
+    const consumer = new TestQueueConsumer()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    createDomainEventsWorker(consumer, publisher, noopStarter)
+
+    const envelope = makeEnvelope("ScoreImmutable", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-2",
+      issueId: null,
+    })
+
+    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("issues")
-    expect(published[0]?.task).toBe("refresh")
-    expect(published[0]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
-    expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
+    expect(published[0]?.queue).toBe("analytic-scores")
+    expect(published[0]?.task).toBe("save")
+    expect(published[0]?.payload).toEqual({ organizationId: "org-1", projectId: "proj-1", scoreId: "score-2" })
   })
 })

@@ -7,4 +7,4 @@ export {
   annotationMetadataSchema,
   annotationSchema,
   annotationSourceIdSchema,
-} from "./annotation.ts"
+} from "./entities/annotation.ts"

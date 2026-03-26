@@ -19,7 +19,7 @@ The docs should remain precise enough to stand on their own after the spec is de
 ## Core Principles
 
 1. Canonical mutable score rows live in Postgres from day one.
-2. ClickHouse stores only immutable score projection rows used for analytics.
+2. ClickHouse stores only immutable score analytics rows used for analytics.
 3. Issue search and clustering projection live in Weaviate.
 4. Evaluation artifacts are stored as scripts from day one, even before the full portable runtime exists.
 5. The Latitude reliability platform should be equally accessible to humans through the web app UI and to other LLM Agents through MCP/API.
@@ -51,7 +51,7 @@ For UI/product-surface work, old v1 components and patterns should also be treat
 | Store      | Responsibility                                                                                                                                   |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Postgres   | canonical `scores`, `evaluations`, `issues`, `annotation_queues`, `simulations`, and embedded settings on `organization`, `projects`, and `user` |
-| ClickHouse | immutable score projection rows, score rollups, and score-aware span/trace/session analytics                                                     |
+| ClickHouse | immutable score analytics rows, score rollups, and score-aware span/trace/session analytics                                                         |
 | Weaviate   | issue title/description projection plus centroid vector for discovery/search                                                                     |
 
 ## Postgres Indexing
@@ -164,13 +164,15 @@ Rules:
 
 Initial reliability async contracts:
 
-- domain events: `SpanIngested`, `TraceEnded`
-- topic tasks: `live-traces:end`, `annotation-scores:publish`, `live-evaluations:enqueue`, `live-evaluations:execute`, `live-annotation-queues:curate`, `system-annotation-queues:flag`, `system-annotation-queues:annotate`
-- workflows: `issue-discovery`, `issue-refresh`, `evaluation-alignment`
+- domain events: `SpanIngested`, `TraceEnded`, `ScoreImmutable`
+- topic tasks: `live-traces:end`, `analytic-scores:save`, `annotation-scores:publish`, `issues:refresh`, `live-evaluations:enqueue`, `live-evaluations:execute`, `live-annotation-queues:curate`, `system-annotation-queues:flag`, `system-annotation-queues:annotate`
+- workflows: `issue-discovery`, `evaluation-alignment`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
 For the initial reliability events, `SpanIngested` and `TraceEnded` publish directly through `createEventsPublisher(queuePublisher)` because they come from high-volume append-only flows whose upstream writes are already durable before publication.
+
+`ScoreImmutable` is intentionally different: it is recorded through the transactional outbox rail so score-row persistence and immutable-save intent are atomic. This prevents dropped immutable-score analytics save intent if a process exits after Postgres commit but before direct queue publication.
 
 ## Spec Governance
 
@@ -188,8 +190,11 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 ### Score ingestion
 
 - annotation, evaluation, and custom flows all write the same canonical score model
+- machine-facing score uploads use `POST /v1/organizations/:organizationId/projects/:projectId/scores`, defaulting to custom-score semantics unless `_evaluation: true` is set for a locally executed Latitude evaluation upload
+- annotation ingestion remains on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though it still writes canonical `source = "annotation"` score rows
 - all score writes land in Postgres first
-- ClickHouse only receives immutable score projections after the score lifecycle is finalized
+- ClickHouse only receives immutable score analytics rows after the score lifecycle is ready for analytics save
+- immutable-score analytics save is requested transactionally through `ScoreImmutable`, then carried out asynchronously by the `analytic-scores:save` task after it re-checks current Postgres immutability and dedupes by score id
 - annotation-originated feedback can be enriched before issue discovery
 - draft annotations use the same annotation score model, but stay drafts through `draftedAt` instead of a fake error value
 - the canonical `feedback` text must stay human/LLM-friendly and intentionally clusterable, because discovery uses it for both embeddings and BM25 matching
@@ -210,11 +215,11 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 
 - failed non-errored scores are embedded and searched against issue centroids/text
 - drafted scores stay out of discovery until `draftedAt` is cleared
-- eligible finalized scores start the `issue-discovery` workflow after commit instead of running embedding/search inline in request paths
+- eligible non-draft failed non-errored scores start the `issue-discovery` workflow after commit instead of running embedding/search inline in request paths
 - managed annotation flows can bypass similarity discovery by linking to an existing issue or creating a new issue inline; those explicit human paths write canonical issue ownership directly
 - issue-linked evaluation scores bypass discovery and assign directly
 - annotations are primary, but unlinked failed evaluation scores and failed custom scores may also create new issues
-- issue name/description regeneration runs through the debounced `issue-refresh` workflow
+- issue name/description regeneration runs through the debounced `issues:refresh` task
 - new issues are named from evidence; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
 - the proven v1 search shape is hybrid Weaviate search with `RelativeScore` fusion, then Voyage reranking

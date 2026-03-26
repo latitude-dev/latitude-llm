@@ -25,6 +25,7 @@
   "dependencies": {
     "@clickhouse/client": "catalog:",
     "@domain/datasets": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/env": "workspace:*",

@@ -53,7 +53,7 @@ const client = await createTemporalClient(config)
 const handle = await client.workflow.start("issueDiscoveryWorkflow", {
   workflowId: `test-issue-discovery-${Date.now()}`,
   taskQueue: config.taskQueue,
-  args: [{ organizationId: "org-test", scoreId: "score-123", logFile }],
+  args: [{ organizationId: "org-test", projectId: "project-test", scoreId: "score-123", logFile }],
 })
 
 console.log(`Started workflow ${handle.workflowId}`)

@@ -16,6 +16,7 @@
     "@domain/api-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@hono/node-server": "catalog:",
     "@hono/swagger-ui": "^0.5.0",

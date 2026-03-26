@@ -143,6 +143,9 @@ importers:
       '@domain/projects':
         specifier: workspace:*
         version: link:../../packages/domain/projects
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../../packages/domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -410,6 +413,9 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../../packages/domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -654,6 +660,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -741,6 +750,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../../domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared

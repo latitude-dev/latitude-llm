@@ -33,4 +33,40 @@ export {
   scoreSchema,
   scoreSourceSchema,
   scoreValueSchema,
-} from "./score.ts"
+} from "./entities/score.ts"
+export { isImmutableScore } from "./helpers.ts"
+export { ScoreAnalyticsRepository } from "./ports/score-analytics-repository.ts"
+export { ScoreEventWriter } from "./ports/score-event-writer.ts"
+export {
+  type ScoreDraftMode,
+  type ScoreListOptions,
+  type ScoreListPage,
+  ScoreRepository,
+  scoreDraftModeSchema,
+} from "./ports/score-repository.ts"
+export {
+  baseListScoresInputSchema,
+  type ListProjectScoresInput,
+  type ListScoresError,
+  type ListSourceScoresInput,
+  listProjectScoresInputSchema,
+  listProjectScoresUseCase,
+  listSourceScoresInputSchema,
+  listSourceScoresUseCase,
+} from "./use-cases/list-scores.ts"
+export {
+  type SaveScoreAnalyticsError,
+  type SaveScoreAnalyticsInput,
+  saveScoreAnalyticsInputSchema,
+  saveScoreAnalyticsUseCase,
+} from "./use-cases/save-score-analytics.ts"
+export {
+  type BaseWriteScoreInput,
+  baseWriteScoreInputSchema,
+  ScoreDraftClosedError,
+  ScoreDraftUpdateConflictError,
+  type WriteScoreError,
+  type WriteScoreInput,
+  writeScoreInputSchema,
+  writeScoreUseCase,
+} from "./use-cases/write-score.ts"

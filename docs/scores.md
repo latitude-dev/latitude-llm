@@ -15,7 +15,7 @@ Everything else is built on top of them:
 Scores use an intentional Postgres + ClickHouse split:
 
 - Postgres stores the canonical mutable score row
-- ClickHouse stores an immutable analytics projection of finalized scores
+- ClickHouse stores immutable score analytics rows
 
 This split exists because mutable score lifecycle does not fit ClickHouse well:
 
@@ -72,7 +72,7 @@ Rules:
 - draft-aware surfaces such as queue review and in-progress annotation editing explicitly read drafts from Postgres
 - writers must never emit a passed score with a non-empty `error`
 - errored scores are observability-relevant, but they should not participate in issue discovery or evaluation alignment
-- once a score is no longer a draft, it becomes immutable; it may later be deleted, but it should not be edited again
+- once a score is no longer a draft, it may later be deleted, but it should not be edited again; failed non-errored scores may still receive later `issue_id` assignment before they become fully immutable
 
 ## Source Semantics
 
@@ -82,7 +82,7 @@ type ScoreSource = "evaluation" | "annotation" | "custom";
 
 - `source = "evaluation"` and `source_id = <evaluation-id>`
 - `source = "annotation"` and `source_id = "UI" | "API" | <annotation-queue-cuid>`
-- `source = "custom"` and `source_id = <user-defined-bucket>`
+- `source = "custom"` and `source_id = <user-defined-source-id>`
 
 Enum-like score contracts should use literal-string unions like `ScoreSource`, not TypeScript enums.
 
@@ -100,7 +100,20 @@ Relationship fields:
 
 - issue-linked monitor scores can write it immediately
 - discovered failed scores can fill it later
-- helper projections are allowed for performance, but the logical `score.issue_id` contract must remain
+- helper materializations are allowed for performance, but the logical `score.issue_id` contract must remain
+
+## Write Contracts
+
+All score producers reuse one canonical Postgres-first write path:
+
+- public machine-facing score ingestion uses `POST /v1/organizations/:organizationId/projects/:projectId/scores`
+- default `/scores` uploads create `source = "custom"` rows and support arbitrary custom metadata
+- clients that upload locally executed Latitude evaluation results reuse the same `/scores` route with `_evaluation: true`, evaluation-score metadata, and the evaluation CUID as `source_id`
+- annotation ingestion stays on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though annotations still persist canonical score rows
+- internal evaluation and simulation writers reuse the same score-validation and persistence path rather than maintaining a second storage model
+- source-specific metadata is validated exactly before persistence, so evaluation, annotation, and custom writers cannot drift into incompatible payload shapes
+- instrumented and uninstrumented writes both use the same canonical row shape, with `session_id`, `trace_id`, and `span_id` remaining optional
+- draft updates rewrite the same canonical Postgres row in place while `draftedAt` is still set; once a score is finalized, later writes must fail instead of mutating the immutable row
 
 ## Metadata
 
@@ -117,7 +130,7 @@ The metadata field is not intended for heavy analytical querying.
 Because most operational score reads now live in Postgres, score indexing is part of the core model:
 
 - partial btree on `(organization_id, project_id, created_at, id)` where `drafted_at IS NULL` for default non-draft project score reads
-- partial btree on `(organization_id, project_id, source, source_id, created_at, id)` where `drafted_at IS NULL` for evaluation/custom bucket reads
+- partial btree on `(organization_id, project_id, source, source_id, created_at, id)` where `drafted_at IS NULL` for evaluation/custom source reads
 - partial btree on `(organization_id, project_id, issue_id, created_at, id)` where `issue_id IS NOT NULL AND drafted_at IS NULL` for issue drilldowns and issue-backed reads
 - partial btree on `(organization_id, project_id, trace_id, created_at, id)` where `trace_id IS NOT NULL` for trace-scoped score hydration, including draft-aware annotation review/edit reads
 - partial btree on `(organization_id, project_id, session_id, created_at, id)` where `session_id IS NOT NULL` for session drilldowns
@@ -131,9 +144,9 @@ These draft-aware indexes are the minimal annotation foundations:
 - trace-scoped annotation reads keep reusing canonical `scores` rows from Postgres rather than introducing a standalone annotation table
 - queue review, in-product annotation editing, and draft finalization continue to read/write the same canonical score row
 
-## ClickHouse Projection
+## ClickHouse Analytics
 
-ClickHouse is no longer the canonical score store. It keeps only the immutable analytics projection of finalized scores.
+ClickHouse is no longer the canonical score store. It keeps only immutable score analytics rows.
 
 The ClickHouse row intentionally contains just aggregation-relevant fields:
 
@@ -171,12 +184,12 @@ Deployment-specific migration note:
 
 - `unclustered/` migrations should use standard merge-tree engines
 - `clustered/` migrations should use `ON CLUSTER default` plus the matching `ReplicatedMergeTree` variant
-- the logical score-projection schema, partitioning, sort key, and skip indexes should stay identical between both variants
+- the logical score analytics schema, partitioning, sort key, and skip indexes should stay identical between both variants
 
 Rules:
 
 - do not update or replace score rows in ClickHouse after insertion
-- do not allow duplicate projected rows for the same score id
+- do not allow duplicate analytics rows for the same score id
 - analytics must remain correct without `FINAL` or app-level deduplication
 - failed non-errored scores are not inserted into ClickHouse until `issue_id` is assigned and the score becomes immutable
 
@@ -186,11 +199,14 @@ All score writes happen in Postgres first.
 
 Publication rules:
 
-- drafts never publish to ClickHouse
-- non-draft passed or errored scores publish to ClickHouse immediately because they are already immutable
+- drafts are never saved to ClickHouse
+- non-draft passed or errored scores are saved to ClickHouse analytics immediately because they are already immutable
 - non-draft failed non-errored scores stay only in Postgres until `issue_id` is assigned
-- when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then projected to ClickHouse
-- ClickHouse publication must be retry-safe and preserve at-most-one projected row per score id
+- when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
+- ClickHouse analytics save must be retry-safe and preserve at-most-one row per score id
+- the canonical Postgres write transaction requests analytics save through a transactional `ScoreImmutable` domain event written to the outbox only when the current score row is already immutable
+- the `domain-events` dispatcher forwards that event to the `analytic-scores:save` task, which re-fetches the canonical score from Postgres and inserts into ClickHouse analytics only if the row is still immutable and not already present in analytics
+- this differs from direct-publication reliability events such as `SpanIngested` and `TraceEnded`: immutable score analytics save uses outbox specifically to keep score-row persistence and save intent atomic.
 
 Draft-specific rules:
 
@@ -204,7 +220,7 @@ Draft-specific rules:
 Delete behavior:
 
 - delete from Postgres first
-- if the score was already projected, issue a rare ClickHouse `DELETE` mutation by `id`
+- if the score was already stored in ClickHouse analytics, issue a rare ClickHouse `DELETE` mutation by `id`
 - if the deleted score had contributed to an issue, run the corresponding centroid/member removal flow and refresh dependent issue state
 
 ## Reads And Analytics
@@ -215,6 +231,8 @@ Read rules:
 - only aggregates and analytical rollups, such as counts, sums, averages, and time-series, query ClickHouse
 - immediate consistency is required for mutable score reads, so those reads stay on Postgres
 - eventual consistency in ClickHouse is acceptable for aggregates
+- the base Postgres read contracts are project-scoped score listings plus source-scoped listings for evaluation/custom sources, both using limit/offset pagination and newest-first ordering
+- default score listings exclude drafts; draft-aware surfaces must opt in explicitly to `include` or `only` draft reads instead of relying on separate tables or bespoke repositories
 
 ## Rollups
 
@@ -225,13 +243,13 @@ That later materialization work will likely need to support responsibilities suc
 - spans
 - traces
 - sessions
-- daily source buckets
+- daily source rollups
 - daily issue trends
 
 These rollups power:
 
 - score-aware filters on telemetry
-- evaluation/custom bucket dashboards
+- evaluation/custom source dashboards
 - issue counts and trends
 - simulation-aware analytics
 
@@ -243,7 +261,7 @@ Spans, traces, and sessions should be filterable by score-derived properties suc
 - value thresholds
 - failed count
 - issue id
-- source bucket
+- source
 
 Score-aware telemetry filtering should use materializations rather than hot joins against canonical Postgres score rows, but the exact tables are still pending precise definition.
 

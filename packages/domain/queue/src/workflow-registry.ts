@@ -5,6 +5,7 @@ function input<T extends Record<string, unknown>>(): T {
 const _registry = {
   issueDiscoveryWorkflow: input<{
     readonly organizationId: string
+    readonly projectId: string
     readonly scoreId: string
     readonly logFile?: string
   }>(),

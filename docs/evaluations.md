@@ -137,7 +137,7 @@ Evaluations generated from issues (by user demand) are the mainline flow:
 - the issue list and issue details modal/page expose `Generate evaluation`
 - issues may have several linked evaluations, and each trigger starts the same initial generation/alignment flow described below as a background job
 - after creation, debounced automatic realignment still runs as new annotations arrive for each linked evaluation
-- alignment reads finalized, non-draft, non-errored canonical score rows from Postgres; aggregate dashboard metrics may still come from ClickHouse projections
+- alignment reads finalized, non-draft, non-errored canonical score rows from Postgres; aggregate dashboard metrics may still come from ClickHouse score analytics
 
 1. collect annotation-derived truth with at least `1` positive example and any available negatives
 2. create a baseline issue-monitor script
@@ -287,7 +287,7 @@ The project `Evaluations` page includes:
 
 - project-wide analytics
 - active evaluation table
-- custom score buckets as a continuation of the table
+- custom score sources as a continuation of the table
 - archived evaluations table
 
 The active evaluations table includes:
@@ -302,7 +302,7 @@ Trigger updates should edit the shared `FilterSet` plus `turn`, `debounce`, and 
 
 Pause/resume/archive/delete actions require confirmation flows.
 
-Custom score buckets remain a continuation of the same table surface, but they have no execution-settings editor, no trigger editor, and no script viewer.
+Custom score sources remain a continuation of the same table surface, but they have no execution-settings editor, no trigger editor, and no script viewer.
 
 Archived evaluations are shown in a lighter table and can be unarchived.
 
@@ -316,14 +316,14 @@ The evaluation dashboard includes:
 
 Read split:
 
-- charts and aggregate counters read from the immutable ClickHouse score projection
+- charts and aggregate counters read from the immutable ClickHouse score analytics table
 - score tables, details, and other row-level score reads come from canonical Postgres scores
 
 If a score errored, tint the whole row red.
 
 Dashboard and score-table reads should exclude simulation-generated scores by default, with explicit include behavior where the product needs it.
 
-For custom score buckets:
+For custom score sources:
 
 - there is no execution-settings editor
 - there is no trigger editor
@@ -336,7 +336,7 @@ Stable machine-facing/public API scope includes:
 - status changes
 - trigger updates
 - dashboard reads
-- custom bucket reads
+- custom source reads
 - post-MVP execution-settings updates if runtime-configured provider/model support lands
 
 ## Still Pending Precise Definition

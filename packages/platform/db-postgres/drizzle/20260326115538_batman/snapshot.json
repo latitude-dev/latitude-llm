@@ -2459,7 +2459,7 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "scores_source_bucket_idx",
+      "name": "scores_source_lookup_idx",
       "entityType": "indexes",
       "schema": "latitude",
       "table": "scores"

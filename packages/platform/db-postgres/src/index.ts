@@ -31,6 +31,8 @@ export { InvitationRepositoryLive } from "./repositories/invitation-repository.t
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
 export { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"
+export { ScoreEventWriterLive } from "./repositories/score-event-writer.ts"
+export { ScoreRepositoryLive } from "./repositories/score-repository.ts"
 export { SettingsReaderLive } from "./repositories/settings-reader-repository.ts"
 export { UserRepositoryLive } from "./repositories/user-repository.ts"
 // SqlClient implementation
