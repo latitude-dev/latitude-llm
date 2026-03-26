@@ -24,7 +24,6 @@ const createTestUser = (id: string): User => ({
   emailVerified: true,
   image: null,
   role: "user",
-  banned: false,
   createdAt: new Date(),
 })
 
@@ -58,7 +57,7 @@ describe("deleteUserUseCase", () => {
     const { users, organizations, memberships, testLayers } = createTestLayers()
     users.set(USER_ID, createTestUser(USER_ID))
 
-    const org = createOrganization({ id: ORG_ID, name: "Solo Org", slug: "solo-org", creatorId: UserId(USER_ID) })
+    const org = createOrganization({ id: ORG_ID, name: "Solo Org", slug: "solo-org" })
     organizations.set(ORG_ID, org)
 
     const m = createMembership({ organizationId: ORG_ID, userId: UserId(USER_ID), role: "owner" })

@@ -1,9 +1,8 @@
-import { generateId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, createOptimisticAction, useLiveQuery } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { MemberRecord } from "./members.functions.ts"
-import { cancelMemberInvite, inviteMember, listMembers, removeMember } from "./members.functions.ts"
+import { cancelInvite, invite, listMembers, removeMember } from "./members.functions.ts"
 
 const queryClient = getQueryClient()
 
@@ -27,50 +26,27 @@ const membersCollection = createCollection(
   }),
 )
 
-const inviteMemberIntentAction = createOptimisticAction<{ email: string; intentId: string }>({
-  onMutate: ({ email, intentId }) => {
-    membersCollection.insert({
-      id: intentId,
-      userId: null,
-      name: null,
-      email,
-      role: "member",
-      status: "invited",
-      confirmedAt: null,
-      createdAt: new Date().toISOString(),
-    })
-  },
-  mutationFn: async ({ email, intentId }) => {
-    await inviteMember({
-      data: {
-        email,
-        intentId,
-      },
-    })
-
-    await queryClient.invalidateQueries({ queryKey: ["members"] })
-  },
-})
-
-export function createMemberInviteIntentMutation(email: string) {
-  const intentId = generateId()
-  const transaction = inviteMemberIntentAction({
-    email,
-    intentId,
+/**
+ * Invite is not a collection mutation, so it must not use `createOptimisticAction` with an empty
+ * `onMutate`: TanStack DB skips `mutationFn` when the transaction has zero pending mutations.
+ */
+export async function inviteMemberMutation(email: string): Promise<void> {
+  await invite({
+    data: { email },
   })
-  return { intentId, transaction }
+  await queryClient.invalidateQueries({ queryKey: ["members"] })
 }
 
 export function removeMemberMutation(membershipId: string) {
   return membersCollection.delete(membershipId)
 }
 
-const cancelInviteIntentAction = createOptimisticAction<{ inviteId: string }>({
+const cancelInviteAction = createOptimisticAction<{ inviteId: string }>({
   onMutate: ({ inviteId }) => {
     membersCollection.delete(inviteId)
   },
   mutationFn: async ({ inviteId }) => {
-    await cancelMemberInvite({
+    await cancelInvite({
       data: { inviteId },
     })
 
@@ -79,7 +55,7 @@ const cancelInviteIntentAction = createOptimisticAction<{ inviteId: string }>({
 })
 
 export function cancelMemberInviteMutation(inviteId: string) {
-  return cancelInviteIntentAction({ inviteId })
+  return cancelInviteAction({ inviteId })
 }
 
 export const useMembersCollection = () => {

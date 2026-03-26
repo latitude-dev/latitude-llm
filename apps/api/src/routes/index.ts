@@ -7,7 +7,6 @@ import { createOrganizationContextMiddleware } from "../middleware/organization-
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
 import type { ProtectedEnv } from "../types.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
-import { createCliAuthRoutes } from "./cli-auth.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
 
@@ -38,9 +37,6 @@ export const registerRoutes = (context: RoutesContext) => {
 
     await next()
   }) // available via c.var.*
-
-  // CLI auth routes - PUBLIC, no auth required
-  v1.route("/auth/cli", createCliAuthRoutes())
 
   protectedRoutes.use("*", createAuthRateLimiter()) // Rate limiting before auth prevents brute force attacks
   protectedRoutes.use("*", createAuthMiddleware())

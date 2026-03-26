@@ -287,7 +287,7 @@ export const getRowQuery = createServerFn({ method: "GET" })
     )
   })
 
-export const updateDatasetMutation = createServerFn({ method: "POST" })
+export const updateDataset = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
@@ -311,7 +311,7 @@ export const updateDatasetMutation = createServerFn({ method: "POST" })
     return toDatasetRecord(dataset)
   })
 
-export const deleteDatasetMutation = createServerFn({ method: "POST" })
+export const deleteDatasetFunction = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(z.object({ datasetId: z.string() }))
   .handler(async ({ data }): Promise<void> => {
@@ -402,7 +402,7 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
     return { type: "direct", csv, filename }
   })
 
-export const createDatasetMutation = createServerFn({ method: "POST" })
+export const createDatasetFunction = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
@@ -492,7 +492,7 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
     return { version: result.version, rowCount: mappedRows.length }
   })
 
-export const insertDatasetRowMutation = createServerFn({ method: "POST" })
+export const insertDatasetRow = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
@@ -537,7 +537,7 @@ export const insertDatasetRowMutation = createServerFn({ method: "POST" })
     },
   )
 
-export const updateRowMutation = createServerFn({ method: "POST" })
+export const updateDatasetRow = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
@@ -568,7 +568,7 @@ export const updateRowMutation = createServerFn({ method: "POST" })
     return { versionId: result.versionId, version: result.version }
   })
 
-export const deleteRowsMutation = createServerFn({ method: "POST" })
+export const deleteDatasetRows = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
@@ -606,7 +606,7 @@ function toTraceSelection(sel: z.infer<typeof rowSelectionSchema>): TraceSelecti
   return { mode: sel.mode, traceIds: sel.rowIds.map(TraceId) }
 }
 
-export const addTracesToDatasetMutation = createServerFn({ method: "POST" })
+export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(
     z.object({
@@ -639,7 +639,7 @@ export const addTracesToDatasetMutation = createServerFn({ method: "POST" })
     }
   })
 
-export const createDatasetFromTracesMutation = createServerFn({
+export const createDatasetFromTracesFunction = createServerFn({
   method: "POST",
 })
   .middleware([errorHandler])

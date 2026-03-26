@@ -6,8 +6,8 @@ import { useCallback, useMemo, useState } from "react"
 import { useDatasetsList } from "../../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 import {
-  addTracesToDatasetMutation,
-  createDatasetFromTracesMutation,
+  addTracesToDatasetFunction,
+  createDatasetFromTracesFunction,
 } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -59,7 +59,7 @@ export function AddToDatasetModal({
     try {
       if (creatingNew) {
         if (!newDatasetName.trim()) return
-        const result = await createDatasetFromTracesMutation({
+        const result = await createDatasetFromTracesFunction({
           data: {
             projectId,
             name: newDatasetName.trim(),
@@ -79,7 +79,7 @@ export function AddToDatasetModal({
         })
       } else {
         if (!selectedDatasetId) return
-        const result = await addTracesToDatasetMutation({
+        const result = await addTracesToDatasetFunction({
           data: { projectId, datasetId: selectedDatasetId, selection },
         })
         toast({

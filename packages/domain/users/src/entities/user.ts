@@ -13,6 +13,5 @@ export interface User {
   readonly emailVerified: boolean
   readonly image: string | null
   readonly role: "user" | "admin"
-  readonly banned: boolean
   readonly createdAt: Date
 }

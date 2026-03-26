@@ -1,4 +1,5 @@
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
+import type { Session, User } from "@platform/db-postgres"
 import { ensureSession } from "../domains/sessions/session.functions.ts"
 
 interface AuthenticatedSession {
@@ -6,32 +7,54 @@ interface AuthenticatedSession {
   readonly organizationId: OrganizationId
 }
 
+// Organization plugin extends the base Session type with activeOrganizationId
+type OrganizationSession = Session & {
+  activeOrganizationId?: string | null
+}
+
+interface BetterAuthSession {
+  user: User
+  session: OrganizationSession
+}
+
+const isBetterAuthSession = (session: unknown): session is BetterAuthSession => {
+  return (
+    typeof session === "object" &&
+    session !== null &&
+    "user" in session &&
+    typeof (session as Record<string, unknown>).user === "object" &&
+    (session as Record<string, unknown>).user !== null &&
+    "session" in session &&
+    typeof (session as Record<string, unknown>).session === "object" &&
+    (session as Record<string, unknown>).session !== null
+  )
+}
+
 const getSessionUserId = (session: unknown): string | null => {
-  if (typeof session !== "object" || session === null) {
+  if (!isBetterAuthSession(session)) {
     return null
   }
 
-  const user = Reflect.get(session, "user")
-  if (typeof user !== "object" || user === null) {
-    return null
-  }
-
-  const id = Reflect.get(user, "id")
-  return typeof id === "string" ? id : null
+  return session.user.id ?? null
 }
 
 export const getSessionOrganizationId = (session: unknown): string | null => {
-  if (typeof session !== "object" || session === null) {
+  if (!isBetterAuthSession(session)) {
     return null
   }
 
-  const sessionData = Reflect.get(session, "session")
-  if (typeof sessionData !== "object" || sessionData === null) {
-    return null
+  return session.session.activeOrganizationId ?? null
+}
+
+export const requireUserSession = async (): Promise<UserId> => {
+  const session = await ensureSession()
+  const userId = getSessionUserId(session)
+
+  if (!userId) {
+    throw new UnauthorizedError({ message: "No user in session" })
   }
 
-  const organizationId = Reflect.get(sessionData, "activeOrganizationId")
-  return typeof organizationId === "string" ? organizationId : null
+  return UserId(userId)
 }
 
 export const requireSession = async (): Promise<AuthenticatedSession> => {

@@ -1,4 +1,4 @@
-import { generateId, OrganizationId, type OrganizationSettings, type UserId } from "@domain/shared"
+import { generateId, OrganizationId, type OrganizationSettings } from "@domain/shared"
 
 /**
  * Organization entity - represents a tenant/workspace.
@@ -12,7 +12,6 @@ export interface Organization {
   readonly slug: string
   readonly logo: string | null
   readonly metadata: string | null // Better auth needs it
-  readonly creatorId: UserId | null
   readonly settings: OrganizationSettings | null
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -27,7 +26,6 @@ export const createOrganization = (params: {
   slug: string
   logo?: string | null
   metadata?: string | null
-  creatorId?: UserId
   settings?: OrganizationSettings | null
   createdAt?: Date
   updatedAt?: Date
@@ -39,7 +37,6 @@ export const createOrganization = (params: {
     slug: params.slug,
     logo: params.logo ?? null,
     metadata: params.metadata ?? null,
-    creatorId: params.creatorId ?? null,
     settings: params.settings ?? null,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,

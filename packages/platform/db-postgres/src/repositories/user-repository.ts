@@ -4,16 +4,15 @@ import { UserRepository } from "@domain/users"
 import { and, eq, isNull, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { user } from "../schema/better-auth.ts"
+import { users } from "../schema/better-auth.ts"
 
-const toDomainUser = (row: typeof user.$inferSelect): User => ({
+const toDomainUser = (row: typeof users.$inferSelect): User => ({
   id: row.id as UserId,
   email: row.email,
   name: row.name ?? null,
   emailVerified: row.emailVerified,
   image: row.image ?? null,
   role: row.role,
-  banned: row.banned,
   createdAt: row.createdAt,
 })
 
@@ -28,7 +27,7 @@ export const UserRepositoryLive = Layer.effect(
     return {
       findByEmail: (email: string) =>
         sqlClient
-          .query((db) => db.select().from(user).where(eq(user.email, email)).limit(1))
+          .query((db) => db.select().from(users).where(eq(users.email, email)).limit(1))
           .pipe(
             Effect.flatMap((results) => {
               const [result] = results
@@ -45,17 +44,19 @@ export const UserRepositoryLive = Layer.effect(
 
           yield* sqlClient.query((db) =>
             db
-              .update(user)
+              .update(users)
               .set({
                 name: name.trim(),
                 updatedAt: new Date(),
               })
-              .where(and(eq(user.id, userId), or(isNull(user.name), eq(user.name, ""), sql`trim(${user.name}) = ''`))),
+              .where(
+                and(eq(users.id, userId), or(isNull(users.name), eq(users.name, ""), sql`trim(${users.name}) = ''`)),
+              ),
           )
         }),
 
       delete: (userId: string) =>
-        sqlClient.query((db) => db.delete(user).where(eq(user.id, userId))).pipe(Effect.asVoid),
+        sqlClient.query((db) => db.delete(users).where(eq(users.id, userId))).pipe(Effect.asVoid),
     }
   }),
 )

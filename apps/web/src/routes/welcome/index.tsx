@@ -1,0 +1,235 @@
+import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
+import { AlertCircle, ArrowRight } from "lucide-react"
+import { useState } from "react"
+import { setActiveOrganization } from "../../domains/auth/auth.functions.ts"
+import { createOrganization, listOrganizations } from "../../domains/organizations/organizations.functions.ts"
+import { getSession } from "../../domains/sessions/session.functions.ts"
+import { updateUser } from "../../domains/users/user.functions.ts"
+import { authClient } from "../../lib/auth-client.ts"
+import { toUserMessage } from "../../lib/errors.ts"
+
+interface Organization {
+  id: string
+  name: string
+  slug?: string
+}
+
+const LETTER_HUES: Record<string, number> = {
+  A: 0,
+  B: 25,
+  C: 50,
+  D: 75,
+  E: 100,
+  F: 125,
+  G: 150,
+  H: 175,
+  I: 200,
+  J: 215,
+  K: 230,
+  L: 245,
+  M: 260,
+  N: 275,
+  O: 290,
+  P: 305,
+  Q: 320,
+  R: 335,
+  S: 350,
+  T: 15,
+  U: 40,
+  V: 65,
+  W: 90,
+  X: 115,
+  Y: 140,
+  Z: 165,
+}
+
+export const Route = createFileRoute("/welcome/")({
+  component: WelcomePage,
+  beforeLoad: async () => {
+    const session = await getSession()
+    if (!session) {
+      throw redirect({ to: "/login" })
+    }
+
+    const orgs = await listOrganizations()
+    if (orgs && orgs.length === 1) {
+      const org = orgs[0]
+      // NOTE: for some reason we cannot use better auth client here so we have
+      // this serverfn indirection
+      await setActiveOrganization({ data: { organizationId: org.id, organizationSlug: org.slug } })
+      throw redirect({ to: "/" })
+    }
+
+    return { organizations: (orgs ?? []) as Organization[] }
+  },
+})
+
+function WelcomePage() {
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string>()
+  const { organizations } = Route.useRouteContext()
+  const router = useRouter()
+
+  const handleSelectOrg = async (orgId: string) => {
+    setIsSubmitting(true)
+    try {
+      await authClient.organization.setActive({ organizationId: orgId })
+      await router.navigate({ to: "/" })
+    } catch (err) {
+      setError(toUserMessage(err))
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleCreateOrg = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (isSubmitting) return
+
+    const formData = new FormData(e.currentTarget)
+    const userName = String(formData.get("name") ?? "")
+    const organizationName = String(formData.get("organizationName") ?? "")
+
+    if (!userName.trim()) {
+      setError("Please enter your name")
+      return
+    }
+
+    if (!organizationName.trim()) {
+      setError("Please enter an organization name")
+      return
+    }
+
+    setIsSubmitting(true)
+    setError(undefined)
+
+    try {
+      await updateUser({ data: { name: userName } })
+      await createOrganization({ data: { name: organizationName } })
+      await router.navigate({ to: "/" })
+    } catch (err) {
+      setError(toUserMessage(err))
+      setIsSubmitting(false)
+    }
+  }
+
+  if (organizations.length > 1) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+        <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
+          <div className="flex flex-col items-center justify-center gap-y-6">
+            <LatitudeLogo />
+            <div className="flex flex-col items-center justify-center gap-y-2">
+              <Text.H3 align="center">Select your workspace</Text.H3>
+              <Text.H5 color="foregroundMuted" align="center">
+                Choose which workspace to use
+              </Text.H5>
+            </div>
+          </div>
+
+          <div className="flex flex-col rounded-xl overflow-hidden shadow-none border border-border">
+            {organizations.map((org: Organization, index: number) => {
+              const initial = org.name.charAt(0).toUpperCase()
+              const hue = LETTER_HUES[initial] ?? 180
+
+              return (
+                <button
+                  key={org.id}
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => handleSelectOrg(org.id)}
+                  className={`flex items-center gap-3 p-3 bg-background hover:bg-muted transition-colors disabled:opacity-50 cursor-pointer ${
+                    index > 0 ? "border-t border-border" : ""
+                  }`}
+                >
+                  <div
+                    className="flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold"
+                    style={{
+                      backgroundColor: `hsl(${hue}, 70%, 85%)`,
+                      color: `hsl(${hue}, 50%, 30%)`,
+                    }}
+                  >
+                    {initial}
+                  </div>
+                  <Text.H5 weight="medium" className="flex-1 text-left">
+                    {org.name}
+                  </Text.H5>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )
+            })}
+
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-destructive px-3 pt-2">
+                <Icon icon={AlertCircle} className="h-4 w-4" />
+                <Text.H6 color="destructive">{error}</Text.H6>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+      <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
+        <div className="flex flex-col items-center justify-center gap-y-6">
+          <LatitudeLogo />
+          <div className="flex flex-col items-center justify-center gap-y-2">
+            <Text.H3 align="center">Complete your profile</Text.H3>
+            <Text.H5 color="foregroundMuted" align="center">
+              Tell us a bit about yourself
+            </Text.H5>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 rounded-xl overflow-hidden shadow-none bg-muted/50 border border-border p-6">
+          <form onSubmit={handleCreateOrg} className="flex flex-col gap-4">
+            <label htmlFor="name" className="flex flex-col gap-2">
+              <Text.H6 weight="medium">Your name</Text.H6>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Ex.: John Doe"
+                required
+                autoComplete="name"
+                data-autofocus="true"
+                className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </label>
+
+            <label htmlFor="organizationName" className="flex flex-col gap-2">
+              <Text.H6 weight="medium">Organization name</Text.H6>
+              <input
+                id="organizationName"
+                name="organizationName"
+                type="text"
+                placeholder="Ex.: Acme Inc."
+                required
+                className="flex w-full border border-input bg-background rounded-lg text-sm leading-5 px-3 py-2 h-9 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+            </label>
+
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <Icon icon={AlertCircle} className="h-4 w-4" />
+                <Text.H6 color="destructive">{error}</Text.H6>
+              </div>
+            )}
+
+            <Button
+              size="full"
+              type="submit"
+              disabled={isSubmitting}
+              className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
+            >
+              {isSubmitting ? "Saving…" : "Continue"}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}

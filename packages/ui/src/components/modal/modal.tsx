@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 
 import { zIndex as globalZIndex, type ZIndex } from "../../tokens/zIndex.ts"
 import { cn } from "../../utils/cn.ts"
@@ -15,6 +15,8 @@ import {
   type FooterProps,
 } from "./primitives.tsx"
 
+export type ModalSize = "small" | "regular" | "medium" | "large" | "xl" | "full"
+
 export type ModalProps = {
   title?: string
   defaultOpen?: boolean
@@ -23,7 +25,7 @@ export type ModalProps = {
   description?: string | ReactNode
   children?: ReactNode
   footer?: ReactNode
-  size?: "small" | "regular" | "medium" | "large" | "xl" | "full"
+  size?: ModalSize
   height?: DialogContentProps["height"]
   dismissible?: boolean
   scrollable?: boolean
@@ -31,7 +33,114 @@ export type ModalProps = {
   footerAlign?: FooterProps["align"]
 }
 
-function Modal({
+const sizeClassName = (size: ModalSize = "regular") =>
+  cn({
+    "max-w-modal-sm": size === "small",
+    "max-w-modal": size === "regular",
+    "max-w-modal-md": size === "medium",
+    "max-w-modal-lg": size === "large",
+    "max-w-modal-xl": size === "xl",
+    "max-w-[97.5%]": size === "full",
+  })
+
+export type ModalRootProps = ComponentProps<typeof Dialog>
+
+function ModalRoot(props: ModalRootProps) {
+  return <Dialog {...props} />
+}
+
+export type ModalContentProps = Omit<ComponentProps<typeof DialogContent>, "dismissible" | "height"> & {
+  dismissible?: boolean
+  height?: DialogContentProps["height"]
+  size?: ModalSize
+  zIndex?: ZIndex
+}
+
+function ModalContent({
+  dismissible = false,
+  height = "content",
+  size = "regular",
+  zIndex = "modal",
+  className,
+  children,
+  ...rest
+}: ModalContentProps) {
+  return (
+    <DialogContent
+      dismissible={dismissible}
+      height={height}
+      className={cn("flex flex-col", globalZIndex[zIndex], sizeClassName(size), className)}
+      {...rest}
+    >
+      <div className="relative flex h-full flex-col overflow-hidden">{children}</div>
+    </DialogContent>
+  )
+}
+
+export type ModalHeaderProps = {
+  title?: string
+  description?: string | ReactNode
+  children?: ReactNode
+  className?: string
+}
+
+function ModalHeader({ title, description, children, className }: ModalHeaderProps) {
+  if (!title && !description && !children) {
+    return null
+  }
+
+  return (
+    <div className={cn("flex flex-col gap-y-4 pb-6", className)}>
+      <div className="px-6 pt-6">
+        {children ?? (
+          <DialogHeader>
+            {title ? <DialogTitle>{title}</DialogTitle> : null}
+            {description ? <DialogDescription>{description}</DialogDescription> : null}
+          </DialogHeader>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export type ModalBodyProps = {
+  scrollable?: boolean
+  children: ReactNode
+  className?: string
+}
+
+function ModalBody({ scrollable = true, children, className }: ModalBodyProps) {
+  return (
+    <div
+      className={cn(
+        "px-6",
+        {
+          "custom-scrollbar min-h-0 flex-1 overflow-y-auto pb-6": scrollable,
+          "flex min-h-0 flex-grow flex-col": !scrollable,
+        },
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+export type ModalFooterProps = {
+  align?: FooterProps["align"]
+  children: ReactNode
+  className?: string
+}
+
+function ModalFooter({ align = "right", children, className }: ModalFooterProps) {
+  return (
+    <div className={cn("rounded-b-2xl border-border border-t bg-background-gray px-6 py-4", className)}>
+      <DialogFooter align={align}>{children}</DialogFooter>
+    </div>
+  )
+}
+
+function ModalBase({
   open,
   defaultOpen,
   onOpenChange,
@@ -51,62 +160,40 @@ function Modal({
   if (defaultOpen !== undefined) dialogProps.defaultOpen = defaultOpen
   if (onOpenChange !== undefined) dialogProps.onOpenChange = onOpenChange
 
+  const showHeader = Boolean(title) || Boolean(description)
+
   return (
-    <Dialog {...dialogProps}>
-      <DialogContent
-        dismissible={dismissible}
-        height={height}
-        className={cn("flex flex-col", globalZIndex[zIndex], {
-          "max-w-modal-sm": size === "small",
-          "max-w-modal": size === "regular",
-          "max-w-modal-md": size === "medium",
-          "max-w-modal-lg": size === "large",
-          "max-w-modal-xl": size === "xl",
-          "max-w-[97.5%]": size === "full",
-        })}
-      >
-        <div className="flex flex-col relative h-full overflow-hidden">
-          {title || !!description ? (
-            <div className="flex flex-col gap-y-4 pb-6">
-              {(title || !!description) && (
-                <div className="px-6 pt-6">
-                  <DialogHeader>
-                    {title && <DialogTitle>{title}</DialogTitle>}
-                    {!!description && <DialogDescription>{description}</DialogDescription>}
-                  </DialogHeader>
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {children ? (
-            <div
-              className={cn("px-6", {
-                "flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-6": scrollable,
-                "min-h-0 flex-grow flex flex-col": !scrollable,
-              })}
-            >
-              {children}
-            </div>
-          ) : null}
-
-          {footer ? (
-            <div
-              className={cn("px-6 border-border border-t rounded-b-2xl", {
-                "bg-background-gray py-4": !!footer,
-              })}
-            >
-              <DialogFooter align={footerAlign}>{footer}</DialogFooter>
-            </div>
-          ) : null}
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ModalRoot {...dialogProps}>
+      <ModalContent dismissible={dismissible} height={height} size={size} zIndex={zIndex}>
+        {showHeader ? (
+          <ModalHeader
+            {...(title !== undefined && title !== "" ? { title } : {})}
+            {...(description !== undefined && Boolean(description) ? { description } : {})}
+          />
+        ) : null}
+        {children ? <ModalBody scrollable={scrollable}>{children}</ModalBody> : null}
+        {footer ? <ModalFooter align={footerAlign}>{footer}</ModalFooter> : null}
+      </ModalContent>
+    </ModalRoot>
   )
 }
+
+ModalRoot.displayName = "Modal.Root"
+ModalContent.displayName = "Modal.Content"
+ModalHeader.displayName = "Modal.Header"
+ModalBody.displayName = "Modal.Body"
+ModalFooter.displayName = "Modal.Footer"
+
+export const Modal = Object.assign(ModalBase, {
+  Root: ModalRoot,
+  Content: ModalContent,
+  Header: ModalHeader,
+  Body: ModalBody,
+  Footer: ModalFooter,
+})
 
 const CloseTrigger = ({ children = <Button variant="outline">Close</Button> }: { children?: ReactNode }) => {
   return <DialogClose asChild>{children}</DialogClose>
 }
 
-export { Modal, CloseTrigger }
+export { CloseTrigger }

@@ -6,21 +6,19 @@ import {
   type OrganizationSettings,
   SqlClient,
   type SqlClientShape,
-  UserId,
   type UserId as UserIdType,
 } from "@domain/shared"
 import { eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
-import { member, organization } from "../schema/better-auth.ts"
+import { members, organizations } from "../schema/better-auth.ts"
 
-const toDomainOrganization = (row: typeof organization.$inferSelect) => ({
+const toDomainOrganization = (row: typeof organizations.$inferSelect) => ({
   id: OrganizationId(row.id),
   name: row.name,
   slug: row.slug,
   logo: row.logo,
   metadata: row.metadata,
-  creatorId: row.creatorId ? UserId(row.creatorId) : null,
   settings: (row.settings as OrganizationSettings | null) ?? null,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
@@ -32,7 +30,6 @@ const toOrganizationInsertRow = (org: {
   slug: string
   logo: string | null
   metadata: string | null
-  creatorId: string | null
   settings: OrganizationSettings | null
 }) => ({
   id: org.id,
@@ -40,7 +37,6 @@ const toOrganizationInsertRow = (org: {
   slug: org.slug,
   logo: org.logo,
   metadata: org.metadata,
-  creatorId: org.creatorId,
   settings: org.settings,
 })
 
@@ -56,7 +52,7 @@ export const OrganizationRepositoryLive = Layer.effect(
     return {
       findById: (id: OrganizationIdType) =>
         sqlClient
-          .query((db) => db.select().from(organization).where(eq(organization.id, id)).limit(1))
+          .query((db) => db.select().from(organizations).where(eq(organizations.id, id)).limit(1))
           .pipe(
             Effect.flatMap((results) => {
               const [result] = results
@@ -71,10 +67,10 @@ export const OrganizationRepositoryLive = Layer.effect(
         sqlClient
           .query((db) =>
             db
-              .select({ organization })
-              .from(organization)
-              .innerJoin(member, eq(member.organizationId, organization.id))
-              .where(eq(member.userId, userId)),
+              .select({ organization: organizations })
+              .from(organizations)
+              .innerJoin(members, eq(members.organizationId, organizations.id))
+              .where(eq(members.userId, userId)),
           )
           .pipe(Effect.map((results) => results.map(({ organization: org }) => toDomainOrganization(org)))),
 
@@ -84,7 +80,6 @@ export const OrganizationRepositoryLive = Layer.effect(
         slug: string
         logo: string | null
         metadata: string | null
-        creatorId: string | null
         settings: OrganizationSettings | null
       }) =>
         Effect.gen(function* () {
@@ -92,16 +87,15 @@ export const OrganizationRepositoryLive = Layer.effect(
 
           yield* sqlClient.query((db) =>
             db
-              .insert(organization)
+              .insert(organizations)
               .values(row)
               .onConflictDoUpdate({
-                target: organization.id,
+                target: organizations.id,
                 set: {
                   name: row.name,
                   slug: row.slug,
                   logo: row.logo,
                   metadata: row.metadata,
-                  creatorId: row.creatorId,
                   settings: row.settings,
                   updatedAt: new Date(),
                 },
@@ -110,12 +104,12 @@ export const OrganizationRepositoryLive = Layer.effect(
         }),
 
       delete: (id: OrganizationIdType) =>
-        sqlClient.query((db) => db.delete(organization).where(eq(organization.id, id))),
+        sqlClient.query((db) => db.delete(organizations).where(eq(organizations.id, id))),
 
       existsBySlug: (slug: string) =>
         sqlClient
           .query((db) =>
-            db.select({ id: organization.id }).from(organization).where(eq(organization.slug, slug)).limit(1),
+            db.select({ id: organizations.id }).from(organizations).where(eq(organizations.slug, slug)).limit(1),
           )
           .pipe(Effect.map((results) => results.length > 0)),
     }

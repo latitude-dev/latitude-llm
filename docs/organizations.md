@@ -26,9 +26,16 @@ Organization scope is where reliability needs:
 - cross-project defaults
 - post-MVP shared execution credentials
 
+## Membership and access model (current auth implementation)
+
+- Membership is tracked in Better Auth `members` and linked to `organizations`.
+- Browser sessions include `session.activeOrganizationId`; `apps/web` requires this value for authenticated routes.
+- Users without an active organization are routed to `/welcome` for organization selection or onboarding.
+- `apps/api` and `apps/ingest` do not use browser sessions for auth; they use API-key context directly.
+
 ## Tenancy
 
-Reliability entities remain organization-scoped through the existing tenancy model:
+Organization-scoped reliability data and all domain repositories still follow the existing tenancy model:
 
 - `evaluations`
 - `issues`

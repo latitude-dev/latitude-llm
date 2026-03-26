@@ -32,13 +32,11 @@ const createTestLayers = () => {
 const seedOrganization = (
   organizations: Map<OrganizationId, ReturnType<typeof createOrganization>>,
   id: OrganizationId,
-  creatorId: string | null = null,
 ) => {
   const org = createOrganization({
     id,
     name: `Org ${id}`,
     slug: `org-${id}`,
-    ...(creatorId ? { creatorId: UserId(creatorId) } : {}),
   })
   organizations.set(id, org)
   return org
@@ -61,7 +59,7 @@ const seedMembership = (
 describe("cleanupUserMembershipsUseCase", () => {
   it("deletes organization when user is the sole member", async () => {
     const { organizations, memberships, testLayers } = createTestLayers()
-    seedOrganization(organizations, ORG_1, USER_ID)
+    seedOrganization(organizations, ORG_1)
     seedMembership(memberships, ORG_1, USER_ID)
 
     await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
@@ -83,22 +81,11 @@ describe("cleanupUserMembershipsUseCase", () => {
     expect(remainingMembers[0]?.userId).toBe(OTHER_USER_ID)
   })
 
-  it("clears creator reference when user was the org creator", async () => {
-    const { organizations, memberships, testLayers } = createTestLayers()
-    seedOrganization(organizations, ORG_1, USER_ID)
-    seedMembership(memberships, ORG_1, USER_ID)
-    seedMembership(memberships, ORG_1, OTHER_USER_ID)
-
-    await Effect.runPromise(cleanupUserMembershipsUseCase({ userId: USER_ID }).pipe(Effect.provide(testLayers)))
-
-    expect(organizations.get(ORG_1)?.creatorId).toBeNull()
-  })
-
   it("handles multiple organizations", async () => {
     const { organizations, memberships, testLayers } = createTestLayers()
 
     // ORG_1: user is sole member → should be deleted
-    seedOrganization(organizations, ORG_1, USER_ID)
+    seedOrganization(organizations, ORG_1)
     seedMembership(memberships, ORG_1, USER_ID)
 
     // ORG_2: user has co-members → only membership removed

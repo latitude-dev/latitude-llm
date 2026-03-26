@@ -1,7 +1,7 @@
 import { generateId, type OrganizationSettings, type ProjectSettings } from "@domain/shared"
 import type { PostgresDb } from "@platform/db-postgres"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
-import { member, organization, user } from "@platform/db-postgres/schema/better-auth"
+import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { type CryptoError, encrypt, hashToken } from "@repo/utils"
 import type { Effect as EffectType } from "effect"
@@ -45,7 +45,7 @@ export const createUserFixture = (
     try: async () => {
       const userId = generateId()
       const [userRow] = await db
-        .insert(user)
+        .insert(users)
         .values({
           id: userId,
           email,
@@ -53,9 +53,9 @@ export const createUserFixture = (
           emailVerified: input.emailVerified ?? true,
         })
         .returning({
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          id: users.id,
+          email: users.email,
+          name: users.name,
         })
 
       return userRow
@@ -70,7 +70,6 @@ export const createUserFixture = (
 export interface OrganizationFixtureInput {
   readonly name?: string
   readonly slug?: string
-  readonly creatorId?: string
 }
 
 /**
@@ -80,7 +79,6 @@ export interface OrganizationFixture {
   readonly id: string
   readonly name: string
   readonly slug: string
-  readonly creatorId: string | null
   readonly settings: OrganizationSettings | null
 }
 
@@ -99,20 +97,18 @@ export const createOrganizationFixture = (
     try: async () => {
       const orgId = generateId()
       const [org] = await db
-        .insert(organization)
+        .insert(organizations)
         .values({
           id: orgId,
           name,
           slug,
-          creatorId: input.creatorId ?? null,
           settings: null,
         })
         .returning({
-          id: organization.id,
-          name: organization.name,
-          slug: organization.slug,
-          creatorId: organization.creatorId,
-          settings: organization.settings,
+          id: organizations.id,
+          name: organizations.name,
+          slug: organizations.slug,
+          settings: organizations.settings,
         })
 
       return org
@@ -151,7 +147,7 @@ export const createMembershipFixture = (
     try: async () => {
       const memberId = generateId()
       const [memberRow] = await db
-        .insert(member)
+        .insert(members)
         .values({
           id: memberId,
           organizationId: input.organizationId,
@@ -159,10 +155,10 @@ export const createMembershipFixture = (
           role: input.role ?? "member",
         })
         .returning({
-          id: member.id,
-          organizationId: member.organizationId,
-          userId: member.userId,
-          role: member.role,
+          id: members.id,
+          organizationId: members.organizationId,
+          userId: members.userId,
+          role: members.role,
         })
 
       return memberRow
@@ -302,9 +298,7 @@ export interface OrganizationSetup {
 export const createOrganizationSetup = (testDb: TestDatabase): EffectType.Effect<OrganizationSetup, FixtureError> => {
   return Effect.gen(function* () {
     const user = yield* createUserFixture(testDb.db)
-    const organization = yield* createOrganizationFixture(testDb.db, {
-      creatorId: user.id,
-    })
+    const organization = yield* createOrganizationFixture(testDb.db)
     const membership = yield* createMembershipFixture(testDb.db, {
       organizationId: organization.id,
       userId: user.id,

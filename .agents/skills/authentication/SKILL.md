@@ -4,7 +4,7 @@
 
 ## Stack
 
-- **`@platform/auth-better`** wraps **better-auth**; the factory is `createBetterAuth()` in `packages/platform/auth-better/src/index.ts`.
+- **`@platform/db-postgres`** exposes **`createBetterAuth()`** in `packages/platform/db-postgres/src/create-better-auth.ts`, wiring **better-auth** with the Drizzle adapter against the shared Postgres client.
 - Sessions: `auth.api.getSession({ headers })` → `{ user, session }` with typed fields.
 - **`User`** includes `id`, `email`, `name` — use those fields directly (no assertions).
 

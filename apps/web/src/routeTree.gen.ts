@@ -9,14 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DesignSystemRouteImport } from './routes/design-system'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as WelcomeIndexRouteImport } from './routes/welcome/index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as DownloadsExportRouteImport } from './routes/downloads/export'
-import { Route as AuthConfirmRouteImport } from './routes/auth/confirm'
-import { Route as AuthCliRouteImport } from './routes/auth/cli'
+import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedUserSettingsRouteImport } from './routes/_authenticated/user-settings'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -28,11 +27,6 @@ import { Route as AuthenticatedProjectsProjectIdIssuesIndexRouteImport } from '.
 import { Route as AuthenticatedProjectsProjectIdDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectId/datasets/index'
 import { Route as AuthenticatedProjectsProjectIdDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectId/datasets/$datasetId'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -47,6 +41,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WelcomeIndexRoute = WelcomeIndexRouteImport.update({
+  id: '/welcome/',
+  path: '/welcome/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -57,14 +56,9 @@ const DownloadsExportRoute = DownloadsExportRouteImport.update({
   path: '/downloads/export',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthConfirmRoute = AuthConfirmRouteImport.update({
-  id: '/auth/confirm',
-  path: '/auth/confirm',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthCliRoute = AuthCliRouteImport.update({
-  id: '/auth/cli',
-  path: '/auth/cli',
+const AuthInviteRoute = AuthInviteRouteImport.update({
+  id: '/auth/invite',
+  path: '/auth/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
@@ -129,13 +123,12 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/auth/cli': typeof AuthCliRoute
-  '/auth/confirm': typeof AuthConfirmRoute
+  '/auth/invite': typeof AuthInviteRoute
   '/downloads/export': typeof DownloadsExportRoute
+  '/welcome/': typeof WelcomeIndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
@@ -147,14 +140,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/auth/cli': typeof AuthCliRoute
-  '/auth/confirm': typeof AuthConfirmRoute
+  '/auth/invite': typeof AuthInviteRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/': typeof AuthenticatedIndexRoute
+  '/welcome': typeof WelcomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -167,14 +159,13 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/design-system': typeof DesignSystemRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/auth/cli': typeof AuthCliRoute
-  '/auth/confirm': typeof AuthConfirmRoute
+  '/auth/invite': typeof AuthInviteRoute
   '/downloads/export': typeof DownloadsExportRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/welcome/': typeof WelcomeIndexRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/_authenticated/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
@@ -189,13 +180,12 @@ export interface FileRouteTypes {
     | '/'
     | '/design-system'
     | '/login'
-    | '/signup'
     | '/settings'
     | '/user-settings'
     | '/api/health'
-    | '/auth/cli'
-    | '/auth/confirm'
+    | '/auth/invite'
     | '/downloads/export'
+    | '/welcome/'
     | '/projects/$projectId'
     | '/api/auth/$'
     | '/projects/$projectId/settings'
@@ -207,14 +197,13 @@ export interface FileRouteTypes {
   to:
     | '/design-system'
     | '/login'
-    | '/signup'
     | '/settings'
     | '/user-settings'
     | '/api/health'
-    | '/auth/cli'
-    | '/auth/confirm'
+    | '/auth/invite'
     | '/downloads/export'
     | '/'
+    | '/welcome'
     | '/api/auth/$'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
@@ -226,14 +215,13 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/design-system'
     | '/login'
-    | '/signup'
     | '/_authenticated/settings'
     | '/_authenticated/user-settings'
     | '/api/health'
-    | '/auth/cli'
-    | '/auth/confirm'
+    | '/auth/invite'
     | '/downloads/export'
     | '/_authenticated/'
+    | '/welcome/'
     | '/_authenticated/projects/$projectId'
     | '/api/auth/$'
     | '/_authenticated/projects/$projectId/settings'
@@ -247,23 +235,15 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   DesignSystemRoute: typeof DesignSystemRoute
   LoginRoute: typeof LoginRoute
-  SignupRoute: typeof SignupRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  AuthCliRoute: typeof AuthCliRoute
-  AuthConfirmRoute: typeof AuthConfirmRoute
+  AuthInviteRoute: typeof AuthInviteRoute
   DownloadsExportRoute: typeof DownloadsExportRoute
+  WelcomeIndexRoute: typeof WelcomeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -285,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/welcome/': {
+      id: '/welcome/'
+      path: '/welcome'
+      fullPath: '/welcome/'
+      preLoaderRoute: typeof WelcomeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
@@ -299,18 +286,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DownloadsExportRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/confirm': {
-      id: '/auth/confirm'
-      path: '/auth/confirm'
-      fullPath: '/auth/confirm'
-      preLoaderRoute: typeof AuthConfirmRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/cli': {
-      id: '/auth/cli'
-      path: '/auth/cli'
-      fullPath: '/auth/cli'
-      preLoaderRoute: typeof AuthCliRouteImport
+    '/auth/invite': {
+      id: '/auth/invite'
+      path: '/auth/invite'
+      fullPath: '/auth/invite'
+      preLoaderRoute: typeof AuthInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/health': {
@@ -436,11 +416,10 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   DesignSystemRoute: DesignSystemRoute,
   LoginRoute: LoginRoute,
-  SignupRoute: SignupRoute,
   ApiHealthRoute: ApiHealthRoute,
-  AuthCliRoute: AuthCliRoute,
-  AuthConfirmRoute: AuthConfirmRoute,
+  AuthInviteRoute: AuthInviteRoute,
   DownloadsExportRoute: DownloadsExportRoute,
+  WelcomeIndexRoute: WelcomeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

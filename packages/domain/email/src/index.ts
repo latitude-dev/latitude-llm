@@ -10,6 +10,10 @@ export {
   type SignupExistingAccountMagicLinkEmailData,
   signupExistingAccountMagicLinkTemplate,
 } from "./templates/signup-existing-account-magic-link/index.tsx"
+export {
+  type SignupMagicLinkEmailData,
+  signupMagicLinkTemplate,
+} from "./templates/signup-magic-link/index.tsx"
 // Templates
 export type { RenderedEmail } from "./templates/types.ts"
 export { type SendEmail, sendEmail } from "./use-cases/send-email.ts"

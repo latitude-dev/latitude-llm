@@ -20,14 +20,15 @@
     "pg:studio": "drizzle-kit studio --config=drizzle.config.ts --port 3003",
     "pg:seed": "npx tsx src/seeds/run.ts",
     "pg:reset": "bash ../../../docker/reset-postgres.sh",
+    "auth:generate-schema-reference": "better-auth generate --config ./auth.cli.ts --output ./better-auth.schema.reference.ts --yes",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@better-auth/stripe": "^1.5.0",
     "@domain/api-keys": "workspace:*",
-    "@domain/auth": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/organizations": "workspace:*",
@@ -35,14 +36,17 @@
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/users": "workspace:*",
+    "@paralleldrive/cuid2": "catalog:",
     "@platform/env": "workspace:*",
     "@repo/utils": "workspace:*",
+    "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
-    "@paralleldrive/cuid2": "catalog:",
-    "pg": "catalog:"
+    "pg": "catalog:",
+    "stripe": "^20.4.0"
   },
   "devDependencies": {
+    "@better-auth/cli": "^1.4.22",
     "@electric-sql/pglite": "0.3.15",
     "@types/pg": "catalog:",
     "dotenv": "catalog:",

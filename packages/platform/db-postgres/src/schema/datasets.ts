@@ -16,6 +16,7 @@ export const datasets = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("datasets"),
+    index("datasets_organization_id_idx").on(t.organizationId),
     index("datasets_project_id_idx").on(t.organizationId, t.projectId, t.deletedAt),
     unique("datasets_unique_name_per_project_idx")
       .on(t.organizationId, t.projectId, t.name, t.deletedAt)

@@ -4,11 +4,7 @@ import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
 import { useState } from "react"
-import {
-  countUserOrganizations,
-  getOrganization,
-  type OrganizationRecord,
-} from "../domains/organizations/organizations.functions.ts"
+import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
@@ -17,7 +13,6 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
   beforeLoad: async () => {
     const session = await getSession()
-
     if (!session) {
       throw redirect({ to: "/login" })
     }
@@ -25,17 +20,13 @@ export const Route = createFileRoute("/_authenticated")({
     const sessionData = session.session as Record<string, unknown>
     const organizationId =
       typeof sessionData.activeOrganizationId === "string" ? sessionData.activeOrganizationId : null
-
-    const [organization, orgCount]: [OrganizationRecord, number] = await Promise.all([
-      getOrganization(),
-      countUserOrganizations(),
-    ])
+    if (!organizationId) {
+      throw redirect({ to: "/welcome" })
+    }
 
     return {
       user: session.user,
       organizationId,
-      organizationName: organization.name,
-      hasMultipleOrgs: orgCount > 1,
     }
   },
   component: AuthenticatedLayout,
@@ -117,13 +108,17 @@ function ThemeToggle() {
 }
 
 function NavHeader() {
-  const { user, organizationName, hasMultipleOrgs } = Route.useRouteContext()
+  const { user, organizationId } = Route.useRouteContext()
+  const { data: allOrgs } = useOrganizationsCollection()
+  const org = allOrgs?.find((o) => o.id === organizationId)
+  const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
   const router = useRouter()
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
-
   const projectMatch = pathname.match(/\/projects\/([^/]+)/)
   const currentProjectId = projectMatch?.[1] ?? null
+
+  if (!org) return null
 
   return (
     <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0">
@@ -134,11 +129,11 @@ function NavHeader() {
         <span className="text-muted-foreground text-sm select-none">/</span>
         {hasMultipleOrgs ? (
           <button type="button" className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors">
-            <span className="text-sm font-medium text-foreground">{organizationName}</span>
+            <span className="text-sm font-medium text-foreground">{org.name}</span>
             <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
           </button>
         ) : (
-          <span className="text-sm font-medium text-foreground px-2 py-1">{organizationName}</span>
+          <span className="text-sm font-medium text-foreground px-2 py-1">{org.name}</span>
         )}
         {currentProjectId && <ProjectBreadcrumb projectId={currentProjectId} />}
       </div>

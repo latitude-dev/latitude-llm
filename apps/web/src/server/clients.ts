@@ -1,10 +1,7 @@
 import type { QueuePublisherShape } from "@domain/queue"
 import { generateId, type StorageDiskPort } from "@domain/shared"
-import { createBetterAuth } from "@platform/auth-better"
-import type { RedisClient } from "@platform/cache-redis"
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
-import { createOutboxWriter, createPostgresClient, type PostgresClient } from "@platform/db-postgres"
+import { createBetterAuth, createOutboxWriter, createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
@@ -12,30 +9,40 @@ import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
-let redisClientInstance: RedisClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let queuePublisher: Promise<QueuePublisherShape> | undefined
 let outboxWriterInstance: ReturnType<typeof createOutboxWriter> | undefined
 
-const getAuthIntentIdFromMagicLinkUrl = ({
+const getInvitationInfoFromMagicLinkUrl = ({
   magicLinkUrl,
   webUrl,
 }: {
   magicLinkUrl: string
   webUrl: string
-}): string | null => {
+}): {
+  invitationId: string | null
+  organizationName: string | null
+  emailFlow: "signin" | "signup" | null
+} => {
   const parsedMagicLinkUrl = new URL(magicLinkUrl)
   const callbackUrl = parsedMagicLinkUrl.searchParams.get("callbackURL")
 
   if (!callbackUrl) {
-    return null
+    return { invitationId: null, organizationName: null, emailFlow: null }
   }
 
   const parsedCallbackUrl = new URL(callbackUrl, webUrl)
-
-  return parsedCallbackUrl.searchParams.get("authIntentId")
+  const invitationId = parsedCallbackUrl.searchParams.get("invitationId")
+  const workspaceName = parsedCallbackUrl.searchParams.get("workspaceName")
+  const emailFlowRaw = parsedCallbackUrl.searchParams.get("emailFlow")
+  const emailFlow = emailFlowRaw === "signin" || emailFlowRaw === "signup" ? emailFlowRaw : null
+  return {
+    invitationId,
+    organizationName: workspaceName,
+    emailFlow,
+  }
 }
 
 /**
@@ -57,14 +64,6 @@ export const getPostgresClient = (): PostgresClient => {
     postgresClientInstance = createPostgresClient()
   }
   return postgresClientInstance
-}
-
-export const getRedisClient = (): RedisClient => {
-  if (!redisClientInstance) {
-    const connection = createRedisConnection()
-    redisClientInstance = createRedisClient(connection)
-  }
-  return redisClientInstance
 }
 
 export const getClickhouseClient = (): ClickHouseClient => {
@@ -124,17 +123,45 @@ export const getBetterAuth = () => {
       trustedOrigins,
       enableTanStackCookies: true,
       sendMagicLink: async ({ email, url }) => {
-        const authIntentId = getAuthIntentIdFromMagicLinkUrl({
+        const invitationInfo = getInvitationInfoFromMagicLinkUrl({
           magicLinkUrl: url,
           webUrl,
         })
+        const aggregateId = invitationInfo.invitationId ?? generateId()
 
         await outboxWriter.write({
           id: generateId(),
           eventName: "MagicLinkEmailRequested",
-          aggregateId: authIntentId ?? generateId(),
+          aggregateId,
           organizationId: "system",
-          payload: { email, magicLinkUrl: url, authIntentId },
+          payload: {
+            email,
+            magicLinkUrl: url,
+            invitationId: invitationInfo.invitationId,
+            organizationName: invitationInfo.organizationName,
+            emailFlow: invitationInfo.emailFlow,
+          },
+          occurredAt: new Date(),
+        })
+      },
+      sendInvitationEmail: async (data) => {
+        const inviterName =
+          typeof data.inviter.user.name === "string" && data.inviter.user.name.trim().length > 0
+            ? data.inviter.user.name.trim()
+            : "A teammate"
+        await outboxWriter.write({
+          id: generateId(),
+          eventName: "MagicLinkEmailRequested",
+          aggregateId: data.id ?? generateId(),
+          organizationId: "system",
+          payload: {
+            email: data.email,
+            magicLinkUrl: `${webUrl}/auth/invite?invitationId=${encodeURIComponent(data.id)}`,
+            invitationId: data.id,
+            organizationName: data.organization.name,
+            inviterName,
+            emailFlow: null,
+          },
           occurredAt: new Date(),
         })
       },

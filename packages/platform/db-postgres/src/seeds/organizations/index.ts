@@ -11,7 +11,7 @@ import {
   SEED_OWNER_USER_ID,
 } from "@domain/shared"
 import { Effect } from "effect"
-import { user } from "../../schema/better-auth.ts"
+import { users as usersTable } from "../../schema/better-auth.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 const seedUsers: Seeder = {
@@ -19,7 +19,7 @@ const seedUsers: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
-        const users = [
+        const seedUsers = [
           {
             id: SEED_OWNER_USER_ID,
             email: SEED_OWNER_EMAIL,
@@ -35,12 +35,12 @@ const seedUsers: Seeder = {
             role: "user" as const,
           },
         ]
-        for (const u of users) {
+        for (const u of seedUsers) {
           await ctx.db
-            .insert(user)
+            .insert(usersTable)
             .values(u)
             .onConflictDoUpdate({
-              target: user.id,
+              target: usersTable.id,
               set: {
                 email: u.email,
                 name: u.name,
@@ -50,7 +50,7 @@ const seedUsers: Seeder = {
             })
         }
 
-        console.log(`  -> users: ${users.map((user) => user.email).join(", ")}`)
+        console.log(`  -> users: ${seedUsers.map((u) => u.email).join(", ")}`)
       },
       catch: (error) => new SeedError({ reason: "Failed to seed users", cause: error }),
     }).pipe(Effect.asVoid),
@@ -64,7 +64,6 @@ const seedOrganizations: Seeder = {
         id: SEED_ORG_ID,
         name: SEED_ORG_NAME,
         slug: SEED_ORG_SLUG,
-        creatorId: SEED_OWNER_USER_ID,
       })
       yield* ctx.repositories.organization.save(org)
       console.log(`  -> organization: ${org.name} (${org.slug})`)

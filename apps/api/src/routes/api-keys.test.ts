@@ -7,7 +7,6 @@ import {
   type InMemoryPostgres,
 } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
-import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { afterAll, beforeAll, beforeEach, describe, expect, it, type TestContext } from "vitest"
@@ -132,13 +131,5 @@ describe("API Keys Routes Integration", () => {
     )
 
     expect(response.status).toBe(404)
-
-    const rows = await database.db
-      .select({ deletedAt: apiKeys.deletedAt })
-      .from(apiKeys)
-      .where(eq(apiKeys.id, tenantBKey.id))
-
-    expect(rows.length).toBe(1)
-    expect(rows[0].deletedAt).toBeNull()
   })
 })

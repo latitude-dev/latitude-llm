@@ -17,7 +17,7 @@ export function InviteMagicLinkEmail({ inviterName, organizationName, magicLinkU
   return (
     <ContainerLayout previewText={`${inviterName} invited you to join ${organizationName} on Latitude`}>
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>
-        You&apos;ve been invited
+        {`${inviterName} invited you`}
       </EmailText>
       <EmailText variant="body" className={emailDesignTokens.spacing.contentGap}>
         {`${inviterName} has invited you to join the ${organizationName} workspace on Latitude, an LLM observability platform for monitoring and evaluating AI applications.`}

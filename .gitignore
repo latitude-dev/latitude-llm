@@ -134,3 +134,7 @@ slate.json
 
 # Workflow test output
 workflow-test-output.txt
+
+# Better auth schema reference. Used to track schema drift between our custom
+# schema and better auth's default schema.
+packages/platform/db-postgres/better-auth.schema.reference.ts

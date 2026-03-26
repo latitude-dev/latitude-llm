@@ -1,4 +1,4 @@
-import { bigint, integer, uniqueIndex, varchar } from "drizzle-orm/pg-core"
+import { bigint, index, integer, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps } from "../schemaHelpers.ts"
 
 export const datasetVersions = latitudeSchema.table(
@@ -17,6 +17,7 @@ export const datasetVersions = latitudeSchema.table(
   },
   (t) => [
     organizationRLSPolicy("dataset_versions"),
+    index("dataset_versions_organization_id_idx").on(t.organizationId),
     uniqueIndex("dataset_versions_dataset_id_version_idx").on(t.datasetId, t.version),
   ],
 )

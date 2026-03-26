@@ -1,6 +1,6 @@
 import { generateId } from "@domain/shared"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
-import { member, organization, user } from "@platform/db-postgres/schema/better-auth"
+import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
 import { createRlsMiddleware, type InMemoryPostgres } from "@platform/testkit"
 import { encrypt, hashToken, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
@@ -52,23 +52,21 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
   const authApiKeyId = generateId()
   const memberId = generateId()
 
-  await database.db.insert(user).values({
+  await database.db.insert(users).values({
     id: userId,
     email: `${userId}@example.com`,
     name: "Test User",
     emailVerified: true,
     role: "user",
-    banned: false,
   })
 
-  await database.db.insert(organization).values({
+  await database.db.insert(organizations).values({
     id: organizationId,
     name: `Organization ${organizationId}`,
     slug: `org-${organizationId}`,
-    creatorId: userId,
   })
 
-  await database.db.insert(member).values({
+  await database.db.insert(members).values({
     id: memberId,
     organizationId,
     userId,

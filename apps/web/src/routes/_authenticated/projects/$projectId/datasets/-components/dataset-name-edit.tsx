@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 import { Loader2, Trash2 } from "lucide-react"
 import { useCallback, useState } from "react"
 import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
-import { deleteDatasetMutation, updateDatasetMutation } from "../../../../../../domains/datasets/datasets.functions.ts"
+import { deleteDatasetFunction, updateDataset } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
 import { parseServerError } from "../../../../../../lib/errors.ts"
 
@@ -37,7 +37,7 @@ export function DatasetNameEdit({
     setSaving(true)
     setError(null)
     try {
-      await updateDatasetMutation({
+      await updateDataset({
         data: {
           datasetId: dataset.id,
           name: editName,
@@ -65,7 +65,7 @@ export function DatasetNameEdit({
   const confirmDelete = useCallback(async () => {
     setDeleting(true)
     try {
-      await deleteDatasetMutation({ data: { datasetId: dataset.id } })
+      await deleteDatasetFunction({ data: { datasetId: dataset.id } })
       const qc = getQueryClient()
       qc.invalidateQueries({ queryKey: ["datasets", projectId] })
       qc.invalidateQueries({ queryKey: ["dataset", dataset.id] })

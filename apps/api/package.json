@@ -26,12 +26,9 @@
     "@platform/env": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
-    "@types/pg": "catalog:",
-    "drizzle-orm": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
-    "pg": "catalog:",
     "tsx": "catalog:",
     "zod": "catalog:"
   },

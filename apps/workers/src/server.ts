@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { fileURLToPath } from "node:url"
+import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
-import { createPollingOutboxConsumer } from "@platform/events-outbox"
 import {
   createBullMqQueueConsumer,
   createBullMqQueuePublisher,
