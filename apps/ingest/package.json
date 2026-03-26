@@ -25,7 +25,6 @@
     "@platform/storage-object": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
-    "dotenv": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
     "tsx": "catalog:"

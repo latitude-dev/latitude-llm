@@ -1,6 +1,4 @@
-import { existsSync } from "node:fs"
 import { createServer } from "node:http"
-import { fileURLToPath } from "node:url"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import {
@@ -10,7 +8,7 @@ import {
   loadBullMqConfig,
 } from "@platform/queue-bullmq"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
-import { config as loadDotenv } from "dotenv"
+import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
@@ -27,13 +25,7 @@ import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
 
-const nodeEnv = process.env.NODE_ENV || "development"
-if (import.meta.url) {
-  const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-  if (existsSync(envFilePath)) {
-    loadDotenv({ path: envFilePath, quiet: true })
-  }
-}
+loadDevelopmentEnvironments(import.meta.url)
 
 const bootstrap = async () => {
   await initializeObservability({
@@ -77,21 +69,28 @@ const bootstrap = async () => {
     )
 
     const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
-
     const workflowStarter = await getWorkflowStarter()
-    createDomainEventsWorker(queueConsumer, queuePublisher, workflowStarter)
-    createMagicLinkEmailWorker(queueConsumer)
-    createUserDeletionWorker(queueConsumer)
-    createApiKeysWorker(queueConsumer)
-    createSpanIngestionWorker(queueConsumer, eventsPublisher)
-    createDatasetExportWorker(queueConsumer)
-    createLiveTracesWorker(queueConsumer)
-    createIssuesWorker(queueConsumer)
-    createScoresWorker(queueConsumer)
-    createAnnotationScoresWorker(queueConsumer)
-    createLiveEvaluationsWorker(queueConsumer)
-    createLiveAnnotationQueuesWorker(queueConsumer)
-    createSystemAnnotationQueuesWorker(queueConsumer)
+
+    const ctx = {
+      consumer: queueConsumer,
+      publisher: queuePublisher,
+      eventsPublisher,
+      workflowStarter,
+    }
+
+    createDomainEventsWorker(ctx)
+    createMagicLinkEmailWorker(ctx)
+    createUserDeletionWorker(ctx)
+    createApiKeysWorker(ctx)
+    createSpanIngestionWorker(ctx)
+    createDatasetExportWorker(ctx)
+    createLiveTracesWorker(ctx)
+    createIssuesWorker(ctx)
+    createScoresWorker(ctx)
+    createAnnotationScoresWorker(ctx)
+    createLiveEvaluationsWorker(ctx)
+    createLiveAnnotationQueuesWorker(ctx)
+    createSystemAnnotationQueuesWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start())
     await Effect.runPromise(queueConsumer.start())

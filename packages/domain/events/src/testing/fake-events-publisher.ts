@@ -1,12 +1,12 @@
 import { Effect } from "effect"
-import type { EventEnvelope, EventsPublisher } from "../index.ts"
+import type { DomainEvent, EventsPublisher } from "../index.ts"
 
 export const createFakeEventsPublisher = <TError = never>(overrides?: Partial<EventsPublisher<TError>>) => {
-  const published: EventEnvelope[] = []
+  const published: DomainEvent[] = []
 
   const publisher: EventsPublisher<TError> = {
-    publish: (envelope: EventEnvelope) => {
-      published.push(envelope)
+    publish: (event: DomainEvent) => {
+      published.push(event)
       return Effect.void
     },
     ...overrides,

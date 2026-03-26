@@ -1,6 +1,6 @@
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
-import { deleteFromDisk, generateId, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { deleteFromDisk, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { SpanRepository } from "@domain/spans"
 import { decodeOtlpProtobuf, type OtlpExportTraceServiceRequest, transformOtlpToSpans } from "@domain/spans/otlp"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -11,11 +11,11 @@ import { getClickhouseClient, getStorageDisk } from "../clients.ts"
 
 const logger = createLogger("span-ingestion")
 
-interface SpanIngestionWorkerDependencies {
-  readonly clickhouseClient?: ClickHouseClient
-  readonly disk?: StorageDiskPort
-  readonly eventsPublisher?: EventsPublisher<QueuePublishError>
-  readonly logger?: Pick<typeof logger, "error">
+interface SpanIngestionDeps {
+  consumer: QueueConsumer
+  eventsPublisher: EventsPublisher<QueuePublishError>
+  clickhouseClient?: ClickHouseClient
+  disk?: StorageDiskPort
 }
 
 function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
@@ -29,15 +29,16 @@ function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceS
   }
 }
 
-export const createSpanIngestionWorker = (
-  consumer: QueueConsumer,
-  eventsPublisher: EventsPublisher<QueuePublishError>,
-  deps: SpanIngestionWorkerDependencies = {},
-) => {
-  const chClient = deps.clickhouseClient ?? getClickhouseClient()
-  const disk = deps.disk ?? getStorageDisk()
-  const pub = deps.eventsPublisher ?? eventsPublisher
-  const workerLogger = deps.logger ?? logger
+export const createSpanIngestionWorker = ({
+  consumer,
+  eventsPublisher,
+  clickhouseClient,
+  disk: diskDep,
+}: SpanIngestionDeps) => {
+  const chClient = clickhouseClient ?? getClickhouseClient()
+  const disk = diskDep ?? getStorageDisk()
+  const pub = eventsPublisher
+  const workerLogger = logger
 
   consumer.subscribe("span-ingestion", {
     ingest: (wire) => {
@@ -81,11 +82,7 @@ export const createSpanIngestionWorker = (
         const traceIds = new Set(spans.map((s) => s.traceId))
         yield* Effect.all(
           [...traceIds].map((traceId) =>
-            pub.publish({
-              id: generateId(),
-              event: { name: "SpanIngested", organizationId, payload: { organizationId, projectId, traceId } },
-              occurredAt: new Date(),
-            }),
+            pub.publish({ name: "SpanIngested", organizationId, payload: { organizationId, projectId, traceId } }),
           ),
           { concurrency: "unbounded" },
         )

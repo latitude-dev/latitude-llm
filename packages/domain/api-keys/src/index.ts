@@ -6,7 +6,6 @@ export {
   revoke,
   touch,
 } from "./entities/api-key.ts"
-export { type ApiKeyCreatedEvent, createApiKeyCreatedEvent } from "./events/api-key-created.ts"
 export { ApiKeyRepository } from "./ports/api-key-repository.ts"
 
 export {

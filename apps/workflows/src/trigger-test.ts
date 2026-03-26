@@ -30,18 +30,12 @@
  *   [timestamp] 4/4 syncProjections: I am issue ..., projections up to date. Discovery complete!
  */
 
-import { existsSync, writeFileSync } from "node:fs"
+import { writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { createTemporalClient, loadTemporalConfig } from "@platform/workflows-temporal"
-import { config as loadDotenv } from "dotenv"
+import { loadDevelopmentEnvironments } from "@repo/utils/env"
 
-const nodeEnv = process.env.NODE_ENV || "development"
-for (const envPath of [join(process.cwd(), `.env.${nodeEnv}`), join(process.cwd(), "..", "..", `.env.${nodeEnv}`)]) {
-  if (existsSync(envPath)) {
-    loadDotenv({ path: envPath, quiet: true })
-    break
-  }
-}
+loadDevelopmentEnvironments(import.meta.url)
 
 const repoRoot = join(process.cwd(), "..", "..")
 const logFile = join(repoRoot, "workflow-test-output.txt")

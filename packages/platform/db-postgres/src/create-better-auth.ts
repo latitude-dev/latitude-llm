@@ -1,3 +1,4 @@
+import type { DBAdapter } from "@better-auth/core/db/adapter"
 import { type StripeOptions, type StripePlugin, stripe } from "@better-auth/stripe"
 import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
@@ -87,21 +88,23 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         })
       : null
 
+  const database = drizzleAdapter(config.client.db, {
+    provider: "pg",
+    usePlural: true,
+    schema: {
+      users,
+      sessions,
+      accounts,
+      verifications,
+      organizations,
+      members,
+      invitations,
+      subscriptions,
+    },
+  }) as unknown as DBAdapter
+
   return betterAuth({
-    database: drizzleAdapter(config.client.db, {
-      provider: "pg",
-      usePlural: true,
-      schema: {
-        users,
-        sessions,
-        accounts,
-        verifications,
-        organizations,
-        members,
-        invitations,
-        subscriptions,
-      },
-    }),
+    database,
     baseURL: baseUrl,
     basePath,
     secret,

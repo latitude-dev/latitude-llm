@@ -1,24 +1,28 @@
 import type { QueueConsumer } from "@domain/queue"
 import { saveScoreAnalyticsUseCase } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { type ClickHouseClient, ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { type PostgresClient, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("scores")
 
-interface ScoresWorkerDependencies {
-  readonly clickhouseClient?: ReturnType<typeof getClickhouseClient>
-  readonly postgresClient?: ReturnType<typeof getPostgresClient>
-  readonly logger?: Pick<typeof logger, "error" | "info">
-}
-
-export const createScoresWorker = (consumer: QueueConsumer, deps: ScoresWorkerDependencies = {}) => {
-  const chClient = deps.clickhouseClient ?? getClickhouseClient()
-  const pgClient = deps.postgresClient ?? getPostgresClient()
-  const workerLogger = deps.logger ?? logger
+export const createScoresWorker = ({
+  consumer,
+  clickhouseClient,
+  postgresClient,
+  logger: customLogger,
+}: {
+  consumer: QueueConsumer
+  clickhouseClient?: ClickHouseClient
+  postgresClient?: PostgresClient
+  logger?: Pick<typeof logger, "error" | "info">
+}) => {
+  const chClient = clickhouseClient ?? getClickhouseClient()
+  const pgClient = postgresClient ?? getPostgresClient()
+  const workerLogger = customLogger ?? logger
 
   consumer.subscribe("analytic-scores", {
     save: (payload) =>

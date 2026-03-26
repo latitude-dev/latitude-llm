@@ -1,5 +1,6 @@
-import type { EventEnvelope, EventsPublisher } from "@domain/events"
+import type { DomainEvent, EventEnvelope, EventsPublisher } from "@domain/events"
 import type { QueuePublishError, QueuePublisherShape } from "@domain/queue"
+import { generateId } from "@domain/shared"
 import { z } from "zod"
 
 export const DomainEventSchema = z.object({
@@ -25,6 +26,10 @@ export const mapEnvelopeToDispatchPayload = (envelope: EventEnvelope) => ({
 })
 
 export const createEventsPublisher = (queuePublisher: QueuePublisherShape): EventsPublisher<QueuePublishError> => ({
-  publish: (envelope: EventEnvelope) =>
-    queuePublisher.publish("domain-events", "dispatch", mapEnvelopeToDispatchPayload(envelope)),
+  publish: (event: DomainEvent) =>
+    queuePublisher.publish("domain-events", "dispatch", {
+      id: generateId(),
+      event,
+      occurredAt: new Date().toISOString(),
+    }),
 })

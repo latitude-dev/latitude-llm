@@ -89,12 +89,12 @@ describe("createDatasetExportWorker", () => {
         }),
     }
 
-    createDatasetExportWorker(consumer, {
+    createDatasetExportWorker({
+      consumer,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
       disk,
       emailSender,
-      logger: { info: () => undefined, error: () => undefined },
     })
 
     await consumer.dispatchTask("dataset-export", "export", {

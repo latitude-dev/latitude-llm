@@ -146,7 +146,7 @@ Reliability background work uses the shared async substrate built in Phase 0:
 
 - `@domain/queue` for type-safe topic/task contracts, workflow contracts, and publisher/consumer interfaces
 - `@platform/queue-bullmq` for BullMQ transport with built-in dedupe and debounce
-- `@domain/events` for typed domain event definitions (`EventPayloads`, `KnownDomainEvent`)
+- `@domain/events` for typed domain event definitions (`EventPayloads`, `DomainEvent`)
 - `apps/workers` for topic consumers with typed `TaskHandlers<T>` maps
 - `apps/workflows` for durable multi-step Temporal workflows
 - `@platform/workflows-temporal` for Temporal client, worker, and typed `WorkflowStarterShape`
@@ -179,7 +179,7 @@ To add a new workflow:
 
 ### Typed domain events
 
-`EventPayloads` in `@domain/events` maps event names to payload shapes. `KnownDomainEvent` is a discriminated union derived from it.
+`EventPayloads` in `@domain/events` maps event names to payload shapes. `DomainEvent` is a discriminated union derived from it.
 
 To add a new domain event:
 
@@ -2342,7 +2342,7 @@ Row click opens a detailed view with:
 
 - [x] Extend the shared async substrate over `@domain/queue`, BullMQ, the existing `domain-events` dispatcher rail, and the existing Temporal-backed `apps/workflows` service, including PascalCase domain-event names, lower-kebab-case topic/task names, dispatcher-only `domain-events` handling, per-message dedupe/debounce options keyed by logical identity, the `apps/workers` topic-dispatcher pattern, the direct `createEventsPublisher(queuePublisher)` publication path for the reliability domain events introduced by this spec, and the generic workflow-start capabilities later phases will use.
 
-**Exit gate**: met. Centralized `TopicRegistry` + `WorkflowRegistry` in `@domain/queue`, typed `EventPayloads` + `KnownDomainEvent` in `@domain/events`, typed publish/subscribe/workflow-start APIs, runtime topic validation, BullMQ dedupe/debounce, all 11 topics with workers, domain-events dispatcher with full type narrowing, `@platform/workflows-temporal` package, and a working issue-discovery workflow scaffold. Later phases add registry entries and handler implementations — no core changes needed.
+**Exit gate**: met. Centralized `TopicRegistry` + `WorkflowRegistry` in `@domain/queue`, typed `EventPayloads` + `DomainEvent` in `@domain/events`, typed publish/subscribe/workflow-start APIs, runtime topic validation, BullMQ dedupe/debounce, all 11 topics with workers, domain-events dispatcher with full type narrowing, `@platform/workflows-temporal` package, and a working issue-discovery workflow scaffold. Later phases add registry entries and handler implementations — no core changes needed.
 
 ### (LAT-458) Phase 1 - Keep-Monitoring Settings Foundations
 

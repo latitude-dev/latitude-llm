@@ -1,5 +1,5 @@
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
-import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
 import { Data, Effect } from "effect"
@@ -20,11 +20,13 @@ type EventHandlerMap = {
 
 type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
 
-export const createDomainEventsWorker = (
-  consumer: QueueConsumer,
-  pub: QueuePublisherShape,
-  _workflows: WorkflowStarterShape,
-) => {
+export const createDomainEventsWorker = ({
+  consumer,
+  publisher: pub,
+}: {
+  consumer: QueueConsumer
+  publisher: QueuePublisherShape
+}) => {
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) => pub.publish("magic-link-email", "send", event.payload),
 
@@ -65,7 +67,10 @@ export const createDomainEventsWorker = (
                     projectId: event.payload.projectId,
                     issueId: event.payload.issueId,
                   },
-                  { dedupeKey: `issues:refresh:${event.payload.issueId}`, debounceMs: ISSUE_REFRESH_DEBOUNCE_MS },
+                  {
+                    dedupeKey: `issues:refresh:${event.payload.issueId}`,
+                    debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
+                  },
                 ),
               ]),
         ],
@@ -94,7 +99,10 @@ export const createDomainEventsWorker = (
       const maybeHandler = handlers[name]
 
       if (!maybeHandler) {
-        const err = new UnhandledEventError({ name: event.name, eventId: envelope.id })
+        const err = new UnhandledEventError({
+          name: event.name,
+          eventId: envelope.id,
+        })
         return Effect.fail(err)
       }
 

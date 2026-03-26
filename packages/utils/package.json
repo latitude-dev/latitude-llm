@@ -15,7 +15,12 @@
   "devDependencies": {
     "@repo/vitest-config": "workspace:*"
   },
+  "exports": {
+    ".": "./src/index.ts",
+    "./env": "./src/env.ts"
+  },
   "dependencies": {
+    "dotenv": "catalog:",
     "effect": "catalog:"
   }
 }

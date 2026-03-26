@@ -4,7 +4,11 @@ import { Effect } from "effect"
 
 const logger = createLogger("system-annotation-queues")
 
-export const createSystemAnnotationQueuesWorker = (consumer: QueueConsumer) => {
+interface SystemAnnotationQueuesDeps {
+  consumer: QueueConsumer
+}
+
+export const createSystemAnnotationQueuesWorker = ({ consumer }: SystemAnnotationQueuesDeps) => {
   consumer.subscribe("system-annotation-queues", {
     flag: () => Effect.sync(() => logger.info("Stub handler for system-annotation-queues:flag")),
     annotate: () => Effect.sync(() => logger.info("Stub handler for system-annotation-queues:annotate")),

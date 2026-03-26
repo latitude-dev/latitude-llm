@@ -1,22 +1,15 @@
-import { existsSync } from "node:fs"
-import { fileURLToPath } from "node:url"
 import { serve } from "@hono/node-server"
 import { parseEnv } from "@platform/env"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { isHttpError, toHttpResponse } from "@repo/utils"
-import { config as loadDotenv } from "dotenv"
+import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { getQueuePublisher } from "./clients.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { IngestEnv } from "./types.ts"
 
-const nodeEnv = process.env.NODE_ENV || "development"
-// Load .env file for local development; skipped in production containers where the file won't exist
-if (import.meta.url) {
-  const envFilePath = fileURLToPath(new URL(`../../../.env.${nodeEnv}`, import.meta.url))
-  if (existsSync(envFilePath)) loadDotenv({ path: envFilePath, quiet: true })
-}
+loadDevelopmentEnvironments(import.meta.url)
 
 const start = async () => {
   await initializeObservability({

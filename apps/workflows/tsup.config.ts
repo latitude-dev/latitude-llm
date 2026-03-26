@@ -11,6 +11,7 @@ export default defineConfig({
   splitting: false,
   sourcemap: true,
   clean: true,
+  shims: true,
   esbuildOptions(options) {
     options.plugins = [
       ...(options.plugins ?? []),

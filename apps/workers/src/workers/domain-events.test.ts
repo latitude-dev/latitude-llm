@@ -1,5 +1,5 @@
 import type { EventEnvelope } from "@domain/events"
-import type { QueueConsumer, QueueName, TaskHandlers, WorkflowStarterShape } from "@domain/queue"
+import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -44,16 +44,12 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
   occurredAt: envelope.occurredAt.toISOString(),
 })
 
-const noopStarter: WorkflowStarterShape = {
-  start: () => Effect.void,
-}
-
 describe("domain-events dispatcher", () => {
   it("routes MagicLinkEmailRequested to magic-link-email:send", async () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({ consumer, publisher })
 
     const envelope = makeEnvelope("MagicLinkEmailRequested", {
       email: "a@b.com",
@@ -77,7 +73,7 @@ describe("domain-events dispatcher", () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({ consumer, publisher })
 
     const envelope = makeEnvelope(
       "OrganizationCreated",
@@ -100,7 +96,10 @@ describe("domain-events dispatcher", () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({
+      consumer,
+      publisher,
+    })
 
     const envelope = makeEnvelope("UserDeletionRequested", {
       organizationId: "org-1",
@@ -122,7 +121,10 @@ describe("domain-events dispatcher", () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({
+      consumer,
+      publisher,
+    })
 
     const envelope = makeEnvelope("SpanIngested", {
       projectId: "proj-1",
@@ -134,7 +136,10 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("live-traces")
     expect(published[0]?.task).toBe("end")
-    expect(published[0]?.payload).toEqual({ projectId: "proj-1", traceId: "trace-abc" })
+    expect(published[0]?.payload).toEqual({
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
     expect(published[0]?.options?.dedupeKey).toBe("live-traces:end:org-1:proj-1:trace-abc")
     expect(published[0]?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
   })
@@ -143,7 +148,10 @@ describe("domain-events dispatcher", () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({
+      consumer,
+      publisher,
+    })
 
     const envelope = makeEnvelope("TraceEnded", {
       organizationId: "org-1",
@@ -165,7 +173,10 @@ describe("domain-events dispatcher", () => {
     const consumer = new TestQueueConsumer()
     const { publisher } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({
+      consumer,
+      publisher,
+    })
 
     const envelope = makeEnvelope("UnknownEvent", { foo: "bar" })
     const effect = consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope))
@@ -173,7 +184,10 @@ describe("domain-events dispatcher", () => {
     const result = await Effect.runPromise(
       effect.pipe(
         Effect.match({
-          onFailure: (error) => ({ ok: false as const, error: error as { _tag: string; name: string } }),
+          onFailure: (error) => ({
+            ok: false as const,
+            error: error as { _tag: string; name: string },
+          }),
           onSuccess: () => ({ ok: true as const, error: null }),
         }),
       ),
@@ -190,7 +204,7 @@ describe("domain-events dispatcher", () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({ consumer, publisher })
 
     const envelope = makeEnvelope("ScoreImmutable", {
       organizationId: "org-1",
@@ -204,7 +218,11 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(2)
     expect(published[0]?.queue).toBe("analytic-scores")
     expect(published[0]?.task).toBe("save")
-    expect(published[0]?.payload).toEqual({ organizationId: "org-1", projectId: "proj-1", scoreId: "score-1" })
+    expect(published[0]?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+    })
     expect(published[1]?.queue).toBe("issues")
     expect(published[1]?.task).toBe("refresh")
     expect(published[1]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
@@ -215,7 +233,7 @@ describe("domain-events dispatcher", () => {
     const consumer = new TestQueueConsumer()
     const { publisher, published } = createFakeQueuePublisher()
 
-    createDomainEventsWorker(consumer, publisher, noopStarter)
+    createDomainEventsWorker({ consumer, publisher })
 
     const envelope = makeEnvelope("ScoreImmutable", {
       organizationId: "org-1",
@@ -229,6 +247,10 @@ describe("domain-events dispatcher", () => {
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("analytic-scores")
     expect(published[0]?.task).toBe("save")
-    expect(published[0]?.payload).toEqual({ organizationId: "org-1", projectId: "proj-1", scoreId: "score-2" })
+    expect(published[0]?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-2",
+    })
   })
 })

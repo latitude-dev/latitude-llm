@@ -119,7 +119,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
             const worker = new Worker(
               queue,
               async (job) => {
-                const task = job.name ?? "default"
+                const task = job.name
                 const handler = handlers[task]
                 if (!handler) {
                   throw new Error(`Unknown task "${task}" on topic "${queue}" — no handler registered`)
