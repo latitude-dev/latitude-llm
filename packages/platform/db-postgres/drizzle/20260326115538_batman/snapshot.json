@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "fbc63ccc-6048-4339-935c-a40be8d8e145",
+  "id": "25605293-621f-49e7-b0d8-217641642036",
   "prevIds": [
     "d1994433-3308-45c3-b2bc-56ac3dc6d4e5"
   ],
@@ -624,19 +624,6 @@
       "table": "organizations"
     },
     {
-      "type": "varchar(24)",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "creator_id",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "organizations"
-    },
-    {
       "type": "jsonb",
       "typeSchema": null,
       "notNull": false,
@@ -1087,45 +1074,6 @@
       "generated": null,
       "identity": null,
       "name": "role",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "users"
-    },
-    {
-      "type": "boolean",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "false",
-      "generated": null,
-      "identity": null,
-      "name": "banned",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "users"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "ban_reason",
-      "entityType": "columns",
-      "schema": "latitude",
-      "table": "users"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "ban_expires",
       "entityType": "columns",
       "schema": "latitude",
       "table": "users"
@@ -2191,27 +2139,6 @@
       "nameExplicit": true,
       "columns": [
         {
-          "value": "creator_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "organizations_creator_id_idx",
-      "entityType": "indexes",
-      "schema": "latitude",
-      "table": "organizations"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
           "value": "user_id",
           "isExpression": false,
           "asc": true,
@@ -2887,23 +2814,6 @@
       "entityType": "fks",
       "schema": "latitude",
       "table": "members"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "creator_id"
-      ],
-      "schemaTo": "latitude",
-      "tableTo": "users",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "organizations_creator_id_users_id_fkey",
-      "entityType": "fks",
-      "schema": "latitude",
-      "table": "organizations"
     },
     {
       "nameExplicit": false,
