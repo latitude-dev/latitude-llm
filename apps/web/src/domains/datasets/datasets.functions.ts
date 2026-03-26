@@ -200,7 +200,7 @@ const listRowsCursorSchema = z.object({
   rowId: z.string(),
 })
 
-export const DATASET_ROW_SORT_COLUMNS = ["createdAt"] as const
+const DATASET_ROW_SORT_COLUMNS = ["createdAt"] as const
 
 export const listRowsQuery = createServerFn({ method: "GET" })
   .middleware([errorHandler])
