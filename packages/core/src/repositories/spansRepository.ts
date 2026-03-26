@@ -1,3 +1,4 @@
+import type { EvaluationResultV2 } from '@latitude-data/constants'
 import {
   and,
   asc,
@@ -11,57 +12,56 @@ import {
   isNull,
   lte,
   or,
+  type SQL,
   sql,
-  SQL,
 } from 'drizzle-orm'
 import { cache as redis } from '../cache'
+import { type Database, database } from '../client'
 import {
   DEFAULT_PAGINATION_SIZE,
   LogSources,
   MAIN_SPAN_TYPES,
-  Span,
   SPAN_METADATA_CACHE_TTL,
   SPAN_METADATA_STORAGE_KEY,
-  SpanMetadata,
+  type Span,
+  type SpanMetadata,
   SpanType,
 } from '../constants'
-import { diskFactory, DiskWrapper } from '../lib/disk'
+import { type DiskWrapper, diskFactory } from '../lib/disk'
 import { decompressToString } from '../lib/disk/compression'
 import { Result } from '../lib/Result'
+import { countByProjectAndSource as chCountByProjectAndSource } from '../queries/clickhouse/spans/countByProjectAndSource'
+import {
+  findByDocumentLogUuid as chFindByDocumentLogUuid,
+  findByDocumentLogUuids as chFindByDocumentLogUuids,
+  findFirstMainSpanByDocumentLogUuid as chFindFirstMainSpanByDocumentLogUuid,
+  findLastMainSpanByDocumentLogUuid as chFindLastMainSpanByDocumentLogUuid,
+  getLastTraceByLogUuid as chGetLastTraceByLogUuid,
+  getSpanIdentifiersByDocumentLogUuids as chGetSpanIdentifiersByDocumentLogUuids,
+  listByDocumentLogUuid as chListByDocumentLogUuid,
+  listTraceIdsByLogUuid as chListTraceIdsByLogUuid,
+} from '../queries/clickhouse/spans/findByDocumentLogUuid'
+import {
+  findByParentAndType as chFindByParentAndType,
+  findBySpanAndTraceIdPairs as chFindBySpanAndTraceIdPairs,
+  findCompletionsByParentIds as chFindCompletionsByParentIds,
+} from '../queries/clickhouse/spans/findBySpanAndTraceIds'
+import {
+  findByDocumentAndCommitLimited as chFindByDocumentAndCommitLimited,
+  findByProjectLimited as chFindByProjectLimited,
+} from '../queries/clickhouse/spans/findLimited'
+import { findSpan as chFindSpan } from '../queries/clickhouse/spans/get'
+import { getByDocumentLogUuidAndSpanId as chGetByDocumentLogUuidAndSpanId } from '../queries/clickhouse/spans/getByDocumentLogUuidAndSpanId'
+import { findSpans as chFindSpans } from '../queries/clickhouse/spans/list'
+import { spans } from '../schema/models/spans'
 import {
   applyDefaultSpansCreatedAtRange,
   normalizeCreatedAtRange,
   shouldFallbackToAllTime,
 } from '../services/spans/defaultCreatedAtWindow'
-import { spans } from '../schema/models/spans'
-import Repository from './repositoryV2'
-import { EvaluationResultV2 } from '@latitude-data/constants'
-import { findSpan as chFindSpan } from '../queries/clickhouse/spans/get'
-import { findSpans as chFindSpans } from '../queries/clickhouse/spans/list'
-import {
-  findByDocumentAndCommitLimited as chFindByDocumentAndCommitLimited,
-  findByProjectLimited as chFindByProjectLimited,
-} from '../queries/clickhouse/spans/findLimited'
-import {
-  getLastTraceByLogUuid as chGetLastTraceByLogUuid,
-  listTraceIdsByLogUuid as chListTraceIdsByLogUuid,
-  findByDocumentLogUuids as chFindByDocumentLogUuids,
-  findByDocumentLogUuid as chFindByDocumentLogUuid,
-  listByDocumentLogUuid as chListByDocumentLogUuid,
-  findLastMainSpanByDocumentLogUuid as chFindLastMainSpanByDocumentLogUuid,
-  findFirstMainSpanByDocumentLogUuid as chFindFirstMainSpanByDocumentLogUuid,
-  getSpanIdentifiersByDocumentLogUuids as chGetSpanIdentifiersByDocumentLogUuids,
-} from '../queries/clickhouse/spans/findByDocumentLogUuid'
-import { getByDocumentLogUuidAndSpanId as chGetByDocumentLogUuidAndSpanId } from '../queries/clickhouse/spans/getByDocumentLogUuidAndSpanId'
-import {
-  findBySpanAndTraceIdPairs as chFindBySpanAndTraceIdPairs,
-  findByParentAndType as chFindByParentAndType,
-  findCompletionsByParentIds as chFindCompletionsByParentIds,
-} from '../queries/clickhouse/spans/findBySpanAndTraceIds'
-import { countByProjectAndSource as chCountByProjectAndSource } from '../queries/clickhouse/spans/countByProjectAndSource'
-import { Database, database } from '../client'
 import { isClickHouseSpansReadEnabled } from '../services/workspaceFeatures/isClickHouseSpansReadEnabled'
 import { captureException } from '../utils/datadogCapture'
+import Repository from './repositoryV2'
 
 const tt = getTableColumns(spans)
 

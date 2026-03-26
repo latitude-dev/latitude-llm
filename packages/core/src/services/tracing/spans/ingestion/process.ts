@@ -2,44 +2,58 @@ import { database } from '../../../../client'
 import {
   ATTRIBUTES,
   Otlp,
-  SpanAttribute,
+  type SpanAttribute,
   SpanStatus,
   SpanType,
   VALUES,
 } from '../../../../constants'
 import { unsafelyFindWorkspace } from '../../../../data-access/workspaces'
 import { UnprocessableEntityError } from '../../../../lib/errors'
-import { Result, TypedResult } from '../../../../lib/Result'
+import { Result, type TypedResult } from '../../../../lib/Result'
 import { findApiKeyById } from '../../../../queries/apiKeys/findById'
 import { selectFirstApiKey } from '../../../../queries/apiKeys/selectFirst'
-import { type ApiKey } from '../../../../schema/models/types/ApiKey'
-import { type Workspace } from '../../../../schema/models/types/Workspace'
-import { internalBaggageSchema } from '../../../../telemetry'
+import type { ApiKey } from '../../../../schema/models/types/ApiKey'
+import type { Workspace } from '../../../../schema/models/types/Workspace'
+import {
+  type InternalBaggage,
+  internalBaggageSchema,
+} from '../../../../telemetry'
+
+type IngestionIdentityCache = {
+  workspaces: Map<number, Workspace>
+  apiKeysByWorkspaceAndId: Map<string, ApiKey>
+  firstApiKeyByWorkspace: Map<number, ApiKey>
+}
 
 function convertSpanAttribute(
   attribute: Otlp.AttributeValue,
 ): TypedResult<SpanAttribute> {
-  if (attribute.stringValue != undefined) {
+  if (attribute.stringValue !== undefined) {
     return Result.ok(attribute.stringValue)
   }
 
-  if (attribute.intValue != undefined) {
+  if (attribute.intValue !== undefined) {
     return Result.ok(attribute.intValue)
   }
 
-  if (attribute.boolValue != undefined) {
+  if (attribute.boolValue !== undefined) {
     return Result.ok(attribute.boolValue)
   }
 
-  if (attribute.arrayValue != undefined) {
+  if (attribute.arrayValue !== undefined) {
     const arrayValues = attribute.arrayValue.values
     if (!arrayValues || arrayValues.length === 0) {
       return Result.ok([])
     }
     const values = arrayValues.map(convertSpanAttribute)
-    if (values.some((v) => v.error)) return Result.error(values[0]!.error!)
+    const errorResult = values.find((v) => v.error)
+    if (errorResult?.error) return Result.error(errorResult.error)
 
-    return Result.ok(values.map((v) => v.value!))
+    const convertedValues = values
+      .map((v) => v.value)
+      .filter((value): value is SpanAttribute => value !== undefined)
+
+    return Result.ok(convertedValues)
   }
 
   return Result.error(new UnprocessableEntityError('Invalid attribute value'))
@@ -158,16 +172,19 @@ export function extractSpanType(
   }
 
   // Fallback: If we have system instructions, input messages, or output messages, it's likely a completion
-  const genAiSystemInstructions = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.systemInstructions] // prettier-ignore
-  const genAiInput = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.input.messages] // prettier-ignore
-  const genAiOutput = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.output.messages] // prettier-ignore
+  const genAiSystemInstructions =
+    attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.systemInstructions]
+  const genAiInput = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.input.messages]
+  const genAiOutput =
+    attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI.output.messages]
   if (genAiSystemInstructions || genAiInput || genAiOutput) {
     return Result.ok(SpanType.Completion)
   }
 
   // Fallback: If we have gen_ai.system and gen_ai.request.model, it's likely a completion
   // This handles instrumentations like Bedrock that don't set an explicit operation type
-  const genAiSystem = attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system] // prettier-ignore
+  const genAiSystem =
+    attributes[ATTRIBUTES.OPENTELEMETRY.GEN_AI._deprecated.system]
   const genAiRequestModel = attributes[ATTRIBUTES.LATITUDE.request.model]
   if (genAiSystem && genAiRequestModel) {
     return Result.ok(SpanType.Completion)
@@ -194,33 +211,59 @@ export async function extractApiKeyAndWorkspace(
     apiKeyId,
     workspaceId,
     attributes,
+    cache,
   }: {
     apiKeyId?: number
     workspaceId?: number
     attributes: Record<string, SpanAttribute>
+    cache?: IngestionIdentityCache
   },
   db = database,
 ): Promise<TypedResult<{ apiKey: ApiKey; workspace: Workspace }>> {
-  let internal
+  let internal: InternalBaggage | undefined
   if (!workspaceId) {
     const extracting = extractInternal(attributes)
     if (extracting.error) return Result.error(extracting.error)
     internal = extracting.value
   }
 
-  const gettingWorkspace = await getWorkspace(
-    { workspaceId: workspaceId ?? internal?.workspaceId },
-    db,
-  )
+  const resolvedWorkspaceId = workspaceId ?? internal?.workspaceId
+  if (!resolvedWorkspaceId) {
+    return Result.error(new UnprocessableEntityError('Workspace is required'))
+  }
+
+  const cachedWorkspace = cache?.workspaces.get(resolvedWorkspaceId)
+  const gettingWorkspace = cachedWorkspace
+    ? Result.ok(cachedWorkspace)
+    : await getWorkspace({ workspaceId: resolvedWorkspaceId }, db)
   if (gettingWorkspace.error) return Result.error(gettingWorkspace.error)
   const workspace = gettingWorkspace.value
+  cache?.workspaces.set(workspace.id, workspace)
 
-  const gettingApiKey = await getApiKey(
-    { apiKeyId: apiKeyId ?? internal?.apiKeyId, workspace },
-    db,
-  )
+  const resolvedApiKeyId = apiKeyId ?? internal?.apiKeyId
+  const apiKeyCacheKey =
+    resolvedApiKeyId !== undefined
+      ? `${workspace.id}:${resolvedApiKeyId}`
+      : undefined
+  const cachedApiKey =
+    apiKeyCacheKey !== undefined
+      ? cache?.apiKeysByWorkspaceAndId.get(apiKeyCacheKey)
+      : cache?.firstApiKeyByWorkspace.get(workspace.id)
+
+  const gettingApiKey = cachedApiKey
+    ? Result.ok(cachedApiKey)
+    : await getApiKey({ apiKeyId: resolvedApiKeyId, workspace }, db)
   if (gettingApiKey.error) return Result.error(gettingApiKey.error)
   const apiKey = gettingApiKey.value
+
+  if (resolvedApiKeyId !== undefined) {
+    cache?.apiKeysByWorkspaceAndId.set(
+      `${workspace.id}:${resolvedApiKeyId}`,
+      apiKey,
+    )
+  } else {
+    cache?.firstApiKeyByWorkspace.set(workspace.id, apiKey)
+  }
 
   return Result.ok({ apiKey, workspace })
 }
