@@ -7,9 +7,11 @@ export default defineConfig({
   outDir: "dist",
   platform: "node",
   noExternal: [/@(platform|domain|repo)\/.*/],
+  external: ["@temporalio/worker"],
   splitting: false,
   sourcemap: true,
   clean: true,
+  shims: true,
   esbuildOptions(options) {
     options.plugins = [
       ...(options.plugins ?? []),

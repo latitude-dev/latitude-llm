@@ -1,10 +1,9 @@
 import { type StripeOptions, type StripePlugin, stripe } from "@better-auth/stripe"
 import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
-import { betterAuth } from "better-auth"
+import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { magicLink, organization as organizationPlugin } from "better-auth/plugins"
-import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
 import Stripe from "stripe"
 import type { PostgresClient } from "./client.ts"
@@ -53,7 +52,7 @@ export interface BetterAuthConfig {
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
   readonly trustedOrigins?: string[]
   readonly basePath?: string
-  readonly enableTanStackCookies?: boolean
+  readonly extraPlugins?: BetterAuthOptions["plugins"]
 }
 
 export interface StripePlanConfig {
@@ -164,7 +163,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         expiresIn: 3600,
         allowedAttempts: 5,
       }),
-      tanstackStartCookies(),
+      ...(config.extraPlugins ?? []),
       ...(stripeClient && stripeWebhookSecret
         ? [
             stripe({

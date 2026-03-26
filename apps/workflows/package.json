@@ -18,6 +18,7 @@
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",
     "@temporalio/workflow": "catalog:",
+    "@temporalio/worker": "catalog:",
     "dotenv": "catalog:",
     "effect": "catalog:",
     "tsx": "catalog:"

@@ -5,6 +5,7 @@ import { createBetterAuth, createOutboxWriter, createPostgresClient, type Postgr
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
+import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
 
 let postgresClientInstance: PostgresClient | undefined
@@ -121,7 +122,7 @@ export const getBetterAuth = () => {
       baseUrl: webUrl,
       basePath: "/api/auth",
       trustedOrigins,
-      enableTanStackCookies: true,
+      extraPlugins: [tanstackStartCookies()],
       sendMagicLink: async ({ email, url }) => {
         const invitationInfo = getInvitationInfoFromMagicLinkUrl({
           magicLinkUrl: url,
