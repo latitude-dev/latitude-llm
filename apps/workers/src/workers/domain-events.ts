@@ -1,4 +1,4 @@
-import type { DomainEvent, EventEnvelope, EventPayloads, KnownDomainEvent } from "@domain/events"
+import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
@@ -18,7 +18,7 @@ type EventHandlerMap = {
   [E in keyof EventPayloads]: (event: DomainEvent<E, EventPayloads[E]>) => Effect.Effect<void, unknown>
 }
 
-type EventHandlerFn = (e: KnownDomainEvent) => Effect.Effect<void, unknown>
+type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
 
 export const createDomainEventsWorker = (
   consumer: QueueConsumer,
@@ -87,7 +87,7 @@ export const createDomainEventsWorker = (
         return Effect.void
       }
 
-      const envelope = parsed.data as EventEnvelope<KnownDomainEvent>
+      const envelope = parsed.data as EventEnvelope<DomainEvent>
       const { event } = envelope
       const name = event.name as keyof EventPayloads
 
