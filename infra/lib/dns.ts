@@ -117,11 +117,20 @@ export function createDnsRecords(
     })
 
     // MX records for notifications.latitude.so
-    records.notificationsMx = new aws.route53.Record(`${name}-notifications-mx`, {
+    records.notificationsMx1 = new aws.route53.Record(`${name}-notifications-mx1`, {
       zoneId: hostedZoneId,
       name: "notifications.latitude.so",
       type: "MX",
-      records: ["10 mxa.eu.mailgun.org", "10 mxb.eu.mailgun.org"],
+      records: ["10 mxa.eu.mailgun.org"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
+    records.notificationsMx2 = new aws.route53.Record(`${name}-notifications-mx2`, {
+      zoneId: hostedZoneId,
+      name: "notifications.latitude.so",
+      type: "MX",
+      records: ["10 mxb.eu.mailgun.org"],
       ttl: 300,
       allowOverwrite: true,
     })
