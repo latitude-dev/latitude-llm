@@ -79,6 +79,7 @@ export {
 } from "./components/modal/primitives.tsx"
 export { ModelBadge, type ModelBadgeProps } from "./components/model-badge/model-badge.tsx"
 export { RichTextEditor, type RichTextEditorProps } from "./components/rich-text-editor/rich-text-editor.tsx"
+export { ScrollNavigator, type ScrollNavigatorHandle } from "./components/scroll-navigator/scroll-navigator.tsx"
 export { SegmentBar, type SegmentBarItem } from "./components/segment-bar/segment-bar.tsx"
 export {
   Select,

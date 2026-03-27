@@ -8,10 +8,12 @@ export function SpansTab({
   traceId,
   selectedSpanId,
   onSelectSpan,
+  isActive,
 }: {
   readonly traceId: string
   readonly selectedSpanId: string
   readonly onSelectSpan: (spanId: string) => void
+  readonly isActive: boolean
 }) {
   const { data: spans } = useSpansByTraceCollection(traceId)
   const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
@@ -72,6 +74,7 @@ export function SpansTab({
         onSelectSpan={handleSelectSpan}
         isMinimized={isMinimized}
         onToggleMinimized={handleToggleMinimized}
+        isActive={isActive}
       />
       {selectedSpanId !== "" && <SpanDetail traceId={traceId} spanId={selectedSpanId} onClose={handleCloseDetail} />}
     </div>

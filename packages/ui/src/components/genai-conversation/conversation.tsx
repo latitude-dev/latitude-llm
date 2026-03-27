@@ -1,7 +1,7 @@
 import { cn, Text } from "@repo/ui"
-import { type RefObject, useRef } from "react"
+import { type ReactNode, type Ref, type RefObject, useMemo, useRef } from "react"
 import type { GenAIMessage, GenAIPart, GenAISystem } from "rosetta-ai"
-import { ScrollNavigator } from "../scroll-navigator/scroll-navigator.tsx"
+import { ScrollNavigator, type ScrollNavigatorHandle } from "../scroll-navigator/scroll-navigator.tsx"
 import { Message, type ToolCallActions } from "./message.tsx"
 import { Part, type ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
@@ -82,6 +82,10 @@ export function Conversation({
   messages,
   enableNavigator = false,
   scrollContainerRef,
+  navigatorRef,
+  navItemRefsRef,
+  prevLabel,
+  nextLabel,
   messageActions,
   toolCallActions,
 }: {
@@ -89,26 +93,44 @@ export function Conversation({
   readonly messages: readonly (GenAIMessage | null)[]
   readonly enableNavigator?: boolean
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
+  /** Ref to imperatively call navigate() on the ScrollNavigator (e.g. from a keyboard shortcut). */
+  readonly navigatorRef?: Ref<ScrollNavigatorHandle>
+  /**
+   * When provided, Conversation writes message element refs into this ref instead of an internal one,
+   * and does NOT render its own ScrollNavigator. The parent is responsible for rendering ScrollNavigator
+   * and positioning it (e.g. absolutely outside the scroll container).
+   */
+  readonly navItemRefsRef?: RefObject<(HTMLDivElement | null)[]>
+  /** Custom label for the "previous" navigator button (e.g. with a HotkeyBadge). */
+  readonly prevLabel?: ReactNode
+  /** Custom label for the "next" navigator button (e.g. with a HotkeyBadge). */
+  readonly nextLabel?: ReactNode
   /** Map of original message index → action, renders a floating navigate button on attributed assistant messages. */
   readonly messageActions?: ReadonlyMap<number, () => void>
   /** Map of toolCallId → action, renders a navigate button inside each ToolCallBlock. */
   readonly toolCallActions?: ToolCallActions
 }) {
-  const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const internalNavItemRefs = useRef<(HTMLDivElement | null)[]>([])
+  // If the parent provides navItemRefsRef it owns the ScrollNavigator; use their ref directly.
+  const navItemRefs = navItemRefsRef ?? internalNavItemRefs
 
   const hasSystem = !!(systemInstructions && systemInstructions.length > 0)
-  const { resultMap, absorbedIndexes } = buildToolResultsMap(messages)
+  const { resultMap, visibleMessages } = useMemo(() => {
+    const { resultMap, absorbedIndexes } = buildToolResultsMap(messages)
 
-  const visibleMessages = messages.reduce<{ message: GenAIMessage; index: number }[]>((acc, msg, i) => {
-    if (!msg) return acc
-    if (absorbedIndexes.has(i)) return acc
+    const visibleMessages = messages.reduce<{ message: GenAIMessage; index: number }[]>((acc, msg, i) => {
+      if (!msg) return acc
+      if (absorbedIndexes.has(i)) return acc
 
-    acc.push({
-      message: normalizeMessage(msg),
-      index: i,
-    })
-    return acc
-  }, [])
+      acc.push({
+        message: normalizeMessage(msg),
+        index: i,
+      })
+      return acc
+    }, [])
+
+    return { resultMap, visibleMessages }
+  }, [messages])
 
   const totalNavItems = (hasSystem ? 1 : 0) + visibleMessages.length
   navItemRefs.current.length = totalNavItems
@@ -160,8 +182,14 @@ export function Conversation({
         )
       })}
 
-      {enableNavigator && scrollContainerRef && (
-        <ScrollNavigator scrollContainerRef={scrollContainerRef} itemRefs={navItemRefs} />
+      {enableNavigator && !navItemRefsRef && scrollContainerRef && (
+        <ScrollNavigator
+          ref={navigatorRef}
+          scrollContainerRef={scrollContainerRef}
+          itemRefs={navItemRefs}
+          {...(prevLabel !== undefined ? { prevLabel } : {})}
+          {...(nextLabel !== undefined ? { nextLabel } : {})}
+        />
       )}
     </div>
   )

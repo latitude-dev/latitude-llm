@@ -12,7 +12,7 @@ import {
   toast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-
+import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CirclePlus, Download, FileDownIcon, Trash2 } from "lucide-react"
@@ -354,6 +354,24 @@ function DatasetRowsView({
     }
     setRid("")
   }
+
+  useHotkeys([
+    {
+      hotkey: "J",
+      callback: () => navigateAdjacentRow(1),
+      options: { enabled: !!rid && canNavigateNext },
+    },
+    {
+      hotkey: "K",
+      callback: () => navigateAdjacentRow(-1),
+      options: { enabled: !!rid && canNavigatePrev },
+    },
+    {
+      hotkey: "Escape",
+      callback: closeRow,
+      options: { enabled: !!rid, ignoreInputs: true },
+    },
+  ])
 
   const handleSortChange = (next: InfiniteTableSorting) => {
     setSortBy(next.column)
