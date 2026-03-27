@@ -1,4 +1,4 @@
-import type { ProjectId, RepositoryError, ScoreId } from "@domain/shared"
+import type { IssueId, ProjectId, RepositoryError, ScoreId, SessionId, SpanId, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
@@ -19,20 +19,41 @@ export interface ScoreListPage {
   readonly offset: number
 }
 
-export class ScoreRepository extends ServiceMap.Service<
-  ScoreRepository,
-  {
-    findById(id: ScoreId): Effect.Effect<Score | null, RepositoryError>
-    save(score: Score): Effect.Effect<void, RepositoryError>
-    listByProjectId(input: {
-      readonly projectId: ProjectId
-      readonly options?: ScoreListOptions
-    }): Effect.Effect<ScoreListPage, RepositoryError>
-    listBySourceId(input: {
-      readonly projectId: ProjectId
-      readonly source: ScoreSource
-      readonly sourceId: string
-      readonly options?: ScoreListOptions
-    }): Effect.Effect<ScoreListPage, RepositoryError>
-  }
->()("@domain/scores/ScoreRepository") {}
+export interface ScoreRepositoryShape {
+  findById(id: ScoreId): Effect.Effect<Score | null, RepositoryError>
+  save(score: Score): Effect.Effect<void, RepositoryError>
+  listByProjectId(input: {
+    readonly projectId: ProjectId
+    readonly options?: ScoreListOptions
+  }): Effect.Effect<ScoreListPage, RepositoryError>
+  listBySourceId(input: {
+    readonly projectId: ProjectId
+    readonly source: ScoreSource
+    readonly sourceId: string
+    readonly options?: ScoreListOptions
+  }): Effect.Effect<ScoreListPage, RepositoryError>
+  listByTraceId(input: {
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly options?: ScoreListOptions
+  }): Effect.Effect<ScoreListPage, RepositoryError>
+  listBySessionId(input: {
+    readonly projectId: ProjectId
+    readonly sessionId: SessionId
+    readonly options?: ScoreListOptions
+  }): Effect.Effect<ScoreListPage, RepositoryError>
+  listBySpanId(input: {
+    readonly projectId: ProjectId
+    readonly spanId: SpanId
+    readonly options?: ScoreListOptions
+  }): Effect.Effect<ScoreListPage, RepositoryError>
+  listByIssueId(input: {
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+    readonly options?: ScoreListOptions
+  }): Effect.Effect<ScoreListPage, RepositoryError>
+}
+
+export class ScoreRepository extends ServiceMap.Service<ScoreRepository, ScoreRepositoryShape>()(
+  "@domain/scores/ScoreRepository",
+) {}

@@ -18,7 +18,6 @@ Reliability adds:
 
 - `simulation_id` on spans as an optional simulation link stored as a non-null `FixedString(24)` with the empty-string sentinel when absent
 - propagation of `simulation_id` into trace/session-level reporting where needed
-- a new session materialization, since the product explicitly talks about spans, traces, and sessions
 - a `SpanIngested` domain event emitted directly through `createEventsPublisher(queuePublisher)` after the span-ingestion process durably writes spans for a trace
 - a debounced `TraceEnded` domain event emitted directly through `createEventsPublisher(queuePublisher)` after a trace has received no new spans for a named debounce window whose initial default is `5 minutes`
 

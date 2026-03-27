@@ -18,6 +18,7 @@ import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { TRACE_FIELD_REGISTRY } from "../registries/trace-fields.ts"
+import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 
 const LIST_SELECT = `
   organization_id,
@@ -175,13 +176,36 @@ const SORT_COLUMNS: Record<string, SortColumn> = {
 }
 
 function buildTraceFilterClauses(filters: FilterSet | undefined): {
-  clauses: string[]
+  /** HAVING clauses for the trace GROUP BY. */
+  havingClauses: string[]
+  /** WHERE clauses to add before GROUP BY (e.g. score subquery). */
+  whereClauses: string[]
   params: Record<string, unknown>
 } {
   if (!filters || Object.keys(filters).length === 0) {
-    return { clauses: [], params: {} }
+    return { havingClauses: [], whereClauses: [], params: {} }
   }
-  return buildClickHouseWhere(filters, TRACE_FIELD_REGISTRY)
+
+  const { telemetryFilters, scoreFilters } = splitScoreFilters(filters)
+
+  const telemetry = telemetryFilters
+    ? buildClickHouseWhere(telemetryFilters, TRACE_FIELD_REGISTRY)
+    : { clauses: [], params: {} }
+
+  let whereClauses: string[] = []
+  let scoreParams: Record<string, unknown> = {}
+
+  if (scoreFilters) {
+    const result = buildScoreRollupSubquery("trace_id", scoreFilters, false)
+    whereClauses = [result.subquery]
+    scoreParams = result.params
+  }
+
+  return {
+    havingClauses: telemetry.clauses,
+    whereClauses,
+    params: { ...telemetry.params, ...scoreParams },
+  }
 }
 
 const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
@@ -198,9 +222,9 @@ export const TraceRepositoryLive = Layer.effect(
         const cmp = orderDir === "DESC" ? "<" : ">"
         const limit = options.limit ?? 50
 
-        const { clauses: filterClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
 
-        const havingParts: string[] = [...filterClauses]
+        const havingParts: string[] = [...havingClauses]
         if (options.cursor) {
           havingParts.push(
             `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
@@ -209,6 +233,7 @@ export const TraceRepositoryLive = Layer.effect(
           )
         }
         const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         return chSqlClient
           .query(async (client) => {
@@ -217,6 +242,7 @@ export const TraceRepositoryLive = Layer.effect(
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
+                        ${extraWhere}
                       GROUP BY organization_id, project_id, trace_id
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
@@ -255,8 +281,9 @@ export const TraceRepositoryLive = Layer.effect(
       },
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
-        const { clauses: filterClauses, params: filterParams } = buildTraceFilterClauses(filters)
-        const havingClause = filterClauses.length > 0 ? `HAVING ${filterClauses.join(" AND ")}` : ""
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         return chSqlClient
           .query(async (client) => {
@@ -267,6 +294,7 @@ export const TraceRepositoryLive = Layer.effect(
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
+                          ${extraWhere}
                         GROUP BY organization_id, project_id, trace_id
                         ${havingClause}
                       )`,

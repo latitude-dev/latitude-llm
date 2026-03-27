@@ -53,7 +53,9 @@ const SCALAR_OPS: Record<ScalarOp, string> = {
 export function buildClickHouseWhere(
   filters: FilterSet,
   registry: ChFieldRegistry,
+  options?: { paramPrefix?: string },
 ): { clauses: string[]; params: Record<string, unknown> } {
+  const prefix = options?.paramPrefix ?? "f"
   const clauses: string[] = []
   const params: Record<string, unknown> = {}
   let paramIdx = 0
@@ -65,8 +67,8 @@ export function buildClickHouseWhere(
     if (field.startsWith("metadata.")) {
       const metaKey = field.slice("metadata.".length)
       for (const cond of conditions) {
-        const p = `f_${paramIdx++}`
-        const kp = `f_${paramIdx++}`
+        const p = `${prefix}_${paramIdx++}`
+        const kp = `${prefix}_${paramIdx++}`
         let metadataValue: string | readonly string[]
 
         if (cond.op === "in" || cond.op === "notIn") {
@@ -87,7 +89,7 @@ export function buildClickHouseWhere(
     if (!mapping) continue
 
     for (const cond of conditions) {
-      const p = `f_${paramIdx++}`
+      const p = `${prefix}_${paramIdx++}`
       let value: FilterCondition["value"] = mapping.mapValue ? mapping.mapValue(cond.value) : cond.value
       if ((cond.op === "contains" || cond.op === "notContains") && typeof value === "string") {
         value = `%${value}%`

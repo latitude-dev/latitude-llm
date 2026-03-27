@@ -35,12 +35,23 @@ export {
   scoreValueSchema,
 } from "./entities/score.ts"
 export { isImmutableScore } from "./helpers.ts"
-export { ScoreAnalyticsRepository } from "./ports/score-analytics-repository.ts"
+export {
+  type IssueOccurrenceAggregate,
+  type IssueOccurrenceBucket,
+  type ScoreAggregate,
+  type ScoreAnalyticsOptions,
+  ScoreAnalyticsRepository,
+  type ScoreAnalyticsRepositoryShape,
+  type ScoreTrendBucket,
+  type SessionScoreRollup,
+  type TraceScoreRollup,
+} from "./ports/score-analytics-repository.ts"
 export {
   type ScoreDraftMode,
   type ScoreListOptions,
   type ScoreListPage,
   ScoreRepository,
+  type ScoreRepositoryShape,
   scoreDraftModeSchema,
 } from "./ports/score-repository.ts"
 export {
