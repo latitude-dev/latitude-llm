@@ -1,6 +1,6 @@
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
-import { deleteFromDisk, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { SpanRepository } from "@domain/spans"
 import { decodeOtlpProtobuf, type OtlpExportTraceServiceRequest, transformOtlpToSpans } from "@domain/spans/otlp"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -45,7 +45,17 @@ export const createSpanIngestionWorker = ({
       const contentType = wire.contentType || "application/json"
 
       return Effect.gen(function* () {
-        const payload = yield* getFromDisk(disk, wire.fileKey)
+        let payload: Uint8Array
+
+        if (wire.inlinePayload) {
+          payload = Buffer.from(wire.inlinePayload, "base64")
+        } else if (wire.fileKey) {
+          payload = yield* getFromDisk(disk, wire.fileKey)
+        } else {
+          workerLogger.error("Span ingestion: no inline payload or fileKey in message")
+          return
+        }
+
         const request = decodeRequest(payload, contentType)
         if (!request) {
           workerLogger.error("Span ingestion: failed to decode message")
@@ -77,7 +87,7 @@ export const createSpanIngestionWorker = ({
 
         const repo = yield* SpanRepository
         yield* repo.insert(spans)
-        yield* deleteFromDisk(disk, wire.fileKey).pipe(Effect.ignore)
+        // S3 cleanup handled by lifecycle policy on the ingest/ prefix
 
         const traceIds = new Set(spans.map((s) => s.traceId))
         yield* Effect.all(

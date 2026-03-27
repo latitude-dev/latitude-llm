@@ -38,7 +38,8 @@ const _registry = {
 
   "span-ingestion": payloads<{
     ingest: {
-      readonly fileKey: string
+      readonly fileKey: string | null
+      readonly inlinePayload: string | null
       readonly contentType: string
       readonly organizationId: string
       readonly projectId: string

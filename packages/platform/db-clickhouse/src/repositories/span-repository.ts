@@ -291,7 +291,15 @@ export const SpanRepositoryLive = Layer.effect(
         chSqlClient
           .query(async (client) => {
             if (spans.length === 0) return
-            await client.insert({ table: "spans", values: spans.map(toInsertRow), format: "JSONEachRow" })
+            await client.insert({
+              table: "spans",
+              values: spans.map(toInsertRow),
+              format: "JSONEachRow",
+              clickhouse_settings: {
+                async_insert: 1,
+                wait_for_async_insert: 1,
+              },
+            })
           })
           .pipe(
             Effect.mapError((error) => {

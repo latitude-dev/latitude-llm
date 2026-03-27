@@ -87,6 +87,7 @@ describe("createSpanIngestionWorker", () => {
 
     await consumer.dispatchTask("span-ingestion", "ingest", {
       fileKey,
+      inlinePayload: null,
       contentType: "application/json",
       organizationId: "org_span_ingestion_test",
       projectId: "proj_span_ingestion_test",
@@ -138,6 +139,7 @@ describe("createSpanIngestionWorker", () => {
 
     await consumer.dispatchTask("span-ingestion", "ingest", {
       fileKey,
+      inlinePayload: null,
       contentType: "application/json",
       organizationId: "org_span_ingestion_test",
       projectId: "proj_span_ingestion_test",

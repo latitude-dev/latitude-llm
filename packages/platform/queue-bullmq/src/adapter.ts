@@ -134,7 +134,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
               },
               {
                 connection: new Redis(redisConfig),
-                concurrency: 10,
+                concurrency: 50,
                 removeOnComplete: { count: 1000 },
                 removeOnFail: { count: 1000 },
                 autorun: false,
