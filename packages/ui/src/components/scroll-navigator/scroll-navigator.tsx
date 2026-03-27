@@ -1,10 +1,17 @@
 import { Button, Icon, Tooltip, useMountEffect } from "@repo/ui"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import { type MutableRefObject, type RefObject, useRef, useState } from "react"
+import { type ReactNode, type Ref, type RefObject, useImperativeHandle, useRef, useState } from "react"
+
+export interface ScrollNavigatorHandle {
+  navigate(direction: "up" | "down"): void
+}
 
 interface ScrollNavigatorProps {
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
-  readonly itemRefs: MutableRefObject<(HTMLDivElement | null)[]>
+  readonly itemRefs: RefObject<(HTMLDivElement | null)[]>
+  readonly prevLabel?: ReactNode
+  readonly nextLabel?: ReactNode
+  readonly ref?: Ref<ScrollNavigatorHandle> | undefined
 }
 
 type ItemMetric = {
@@ -58,11 +65,15 @@ function NavigatorButtons({
   canScrollDown,
   onPrevious,
   onNext,
+  prevLabel,
+  nextLabel,
 }: {
   readonly canScrollUp: boolean
   readonly canScrollDown: boolean
   readonly onPrevious: () => void
   readonly onNext: () => void
+  readonly prevLabel?: ReactNode
+  readonly nextLabel?: ReactNode
 }) {
   return (
     <div className="sticky bottom-4 z-10 self-end">
@@ -82,7 +93,7 @@ function NavigatorButtons({
             </Button>
           }
         >
-          Previous
+          {prevLabel ?? "Previous"}
         </Tooltip>
 
         <Tooltip
@@ -100,14 +111,14 @@ function NavigatorButtons({
             </Button>
           }
         >
-          Next
+          {nextLabel ?? "Next"}
         </Tooltip>
       </div>
     </div>
   )
 }
 
-export function ScrollNavigator({ scrollContainerRef, itemRefs }: ScrollNavigatorProps) {
+export function ScrollNavigator({ scrollContainerRef, itemRefs, prevLabel, nextLabel, ref }: ScrollNavigatorProps) {
   const rafRef = useRef(0)
   const [hasOverflow, setHasOverflow] = useState(false)
   const [canScrollUp, setCanScrollUp] = useState(false)
@@ -230,6 +241,8 @@ export function ScrollNavigator({ scrollContainerRef, itemRefs }: ScrollNavigato
     })
   }
 
+  useImperativeHandle(ref, () => ({ navigate }))
+
   if (!hasOverflow) {
     return null
   }
@@ -240,6 +253,8 @@ export function ScrollNavigator({ scrollContainerRef, itemRefs }: ScrollNavigato
       canScrollDown={canScrollDown}
       onPrevious={() => navigate("up")}
       onNext={() => navigate("down")}
+      prevLabel={prevLabel}
+      nextLabel={nextLabel}
     />
   )
 }

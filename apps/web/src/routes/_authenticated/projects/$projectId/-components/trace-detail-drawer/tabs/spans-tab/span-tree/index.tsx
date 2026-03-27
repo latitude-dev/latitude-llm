@@ -1,6 +1,8 @@
-import { cn, Text } from "@repo/ui"
+import { cn, Text, Tooltip } from "@repo/ui"
+import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon, MaximizeIcon, MinimizeIcon } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
+import { HotkeyBadge } from "../../../../../../../../../components/hotkey-badge.tsx"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { MIN_TREE_WIDTH, MIN_WATERFALL_WIDTH, MINIMIZED_MAX_HEIGHT, ROW_HEIGHT } from "./helpers.ts"
 import { TreeRow } from "./tree-row.tsx"
@@ -14,12 +16,14 @@ export function SpanTree({
   onSelectSpan,
   isMinimized,
   onToggleMinimized,
+  isActive,
 }: {
   readonly spans: readonly SpanRecord[]
   readonly selectedSpanId: string
   readonly onSelectSpan: (spanId: string) => void
   readonly isMinimized: boolean
   readonly onToggleMinimized: () => void
+  readonly isActive: boolean
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -62,6 +66,40 @@ export function SpanTree({
     setCollapsed((prev) => (prev.size === collapsibleIds.size ? new Set() : new Set(collapsibleIds)))
   }, [collapsibleIds])
 
+  // J/K/E/Escape hotkeys — only active when this tab is visible
+  useHotkeys([
+    {
+      hotkey: "J",
+      callback: () => {
+        const idx = selectedSpanId ? visibleNodes.findIndex((n) => n.node.span.spanId === selectedSpanId) : -1
+        const next = visibleNodes[idx + 1] ?? visibleNodes[0]
+        if (next) onSelectSpan(next.node.span.spanId)
+      },
+      options: { enabled: isActive },
+    },
+    {
+      hotkey: "K",
+      callback: () => {
+        const idx = selectedSpanId
+          ? visibleNodes.findIndex((n) => n.node.span.spanId === selectedSpanId)
+          : visibleNodes.length
+        const prev = visibleNodes[idx - 1]
+        if (prev) onSelectSpan(prev.node.span.spanId)
+      },
+      options: { enabled: isActive },
+    },
+    {
+      hotkey: "E",
+      callback: toggleAll,
+      options: { enabled: isActive },
+    },
+    {
+      hotkey: "Escape",
+      callback: () => onSelectSpan(""),
+      options: { enabled: isActive && selectedSpanId !== "", ignoreInputs: true },
+    },
+  ])
+
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: passive mouse tracking for waterfall cursor
     <div
@@ -74,30 +112,44 @@ export function SpanTree({
       {/* Header */}
       <div className="flex flex-row items-center shrink-0 border-b border-border" style={{ height: ROW_HEIGHT }}>
         <div className="flex flex-row items-center gap-1 shrink-0 px-2" style={{ width: resolvedTreeWidth }}>
-          <Text.H6 color="foregroundMuted">Span</Text.H6>
+          <Tooltip side="bottom" trigger={<Text.H6 color="foregroundMuted">Span</Text.H6>}>
+            Navigate <HotkeyBadge hotkey="J" /> <HotkeyBadge hotkey="K" /> · Deselect <HotkeyBadge hotkey="Escape" />
+          </Tooltip>
           {collapsibleIds.size > 0 && (
-            <button
-              type="button"
-              className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground transition-colors"
-              onClick={toggleAll}
-              title={isAllCollapsed ? "Expand all" : "Collapse all"}
+            <Tooltip
+              side="bottom"
+              trigger={
+                <button
+                  type="button"
+                  className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground transition-colors"
+                  onClick={toggleAll}
+                >
+                  {isAllCollapsed ? (
+                    <ChevronsUpDownIcon className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronsDownUpIcon className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              }
             >
-              {isAllCollapsed ? (
-                <ChevronsUpDownIcon className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronsDownUpIcon className="w-3.5 h-3.5" />
-              )}
-            </button>
+              {isAllCollapsed ? "Expand all" : "Collapse all"} <HotkeyBadge hotkey="E" />
+            </Tooltip>
           )}
           {selectedSpanId !== "" && (
-            <button
-              type="button"
-              className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground transition-colors"
-              onClick={onToggleMinimized}
-              title={isMinimized ? "Expand tree" : "Minimize tree"}
+            <Tooltip
+              side="bottom"
+              trigger={
+                <button
+                  type="button"
+                  className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground transition-colors"
+                  onClick={onToggleMinimized}
+                >
+                  {isMinimized ? <MaximizeIcon className="w-3.5 h-3.5" /> : <MinimizeIcon className="w-3.5 h-3.5" />}
+                </button>
+              }
             >
-              {isMinimized ? <MaximizeIcon className="w-3.5 h-3.5" /> : <MinimizeIcon className="w-3.5 h-3.5" />}
-            </button>
+              {isMinimized ? "Expand tree" : "Minimize tree"}
+            </Tooltip>
           )}
         </div>
         <div className="shrink-0 w-px self-stretch bg-border" />

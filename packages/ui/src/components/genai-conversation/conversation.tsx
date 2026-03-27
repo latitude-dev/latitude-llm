@@ -1,7 +1,7 @@
 import { cn, Text } from "@repo/ui"
-import { type RefObject, useRef } from "react"
+import { type ReactNode, type Ref, type RefObject, useRef } from "react"
 import type { GenAIMessage, GenAIPart, GenAISystem } from "rosetta-ai"
-import { ScrollNavigator } from "../scroll-navigator/scroll-navigator.tsx"
+import { ScrollNavigator, type ScrollNavigatorHandle } from "../scroll-navigator/scroll-navigator.tsx"
 import { Message, type ToolCallActions } from "./message.tsx"
 import { Part, type ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
@@ -82,6 +82,9 @@ export function Conversation({
   messages,
   enableNavigator = false,
   scrollContainerRef,
+  navigatorRef,
+  prevLabel,
+  nextLabel,
   messageActions,
   toolCallActions,
 }: {
@@ -89,6 +92,12 @@ export function Conversation({
   readonly messages: readonly (GenAIMessage | null)[]
   readonly enableNavigator?: boolean
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null>
+  /** Ref to imperatively call navigate() on the ScrollNavigator (e.g. from a keyboard shortcut). */
+  readonly navigatorRef?: Ref<ScrollNavigatorHandle>
+  /** Custom label for the "previous" navigator button (e.g. with a HotkeyBadge). */
+  readonly prevLabel?: ReactNode
+  /** Custom label for the "next" navigator button (e.g. with a HotkeyBadge). */
+  readonly nextLabel?: ReactNode
   /** Map of original message index → action, renders a floating navigate button on attributed assistant messages. */
   readonly messageActions?: ReadonlyMap<number, () => void>
   /** Map of toolCallId → action, renders a navigate button inside each ToolCallBlock. */
@@ -161,7 +170,13 @@ export function Conversation({
       })}
 
       {enableNavigator && scrollContainerRef && (
-        <ScrollNavigator scrollContainerRef={scrollContainerRef} itemRefs={navItemRefs} />
+        <ScrollNavigator
+          ref={navigatorRef}
+          scrollContainerRef={scrollContainerRef}
+          itemRefs={navItemRefs}
+          {...(prevLabel !== undefined ? { prevLabel } : {})}
+          {...(nextLabel !== undefined ? { nextLabel } : {})}
+        />
       )}
     </div>
   )

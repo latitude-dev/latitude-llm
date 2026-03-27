@@ -1,6 +1,8 @@
 import { Button, cn, DetailDrawer, ProviderIcon, Skeleton, type TabOption, Tabs, Text, Tooltip } from "@repo/ui"
+import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { useState } from "react"
+import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -11,9 +13,19 @@ import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
 type TabId = "trace" | "conversation" | "spans"
 
 const TABS: TabOption<TabId>[] = [
-  { id: "trace", label: "Trace", icon: <GroupIcon className="w-4 h-4" /> },
-  { id: "conversation", label: "Conversation", icon: <MessagesSquareIcon className="w-4 h-4" /> },
-  { id: "spans", label: "Spans", icon: <ListTreeIcon className="w-4 h-4" /> },
+  { id: "trace", label: "Trace", icon: <GroupIcon className="w-4 h-4" />, tooltip: <HotkeyBadge hotkey="Shift+1" /> },
+  {
+    id: "conversation",
+    label: "Conversation",
+    icon: <MessagesSquareIcon className="w-4 h-4" />,
+    tooltip: <HotkeyBadge hotkey="Shift+2" />,
+  },
+  {
+    id: "spans",
+    label: "Spans",
+    icon: <ListTreeIcon className="w-4 h-4" />,
+    tooltip: <HotkeyBadge hotkey="Shift+3" />,
+  },
 ]
 
 export function TraceDetailDrawer({
@@ -21,11 +33,17 @@ export function TraceDetailDrawer({
   trace,
   projectId,
   onClose,
+  onNextTrace,
+  onPrevTrace,
+  onTabChange,
 }: {
   readonly traceId: string
   readonly trace?: TraceRecord | undefined
   readonly projectId: string
   readonly onClose: () => void
+  readonly onNextTrace?: () => void
+  readonly onPrevTrace?: () => void
+  readonly onTabChange?: (tab: TabId) => void
 }) {
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
@@ -44,11 +62,13 @@ export function TraceDetailDrawer({
     setLastTraceId(traceId)
     setActiveTab("trace")
     setVisitedTabs(new Set(["trace"]))
+    onTabChange?.("trace")
   }
 
   function handleSetActiveTab(tab: TabId) {
     setActiveTab(tab)
     setVisitedTabs((prev) => new Set([...prev, tab]))
+    onTabChange?.(tab)
   }
 
   function navigateToSpan(spanId: string | null) {
@@ -56,18 +76,69 @@ export function TraceDetailDrawer({
     setSelectedSpanId(spanId ?? "")
   }
 
+  useHotkeys([
+    { hotkey: "Shift+1", callback: () => handleSetActiveTab("trace") },
+    { hotkey: "Shift+2", callback: () => handleSetActiveTab("conversation") },
+    { hotkey: "Shift+3", callback: () => handleSetActiveTab("spans") },
+    {
+      hotkey: "Alt+ArrowDown",
+      callback: () => onNextTrace?.(),
+      options: { enabled: !!onNextTrace },
+    },
+    {
+      hotkey: "Alt+ArrowUp",
+      callback: () => onPrevTrace?.(),
+      options: { enabled: !!onPrevTrace },
+    },
+  ])
+
   return (
     <DetailDrawer
       storeKey="trace-detail-drawer-width"
       onClose={onClose}
+      closeLabel={
+        <>
+          Close <HotkeyBadge hotkey="Escape" />
+        </>
+      }
       actions={
         <>
-          <Button flat variant="ghost" className="w-8 h-8 p-0" disabled>
-            <ArrowDownIcon className="w-4 h-4 text-muted-foreground" />
-          </Button>
-          <Button flat variant="ghost" className="w-8 h-8 p-0" disabled>
-            <ArrowUpIcon className="w-4 h-4 text-muted-foreground" />
-          </Button>
+          <Tooltip
+            side="bottom"
+            trigger={
+              <Button
+                flat
+                variant="ghost"
+                className="w-8 h-8 p-0"
+                disabled={!onNextTrace}
+                onClick={onNextTrace}
+                type="button"
+                aria-label="Next trace"
+              >
+                <ArrowDownIcon className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            }
+          >
+            Next trace <HotkeyBadge hotkey="Alt+ArrowDown" /> <HotkeyBadge hotkey="J" />
+          </Tooltip>
+          <Tooltip
+            side="bottom"
+            trigger={
+              <Button
+                flat
+                variant="ghost"
+                className="w-8 h-8 p-0"
+                disabled={!onPrevTrace}
+                onClick={onPrevTrace}
+                type="button"
+                aria-label="Previous trace"
+              >
+                <ArrowUpIcon className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            }
+          >
+            Previous trace <HotkeyBadge hotkey="Alt+ArrowUp" /> <HotkeyBadge hotkey="K" />
+          </Tooltip>
         </>
       }
       header={
@@ -160,6 +231,7 @@ export function TraceDetailDrawer({
             traceId={traceId}
             selectedSpanId={selectedSpanId}
             onSelectSpan={navigateToSpan}
+            isActive={activeTab === "spans"}
           />
         )}
       </div>

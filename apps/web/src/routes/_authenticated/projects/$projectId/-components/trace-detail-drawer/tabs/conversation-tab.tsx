@@ -1,6 +1,8 @@
-import { Conversation, Skeleton, Text } from "@repo/ui"
+import { Conversation, type ScrollNavigatorHandle, Skeleton, Text } from "@repo/ui"
+import { useHotkeys } from "@tanstack/react-hotkeys"
 import { useQuery } from "@tanstack/react-query"
 import { useRef } from "react"
+import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { mapConversationToSpans } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 
@@ -16,6 +18,7 @@ export function ConversationTab({
   readonly projectId: string
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const navigatorRef = useRef<ScrollNavigatorHandle>(null)
 
   const traceId = traceDetail?.traceId
   const { data: spanMaps } = useQuery({
@@ -40,6 +43,11 @@ export function ConversationTab({
           ]),
         )
       : undefined
+
+  useHotkeys([
+    { hotkey: "N", callback: () => navigatorRef.current?.navigate("down") },
+    { hotkey: "P", callback: () => navigatorRef.current?.navigate("up") },
+  ])
 
   if (isDetailLoading) {
     return (
@@ -66,6 +74,17 @@ export function ConversationTab({
         messages={traceDetail.allMessages}
         enableNavigator
         scrollContainerRef={scrollRef}
+        navigatorRef={navigatorRef}
+        prevLabel={
+          <>
+            Previous <HotkeyBadge hotkey="P" />
+          </>
+        }
+        nextLabel={
+          <>
+            Next <HotkeyBadge hotkey="N" />
+          </>
+        }
         {...(messageActions ? { messageActions } : {})}
         {...(toolCallActions ? { toolCallActions } : {})}
       />

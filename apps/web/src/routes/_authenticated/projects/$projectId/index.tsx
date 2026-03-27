@@ -1,5 +1,6 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
-import { Button, Input, Tabs } from "@repo/ui"
+import { Button, Input, Tabs, Tooltip } from "@repo/ui"
+import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
 import {
   AppWindowIcon,
@@ -10,7 +11,8 @@ import {
   MessagesSquareIcon,
   TextIcon,
 } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
+import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
@@ -81,6 +83,12 @@ function ProjectPage() {
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
 
+  // Tracks which drawer tab is active so J/K knows when to defer to span navigation
+  const [activeDrawerTab, setActiveDrawerTab] = useState<string>("trace")
+
+  // Ref to the ordered list of trace IDs from the currently loaded table page
+  const traceIdsRef = useRef<string[]>([])
+
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
@@ -108,17 +116,46 @@ function ProjectPage() {
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
 
+  // Compute next/prev trace callbacks from the loaded list
+  const navigateTrace = useCallback(
+    (delta: 1 | -1) => {
+      const ids = traceIdsRef.current
+      if (ids.length === 0) return
+      const idx = ids.indexOf(activeTraceId)
+      const target = idx < 0 ? ids[0] : ids[idx + delta]
+      if (target) setActiveTraceId(target)
+    },
+    [activeTraceId],
+  )
+
+  const onNextTrace = useCallback(() => navigateTrace(1), [navigateTrace])
+  const onPrevTrace = useCallback(() => navigateTrace(-1), [navigateTrace])
+
+  // Page-level hotkeys
+  useHotkeys([
+    { hotkey: "F", callback: () => setFiltersOpen((prev) => !prev) },
+    { hotkey: "1", callback: () => setActiveTab("traces"), options: { enabled: !activeTraceId } },
+    { hotkey: "2", callback: () => setActiveTab("sessions"), options: { enabled: !activeTraceId } },
+    {
+      hotkey: "Escape",
+      callback: () => setActiveTraceId(""),
+      options: { enabled: !!activeTraceId, ignoreInputs: true },
+    },
+  ])
+
   const sharedViewProps = {
     projectId,
     filters,
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
+    activeDrawerTab,
     selectionState,
     onSelectionChange: setSelectionState,
     totalTraceCount,
     onFiltersChange,
     onFiltersClose: () => setFiltersOpen(false),
     onActiveTraceChange,
+    traceIdsRef,
   }
 
   return (
@@ -153,20 +190,26 @@ function ProjectPage() {
               Columns
               <ChevronDown className="h-4 w-4" />
             </Button>
-            <Button
-              variant={filtersOpen ? "outline" : "ghost"}
-              size="sm"
-              flat
-              onClick={() => setFiltersOpen(!filtersOpen)}
+            <Tooltip
+              trigger={
+                <Button
+                  variant={filtersOpen ? "outline" : "ghost"}
+                  size="sm"
+                  flat
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                >
+                  <FilterIcon className="h-4 w-4" />
+                  Filters
+                  {hasActiveFilters && (
+                    <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
+                      {Object.keys(filters).length}
+                    </span>
+                  )}
+                </Button>
+              }
             >
-              <FilterIcon className="h-4 w-4" />
-              Filters
-              {hasActiveFilters && (
-                <span className="inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] leading-4 font-medium text-primary-foreground">
-                  {Object.keys(filters).length}
-                </span>
-              )}
-            </Button>
+              Toggle filters <HotkeyBadge hotkey="F" />
+            </Tooltip>
           </Layout.ActionRowItem>
           <Layout.ActionRowItem>
             <Tabs
@@ -210,7 +253,14 @@ function ProjectPage() {
 
       {activeTraceId ? (
         <Layout.Aside>
-          <TraceDetailDrawer traceId={activeTraceId} projectId={projectId} onClose={() => setActiveTraceId("")} />
+          <TraceDetailDrawer
+            traceId={activeTraceId}
+            projectId={projectId}
+            onClose={() => setActiveTraceId("")}
+            onNextTrace={onNextTrace}
+            onPrevTrace={onPrevTrace}
+            onTabChange={setActiveDrawerTab}
+          />
         </Layout.Aside>
       ) : null}
 

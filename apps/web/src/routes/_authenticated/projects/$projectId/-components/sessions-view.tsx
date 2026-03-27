@@ -13,7 +13,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { useQueries } from "@tanstack/react-query"
-import { useCallback, useMemo, useState } from "react"
+import { type RefObject, useCallback, useMemo, useState } from "react"
 import { useSessionsInfiniteScroll } from "../../../../../domains/sessions/sessions.collection.ts"
 import type { SessionRecord } from "../../../../../domains/sessions/sessions.functions.ts"
 import { listTracesByProject, type TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
@@ -273,12 +273,14 @@ interface SessionsViewProps {
   readonly filters: FilterSet
   readonly filtersOpen: boolean
   readonly activeTraceId: string | undefined
+  readonly activeDrawerTab: string
   readonly selectionState: SelectionState<string>
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
+  readonly traceIdsRef: RefObject<string[]>
 }
 
 export function SessionsView({

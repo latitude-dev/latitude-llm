@@ -8,7 +8,8 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
-import { useState } from "react"
+import { useHotkeys } from "@tanstack/react-hotkeys"
+import { type RefObject, useMemo, useState } from "react"
 import { useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -110,12 +111,14 @@ interface TracesViewProps {
   readonly filters: FilterSet
   readonly filtersOpen: boolean
   readonly activeTraceId: string | undefined
+  readonly activeDrawerTab: string
   readonly selectionState: SelectionState<string>
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
+  readonly traceIdsRef: RefObject<string[]>
 }
 
 export function TracesView({
@@ -123,12 +126,14 @@ export function TracesView({
   filters,
   filtersOpen,
   activeTraceId,
+  activeDrawerTab,
   selectionState,
   onSelectionChange,
   totalTraceCount,
   onFiltersChange,
   onFiltersClose,
   onActiveTraceChange,
+  traceIdsRef,
 }: TracesViewProps) {
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
 
@@ -144,7 +149,11 @@ export function TracesView({
     ...(hasActiveFilters ? { filters } : {}),
   })
 
-  const traceIds = traces.map((t) => t.traceId)
+  const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
+
+  // Write trace IDs into the shared ref during render so the parent can navigate next/prev without a callback effect
+  traceIdsRef.current = traceIds
+
   const selection = useSelectableRows({
     rowIds: traceIds,
     totalRowCount: totalTraceCount,
@@ -157,6 +166,30 @@ export function TracesView({
     if (sel && sel.toString().length > 0) return
     onActiveTraceChange(t.traceId === activeTraceId ? undefined : t.traceId)
   }
+
+  // J/K hotkeys: navigate through traces. Disabled when spans tab is active (span tree takes over J/K).
+  const jkEnabled = activeDrawerTab !== "spans"
+  useHotkeys([
+    {
+      hotkey: "J",
+      callback: () => {
+        const idx = activeTraceId ? traceIds.indexOf(activeTraceId) : -1
+        const next = traceIds[idx + 1]
+        if (next) onActiveTraceChange(next)
+        else if (traceIds.length > 0 && !activeTraceId) onActiveTraceChange(traceIds[0])
+      },
+      options: { enabled: jkEnabled },
+    },
+    {
+      hotkey: "K",
+      callback: () => {
+        const idx = activeTraceId ? traceIds.indexOf(activeTraceId) : traceIds.length
+        const prev = traceIds[idx - 1]
+        if (prev) onActiveTraceChange(prev)
+      },
+      options: { enabled: jkEnabled },
+    },
+  ])
 
   return (
     <Layout.Body>
