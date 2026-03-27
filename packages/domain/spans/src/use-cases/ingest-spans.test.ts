@@ -19,11 +19,7 @@ const makeInput = (payload: Uint8Array) => ({
   contentType: "application/json",
 })
 
-const runUseCase = (
-  input: ReturnType<typeof makeInput>,
-  diskPort: StorageDiskPort,
-  publisher: QueuePublisherShape,
-) =>
+const runUseCase = (input: ReturnType<typeof makeInput>, diskPort: StorageDiskPort, publisher: QueuePublisherShape) =>
   ingestSpansUseCase(input).pipe(
     Effect.provide(Layer.merge(Layer.succeed(StorageDisk, diskPort), Layer.succeed(QueuePublisher, publisher))),
   )
@@ -43,7 +39,7 @@ describe("ingestSpansUseCase", () => {
     const payload = published[0]?.payload as { fileKey: string | null; inlinePayload: string | null }
     expect(payload.fileKey).toBeNull()
     expect(payload.inlinePayload).toBeDefined()
-    expect(Buffer.from(payload.inlinePayload!, "base64").toString()).toBe('{"spans":[]}')
+    expect(Buffer.from(payload.inlinePayload ?? "", "base64").toString()).toBe('{"spans":[]}')
   })
 
   it("writes large payloads to disk and sends fileKey", async () => {
