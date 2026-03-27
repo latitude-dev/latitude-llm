@@ -7,9 +7,9 @@ import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
-const logger = createLogger("scores")
+const logger = createLogger("analytic-scores")
 
-export const createScoresWorker = ({
+export const createAnalyticScoresWorker = ({
   consumer,
   clickhouseClient,
   postgresClient,

@@ -2,10 +2,12 @@ import {
   BadRequestError,
   cuidSchema,
   generateId,
+  OutboxEventWriter,
   ProjectId,
   type RepositoryError,
   ScoreId,
   SqlClient,
+  toRepositoryError,
 } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { z } from "zod"
@@ -18,7 +20,6 @@ import {
   scoreSchema,
 } from "../entities/score.ts"
 import { isImmutableScore } from "../helpers.ts"
-import { ScoreEventWriter } from "../ports/score-event-writer.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
 
 const baseWritableScoreSchema = baseScoreSchema.omit({
@@ -159,7 +160,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
         const scoreRepository = yield* ScoreRepository
-        const scoreEventWriter = yield* ScoreEventWriter
+        const outboxEventWriter = yield* OutboxEventWriter
 
         const existingScore = parsedInput.id ? yield* scoreRepository.findById(parsedInput.id) : null
 
@@ -183,12 +184,19 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
         yield* scoreRepository.save(score)
 
         if (isImmutableScore(score)) {
-          yield* scoreEventWriter.scoreImmutable({
-            organizationId: score.organizationId,
-            projectId: score.projectId,
-            scoreId: score.id,
-            issueId: score.issueId,
-          })
+          yield* outboxEventWriter
+            .write({
+              eventName: "ScoreImmutable",
+              aggregateId: score.id,
+              organizationId: score.organizationId,
+              payload: {
+                organizationId: score.organizationId,
+                projectId: score.projectId,
+                scoreId: score.id,
+                issueId: score.issueId,
+              },
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
         }
 
         return score

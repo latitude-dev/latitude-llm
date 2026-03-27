@@ -36,7 +36,6 @@ export {
 } from "./entities/score.ts"
 export { isImmutableScore } from "./helpers.ts"
 export { ScoreAnalyticsRepository } from "./ports/score-analytics-repository.ts"
-export { ScoreEventWriter } from "./ports/score-event-writer.ts"
 export {
   type ScoreDraftMode,
   type ScoreListOptions,

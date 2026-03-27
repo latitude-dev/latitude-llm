@@ -1,12 +1,12 @@
 import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
-import { ScoreEventWriter, writeScoreUseCase } from "@domain/scores"
-import { OrganizationId, ProjectId, ScoreId } from "@domain/shared"
+import { writeScoreUseCase } from "@domain/scores"
+import { OrganizationId, OutboxEventWriter, ProjectId, ScoreId } from "@domain/shared"
 import { queryClickhouse } from "@platform/db-clickhouse"
 import { ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { createScoresWorker } from "./scores.ts"
+import { createAnalyticScoresWorker } from "./analytic-scores.ts"
 
 type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
 
@@ -37,15 +37,15 @@ class TestQueueConsumer implements QueueConsumer {
 const pg = setupTestPostgres()
 const ch = setupTestClickHouse()
 
-const scoreEventWriterLayer = Layer.succeed(ScoreEventWriter, {
-  scoreImmutable: () => Effect.void,
+const outboxEventWriterLayer = Layer.succeed(OutboxEventWriter, {
+  write: () => Effect.void,
 })
 
 const writeScore = (organizationId: string, input: Parameters<typeof writeScoreUseCase>[0]) =>
   Effect.runPromise(
     writeScoreUseCase(input).pipe(
       withPostgres(
-        Layer.mergeAll(ScoreRepositoryLive, scoreEventWriterLayer),
+        Layer.mergeAll(ScoreRepositoryLive, outboxEventWriterLayer),
         pg.appPostgresClient,
         OrganizationId(organizationId),
       ),
@@ -69,13 +69,13 @@ const queryAnalyticsScores = (organizationId: string, scoreId: string) =>
     })),
   )
 
-describe("createScoresWorker", () => {
+describe("createAnalyticScoresWorker", () => {
   it("stores immutable scores in analytics once even when the same save task is retried", async () => {
     const organizationId = "pppppppppppppppppppppppp"
     const projectId = ProjectId("qqqqqqqqqqqqqqqqqqqqqqqq")
     const consumer = new TestQueueConsumer()
 
-    createScoresWorker({
+    createAnalyticScoresWorker({
       consumer,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,
@@ -116,7 +116,7 @@ describe("createScoresWorker", () => {
     const projectId = ProjectId("nnnnnnnnnnnnnnnnnnnnnnnn")
     const consumer = new TestQueueConsumer()
 
-    createScoresWorker({
+    createAnalyticScoresWorker({
       consumer,
       postgresClient: pg.appPostgresClient,
       clickhouseClient: ch.client,

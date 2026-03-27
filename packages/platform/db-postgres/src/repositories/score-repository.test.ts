@@ -3,11 +3,11 @@ import { OrganizationId, ProjectId, ScoreId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { OutboxEventWriterLive } from "../outbox-writer.ts"
 import { outboxEvents } from "../schema/outbox-events.ts"
 import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
-import { ScoreEventWriterLive } from "./score-event-writer.ts"
 import { ScoreRepositoryLive } from "./score-repository.ts"
 
 const evaluationSourceId = "eeeeeeeeeeeeeeeeeeeeeeee"
@@ -16,7 +16,7 @@ const annotationProjectId = ProjectId("aaaaaaaaaaaaaaaaaaaaaaaa")
 
 const createWriteProvider = (database: InMemoryPostgres, organizationId: string) =>
   withPostgres(
-    Layer.mergeAll(ScoreRepositoryLive, ScoreEventWriterLive),
+    Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
     database.appPostgresClient,
     OrganizationId(organizationId),
   )
