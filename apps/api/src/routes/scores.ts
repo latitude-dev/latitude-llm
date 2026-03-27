@@ -11,7 +11,7 @@ import { cuidSchema, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
-import { ErrorSchema, OrgAndProjectParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const ApiScoreBodyCommonSchema = z.object({
@@ -41,17 +41,15 @@ const CreateEvaluationScoreBodySchema = z
   })
   .openapi("CreateEvaluationScoreBody", { description: "Internal, don't use" })
 
-const CreateScoreBodySchema = z
-  .union([CreateCustomScoreBodySchema, CreateEvaluationScoreBodySchema])
-  .openapi("CreateScoreBody")
+const RequestSchema = z.union([CreateCustomScoreBodySchema, CreateEvaluationScoreBodySchema]).openapi("CreateScoreBody")
 
 const apiScoreResponseOverrides = {
   id: cuidSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
-  draftedAt: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  draftedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 } as const
 
 const CustomScoreResponseSchema = z
@@ -68,11 +66,11 @@ const EvaluationScoreResponseSchema = z
   })
   .openapi("EvaluationScoreResponse")
 
-const ScoreResponseSchema = z.union([CustomScoreResponseSchema, EvaluationScoreResponseSchema]).openapi("ScoreResponse")
+const ResponseSchema = z.union([CustomScoreResponseSchema, EvaluationScoreResponseSchema]).openapi("ScoreResponse")
 
 type ApiScore = CustomScore | EvaluationScore
 
-const createScoreRoute = createRoute({
+const route = createRoute({
   method: "post",
   path: "/",
   tags: ["Scores"],
@@ -81,32 +79,16 @@ const createScoreRoute = createRoute({
   security: PROTECTED_SECURITY,
   request: {
     params: OrgAndProjectParamsSchema,
-    body: {
-      content: { "application/json": { schema: CreateScoreBodySchema } },
-      required: true,
-    },
+    body: jsonBody(RequestSchema),
   },
-  responses: {
-    201: {
-      content: { "application/json": { schema: ScoreResponseSchema } },
-      description: "Score created successfully",
-    },
-    400: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Validation error",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Project not found",
-    },
-  },
+  responses: openApiResponses({
+    status: 201,
+    schema: ResponseSchema,
+    description: "Score created successfully",
+  }),
 })
 
-const toScoreResponse = (score: ApiScore) => {
+const toResponse = (score: ApiScore) => {
   const baseResponse = {
     id: score.id as string,
     organizationId: score.organizationId,
@@ -147,16 +129,9 @@ const toScoreResponse = (score: ApiScore) => {
 }
 
 export const createScoresRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>({
-    defaultHook(result, c) {
-      if (!result.success) {
-        const error = result.error.issues.map((issue) => issue.message).join(", ")
-        return c.json({ error }, 400)
-      }
-    },
-  })
+  const app = new OpenAPIHono<OrganizationScopedEnv>()
 
-  app.openapi(createScoreRoute, async (c) => {
+  app.openapi(route, async (c) => {
     const body = c.req.valid("json")
     const { projectId: projectIdParam } = c.req.valid("param")
     const projectId = ProjectId(projectIdParam)
@@ -212,7 +187,7 @@ export const createScoresRoutes = () => {
       throw new Error("Unexpected annotation score returned from score API writer")
     }
 
-    return c.json(toScoreResponse(score), 201)
+    return c.json(toResponse(score), 201)
   })
 
   return app

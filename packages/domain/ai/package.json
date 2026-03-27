@@ -1,5 +1,5 @@
 {
-  "name": "@domain/annotations",
+  "name": "@domain/ai",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,12 +13,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/ai": "workspace:*",
-    "@domain/queue": "workspace:*",
-    "@domain/scores": "workspace:*",
-    "@domain/shared": "workspace:*",
-    "@domain/spans": "workspace:*",
-    "effect": "catalog:",
-    "zod": "catalog:"
+    "effect": "catalog:"
   }
 }

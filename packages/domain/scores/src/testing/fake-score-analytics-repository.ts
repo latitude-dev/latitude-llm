@@ -29,6 +29,11 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
     rollupBySessionIds: () => Effect.succeed([]),
     aggregateByIssues: () => Effect.succeed([]),
     trendByIssue: () => Effect.succeed([]),
+    deleteById: (id) =>
+      Effect.succeed(() => {
+        const index = inserted.indexOf(id)
+        if (index !== -1) inserted.splice(index, 1)
+      }),
     ...overrides,
   }
 

@@ -1,15 +1,42 @@
+import { finalizeAnnotationUseCase } from "@domain/annotations"
 import type { QueueConsumer } from "@domain/queue"
+import { OrganizationId, type ScoreId } from "@domain/shared"
+import { AICredentialsLive } from "@platform/ai-credentials"
+import { AILive } from "@platform/ai-vercel"
+import type { PostgresClient } from "@platform/db-postgres"
+import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
+import { getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("annotation-scores")
 
 interface AnnotationScoresDeps {
   consumer: QueueConsumer
+  postgresClient?: PostgresClient
 }
 
-export const createAnnotationScoresWorker = ({ consumer }: AnnotationScoresDeps) => {
+const annotationAiLayer = AILive.pipe(Layer.provideMerge(AICredentialsLive))
+
+export const createAnnotationScoresWorker = ({ consumer, postgresClient }: AnnotationScoresDeps) => {
+  const pgClient = postgresClient ?? getPostgresClient()
+
+  const postgresLayers = Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive)
+
   consumer.subscribe("annotation-scores", {
-    publish: () => Effect.sync(() => logger.info("Stub handler for annotation-scores:publish")),
+    publish: (payload) =>
+      finalizeAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
+        withPostgres(postgresLayers, pgClient, OrganizationId(payload.organizationId)),
+        Effect.provide(annotationAiLayer),
+        Effect.tap(() =>
+          Effect.sync(() => logger.info(`Finalized annotation score ${payload.projectId}/${payload.scoreId}`)),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() =>
+            logger.error(`Annotation finalization failed for ${payload.projectId}/${payload.scoreId}`, error),
+          ),
+        ),
+        Effect.asVoid,
+      ),
   })
 }
