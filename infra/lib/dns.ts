@@ -92,6 +92,31 @@ export function createDnsRecords(
     })
   }
 
+  // SPF and DKIM records for production email domain
+  if (config.name === "production") {
+    // SPF record for notifications.latitude.so
+    records.notificationsSpf = new aws.route53.Record(`${name}-notifications-spf`, {
+      zoneId: hostedZoneId,
+      name: "notifications.latitude.so",
+      type: "TXT",
+      records: ["v=spf1 include:mailgun.org ~all"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
+    // DKIM record for notifications.latitude.so
+    records.notificationsDkim = new aws.route53.Record(`${name}-notifications-dkim`, {
+      zoneId: hostedZoneId,
+      name: "email._domainkey.notifications.latitude.so",
+      type: "TXT",
+      records: [
+        "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC4H4pcHx6bbjEPdjStYEll3wdeZyBXGkDwcQWqeP++haHsLthrHlVzD88eCXZv8PS8R44ZM1y1j617RVwz+Eygxrb4q66DacZKYiYUEEbFJ4CcPR59Mic21vHHU3xLad5Ms7EKp2UkCNdK3qbWp8MD12OepLl2ZCzhXt7gdAZDRQIDAQAB",
+      ],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+  }
+
   return {
     records,
   }
