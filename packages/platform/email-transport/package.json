@@ -16,7 +16,7 @@
     "@domain/email": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "nodemailer": "^6.9.0"
+    "nodemailer": "^8.0.4"
   },
   "devDependencies": {
     "@types/nodemailer": "^6.4.0"
