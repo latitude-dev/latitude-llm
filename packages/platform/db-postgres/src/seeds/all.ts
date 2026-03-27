@@ -1,3 +1,4 @@
+import { annotationQueueSeeders } from "./annotation-queues/index.ts"
 import { apiKeySeeders } from "./api-keys/index.ts"
 import { datasetSeeders } from "./datasets/index.ts"
 import { issueSeeders } from "./issues/index.ts"
@@ -13,4 +14,5 @@ export const allSeeders: readonly Seeder[] = [
   ...datasetSeeders,
   ...issueSeeders,
   ...scoreSeeders,
+  ...annotationQueueSeeders,
 ]
