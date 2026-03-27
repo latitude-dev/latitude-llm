@@ -1,6 +1,6 @@
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
-import { deleteFromDisk, getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
+import { getFromDisk, OrganizationId, type StorageDiskPort } from "@domain/shared"
 import { SpanRepository } from "@domain/spans"
 import { decodeOtlpProtobuf, type OtlpExportTraceServiceRequest, transformOtlpToSpans } from "@domain/spans/otlp"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
@@ -40,56 +40,69 @@ export const createSpanIngestionWorker = ({
   const pub = eventsPublisher
   const workerLogger = logger
 
-  consumer.subscribe("span-ingestion", {
-    ingest: (wire) => {
-      const contentType = wire.contentType || "application/json"
+  consumer.subscribe(
+    "span-ingestion",
+    {
+      ingest: (wire) => {
+        const contentType = wire.contentType || "application/json"
 
-      return Effect.gen(function* () {
-        const payload = yield* getFromDisk(disk, wire.fileKey)
-        const request = decodeRequest(payload, contentType)
-        if (!request) {
-          workerLogger.error("Span ingestion: failed to decode message")
-          return
-        }
+        return Effect.gen(function* () {
+          let payload: Uint8Array
 
-        if (!request.resourceSpans?.length) {
-          return
-        }
+          if (wire.inlinePayload) {
+            payload = Buffer.from(wire.inlinePayload, "base64")
+          } else if (wire.fileKey) {
+            payload = yield* getFromDisk(disk, wire.fileKey)
+          } else {
+            workerLogger.error("Span ingestion: no inline payload or fileKey in message")
+            return
+          }
 
-        const organizationId = wire.organizationId
-        const projectId = wire.projectId
-        if (!organizationId || !projectId) {
-          workerLogger.error("Span ingestion: missing organizationId or projectId in message")
-          return
-        }
-        const apiKeyId = wire.apiKeyId
-        const ingestedAt = wire.ingestedAt ? new Date(wire.ingestedAt) : new Date()
+          const request = decodeRequest(payload, contentType)
+          if (!request) {
+            workerLogger.error("Span ingestion: failed to decode message")
+            return
+          }
 
-        const spans = transformOtlpToSpans(request, {
-          organizationId,
-          projectId,
-          apiKeyId,
-          ingestedAt,
-        })
-        if (spans.length === 0) {
-          return
-        }
+          if (!request.resourceSpans?.length) {
+            return
+          }
 
-        const repo = yield* SpanRepository
-        yield* repo.insert(spans)
-        yield* deleteFromDisk(disk, wire.fileKey).pipe(Effect.ignore)
+          const organizationId = wire.organizationId
+          const projectId = wire.projectId
+          if (!organizationId || !projectId) {
+            workerLogger.error("Span ingestion: missing organizationId or projectId in message")
+            return
+          }
+          const apiKeyId = wire.apiKeyId
+          const ingestedAt = wire.ingestedAt ? new Date(wire.ingestedAt) : new Date()
 
-        const traceIds = new Set(spans.map((s) => s.traceId))
-        yield* Effect.all(
-          [...traceIds].map((traceId) =>
-            pub.publish({ name: "SpanIngested", organizationId, payload: { organizationId, projectId, traceId } }),
-          ),
-          { concurrency: "unbounded" },
+          const spans = transformOtlpToSpans(request, {
+            organizationId,
+            projectId,
+            apiKeyId,
+            ingestedAt,
+          })
+          if (spans.length === 0) {
+            return
+          }
+
+          const repo = yield* SpanRepository
+          yield* repo.insert(spans)
+
+          const traceIds = new Set(spans.map((s) => s.traceId))
+          yield* Effect.all(
+            [...traceIds].map((traceId) =>
+              pub.publish({ name: "SpanIngested", organizationId, payload: { organizationId, projectId, traceId } }),
+            ),
+            { concurrency: "unbounded" },
+          )
+        }).pipe(
+          Effect.tapError((error) => Effect.sync(() => workerLogger.error("Span ingestion failed", error))),
+          withClickHouse(SpanRepositoryLive, chClient, OrganizationId(wire.organizationId)),
         )
-      }).pipe(
-        Effect.tapError((error) => Effect.sync(() => workerLogger.error("Span ingestion failed", error))),
-        withClickHouse(SpanRepositoryLive, chClient, OrganizationId(wire.organizationId)),
-      )
+      },
     },
-  })
+    { concurrency: 50 },
+  )
 }

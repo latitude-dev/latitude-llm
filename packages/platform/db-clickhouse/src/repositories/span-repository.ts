@@ -291,7 +291,16 @@ export const SpanRepositoryLive = Layer.effect(
         chSqlClient
           .query(async (client) => {
             if (spans.length === 0) return
-            await client.insert({ table: "spans", values: spans.map(toInsertRow), format: "JSONEachRow" })
+            await client.insert({
+              table: "spans",
+              values: spans.map(toInsertRow),
+              format: "JSONEachRow",
+              // Let CH buffer concurrent inserts into larger blocks to reduce part creation and merge pressure
+              clickhouse_settings: {
+                async_insert: 1,
+                wait_for_async_insert: 1,
+              },
+            })
           })
           .pipe(
             Effect.mapError((error) => {

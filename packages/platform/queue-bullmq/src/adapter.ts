@@ -3,6 +3,7 @@ import type {
   QueueConsumer,
   QueueName,
   QueuePublisherShape,
+  SubscribeOptions,
   TaskHandlers,
   TaskName,
   TaskPayload,
@@ -96,8 +97,10 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
       maxRetriesPerRequest: null,
     }
 
+    const DEFAULT_CONCURRENCY = 10
     const workers: Map<QueueName, Worker> = new Map()
     const subscriptions = new Map<QueueName, AnyTaskHandlers>()
+    const concurrencyOverrides = new Map<QueueName, number>()
     let isRunning = false
 
     const start = () => {
@@ -134,7 +137,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
               },
               {
                 connection: new Redis(redisConfig),
-                concurrency: 10,
+                concurrency: concurrencyOverrides.get(queue) ?? DEFAULT_CONCURRENCY,
                 removeOnComplete: { count: 1000 },
                 removeOnFail: { count: 1000 },
                 autorun: false,
@@ -170,11 +173,14 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
         isRunning = false
       })
 
-    const subscribe = <T extends QueueName>(queue: T, handlers: TaskHandlers<T>): void => {
+    const subscribe = <T extends QueueName>(queue: T, handlers: TaskHandlers<T>, options?: SubscribeOptions): void => {
       if (isRunning) {
         throw new Error(`Cannot subscribe to queue "${queue}" after consumer has started`)
       }
       subscriptions.set(queue, handlers as unknown as AnyTaskHandlers)
+      if (options?.concurrency) {
+        concurrencyOverrides.set(queue, options.concurrency)
+      }
     }
 
     return { start, stop, subscribe }

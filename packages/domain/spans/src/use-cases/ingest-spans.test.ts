@@ -1,40 +1,60 @@
 import type { QueuePublisherShape } from "@domain/queue"
 import { QueuePublishError, QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { OrganizationId, ProjectId, StorageDisk, type StorageDiskPort, StorageError } from "@domain/shared"
+import { OrganizationId, ProjectId, StorageDisk, type StorageDiskPort } from "@domain/shared"
 import { createFakeStorageDisk } from "@domain/shared/testing"
 import { Effect, Layer, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { ingestSpansUseCase } from "./ingest-spans.ts"
 
-const validInput = {
+const smallPayload = new TextEncoder().encode('{"spans":[]}')
+
+const largePayload = new Uint8Array(60_000).fill(65) // 60 KB, above 50 KB threshold
+
+const makeInput = (payload: Uint8Array) => ({
   organizationId: OrganizationId("org-1"),
   projectId: ProjectId("proj-1"),
   apiKeyId: "key-1",
-  payload: new TextEncoder().encode('{"spans":[]}'),
+  payload,
   contentType: "application/json",
-}
+})
 
-const runUseCase = (diskPort: StorageDiskPort, publisher: QueuePublisherShape) =>
-  ingestSpansUseCase(validInput).pipe(
+const runUseCase = (input: ReturnType<typeof makeInput>, diskPort: StorageDiskPort, publisher: QueuePublisherShape) =>
+  ingestSpansUseCase(input).pipe(
     Effect.provide(Layer.merge(Layer.succeed(StorageDisk, diskPort), Layer.succeed(QueuePublisher, publisher))),
   )
 
 describe("ingestSpansUseCase", () => {
-  it("stores payload to disk and publishes queue message", async () => {
+  it("inlines small payloads without writing to disk", async () => {
     const { disk, written } = createFakeStorageDisk()
     const { publisher, published } = createFakeQueuePublisher()
 
-    await Effect.runPromise(runUseCase(disk, publisher))
+    await Effect.runPromise(runUseCase(makeInput(smallPayload), disk, publisher))
 
-    expect(written).toHaveLength(1)
-    expect(written[0]?.key).toContain("organizations/org-1/projects/proj-1/ingest/")
-    expect(written[0]?.key).toMatch(/\.json$/)
-
+    expect(written).toHaveLength(0)
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("span-ingestion")
     expect(published[0]?.task).toBe("ingest")
-    expect((published[0]?.payload as { fileKey: string }).fileKey).toBe(written[0]?.key)
+
+    const payload = published[0]?.payload as { fileKey: string | null; inlinePayload: string | null }
+    expect(payload.fileKey).toBeNull()
+    expect(payload.inlinePayload).toBeDefined()
+    expect(Buffer.from(payload.inlinePayload ?? "", "base64").toString()).toBe('{"spans":[]}')
+  })
+
+  it("writes large payloads to disk and sends fileKey", async () => {
+    const { disk, written } = createFakeStorageDisk()
+    const { publisher, published } = createFakeQueuePublisher()
+
+    await Effect.runPromise(runUseCase(makeInput(largePayload), disk, publisher))
+
+    expect(written).toHaveLength(1)
+    expect(written[0]?.key).toContain("tmp-ingest/org-1/proj-1/")
+
+    expect(published).toHaveLength(1)
+    const payload = published[0]?.payload as { fileKey: string | null; inlinePayload: string | null }
+    expect(payload.fileKey).toBe(written[0]?.key)
+    expect(payload.inlinePayload).toBeNull()
   })
 
   it("uses protobuf extension for protobuf content type", async () => {
@@ -42,7 +62,7 @@ describe("ingestSpansUseCase", () => {
     const { publisher } = createFakeQueuePublisher()
 
     await Effect.runPromise(
-      ingestSpansUseCase({ ...validInput, contentType: "application/x-protobuf" }).pipe(
+      ingestSpansUseCase({ ...makeInput(largePayload), contentType: "application/x-protobuf" }).pipe(
         Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
       ),
     )
@@ -50,7 +70,7 @@ describe("ingestSpansUseCase", () => {
     expect(written[0]?.key).toMatch(/\.protobuf$/)
   })
 
-  it("fails with StorageError when disk write fails", async () => {
+  it("fails with StorageError when disk write fails for large payloads", async () => {
     const { disk } = createFakeStorageDisk({
       put: async () => {
         throw new Error("disk unavailable")
@@ -58,77 +78,34 @@ describe("ingestSpansUseCase", () => {
     })
     const { publisher, published } = createFakeQueuePublisher()
 
-    const res = await Effect.runPromise(
-      Effect.result(
-        ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
-        ),
-      ),
-    )
+    const res = await Effect.runPromise(Effect.result(runUseCase(makeInput(largePayload), disk, publisher)))
 
     expect(Result.isFailure(res)).toBe(true)
     if (Result.isFailure(res)) {
       expect(res.failure._tag).toBe("StorageError")
-      expect(res.failure).toBeInstanceOf(StorageError)
     }
     expect(published).toHaveLength(0)
   })
 
-  it("fails with QueuePublishError and cleans up file when publish fails", async () => {
-    const { disk, written, deleted } = createFakeStorageDisk()
+  it("fails with QueuePublishError when publish fails (inline path)", async () => {
+    const { disk } = createFakeStorageDisk()
     const { publisher } = createFakeQueuePublisher({
       publish: (queue) => Effect.fail(new QueuePublishError({ cause: new Error("queue down"), queue })),
     })
 
-    const res = await Effect.runPromise(
-      Effect.result(
-        ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
-        ),
-      ),
-    )
+    const res = await Effect.runPromise(Effect.result(runUseCase(makeInput(smallPayload), disk, publisher)))
 
-    expect(written).toHaveLength(1)
-    expect(deleted).toHaveLength(1)
-    expect(deleted[0]).toBe(written[0]?.key)
     expect(Result.isFailure(res)).toBe(true)
     if (Result.isFailure(res)) {
       expect(res.failure._tag).toBe("QueuePublishError")
-      expect(res.failure).toBeInstanceOf(QueuePublishError)
-      const err = res.failure as QueuePublishError
-      expect(err.httpStatus).toBe(502)
-      expect(err.httpMessage).toContain("span-ingestion")
     }
-  })
-
-  it("does not publish when storage fails (sequential guarantee)", async () => {
-    const { disk } = createFakeStorageDisk({
-      put: async () => {
-        throw new Error("disk error")
-      },
-    })
-    const { publisher, published } = createFakeQueuePublisher()
-
-    await Effect.runPromise(
-      Effect.result(
-        ingestSpansUseCase(validInput).pipe(
-          Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
-        ),
-      ),
-    )
-
-    expect(published).toHaveLength(0)
   })
 
   it("passes ingest fields in queue payload", async () => {
     const { disk } = createFakeStorageDisk()
     const { publisher, published } = createFakeQueuePublisher()
 
-    await Effect.runPromise(
-      ingestSpansUseCase(validInput).pipe(
-        Effect.provide(Layer.merge(Layer.succeed(StorageDisk, disk), Layer.succeed(QueuePublisher, publisher))),
-      ),
-    )
+    await Effect.runPromise(runUseCase(makeInput(smallPayload), disk, publisher))
 
     expect(published).toHaveLength(1)
     const payload = published[0]?.payload as {

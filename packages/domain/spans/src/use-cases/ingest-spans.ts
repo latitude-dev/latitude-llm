@@ -1,14 +1,9 @@
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
-import {
-  deleteFromDisk,
-  type OrganizationId,
-  type ProjectId,
-  putInDisk,
-  StorageDisk,
-  type StorageError,
-} from "@domain/shared"
+import { type OrganizationId, type ProjectId, putInDisk, StorageDisk, type StorageError } from "@domain/shared"
 import { Effect } from "effect"
+
+const INLINE_PAYLOAD_MAX_BYTES = 50_000 // 50 KB
 
 export interface IngestSpansInput {
   readonly organizationId: OrganizationId
@@ -22,25 +17,31 @@ export const ingestSpansUseCase = (
   input: IngestSpansInput,
 ): Effect.Effect<void, StorageError | QueuePublishError, StorageDisk | QueuePublisher> =>
   Effect.gen(function* () {
-    const disk = yield* StorageDisk
     const publisher = yield* QueuePublisher
 
-    const fileKey = yield* putInDisk(disk, {
-      namespace: "ingest",
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      content: input.payload,
-      extension: input.contentType.includes("protobuf") ? "protobuf" : "json",
-    })
+    let fileKey: string | null = null
+    let inlinePayload: string | null = null
 
-    yield* publisher
-      .publish("span-ingestion", "ingest", {
-        fileKey,
-        contentType: input.contentType,
+    if (input.payload.byteLength <= INLINE_PAYLOAD_MAX_BYTES) {
+      inlinePayload = Buffer.from(input.payload).toString("base64")
+    } else {
+      const disk = yield* StorageDisk
+      fileKey = yield* putInDisk(disk, {
+        namespace: "ingest",
         organizationId: input.organizationId,
         projectId: input.projectId,
-        apiKeyId: input.apiKeyId,
-        ingestedAt: new Date().toISOString(),
+        content: input.payload,
+        extension: input.contentType.includes("protobuf") ? "protobuf" : "json",
       })
-      .pipe(Effect.tapError(() => deleteFromDisk(disk, fileKey).pipe(Effect.ignore)))
+    }
+
+    yield* publisher.publish("span-ingestion", "ingest", {
+      fileKey,
+      inlinePayload,
+      contentType: input.contentType,
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      apiKeyId: input.apiKeyId,
+      ingestedAt: new Date().toISOString(),
+    })
   })

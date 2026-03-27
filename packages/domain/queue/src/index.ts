@@ -43,10 +43,14 @@ export class QueuePublisher extends ServiceMap.Service<QueuePublisher, QueuePubl
   "@domain/queue/QueuePublisher",
 ) {}
 
+export interface SubscribeOptions {
+  readonly concurrency?: number
+}
+
 export interface QueueConsumer {
   readonly start: () => Effect.Effect<void, QueueSubscribeError>
   readonly stop: () => Effect.Effect<void>
-  readonly subscribe: <T extends QueueName>(queue: T, handlers: TaskHandlers<T>) => void
+  readonly subscribe: <T extends QueueName>(queue: T, handlers: TaskHandlers<T>, options?: SubscribeOptions) => void
 }
 
 export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
