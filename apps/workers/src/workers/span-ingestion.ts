@@ -100,5 +100,5 @@ export const createSpanIngestionWorker = ({
         withClickHouse(SpanRepositoryLive, chClient, OrganizationId(wire.organizationId)),
       )
     },
-  })
+  }, { concurrency: 50 })
 }
