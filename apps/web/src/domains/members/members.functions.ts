@@ -19,6 +19,7 @@ export interface MemberRecord {
   readonly status: MemberStatus
   readonly confirmedAt: string | null
   readonly createdAt: string
+  readonly expiresAt?: string | null
 }
 
 export const listMembers = createServerFn({ method: "GET" })
@@ -65,6 +66,7 @@ export const listMembers = createServerFn({ method: "GET" })
         status: "invited" as const,
         confirmedAt: null,
         createdAt: new Date(invite.createdAt).toISOString(),
+        expiresAt: invite.expiresAt ? new Date(invite.expiresAt).toISOString() : null,
       }))
 
     return [...activeMembers, ...invitedMembers]

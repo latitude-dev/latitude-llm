@@ -32,7 +32,11 @@ export function relativeTime(date: Date | string | null | undefined, locale: Int
   const time = formatTime(d, locale)
 
   if (absDiffMs < 2 * DAY) {
-    return `Yesterday at ${time}`
+    if (diffMs >= 0) {
+      return `Yesterday at ${time}`
+    } else {
+      return `Tomorrow at ${time}`
+    }
   }
 
   if (absDiffMs < TEN_MONTHS) {

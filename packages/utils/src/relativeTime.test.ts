@@ -61,4 +61,19 @@ describe("relativeTime", () => {
     expect(relativeTime(null)).toBe("-")
     expect(relativeTime(undefined)).toBe("-")
   })
+
+  it("returns 'in X minutes' for future dates < 1 hour", () => {
+    expect(relativeTime(new Date(NOW.getTime() + 2 * MINUTES))).toBe("in 2 minutes")
+    expect(relativeTime(new Date(NOW.getTime() + 30 * MINUTES))).toBe("in 30 minutes")
+  })
+
+  it("returns 'in X hours' for future dates < 24 hours", () => {
+    expect(relativeTime(new Date(NOW.getTime() + 2 * HOURS))).toBe("in 2 hours")
+    expect(relativeTime(new Date(NOW.getTime() + 12 * HOURS))).toBe("in 12 hours")
+  })
+
+  it("returns 'Tomorrow at {time}' for future dates < 2 days", () => {
+    const result = relativeTime(new Date(NOW.getTime() + 30 * HOURS))
+    expect(result).toMatch(/^Tomorrow at \d{1,2}:\d{2}\s[AP]M$/)
+  })
 })

@@ -164,13 +164,20 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
 function MembersTable({ members }: { members: MemberRecord[] }) {
   const { toast } = useToast()
 
+  const isExpired = (expiresAt: string | null | undefined) => {
+    if (!expiresAt) return false
+    return new Date(expiresAt) < new Date()
+  }
+
   return (
     <Table>
       <TableHeader>
         <TableRow verticalPadding>
           <TableHead>Name</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Confirmed</TableHead>
+          <TableHead>Role</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Invitation</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
@@ -184,10 +191,24 @@ function MembersTable({ members }: { members: MemberRecord[] }) {
               <Text.H5 color="foregroundMuted">{member.email}</Text.H5>
             </TableCell>
             <TableCell>
+              <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+            </TableCell>
+            <TableCell>
+              <Text.H5 color={member.status === "invited" ? "warningMutedForeground" : "foregroundMuted"}>
+                {member.status === "invited" ? "Pending" : "Active"}
+              </Text.H5>
+            </TableCell>
+            <TableCell>
               {member.status === "invited" ? (
-                <Text.H5 color="warningMutedForeground">Invited</Text.H5>
+                member.expiresAt && isExpired(member.expiresAt) ? (
+                  <Text.H5 color="destructive">Expired</Text.H5>
+                ) : member.expiresAt ? (
+                  <Text.H5 color="foregroundMuted">{relativeTime(member.expiresAt)}</Text.H5>
+                ) : (
+                  <Text.H5 color="foregroundMuted">No expiration</Text.H5>
+                )
               ) : (
-                <Text.H5 color="foregroundMuted">{relativeTime(member.confirmedAt)}</Text.H5>
+                <Text.H5 color="foregroundMuted">-</Text.H5>
               )}
             </TableCell>
             <TableCell align="right">
@@ -486,59 +507,51 @@ function ProfileSection() {
   const { user } = Route.useRouteContext()
   const { toast } = useToast()
   const router = useRouter()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const [name, setName] = useState(user.name ?? "")
 
-  const form = useForm({
-    defaultValues: {
-      name: user.name ?? "",
+  const saveField = useCallback(
+    (newName: string) => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(async () => {
+        try {
+          await updateUserName({ data: { name: newName } })
+          toast({ description: "Name updated" })
+          void router.invalidate()
+        } catch (error) {
+          toast({
+            variant: "destructive",
+            description: toUserMessage(error),
+          })
+        }
+      }, 600)
     },
-    onSubmit: async ({ value }) => {
-      try {
-        await updateUserName({ data: { name: value.name } })
-        toast({ description: "Name updated" })
-        form.reset({ name: value.name })
-        void router.invalidate()
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          description: toUserMessage(error),
-        })
-      }
-    },
-  })
+    [toast, router],
+  )
+
+  const handleChange = (newName: string) => {
+    setName(newName)
+    saveField(newName)
+  }
 
   return (
-    <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Profile</Text.H4>
-      <form
-        className="flex flex-row items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <form.Field name="name">
-          {(field) => (
-            <Input
-              required
-              type="text"
-              label="Your Name"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="Your name"
-            />
-          )}
-        </form.Field>
-        <Button type="submit" disabled={form.state.isSubmitting}>
-          Save
-        </Button>
-      </form>
+    <div className="flex max-w-lg flex-col gap-4">
+      <Text.H4 weight="bold">User settings</Text.H4>
+      <Input
+        required
+        type="text"
+        label="Your Name"
+        value={name}
+        onChange={(e) => handleChange(e.target.value)}
+        placeholder="Your name"
+      />
     </div>
   )
 }
 
 // --- Create Organization Section (from user-settings) ---
 
-function CreateOrganizationSection() {
+function CreateOrganizationModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
 
   const form = useForm({
@@ -556,6 +569,7 @@ function CreateOrganizationSection() {
             organizationSlug: org.slug,
           },
         })
+        setOpen(false)
         window.location.href = "/"
       } catch (error) {
         toast({
@@ -567,31 +581,59 @@ function CreateOrganizationSection() {
   })
 
   return (
-    <div className="flex flex-col gap-4">
-      <Text.H4 weight="bold">Create Organization</Text.H4>
-      <form
-        className="flex flex-row items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <form.Field name="name">
-          {(field) => (
-            <Input
-              required
-              type="text"
-              label="Organization Name"
-              value={field.state.value}
-              onChange={(e) => field.handleChange(e.target.value)}
-              placeholder="My Organization"
-            />
-          )}
-        </form.Field>
-        <Button type="submit" disabled={form.state.isSubmitting}>
-          Create
-        </Button>
-      </form>
+    <Modal.Root open={open} onOpenChange={setOpen}>
+      <Modal.Content dismissible>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            void form.handleSubmit()
+          }}
+        >
+          <Modal.Header
+            title="Create Organization"
+            description="Create a new organization to manage your projects and team members."
+          />
+          <Modal.Body>
+            <FormWrapper>
+              <form.Field name="name">
+                {(field) => (
+                  <Input
+                    required
+                    type="text"
+                    label="Organization Name"
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="My Organization"
+                  />
+                )}
+              </form.Field>
+            </FormWrapper>
+          </Modal.Body>
+          <Modal.Footer>
+            <CloseTrigger />
+            <Button type="submit" disabled={form.state.isSubmitting}>
+              Create
+            </Button>
+          </Modal.Footer>
+        </form>
+      </Modal.Content>
+    </Modal.Root>
+  )
+}
+
+function CreateOrganizationSection() {
+  const [modalOpen, setModalOpen] = useState(false)
+
+  return (
+    <div className="flex flex-col gap-4 rounded-lg border border-primary/30 bg-primary/5 p-6">
+      <Text.H4 weight="bold" color="primary">
+        Create Organization
+      </Text.H4>
+      <Text.H5 color="primary">Create a new organization to manage your projects and team members.</Text.H5>
+      <CreateOrganizationModal open={modalOpen} setOpen={setModalOpen} />
+      <div>
+        <Button onClick={() => setModalOpen(true)}>Create Organization</Button>
+      </div>
     </div>
   )
 }
@@ -686,12 +728,12 @@ function SettingsPage() {
       <MembershipsSection />
       <ApiKeysSection />
 
-      <div className="border-t border-border my-4" />
-
       {/* User Settings */}
-      <ProfileSection />
-      <CreateOrganizationSection />
-      <DeleteAccountSection />
+      <div className="flex flex-col gap-8">
+        <ProfileSection />
+        <CreateOrganizationSection />
+        <DeleteAccountSection />
+      </div>
     </Container>
   )
 }
