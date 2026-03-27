@@ -1897,7 +1897,7 @@ export const ISSUES_COLLECTION_TENANT_NAME = ({
 }: {
   organizationId: string;
   projectId: string;
-}) => `${organizationId}:${projectId}`;
+}) => `${organizationId}_${projectId}`;
 
 export type IssuesCollection = {
   // id: string // equals `issues.uuid`
@@ -1910,7 +1910,7 @@ export type IssuesCollection = {
 Weaviate collection requirements:
 
 - multi-tenancy enabled
-- tenant scope `${organizationId}:${projectId}`
+- tenant scope `${organizationId}_${projectId}`
 - self-provided vectors
 - cosine distance
 - `title` searchable with trigram tokenization
@@ -1925,7 +1925,7 @@ Exact v1 configuration that should inform the v2 implementation:
 - `description` used word tokenization with `skipVectorization = true`
 - BM25 used `b = 0.35` and `k1 = 1.1`
 - the vector index used self-provided vectors, cosine distance, dynamic indexing with threshold `10_000`, and quantization disabled
-- v1 tenant scope was `${workspaceId}_${projectId}_${documentUuid}`; v2 is intentionally changing that to `${organizationId}:${projectId}` so issues become project-scoped rather than document-scoped
+- v1 tenant scope was `${workspaceId}_${projectId}_${documentUuid}`; v2 is intentionally changing that to `${organizationId}_${projectId}` so issues become project-scoped rather than document-scoped (underscore separator because Weaviate tenant names only allow alphanumeric, underscore, and hyphen)
 - v1 user-facing issue search still relied on Postgres title search while Weaviate was mainly used for discovery and merge candidate lookup; v2 is intentionally upgrading the product search surface to hybrid search in Weaviate
 
 Exact legacy v1 reference collection configuration code to preserve (must be adapted though):
@@ -2392,12 +2392,12 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with phases 5 through 7 once Phase 2 lands.
 
-- [ ] Define the canonical shared Zod schemas for issues, `IssueCentroid`, and issue lifecycle; infer TypeScript types.
-- [ ] Add the Postgres `issues` table with full Drizzle definition using repo-convention helpers, the stored `issues.uuid` used to link with Weaviate, centroid JSONB, `clusteredAt`, lifecycle timestamps, RLS, and the exact secondary indexes defined by this spec.
-- [ ] Add the Weaviate `Issues` collection definition with the required BM25, vector, and multi-tenancy settings.
-- [ ] Add representative seed data for issues and their initial search/projection state.
-- [ ] Define the issues-domain named constants for discovery thresholds, centroid decay/weights, refresh debounce, and denoising visibility in the owning package.
-- [ ] Document the centroid math, decay anchor (`clusteredAt`), and source-weight rules for later discovery phases.
+- [x] Define the canonical shared Zod schemas for issues, `IssueCentroid`, and issue lifecycle; infer TypeScript types.
+- [x] Add the Postgres `issues` table with full Drizzle definition using repo-convention helpers, the stored `issues.uuid` used to link with Weaviate, centroid JSONB, `clusteredAt`, lifecycle timestamps, RLS, and the exact secondary indexes defined by this spec.
+- [x] Add the Weaviate `Issues` collection definition with the required BM25, vector, and multi-tenancy settings.
+- [x] Add representative seed data for issues and their initial search/projection state.
+- [x] Define the issues-domain named constants for discovery thresholds, centroid decay/weights, refresh debounce, and denoising visibility in the owning package.
+- [x] Document the centroid math, decay anchor (`clusteredAt`), and source-weight rules for later discovery phases.
 
 **Exit gate**: issues schema, Postgres table, and Weaviate collection are complete; later phases can build discovery and lifecycle.
 

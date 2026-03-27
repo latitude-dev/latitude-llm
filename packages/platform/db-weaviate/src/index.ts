@@ -11,3 +11,4 @@ export {
 export { defaultWeaviateCollectionDefinitions } from "./collections.ts"
 export type { WeaviateCollectionDefinition } from "./migrations.ts"
 export { WeaviateCollectionMigrationError } from "./migrations.ts"
+export { IssueProjectionRepositoryLive } from "./repositories/issue-projection-repository.ts"

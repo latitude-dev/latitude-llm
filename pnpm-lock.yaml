@@ -369,8 +369,8 @@ importers:
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.1(@types/node@24.10.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2))
       agentation:
-        specifier: ^2.3.2
-        version: 2.3.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+        specifier: ^3.0.2
+        version: 3.0.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -592,9 +592,22 @@ importers:
 
   packages/domain/issues:
     dependencies:
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.0)(@types/node@24.10.3)(jsdom@29.0.1(@noble/hashes@2.0.1))(msw@2.12.7(@types/node@24.10.3)(typescript@5.8.3))(vite@7.3.1(@types/node@24.10.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.44.0)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/domain/models:
     dependencies:
@@ -793,6 +806,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../domain/events
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../../domain/issues
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../domain/organizations
@@ -857,6 +873,12 @@ importers:
 
   packages/platform/db-weaviate:
     dependencies:
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../../domain/issues
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -866,6 +888,10 @@ importers:
       weaviate-client:
         specifier: 'catalog:'
         version: 3.11.0
+    devDependencies:
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   packages/platform/email-transport:
     dependencies:
@@ -5923,8 +5949,8 @@ packages:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
     engines: {node: '>= 14'}
 
-  agentation@2.3.2:
-    resolution: {integrity: sha512-TMCD7/n1GFZIuThrVWAmNWJuq2s/o7Iabx6M9fKf/Foi2EvH+ZZ8E2AWLSoLgIcAabN653WvCPfx+XqGmcbdmg==}
+  agentation@3.0.2:
+    resolution: {integrity: sha512-iGzBxFVTuZEIKzLY6AExSLAQH6i6SwxV4pAu7v7m3X6bInZ7qlZXAwrEqyc4+EfP4gM7z2RXBF6SF4DeH0f2lA==}
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
@@ -15597,7 +15623,7 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  agentation@2.3.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
+  agentation@3.0.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4):
     optionalDependencies:
       react: 19.2.4
       react-dom: 19.2.4(react@19.2.4)

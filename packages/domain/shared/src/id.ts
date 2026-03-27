@@ -36,6 +36,7 @@ export type DatasetVersionId = Branded<string, "DatasetVersionId">
 
 // Reliability-related IDs
 export type ScoreId = Branded<string, "ScoreId">
+export type IssueId = Branded<string, "IssueId">
 
 // Telemetry-related IDs
 export type TraceId = Branded<string, "TraceId">
@@ -53,6 +54,7 @@ export const MembershipId = (value: string): MembershipId => value as Membership
 export const ProjectId = (value: string): ProjectId => value as ProjectId
 export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
+export const IssueId = (value: string): IssueId => value as IssueId
 export const TraceId = (value: string): TraceId => value as TraceId
 export const SpanId = (value: string): SpanId => value as SpanId
 export const DatasetId = (value: string): DatasetId => value as DatasetId

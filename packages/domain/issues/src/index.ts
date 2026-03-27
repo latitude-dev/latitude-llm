@@ -1,4 +1,45 @@
 export {
+  AUTO_RESOLVE_INACTIVITY_DAYS,
+  CENTROID_EMBEDDING_DIMENSIONS,
+  CENTROID_EMBEDDING_MODEL,
+  CENTROID_HALF_LIFE_SECONDS,
+  CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_THRESHOLD_FACTOR,
+  HYBRID_SEARCH_ALPHA,
+  ISSUE_DISCOVERY_MAX_CANDIDATES,
+  ISSUE_DISCOVERY_MIN_KEYWORDS,
+  ISSUE_DISCOVERY_MIN_SIMILARITY,
+  ISSUE_DISCOVERY_SEARCH_RATIO,
+  ISSUE_REFRESH_DEBOUNCE_MS,
+  ISSUE_STATES,
+  MAX_INITIAL_CANDIDATES,
+  MIN_BM25_KEYWORD_MATCHES,
+  MIN_HYBRID_SIMILARITY,
+  MIN_OCCURRENCES_FOR_VISIBILITY,
+  MIN_RERANK_RELEVANCE,
+  NEW_ISSUE_AGE_DAYS,
+  RERANK_LIMIT,
+  RERANK_MODEL,
+} from "./constants.ts"
+export {
+  type Issue,
+  type IssueCentroid,
+  type IssueState,
+  issueCentroidSchema,
+  issueIdSchema,
+  issueSchema,
+  issueStateSchema,
+} from "./entities/issue.ts"
+export { emptyIssueCentroid } from "./helpers.ts"
+export {
+  type DeleteIssueProjectionInput,
+  type HybridSearchInput,
+  type IssueProjectionCandidate,
+  IssueProjectionRepository,
+  type IssuesCollectionProperties,
+  type UpsertIssueProjectionInput,
+} from "./ports/issue-projection-repository.ts"
+export {
   type AssignmentResult,
   createOrAssignIssueUseCase,
   type DiscoverIssueInput,
