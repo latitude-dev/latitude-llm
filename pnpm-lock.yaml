@@ -596,6 +596,15 @@ importers:
         specifier: ^5.7.0
         version: 5.8.3
 
+  packages/domain/evaluations:
+    dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
   packages/domain/events:
     dependencies:
       effect:
@@ -818,6 +827,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../../domain/evaluations
       '@domain/events':
         specifier: workspace:*
         version: link:../../domain/events

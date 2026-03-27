@@ -2407,11 +2407,11 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with phases 6 and 7 once phases 2 and 4 land.
 
-- [ ] Define the canonical shared Zod schemas for evaluations, triggers, and evaluation lifecycle; infer TypeScript types.
-- [ ] Add the Postgres `evaluations` table with full Drizzle definition using repo-convention helpers, support for multiple linked evaluations per issue, RLS, and the exact secondary indexes defined by this spec.
-- [ ] Add representative seed data for evaluations, including linked-issue examples where the schema supports them.
-- [ ] Define the evaluations-domain named constants for cadence, default sampling, alignment tolerances, and evaluation-generation job-status TTL.
-- [ ] Define `EvaluationTrigger.filter` as the shared `FilterSet` from `@domain/shared`, using the shared trace field registry semantics instead of a reliability-only string grammar.
+- [x] Define the canonical shared Zod schemas for evaluations, triggers, and evaluation lifecycle; infer TypeScript types.
+- [x] Add the Postgres `evaluations` table with full Drizzle definition using repo-convention helpers, support for multiple linked evaluations per issue, RLS, and the exact secondary indexes defined by this spec.
+- [x] Add representative seed data for evaluations, including linked-issue examples where the schema supports them.
+- [x] Define the evaluations-domain named constants for cadence, default sampling, alignment tolerances, and evaluation-generation job-status TTL.
+- [x] Define `EvaluationTrigger.filter` as the shared `FilterSet` from `@domain/shared`, using the shared trace field registry semantics instead of a reliability-only string grammar.
 
 **Exit gate**: evaluations schema and table are complete; later phases can build generation, alignment, and execution.
 
