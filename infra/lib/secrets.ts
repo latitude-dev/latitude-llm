@@ -103,6 +103,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "ClickHouse Cloud URL",
     process.env.CLICKHOUSE_URL ?? "https://placeholder.clickhouse.cloud:8443",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["clickhouse-url"] = clickhouseUrl.secret
   secretVersions["clickhouse-url"] = clickhouseUrl.secretVersion
@@ -113,6 +114,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "ClickHouse Cloud username",
     process.env.CLICKHOUSE_USER ?? "default",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["clickhouse-user"] = clickhouseUser.secret
   secretVersions["clickhouse-user"] = clickhouseUser.secretVersion
@@ -123,6 +125,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "ClickHouse Cloud password",
     process.env.CLICKHOUSE_PASSWORD ?? "placeholder-change-me",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["clickhouse-password"] = clickhousePassword.secret
   secretVersions["clickhouse-password"] = clickhousePassword.secretVersion
@@ -133,6 +136,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "ClickHouse database name",
     process.env.CLICKHOUSE_DB ?? "latitude",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["clickhouse-db"] = clickhouseDb.secret
   secretVersions["clickhouse-db"] = clickhouseDb.secretVersion
@@ -143,6 +147,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "ClickHouse native protocol URL for migrations",
     process.env.CLICKHOUSE_MIGRATION_URL ?? "clickhouse://localhost:9000",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["clickhouse-migration-url"] = clickhouseMigrationUrl.secret
   secretVersions["clickhouse-migration-url"] = clickhouseMigrationUrl.secretVersion
@@ -153,6 +158,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Weaviate Cloud URL",
     process.env.LAT_WEAVIATE_URL ?? "https://placeholder.weaviate.cloud",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["weaviate-url"] = weaviateUrl.secret
   secretVersions["weaviate-url"] = weaviateUrl.secretVersion
@@ -163,6 +169,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Weaviate Cloud API key",
     process.env.LAT_WEAVIATE_API_KEY ?? "placeholder-change-me",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["weaviate-api-key"] = weaviateApiKey.secret
   secretVersions["weaviate-api-key"] = weaviateApiKey.secretVersion
@@ -173,6 +180,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Mailgun API key",
     process.env.LAT_MAILGUN_API_KEY ?? "placeholder-change-me",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["mailgun-api-key"] = mailgunApiKey.secret
   secretVersions["mailgun-api-key"] = mailgunApiKey.secretVersion
@@ -183,6 +191,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Mailgun domain",
     process.env.LAT_MAILGUN_DOMAIN ?? "placeholder-change-me",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["mailgun-domain"] = mailgunDomain.secret
   secretVersions["mailgun-domain"] = mailgunDomain.secretVersion
@@ -193,6 +202,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Mailgun from email address",
     process.env.LAT_MAILGUN_FROM ?? `noreply@${environment}.latitude.so`,
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["mailgun-from"] = mailgunFrom.secret
   secretVersions["mailgun-from"] = mailgunFrom.secretVersion
@@ -203,6 +213,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Mailgun region",
     process.env.LAT_MAILGUN_REGION ?? "us",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["mailgun-region"] = mailgunRegion.secret
   secretVersions["mailgun-region"] = mailgunRegion.secretVersion
@@ -257,6 +268,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Temporal Cloud API key for workflows worker",
     process.env.LAT_TEMPORAL_API_KEY ?? "placeholder-set-before-deploy",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["temporal-api-key"] = temporalApiKey.secret
   secretVersions["temporal-api-key"] = temporalApiKey.secretVersion
@@ -267,6 +279,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Datadog API key — replace placeholder-change-me in Secrets Manager",
     process.env.LAT_DATADOG_API_KEY ?? "placeholder-change-me",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["datadog-api-key"] = datadogApiKey.secret
   secretVersions["datadog-api-key"] = datadogApiKey.secretVersion
@@ -277,6 +290,7 @@ export function createApplicationSecrets(baseName: string, environment: string):
     "Datadog site (e.g., datadoghq.com, datadoghq.eu)",
     process.env.LAT_DATADOG_SITE ?? "datadoghq.eu",
     environment,
+    immutableSecretResourceOptions,
   )
   secrets["datadog-site"] = datadogSite.secret
   secretVersions["datadog-site"] = datadogSite.secretVersion
