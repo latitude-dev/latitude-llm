@@ -9,7 +9,7 @@ import {
 } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { ProjectRepositoryLive, ScoreEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
 import { ErrorSchema, OrgAndProjectParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
@@ -161,7 +161,7 @@ export const createScoresRoutes = () => {
     const { projectId: projectIdParam } = c.req.valid("param")
     const projectId = ProjectId(projectIdParam)
 
-    const repositoriesLayer = Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, ScoreEventWriterLive)
+    const repositoriesLayer = Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive)
 
     const score = await Effect.runPromise(
       Effect.gen(function* () {
