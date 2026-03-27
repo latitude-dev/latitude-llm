@@ -299,6 +299,8 @@ function createTaskDefinition(
       secrets["github-oauth-client-id"].arn,
       secrets["github-oauth-client-secret"].arn,
       secrets["temporal-api-key"].arn,
+      secrets["datadog-api-key"].arn,
+      secrets["datadog-site"].arn,
     ])
     .apply(
       ([
@@ -325,6 +327,8 @@ function createTaskDefinition(
         githubOauthClientIdArn,
         githubOauthClientSecretArn,
         temporalApiKeyArn,
+        datadogApiKeyArn,
+        datadogSiteArn,
       ]) => {
         const baseEnvironment: { name: string; value: string }[] = [
           { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
@@ -368,6 +372,8 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
+          { name: "LAT_DATADOG_API_KEY", valueFrom: datadogApiKeyArn },
+          { name: "LAT_DATADOG_SITE", valueFrom: datadogSiteArn },
         ]
 
         const workflowsEnvironment =
@@ -502,9 +508,7 @@ function createMigrationTaskDefinition(
               "awslogs-stream-prefix": "migrations",
             },
           },
-          environment: [
-            { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
-          ],
+          environment: [{ name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" }],
           secrets: [
             { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbSecretArn },
             { name: "CLICKHOUSE_MIGRATION_URL", valueFrom: clickhouseMigrationUrlArn },

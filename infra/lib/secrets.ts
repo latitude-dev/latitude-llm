@@ -261,6 +261,26 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["temporal-api-key"] = temporalApiKey.secret
   secretVersions["temporal-api-key"] = temporalApiKey.secretVersion
 
+  const datadogApiKey = createSingleSecret(
+    baseName,
+    "datadog-api-key",
+    "Datadog API key — replace placeholder-change-me in Secrets Manager",
+    process.env.LAT_DATADOG_API_KEY ?? "placeholder-change-me",
+    environment,
+  )
+  secrets["datadog-api-key"] = datadogApiKey.secret
+  secretVersions["datadog-api-key"] = datadogApiKey.secretVersion
+
+  const datadogSite = createSingleSecret(
+    baseName,
+    "datadog-site",
+    "Datadog site (e.g., datadoghq.com, datadoghq.eu)",
+    process.env.LAT_DATADOG_SITE ?? "datadoghq.eu",
+    environment,
+  )
+  secrets["datadog-site"] = datadogSite.secret
+  secretVersions["datadog-site"] = datadogSite.secretVersion
+
   return {
     secrets,
     secretVersions,
