@@ -14,6 +14,7 @@ import { SessionRepository } from "@domain/spans"
 import { Effect, Layer } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
+import { buildScoreRollupSubquery, splitScoreFilters } from "../score-filter-subquery.ts"
 
 const LIST_SELECT = `
   organization_id,
@@ -114,13 +115,34 @@ const SORT_COLUMNS: Record<string, SortColumn> = {
 }
 
 function buildSessionFilterClauses(filters: FilterSet | undefined): {
-  clauses: string[]
+  havingClauses: string[]
+  whereClauses: string[]
   params: Record<string, unknown>
 } {
   if (!filters || Object.keys(filters).length === 0) {
-    return { clauses: [], params: {} }
+    return { havingClauses: [], whereClauses: [], params: {} }
   }
-  return buildClickHouseWhere(filters, SESSION_FIELD_REGISTRY)
+
+  const { telemetryFilters, scoreFilters } = splitScoreFilters(filters)
+
+  const telemetry = telemetryFilters
+    ? buildClickHouseWhere(telemetryFilters, SESSION_FIELD_REGISTRY)
+    : { clauses: [], params: {} }
+
+  let whereClauses: string[] = []
+  let scoreParams: Record<string, unknown> = {}
+
+  if (scoreFilters) {
+    const result = buildScoreRollupSubquery("session_id", scoreFilters, false)
+    whereClauses = [result.subquery]
+    scoreParams = result.params
+  }
+
+  return {
+    havingClauses: telemetry.clauses,
+    whereClauses,
+    params: { ...telemetry.params, ...scoreParams },
+  }
 }
 
 const DEFAULT_SORT: SortColumn = SORT_COLUMNS.startTime as SortColumn
@@ -137,9 +159,9 @@ export const SessionRepositoryLive = Layer.effect(
         const cmp = orderDir === "DESC" ? "<" : ">"
         const limit = options.limit ?? 50
 
-        const { clauses: filterClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
+        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
 
-        const havingParts: string[] = [...filterClauses]
+        const havingParts: string[] = [...havingClauses]
         if (options.cursor) {
           havingParts.push(
             `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
@@ -148,6 +170,7 @@ export const SessionRepositoryLive = Layer.effect(
           )
         }
         const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         return chSqlClient
           .query(async (client) => {
@@ -156,6 +179,7 @@ export const SessionRepositoryLive = Layer.effect(
                       FROM sessions
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
+                        ${extraWhere}
                       GROUP BY organization_id, project_id, session_id
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
@@ -194,8 +218,9 @@ export const SessionRepositoryLive = Layer.effect(
       },
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
-        const { clauses: filterClauses, params: filterParams } = buildSessionFilterClauses(filters)
-        const havingClause = filterClauses.length > 0 ? `HAVING ${filterClauses.join(" AND ")}` : ""
+        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
         return chSqlClient
           .query(async (client) => {
@@ -206,6 +231,7 @@ export const SessionRepositoryLive = Layer.effect(
                         FROM sessions
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
+                          ${extraWhere}
                         GROUP BY organization_id, project_id, session_id
                         ${havingClause}
                       )`,

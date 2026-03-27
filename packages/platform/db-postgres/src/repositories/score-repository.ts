@@ -1,6 +1,15 @@
 import type { Score, ScoreListOptions, ScoreSource } from "@domain/scores"
 import { ScoreRepository, scoreSchema } from "@domain/scores"
-import { type ProjectId, type ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  type IssueId,
+  type ProjectId,
+  type ScoreId,
+  type SessionId,
+  type SpanId,
+  SqlClient,
+  type SqlClientShape,
+  type TraceId,
+} from "@domain/shared"
 import { and, desc, eq, isNotNull, isNull, type SQL } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -169,6 +178,70 @@ export const ScoreRepositoryLive = Layer.effect(
         list({
           baseWhere:
             and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId)) ??
+            eq(scores.projectId, projectId),
+          options,
+        }),
+
+      listByTraceId: ({
+        projectId,
+        traceId,
+        options,
+      }: {
+        readonly projectId: ProjectId
+        readonly traceId: TraceId
+        readonly options?: ScoreListOptions
+      }) =>
+        list({
+          baseWhere:
+            and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string)) ??
+            eq(scores.projectId, projectId),
+          options,
+        }),
+
+      listBySessionId: ({
+        projectId,
+        sessionId,
+        options,
+      }: {
+        readonly projectId: ProjectId
+        readonly sessionId: SessionId
+        readonly options?: ScoreListOptions
+      }) =>
+        list({
+          baseWhere:
+            and(eq(scores.projectId, projectId), eq(scores.sessionId, sessionId as string)) ??
+            eq(scores.projectId, projectId),
+          options,
+        }),
+
+      listBySpanId: ({
+        projectId,
+        spanId,
+        options,
+      }: {
+        readonly projectId: ProjectId
+        readonly spanId: SpanId
+        readonly options?: ScoreListOptions
+      }) =>
+        list({
+          baseWhere:
+            and(eq(scores.projectId, projectId), eq(scores.spanId, spanId as string)) ??
+            eq(scores.projectId, projectId),
+          options,
+        }),
+
+      listByIssueId: ({
+        projectId,
+        issueId,
+        options,
+      }: {
+        readonly projectId: ProjectId
+        readonly issueId: IssueId
+        readonly options?: ScoreListOptions
+      }) =>
+        list({
+          baseWhere:
+            and(eq(scores.projectId, projectId), eq(scores.issueId, issueId as string)) ??
             eq(scores.projectId, projectId),
           options,
         }),

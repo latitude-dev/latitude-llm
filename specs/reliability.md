@@ -1579,7 +1579,7 @@ Those later materializations will likely need to support responsibilities such a
 - evaluation/custom source trend charts
 - issue occurrence charts and counts
 
-The repository currently materializes `traces` but not `sessions`, so reliability must add a session-level materialization built from spans.
+The repository materializes both `traces` and `sessions`, so reliability can filter sessions by aggregated properties without additional materialization work.
 
 ## Issues
 
@@ -2334,7 +2334,7 @@ Row click opens a detailed view with:
 >
 > Each phase is intended to become one GitHub PR and one Linear issue. Before Linear sync, phase headings use the placeholder id `LAT-XXX`; after sync, they should use the created Linear issue ids. Task bullets are local checklist items.
 
-### (LAT-457) Phase 0 - Reliability Async Foundations ✅
+### (LAT-457) Phase 0 - Reliability Async Foundations
 
 **Depends on**: none
 
@@ -2441,9 +2441,9 @@ Row click opens a detailed view with:
 - [ ] Extend telemetry storage with `simulation_id` as a non-null fixed-width CUID link using the empty-string sentinel when absent through a new ClickHouse migration rather than by editing existing migration history.
 - [ ] Add representative seed data for simulations and simulation-linked score/telemetry examples.
 - [ ] Define the simulations-domain named constants for reporting defaults and upload/local-only behavior.
-- [ ] Add the missing session materialization boundary needed for later reliability queries.
+- [ ] Propagate `simulation_id` into the existing traces and sessions materializations via a new ClickHouse migration rather than by editing existing migration history.
 
-**Exit gate**: simulations schema and table are complete; telemetry has `simulation_id` and session materialization; later phases can build simulation runtime and product surface.
+**Exit gate**: simulations schema and table are complete; telemetry has `simulation_id` propagated through spans, traces, and sessions materializations; later phases can build simulation runtime and product surface.
 
 ### (LAT-465) Phase 8 - Scores Ingestion And Base Reads
 
@@ -2467,14 +2467,14 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: Phase 10 can continue in parallel while this phase finishes; phases 11 and 15 should wait for it.
 
-- [ ] Implement repositories and query primitives over canonical Postgres scores plus the initial ClickHouse score analytics query layer, while keeping the exact later materialized analytics tables deferred.
-- [ ] Implement score-aware filtering for spans using rollups instead of hot joins against raw scores.
-- [ ] Implement trace and session drilldowns filtered by score state, value, source, and issue.
-- [ ] Implement evaluation/custom source trend queries and project-wide score aggregates from the immutable ClickHouse score analytics rows, while keeping score-table and drilldown reads in Postgres.
-- [ ] Implement issue occurrence/time-series aggregates used by issue lifecycle and UI.
-- [ ] Ensure score queries can include or exclude simulation-generated scores where the product requires it.
-- [ ] Benchmark and tune the ClickHouse score analytics table sort keys, partitions, and skip indexes against realistic reliability workloads.
-- [ ] Add query regression tests and benchmark fixtures for Postgres-backed score drilldowns, ClickHouse-backed project aggregates, and include/exclude simulation behavior.
+- [x] Implement repositories and query primitives over canonical Postgres scores plus the initial ClickHouse score analytics query layer, while keeping the exact later materialized analytics tables deferred.
+- [x] Implement score-aware filtering for spans using rollups instead of hot joins against raw scores.
+- [x] Implement trace and session drilldowns filtered by score state, value, source, and issue.
+- [x] Implement evaluation/custom source trend queries and project-wide score aggregates from the immutable ClickHouse score analytics rows, while keeping score-table and drilldown reads in Postgres.
+- [x] Implement issue occurrence/time-series aggregates used by issue lifecycle and UI.
+- [x] Ensure score queries can include or exclude simulation-generated scores where the product requires it.
+- [x] Benchmark and tune the ClickHouse score analytics table sort keys, partitions, and skip indexes against realistic reliability workloads.
+- [x] Add query regression tests and benchmark fixtures for Postgres-backed score drilldowns, ClickHouse-backed project aggregates, and include/exclude simulation behavior.
 
 **Exit gate**: spans, traces, and sessions can be filtered by score-derived properties; evaluation, issue, and simulation analytics have a working query path without prematurely locking the final materialized-table design.
 
