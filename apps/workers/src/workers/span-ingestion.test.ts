@@ -128,6 +128,35 @@ describe("createSpanIngestionWorker", () => {
     })
   })
 
+  it("returns early when neither inlinePayload nor fileKey is provided", async () => {
+    const consumer = new TestQueueConsumer()
+    const disk = new FakeStorageDisk()
+    const pub = createFakeEventsPublisher()
+
+    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
+
+    await consumer.dispatchTask("span-ingestion", "ingest", {
+      fileKey: null,
+      inlinePayload: null,
+      contentType: "application/json",
+      organizationId: "org_no_payload_test",
+      projectId: "proj_no_payload_test",
+      apiKeyId: "api_key_no_payload_test",
+      ingestedAt: "2026-03-18T10:00:00.000Z",
+    })
+
+    const [count] = await Effect.runPromise(
+      queryClickhouse<{ total: string }>(
+        ch.client,
+        "SELECT count() AS total FROM spans WHERE organization_id = {organizationId:String}",
+        { organizationId: "org_no_payload_test" },
+      ),
+    )
+
+    expect(Number(count?.total ?? 0)).toBe(0)
+    expect(pub.published).toHaveLength(0)
+  })
+
   it("drops invalid payloads without inserting spans", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
