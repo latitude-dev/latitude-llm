@@ -180,7 +180,6 @@ function ProjectSidebar({
           <Button
             variant="outline"
             size="icon"
-            flat
             onClick={onToggleCollapse}
             className="h-8 w-8 shrink-0"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}

@@ -88,7 +88,7 @@ export function TimeFilterDropdown({ startTimeFrom, startTimeTo, onChange }: Tim
   return (
     <DropdownMenuRoot open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" flat>
+        <Button variant="outline" size="sm">
           <CalendarIcon className="h-4 w-4" />
           <Text.H6>{activeLabel}</Text.H6>
           <ChevronDown className="h-4 w-4" />
@@ -131,7 +131,7 @@ export function TimeFilterDropdown({ startTimeFrom, startTimeTo, onChange }: Tim
               />
             </label>
           </div>
-          <Button variant="outline" size="sm" flat onClick={applyCustomRange}>
+          <Button variant="outline" size="sm" onClick={applyCustomRange}>
             <Text.H6>Apply</Text.H6>
           </Button>
         </fieldset>

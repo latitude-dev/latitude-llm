@@ -128,11 +128,11 @@ export function UploadBlankSlate({
                       </Text.H5>
                     </div>
                     <div className="flex flex-row flex-wrap items-center justify-center gap-3">
-                      <Button flat variant="default" onClick={() => fileInputRef.current?.click()}>
+                      <Button variant="default" onClick={() => fileInputRef.current?.click()}>
                         <FileUp className="h-4 w-4" />
                         Choose file
                       </Button>
-                      <Button flat variant="outline" onClick={openAddRowModal}>
+                      <Button variant="outline" onClick={openAddRowModal}>
                         <CirclePlus className="h-4 w-4" />
                         Add row
                       </Button>
