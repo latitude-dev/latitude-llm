@@ -1,6 +1,7 @@
 import { type EmailMessage, EmailSendError, type EmailSender } from "@domain/email"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
+import Mailgun from "mailgun.js"
 import { createTransport } from "nodemailer"
 
 interface MailgunApiConfig {
@@ -92,28 +93,25 @@ const mergeMailpitConfig = (base: MailpitConfig, override: Partial<MailpitConfig
 
 const createMailgunSendFn = (apiKey: string, domain: string, region: "us" | "eu"): SendFn => {
   const apiHost = region === "eu" ? "api.eu.mailgun.net" : "api.mailgun.net"
-  const url = `https://${apiHost}/v3/${domain}/messages`
-  const authHeader = `Basic ${btoa(`api:${apiKey}`)}`
+  const mailgun = new Mailgun(FormData)
+  const client = mailgun.client({
+    username: "api",
+    key: apiKey,
+    url: `https://${apiHost}`,
+    useFetch: true,
+  })
 
   return async (message, from) => {
-    const body = new FormData()
-    body.append("from", from)
-    body.append("to", message.to)
-    body.append("subject", message.subject)
-    body.append("html", message.html)
-    if (message.text) body.append("text", message.text)
-    if (message.replyTo) body.append("h:Reply-To", message.replyTo)
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { Authorization: authHeader },
-      body,
-    })
-
-    if (!response.ok) {
-      const text = await response.text()
-      throw new Error(`Mailgun API ${response.status}: ${text}`)
+    const data = {
+      from,
+      to: [message.to],
+      subject: message.subject,
+      html: message.html,
+      ...(message.text && { text: message.text }),
+      ...(message.replyTo && { "h:Reply-To": message.replyTo }),
     }
+
+    await client.messages.create(domain, data)
   }
 }
 
@@ -199,7 +197,7 @@ export const createEmailTransportSender = (config?: EmailTransportConfig): Email
   return {
     send: (message: EmailMessage): Effect.Effect<void, EmailSendError> => {
       return Effect.gen(function* () {
-        const resolvedFrom = message.from ?? resolved.from
+        const resolvedFrom = message.from ?? `Latitude <${resolved.from}>`
 
         if (!resolvedFrom) {
           return yield* new EmailSendError({

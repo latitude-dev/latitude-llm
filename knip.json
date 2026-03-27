@@ -37,8 +37,7 @@
       "project": ["src/**/*.ts"]
     },
     "packages/platform/db-weaviate": {
-      "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["tsx"]
+      "project": ["src/**/*.ts"]
     },
     "packages/platform/*": {
       "project": ["src/**/*.ts"]
@@ -54,7 +53,7 @@
       "project": []
     }
   },
-  "ignoreBinaries": ["tmuxinator", "pulumi", "tsx"],
+  "ignoreBinaries": ["tmuxinator", "pulumi"],
   "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"],
   "ignoreIssues": {
     "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"],

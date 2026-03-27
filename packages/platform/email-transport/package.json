@@ -16,6 +16,7 @@
     "@domain/email": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
+    "mailgun.js": "^12.7.1",
     "nodemailer": "^8.0.4"
   },
   "devDependencies": {
