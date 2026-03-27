@@ -7,41 +7,13 @@ import { createOrganization, listOrganizations } from "../../domains/organizatio
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { updateUser } from "../../domains/users/user.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
+import { getAvatarBackgroundColor, getAvatarTextColor } from "../../lib/avatar.ts"
 import { toUserMessage } from "../../lib/errors.ts"
 
 interface Organization {
   id: string
   name: string
   slug?: string
-}
-
-const LETTER_HUES: Record<string, number> = {
-  A: 0,
-  B: 25,
-  C: 50,
-  D: 75,
-  E: 100,
-  F: 125,
-  G: 150,
-  H: 175,
-  I: 200,
-  J: 215,
-  K: 230,
-  L: 245,
-  M: 260,
-  N: 275,
-  O: 290,
-  P: 305,
-  Q: 320,
-  R: 335,
-  S: 350,
-  T: 15,
-  U: 40,
-  V: 65,
-  W: 90,
-  X: 115,
-  Y: 140,
-  Z: 165,
 }
 
 export const Route = createFileRoute("/welcome/")({
@@ -130,7 +102,6 @@ function WelcomePage() {
           <div className="flex flex-col rounded-xl overflow-hidden shadow-none border border-border">
             {organizations.map((org: Organization, index: number) => {
               const initial = org.name.charAt(0).toUpperCase()
-              const hue = LETTER_HUES[initial] ?? 180
 
               return (
                 <button
@@ -145,8 +116,8 @@ function WelcomePage() {
                   <div
                     className="flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold"
                     style={{
-                      backgroundColor: `hsl(${hue}, 70%, 85%)`,
-                      color: `hsl(${hue}, 50%, 30%)`,
+                      backgroundColor: getAvatarBackgroundColor(initial),
+                      color: getAvatarTextColor(initial),
                     }}
                   >
                     {initial}

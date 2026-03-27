@@ -8,6 +8,7 @@ import { useOrganizationsCollection } from "../domains/organizations/organizatio
 import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
+import { getAvatarBackgroundColor, getAvatarTextColor } from "../lib/avatar.ts"
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
@@ -45,9 +46,17 @@ function UserAvatar({ name }: { name: string }) {
           .join("")
           .toUpperCase() || trimmed.slice(0, 2).toUpperCase()
 
+  const initial = trimmed.charAt(0).toUpperCase()
+
   return (
-    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-      <span className="text-xs font-medium text-primary-foreground leading-none">{initials}</span>
+    <div
+      className="w-6 h-6 rounded-full flex items-center justify-center"
+      style={{
+        backgroundColor: getAvatarBackgroundColor(initial),
+        color: getAvatarTextColor(initial),
+      }}
+    >
+      <span className="text-xs font-medium leading-none">{initials}</span>
     </div>
   )
 }
@@ -179,12 +188,6 @@ function NavHeader() {
           side="bottom"
           align="end"
           options={[
-            {
-              label: "User Settings",
-              onClick: () => {
-                void router.navigate({ to: "/user-settings" })
-              },
-            },
             {
               label: "Log out",
               type: "destructive",

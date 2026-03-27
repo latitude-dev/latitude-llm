@@ -20,7 +20,6 @@ import { Route as DesignSystemColorsRouteImport } from './routes/design-system/c
 import { Route as DesignSystemButtonRouteImport } from './routes/design-system/button'
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as AuthenticatedUserSettingsRouteImport } from './routes/_authenticated/user-settings'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects/$projectId'
@@ -84,12 +83,6 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedUserSettingsRoute =
-  AuthenticatedUserSettingsRouteImport.update({
-    id: '/user-settings',
-    path: '/user-settings',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -142,7 +135,6 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -161,7 +153,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/settings': typeof AuthenticatedSettingsRoute
-  '/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -183,7 +174,6 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
-  '/_authenticated/user-settings': typeof AuthenticatedUserSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -207,7 +197,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/settings'
-    | '/user-settings'
     | '/api/health'
     | '/auth/invite'
     | '/design-system/button'
@@ -226,7 +215,6 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/settings'
-    | '/user-settings'
     | '/api/health'
     | '/auth/invite'
     | '/design-system/button'
@@ -247,7 +235,6 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/settings'
-    | '/_authenticated/user-settings'
     | '/api/health'
     | '/auth/invite'
     | '/design-system/button'
@@ -355,13 +342,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/user-settings': {
-      id: '/_authenticated/user-settings'
-      path: '/user-settings'
-      fullPath: '/user-settings'
-      preLoaderRoute: typeof AuthenticatedUserSettingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -465,14 +445,12 @@ const AuthenticatedProjectsProjectIdRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
-  AuthenticatedUserSettingsRoute: typeof AuthenticatedUserSettingsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedProjectsProjectIdRoute: typeof AuthenticatedProjectsProjectIdRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
-  AuthenticatedUserSettingsRoute: AuthenticatedUserSettingsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedProjectsProjectIdRoute:
     AuthenticatedProjectsProjectIdRouteWithChildren,
