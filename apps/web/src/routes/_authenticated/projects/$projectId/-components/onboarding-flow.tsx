@@ -1,6 +1,6 @@
 import { Button, Checkbox, CodeBlock, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
 import { ChevronLeft, ChevronRight, DoorOpen, ListTree } from "lucide-react"
-import { type ElementType, useState } from "react"
+import { type ElementType, useRef, useState } from "react"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 
 type OnboardingRole = "engineer" | "data-ai-ml" | "product-manager" | "founder" | "other"
@@ -14,49 +14,222 @@ interface ProviderDefinition {
   readonly otelSetup: string
 }
 
-const ROLE_OPTIONS: ReadonlyArray<{ readonly id: OnboardingRole; readonly title: string; readonly description: string }> = [
+const ROLE_OPTIONS: ReadonlyArray<{
+  readonly id: OnboardingRole
+  readonly title: string
+  readonly description: string
+}> = [
   { id: "engineer", title: "Engineer", description: "I'll set up the SDK and own the integration" },
-  { id: "data-ai-ml", title: "Data / AI / ML", description: "I evaluate model quality — I review traces, annotate outputs, and track scores over time" },
-  { id: "product-manager", title: "Product manager", description: "I track how our AI features are performing and spot regressions" },
-  { id: "founder", title: "Founder", description: "I need visibility into what our AI is doing and whether it's working as intended" },
+  {
+    id: "data-ai-ml",
+    title: "Data / AI / ML",
+    description: "I evaluate model quality — I review traces, annotate outputs, and track scores over time",
+  },
+  {
+    id: "product-manager",
+    title: "Product manager",
+    description: "I track how our AI features are performing and spot regressions",
+  },
+  {
+    id: "founder",
+    title: "Founder",
+    description: "I need visibility into what our AI is doing and whether it's working as intended",
+  },
   { id: "other", title: "Other", description: "I'm something else" },
 ]
 
 const ROLE_MOCKUPS: Record<OnboardingRole, string> = {
-  engineer: "https://www.figma.com/api/mcp/asset/dda82492-ea88-4aab-a608-3df0a6d93e2a",
-  "data-ai-ml": "https://www.figma.com/api/mcp/asset/85e8fdf1-e398-4f5e-a47f-8d87c470f034",
-  "product-manager": "https://www.figma.com/api/mcp/asset/b9465077-fa38-473f-b489-7d8ad9c4f108",
-  founder: "https://www.figma.com/api/mcp/asset/bc3ed51a-27fa-45d6-85f9-c82e010c03b0",
-  other: "https://www.figma.com/api/mcp/asset/dda82492-ea88-4aab-a608-3df0a6d93e2a",
+  engineer: "/onboarding/role-engineer.png",
+  "data-ai-ml": "/onboarding/role-data.png",
+  "product-manager": "/onboarding/role-product.png",
+  founder: "/onboarding/role-product.png",
+  other: "/onboarding/role-product.png",
 }
 
-const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> = [
-  { title: "Live traces coming in", description: "As soon as we detect your first trace, we will open the project traces tab automatically.", image: "/onboarding/discover.png" },
-  { title: "Debug responses with context", description: "Inspect model calls, timing, costs and user/session metadata in one place.", image: "/onboarding/observe.png" },
-  { title: "Track product-level behavior", description: "Use role-specific views to monitor quality and catch regressions quickly.", image: "/onboarding/annotate.png" },
-]
+const ROLE_TESTIMONIALS: Record<
+  OnboardingRole,
+  { readonly quote: string; readonly name: string; readonly title: string }
+> = {
+  engineer: {
+    quote:
+      "Latitude ties LLM calls to tools and spans in one place—we cut debug time without spelunking logs or reproducing flaky sessions for our team now.",
+    name: "Alex Chen",
+    title: "Staff Engineer @ Northwind Labs",
+  },
+  "data-ai-ml": {
+    quote:
+      "We label runs in Latitude and watch quality trend—drift surfaces early, not in quarterly reviews after the wrong fix already shipped broadly now.",
+    name: "Jordan Okonkwo",
+    title: "ML Lead @ Riverstone Analytics",
+  },
+  "product-manager": {
+    quote:
+      "Latitude shows latency, cost, and errors for our AI in prod—we catch regressions before customers hit support or see quality slipping in-app now.",
+    name: "Sam Rivera",
+    title: "Product Lead @ Harbor Apps",
+  },
+  founder: {
+    quote:
+      "I see AI cost, failures, and whether behavior matches our pitch—Latitude puts spend, reliability, and risk in one dashboard for leadership teams.",
+    name: "Casey Park",
+    title: "CEO @ Lantern Systems",
+  },
+  other: {
+    quote:
+      "We wanted one LLM observability home—Latitude unifies traces, spend, and failures so we stop juggling five tools and three dashboards daily here.",
+    name: "Riley Brooks",
+    title: "Head of Ops @ Meridian Co.",
+  },
+}
+
+const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly description: string; readonly image: string }> =
+  [
+    {
+      title: "Live traces coming in",
+      description: "As soon as we detect your first trace, we will open the project traces tab automatically.",
+      image: "/onboarding/discover.png",
+    },
+    {
+      title: "Debug responses with context",
+      description: "Inspect model calls, timing, costs and user/session metadata in one place.",
+      image: "/onboarding/observe.png",
+    },
+    {
+      title: "Track product-level behavior",
+      description: "Use role-specific views to monitor quality and catch regressions quickly.",
+      image: "/onboarding/annotate.png",
+    },
+  ]
 
 const DotLottieWc = "dotlottie-wc" as ElementType
 
 const PROVIDERS: ReadonlyArray<ProviderDefinition> = [
-  { name: "OpenAI", icon: "openai", sdkInstall: "npm install openai @latitude-data/telemetry", sdkEnv: "OPENAI_API_KEY=sk-...", otelSetup: "Use OpenTelemetry Node SDK with the OpenAI client and export spans to Latitude." },
-  { name: "Anthropic", icon: "anthropic", sdkInstall: "npm install @anthropic-ai/sdk @latitude-data/telemetry", sdkEnv: "ANTHROPIC_API_KEY=sk-ant-...", otelSetup: "Instrument Anthropic calls with OpenTelemetry and ship traces to Latitude OTLP endpoint." },
-  { name: "Gemini", icon: "googleGemini", sdkInstall: "npm install @google/genai @latitude-data/telemetry", sdkEnv: "GEMINI_API_KEY=...", otelSetup: "Enable OpenTelemetry for Google GenAI calls and export trace batches to Latitude." },
-  { name: "Azure OpenAI", icon: "azure", sdkInstall: "npm install openai @latitude-data/telemetry", sdkEnv: "AZURE_OPENAI_ENDPOINT=https://...\nAZURE_OPENAI_API_KEY=...", otelSetup: "Use OpenTelemetry + Azure OpenAI client and route spans through OTLP exporter." },
-  { name: "Amazon Bedrock", icon: "bedrock", sdkInstall: "npm install @aws-sdk/client-bedrock-runtime @latitude-data/telemetry", sdkEnv: "AWS_REGION=us-east-1", otelSetup: "Instrument Bedrock runtime calls with OpenTelemetry and forward traces to Latitude." },
-  { name: "Vertex AI", icon: "googleVertex", sdkInstall: "npm install @google-cloud/vertexai @latitude-data/telemetry", sdkEnv: "GOOGLE_APPLICATION_CREDENTIALS=/path/credentials.json", otelSetup: "Add OpenTelemetry instrumentation around Vertex requests and export to Latitude." },
-  { name: "Cohere", icon: "cohere", sdkInstall: "npm install cohere-ai @latitude-data/telemetry", sdkEnv: "COHERE_API_KEY=...", otelSetup: "Wrap Cohere requests in OpenTelemetry spans and export through OTLP." },
-  { name: "Together AI", icon: "sparkles", sdkInstall: "npm install together-ai @latitude-data/telemetry", sdkEnv: "TOGETHER_API_KEY=...", otelSetup: "Capture Together AI spans through OpenTelemetry and ship to Latitude." },
-  { name: "Google AI Platform", icon: "googleGemini", sdkInstall: "npm install @google-cloud/aiplatform @latitude-data/telemetry", sdkEnv: "GOOGLE_APPLICATION_CREDENTIALS=/path/credentials.json", otelSetup: "Instrument AI Platform client calls with OpenTelemetry and forward to Latitude." },
-  { name: "Groq", icon: "groq", sdkInstall: "pip install groq latitude-telemetry", sdkEnv: "GROQ_API_KEY=...", otelSetup: "Use OpenTelemetry Python instrumentation and export Groq traces to Latitude." },
-  { name: "Mistral", icon: "mistral", sdkInstall: "pip install mistralai latitude-telemetry", sdkEnv: "MISTRAL_API_KEY=...", otelSetup: "Emit OpenTelemetry spans for Mistral requests and send via OTLP." },
-  { name: "LiteLLM", icon: "sparkles", sdkInstall: "pip install litellm latitude-telemetry", sdkEnv: "LITELLM_API_KEY=...", otelSetup: "Attach OpenTelemetry around LiteLLM completions and export to Latitude." },
-  { name: "Ollama", icon: "sparkles", sdkInstall: "pip install ollama latitude-telemetry", sdkEnv: "OLLAMA_HOST=http://localhost:11434", otelSetup: "Wrap Ollama chat calls with OpenTelemetry spans and export to Latitude." },
-  { name: "Replicate", icon: "sparkles", sdkInstall: "pip install replicate latitude-telemetry", sdkEnv: "REPLICATE_API_TOKEN=r8_...", otelSetup: "Use OpenTelemetry Python SDK to capture Replicate traces and route to Latitude." },
-  { name: "AWS SageMaker", icon: "bedrock", sdkInstall: "pip install boto3 latitude-telemetry", sdkEnv: "AWS_REGION=us-east-1", otelSetup: "Instrument SageMaker runtime requests and export OTLP spans to Latitude." },
-  { name: "Hugging Face Transformers", icon: "sparkles", sdkInstall: "pip install transformers latitude-telemetry", sdkEnv: "HF_TOKEN=hf_...", otelSetup: "Add OpenTelemetry spans around transformer inference and export to Latitude." },
-  { name: "IBM watsonx.ai", icon: "sparkles", sdkInstall: "pip install ibm-watsonx-ai latitude-telemetry", sdkEnv: "WATSONX_API_KEY=...", otelSetup: "Capture watsonx calls with OpenTelemetry and export traces to Latitude." },
-  { name: "Aleph Alpha", icon: "sparkles", sdkInstall: "pip install aleph-alpha-client latitude-telemetry", sdkEnv: "ALEPH_ALPHA_API_KEY=...", otelSetup: "Instrument Aleph Alpha request flow and export spans to Latitude OTLP endpoint." },
+  {
+    name: "OpenAI",
+    icon: "openai",
+    sdkInstall: "npm install openai @latitude-data/telemetry",
+    sdkEnv: "OPENAI_API_KEY=sk-...",
+    otelSetup: "Use OpenTelemetry Node SDK with the OpenAI client and export spans to Latitude.",
+  },
+  {
+    name: "Anthropic",
+    icon: "anthropic",
+    sdkInstall: "npm install @anthropic-ai/sdk @latitude-data/telemetry",
+    sdkEnv: "ANTHROPIC_API_KEY=sk-ant-...",
+    otelSetup: "Instrument Anthropic calls with OpenTelemetry and ship traces to Latitude OTLP endpoint.",
+  },
+  {
+    name: "Gemini",
+    icon: "googleGemini",
+    sdkInstall: "npm install @google/genai @latitude-data/telemetry",
+    sdkEnv: "GEMINI_API_KEY=...",
+    otelSetup: "Enable OpenTelemetry for Google GenAI calls and export trace batches to Latitude.",
+  },
+  {
+    name: "Azure OpenAI",
+    icon: "azure",
+    sdkInstall: "npm install openai @latitude-data/telemetry",
+    sdkEnv: "AZURE_OPENAI_ENDPOINT=https://...\nAZURE_OPENAI_API_KEY=...",
+    otelSetup: "Use OpenTelemetry + Azure OpenAI client and route spans through OTLP exporter.",
+  },
+  {
+    name: "Amazon Bedrock",
+    icon: "bedrock",
+    sdkInstall: "npm install @aws-sdk/client-bedrock-runtime @latitude-data/telemetry",
+    sdkEnv: "AWS_REGION=us-east-1",
+    otelSetup: "Instrument Bedrock runtime calls with OpenTelemetry and forward traces to Latitude.",
+  },
+  {
+    name: "Vertex AI",
+    icon: "googleVertex",
+    sdkInstall: "npm install @google-cloud/vertexai @latitude-data/telemetry",
+    sdkEnv: "GOOGLE_APPLICATION_CREDENTIALS=/path/credentials.json",
+    otelSetup: "Add OpenTelemetry instrumentation around Vertex requests and export to Latitude.",
+  },
+  {
+    name: "Cohere",
+    icon: "cohere",
+    sdkInstall: "npm install cohere-ai @latitude-data/telemetry",
+    sdkEnv: "COHERE_API_KEY=...",
+    otelSetup: "Wrap Cohere requests in OpenTelemetry spans and export through OTLP.",
+  },
+  {
+    name: "Together AI",
+    icon: "sparkles",
+    sdkInstall: "npm install together-ai @latitude-data/telemetry",
+    sdkEnv: "TOGETHER_API_KEY=...",
+    otelSetup: "Capture Together AI spans through OpenTelemetry and ship to Latitude.",
+  },
+  {
+    name: "Google AI Platform",
+    icon: "googleGemini",
+    sdkInstall: "npm install @google-cloud/aiplatform @latitude-data/telemetry",
+    sdkEnv: "GOOGLE_APPLICATION_CREDENTIALS=/path/credentials.json",
+    otelSetup: "Instrument AI Platform client calls with OpenTelemetry and forward to Latitude.",
+  },
+  {
+    name: "Groq",
+    icon: "groq",
+    sdkInstall: "pip install groq latitude-telemetry",
+    sdkEnv: "GROQ_API_KEY=...",
+    otelSetup: "Use OpenTelemetry Python instrumentation and export Groq traces to Latitude.",
+  },
+  {
+    name: "Mistral",
+    icon: "mistral",
+    sdkInstall: "pip install mistralai latitude-telemetry",
+    sdkEnv: "MISTRAL_API_KEY=...",
+    otelSetup: "Emit OpenTelemetry spans for Mistral requests and send via OTLP.",
+  },
+  {
+    name: "LiteLLM",
+    icon: "sparkles",
+    sdkInstall: "pip install litellm latitude-telemetry",
+    sdkEnv: "LITELLM_API_KEY=...",
+    otelSetup: "Attach OpenTelemetry around LiteLLM completions and export to Latitude.",
+  },
+  {
+    name: "Ollama",
+    icon: "sparkles",
+    sdkInstall: "pip install ollama latitude-telemetry",
+    sdkEnv: "OLLAMA_HOST=http://localhost:11434",
+    otelSetup: "Wrap Ollama chat calls with OpenTelemetry spans and export to Latitude.",
+  },
+  {
+    name: "Replicate",
+    icon: "sparkles",
+    sdkInstall: "pip install replicate latitude-telemetry",
+    sdkEnv: "REPLICATE_API_TOKEN=r8_...",
+    otelSetup: "Use OpenTelemetry Python SDK to capture Replicate traces and route to Latitude.",
+  },
+  {
+    name: "AWS SageMaker",
+    icon: "bedrock",
+    sdkInstall: "pip install boto3 latitude-telemetry",
+    sdkEnv: "AWS_REGION=us-east-1",
+    otelSetup: "Instrument SageMaker runtime requests and export OTLP spans to Latitude.",
+  },
+  {
+    name: "Hugging Face Transformers",
+    icon: "sparkles",
+    sdkInstall: "pip install transformers latitude-telemetry",
+    sdkEnv: "HF_TOKEN=hf_...",
+    otelSetup: "Add OpenTelemetry spans around transformer inference and export to Latitude.",
+  },
+  {
+    name: "IBM watsonx.ai",
+    icon: "sparkles",
+    sdkInstall: "pip install ibm-watsonx-ai latitude-telemetry",
+    sdkEnv: "WATSONX_API_KEY=...",
+    otelSetup: "Capture watsonx calls with OpenTelemetry and export traces to Latitude.",
+  },
+  {
+    name: "Aleph Alpha",
+    icon: "sparkles",
+    sdkInstall: "pip install aleph-alpha-client latitude-telemetry",
+    sdkEnv: "ALEPH_ALPHA_API_KEY=...",
+    otelSetup: "Instrument Aleph Alpha request flow and export spans to Latitude OTLP endpoint.",
+  },
 ]
 
 export function OnboardingFlow({
@@ -72,23 +245,47 @@ export function OnboardingFlow({
   const [integrationMode, setIntegrationMode] = useState<IntegrationMode>("sdk")
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [isDotLottieReady, setIsDotLottieReady] = useState(false)
+  const [traceReceived, setTraceReceived] = useState(false)
+  const pollTimeoutRef = useRef<number | undefined>(undefined)
+  const redirectTimeoutRef = useRef<number | undefined>(undefined)
 
   useMountEffect(() => {
     let cancelled = false
+
+    const clearTimers = () => {
+      if (pollTimeoutRef.current !== undefined) {
+        window.clearTimeout(pollTimeoutRef.current)
+        pollTimeoutRef.current = undefined
+      }
+      if (redirectTimeoutRef.current !== undefined) {
+        window.clearTimeout(redirectTimeoutRef.current)
+        redirectTimeoutRef.current = undefined
+      }
+    }
+
     const poll = async () => {
+      if (cancelled) return
       try {
         const count = await countTracesByProject({ data: { projectId } })
-        if (count > 0 && !cancelled) {
-          await onOpenProjectTraces(projectId)
+        if (cancelled) return
+        if (count > 0) {
+          setTraceReceived(true)
+          redirectTimeoutRef.current = window.setTimeout(() => {
+            if (!cancelled) void onOpenProjectTraces(projectId)
+          }, 3000)
           return
         }
       } finally {
-        if (!cancelled) window.setTimeout(() => void poll(), 3000)
+        if (!cancelled && redirectTimeoutRef.current === undefined) {
+          pollTimeoutRef.current = window.setTimeout(() => void poll(), 3000)
+        }
       }
     }
+
     void poll()
     return () => {
       cancelled = true
+      clearTimers()
     }
   })
 
@@ -163,7 +360,9 @@ export function OnboardingFlow({
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <Text.H2 weight="medium">Waiting for traces</Text.H2>
+                <Text.H2 weight="medium">
+                  {traceReceived ? "Trace received. Redirecting…" : "Waiting for traces"}
+                </Text.H2>
                 <Text.H4 color="foregroundMuted">Set up Latitude in your project and start sending traces</Text.H4>
               </div>
             </div>
@@ -210,10 +409,15 @@ export function OnboardingFlow({
             <div className="flex flex-col gap-2">
               <Text.H5M>Add environment variables</Text.H5M>
               <Text.H5 color="foregroundMuted">
-                Add environment variables to your `.env` file and container environment. You can find your project details in project settings.
+                Add environment variables to your `.env` file and container environment. You can find your project
+                details in project settings.
               </Text.H5>
               <CodeBlock
-                value={integrationMode === "sdk" ? `${selectedProvider.sdkEnv}\nLATITUDE_PROJECT_ID=${projectId}` : `${selectedProvider.otelSetup}\nLATITUDE_PROJECT_ID=${projectId}`}
+                value={
+                  integrationMode === "sdk"
+                    ? `${selectedProvider.sdkEnv}\nLATITUDE_PROJECT_ID=${projectId}`
+                    : `${selectedProvider.otelSetup}\nLATITUDE_PROJECT_ID=${projectId}`
+                }
                 copyable
               />
             </div>
@@ -235,19 +439,25 @@ export function OnboardingFlow({
           {step === "role" ? (
             <div className="h-fit w-full flex flex-col gap-0 justify-center items-start">
               <div className="max-w-[591px] flex flex-col gap-6">
-                <Text.H3M color="foregroundMuted">
-                  " This tool helped us boost our observability and improve our real metrics along with the fake ones — viva Latitude "
-                </Text.H3M>
+                <Text.H3M color="foregroundMuted">"{ROLE_TESTIMONIALS[role].quote}"</Text.H3M>
                 <div className="flex flex-row items-center gap-3">
-                  <img src="https://www.figma.com/api/mcp/asset/31df020f-40a7-4f96-9699-1dba395d25f4" alt="Pedro" className="h-10 w-10 rounded-full" />
+                  <img
+                    src="/onboarding/testimonial-avatar.png"
+                    alt=""
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
                   <div className="flex flex-col">
-                    <Text.H5M>Pedro</Text.H5M>
-                    <Text.H6 color="foregroundMuted">CEO @ whatever</Text.H6>
+                    <Text.H5M>{ROLE_TESTIMONIALS[role].name}</Text.H5M>
+                    <Text.H6 color="foregroundMuted">{ROLE_TESTIMONIALS[role].title}</Text.H6>
                   </div>
                 </div>
               </div>
-              <div className="mt-10 w-full h-fit rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
-                <img src={ROLE_MOCKUPS[role]} alt={`${role} preview`} className="w-full h-fit object-cover object-left-top" />
+              <div className="mt-10 w-full aspect-[946/616] rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
+                <img
+                  src={ROLE_MOCKUPS[role]}
+                  alt={`${role} preview`}
+                  className="h-full w-full object-cover object-left-top"
+                />
               </div>
             </div>
           ) : (
@@ -258,16 +468,30 @@ export function OnboardingFlow({
                   <Text.H6 color="foregroundMuted">{activeGalleryItem.description}</Text.H6>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" flat onClick={() => setGalleryIndex((c) => (c === 0 ? WAITING_GALLERY.length - 1 : c - 1))}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    flat
+                    onClick={() => setGalleryIndex((c) => (c === 0 ? WAITING_GALLERY.length - 1 : c - 1))}
+                  >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" size="icon" flat onClick={() => setGalleryIndex((c) => (c + 1) % WAITING_GALLERY.length)}>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    flat
+                    onClick={() => setGalleryIndex((c) => (c + 1) % WAITING_GALLERY.length)}
+                  >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
-              <div className="mt-10 w-full h-fit rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
-                <img src={activeGalleryItem.image} alt={activeGalleryItem.title} className="w-full h-fit object-cover object-left-top" />
+              <div className="mt-10 w-full aspect-[946/616] rounded-xl border-[6px] border-[#0b0f19] overflow-hidden shadow-xl">
+                <img
+                  src={activeGalleryItem.image}
+                  alt={activeGalleryItem.title}
+                  className="h-full w-full object-cover object-left-top"
+                />
               </div>
             </div>
           )}

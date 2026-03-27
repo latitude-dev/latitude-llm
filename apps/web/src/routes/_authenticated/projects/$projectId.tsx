@@ -16,8 +16,8 @@ import {
   ShieldAlert,
 } from "lucide-react"
 import { useState } from "react"
-import { createProject } from "../../../domains/projects/projects.functions.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
+import { createProject } from "../../../domains/projects/projects.functions.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
   component: ProjectLayout,
@@ -173,7 +173,9 @@ function ProjectSidebar({
       }`}
     >
       {/* Header */}
-      <div className={`flex items-center gap-3 p-4 border-b border-border shrink-0 ${collapsed ? "justify-center" : ""}`}>
+      <div
+        className={`flex items-center gap-3 p-4 border-b border-border shrink-0 ${collapsed ? "justify-center" : ""}`}
+      >
         {!collapsed && <ProjectEmoji name={project?.name ?? ""} />}
         {!collapsed && (
           <Text.H5M ellipsis className="flex-1 min-w-0">
@@ -227,9 +229,7 @@ function ProjectSidebar({
         />
       </nav>
 
-      <div
-        className={`shrink-0 border-t border-border p-4 ${collapsed ? "flex justify-center" : ""}`}
-      >
+      <div className={`shrink-0 border-t border-border p-4 ${collapsed ? "flex justify-center" : ""}`}>
         <Button
           variant="outline"
           size={collapsed ? "icon" : "sm"}
