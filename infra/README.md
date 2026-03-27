@@ -122,6 +122,33 @@ Deployment triggers:
 - **Production**: push a `v*` tag → checks must pass → build → migrate → deploy
 - **Manual**: workflow_dispatch with environment selector
 
+### Production Deployment Details
+
+To deploy to production:
+
+1. **Ensure all checks pass**: The deployment workflow requires the `build-checks` job to succeed. This includes:
+   - Type checking (`pnpm typecheck`)
+   - Linting (`pnpm lint`)
+   - Unit tests (`pnpm test:unit`)
+   - Integration tests (`pnpm test:integration`)
+
+2. **Create and push a version tag:**
+   ```bash
+   git tag v1.2.3
+   git push origin v1.2.3
+   ```
+
+3. **Monitor the deployment**: The workflow will:
+   - Run all checks in parallel
+   - Build and push container images to GHCR
+   - Execute database migrations via ECS task
+   - Deploy services to ECS Fargate with zero-downtime rolling updates
+
+4. **Verify deployment**: Check service health via their endpoints:
+   - `https://console.latitude.so/api/health`
+   - `https://api.latitude.so/health`
+   - `https://ingest.latitude.so/health`
+
 The deployment workflow uses OIDC authentication (no long-lived AWS credentials).
 
 ## Secret lifecycle
