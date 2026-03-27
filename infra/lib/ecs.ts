@@ -376,30 +376,37 @@ function createTaskDefinition(
           { name: "LAT_DATADOG_SITE", valueFrom: datadogSiteArn },
         ]
 
-        const workflowsEnvironment =
-          serviceConfig.name === "workflows"
-            ? [
-                ...baseEnvironment,
-                { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
-                { name: "LAT_TEMPORAL_ADDRESS", value: temporalCloud.address },
-                { name: "LAT_TEMPORAL_NAMESPACE", value: temporalCloud.namespace },
-                { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
-              ]
-            : baseEnvironment
+        // Service-specific environment variables
+        const temporalEnvVars = [
+          { name: "LAT_TEMPORAL_ADDRESS", value: temporalCloud.address },
+          { name: "LAT_TEMPORAL_NAMESPACE", value: temporalCloud.namespace },
+          { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
+        ]
 
-        const oauthSecrets: { name: string; valueFrom: string }[] = [
+        const serviceSpecificEnvVars: Record<string, { name: string; value: string }[]> = {
+          workflows: [{ name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" }, ...temporalEnvVars],
+          workers: temporalEnvVars,
+        }
+
+        const environment = [...baseEnvironment, ...(serviceSpecificEnvVars[serviceConfig.name] ?? [])]
+
+        // Service-specific secrets
+        const oauthSecrets = [
           { name: "LAT_GOOGLE_CLIENT_ID", valueFrom: googleOauthClientIdArn },
           { name: "LAT_GOOGLE_CLIENT_SECRET", valueFrom: googleOauthClientSecretArn },
           { name: "LAT_GITHUB_CLIENT_ID", valueFrom: githubOauthClientIdArn },
           { name: "LAT_GITHUB_CLIENT_SECRET", valueFrom: githubOauthClientSecretArn },
         ]
 
-        const serviceSecrets =
-          serviceConfig.name === "web"
-            ? [...baseSecrets, ...oauthSecrets]
-            : serviceConfig.name === "workflows"
-              ? [...baseSecrets, { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }]
-              : baseSecrets
+        const temporalSecret = { name: "LAT_TEMPORAL_API_KEY", valueFrom: temporalApiKeyArn }
+
+        const serviceSpecificSecrets: Record<string, { name: string; valueFrom: string }[]> = {
+          web: oauthSecrets,
+          workflows: [temporalSecret],
+          workers: [temporalSecret],
+        }
+
+        const secrets = [...baseSecrets, ...(serviceSpecificSecrets[serviceConfig.name] ?? [])]
 
         const def = {
           name: serviceConfig.name,
@@ -424,8 +431,8 @@ function createTaskDefinition(
               "awslogs-stream-prefix": serviceConfig.name,
             },
           },
-          environment: workflowsEnvironment,
-          secrets: serviceSecrets,
+          environment,
+          secrets,
           healthCheck: {
             command: [
               "CMD-SHELL",
