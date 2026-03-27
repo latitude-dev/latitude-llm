@@ -1,7 +1,7 @@
-import { Button, Icon, Text } from "@repo/ui"
+import { Button, cn, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, useRouter, useRouterState } from "@tanstack/react-router"
 import {
   ChevronDown,
   ChevronRight,
@@ -11,10 +11,12 @@ import {
   MessageSquareText,
   PanelLeft,
   PanelLeftClose,
+  RotateCcw,
   Settings,
   ShieldAlert,
 } from "lucide-react"
 import { useState } from "react"
+import { createProject } from "../../../domains/projects/projects.functions.ts"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId")({
@@ -147,7 +149,9 @@ function ProjectSidebar({
   onToggleCollapse: () => void
 }) {
   const routerState = useRouterState()
+  const router = useRouter()
   const pathname = routerState.location.pathname
+  const [isCreatingOnboardingProject, setIsCreatingOnboardingProject] = useState(false)
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.id, projectId)).findOne(),
@@ -164,66 +168,93 @@ function ProjectSidebar({
 
   return (
     <aside
-      className={`shrink-0 border-r border-border flex flex-col h-full transition-all duration-200 ${
+      className={`shrink-0 border-r border-border flex flex-col h-full min-h-0 transition-all duration-200 ${
         collapsed ? "w-16" : "w-[280px]"
       }`}
     >
-      <div className="flex flex-col shrink-0">
-        {/* Header */}
-        <div className={`flex items-center gap-3 p-4 border-b border-border ${collapsed ? "justify-center" : ""}`}>
-          {!collapsed && <ProjectEmoji name={project?.name ?? ""} />}
-          {!collapsed && (
-            <Text.H5M ellipsis className="flex-1 min-w-0">
-              {project ? extractLeadingEmoji(project.name)[1] : "…"}
-            </Text.H5M>
-          )}
-          <Button
-            variant="outline"
-            size="icon"
-            flat
-            onClick={onToggleCollapse}
-            className="h-8 w-8 shrink-0"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
-          </Button>
-        </div>
+      {/* Header */}
+      <div className={`flex items-center gap-3 p-4 border-b border-border shrink-0 ${collapsed ? "justify-center" : ""}`}>
+        {!collapsed && <ProjectEmoji name={project?.name ?? ""} />}
+        {!collapsed && (
+          <Text.H5M ellipsis className="flex-1 min-w-0">
+            {project ? extractLeadingEmoji(project.name)[1] : "…"}
+          </Text.H5M>
+        )}
+        <Button
+          variant="outline"
+          size="icon"
+          flat
+          onClick={onToggleCollapse}
+          className="h-8 w-8 shrink-0"
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
+        </Button>
+      </div>
 
-        {/* Nav items */}
-        <nav className={`p-4 flex flex-col gap-1 ${collapsed ? "items-center" : ""}`}>
-          <NavItem
-            icon={MessageSquareText}
-            label="Traces"
-            to={`/projects/${projectId}`}
-            active={isTracesActive}
-            collapsed={collapsed}
-          />
-          <NavItem icon={Link2Off} label="Annotation queues" defaultExpanded={false} collapsed={collapsed}>
-            <NavChild label="Another queue" />
-            <NavChild label="Cute queue" />
-          </NavItem>
-          <NavItem
-            icon={ShieldAlert}
-            label="Issues"
-            to={`/projects/${projectId}/issues`}
-            active={isIssuesActive}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={History}
-            label="Datasets"
-            to={`/projects/${projectId}/datasets`}
-            active={isDatasetsActive}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={Settings}
-            label="Settings"
-            to={`/projects/${projectId}/settings`}
-            active={isSettingsActive}
-            collapsed={collapsed}
-          />
-        </nav>
+      <nav className={`flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-1 ${collapsed ? "items-center" : ""}`}>
+        <NavItem
+          icon={MessageSquareText}
+          label="Traces"
+          to={`/projects/${projectId}`}
+          active={isTracesActive}
+          collapsed={collapsed}
+        />
+        <NavItem icon={Link2Off} label="Annotation queues" defaultExpanded={false} collapsed={collapsed}>
+          <NavChild label="Another queue" />
+          <NavChild label="Cute queue" />
+        </NavItem>
+        <NavItem
+          icon={ShieldAlert}
+          label="Issues"
+          to={`/projects/${projectId}/issues`}
+          active={isIssuesActive}
+          collapsed={collapsed}
+        />
+        <NavItem
+          icon={History}
+          label="Datasets"
+          to={`/projects/${projectId}/datasets`}
+          active={isDatasetsActive}
+          collapsed={collapsed}
+        />
+        <NavItem
+          icon={Settings}
+          label="Settings"
+          to={`/projects/${projectId}/settings`}
+          active={isSettingsActive}
+          collapsed={collapsed}
+        />
+      </nav>
+
+      <div
+        className={`shrink-0 border-t border-border p-4 ${collapsed ? "flex justify-center" : ""}`}
+      >
+        <Button
+          variant="outline"
+          size={collapsed ? "icon" : "sm"}
+          flat
+          disabled={isCreatingOnboardingProject}
+          title="Replay onboarding"
+          className={cn({ "w-full gap-2": !collapsed })}
+          onClick={() => {
+            if (isCreatingOnboardingProject) return
+            setIsCreatingOnboardingProject(true)
+            void createProject({ data: { name: "My project" } })
+              .then((created) =>
+                router.navigate({
+                  to: "/projects/$projectId/onboarding",
+                  params: { projectId: created.id },
+                }),
+              )
+              .finally(() => {
+                setIsCreatingOnboardingProject(false)
+              })
+          }}
+        >
+          <Icon icon={RotateCcw} size="sm" color="foregroundMuted" />
+          {!collapsed ? "Replay onboarding" : null}
+        </Button>
       </div>
     </aside>
   )
@@ -232,9 +263,20 @@ function ProjectSidebar({
 function ProjectLayout() {
   const { projectId } = Route.useParams()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const routerState = useRouterState()
+  const normalizedPath = routerState.location.pathname.replace(/\/$/, "") || "/"
+  const isOnboarding = normalizedPath === `/projects/${projectId}/onboarding`
+
+  if (isOnboarding) {
+    return (
+      <div className="h-full min-h-0">
+        <Outlet />
+      </div>
+    )
+  }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-h-0">
       <ProjectSidebar
         projectId={projectId}
         collapsed={sidebarCollapsed}

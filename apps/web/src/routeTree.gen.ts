@@ -23,6 +23,7 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedProjectsProjectIdRouteImport } from './routes/_authenticated/projects/$projectId'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/index'
 import { Route as AuthenticatedProjectsProjectIdSettingsRouteImport } from './routes/_authenticated/projects/$projectId/settings'
+import { Route as AuthenticatedProjectsProjectIdOnboardingRouteImport } from './routes/_authenticated/projects/$projectId/onboarding'
 import { Route as AuthenticatedProjectsProjectIdIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectId/issues/index'
 import { Route as AuthenticatedProjectsProjectIdDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectId/datasets/index'
 import { Route as AuthenticatedProjectsProjectIdDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectId/datasets/$datasetId'
@@ -100,6 +101,12 @@ const AuthenticatedProjectsProjectIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
   } as any)
+const AuthenticatedProjectsProjectIdOnboardingRoute =
+  AuthenticatedProjectsProjectIdOnboardingRouteImport.update({
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AuthenticatedProjectsProjectIdRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdIssuesIndexRoute =
   AuthenticatedProjectsProjectIdIssuesIndexRouteImport.update({
     id: '/issues/',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/welcome/': typeof WelcomeIndexRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/projects/$projectId/onboarding': typeof AuthenticatedProjectsProjectIdOnboardingRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/datasets/$datasetId': typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
@@ -148,6 +156,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/welcome': typeof WelcomeIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/projects/$projectId/onboarding': typeof AuthenticatedProjectsProjectIdOnboardingRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/datasets/$datasetId': typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
@@ -168,6 +177,7 @@ export interface FileRoutesById {
   '/welcome/': typeof WelcomeIndexRoute
   '/_authenticated/projects/$projectId': typeof AuthenticatedProjectsProjectIdRouteWithChildren
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authenticated/projects/$projectId/onboarding': typeof AuthenticatedProjectsProjectIdOnboardingRoute
   '/_authenticated/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/_authenticated/projects/$projectId/datasets/$datasetId': typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/welcome/'
     | '/projects/$projectId'
     | '/api/auth/$'
+    | '/projects/$projectId/onboarding'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
     | '/projects/$projectId/datasets/$datasetId'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/'
     | '/welcome'
     | '/api/auth/$'
+    | '/projects/$projectId/onboarding'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
     | '/projects/$projectId/datasets/$datasetId'
@@ -224,6 +236,7 @@ export interface FileRouteTypes {
     | '/welcome/'
     | '/_authenticated/projects/$projectId'
     | '/api/auth/$'
+    | '/_authenticated/projects/$projectId/onboarding'
     | '/_authenticated/projects/$projectId/settings'
     | '/_authenticated/projects/$projectId/'
     | '/_authenticated/projects/$projectId/datasets/$datasetId'
@@ -342,6 +355,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdSettingsRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdRoute
     }
+    '/_authenticated/projects/$projectId/onboarding': {
+      id: '/_authenticated/projects/$projectId/onboarding'
+      path: '/onboarding'
+      fullPath: '/projects/$projectId/onboarding'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdOnboardingRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdRoute
+    }
     '/_authenticated/projects/$projectId/issues/': {
       id: '/_authenticated/projects/$projectId/issues/'
       path: '/issues'
@@ -367,6 +387,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedProjectsProjectIdRouteChildren {
+  AuthenticatedProjectsProjectIdOnboardingRoute: typeof AuthenticatedProjectsProjectIdOnboardingRoute
   AuthenticatedProjectsProjectIdSettingsRoute: typeof AuthenticatedProjectsProjectIdSettingsRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
   AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectIdDatasetsDatasetIdRoute
@@ -376,6 +397,8 @@ interface AuthenticatedProjectsProjectIdRouteChildren {
 
 const AuthenticatedProjectsProjectIdRouteChildren: AuthenticatedProjectsProjectIdRouteChildren =
   {
+    AuthenticatedProjectsProjectIdOnboardingRoute:
+      AuthenticatedProjectsProjectIdOnboardingRoute,
     AuthenticatedProjectsProjectIdSettingsRoute:
       AuthenticatedProjectsProjectIdSettingsRoute,
     AuthenticatedProjectsProjectIdIndexRoute:
