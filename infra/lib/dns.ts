@@ -115,6 +115,47 @@ export function createDnsRecords(
       ttl: 300,
       allowOverwrite: true,
     })
+
+    // MX records for notifications.latitude.so
+    records.notificationsMx1 = new aws.route53.Record(`${name}-notifications-mx1`, {
+      zoneId: hostedZoneId,
+      name: "notifications.latitude.so",
+      type: "MX",
+      records: ["10 mxa.eu.mailgun.org"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
+    records.notificationsMx2 = new aws.route53.Record(`${name}-notifications-mx2`, {
+      zoneId: hostedZoneId,
+      name: "notifications.latitude.so",
+      type: "MX",
+      records: ["10 mxb.eu.mailgun.org"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
+    // CNAME for email.notifications.latitude.so
+    records.notificationsCname = new aws.route53.Record(`${name}-notifications-cname`, {
+      zoneId: hostedZoneId,
+      name: "email.notifications.latitude.so",
+      type: "CNAME",
+      records: ["eu.mailgun.org"],
+      ttl: 300,
+      allowOverwrite: true,
+    })
+
+    // DMARC record for notifications.latitude.so
+    records.notificationsDmarc = new aws.route53.Record(`${name}-notifications-dmarc`, {
+      zoneId: hostedZoneId,
+      name: "_dmarc.notifications.latitude.so",
+      type: "TXT",
+      records: [
+        "v=DMARC1; p=none; pct=100; fo=1; ri=3600; rua=mailto:e0c20fc1@dmarc.mailgun.org,mailto:0201067b@inbox.ondmarc.com; ruf=mailto:e0c20fc1@dmarc.mailgun.org,mailto:0201067b@inbox.ondmarc.com;",
+      ],
+      ttl: 300,
+      allowOverwrite: true,
+    })
   }
 
   return {
