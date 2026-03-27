@@ -1,5 +1,5 @@
 {
-  "name": "@domain/annotations",
+  "name": "@platform/ai-credentials",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,11 +14,7 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
-    "@domain/queue": "workspace:*",
-    "@domain/scores": "workspace:*",
-    "@domain/shared": "workspace:*",
-    "@domain/spans": "workspace:*",
-    "effect": "catalog:",
-    "zod": "catalog:"
+    "@platform/env": "workspace:*",
+    "effect": "catalog:"
   }
 }

@@ -22,19 +22,22 @@ export interface ScoreListPage {
 export interface ScoreRepositoryShape {
   findById(id: ScoreId): Effect.Effect<Score | null, RepositoryError>
   save(score: Score): Effect.Effect<void, RepositoryError>
+  delete(id: ScoreId): Effect.Effect<void, RepositoryError>
   listByProjectId(input: {
     readonly projectId: ProjectId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
+  /** When `sourceId` is omitted, lists all scores for the project with the given `source` (e.g. every annotation). */
   listBySourceId(input: {
     readonly projectId: ProjectId
     readonly source: ScoreSource
-    readonly sourceId: string
+    readonly sourceId?: string
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
   listByTraceId(input: {
     readonly projectId: ProjectId
     readonly traceId: TraceId
+    readonly source?: ScoreSource
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
   listBySessionId(input: {

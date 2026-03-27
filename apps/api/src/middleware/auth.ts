@@ -95,11 +95,13 @@ const cacheApiKeyResult = (
 const validateApiKey = (
   c: Context,
   token: string,
-  options?: AuthMiddlewareOptions,
+  options: AuthMiddlewareOptions,
 ): Effect.Effect<{ organizationId: string; keyId: string } | null, never> => {
   const redis = c.get("redis")
-  const adminClient = options?.adminClient ?? getAdminPostgresClient()
-  const touchBuffer = createTouchBuffer(adminClient)
+  const adminClient = options.adminClient ?? getAdminPostgresClient()
+  const touchBuffer = createTouchBuffer(adminClient, {
+    logTouchBuffer: options.logTouchBuffer,
+  })
 
   return Effect.gen(function* () {
     const startTime = Date.now()
@@ -173,7 +175,7 @@ const extractBearerToken = (c: Context): string | undefined => {
 const authenticateWithApiKey = (
   c: Context,
   token: string,
-  options?: AuthMiddlewareOptions,
+  options: AuthMiddlewareOptions,
 ): Effect.Effect<AuthContext | null, never> => {
   return Effect.gen(function* () {
     const result = yield* validateApiKey(c, token, options)
@@ -195,7 +197,7 @@ const authenticateWithApiKey = (
 /**
  * Main authentication effect that validates API key from Authorization header.
  */
-const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> => {
+const authenticate = (c: Context, options: AuthMiddlewareOptions): Effect.Effect<AuthContext, UnauthorizedError> => {
   return Effect.gen(function* () {
     const bearerToken = extractBearerToken(c)
 
@@ -221,10 +223,11 @@ const authenticate = (c: Context, options?: AuthMiddlewareOptions): Effect.Effec
  * Public routes should be excluded from this middleware.
  */
 interface AuthMiddlewareOptions {
-  readonly adminClient?: PostgresClient
+  adminClient: PostgresClient | undefined
+  logTouchBuffer: boolean
 }
 
-export const createAuthMiddleware = (options?: AuthMiddlewareOptions): MiddlewareHandler => {
+export const createAuthMiddleware = (options: AuthMiddlewareOptions): MiddlewareHandler => {
   return async (c: Context, next: Next) => {
     const authContext = await Effect.runPromise(authenticate(c, options))
     c.set("auth", authContext)

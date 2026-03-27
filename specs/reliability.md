@@ -1510,6 +1510,13 @@ ClickHouse-specific rules:
 - do not allow duplicate rows for the same score id; analytics must remain correct without `FINAL`
 - failed non-errored scores are not inserted into ClickHouse until `issue_id` is assigned and the score becomes immutable
 
+**Deletion vs analytics (explicit question):** If a **non-draft** annotation score was **saved to ClickHouse** (immutable analytics row) and the user **deletes** the canonical score in Postgres, **what should happen in ClickHouse?** This must be a single, documented contract:
+
+- **Remove the analytics row** so aggregates and downstream queries never count deleted evidence (implies a **rare delete mutation** in ClickHouse; acceptable only if treated as an exceptional correction, not a general update path).
+- **Or keep append-only history** and do not delete—then **queries and dashboards** must **exclude** deleted scores by some other mechanism (e.g. join Postgres, tombstones, or accepted staleness).
+
+Phase 10 integration tests for “delete after finalize” should assert the chosen behavior end-to-end.
+
 ClickHouse deployments in this repository have both `unclustered/` and `clustered/` migration variants. The `scores` analytics table must follow the same pattern:
 
 - `unclustered/`: keep the schema above with `CREATE TABLE IF NOT EXISTS scores` and `ENGINE = MergeTree()`
@@ -2481,13 +2488,40 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: can run in parallel with Phase 9 once phases 0, 3, and 8 land.
 
-- [ ] Implement the public API for annotation ingestion under `/:organizationId/projects/:projectId/annotations` with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
-- [ ] Introduce the shared text-generation capability in the first phase that needs it, and define the concrete `annotation-scores:publish` topic-task payload/schema plus dedupe key semantics keyed by the canonical score id.
+- [x] Implement the public API for annotation ingestion under `/:organizationId/projects/:projectId/annotations` with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
+- [x] Introduce the shared text-generation capability in the first phase that needs it, and define the concrete `annotation-scores:publish` topic-task payload/schema plus dedupe key semantics keyed by the canonical score id.
 - [ ] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, inline manual issue creation, debounced draft finalization through `annotation-scores:publish` keyed by the canonical score id, and post-finalization immutability after the debounce window closes.
 - [ ] Implement annotation feedback enrichment using surrounding context before issue discovery, persist the enriched canonical feedback, and preserve the original raw human text separately in metadata.
 - [ ] Implement annotation read/query surfaces needed by issue discovery, issue visibility, evaluation alignment, draft-aware editing, and queue review, with default exclusion of drafts outside draft-aware surfaces.
-- [ ] Ensure UI-created and API-created annotations converge on the exact same score contract and behavior, including the canonical `source_id` provenance rules for `"UI"`, `"API"`, and annotation queues plus shared `draftedAt` semantics.
+- [x] Ensure UI-created and API-created annotations converge on the exact same score contract and behavior, including the canonical `source_id` provenance rules for `"UI"`, `"API"`, and annotation queues plus shared `draftedAt` semantics.
 - [ ] Add integration tests covering UI/API annotation parity, raw/enriched feedback preservation, refresh-safe draft visibility, debounce-based finalization through `annotation-scores:publish`, deletion after finalization, and reliable reopening of message-level and text-range anchors.
+
+**Remaining work (split)** — use this to plan; close sub-items before flipping the parent `[ ]` above.
+
+- **Parent: in-product annotation creation (line still `[ ]`)** — the spec bundles backend + product + issue UX in one sentence. Split:
+  - [ ] **Product UI**: ship **end-user screens** (not only TanStack server functions) so people can **create and edit** annotations in context: **conversation / message / span / trace / session** views. Today the backend paths exist; **wiring** those flows into the actual product navigation and layout is still open until this is checked.
+    - **`apps/web` placement (conversation on trace)**: the intended **conversation-thread** surface is the **Conversation** tab in the **trace detail drawer** on the project **Traces** screen. Route: `/_authenticated/projects/$projectId/` with `tab=traces` and search param `traceId` opening the drawer. Code: `apps/web/src/routes/_authenticated/projects/$projectId/index.tsx` (list + drawer), `apps/web/src/routes/_authenticated/projects/$projectId/-components/trace-detail-drawer.tsx` (tabs: Trace / **Conversation** / Spans), `apps/web/src/routes/_authenticated/projects/$projectId/-components/trace-detail-drawer/tabs/conversation-tab.tsx` (conversation body; annotation controls still to be wired). Other surfaces (e.g. span-level, sessions tab) are not fixed to paths yet.
+  - [ ] **Issue intent & discovery hooks** — **What the spec means**: the human can signal intent such as “**include this in automatic issue discovery**” vs “**noise / don’t cluster**,” not only attach data. **What exists today**: `writeAnnotation` accepts an optional **`issueId`** (link an annotation to an existing issue) and stores it on the score row; there is **no** separate first-class field (e.g. in metadata) for “intent” or “opt into discovery” beyond what Phase 11 will infer from scores. **Still to do**: product fields or toggles + persistence rules that match the spec’s “annotation-side issue intent for automatic discovery.”
+  - [ ] **Issue linking UX**: in the **annotation UI**, let the user **pick an existing issue** or see the current link. **Today**: API/web **can** pass `issueId`; **product UI** to browse/search issues and attach is still open.
+  - [ ] **Inline manual issue creation**: from the **same annotation flow**, create a **new** issue (title/description) without leaving for a separate issue-only screen—**not implemented** as a guided flow until this is checked.
+  - [x] **Postgres draft scores, debounced `annotation-scores:publish`, post-finalize immutability** — implemented in domain/workers; parent line stays `[ ]` until UI + issue items above are done.
+
+- **Parent: enrichment with surrounding context (line still `[ ]`)** — split:
+  - [x] **Persist enriched `feedback` + separate `metadata.rawFeedback`** on finalize (baseline enrichment exists).
+  - [ ] **Surrounding context in the enrichment prompt**: pull **real trace/session/message (or span) text** from telemetry/storage, not only anchor indices and raw comment text.
+
+- **Parent: read/query for downstream surfaces (line still `[ ]`)** — split:
+  - [x] **Domain + app server**: project/trace lists with `draftMode` for annotations.
+  - [ ] **Issue discovery / visibility / evaluation alignment / queue review**: each consuming UI or job uses the right **draft defaults** and the right **scopes** (wire + verify).
+  - [ ] **Optional — public HTTP list/query** for agents: if required for “minimal agent-friendly” parity, expose reads on the same route family as ingestion (today reads may be session/server-only).
+
+- **Parent: integration tests (line still `[ ]`)** — split:
+  - [ ] UI vs API **same behavior** (contract parity in a full stack test).
+  - [ ] **Raw vs enriched** persisted correctly through API/worker.
+  - [ ] **Refresh-safe drafts** (reload still sees draft state before finalize).
+  - [ ] **Debounce → `annotation-scores:publish` → worker** end-to-end (not only unit mocks).
+  - [ ] **Delete after finalize** semantics.
+  - [ ] **Anchors (message + text range)**: integration tests that an annotation’s **anchor fields** (`messageIndex`, optional `partIndex`, optional `startOffset`/`endOffset`) **round-trip** after save, reload, and return visits—so **reopen** still highlights the right message and **substring**, and **edit** does not corrupt offsets or indices. Covers both **message-level** and **text-range** annotations.
 
 **Exit gate**: annotations are a reliable human ground-truth source across UI and API; enriched feedback is available for clustering without losing original human wording; explicit annotation-side issue creation/linking preserves human ownership without relying on similarity discovery.
 

@@ -152,6 +152,8 @@ export const ScoreRepositoryLive = Layer.effect(
           )
         }),
 
+      delete: (id: ScoreId) => sqlClient.query((db) => db.delete(scores).where(eq(scores.id, id))),
+
       listByProjectId: ({
         projectId,
         options,
@@ -172,31 +174,39 @@ export const ScoreRepositoryLive = Layer.effect(
       }: {
         readonly projectId: ProjectId
         readonly source: ScoreSource
-        readonly sourceId: string
+        readonly sourceId?: string
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId)) ??
-            eq(scores.projectId, projectId),
+      }) => {
+        const combined =
+          sourceId !== undefined
+            ? and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId))
+            : and(eq(scores.projectId, projectId), eq(scores.source, source))
+        return list({
+          baseWhere: combined ?? eq(scores.projectId, projectId),
           options,
-        }),
+        })
+      },
 
       listByTraceId: ({
         projectId,
         traceId,
+        source,
         options,
       }: {
         readonly projectId: ProjectId
         readonly traceId: TraceId
+        readonly source?: ScoreSource
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string)) ??
-            eq(scores.projectId, projectId),
+      }) => {
+        const combined =
+          source !== undefined
+            ? and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string), eq(scores.source, source))
+            : and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string))
+        return list({
+          baseWhere: combined ?? eq(scores.projectId, projectId),
           options,
-        }),
+        })
+      },
 
       listBySessionId: ({
         projectId,
