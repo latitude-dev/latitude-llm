@@ -1,29 +1,24 @@
 import { createServer } from "node:http"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
-import {
-  createBullMqQueueConsumer,
-  createBullMqQueuePublisher,
-  createEventsPublisher,
-  loadBullMqConfig,
-} from "@platform/queue-bullmq"
+import { createBullMqQueueConsumer, createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient } from "./clients.ts"
+import { createEventRouter } from "./events/event-router.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
-import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
-import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
-import { createDomainEventsWorker } from "./workers/domain-events.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createLiveTracesWorker } from "./workers/live-traces.ts"
+import { createMagicLinkEmailWorker } from "./workers/magic-link-email.ts"
 import { createScoresWorker } from "./workers/scores.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
+import { createUserDeletionWorker } from "./workers/user-deletion.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -55,7 +50,8 @@ const bootstrap = async () => {
   const initializeWorkers = async () => {
     const bullMqConfig = Effect.runSync(loadBullMqConfig())
     const queuePublisher = await Effect.runPromise(createBullMqQueuePublisher({ redis: bullMqConfig }))
-    const eventsPublisher = createEventsPublisher(queuePublisher)
+    const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
+    const eventRouter = createEventRouter(queuePublisher)
 
     const outboxConsumer = await Effect.runPromise(
       createPollingOutboxConsumer(
@@ -64,33 +60,22 @@ const bootstrap = async () => {
           pollIntervalMs: 1000,
           batchSize: 100,
         },
-        eventsPublisher,
+        eventRouter,
       ),
     )
 
-    const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
-    const workflowStarter = await getWorkflowStarter()
-
-    const ctx = {
-      consumer: queueConsumer,
-      publisher: queuePublisher,
-      eventsPublisher,
-      workflowStarter,
-    }
-
-    createDomainEventsWorker(ctx)
-    createMagicLinkEmailWorker(ctx)
-    createUserDeletionWorker(ctx)
-    createApiKeysWorker(ctx)
-    createSpanIngestionWorker(ctx)
-    createDatasetExportWorker(ctx)
-    createLiveTracesWorker(ctx)
-    createIssuesWorker(ctx)
-    createScoresWorker(ctx)
-    createAnnotationScoresWorker(ctx)
-    createLiveEvaluationsWorker(ctx)
-    createLiveAnnotationQueuesWorker(ctx)
-    createSystemAnnotationQueuesWorker(ctx)
+    createMagicLinkEmailWorker(queueConsumer)
+    createUserDeletionWorker(queueConsumer)
+    createApiKeysWorker(queueConsumer)
+    createSpanIngestionWorker(queueConsumer, queuePublisher)
+    createDatasetExportWorker(queueConsumer)
+    createLiveTracesWorker(queueConsumer)
+    createIssuesWorker(queueConsumer)
+    createScoresWorker(queueConsumer)
+    createAnnotationScoresWorker(queueConsumer)
+    createLiveEvaluationsWorker(queueConsumer)
+    createLiveAnnotationQueuesWorker(queueConsumer)
+    createSystemAnnotationQueuesWorker(queueConsumer)
 
     await Effect.runPromise(outboxConsumer.start())
     await Effect.runPromise(queueConsumer.start())

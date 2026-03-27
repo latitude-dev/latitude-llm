@@ -437,9 +437,6 @@ importers:
       '@platform/storage-object':
         specifier: workspace:*
         version: link:../../packages/platform/storage-object
-      '@platform/workflows-temporal':
-        specifier: workspace:*
-        version: link:../../packages/platform/workflows-temporal
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -642,9 +639,6 @@ importers:
 
   packages/domain/queue:
     dependencies:
-      '@domain/events':
-        specifier: workspace:*
-        version: link:../events
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0

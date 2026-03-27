@@ -27,8 +27,6 @@
     "@platform/env": "workspace:*",
     "@platform/queue-bullmq": "workspace:*",
     "@platform/storage-object": "workspace:*",
-    "@platform/workflows-temporal": "workspace:*",
-    "@temporalio/worker": "catalog:",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",

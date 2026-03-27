@@ -12,7 +12,7 @@ interface SignupMagicLinkEmailProps {
   readonly magicLinkUrl: string
 }
 
-export function SignupMagicLinkEmail({ userName, magicLinkUrl }: SignupMagicLinkEmailProps) {
+function SignupMagicLinkEmail({ userName, magicLinkUrl }: SignupMagicLinkEmailProps) {
   return (
     <ContainerLayout previewText="Complete your Latitude account">
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${userName},`}</EmailText>

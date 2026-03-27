@@ -8,7 +8,7 @@ import {
 } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getAdminPostgresClient } from "../../clients.ts"
+import { getAdminPostgresClient } from "../clients.ts"
 
 const logger = createLogger("user-deletion")
 

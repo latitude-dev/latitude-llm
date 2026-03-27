@@ -1,5 +1,4 @@
-import type { DomainEvent, EventsPublisher } from "@domain/events"
-import type { QueueConsumer, QueueName, QueuePublishError, TaskHandlers } from "@domain/queue"
+import type { QueueConsumer, QueueName, QueuePublisherShape, TaskHandlers } from "@domain/queue"
 import { queryClickhouse } from "@platform/db-clickhouse"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse } from "@platform/testkit"
@@ -35,16 +34,23 @@ class TestQueueConsumer implements QueueConsumer {
 
 const ch = setupTestClickHouse()
 
-function createFakeEventsPublisher(): EventsPublisher<QueuePublishError> & {
-  readonly published: DomainEvent[]
+import type { PublishOptions } from "@domain/queue"
+
+function createFakeQueuePublisher(): QueuePublisherShape & {
+  readonly published: Array<{ queue: string; task: string; payload: unknown; options?: PublishOptions }>
 } {
-  const published: DomainEvent[] = []
+  const published: Array<{ queue: string; task: string; payload: unknown; options?: PublishOptions }> = []
   return {
     published,
-    publish: (event) => {
-      published.push(event)
+    publish: (queue, task, payload, options?) => {
+      if (options) {
+        published.push({ queue, task, payload, options })
+      } else {
+        published.push({ queue, task, payload })
+      }
       return Effect.void
     },
+    close: () => Effect.void,
   }
 }
 
@@ -79,7 +85,7 @@ describe("createSpanIngestionWorker", () => {
   it("ingests JSON OTLP messages and inserts spans into ClickHouse", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
-    const pub = createFakeEventsPublisher()
+    const pub = createFakeQueuePublisher()
     const fileKey = "span-ingestion/test-valid.json"
     disk.putBytes(fileKey, Buffer.from(JSON.stringify(validRequest), "utf-8"))
 
@@ -119,18 +125,20 @@ describe("createSpanIngestionWorker", () => {
     expect(rows[0]?.ingested_at).toContain("2026-03-18 10:00:00")
 
     expect(pub.published).toHaveLength(1)
-    expect(pub.published[0]?.name).toBe("SpanIngested")
+    expect(pub.published[0]?.queue).toBe("live-traces")
+    expect(pub.published[0]?.task).toBe("end")
     expect(pub.published[0]?.payload).toEqual({
       organizationId: "org_span_ingestion_test",
       projectId: "proj_span_ingestion_test",
       traceId: "0af7651916cd43dd8448eb211c80319c",
     })
+    expect(pub.published[0]?.options?.debounceMs).toBe(5 * 60 * 1000)
   })
 
   it("drops invalid payloads without inserting spans", async () => {
     const consumer = new TestQueueConsumer()
     const disk = new FakeStorageDisk()
-    const pub = createFakeEventsPublisher()
+    const pub = createFakeQueuePublisher()
     const fileKey = "span-ingestion/test-invalid.json"
     disk.putBytes(fileKey, Buffer.from("not-json", "utf-8"))
 

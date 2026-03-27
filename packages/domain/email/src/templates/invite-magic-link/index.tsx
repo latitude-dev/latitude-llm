@@ -3,7 +3,7 @@
 import React from "react"
 import { renderEmail } from "../../utils/render.ts"
 import type { RenderedEmail } from "../types.ts"
-import { InviteMagicLinkEmail } from "./EmailTemplate.tsx"
+import InviteMagicLinkEmail from "./EmailTemplate.tsx"
 
 export interface InviteMagicLinkEmailData {
   readonly inviterName: string

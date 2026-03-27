@@ -1,4 +1,4 @@
-import type { Effect } from "effect"
+export { type EventRouter, RouteError } from "./routing.js"
 
 export interface EventPayloads {
   MagicLinkEmailRequested: {
@@ -50,10 +50,6 @@ export interface EventEnvelope<TEvent extends DomainEvent = DomainEvent> {
   readonly id: string
   readonly event: TEvent
   readonly occurredAt: Date
-}
-
-export interface EventsPublisher<TError = unknown> {
-  publish(envelope: DomainEvent): Effect.Effect<void, TError, never>
 }
 
 /**

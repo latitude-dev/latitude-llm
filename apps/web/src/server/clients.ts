@@ -150,6 +150,10 @@ export const getBetterAuth = () => {
           typeof data.inviter.user.name === "string" && data.inviter.user.name.trim().length > 0
             ? data.inviter.user.name.trim()
             : "A teammate"
+
+        // TODO(sendInvitationEmail): create a separate event and handler to
+        // handle invitatation email sending. Simplify magic link email
+        // requested handler once done.
         await outboxWriter.write({
           eventName: "MagicLinkEmailRequested",
           aggregateId: data.id,

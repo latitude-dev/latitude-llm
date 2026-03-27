@@ -14,7 +14,7 @@ interface DatasetExportEmailProps {
   readonly recipientName?: string
 }
 
-export function DatasetExportEmail({ datasetName, downloadUrl, recipientName = "there" }: DatasetExportEmailProps) {
+function DatasetExportEmail({ datasetName, downloadUrl, recipientName = "there" }: DatasetExportEmailProps) {
   return (
     <ContainerLayout previewText="Your dataset export is ready">
       <EmailText variant="heading" className={emailDesignTokens.spacing.headingGap}>{`Hi ${recipientName},`}</EmailText>
