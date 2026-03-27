@@ -172,7 +172,7 @@ function NavHeader() {
         {currentProjectId && <ProjectBreadcrumb projectId={currentProjectId} />}
       </div>
       <div className="flex items-center gap-4">
-        {import.meta.env.DEV && <ThemeToggle />}
+        <ThemeToggle />
         <a
           href="https://docs.latitude.so"
           target="_blank"
