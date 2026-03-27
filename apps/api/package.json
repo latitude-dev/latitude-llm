@@ -9,15 +9,18 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
     "@clickhouse/client": "catalog:",
+    "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",
     "@hono/swagger-ui": "^0.5.0",
     "@hono/zod-openapi": "^1.2.4",
@@ -25,6 +28,7 @@
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",
+    "@platform/queue-bullmq": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
@@ -34,7 +38,6 @@
   },
   "devDependencies": {
     "@platform/testkit": "workspace:*",
-    "@repo/vitest-config": "workspace:*",
     "tsup": "^8.0.0"
   }
 }

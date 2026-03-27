@@ -463,6 +463,16 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           })
           .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
       },
+      // Lightweight DELETE (row mask); omits deleted rows from subsequent SELECTs without full part rewrite.
+      deleteById: (id: ScoreId) =>
+        chSqlClient
+          .query(async (client) => {
+            await client.command({
+              query: "DELETE FROM scores WHERE id = {id:FixedString(24)}",
+              query_params: { id },
+            })
+          })
+          .pipe(Effect.asVoid),
     }
   }),
 )

@@ -1,28 +1,15 @@
 import { generateId } from "@domain/shared"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
-import {
-  closeInMemoryPostgres,
-  createApiKeyAuthHeaders,
-  createInMemoryPostgres,
-  type InMemoryPostgres,
-} from "@platform/testkit"
+import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
 import { encrypt, hashToken } from "@repo/utils"
 import { Effect } from "effect"
-import type { Hono } from "hono"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, type TestContext } from "vitest"
-import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
+import { describe, expect, it } from "vitest"
 import {
-  createProtectedApp,
+  type ApiTestContext,
   createTenantSetup,
+  setupTestApi,
   TEST_ENCRYPTION_KEY,
-  TEST_ENCRYPTION_KEY_HEX,
 } from "../test-utils/create-test-app.ts"
-import { createApiKeysRoutes } from "./api-keys.ts"
-
-interface ApiKeysRoutesTestContext extends TestContext {
-  app: Hono
-  database: InMemoryPostgres
-}
 
 const createApiKeyRecord = async (database: InMemoryPostgres, organizationId: string, name: string) => {
   const token = crypto.randomUUID()
@@ -42,30 +29,9 @@ const createApiKeyRecord = async (database: InMemoryPostgres, organizationId: st
 }
 
 describe("API Keys Routes Integration", () => {
-  let app: Hono
-  let database: InMemoryPostgres
+  setupTestApi()
 
-  beforeAll(async () => {
-    process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
-    database = await createInMemoryPostgres()
-
-    const { app: root, protectedRoutes } = createProtectedApp(database)
-    protectedRoutes.route("/:organizationId/api-keys", createApiKeysRoutes())
-    root.route("/v1/organizations", protectedRoutes)
-    app = root
-  })
-
-  beforeEach<ApiKeysRoutesTestContext>((context) => {
-    context.app = app
-    context.database = database
-  })
-
-  afterAll(async () => {
-    await destroyTouchBuffer()
-    await closeInMemoryPostgres(database)
-  })
-
-  it<ApiKeysRoutesTestContext>("GET /v1/organizations/:organizationId/api-keys isolates organization API keys", async ({
+  it<ApiTestContext>("GET /v1/organizations/:organizationId/api-keys isolates organization API keys", async ({
     app,
     database,
   }) => {
@@ -91,7 +57,7 @@ describe("API Keys Routes Integration", () => {
     expect(ids).not.toContain(tenantBKey.id)
   })
 
-  it<ApiKeysRoutesTestContext>("POST /v1/organizations/:organizationId/api-keys creates an API key", async ({
+  it<ApiTestContext>("POST /v1/organizations/:organizationId/api-keys creates an API key", async ({
     app,
     database,
   }) => {
@@ -115,7 +81,7 @@ describe("API Keys Routes Integration", () => {
     expect(body.token.length).toBeGreaterThan(0)
   })
 
-  it<ApiKeysRoutesTestContext>("DELETE /v1/organizations/:organizationId/api-keys/:id cannot revoke cross-tenant keys", async ({
+  it<ApiTestContext>("DELETE /v1/organizations/:organizationId/api-keys/:id cannot revoke cross-tenant keys", async ({
     app,
     database,
   }) => {

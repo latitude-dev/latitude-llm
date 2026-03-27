@@ -2,22 +2,10 @@ import { eq } from "@platform/db-postgres"
 import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
-import {
-  closeInMemoryPostgres,
-  createApiKeyAuthHeaders,
-  createInMemoryPostgres,
-  type InMemoryPostgres,
-} from "@platform/testkit"
-import type { Hono } from "hono"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, type TestContext } from "vitest"
-import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
-import { createProtectedApp, createTenantSetup, TEST_ENCRYPTION_KEY_HEX } from "../test-utils/create-test-app.ts"
-import { createScoresRoutes } from "./scores.ts"
-
-interface ScoresRoutesTestContext extends TestContext {
-  app: Hono
-  database: InMemoryPostgres
-}
+import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
+import { describe, expect, it } from "vitest"
+import { API_TEST_ANCHOR_TRACE_ID } from "../test-utils/api-test-trace-repository.ts"
+import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
 
 const createProjectRecord = async (database: InMemoryPostgres, organizationId: string, projectId: string) => {
   await database.db.insert(projects).values({
@@ -29,30 +17,9 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
 }
 
 describe("Scores Routes Integration", () => {
-  let app: Hono
-  let database: InMemoryPostgres
+  setupTestApi()
 
-  beforeAll(async () => {
-    process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
-    database = await createInMemoryPostgres()
-
-    const { app: root, protectedRoutes } = createProtectedApp(database)
-    protectedRoutes.route("/:organizationId/projects/:projectId/scores", createScoresRoutes())
-    root.route("/v1/organizations", protectedRoutes)
-    app = root
-  })
-
-  beforeEach<ScoresRoutesTestContext>((context) => {
-    context.app = app
-    context.database = database
-  })
-
-  afterAll(async () => {
-    await destroyTouchBuffer()
-    await closeInMemoryPostgres(database)
-  })
-
-  it<ScoresRoutesTestContext>("creates an instrumented custom score and queues publication when the score is immutable", async ({
+  it<ApiTestContext>("creates an instrumented custom score and queues publication when the score is immutable", async ({
     app,
     database,
   }) => {
@@ -113,7 +80,7 @@ describe("Scores Routes Integration", () => {
     expect(publicationRequests[0]?.eventName).toBe("ScoreImmutable")
   })
 
-  it<ScoresRoutesTestContext>("creates an evaluation score through the shared scores endpoint when `_evaluation` is true", async ({
+  it<ApiTestContext>("creates an evaluation score through the shared scores endpoint when `_evaluation` is true", async ({
     app,
     database,
   }) => {
@@ -133,7 +100,7 @@ describe("Scores Routes Integration", () => {
           _evaluation: true,
           sourceId: evaluationId,
           sessionId: "session-456",
-          traceId: "22222222222222222222222222222222",
+          traceId: API_TEST_ANCHOR_TRACE_ID,
           spanId: "bbbbbbbbbbbbbbbb",
           value: 0.93,
           passed: true,
@@ -175,7 +142,7 @@ describe("Scores Routes Integration", () => {
     expect(publicationRequests[0]?.eventName).toBe("ScoreImmutable")
   })
 
-  it<ScoresRoutesTestContext>("creates an uninstrumented custom score without queueing publication for failed non-errored results", async ({
+  it<ApiTestContext>("creates an uninstrumented custom score without queueing publication for failed non-errored results", async ({
     app,
     database,
   }) => {
@@ -226,7 +193,7 @@ describe("Scores Routes Integration", () => {
     expect(publicationRequests).toHaveLength(0)
   })
 
-  it<ScoresRoutesTestContext>("rejects invalid score lifecycle payloads", async ({ app, database }) => {
+  it<ApiTestContext>("rejects invalid score lifecycle payloads", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "dddddddddddddddddddddddd"
     await createProjectRecord(database, tenant.organizationId, projectId)
@@ -249,6 +216,9 @@ describe("Scores Routes Integration", () => {
     )
 
     expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body).toHaveProperty("error")
+    expect(typeof body.error).toBe("string")
 
     const persistedScores = await database.db
       .select()

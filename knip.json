@@ -19,7 +19,8 @@
     },
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
-      "project": ["src/**/*.ts", "src/**/*.tsx"]
+      "project": ["src/**/*.ts", "src/**/*.tsx"],
+      "ignoreDependencies": ["@domain/annotations", "@domain/scores"]
     },
     "infra": {
       "entry": [],
@@ -57,8 +58,8 @@
   "ignoreDependencies": ["@pulumi/awsx", "@pulumi/aws", "@pulumi/pulumi", "@pulumi/random"],
   "ignoreIssues": {
     "packages/domain/email/src/templates/**/EmailTemplate.tsx": ["exports", "duplicates"],
-    "apps/web/src/domains/sessions/sessions.collection.ts": ["files"],
-    "apps/web/src/domains/sessions/sessions.functions.ts": ["files"]
+    "apps/web/src/domains/annotations/annotations.collection.ts": ["files"],
+    "apps/web/src/domains/annotations/annotations.functions.ts": ["files"]
   },
   "tags": ["-knipignore"]
 }

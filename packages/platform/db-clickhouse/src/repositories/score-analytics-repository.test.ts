@@ -69,6 +69,33 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
+  // deleteById (lightweight DELETE — rows masked from SELECTs)
+  // ------------------------------------------------------------------
+
+  describe("deleteById", () => {
+    it("hides the score from existsById and aggregates after lightweight delete", async () => {
+      const id = "dddddddddddddddddddddddd"
+      await insertScores([makeScoreRow({ id, value: 0.99, passed: true, cost: 999, tokens: 10, duration: 1 })])
+
+      expect(await Effect.runPromise(repo.existsById(id as ScoreId))).toBe(true)
+
+      const beforeAgg = await Effect.runPromise(
+        repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
+      )
+      const countBefore = beforeAgg.totalScores
+
+      await Effect.runPromise(repo.deleteById(id as ScoreId))
+
+      expect(await Effect.runPromise(repo.existsById(id as ScoreId))).toBe(false)
+
+      const afterAgg = await Effect.runPromise(
+        repo.aggregateByProject({ organizationId: ORG_ID, projectId: PROJECT_ID }),
+      )
+      expect(afterAgg.totalScores).toBe(countBefore - 1)
+    })
+  })
+
+  // ------------------------------------------------------------------
   // aggregateByProject
   // ------------------------------------------------------------------
 

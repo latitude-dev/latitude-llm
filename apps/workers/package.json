@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
@@ -21,6 +22,8 @@
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@domain/users": "workspace:*",
+    "@platform/ai-credentials": "workspace:*",
+    "@platform/ai-vercel": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/email-transport": "workspace:*",

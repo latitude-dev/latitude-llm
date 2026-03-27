@@ -15,6 +15,7 @@ interface TouchBufferConfig {
   intervalMs?: number
   /** Maximum buffer size before forced flush (default: 10000) */
   maxBufferSize?: number
+  logTouchBuffer?: boolean
 }
 
 /**
@@ -43,15 +44,20 @@ class TouchBuffer {
   private readonly intervalMs: number
   private readonly maxBufferSize: number
   private readonly client: PostgresClient
+  private readonly logTouchBuffer: boolean
 
   constructor(client: PostgresClient, config: TouchBufferConfig = {}) {
     this.client = client
     this.intervalMs = config.intervalMs ?? 30000
     this.maxBufferSize = config.maxBufferSize ?? 10000
+    this.logTouchBuffer = config.logTouchBuffer ?? false
 
     this.startFlushInterval()
 
-    logger.info(`TouchBuffer initialized with ${this.intervalMs}ms interval, max buffer size ${this.maxBufferSize}`)
+    this.log({
+      message: `initialized with ${this.intervalMs}ms interval, max buffer size ${this.maxBufferSize}`,
+      type: "info",
+    })
   }
 
   /**
@@ -67,7 +73,10 @@ class TouchBuffer {
 
     // Force flush if buffer exceeds max size
     if (this.buffer.size >= this.maxBufferSize) {
-      logger.warn(`Buffer size ${this.buffer.size} exceeded max ${this.maxBufferSize}, forcing flush`)
+      this.log({
+        message: `Buffer size ${this.buffer.size} exceeded max ${this.maxBufferSize}, forcing flush`,
+        type: "warn",
+      })
       void this.flush()
     }
   }
@@ -107,9 +116,15 @@ class TouchBuffer {
         }).pipe(withPostgres(ApiKeyRepositoryLive, this.client)),
       )
 
-      logger.info(`Flushed ${keyIds.length} touch updates in ${Date.now() - startTime}ms`)
+      this.log({
+        message: `Flushed ${keyIds.length} touch updates in ${Date.now() - startTime}ms`,
+        type: "info",
+      })
     } catch (error) {
-      logger.error(`Failed to flush touch updates: ${error instanceof Error ? error.message : "Unknown error"}`)
+      this.log({
+        message: `Failed to flush touch updates: ${error instanceof Error ? error.message : "Unknown error"}`,
+        type: "error",
+      })
 
       // Re-add failed keys to buffer for retry (with limit to prevent unbounded growth)
       for (const [keyId, timestamp] of batch) {
@@ -127,7 +142,10 @@ class TouchBuffer {
         for (let i = 0; i < entriesToRemove; i++) {
           this.buffer.delete(entries[i][0])
         }
-        logger.warn(`Trimmed ${entriesToRemove} oldest entries from buffer after flush failure`)
+        this.log({
+          message: `Trimmed ${entriesToRemove} oldest entries from buffer after flush failure`,
+          type: "warn",
+        })
       }
     }
   }
@@ -139,17 +157,22 @@ class TouchBuffer {
    * touch updates are persisted.
    */
   async destroy(): Promise<void> {
-    logger.info(`Destroying TouchBuffer with ${this.buffer.size} pending updates`)
+    this.log({
+      message: `Destroying TouchBuffer with ${this.buffer.size} pending updates`,
+      type: "info",
+    })
 
     if (this.flushInterval) {
       clearInterval(this.flushInterval)
       this.flushInterval = null
     }
 
-    // Final flush
     await this.flush()
 
-    logger.info("TouchBuffer destroyed")
+    this.log({
+      message: `TouchBuffer destroyed with ${this.buffer.size} pending updates (should be 0)`,
+      type: "info",
+    })
   }
 
   private startFlushInterval(): void {
@@ -157,10 +180,16 @@ class TouchBuffer {
       void this.flush()
     }, this.intervalMs)
 
-    // Ensure interval doesn't prevent process exit in tests/development
     if (this.flushInterval.unref) {
       this.flushInterval.unref()
     }
+  }
+
+  private log({ message, type }: { message: string; type: "info" | "warn" | "error" }): void {
+    if (!this.logTouchBuffer) return
+    const logPrefix = `[TouchBuffer]`
+    const logFn = type === "warn" ? logger.warn : logger.info
+    logFn(`${logPrefix} ${message}`)
   }
 }
 
