@@ -85,76 +85,38 @@ export function createSecurityGroups(name: string, config: EnvironmentConfig, vp
     },
   })
 
-  // RDS/Redis ingress use aws.vpc.SecurityGroupIngressRule (one referenced SG per rule).
-  // Inline `ingress` with multiple securityGroups is unreliable in the AWS provider and can
-  // leave Pulumi state out of sync with EC2 (no drift on `pulumi preview`).
-  // We create the security groups with empty ingress here, then add rules separately below
-  // via aws.vpc.SecurityGroupIngressRule resources. The ignoreChanges prevents Pulumi refresh
-  // from detecting drift - it sees the added rules in AWS and incorrectly thinks they should
-  // be inline on the parent resource, causing false positive "remove ingress" diffs on every
-  // preview after a refresh.
-  const rdsSg = new aws.ec2.SecurityGroup(
-    `${name}-rds-sg`,
-    {
-      vpcId: vpc.id,
-      description: "RDS security group",
-      ingress: [],
-      tags: {
-        Name: `${name}-rds-sg`,
-        Environment: config.name,
+  const rdsSg = new aws.ec2.SecurityGroup(`${name}-rds-sg`, {
+    vpcId: vpc.id,
+    description: "RDS security group",
+    ingress: [
+      {
+        protocol: "TCP",
+        fromPort: 5432,
+        toPort: 5432,
+        securityGroups: [ecsSg.id, bastionSg.id],
       },
+    ],
+    tags: {
+      Name: `${name}-rds-sg`,
+      Environment: config.name,
     },
-    { ignoreChanges: ["ingress"] },
-  )
+  })
 
-  const redisSg = new aws.ec2.SecurityGroup(
-    `${name}-redis-sg`,
-    {
-      vpcId: vpc.id,
-      description: "Redis security group",
-      ingress: [],
-      tags: {
-        Name: `${name}-redis-sg`,
-        Environment: config.name,
+  const redisSg = new aws.ec2.SecurityGroup(`${name}-redis-sg`, {
+    vpcId: vpc.id,
+    description: "Redis security group",
+    ingress: [
+      {
+        protocol: "TCP",
+        fromPort: 6379,
+        toPort: 6379,
+        securityGroups: [ecsSg.id, bastionSg.id],
       },
+    ],
+    tags: {
+      Name: `${name}-redis-sg`,
+      Environment: config.name,
     },
-    { ignoreChanges: ["ingress"] },
-  )
-
-  new aws.vpc.SecurityGroupIngressRule(`${name}-rds-from-ecs`, {
-    securityGroupId: rdsSg.id,
-    referencedSecurityGroupId: ecsSg.id,
-    ipProtocol: "tcp",
-    fromPort: 5432,
-    toPort: 5432,
-    description: "PostgreSQL from ECS tasks",
-  })
-
-  new aws.vpc.SecurityGroupIngressRule(`${name}-rds-from-bastion`, {
-    securityGroupId: rdsSg.id,
-    referencedSecurityGroupId: bastionSg.id,
-    ipProtocol: "tcp",
-    fromPort: 5432,
-    toPort: 5432,
-    description: "PostgreSQL from bastion",
-  })
-
-  new aws.vpc.SecurityGroupIngressRule(`${name}-redis-from-ecs`, {
-    securityGroupId: redisSg.id,
-    referencedSecurityGroupId: ecsSg.id,
-    ipProtocol: "tcp",
-    fromPort: 6379,
-    toPort: 6379,
-    description: "Redis from ECS tasks",
-  })
-
-  new aws.vpc.SecurityGroupIngressRule(`${name}-redis-from-bastion`, {
-    securityGroupId: redisSg.id,
-    referencedSecurityGroupId: bastionSg.id,
-    ipProtocol: "tcp",
-    fromPort: 6379,
-    toPort: 6379,
-    description: "Redis from bastion",
   })
 
   const vpcEndpointsSg = new aws.ec2.SecurityGroup(`${name}-vpc-endpoints-sg`, {
@@ -165,7 +127,7 @@ export function createSecurityGroups(name: string, config: EnvironmentConfig, vp
         protocol: "TCP",
         fromPort: 443,
         toPort: 443,
-        securityGroups: [ecsSg.id],
+        securityGroups: [ecsSg.id, bastionSg.id],
       },
     ],
     tags: {

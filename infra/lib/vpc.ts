@@ -194,28 +194,18 @@ export function createVpc(name: string, config: EnvironmentConfig): VpcOutput {
       allocationId: natEip.allocationId,
     })
 
-    // We create the route table with empty routes here, then add routes separately below
-    // via aws.ec2.Route resources. The ignoreChanges prevents Pulumi refresh from detecting
-    // drift - it sees the added routes in AWS and incorrectly thinks they should be inline
-    // on the parent resource, causing false positive "remove routes" diffs on every preview
-    // after a refresh.
-    privateRouteTable = new aws.ec2.RouteTable(
-      `${name}-private-rt`,
-      {
-        vpcId: vpc.id,
-        routes: [],
-        tags: {
-          Name: `${name}-private-rt`,
-          Environment: config.name,
+    privateRouteTable = new aws.ec2.RouteTable(`${name}-private-rt`, {
+      vpcId: vpc.id,
+      routes: [
+        {
+          cidrBlock: "0.0.0.0/0",
+          networkInterfaceId: natInstance.primaryNetworkInterfaceId,
         },
+      ],
+      tags: {
+        Name: `${name}-private-rt`,
+        Environment: config.name,
       },
-      { ignoreChanges: ["routes"] },
-    )
-
-    new aws.ec2.Route(`${name}-private-route`, {
-      routeTableId: privateRouteTable.id,
-      destinationCidrBlock: "0.0.0.0/0",
-      networkInterfaceId: natInstance.primaryNetworkInterfaceId,
     })
 
     for (let i = 0; i < privateSubnets.length; i++) {
