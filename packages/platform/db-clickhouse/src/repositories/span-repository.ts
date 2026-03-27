@@ -295,6 +295,7 @@ export const SpanRepositoryLive = Layer.effect(
               table: "spans",
               values: spans.map(toInsertRow),
               format: "JSONEachRow",
+              // Let CH buffer concurrent inserts into larger blocks to reduce part creation and merge pressure
               clickhouse_settings: {
                 async_insert: 1,
                 wait_for_async_insert: 1,

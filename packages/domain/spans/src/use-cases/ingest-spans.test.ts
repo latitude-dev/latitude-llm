@@ -49,7 +49,7 @@ describe("ingestSpansUseCase", () => {
     await Effect.runPromise(runUseCase(makeInput(largePayload), disk, publisher))
 
     expect(written).toHaveLength(1)
-    expect(written[0]?.key).toContain("organizations/org-1/projects/proj-1/ingest/")
+    expect(written[0]?.key).toContain("tmp-ingest/org-1/proj-1/")
 
     expect(published).toHaveLength(1)
     const payload = published[0]?.payload as { fileKey: string | null; inlinePayload: string | null }

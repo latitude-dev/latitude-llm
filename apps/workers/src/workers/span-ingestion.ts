@@ -87,7 +87,6 @@ export const createSpanIngestionWorker = ({
 
         const repo = yield* SpanRepository
         yield* repo.insert(spans)
-        // S3 cleanup handled by lifecycle policy on the ingest/ prefix
 
         const traceIds = new Set(spans.map((s) => s.traceId))
         yield* Effect.all(

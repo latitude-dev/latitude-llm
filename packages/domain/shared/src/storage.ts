@@ -104,7 +104,7 @@ function buildStorageKey(options: KeyBuildingOptions): string | undefined {
     case "ingest": {
       const id = crypto.randomUUID()
       const ext = options.extension ?? "json"
-      return `${projectsPath(basePath, options.projectId)}/ingest/${id}.${ext}`
+      return `tmp-ingest/${options.organizationId}/${options.projectId}/${id}.${ext}`
     }
     default:
       return undefined

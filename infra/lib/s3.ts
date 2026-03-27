@@ -51,6 +51,16 @@ export function createS3(name: string, config: EnvironmentConfig): S3Output {
               }
             : undefined,
         },
+        {
+          id: "expire-ingest-temp-files",
+          status: "Enabled",
+          filter: {
+            prefix: "tmp-ingest/",
+          },
+          expiration: {
+            days: 1,
+          },
+        },
       ],
     },
     {
