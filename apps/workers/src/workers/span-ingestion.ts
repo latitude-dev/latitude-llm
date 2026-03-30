@@ -1,7 +1,7 @@
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
 import { OrganizationId, ProjectId, type StorageDiskPort } from "@domain/shared"
-import { processIngestedSpansUseCase } from "@domain/spans"
+import { processIngestedSpansUseCase, SpanDecodingError } from "@domain/spans"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { StorageDiskLive } from "@platform/storage-object"
@@ -48,6 +48,9 @@ export const createSpanIngestionWorker = ({
           inlinePayload: wire.inlinePayload,
           fileKey: wire.fileKey,
         }).pipe(
+          Effect.catchTag("SpanDecodingError", (error) =>
+            Effect.sync(() => logger.warn("Dropping invalid span payload", error)),
+          ),
           Effect.tapError((error) => Effect.sync(() => logger.error("Span ingestion failed", error))),
           withClickHouse(SpanRepositoryLive, chClient, OrganizationId(organizationId)),
           Effect.provide(StorageDiskLive(disk)),
