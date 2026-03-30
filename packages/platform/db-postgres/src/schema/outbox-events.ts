@@ -13,6 +13,7 @@ export const outboxEvents = latitudeSchema.table(
   {
     id: cuid("id").primaryKey(),
     eventName: text("event_name").notNull(),
+    aggregateType: text("aggregate_type").notNull(),
     aggregateId: cuid("aggregate_id").notNull(),
     organizationId: cuid("workspace_id").notNull(),
     payload: jsonb("payload").$type<EventPayloads[keyof EventPayloads]>().notNull(),
@@ -21,5 +22,8 @@ export const outboxEvents = latitudeSchema.table(
     occurredAt: tzTimestamp("occurred_at").notNull(),
     createdAt: tzTimestamp("created_at").notNull().defaultNow(),
   },
-  (t) => [index("outbox_events_workspace_id_idx").on(t.organizationId)],
+  (t) => [
+    index("outbox_events_workspace_id_idx").on(t.organizationId),
+    index("outbox_events_aggregate_type_idx").on(t.aggregateType),
+  ],
 )

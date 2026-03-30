@@ -719,6 +719,9 @@ importers:
 
   packages/domain/spans:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/models':
         specifier: workspace:*
         version: link:../models

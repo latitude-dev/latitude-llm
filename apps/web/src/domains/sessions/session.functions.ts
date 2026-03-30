@@ -58,6 +58,7 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
   await outboxWriter.write({
     id: generateId(),
     eventName: "UserDeletionRequested",
+    aggregateType: "user",
     aggregateId: userId,
     organizationId: "system",
     payload: {

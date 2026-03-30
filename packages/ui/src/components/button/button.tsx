@@ -62,7 +62,7 @@ const buttonVariantsConfig = cva(
         default: "min-h-8 px-3 py-buttonDefaultVertical",
         sm: "h-8 rounded-lg px-3 text-xs",
         lg: "h-10 rounded-lg px-8",
-        icon: "h-9 w-9",
+        icon: "h-8 w-8 p-0",
         full: "min-h-8 w-full px-3 py-buttonDefaultVertical",
       },
     },

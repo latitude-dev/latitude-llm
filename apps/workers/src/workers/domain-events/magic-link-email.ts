@@ -1,10 +1,4 @@
-import {
-  inviteMagicLinkTemplate,
-  magicLinkTemplate,
-  type RenderedEmail,
-  sendEmail,
-  signupMagicLinkTemplate,
-} from "@domain/email"
+import { magicLinkTemplate, type RenderedEmail, sendEmail, signupMagicLinkTemplate } from "@domain/email"
 import type { QueueConsumer } from "@domain/queue"
 import { UserRepository } from "@domain/users"
 import { SqlClientLive, UserRepositoryLive } from "@platform/db-postgres"
@@ -38,23 +32,10 @@ export const createMagicLinkEmailWorker = ({ consumer }: MagicLinkEmailDeps) => 
           .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
         const userName = user?.name ?? "there"
-        const isInvitation = Boolean(payload.invitationId) && !payload.emailFlow
 
         let rendered: RenderedEmail
 
-        if (isInvitation) {
-          const inviterName =
-            typeof payload.inviterName === "string" && payload.inviterName.trim().length > 0
-              ? payload.inviterName.trim()
-              : "A teammate"
-          rendered = yield* Effect.tryPromise(() =>
-            inviteMagicLinkTemplate({
-              inviterName,
-              organizationName: payload.organizationName ?? "a workspace",
-              magicLinkUrl: payload.magicLinkUrl,
-            }),
-          )
-        } else if (payload.emailFlow === "signup") {
+        if (payload.emailFlow === "signup") {
           rendered = yield* Effect.tryPromise(() =>
             signupMagicLinkTemplate({ userName, magicLinkUrl: payload.magicLinkUrl }),
           )
