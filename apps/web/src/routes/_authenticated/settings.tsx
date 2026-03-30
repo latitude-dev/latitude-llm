@@ -42,10 +42,11 @@ import {
   cancelMemberInviteMutation,
   inviteMemberMutation,
   removeMemberMutation,
+  transferOwnershipMutation,
+  updateMemberRoleMutation,
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { transferOwnership, updateMemberRole } from "../../domains/members/members.functions.ts"
 import {
   updateOrganizationMutation,
   useOrganizationsCollection,
@@ -189,7 +190,7 @@ function TransferOwnershipModal({
     if (!selectedMemberId) return
 
     try {
-      await transferOwnership({ data: { newOwnerUserId: selectedMemberId } })
+      await transferOwnershipMutation(selectedMemberId)
       setOpen(false)
       toast({ description: "Ownership transferred successfully. You are now an admin." })
     } catch (error) {
@@ -373,7 +374,7 @@ function MembersTable({
 
   const handleRoleChange = async (targetUserId: string, newRole: "admin" | "member") => {
     try {
-      await updateMemberRole({ data: { targetUserId, newRole } })
+      await updateMemberRoleMutation(targetUserId, newRole)
       toast({ description: `Role updated to ${newRole}` })
     } catch (error) {
       toast({
