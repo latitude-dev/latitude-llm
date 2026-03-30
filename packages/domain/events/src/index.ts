@@ -6,9 +6,13 @@ export interface EventPayloads {
     readonly magicLinkUrl: string
     readonly emailFlow: string | null
     readonly organizationId: string
+  }
+  InvitationEmailRequested: {
+    readonly email: string
+    readonly invitationUrl: string
+    readonly organizationId: string
     readonly organizationName: string
-    readonly inviterName: string | null
-    readonly invitationId: string | null
+    readonly inviterName: string
   }
   UserDeletionRequested: {
     readonly organizationId: string

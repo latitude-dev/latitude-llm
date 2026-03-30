@@ -30,6 +30,8 @@ export const createDomainEventsWorker = ({
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) => pub.publish("magic-link-email", "send", event.payload),
 
+    InvitationEmailRequested: (event) => pub.publish("invitation-email", "send", event.payload),
+
     UserDeletionRequested: (event) => pub.publish("user-deletion", "delete", event.payload),
 
     SpanIngested: (event) =>
