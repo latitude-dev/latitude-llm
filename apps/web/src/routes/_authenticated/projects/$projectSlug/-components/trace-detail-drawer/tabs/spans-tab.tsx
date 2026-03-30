@@ -5,12 +5,10 @@ import { SpanDetail } from "./spans-tab/span-detail/index.tsx"
 import { SpanTree, scrollSpanIntoView } from "./spans-tab/span-tree/index.tsx"
 
 export function SpansTab({
-  projectId: _,
   traceId,
   selectedSpanId,
   onSelectSpan,
 }: {
-  readonly projectId: string
   readonly traceId: string
   readonly selectedSpanId: string
   readonly onSelectSpan: (spanId: string) => void

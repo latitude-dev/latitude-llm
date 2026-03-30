@@ -12,7 +12,7 @@ import {
   toast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
+
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CirclePlus, Download, FileDownIcon, Trash2 } from "lucide-react"
@@ -30,7 +30,6 @@ import {
   saveDatasetCsv,
   updateDatasetRow,
 } from "../../../../../domains/datasets/datasets.functions.ts"
-import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -84,12 +83,8 @@ const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
 ]
 
 function DatasetDetailPage() {
-  const { projectSlug, datasetId } = Route.useParams()
-
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
-    [projectSlug],
-  )
+  const { datasetId } = Route.useParams()
+  const { project } = Route.useRouteContext()
   const [, setRid] = useParamState("rid", "")
 
   const { data: dataset, isLoading } = useQuery({

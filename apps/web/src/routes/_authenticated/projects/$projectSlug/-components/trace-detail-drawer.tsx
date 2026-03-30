@@ -34,7 +34,7 @@ export function TraceDetailDrawer({
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
   const [activeTab, setActiveTab] = useState<TabId>("trace")
-  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
+  const [_, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
 
   function handleSetActiveTab(tab: TabId) {
@@ -132,8 +132,17 @@ export function TraceDetailDrawer({
           isDetailLoading={isDetailLoading}
         />
       )}
-      {activeTab === "conversation" && <ConversationTab traceDetail={traceDetail} isDetailLoading={isDetailLoading} />}
-      {activeTab === "spans" && <SpansTab key={traceId} projectId={projectId} traceId={traceId} />}
+      {activeTab === "conversation" && (
+        <ConversationTab
+          projectId={projectId}
+          traceDetail={traceDetail}
+          isDetailLoading={isDetailLoading}
+          navigateToSpan={navigateToSpan}
+        />
+      )}
+      {activeTab === "spans" && (
+        <SpansTab key={traceId} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} traceId={traceId} />
+      )}
     </DetailDrawer>
   )
 }

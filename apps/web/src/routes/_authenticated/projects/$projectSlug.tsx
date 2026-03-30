@@ -1,7 +1,6 @@
 import { Button, cn, Icon, Text, useToast } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
-import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import {
   ChevronDown,
   ChevronRight,
@@ -16,10 +15,18 @@ import {
   ShieldAlert,
 } from "lucide-react"
 import { useState } from "react"
-import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
+import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   component: ProjectLayout,
+  beforeLoad: async ({ params }) => {
+    try {
+      const project = await getProjectBySlug({ data: { slug: params.projectSlug } })
+      return { project }
+    } catch {
+      throw redirect({ to: "/" })
+    }
+  },
 })
 
 function ProjectEmoji({ name }: { name: string }) {
@@ -139,10 +146,12 @@ function NavChild({ label, to }: { label: string; to?: string }) {
 }
 
 function ProjectSidebar({
+  project,
   projectSlug,
   collapsed,
   onToggleCollapse,
 }: {
+  project: ProjectRecord
   projectSlug: string
   collapsed: boolean
   onToggleCollapse: () => void
@@ -150,11 +159,6 @@ function ProjectSidebar({
   const { toast } = useToast()
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
-
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
-    [projectSlug],
-  )
 
   const isTracesActive =
     pathname === `/projects/${projectSlug}` ||
@@ -252,11 +256,13 @@ function ProjectSidebar({
 
 function ProjectLayout() {
   const { projectSlug } = Route.useParams()
+  const { project } = Route.useRouteContext()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
     <div className="flex h-full">
       <ProjectSidebar
+        project={project}
         projectSlug={projectSlug}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((v) => !v)}

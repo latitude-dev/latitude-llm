@@ -58,7 +58,7 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
     if (trimmedSlug.length > 256) {
       return yield* new InvalidProjectNameError({
         field: trimmedSlug,
-        message: "Slug exceeds 256 characters",
+        message: "Slug exceeds 256 characters, try with a shorter project name.",
       })
     }
 
@@ -69,7 +69,7 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
         // Generate unique slug by appending numbers if needed
         let uniqueSlug = trimmedSlug
         let found = false
-        for (let i = 1; i <= 20; i++) {
+        for (let i = 1; i <= 100; i++) {
           const exists = yield* repo.existsBySlug(uniqueSlug)
           if (!exists) {
             found = true
@@ -81,7 +81,7 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
         if (!found) {
           return yield* new InvalidProjectNameError({
             field: trimmedSlug,
-            message: "Could not generate a unique slug",
+            message: "Could not generate a unique project slug, try with a different project name.",
           })
         }
 

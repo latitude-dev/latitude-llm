@@ -11,13 +11,11 @@ import {
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
-import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
@@ -55,14 +53,10 @@ const columns: InfiniteTableColumn<DatasetRecord>[] = [
 
 function DatasetsPage() {
   const { projectSlug } = Route.useParams()
+  const { project } = Route.useRouteContext()
   const navigate = Route.useNavigate()
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
-
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
-    [projectSlug],
-  )
 
   const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_SORTING.column)
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SORTING.direction, {
@@ -80,7 +74,7 @@ function DatasetsPage() {
     isLoading,
     infiniteScroll,
   } = useDatasetsInfiniteScroll({
-    projectId: project?.id ?? "",
+    projectId: project.id,
     sorting,
   })
 
@@ -95,7 +89,6 @@ function DatasetsPage() {
   )
 
   const handleCreate = useCallback(async () => {
-    if (!project) return
     setCreating(true)
     try {
       const datasetId = generateId()
