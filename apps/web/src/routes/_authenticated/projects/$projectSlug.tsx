@@ -204,12 +204,7 @@ function ProjectSidebar({
               className="flex items-center gap-1 group cursor-pointer"
             >
               <Text.H6 color="foregroundMuted">{project.slug}</Text.H6>
-              <Icon
-                icon={Clipboard}
-                size="xs"
-                color="foregroundMuted"
-                className="opacity-0 group-hover:opacity-100 transition-opacity"
-              />
+              <Icon icon={Clipboard} size="xs" color="foregroundMuted" />
             </button>
           )}
         </div>
