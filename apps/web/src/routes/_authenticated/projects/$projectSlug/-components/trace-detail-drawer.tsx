@@ -123,37 +123,17 @@ export function TraceDetailDrawer({
         </>
       }
     >
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "trace" })}>
-        {visitedTabs.has("trace") && (
-          <TraceTab
-            traceId={traceId}
-            traceRecord={traceRecord}
-            traceDetail={traceDetail}
-            isRecordLoading={isRecordLoading}
-            isDetailLoading={isDetailLoading}
-          />
-        )}
-      </div>
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "conversation" })}>
-        {visitedTabs.has("conversation") && (
-          <ConversationTab
-            traceDetail={traceDetail}
-            isDetailLoading={isDetailLoading}
-            navigateToSpan={navigateToSpan}
-            projectId={projectId}
-          />
-        )}
-      </div>
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "spans" })}>
-        {visitedTabs.has("spans") && (
-          <SpansTab
-            projectId={projectId}
-            traceId={traceId}
-            selectedSpanId={selectedSpanId}
-            onSelectSpan={navigateToSpan}
-          />
-        )}
-      </div>
+      {activeTab === "trace" && (
+        <TraceTab
+          traceId={traceId}
+          traceRecord={traceRecord}
+          traceDetail={traceDetail}
+          isRecordLoading={isRecordLoading}
+          isDetailLoading={isDetailLoading}
+        />
+      )}
+      {activeTab === "conversation" && <ConversationTab traceDetail={traceDetail} isDetailLoading={isDetailLoading} />}
+      {activeTab === "spans" && <SpansTab key={traceId} projectId={projectSlug} traceId={traceId} />}
     </DetailDrawer>
   )
 }

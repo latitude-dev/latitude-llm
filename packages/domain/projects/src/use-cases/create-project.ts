@@ -1,6 +1,5 @@
 import {
   type ConflictError,
-  type OrganizationId,
   type ProjectId,
   type RepositoryError,
   SqlClient,
@@ -22,17 +21,6 @@ const toSlug = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
 
-export class ProjectAlreadyExistsError extends Data.TaggedError("ProjectAlreadyExistsError")<{
-  readonly name: string
-  readonly slug: string
-  readonly organizationId: OrganizationId
-}> {
-  readonly httpStatus = 409
-  get httpMessage() {
-    return `Project '${this.name}' or slug '${this.slug}' already exists in this organization`
-  }
-}
-
 export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
   readonly field: string
   readonly message: string
@@ -43,12 +31,7 @@ export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNam
   }
 }
 
-export type CreateProjectError =
-  | RepositoryError
-  | ValidationError
-  | ConflictError
-  | ProjectAlreadyExistsError
-  | InvalidProjectNameError
+export type CreateProjectError = RepositoryError | ValidationError | ConflictError | InvalidProjectNameError
 
 export const createProjectUseCase = (input: CreateProjectInput) =>
   Effect.gen(function* () {
@@ -71,7 +54,6 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
     }
 
     const trimmedSlug = toSlug(trimmedName)
-
     if (!trimmedSlug || trimmedSlug.length === 0) {
       return yield* new InvalidProjectNameError({
         field: trimmedSlug,
@@ -86,34 +68,24 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
       })
     }
 
-    const project = createProject({
-      id: input.id,
-      organizationId,
-      name: trimmedName,
-      slug: trimmedSlug,
-    })
-
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
 
-        const nameExists = yield* repo.existsByName(trimmedName)
-        if (nameExists) {
-          return yield* new ProjectAlreadyExistsError({
-            name: trimmedName,
-            slug: trimmedSlug,
-            organizationId,
-          })
+        // Generate unique slug by appending numbers if needed
+        let uniqueSlug = trimmedSlug
+        for (let i = 1; i <= 20; i++) {
+          const exists = yield* repo.existsBySlug(uniqueSlug)
+          if (!exists) break
+          uniqueSlug = `${trimmedSlug}-${i}`
         }
 
-        const slugExists = yield* repo.existsBySlug(trimmedSlug)
-        if (slugExists) {
-          return yield* new ProjectAlreadyExistsError({
-            name: trimmedName,
-            slug: trimmedSlug,
-            organizationId,
-          })
-        }
+        const project = createProject({
+          id: input.id,
+          organizationId,
+          name: trimmedName,
+          slug: uniqueSlug,
+        })
 
         yield* repo.save(project)
 

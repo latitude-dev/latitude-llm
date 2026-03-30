@@ -11,16 +11,18 @@ import {
   useToast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 import { useDatasetsInfiniteScroll } from "../../../../../domains/datasets/datasets.collection.ts"
 import type { DatasetRecord } from "../../../../../domains/datasets/datasets.functions.ts"
 import { createDatasetMutation } from "../../../../../domains/datasets/datasets.mutations.ts"
+import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/")({
   component: DatasetsPage,
 })
 
@@ -52,10 +54,15 @@ const columns: InfiniteTableColumn<DatasetRecord>[] = [
 ]
 
 function DatasetsPage() {
-  const { projectId } = Route.useParams()
+  const { projectSlug } = Route.useParams()
   const navigate = Route.useNavigate()
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
+
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
+  )
 
   const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_SORTING.column)
   const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_SORTING.direction, {
@@ -73,7 +80,7 @@ function DatasetsPage() {
     isLoading,
     infiniteScroll,
   } = useDatasetsInfiniteScroll({
-    projectId,
+    projectId: project?.id ?? "",
     sorting,
   })
 
@@ -81,31 +88,32 @@ function DatasetsPage() {
   const onRowClick = useCallback(
     (d: DatasetRecord) =>
       navigate({
-        to: "/projects/$projectId/datasets/$datasetId",
-        params: { projectId, datasetId: d.id },
+        to: "/projects/$projectSlug/datasets/$datasetId",
+        params: { projectSlug, datasetId: d.id },
       }),
-    [navigate, projectId],
+    [navigate, projectSlug],
   )
 
   const handleCreate = useCallback(async () => {
+    if (!project) return
     setCreating(true)
     try {
       const datasetId = generateId()
       await createDatasetMutation({
         id: datasetId,
-        projectId,
+        projectId: projectId,
         name: `Dataset ${new Date().toLocaleString()}`,
       })
       navigate({
-        to: "/projects/$projectId/datasets/$datasetId",
-        params: { projectId, datasetId },
+        to: "/projects/$projectSlug/datasets/$datasetId",
+        params: { projectSlug, datasetId },
       })
     } catch (err) {
       toast({ variant: "destructive", description: toUserMessage(err) })
     } finally {
       setCreating(false)
     }
-  }, [projectId, navigate, toast])
+  }, [project, projectSlug, navigate, toast])
 
   return (
     <Layout>

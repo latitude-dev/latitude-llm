@@ -1,4 +1,4 @@
-import { Button, Icon, Text } from "@repo/ui"
+import { Button, Icon, Text, useToast } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router"
@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronsUp,
+  Clipboard,
   History,
   Link2Off,
   MessageSquareText,
@@ -17,7 +18,7 @@ import {
 import { useState } from "react"
 import { useProjectsCollection } from "../../../domains/projects/projects.collection.ts"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   component: ProjectLayout,
 })
 
@@ -138,29 +139,30 @@ function NavChild({ label, to }: { label: string; to?: string }) {
 }
 
 function ProjectSidebar({
-  projectId,
+  projectSlug,
   collapsed,
   onToggleCollapse,
 }: {
-  projectId: string
+  projectSlug: string
   collapsed: boolean
   onToggleCollapse: () => void
 }) {
+  const { toast } = useToast()
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
 
   const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.id, projectId)).findOne(),
-    [projectId],
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
   )
 
   const isTracesActive =
-    pathname === `/projects/${projectId}` ||
-    pathname === `/projects/${projectId}/` ||
-    pathname.startsWith(`/projects/${projectId}/traces`)
-  const isIssuesActive = pathname.startsWith(`/projects/${projectId}/issues`)
-  const isDatasetsActive = pathname.startsWith(`/projects/${projectId}/datasets`)
-  const isSettingsActive = pathname.startsWith(`/projects/${projectId}/settings`)
+    pathname === `/projects/${projectSlug}` ||
+    pathname === `/projects/${projectSlug}/` ||
+    pathname.startsWith(`/projects/${projectSlug}/traces`)
+  const isIssuesActive = pathname.startsWith(`/projects/${projectSlug}/issues`)
+  const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
+  const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
 
   return (
     <aside
@@ -170,12 +172,28 @@ function ProjectSidebar({
     >
       <div className="flex flex-col shrink-0">
         {/* Header */}
-        <div className={`flex items-center gap-3 p-4 border-b border-border ${collapsed ? "justify-center" : ""}`}>
+        <div
+          className={`flex items-center gap-3 p-4 border-b border-border ${collapsed ? "justify-center" : "justify-between"}`}
+        >
           {!collapsed && <ProjectEmoji name={project?.name ?? ""} />}
           {!collapsed && (
-            <Text.H5M ellipsis className="flex-1 min-w-0">
-              {project ? extractLeadingEmoji(project.name)[1] : "…"}
-            </Text.H5M>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                if (project) {
+                  navigator.clipboard.writeText(project.slug)
+                  toast({
+                    title: "Copied to clipboard",
+                    description: `Project slug "${project.slug}" copied`,
+                  })
+                }
+              }}
+              className="flex-1 min-w-0 justify-start px-0 hover:bg-transparent gap-2"
+            >
+              <Text.H5M ellipsis>{project ? extractLeadingEmoji(project.name)[1] : "…"}</Text.H5M>
+              <Icon icon={Clipboard} size="sm" color="foregroundMuted" />
+            </Button>
           )}
           <Button
             variant="outline"
@@ -193,7 +211,7 @@ function ProjectSidebar({
           <NavItem
             icon={MessageSquareText}
             label="Traces"
-            to={`/projects/${projectId}`}
+            to={`/projects/${projectSlug}`}
             active={isTracesActive}
             collapsed={collapsed}
           />
@@ -204,21 +222,21 @@ function ProjectSidebar({
           <NavItem
             icon={ShieldAlert}
             label="Issues"
-            to={`/projects/${projectId}/issues`}
+            to={`/projects/${projectSlug}/issues`}
             active={isIssuesActive}
             collapsed={collapsed}
           />
           <NavItem
             icon={History}
             label="Datasets"
-            to={`/projects/${projectId}/datasets`}
+            to={`/projects/${projectSlug}/datasets`}
             active={isDatasetsActive}
             collapsed={collapsed}
           />
           <NavItem
             icon={Settings}
             label="Settings"
-            to={`/projects/${projectId}/settings`}
+            to={`/projects/${projectSlug}/settings`}
             active={isSettingsActive}
             collapsed={collapsed}
           />
@@ -229,13 +247,13 @@ function ProjectSidebar({
 }
 
 function ProjectLayout() {
-  const { projectId } = Route.useParams()
+  const { projectSlug } = Route.useParams()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   return (
     <div className="flex h-full">
       <ProjectSidebar
-        projectId={projectId}
+        projectSlug={projectSlug}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
       />

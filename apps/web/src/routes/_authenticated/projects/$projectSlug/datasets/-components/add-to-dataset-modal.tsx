@@ -74,7 +74,7 @@ export function AddToDatasetModal({
         onSuccess()
         onOpenChange(false)
         navigate({
-          to: "/projects/$projectId/datasets/$datasetId",
+          to: "/projects/$projectSlug/datasets/$datasetId",
           params: { projectId, datasetId: result.datasetId },
         })
       } else {

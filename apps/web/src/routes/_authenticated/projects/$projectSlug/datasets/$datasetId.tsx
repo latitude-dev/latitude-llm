@@ -40,7 +40,7 @@ import { DeleteRowsModal } from "./-components/delete-rows-modal.tsx"
 import { RowDetailDrawer } from "./-components/row-detail-drawer.tsx"
 import { UploadBlankSlate } from "./-components/upload-blank-slate.tsx"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/$datasetId")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/$datasetId")({
   component: DatasetDetailPage,
 })
 
@@ -166,13 +166,13 @@ function DatasetDetailPage() {
         : (rowCountProbe?.total ?? rowCountProbe?.rows?.length ?? 0) > 0
 
   if (hasRows && !parsedCsv) {
-    return <DatasetRowsView projectId={projectId} datasetId={datasetId} dataset={dataset} onImport={setParsedCsv} />
+    return <DatasetRowsView projectId={projectSlug} datasetId={datasetId} dataset={dataset} onImport={setParsedCsv} />
   }
 
   if (parsedCsv) {
     return (
       <CsvMappingView
-        projectId={projectId}
+        projectId={projectSlug}
         datasetId={datasetId}
         dataset={dataset}
         parsedCsv={parsedCsv}

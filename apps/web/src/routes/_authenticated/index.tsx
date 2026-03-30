@@ -31,12 +31,13 @@ import {
   useProjectsCollection,
 } from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
+import { toUserMessage } from "../../lib/errors.ts"
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
 })
 
-function ProjectTitle({ name, projectId }: { name: string; projectId: string }) {
+function ProjectTitle({ name, projectSlug }: { name: string; projectSlug: string }) {
   const [emoji, title] = extractLeadingEmoji(name)
 
   return (
@@ -46,7 +47,7 @@ function ProjectTitle({ name, projectId }: { name: string; projectId: string }) 
           <Text.H3>{emoji}</Text.H3>
         </div>
       )}
-      <Link to="/projects/$projectId" params={{ projectId }}>
+      <Link to="/projects/$projectSlug" params={{ projectSlug }}>
         <Text.H5 weight="medium">{title}</Text.H5>
       </Link>
     </div>
@@ -75,10 +76,12 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
               key={project.id}
               verticalPadding
               className="cursor-pointer"
-              onClick={() => void router.navigate({ to: "/projects/$projectId", params: { projectId: project.id } })}
+              onClick={() =>
+                void router.navigate({ to: "/projects/$projectSlug", params: { projectSlug: project.slug } })
+              }
             >
               <TableCell>
-                <ProjectTitle name={project.name} projectId={project.id} />
+                <ProjectTitle name={project.name} projectSlug={project.slug} />
               </TableCell>
               <TableCell className="w-44">
                 <Text.H5 color="foregroundMuted">—</Text.H5>
@@ -188,14 +191,23 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
 }
 
 function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { toast } = useToast()
   const form = useForm({
     defaultValues: {
       name: "",
     },
     onSubmit: async ({ value }) => {
-      const transaction = createProjectMutation(value.name)
-      await transaction.isPersisted.promise
-      onClose()
+      try {
+        const transaction = createProjectMutation(value.name)
+        await transaction.isPersisted.promise
+        onClose()
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error creating project",
+          description: toUserMessage(error),
+        })
+      }
     },
   })
 

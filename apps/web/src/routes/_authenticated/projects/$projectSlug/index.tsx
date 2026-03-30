@@ -68,12 +68,12 @@ function getBulkSelection(state: SelectionState<string>): BulkSelection<string> 
   }
 }
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
   component: ProjectPage,
 })
 
 function ProjectPage() {
-  const { projectId } = Route.useParams()
+  const { projectSlug } = Route.useParams()
   const [activeTab, setActiveTab] = useParamState("tab", "traces", {
     validate: (v): v is "traces" | "sessions" => v === "traces" || v === "sessions",
   })
@@ -205,12 +205,7 @@ function ProjectPage() {
 
       {activeTraceId ? (
         <Layout.Aside>
-          <TraceDetailDrawer
-            key={activeTraceId}
-            traceId={activeTraceId}
-            projectId={projectId}
-            onClose={() => setActiveTraceId("")}
-          />
+          <TraceDetailDrawer traceId={activeTraceId} projectId={projectSlug} onClose={() => setActiveTraceId("")} />
         </Layout.Aside>
       ) : null}
 
@@ -218,7 +213,7 @@ function ProjectPage() {
         <AddToDatasetModal
           open={addToDatasetOpen}
           onOpenChange={setAddToDatasetOpen}
-          projectId={projectId}
+          projectId={projectSlug}
           selection={bulkSelection}
           selectedCount={selectedCount}
           onSuccess={clearSelections}
