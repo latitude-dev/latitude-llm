@@ -40,23 +40,6 @@ export const listProjects = createServerFn({ method: "GET" })
     return projects.map(toRecord)
   })
 
-export const getProjectBySlug = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
-  .inputValidator(z.object({ slug: z.string() }))
-  .handler(async ({ data }): Promise<ProjectRecord> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
-
-    const project = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        return yield* repo.findBySlug(data.slug)
-      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
-    )
-
-    return toRecord(project)
-  })
-
 export const createProject = createServerFn({ method: "POST" })
   .middleware([errorHandler])
   .inputValidator(

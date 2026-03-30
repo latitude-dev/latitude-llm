@@ -3,6 +3,7 @@ import {
   type ProjectId,
   type RepositoryError,
   SqlClient,
+  toSlug,
   type ValidationError,
 } from "@domain/shared"
 import { Data, Effect } from "effect"
@@ -13,13 +14,6 @@ export interface CreateProjectInput {
   readonly id?: ProjectId
   readonly name: string
 }
-
-const toSlug = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
 
 export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
   readonly field: string
@@ -74,10 +68,21 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
 
         // Generate unique slug by appending numbers if needed
         let uniqueSlug = trimmedSlug
+        let found = false
         for (let i = 1; i <= 20; i++) {
           const exists = yield* repo.existsBySlug(uniqueSlug)
-          if (!exists) break
+          if (!exists) {
+            found = true
+            break
+          }
           uniqueSlug = `${trimmedSlug}-${i}`
+        }
+
+        if (!found) {
+          return yield* new InvalidProjectNameError({
+            field: trimmedSlug,
+            message: "Could not generate a unique slug",
+          })
         }
 
         const project = createProject({
