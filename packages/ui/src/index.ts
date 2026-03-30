@@ -80,7 +80,12 @@ export {
 export { ModelBadge, type ModelBadgeProps } from "./components/model-badge/model-badge.tsx"
 export { RichTextEditor, type RichTextEditorProps } from "./components/rich-text-editor/rich-text-editor.tsx"
 export { SegmentBar, type SegmentBarItem } from "./components/segment-bar/segment-bar.tsx"
-export { Select, type SelectOption, type SelectOptionGroup, type SelectProps } from "./components/select/index.tsx"
+export {
+  Select,
+  type SelectOption,
+  type SelectOptionGroup,
+  type SelectProps,
+} from "./components/select/index.tsx"
 export { Skeleton } from "./components/skeleton/skeleton.tsx"
 export { Slider, type SliderProps } from "./components/slider/index.tsx"
 export { Switch, type SwitchProps } from "./components/switch/switch.tsx"

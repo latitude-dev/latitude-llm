@@ -2,11 +2,16 @@ import {
   Button,
   CloseTrigger,
   Container,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
   FormWrapper,
   Icon,
   Input,
   Label,
   Modal,
+  Select,
   Switch,
   Table,
   TableBody,
@@ -24,8 +29,8 @@ import { relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouteContext, useRouter } from "@tanstack/react-router"
-import { ArrowRightLeft, Clipboard, Pencil, Trash2 } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import { ChevronDown, Clipboard, Pencil, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   deleteApiKeyMutation,
   updateApiKeyMutation,
@@ -37,10 +42,11 @@ import {
   cancelMemberInviteMutation,
   inviteMemberMutation,
   removeMemberMutation,
+  transferOwnershipMutation,
+  updateMemberRoleMutation,
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { transferOwnership, updateMemberRole } from "../../domains/members/members.functions.ts"
 import {
   updateOrganizationMutation,
   useOrganizationsCollection,
@@ -62,14 +68,24 @@ function OrganizationSection() {
   )
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const saveField = useCallback(
-    (patch: { name?: string; settings?: { keepMonitoring: boolean } }) => {
+  const saveName = useCallback(
+    (name: string) => {
       if (!org) return
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
-        updateOrganizationMutation(org.id, patch)
-        toast({ description: patch.name ? "Organization name updated" : "Monitoring preference updated" })
+        updateOrganizationMutation(org.id, { name })
+        toast({ description: "Organization name updated" })
       }, 600)
+    },
+    [org, toast],
+  )
+
+  const handleMonitoringChange = useCallback(
+    (checked: boolean) => {
+      if (!org) return
+      // Update collection immediately - it's optimistic
+      updateOrganizationMutation(org.id, { settings: { keepMonitoring: checked } })
+      toast({ description: "Monitoring preference updated" })
     },
     [org, toast],
   )
@@ -84,7 +100,7 @@ function OrganizationSection() {
         type="text"
         label="Organization Name"
         defaultValue={org.name}
-        onChange={(e) => saveField({ name: e.target.value })}
+        onChange={(e) => saveName(e.target.value)}
         placeholder="Organization name"
       />
       <div className="flex flex-row items-center justify-between">
@@ -97,7 +113,7 @@ function OrganizationSection() {
         <Switch
           id="keep-monitoring"
           checked={org.settings?.keepMonitoring ?? true}
-          onCheckedChange={(checked) => saveField({ settings: { keepMonitoring: checked } })}
+          onCheckedChange={handleMonitoringChange}
         />
       </div>
     </div>
@@ -184,7 +200,7 @@ function TransferOwnershipModal({
     if (!selectedMemberId) return
 
     try {
-      await transferOwnership({ data: { newOwnerUserId: selectedMemberId } })
+      await transferOwnershipMutation(selectedMemberId)
       setOpen(false)
       toast({ description: "Ownership transferred successfully. You are now an admin." })
     } catch (error) {
@@ -194,6 +210,11 @@ function TransferOwnershipModal({
       })
     }
   }
+
+  const memberOptions = eligibleMembers.map((member) => ({
+    label: `${member.name ?? member.email} (${member.email})`,
+    value: member.userId ?? "",
+  }))
 
   return (
     <Modal.Root open={open} onOpenChange={setOpen}>
@@ -211,23 +232,16 @@ function TransferOwnershipModal({
             ) : (
               <div className="flex flex-col gap-2">
                 <Label>Select new owner</Label>
-                {eligibleMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="newOwner"
-                      id={member.id}
-                      value={member.userId ?? ""}
-                      checked={selectedMemberId === member.userId}
-                      onChange={(e) => setSelectedMemberId(e.target.value)}
-                      className="h-4 w-4"
-                    />
-                    <label htmlFor={member.id} className="flex flex-col cursor-pointer">
-                      <Text.H5>{member.name ?? member.email}</Text.H5>
-                      <Text.H6 color="foregroundMuted">{member.email}</Text.H6>
-                    </label>
-                  </div>
-                ))}
+                <Select
+                  name="newOwner"
+                  options={memberOptions}
+                  value={selectedMemberId ?? undefined}
+                  onChange={(value) => setSelectedMemberId(value)}
+                  placeholder="Select a member..."
+                  searchable
+                  searchPlaceholder="Search members..."
+                  searchableEmptyMessage="No members found"
+                />
               </div>
             )}
           </FormWrapper>
@@ -240,6 +254,106 @@ function TransferOwnershipModal({
             onClick={() => void handleTransfer()}
           >
             Transfer Ownership
+          </Button>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal.Root>
+  )
+}
+
+function ChangeRoleModal({
+  open,
+  setOpen,
+  member,
+  onRoleChange,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+  member: MemberRecord | null
+  onRoleChange: (targetUserId: string, newRole: "admin" | "member") => Promise<void>
+}) {
+  const { toast } = useToast()
+  const [selectedRole, setSelectedRole] = useState<"admin" | "member" | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Pre-select current role when modal opens
+  useEffect(() => {
+    if (open && member?.role === "admin") {
+      setSelectedRole("admin")
+    } else if (open && member?.role === "member") {
+      setSelectedRole("member")
+    } else if (!open) {
+      setSelectedRole(null)
+    }
+  }, [open, member])
+
+  const handleSubmit = async () => {
+    if (!member?.userId || !selectedRole) return
+
+    setIsSubmitting(true)
+    try {
+      await onRoleChange(member.userId, selectedRole)
+      setOpen(false)
+      toast({ description: `Role updated to ${selectedRole}` })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (!member) return null
+
+  return (
+    <Modal.Root open={open} onOpenChange={setOpen}>
+      <Modal.Content dismissible>
+        <Modal.Header title="Change Member Role" description={`Update the role for ${member.name ?? member.email}`} />
+        <Modal.Body>
+          <FormWrapper>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Select new role</Label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 p-3 rounded border hover:bg-muted cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="admin"
+                      checked={selectedRole === "admin"}
+                      onChange={(e) => setSelectedRole(e.target.value as "admin")}
+                      className="h-4 w-4"
+                    />
+                    <div className="flex flex-col">
+                      <Text.H5>Admin</Text.H5>
+                      <Text.H6 color="foregroundMuted">Can manage members and organization settings</Text.H6>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 p-3 rounded border hover:bg-muted cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="member"
+                      checked={selectedRole === "member"}
+                      onChange={(e) => setSelectedRole(e.target.value as "member")}
+                      className="h-4 w-4"
+                    />
+                    <div className="flex flex-col">
+                      <Text.H5>Member</Text.H5>
+                      <Text.H6 color="foregroundMuted">Standard member with limited permissions</Text.H6>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </FormWrapper>
+        </Modal.Body>
+        <Modal.Footer>
+          <CloseTrigger />
+          <Button type="button" disabled={!selectedRole || isSubmitting} onClick={() => void handleSubmit()}>
+            {isSubmitting ? "Updating..." : "Update Role"}
           </Button>
         </Modal.Footer>
       </Modal.Content>
@@ -260,6 +374,8 @@ function MembersTable({
 }) {
   const { toast } = useToast()
   const [transferOpen, setTransferOpen] = useState(false)
+  const [changeRoleOpen, setChangeRoleOpen] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<MemberRecord | null>(null)
 
   const isExpired = (expiresAt: string | null | undefined) => {
     if (!expiresAt) return false
@@ -268,7 +384,7 @@ function MembersTable({
 
   const handleRoleChange = async (targetUserId: string, newRole: "admin" | "member") => {
     try {
-      await updateMemberRole({ data: { targetUserId, newRole } })
+      await updateMemberRoleMutation(targetUserId, newRole)
       toast({ description: `Role updated to ${newRole}` })
     } catch (error) {
       toast({
@@ -290,6 +406,11 @@ function MembersTable({
     return true
   }
 
+  const openChangeRoleModal = (member: MemberRecord) => {
+    setSelectedMember(member)
+    setChangeRoleOpen(true)
+  }
+
   return (
     <>
       <TransferOwnershipModal
@@ -297,6 +418,12 @@ function MembersTable({
         setOpen={setTransferOpen}
         members={members}
         currentUserId={currentUserId}
+      />
+      <ChangeRoleModal
+        open={changeRoleOpen}
+        setOpen={setChangeRoleOpen}
+        member={selectedMember}
+        onRoleChange={handleRoleChange}
       />
       <Table>
         <TableHeader>
@@ -306,7 +433,7 @@ function MembersTable({
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Invitation</TableHead>
-            <TableHead />
+            {isAdmin && <TableHead />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -320,33 +447,25 @@ function MembersTable({
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
-                  {member.role === "owner" && isOwner && (
-                    <Button variant="ghost" size="sm" onClick={() => setTransferOpen(true)} title="Transfer ownership">
-                      <Icon icon={ArrowRightLeft} size="sm" />
-                    </Button>
-                  )}
-                  {canChangeRole(member) && (
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => member.userId && handleRoleChange(member.userId, "admin")}
-                        disabled={member.role === "admin"}
-                        title="Make admin"
-                      >
-                        Admin
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => member.userId && handleRoleChange(member.userId, "member")}
-                        disabled={member.role === "member"}
-                        title="Make member"
-                      >
-                        Member
-                      </Button>
-                    </div>
+                  {(member.role === "owner" && isOwner) || canChangeRole(member) ? (
+                    <DropdownMenuRoot>
+                      <DropdownMenuTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-pointer hover:bg-muted px-2 py-1 rounded transition-colors">
+                          <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+                          <Icon icon={ChevronDown} size="sm" className="text-muted-foreground" />
+                        </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="border-0">
+                        {member.role === "owner" && isOwner && (
+                          <DropdownMenuItem onSelect={() => setTransferOpen(true)}>Transfer ownership</DropdownMenuItem>
+                        )}
+                        {canChangeRole(member) && (
+                          <DropdownMenuItem onSelect={() => openChangeRoleModal(member)}>Change role</DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenuRoot>
+                  ) : (
+                    <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
                   )}
                 </div>
               </TableCell>
@@ -369,31 +488,38 @@ function MembersTable({
                 )}
               </TableCell>
               <TableCell align="right">
-                {(member.status === "active" || member.status === "invited") && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      const transaction =
-                        member.status === "invited"
-                          ? cancelMemberInviteMutation(member.id)
-                          : removeMemberMutation(member.id)
+                {isAdmin && (member.status === "active" || member.status === "invited") && (
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          const transaction =
+                            member.status === "invited"
+                              ? cancelMemberInviteMutation(member.id)
+                              : removeMemberMutation(member.id)
 
-                      void transaction.isPersisted.promise
-                        .then(() => {
-                          toast({
-                            description: member.status === "invited" ? "Invitation canceled" : "Member removed",
-                          })
-                        })
-                        .catch((e) =>
-                          toast({
-                            variant: "destructive",
-                            description: toUserMessage(e),
-                          }),
-                        )
-                    }}
+                          void transaction.isPersisted.promise
+                            .then(() => {
+                              toast({
+                                description: member.status === "invited" ? "Invitation canceled" : "Member removed",
+                              })
+                            })
+                            .catch((e) =>
+                              toast({
+                                variant: "destructive",
+                                description: toUserMessage(e),
+                              }),
+                            )
+                        }}
+                      >
+                        <Icon icon={Trash2} size="sm" />
+                      </Button>
+                    }
                   >
-                    <Icon icon={Trash2} size="sm" />
-                  </Button>
+                    {member.status === "invited" ? "Cancel invitation" : "Remove member"}
+                  </Tooltip>
                 )}
               </TableCell>
             </TableRow>
@@ -421,9 +547,11 @@ function MembershipsSection() {
         <div className="flex flex-row items-center gap-2">
           <Text.H4 weight="bold">Organization Members</Text.H4>
         </div>
-        <Button variant="outline" onClick={() => setInviteOpen(true)}>
-          Add Member
-        </Button>
+        {isAdmin && (
+          <Button variant="outline" onClick={() => setInviteOpen(true)}>
+            Add Member
+          </Button>
+        )}
       </div>
       <div className="flex flex-col gap-2">
         {isLoading && <TableSkeleton cols={4} rows={3} />}
