@@ -11,6 +11,7 @@ import {
   Input,
   Label,
   Modal,
+  Select,
   Switch,
   Table,
   TableBody,
@@ -199,6 +200,11 @@ function TransferOwnershipModal({
     }
   }
 
+  const memberOptions = eligibleMembers.map((member) => ({
+    label: `${member.name ?? member.email} (${member.email})`,
+    value: member.userId ?? "",
+  }))
+
   return (
     <Modal.Root open={open} onOpenChange={setOpen}>
       <Modal.Content dismissible>
@@ -215,23 +221,16 @@ function TransferOwnershipModal({
             ) : (
               <div className="flex flex-col gap-2">
                 <Label>Select new owner</Label>
-                {eligibleMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="newOwner"
-                      id={member.id}
-                      value={member.userId ?? ""}
-                      checked={selectedMemberId === member.userId}
-                      onChange={(e) => setSelectedMemberId(e.target.value)}
-                      className="h-4 w-4"
-                    />
-                    <label htmlFor={member.id} className="flex flex-col cursor-pointer">
-                      <Text.H5>{member.name ?? member.email}</Text.H5>
-                      <Text.H6 color="foregroundMuted">{member.email}</Text.H6>
-                    </label>
-                  </div>
-                ))}
+                <Select
+                  name="newOwner"
+                  options={memberOptions}
+                  value={selectedMemberId ?? undefined}
+                  onChange={(value) => setSelectedMemberId(value)}
+                  placeholder="Select a member..."
+                  searchable
+                  searchPlaceholder="Search members..."
+                  searchableEmptyMessage="No members found"
+                />
               </div>
             )}
           </FormWrapper>
