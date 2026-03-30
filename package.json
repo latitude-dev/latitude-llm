@@ -23,7 +23,7 @@
     "@biomejs/biome": "catalog:",
     "@effect/language-service": "^0.77.0",
     "@types/node": "catalog:",
-    "knip": "^5.85.0",
+    "knip": "^6.1.0",
     "turbo": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
