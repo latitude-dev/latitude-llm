@@ -72,6 +72,6 @@ details when the documentation isn't enough.
 ## Async Contract Scoping Convention
 
 - Reliability domain-event payloads, queue topic/task payloads, and workflow inputs should include both `organizationId` and `projectId` by default so async execution remains project-scoped end-to-end.
-- Explicit exceptions: the `domain-events` topic payload, the `magic-link-email` topic payload, the `MagicLinkEmailRequested` domain event, the `UserDeletionRequested` domain event, and the `user-deletion` topic payload do not require `projectId`.
+- Explicit exceptions: the `domain-events` topic payload, the `magic-link-email` topic payload, the `invitation-email` topic payload, the `MagicLinkEmailRequested` domain event, the `InvitationEmailRequested` domain event, the `UserDeletionRequested` domain event, and the `user-deletion` topic payload do not require `projectId`.
 
 <!-- domain-schema-and-module-conventions:end -->
