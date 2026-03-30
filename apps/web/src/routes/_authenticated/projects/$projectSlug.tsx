@@ -1,4 +1,4 @@
-import { Button, Icon, Text, useToast } from "@repo/ui"
+import { Button, CopyButton, cn, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router"
@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronsUp,
-  Clipboard,
   History,
   Link2Off,
   MessageSquareText,
@@ -147,7 +146,6 @@ function ProjectSidebar({
   collapsed: boolean
   onToggleCollapse: () => void
 }) {
-  const { toast } = useToast()
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
 
@@ -166,16 +164,15 @@ function ProjectSidebar({
 
   return (
     <aside
-      className={`shrink-0 border-r border-border flex flex-col h-full transition-all duration-200 ${
-        collapsed ? "w-16" : "w-[280px]"
-      }`}
+      className={cn(
+        "shrink-0 border-r border-border flex flex-col h-full transition-all duration-200",
+        collapsed ? "w-16" : "w-[280px]",
+      )}
     >
       <div className="flex flex-col shrink-0">
         {/* Header */}
-        <div
-          className={`flex flex-col p-4 border-b border-border ${collapsed ? "justify-center items-center" : "gap-2"}`}
-        >
-          <div className={`flex items-center gap-3 ${collapsed ? "" : "justify-between"}`}>
+        <div className={cn("flex flex-col p-4 border-b border-border", { collapsed: "justify-center items-center" })}>
+          <div className={cn("flex items-center gap-3", !collapsed && "justify-between")}>
             {!collapsed && <ProjectEmoji name={project?.name ?? ""} />}
             {!collapsed && (
               <Text.H5M ellipsis className="flex-1 min-w-0">
@@ -195,21 +192,7 @@ function ProjectSidebar({
           {!collapsed && project && (
             <div className="flex items-center gap-2">
               <Text.H6 color="foregroundMuted">{project.slug}</Text.H6>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  navigator.clipboard.writeText(project.slug)
-                  toast({
-                    title: "Copied to clipboard",
-                    description: `Project slug "${project.slug}" copied`,
-                  })
-                }}
-                className="h-6 w-6 p-0"
-                title="Copy project slug"
-              >
-                <Icon icon={Clipboard} size="xs" color="foregroundMuted" />
-              </Button>
+              <CopyButton value={project.slug} className="h-6 w-6" tooltip="Copy project slug" />
             </div>
           )}
         </div>

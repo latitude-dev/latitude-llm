@@ -211,7 +211,11 @@ function ProjectPage() {
 
       {activeTraceId ? (
         <Layout.Aside>
-          <TraceDetailDrawer traceId={activeTraceId} projectId={project?.id ?? ""} onClose={() => setActiveTraceId("")} />
+          <TraceDetailDrawer
+            traceId={activeTraceId}
+            projectId={project?.id ?? ""}
+            onClose={() => setActiveTraceId("")}
+          />
         </Layout.Aside>
       ) : null}
 
