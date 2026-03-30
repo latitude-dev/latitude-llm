@@ -53,19 +53,33 @@ export const closePostgres = async (pool: Pool): Promise<void> => {
   await pool.end()
 }
 
+/** Default pool idle timeout: 30 seconds. Keeps stale connections from lingering after a DB restart. */
+const DEFAULT_IDLE_TIMEOUT_MS = 30_000
+/** Default connection timeout: 5 seconds. Allows fast failure when the DB is temporarily unreachable. */
+const DEFAULT_CONNECTION_TIMEOUT_MS = 5_000
+
 const parsePostgresPoolConfig = (config: PostgresConfig = {}) =>
   Effect.all({
     connectionString: config.databaseUrl ? Effect.succeed(config.databaseUrl) : parseEnv("LAT_DATABASE_URL", "string"),
     max: config.maxConnections ? Effect.succeed(config.maxConnections) : parseEnvOptional("LAT_PG_POOL_MAX", "number"),
     idleTimeoutMillis: config.idleTimeoutMs
       ? Effect.succeed(config.idleTimeoutMs)
-      : parseEnvOptional("LAT_PG_IDLE_TIMEOUT_MS", "number"),
+      : parseEnvOptional("LAT_PG_IDLE_TIMEOUT_MS", "number").pipe(Effect.map((v) => v ?? DEFAULT_IDLE_TIMEOUT_MS)),
     connectionTimeoutMillis: config.connectionTimeoutMs
       ? Effect.succeed(config.connectionTimeoutMs)
-      : parseEnvOptional("LAT_PG_CONNECT_TIMEOUT_MS", "number"),
+      : parseEnvOptional("LAT_PG_CONNECT_TIMEOUT_MS", "number").pipe(
+          Effect.map((v) => v ?? DEFAULT_CONNECTION_TIMEOUT_MS),
+        ),
   })
 
 const buildPostgresClient = (pool: Pool): PostgresClient => {
+  // Prevent unhandled rejection crashes when idle connections
+  // receive errors (e.g. after a DB restart). The pool automatically
+  // removes errored clients and creates fresh ones on the next checkout.
+  pool.on("error", (err) => {
+    console.error("[pg.Pool] Idle client error (connection will be recycled):", err.message)
+  })
+
   const db = drizzle({ client: pool })
   const transaction = <T>(fn: (tx: TransactionDb) => Promise<T>): Promise<T> => db.transaction(async (tx) => fn(tx))
 
