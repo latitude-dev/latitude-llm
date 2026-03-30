@@ -55,6 +55,50 @@ function ProjectTitle({ name, projectSlug }: { name: string; projectSlug: string
   )
 }
 
+function DeleteProjectModal({ project, onClose }: { project: ProjectRecord; onClose: () => void }) {
+  const { toast } = useToast()
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await deleteProjectMutation(project.id).isPersisted.promise
+      toast({
+        title: "Success",
+        description: `Project "${project.name}" has been deleted.`,
+      })
+      onClose()
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error deleting project",
+        description: toUserMessage(error),
+      })
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      dismissible
+      onOpenChange={onClose}
+      title="Delete Project"
+      description={`Are you sure you want to delete "${project.name}"? This action cannot be undone.`}
+      footer={
+        <div className="flex flex-row items-center gap-2">
+          <Button variant="outline" onClick={onClose} disabled={deleting}>
+            <Text.H5>Cancel</Text.H5>
+          </Button>
+          <Button variant="destructive" onClick={() => void handleDelete()} disabled={deleting}>
+            <Text.H5 color="white">{deleting ? "Deleting..." : "Delete Project"}</Text.H5>
+          </Button>
+        </div>
+      }
+    />
+  )
+}
+
 function ProjectsTable({
   projects,
   statsByProjectId,
@@ -65,6 +109,7 @@ function ProjectsTable({
   isLoadingStats: boolean
 }) {
   const [projectToRename, setProjectToRename] = useState<ProjectRecord | null>(null)
+  const [projectToDelete, setProjectToDelete] = useState<ProjectRecord | null>(null)
   const router = useRouter()
 
   return (
@@ -124,7 +169,7 @@ function ProjectsTable({
                         label: "Delete",
                         type: "destructive",
                         onClick: () => {
-                          void deleteProjectMutation(project.id).isPersisted.promise
+                          setProjectToDelete(project)
                         },
                       },
                     ]}
@@ -142,6 +187,7 @@ function ProjectsTable({
       </Table>
 
       {projectToRename && <RenameProjectModal project={projectToRename} onClose={() => setProjectToRename(null)} />}
+      {projectToDelete && <DeleteProjectModal project={projectToDelete} onClose={() => setProjectToDelete(null)} />}
     </>
   )
 }
