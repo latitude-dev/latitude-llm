@@ -4,7 +4,7 @@ import { OrganizationRepository } from "../ports/organization-repository.ts"
 
 const MAX_SLUG_ATTEMPTS = 20
 
-export class SlugGenerationError extends Data.TaggedError("SlugGenerationError")<{
+class SlugGenerationError extends Data.TaggedError("SlugGenerationError")<{
   readonly message: string
 }> {}
 
