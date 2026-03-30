@@ -1,9 +1,9 @@
-import { NotFoundError, OrganizationId, SpanId, TraceId } from "@domain/shared"
+import { NotFoundError, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
-import { SpanRepository } from "@domain/spans"
-import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
+import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
@@ -148,6 +148,37 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     )
     return spans.map(serializeSpan)
   })
+
+export const mapConversationToSpans = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
+  .handler(
+    async ({ data }): Promise<{ messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> }> => {
+      const { organizationId } = await requireSession()
+      const orgId = OrganizationId(organizationId)
+      const traceId = TraceId(data.traceId)
+
+      return Effect.runPromise(
+        Effect.gen(function* () {
+          const traceRepo = yield* TraceRepository
+          const spanRepo = yield* SpanRepository
+
+          const [traceDetail, spans] = yield* Effect.all([
+            traceRepo.findByTraceId({
+              organizationId: orgId,
+              projectId: ProjectId(data.projectId),
+              traceId,
+            }),
+            spanRepo.findMessagesForTrace({ organizationId: orgId, traceId }),
+          ])
+
+          if (!traceDetail) return { messageSpanMap: {}, toolCallSpanMap: {} }
+
+          return buildConversationSpanMaps(traceDetail.allMessages, spans)
+        }).pipe(withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), getClickhouseClient(), orgId)),
+      )
+    },
+  )
 
 export const getSpanDetail = createServerFn({ method: "GET" })
   .middleware([errorHandler])

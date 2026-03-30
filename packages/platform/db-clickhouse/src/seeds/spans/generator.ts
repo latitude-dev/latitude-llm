@@ -5,6 +5,7 @@ import {
   MODELS,
   type ModelConfig,
   SERVICE_NAMES,
+  SESSION_FOLLOWUPS,
   SYSTEM_PROMPTS,
   TOOLS,
   type ToolConfig,
@@ -330,9 +331,8 @@ function makeLlmSpan({
   return span
 }
 
-function makeToolSpan({ base, tool }: { base: SpanBase; tool: ToolConfig }): SpanRow {
+function makeToolSpan({ base, tool, callId }: { base: SpanBase; tool: ToolConfig; callId: string }): SpanRow {
   const span = makeBaseSpan(base)
-  const callId = `call_${randomHex(24)}`
   span.name = `execute_tool ${tool.name}`
   span.operation = "execute_tool"
   span.kind = 2 // INTERNAL
@@ -540,13 +540,14 @@ function generateToolCallTrace(config: TraceConfig): SpanRow[] {
   // Tool execution spans + tool results in history
   for (let i = 0; i < tools.length; i++) {
     const tool = tools[i] as ToolConfig
+    const callId = (toolCalls[i] as { id: string }).id
     const toolDuration = randInt(tool.latencyRange[0], tool.latencyRange[1])
     const toolSpan = makeToolSpan({
       base: toBase(ctx, traceId, rootSpanId, cursor, toolDuration),
       tool,
+      callId,
     })
     spans.push(toolSpan)
-    const callId = (toolCalls[i] as { id: string }).id
     conversationHistory.push(toolResultMessage(callId, tool.sampleResult))
     cursor = addMs(cursor, toolDuration)
   }
@@ -694,10 +695,12 @@ function generateAgentTrace(
     // Tool execution spans
     for (let i = 0; i < toolsThisStep.length; i++) {
       const tool = toolsThisStep[i] as ToolConfig
+      const callId = (toolCalls[i] as { id: string }).id
       const toolDuration = randInt(tool.latencyRange[0], tool.latencyRange[1])
       const toolSpan = makeToolSpan({
         base: toBase(ctx, traceId, rootSpanId, cursor, toolDuration),
         tool,
+        callId,
       })
 
       // Nested LLM call inside tool execution (complex agents only)
@@ -725,7 +728,6 @@ function generateAgentTrace(
         cursor = addMs(cursor, toolDuration)
       }
 
-      const callId = (toolCalls[i] as { id: string }).id
       conversationHistory.push(toolResultMessage(callId, tool.sampleResult))
     }
   }
@@ -817,32 +819,249 @@ function generateTrace(pattern: TracePattern, config: TraceConfig): SpanRow[] {
 }
 
 // ---------------------------------------------------------------------------
-// Session grouping — some traces share a session_id
+// Session trace generation — coherent multi-turn conversations
 // ---------------------------------------------------------------------------
 
-function assignSessions(allSpans: SpanRow[]): void {
-  const traceIds = [...new Set(allSpans.map((s) => s.trace_id))]
+type TurnResult = {
+  spans: SpanRow[]
+  response: string
+  durationMs: number
+}
 
-  // Shuffle and pick ~1/3 of all traces to be included in sessions
-  const shuffled = [...traceIds].sort(() => Math.random() - 0.5)
-  const sessionTraces = shuffled.slice(0, Math.floor(traceIds.length / 3))
+type SessionConfig = {
+  sessionId: string
+  modelConfig: ModelConfig
+  systemPrompt: string
+  userId: string
+  serviceName: string
+  tags: string[]
+  metadata: Record<string, string>
+  availableTools: ToolConfig[]
+  includeRag: boolean
+}
 
-  // Group the selected traces into sessions of 2-8 traces each
-  const traceToSession = new Map<string, string>()
-  let i = 0
-  while (i < sessionTraces.length) {
-    const sessionSize = randInt(2, 8)
-    const sessionId = `session-${randomHex(8)}`
-    const end = Math.min(i + sessionSize, sessionTraces.length)
-    for (let j = i; j < end; j++) {
-      traceToSession.set(sessionTraces[j] as string, sessionId)
+function pickSessionConfig(): SessionConfig {
+  const hasTools = Math.random() > 0.4
+  const availableTools = hasTools ? pickN(TOOLS, randInt(2, 5)) : []
+  return {
+    sessionId: `session-${randomHex(8)}`,
+    modelConfig: pick(MODELS),
+    systemPrompt: pick(SYSTEM_PROMPTS),
+    userId: Math.random() > 0.3 ? pick(USER_IDS) : "",
+    serviceName: pick(SERVICE_NAMES),
+    tags:
+      Math.random() > 0.6
+        ? pickN(["production", "staging", "canary", "experiment-a", "experiment-b"], randInt(1, 2))
+        : [],
+    metadata: generateTraceMetadata(),
+    availableTools,
+    includeRag: !hasTools && Math.random() < 0.25,
+  }
+}
+
+function generateSessionChatTurn(
+  ctx: TraceContext,
+  traceId: string,
+  session: SessionConfig,
+  inputMessages: Message[],
+): TurnResult {
+  const duration = randInt(session.modelConfig.latencyRange[0], session.modelConfig.latencyRange[1])
+  const assistantReply = pick(ASSISTANT_RESPONSES)
+  const temperature = Math.round(randFloat(0, 1) * 10) / 10
+
+  const span = makeLlmSpan({
+    base: toBase(ctx, traceId, "", ctx.startTime, duration),
+    modelConfig: session.modelConfig,
+    inputMessages,
+    outputMessages: [assistantTextMessage(assistantReply)],
+    systemInstructions: session.systemPrompt,
+    ...(session.availableTools.length > 0 && { toolDefinitions: session.availableTools }),
+    finishReason: session.modelConfig.finishReasonStop,
+    temperature,
+  })
+
+  return { spans: [span], response: assistantReply, durationMs: duration }
+}
+
+function generateSessionToolCallTurn(
+  ctx: TraceContext,
+  traceId: string,
+  session: SessionConfig,
+  inputMessages: Message[],
+): TurnResult {
+  const spans: SpanRow[] = []
+  let cursor = ctx.startTime
+  const rootSpanId = randomHex(16)
+  const tools = pickN(session.availableTools, randInt(1, 3))
+
+  const llm1Duration = randInt(session.modelConfig.latencyRange[0], session.modelConfig.latencyRange[1])
+  const toolCalls = tools.map((t) => ({
+    id: `call_${randomHex(24)}`,
+    name: t.name,
+    args: t.sampleArgs,
+  }))
+
+  const llm1 = makeLlmSpan({
+    base: toBase(ctx, traceId, rootSpanId, cursor, llm1Duration),
+    modelConfig: session.modelConfig,
+    inputMessages,
+    outputMessages: [assistantToolCallMessage(toolCalls)],
+    systemInstructions: session.systemPrompt,
+    toolDefinitions: session.availableTools,
+    finishReason: "tool_calls",
+  })
+  spans.push(llm1)
+  cursor = addMs(cursor, llm1Duration)
+
+  const internalHistory = [...inputMessages, assistantToolCallMessage(toolCalls)]
+
+  for (let i = 0; i < tools.length; i++) {
+    const tool = tools[i] as ToolConfig
+    const callId = (toolCalls[i] as { id: string }).id
+    const toolDuration = randInt(tool.latencyRange[0], tool.latencyRange[1])
+    const toolSpan = makeToolSpan({
+      base: toBase(ctx, traceId, rootSpanId, cursor, toolDuration),
+      tool,
+      callId,
+    })
+    spans.push(toolSpan)
+    internalHistory.push(toolResultMessage(callId, tool.sampleResult))
+    cursor = addMs(cursor, toolDuration)
+  }
+
+  const llm2Duration = randInt(session.modelConfig.latencyRange[0], session.modelConfig.latencyRange[1])
+  const assistantReply = pick(ASSISTANT_RESPONSES)
+  const llm2 = makeLlmSpan({
+    base: toBase(ctx, traceId, rootSpanId, cursor, llm2Duration),
+    modelConfig: session.modelConfig,
+    inputMessages: internalHistory,
+    outputMessages: [assistantTextMessage(assistantReply)],
+    systemInstructions: session.systemPrompt,
+    toolDefinitions: session.availableTools,
+    finishReason: session.modelConfig.finishReasonStop,
+  })
+  spans.push(llm2)
+  cursor = addMs(cursor, llm2Duration)
+
+  const totalDuration = cursor.getTime() - ctx.startTime.getTime() + randInt(10, 50)
+  const root = makeWrapperSpan({
+    base: { ...toBase(ctx, traceId, "", ctx.startTime, totalDuration), durationMs: totalDuration },
+    name: `invoke_agent ${ctx.serviceName}`,
+  })
+  root.span_id = rootSpanId
+  root.operation = "invoke_agent"
+  spans.unshift(root)
+
+  return { spans, response: assistantReply, durationMs: totalDuration }
+}
+
+function generateSessionRagTurn(
+  ctx: TraceContext,
+  traceId: string,
+  session: SessionConfig,
+  inputMessages: Message[],
+): TurnResult {
+  const rootSpanId = randomHex(16)
+  const spans: SpanRow[] = []
+  let cursor = ctx.startTime
+
+  const embeddingModel = pick(EMBEDDING_MODELS)
+  const inputTokens = randInt(50, 300)
+
+  const embDuration = randInt(embeddingModel.latencyRange[0], embeddingModel.latencyRange[1])
+  spans.push(
+    makeEmbeddingSpan({
+      base: toBase(ctx, traceId, rootSpanId, cursor, embDuration),
+      modelConfig: embeddingModel,
+      inputTokens,
+    }),
+  )
+  cursor = addMs(cursor, embDuration)
+
+  const retDuration = randInt(80, 500)
+  spans.push(
+    makeRetrievalSpan({
+      base: toBase(ctx, traceId, rootSpanId, cursor, retDuration),
+    }),
+  )
+  cursor = addMs(cursor, retDuration)
+
+  const chatDuration = randInt(session.modelConfig.latencyRange[0], session.modelConfig.latencyRange[1])
+  const assistantReply = pick(ASSISTANT_RESPONSES)
+  const ragInputMessages = [
+    ...inputMessages,
+    systemMessage("[Retrieved context: Document 1: ... Document 2: ... Document 3: ...]"),
+  ]
+
+  spans.push(
+    makeLlmSpan({
+      base: toBase(ctx, traceId, rootSpanId, cursor, chatDuration),
+      modelConfig: session.modelConfig,
+      inputMessages: ragInputMessages,
+      outputMessages: [assistantTextMessage(assistantReply)],
+      systemInstructions: session.systemPrompt,
+      finishReason: session.modelConfig.finishReasonStop,
+    }),
+  )
+  cursor = addMs(cursor, chatDuration)
+
+  const totalDuration = cursor.getTime() - ctx.startTime.getTime() + randInt(10, 30)
+  const root = makeWrapperSpan({
+    base: toBase(ctx, traceId, "", ctx.startTime, totalDuration),
+    name: "rag-pipeline",
+  })
+  root.span_id = rootSpanId
+  spans.unshift(root)
+
+  return { spans, response: assistantReply, durationMs: totalDuration }
+}
+
+function generateSessionTraces(config: TraceConfig, sessionSize: number): SpanRow[] {
+  const session = pickSessionConfig()
+  const allSpans: SpanRow[] = []
+  const conversationHistory: Message[] = []
+
+  let sessionCursor = randomTimeInWindow(config.timeWindow.from, config.timeWindow.to)
+
+  for (let turn = 0; turn < sessionSize; turn++) {
+    const traceId = randomHex(32)
+    const isFirstTurn = turn === 0
+
+    const userPrompt = isFirstTurn ? pick(USER_PROMPTS) : pick(SESSION_FOLLOWUPS)
+    conversationHistory.push(userMessage(userPrompt))
+
+    const ctx: TraceContext = {
+      organizationId: config.organizationId,
+      projectId: config.projectId,
+      apiKeyId: config.apiKeyId,
+      startTime: sessionCursor,
+      sessionId: session.sessionId,
+      userId: session.userId,
+      serviceName: session.serviceName,
+      tags: session.tags,
+      metadata: session.metadata,
     }
-    i = end
+
+    const useTools = session.availableTools.length > 0 && Math.random() < (isFirstTurn ? 0.3 : 0.5)
+    const useRag = session.includeRag && isFirstTurn
+
+    let result: TurnResult
+
+    if (useRag) {
+      result = generateSessionRagTurn(ctx, traceId, session, [...conversationHistory])
+    } else if (useTools) {
+      result = generateSessionToolCallTurn(ctx, traceId, session, [...conversationHistory])
+    } else {
+      result = generateSessionChatTurn(ctx, traceId, session, [...conversationHistory])
+    }
+
+    allSpans.push(...result.spans)
+    conversationHistory.push(assistantTextMessage(result.response))
+
+    sessionCursor = addMs(sessionCursor, result.durationMs + randInt(5_000, 300_000))
   }
 
-  for (const span of allSpans) {
-    span.session_id = traceToSession.get(span.trace_id) ?? ""
-  }
+  return allSpans
 }
 
 // ---------------------------------------------------------------------------
@@ -852,12 +1071,23 @@ function assignSessions(allSpans: SpanRow[]): void {
 export function generateAllSpans(config: TraceConfig): SpanRow[] {
   const allSpans: SpanRow[] = []
 
-  for (let i = 0; i < config.traceCount; i++) {
-    const pattern = pickPattern()
-    const traceSpans = generateTrace(pattern, config)
-    allSpans.push(...traceSpans)
+  const sessionTracesBudget = Math.floor(config.traceCount / 3)
+  let sessionTracesUsed = 0
+
+  while (sessionTracesUsed < sessionTracesBudget) {
+    const sessionSize = randInt(2, 8)
+    const actualSize = Math.min(sessionSize, sessionTracesBudget - sessionTracesUsed)
+    if (actualSize < 2) break
+
+    allSpans.push(...generateSessionTraces(config, actualSize))
+    sessionTracesUsed += actualSize
   }
 
-  assignSessions(allSpans)
+  const remaining = config.traceCount - sessionTracesUsed
+  for (let i = 0; i < remaining; i++) {
+    const pattern = pickPattern()
+    allSpans.push(...generateTrace(pattern, config))
+  }
+
   return allSpans
 }

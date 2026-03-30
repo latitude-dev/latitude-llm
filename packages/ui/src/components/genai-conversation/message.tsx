@@ -1,6 +1,11 @@
+import { ScanSearchIcon } from "lucide-react"
 import type { GenAIMessage } from "rosetta-ai"
 import { cn } from "../../utils/cn.ts"
+import { Text } from "../text/text.tsx"
+import { Tooltip } from "../tooltip/tooltip.tsx"
 import { Part, ReasoningGroup, type ToolCallResult } from "./part.tsx"
+
+export type ToolCallActions = ReadonlyMap<string, () => void>
 
 type PartType = GenAIMessage["parts"][number]
 
@@ -28,9 +33,11 @@ function groupParts(parts: readonly PartType[]): GroupedEntry[] {
 function PartsRenderer({
   parts,
   toolResults,
+  toolCallActions,
 }: {
   readonly parts: readonly PartType[]
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
+  readonly toolCallActions?: ToolCallActions
 }) {
   const grouped = groupParts(parts)
 
@@ -40,11 +47,17 @@ function PartsRenderer({
         if (entry.kind === "reasoning") {
           return <ReasoningGroup key={i} texts={entry.texts} />
         }
-        const result =
-          toolResults && entry.part.type === "tool_call"
-            ? toolResults.get((entry.part as { id?: string }).id ?? "")
-            : undefined
-        return <Part key={i} part={entry.part} toolResult={result} />
+        const partId = entry.part.type === "tool_call" ? ((entry.part as { id?: string }).id ?? "") : ""
+        const result = toolResults?.get(partId)
+        const onNavigateToSpan = toolCallActions?.get(partId)
+        return (
+          <Part
+            key={i}
+            part={entry.part}
+            {...(result ? { toolResult: result } : {})}
+            {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
+          />
+        )
       })}
     </div>
   )
@@ -69,13 +82,40 @@ function UserMessage({
 function AssistantMessage({
   message,
   toolResults,
+  toolCallActions,
+  onNavigate,
 }: {
   readonly message: GenAIMessage
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
+  readonly toolCallActions?: ToolCallActions
+  readonly onNavigate?: () => void
 }) {
   return (
-    <div className="flex flex-col gap-1">
-      <PartsRenderer parts={message.parts} toolResults={toolResults} />
+    <div className="relative flex flex-col gap-1">
+      {onNavigate && (
+        <div className="sticky top-0 h-0 overflow-visible z-10">
+          <Tooltip
+            asChild
+            trigger={
+              <button
+                type="button"
+                onClick={onNavigate}
+                className="absolute -left-8 flex items-center justify-center w-6 h-6 rounded-md border border-border bg-background shadow-sm opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground cursor-pointer"
+                title="View source span"
+              >
+                <ScanSearchIcon className="h-4 w-4" />
+              </button>
+            }
+          >
+            <Text.H6>View source span</Text.H6>
+          </Tooltip>
+        </div>
+      )}
+      <PartsRenderer
+        parts={message.parts}
+        {...(toolResults ? { toolResults } : {})}
+        {...(toolCallActions ? { toolCallActions } : {})}
+      />
     </div>
   )
 }
@@ -114,16 +154,27 @@ export function Message({
   message,
   alignment = "right",
   toolResults,
+  toolCallActions,
+  onNavigate,
 }: {
   readonly message: GenAIMessage
   readonly alignment?: "left" | "right"
   readonly toolResults?: ReadonlyMap<string, ToolCallResult> | undefined
+  readonly toolCallActions?: ToolCallActions
+  readonly onNavigate?: () => void
 }) {
   switch (message.role) {
     case "user":
       return <UserMessage message={message} alignment={alignment} />
     case "assistant":
-      return <AssistantMessage message={message} toolResults={toolResults} />
+      return (
+        <AssistantMessage
+          message={message}
+          {...(toolResults ? { toolResults } : {})}
+          {...(toolCallActions ? { toolCallActions } : {})}
+          {...(onNavigate ? { onNavigate } : {})}
+        />
+      )
     case "system":
       return <SystemMessage message={message} />
     case "tool":

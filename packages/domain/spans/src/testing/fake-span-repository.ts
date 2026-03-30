@@ -13,6 +13,7 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
     findByTraceId: () => Effect.succeed([]),
     findByProjectId: () => Effect.succeed([]),
     findBySpanId: () => Effect.succeed(null),
+    findMessagesForTrace: () => Effect.succeed([]),
     ...overrides,
   }
 

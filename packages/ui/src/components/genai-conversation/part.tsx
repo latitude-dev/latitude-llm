@@ -24,9 +24,11 @@ export type { ToolCallResult } from "./parts/types.ts"
 export function Part({
   part,
   toolResult,
+  onNavigateToSpan,
 }: {
   readonly part: GenAIPart
   readonly toolResult?: ToolCallResult | undefined
+  readonly onNavigateToSpan?: () => void
 }) {
   switch (part.type) {
     case "text": {
@@ -96,7 +98,13 @@ export function Part({
 
     case "tool_call": {
       const p = part as ToolCallPart
-      return <ToolCallBlock call={p} result={toolResult} />
+      return (
+        <ToolCallBlock
+          call={p}
+          {...(toolResult ? { result: toolResult } : {})}
+          {...(onNavigateToSpan ? { onNavigateToSpan } : {})}
+        />
+      )
     }
 
     case "tool_call_response": {
