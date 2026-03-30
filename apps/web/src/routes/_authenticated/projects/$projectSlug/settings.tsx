@@ -1,24 +1,16 @@
 import { Container, Label, Switch, Text } from "@repo/ui"
-import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
-import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
+import { updateProjectMutation } from "../../../../domains/projects/projects.collection.ts"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/settings")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings")({
   component: ProjectSettingsPage,
 })
 
 function ProjectSettingsPage() {
-  const { projectId } = Route.useParams()
-
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.id, projectId)).findOne(),
-    [projectId],
-  )
-
-  if (!project) return null
+  const { project } = Route.useRouteContext()
 
   const handleKeepMonitoringChange = (checked: boolean) => {
-    updateProjectMutation(projectId, { settings: { keepMonitoring: checked } })
+    updateProjectMutation(project.id, { settings: { keepMonitoring: checked } })
   }
 
   return (

@@ -73,7 +73,7 @@ export function DatasetNameEdit({
       qc.invalidateQueries({ queryKey: ["datasetRowCount", dataset.id] })
       setDeleteOpen(false)
       toast({ description: "Dataset removed" })
-      navigate({ to: "/projects/$projectId/datasets", params: { projectId } })
+      navigate({ to: "/projects/$projectSlug/datasets", params: { projectId } })
     } catch (e) {
       toast({
         variant: "destructive",

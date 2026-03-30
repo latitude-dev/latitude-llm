@@ -1,15 +1,12 @@
-import { generateId } from "@domain/shared"
-import { Effect } from "effect"
+import { generateId, toSlug } from "@domain/shared"
+import { Data, Effect } from "effect"
 import { OrganizationRepository } from "../ports/organization-repository.ts"
 
 const MAX_SLUG_ATTEMPTS = 20
 
-const toSlug = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
+class SlugGenerationError extends Data.TaggedError("SlugGenerationError")<{
+  readonly message: string
+}> {}
 
 export const generateUniqueOrganizationSlugUseCase = (input: { name: string }) =>
   Effect.gen(function* () {
@@ -30,5 +27,8 @@ export const generateUniqueOrganizationSlugUseCase = (input: { name: string }) =
       slug = `${slugBase}-${i}`
     }
 
-    return slug
+    // If we exhausted all attempts, return an error effect
+    return yield* new SlugGenerationError({
+      message: `Could not generate a unique slug after ${MAX_SLUG_ATTEMPTS} attempts`,
+    })
   })

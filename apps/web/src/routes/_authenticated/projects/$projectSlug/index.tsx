@@ -1,5 +1,6 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
 import { Button, Input, Tabs } from "@repo/ui"
+import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import {
   AppWindowIcon,
@@ -11,6 +12,7 @@ import {
   TextIcon,
 } from "lucide-react"
 import { useMemo, useState } from "react"
+import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
@@ -68,12 +70,16 @@ function getBulkSelection(state: SelectionState<string>): BulkSelection<string> 
   }
 }
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
   component: ProjectPage,
 })
 
 function ProjectPage() {
-  const { projectId } = Route.useParams()
+  const { projectSlug } = Route.useParams()
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
+  )
   const [activeTab, setActiveTab] = useParamState("tab", "traces", {
     validate: (v): v is "traces" | "sessions" => v === "traces" || v === "sessions",
   })
@@ -90,7 +96,7 @@ function ProjectPage() {
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
 
   const { totalCount: totalTraceCount } = useTracesCount({
-    projectId,
+    projectId: project?.id ?? "",
     ...(hasActiveFilters ? { filters } : {}),
   })
 
@@ -109,7 +115,7 @@ function ProjectPage() {
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
 
   const sharedViewProps = {
-    projectId,
+    projectId: project?.id ?? "",
     filters,
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
@@ -206,9 +212,8 @@ function ProjectPage() {
       {activeTraceId ? (
         <Layout.Aside>
           <TraceDetailDrawer
-            key={activeTraceId}
             traceId={activeTraceId}
-            projectId={projectId}
+            projectId={project?.id ?? ""}
             onClose={() => setActiveTraceId("")}
           />
         </Layout.Aside>
@@ -218,7 +223,7 @@ function ProjectPage() {
         <AddToDatasetModal
           open={addToDatasetOpen}
           onOpenChange={setAddToDatasetOpen}
-          projectId={projectId}
+          projectId={project?.id ?? ""}
           selection={bulkSelection}
           selectedCount={selectedCount}
           onSuccess={clearSelections}

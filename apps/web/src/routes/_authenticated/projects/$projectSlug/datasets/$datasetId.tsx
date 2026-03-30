@@ -12,6 +12,7 @@ import {
   toast,
 } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { CirclePlus, Download, FileDownIcon, Trash2 } from "lucide-react"
@@ -40,7 +41,7 @@ import { DeleteRowsModal } from "./-components/delete-rows-modal.tsx"
 import { RowDetailDrawer } from "./-components/row-detail-drawer.tsx"
 import { UploadBlankSlate } from "./-components/upload-blank-slate.tsx"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/$datasetId")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/$datasetId")({
   component: DatasetDetailPage,
 })
 
@@ -82,7 +83,8 @@ const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
 ]
 
 function DatasetDetailPage() {
-  const { projectId, datasetId } = Route.useParams()
+  const { datasetId } = Route.useParams()
+  const { project } = Route.useRouteContext()
   const [, setRid] = useParamState("rid", "")
 
   const { data: dataset, isLoading } = useQuery({
@@ -120,7 +122,7 @@ function DatasetDetailPage() {
         })
         const qc = getQueryClient()
         await qc.invalidateQueries({ queryKey: ["dataset", datasetId] })
-        await qc.invalidateQueries({ queryKey: ["datasets", projectId] })
+        await qc.invalidateQueries({ queryKey: ["datasets", project?.id ?? ""] })
         await qc.invalidateQueries({ queryKey: ["datasetRows", datasetId] })
         await qc.invalidateQueries({
           queryKey: ["datasetRowCount", datasetId],
@@ -134,7 +136,7 @@ function DatasetDetailPage() {
         throw e
       }
     },
-    [datasetId, projectId, setRid],
+    [datasetId, project?.id ?? "", setRid],
   )
 
   if (isLoading) {
@@ -166,13 +168,15 @@ function DatasetDetailPage() {
         : (rowCountProbe?.total ?? rowCountProbe?.rows?.length ?? 0) > 0
 
   if (hasRows && !parsedCsv) {
-    return <DatasetRowsView projectId={projectId} datasetId={datasetId} dataset={dataset} onImport={setParsedCsv} />
+    return (
+      <DatasetRowsView projectId={project?.id ?? ""} datasetId={datasetId} dataset={dataset} onImport={setParsedCsv} />
+    )
   }
 
   if (parsedCsv) {
     return (
       <CsvMappingView
-        projectId={projectId}
+        projectId={project?.id ?? ""}
         datasetId={datasetId}
         dataset={dataset}
         parsedCsv={parsedCsv}

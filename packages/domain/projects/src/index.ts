@@ -11,7 +11,6 @@ export {
   type CreateProjectInput,
   createProjectUseCase,
   InvalidProjectNameError,
-  ProjectAlreadyExistsError,
 } from "./use-cases/create-project.ts"
 
 export {

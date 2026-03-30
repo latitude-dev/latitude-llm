@@ -1,7 +1,7 @@
 import { Container, TableBlankSlate, TableWithHeader } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/issues/")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
   component: IssuesPage,
 })
 

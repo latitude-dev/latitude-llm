@@ -34,7 +34,7 @@ export function TraceDetailDrawer({
   const isRecordLoading = !trace && !traceDetail
   const traceRecord: TraceRecord | undefined = traceDetail ?? trace
   const [activeTab, setActiveTab] = useState<TabId>("trace")
-  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
+  const [_, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
 
   function handleSetActiveTab(tab: TabId) {
@@ -123,37 +123,26 @@ export function TraceDetailDrawer({
         </>
       }
     >
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "trace" })}>
-        {visitedTabs.has("trace") && (
-          <TraceTab
-            traceId={traceId}
-            traceRecord={traceRecord}
-            traceDetail={traceDetail}
-            isRecordLoading={isRecordLoading}
-            isDetailLoading={isDetailLoading}
-          />
-        )}
-      </div>
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "conversation" })}>
-        {visitedTabs.has("conversation") && (
-          <ConversationTab
-            traceDetail={traceDetail}
-            isDetailLoading={isDetailLoading}
-            navigateToSpan={navigateToSpan}
-            projectId={projectId}
-          />
-        )}
-      </div>
-      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "spans" })}>
-        {visitedTabs.has("spans") && (
-          <SpansTab
-            projectId={projectId}
-            traceId={traceId}
-            selectedSpanId={selectedSpanId}
-            onSelectSpan={navigateToSpan}
-          />
-        )}
-      </div>
+      {activeTab === "trace" && (
+        <TraceTab
+          traceId={traceId}
+          traceRecord={traceRecord}
+          traceDetail={traceDetail}
+          isRecordLoading={isRecordLoading}
+          isDetailLoading={isDetailLoading}
+        />
+      )}
+      {activeTab === "conversation" && (
+        <ConversationTab
+          projectId={projectId}
+          traceDetail={traceDetail}
+          isDetailLoading={isDetailLoading}
+          navigateToSpan={navigateToSpan}
+        />
+      )}
+      {activeTab === "spans" && (
+        <SpansTab key={traceId} selectedSpanId={selectedSpanId} onSelectSpan={setSelectedSpanId} traceId={traceId} />
+      )}
     </DetailDrawer>
   )
 }

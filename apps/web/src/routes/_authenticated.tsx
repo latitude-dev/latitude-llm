@@ -61,10 +61,10 @@ function UserAvatar({ name }: { name: string }) {
   )
 }
 
-function ProjectBreadcrumb({ projectId }: { projectId: string }) {
+function ProjectBreadcrumb({ projectSlug }: { projectSlug: string }) {
   const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.id, projectId)).findOne(),
-    [projectId],
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
   )
 
   const { data: allProjects } = useProjectsCollection()
@@ -78,11 +78,30 @@ function ProjectBreadcrumb({ projectId }: { projectId: string }) {
     <>
       <span className="text-muted-foreground text-sm select-none">/</span>
       {hasMultipleProjects ? (
-        <button type="button" className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors">
-          {emoji && <span className="text-sm">{emoji}</span>}
-          <span className="text-sm font-medium text-muted-foreground">{title}</span>
-          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-        </button>
+        <DropdownMenu
+          side="bottom"
+          align="start"
+          options={
+            allProjects?.map((p) => ({
+              label: p.name,
+              onClick: () => {
+                window.location.href = `/projects/${p.slug}`
+              },
+            })) ?? []
+          }
+          trigger={() => (
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+              >
+                {emoji && <span className="text-sm">{emoji}</span>}
+                <span className="text-sm font-medium text-muted-foreground">{title}</span>
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+          )}
+        />
       ) : (
         <span className="text-sm font-medium text-muted-foreground px-2 py-1">
           {emoji && `${emoji} `}
@@ -125,7 +144,7 @@ function NavHeader() {
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
   const projectMatch = pathname.match(/\/projects\/([^/]+)/)
-  const currentProjectId = projectMatch?.[1] ?? null
+  const currentProjectSlug = projectMatch?.[1] ?? null
 
   if (!org) return null
 
@@ -169,7 +188,7 @@ function NavHeader() {
         ) : (
           <span className="text-sm font-medium text-foreground px-2 py-1">{org.name}</span>
         )}
-        {currentProjectId && <ProjectBreadcrumb projectId={currentProjectId} />}
+        {currentProjectSlug && <ProjectBreadcrumb projectSlug={currentProjectSlug} />}
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />

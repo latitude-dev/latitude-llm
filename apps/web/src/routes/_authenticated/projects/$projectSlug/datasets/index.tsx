@@ -20,7 +20,7 @@ import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/in
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/datasets/")({
+export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/")({
   component: DatasetsPage,
 })
 
@@ -52,7 +52,8 @@ const columns: InfiniteTableColumn<DatasetRecord>[] = [
 ]
 
 function DatasetsPage() {
-  const { projectId } = Route.useParams()
+  const { projectSlug } = Route.useParams()
+  const { project } = Route.useRouteContext()
   const navigate = Route.useNavigate()
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
@@ -73,7 +74,7 @@ function DatasetsPage() {
     isLoading,
     infiniteScroll,
   } = useDatasetsInfiniteScroll({
-    projectId,
+    projectId: project.id,
     sorting,
   })
 
@@ -81,10 +82,10 @@ function DatasetsPage() {
   const onRowClick = useCallback(
     (d: DatasetRecord) =>
       navigate({
-        to: "/projects/$projectId/datasets/$datasetId",
-        params: { projectId, datasetId: d.id },
+        to: "/projects/$projectSlug/datasets/$datasetId",
+        params: { projectSlug, datasetId: d.id },
       }),
-    [navigate, projectId],
+    [navigate, projectSlug],
   )
 
   const handleCreate = useCallback(async () => {
@@ -93,19 +94,19 @@ function DatasetsPage() {
       const datasetId = generateId()
       await createDatasetMutation({
         id: datasetId,
-        projectId,
+        projectId: project.id,
         name: `Dataset ${new Date().toLocaleString()}`,
       })
       navigate({
-        to: "/projects/$projectId/datasets/$datasetId",
-        params: { projectId, datasetId },
+        to: "/projects/$projectSlug/datasets/$datasetId",
+        params: { projectSlug, datasetId },
       })
     } catch (err) {
       toast({ variant: "destructive", description: toUserMessage(err) })
     } finally {
       setCreating(false)
     }
-  }, [projectId, navigate, toast])
+  }, [project, projectSlug, navigate, toast])
 
   return (
     <Layout>
