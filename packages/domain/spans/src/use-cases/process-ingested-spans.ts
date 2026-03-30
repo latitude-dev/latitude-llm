@@ -47,9 +47,10 @@ function resolvePayload(
   }
 
   if (input.fileKey) {
+    const fileKey = input.fileKey
     return Effect.gen(function* () {
       const disk = yield* StorageDisk
-      return yield* getFromDisk(disk, input.fileKey!)
+      return yield* getFromDisk(disk, fileKey)
     })
   }
 
