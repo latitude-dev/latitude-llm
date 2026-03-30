@@ -1,7 +1,7 @@
 import type { EventsPublisher } from "@domain/events"
 import type { QueueConsumer, QueuePublishError } from "@domain/queue"
 import { OrganizationId, ProjectId, type StorageDiskPort } from "@domain/shared"
-import { processIngestedSpansUseCase, SpanDecodingError } from "@domain/spans"
+import { processIngestedSpansUseCase } from "@domain/spans"
 import type { ClickHouseClient } from "@platform/db-clickhouse"
 import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { StorageDiskLive } from "@platform/storage-object"

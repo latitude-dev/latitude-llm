@@ -63,7 +63,7 @@ function decodeAndTransform(
   return Effect.gen(function* () {
     const request = decodeRequest(payload, input.contentType)
     if (!request) {
-      return yield* Effect.fail(new SpanDecodingError({ reason: "failed to decode OTLP message" }))
+      return yield* new SpanDecodingError({ reason: "failed to decode OTLP message" })
     }
 
     if (!request.resourceSpans?.length) {
