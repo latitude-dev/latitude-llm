@@ -192,8 +192,9 @@ function ProjectSidebar({
             </Button>
           </div>
           {!collapsed && project && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 navigator.clipboard.writeText(project.slug)
                 toast({
@@ -201,11 +202,11 @@ function ProjectSidebar({
                   description: `Project slug "${project.slug}" copied`,
                 })
               }}
-              className="flex items-center gap-1 group cursor-pointer"
+              className="flex items-center gap-1 px-2 -ml-2 w-fit"
             >
               <Text.H6 color="foregroundMuted">{project.slug}</Text.H6>
               <Icon icon={Clipboard} size="xs" color="foregroundMuted" />
-            </button>
+            </Button>
           )}
         </div>
 
