@@ -7,6 +7,7 @@ import { outboxEvents } from "./schema/outbox-events.ts"
 const toOutboxInsertValues = (event: {
   readonly id?: string
   readonly eventName: string
+  readonly aggregateType: string
   readonly aggregateId: string
   readonly organizationId: string
   readonly payload: unknown
@@ -14,6 +15,7 @@ const toOutboxInsertValues = (event: {
 }) => ({
   id: event.id ?? generateId(),
   eventName: event.eventName,
+  aggregateType: event.aggregateType,
   aggregateId: event.aggregateId,
   organizationId: event.organizationId,
   payload: event.payload as EventPayloads[keyof EventPayloads],

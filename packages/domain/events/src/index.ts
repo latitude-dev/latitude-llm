@@ -69,6 +69,7 @@ export type OutboxWriter = {
   write<TEventName extends keyof EventPayloads>(event: {
     readonly id?: string
     readonly eventName: TEventName
+    readonly aggregateType: string
     readonly aggregateId: string
     readonly organizationId: string
     readonly payload: EventPayloads[TEventName]

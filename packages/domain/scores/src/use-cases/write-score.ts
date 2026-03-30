@@ -187,6 +187,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
           yield* outboxEventWriter
             .write({
               eventName: "ScoreImmutable",
+              aggregateType: "score",
               aggregateId: score.id,
               organizationId: score.organizationId,
               payload: {
