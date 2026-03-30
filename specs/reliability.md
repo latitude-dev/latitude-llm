@@ -1018,6 +1018,34 @@ System-created default queues:
 - description: the trace has unusually high latency, cost, or usage
 - instructions: review traces whose latency, token usage, or cost materially exceeds project norms. This queue is primarily detected through deterministic outlier checks based on project medians and configured thresholds rather than the low-cost flagger model.
 
+#### Thrashing
+
+- description: the agent cycles between tools without making progress
+- instructions: review traces where the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.
+
+The flagger for this queue receives a structured payload derived from the trace's span tree rather than raw conversation messages alone. The payload must include the ordered tool call sequence so the flagger can detect repetition and cycling patterns:
+
+```typescript
+type ThrashingFlaggerPayload = {
+  conversation_excerpt: Array<{ role: string; content: string }>; // last N assistant/user turns for goal context
+  system_prompt_excerpt: string; // leading portion of the system prompt, truncated to a fixed token budget
+  turn_count: number; // total conversation turns in the trace
+  tool_call_sequence: Array<{
+    tool_name: string;
+    call_index: number; // zero-based position in the full trace tool call order
+    outcome: "success" | "error" | "empty_result";
+  }>; // ordered list of every tool call in the trace
+  tool_call_summary: {
+    total_calls: number;
+    failed_calls: number;
+    unique_tools_called: number;
+    repeated_tool_calls: Array<{ tool_name: string; call_count: number }>; // tools invoked more than once, sorted by call_count desc
+    tools_available: string[]; // tool names declared in the trace context
+    tools_used: string[]; // deduplicated tool names actually invoked
+  };
+};
+```
+
 Queue population flows:
 
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table
