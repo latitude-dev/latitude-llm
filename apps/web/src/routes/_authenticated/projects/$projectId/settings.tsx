@@ -27,9 +27,10 @@ function ProjectSettingsPage() {
         <Text.H4 weight="bold">Project Settings</Text.H4>
         <div className="flex flex-row items-center justify-between">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="keep-monitoring">Keep monitoring after resolution</Label>
+            <Label htmlFor="keep-monitoring">Monitor resolved issues</Label>
             <Text.H6 color="foregroundMuted">
-              When enabled, linked evaluations stay active after an issue is resolved to detect regressions.
+              When enabled, evaluations monitoring active issues stay active even after a issue is resolved to detect
+              further regressions
             </Text.H6>
           </div>
           <Switch

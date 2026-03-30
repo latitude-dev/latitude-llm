@@ -65,8 +65,8 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
             <TableHead>Name</TableHead>
             <TableHead className="w-44">Issues</TableHead>
             <TableHead className="w-44">Datasets</TableHead>
-            <TableHead className="w-44">Traces (7D)</TableHead>
-            <TableHead />
+            <TableHead className="w-44">Traces</TableHead>
+            <TableHead className="text-right" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -89,7 +89,7 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
               <TableCell className="w-44">
                 <Text.H5 color="foregroundMuted">—</Text.H5>
               </TableCell>
-              <TableCell preventDefault>
+              <TableCell preventDefault align="right">
                 <DropdownMenu
                   options={[
                     {
@@ -109,7 +109,7 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
                   side="bottom"
                   align="end"
                   triggerButtonProps={{
-                    className: "border-none justify-end cursor-pointer",
+                    className: "border-none cursor-pointer",
                   }}
                 />
               </TableCell>
