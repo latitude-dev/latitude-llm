@@ -63,6 +63,25 @@ export const ProjectRepositoryLive = Layer.effect(
             }),
           ),
 
+      findBySlug: (slug: string) =>
+        sqlClient
+          .query((db) =>
+            db
+              .select()
+              .from(projects)
+              .where(and(eq(projects.slug, slug), isNull(projects.deletedAt)))
+              .limit(1),
+          )
+          .pipe(
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
+              }
+              return Effect.succeed(toDomainProject(result))
+            }),
+          ),
+
       findAll: () =>
         sqlClient
           .query((db) => db.select().from(projects).where(isNull(projects.deletedAt)))

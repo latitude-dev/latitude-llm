@@ -1,8 +1,8 @@
-import { DropdownMenu, DropdownMenuTrigger, LatitudeLogo } from "@repo/ui"
+import { Button, DropdownMenu, DropdownMenuTrigger, Icon, LatitudeLogo, useToast } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
-import { ChevronsUpDown, Moon, Sun } from "lucide-react"
+import { ChevronsUpDown, Clipboard, Moon, Sun } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
@@ -69,6 +69,7 @@ function ProjectBreadcrumb({ projectId }: { projectId: string }) {
 
   const { data: allProjects } = useProjectsCollection()
   const hasMultipleProjects = (allProjects?.length ?? 0) > 1
+  const { toast } = useToast()
 
   if (!project) return null
 
@@ -84,10 +85,23 @@ function ProjectBreadcrumb({ projectId }: { projectId: string }) {
           <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
         </button>
       ) : (
-        <span className="text-sm font-medium text-muted-foreground px-2 py-1">
-          {emoji && `${emoji} `}
-          {title}
-        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            navigator.clipboard.writeText(project.slug)
+            toast({
+              title: "Copied to clipboard",
+              description: `Project slug "${project.slug}" copied`,
+            })
+          }}
+        >
+          <div className="flex flex-row items-center gap-2">
+            {emoji && <span className="text-sm">{emoji}</span>}
+            <span className="text-sm font-medium text-muted-foreground">{title}</span>
+            <Icon icon={Clipboard} size="xs" color="foregroundMuted" />
+          </div>
+        </Button>
       )}
     </>
   )
