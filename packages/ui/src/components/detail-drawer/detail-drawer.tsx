@@ -179,7 +179,7 @@ export function DetailDrawer({
         <div className="flex flex-row items-center justify-between px-6 py-4 border-b shrink-0">
           <div className="w-full flex flex-row items-center justify-between gap-1">
             <div className="flex flex-row items-center gap-x-1">
-              <Button variant="outline" className="w-8 h-8 p-0" onClick={onClose}>
+              <Button variant="outline" size="icon" onClick={onClose}>
                 <PanelRightCloseIcon className="w-4 h-4 text-muted-foreground" />
               </Button>
               {actions}

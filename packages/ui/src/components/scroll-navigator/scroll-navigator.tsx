@@ -73,7 +73,7 @@ function NavigatorButtons({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-full shadow-sm"
+              className="rounded-full shadow-sm"
               disabled={!canScrollUp}
               onClick={onPrevious}
             >
@@ -90,7 +90,7 @@ function NavigatorButtons({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 rounded-full shadow-sm"
+              className="rounded-full shadow-sm"
               disabled={!canScrollDown}
               onClick={onNext}
             >
