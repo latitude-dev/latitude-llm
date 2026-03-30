@@ -8,6 +8,13 @@ describe("formatCount", () => {
     expect(formatCount(999)).toBe("999")
   })
 
+  it("limits fractional small numbers to two decimal places", () => {
+    expect(formatCount(74.333333333333)).toBe("74.33")
+    expect(formatCount(74.3)).toBe("74.3")
+    expect(formatCount(0.12)).toBe("0.12")
+    expect(formatCount(1.005)).toBe("1.01")
+  })
+
   it("formats thousands", () => {
     expect(formatCount(1000)).toBe("1K")
     expect(formatCount(1500)).toBe("1.5K")

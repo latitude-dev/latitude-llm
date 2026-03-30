@@ -1,4 +1,5 @@
 import type { ChFieldRegistry } from "../filter-builder.ts"
+import { mapDateTime64UtcQueryParam } from "./helpers.ts"
 
 export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   sessionId: { column: "session_id", chType: "String" },
@@ -15,5 +16,5 @@ export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
   traceCount: { column: "trace_count", chType: "UInt64" },
   tokensInput: { column: "tokens_input", chType: "UInt64" },
   tokensOutput: { column: "tokens_output", chType: "UInt64" },
-  startTime: { column: "start_time", chType: "DateTime64(9, 'UTC')" },
+  startTime: { column: "start_time", chType: "DateTime64(9, 'UTC')", mapValue: mapDateTime64UtcQueryParam },
 }

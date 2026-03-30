@@ -5,6 +5,7 @@ import { useMemo } from "react"
 import {
   getSessionBySessionId,
   getSessionDistinctValues,
+  getSessionMetricsByProject,
   listSessionsByProject,
   type SessionRecord,
 } from "./sessions.functions.ts"
@@ -70,6 +71,26 @@ export function useSessionDetail({ projectId, sessionId }: { readonly projectId:
       return result ?? null
     },
     enabled: sessionId.length > 0,
+    staleTime: 30_000,
+  })
+}
+
+export function useSessionMetrics({
+  projectId,
+  filters,
+}: {
+  readonly projectId: string
+  readonly filters?: FilterSet
+}) {
+  return useQuery({
+    queryKey: ["sessions-metrics", projectId, filters],
+    queryFn: () =>
+      getSessionMetricsByProject({
+        data: {
+          projectId,
+          ...(filters ? { filters } : {}),
+        },
+      }),
     staleTime: 30_000,
   })
 }

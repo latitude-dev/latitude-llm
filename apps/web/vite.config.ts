@@ -59,6 +59,14 @@ export default defineConfig({
               name: "codemirror",
             },
             {
+              test: /node_modules\/echarts-for-react\//,
+              name: "echarts-react",
+            },
+            {
+              test: /node_modules\/echarts\//,
+              name: "echarts",
+            },
+            {
               test: /node_modules\/react/,
               name: "react",
             },
