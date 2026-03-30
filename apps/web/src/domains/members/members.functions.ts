@@ -1,4 +1,9 @@
-import { MembershipRepository, removeMemberUseCase, transferOwnershipUseCase } from "@domain/organizations"
+import {
+  MembershipRepository,
+  removeMemberUseCase,
+  transferOwnershipUseCase,
+  updateMemberRoleUseCase,
+} from "@domain/organizations"
 import { UserId } from "@domain/shared"
 import { MembershipRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
@@ -137,6 +142,23 @@ export const transferOwnership = createServerFn({ method: "POST" })
         organizationId,
         currentOwnerUserId: userId,
         newOwnerUserId: UserId(data.newOwnerUserId),
+      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
+    )
+  })
+
+export const updateMemberRole = createServerFn({ method: "POST" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ targetUserId: z.string(), newRole: z.enum(["admin", "member"]) }))
+  .handler(async ({ data }): Promise<void> => {
+    const { userId, organizationId } = await requireSession()
+    const client = getPostgresClient()
+
+    await Effect.runPromise(
+      updateMemberRoleUseCase({
+        organizationId,
+        requestingUserId: userId,
+        targetUserId: UserId(data.targetUserId),
+        newRole: data.newRole,
       }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
     )
   })

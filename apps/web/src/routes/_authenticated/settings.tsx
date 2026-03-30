@@ -40,7 +40,7 @@ import {
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
-import { transferOwnership } from "../../domains/members/members.functions.ts"
+import { transferOwnership, updateMemberRole } from "../../domains/members/members.functions.ts"
 import {
   updateOrganizationMutation,
   useOrganizationsCollection,
@@ -251,10 +251,12 @@ function MembersTable({
   members,
   currentUserId,
   isOwner,
+  isAdmin,
 }: {
   members: MemberRecord[]
   currentUserId: string
   isOwner: boolean
+  isAdmin: boolean
 }) {
   const { toast } = useToast()
   const [transferOpen, setTransferOpen] = useState(false)
@@ -262,6 +264,30 @@ function MembersTable({
   const isExpired = (expiresAt: string | null | undefined) => {
     if (!expiresAt) return false
     return new Date(expiresAt) < new Date()
+  }
+
+  const handleRoleChange = async (targetUserId: string, newRole: "admin" | "member") => {
+    try {
+      await updateMemberRole({ data: { targetUserId, newRole } })
+      toast({ description: `Role updated to ${newRole}` })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    }
+  }
+
+  const canChangeRole = (member: MemberRecord) => {
+    // Only admins can change roles
+    if (!isAdmin) return false
+    // Cannot change own role
+    if (member.userId === currentUserId) return false
+    // Cannot change owner's role
+    if (member.role === "owner") return false
+    // Can only change active members
+    if (member.status !== "active") return false
+    return true
   }
 
   return (
@@ -299,6 +325,28 @@ function MembersTable({
                     <Button variant="ghost" size="sm" onClick={() => setTransferOpen(true)} title="Transfer ownership">
                       <Icon icon={ArrowRightLeft} size="sm" />
                     </Button>
+                  )}
+                  {canChangeRole(member) && (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => member.userId && handleRoleChange(member.userId, "admin")}
+                        disabled={member.role === "admin"}
+                        title="Make admin"
+                      >
+                        Admin
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => member.userId && handleRoleChange(member.userId, "member")}
+                        disabled={member.role === "member"}
+                        title="Make member"
+                      >
+                        Member
+                      </Button>
+                    </div>
                   )}
                 </div>
               </TableCell>
@@ -364,6 +412,7 @@ function MembershipsSection() {
 
   const currentUserMembership = members.find((m) => m.userId === user.id)
   const isOwner = currentUserMembership?.role === "owner"
+  const isAdmin = isOwner || currentUserMembership?.role === "admin"
 
   return (
     <div className="flex flex-col gap-4">
@@ -379,7 +428,7 @@ function MembershipsSection() {
       <div className="flex flex-col gap-2">
         {isLoading && <TableSkeleton cols={4} rows={3} />}
         {!isLoading && members.length > 0 && (
-          <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} />
+          <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
         )}
       </div>
     </div>

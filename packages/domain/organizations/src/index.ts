@@ -35,6 +35,14 @@ export {
   transferOwnershipUseCase,
 } from "./use-cases/transfer-ownership.ts"
 export {
+  CannotChangeOwnerRoleError,
+  CannotChangeOwnRoleError,
+  NotAdminError,
+  type UpdateMemberRoleError,
+  type UpdateMemberRoleInput,
+  updateMemberRoleUseCase,
+} from "./use-cases/update-member-role.ts"
+export {
   type UpdateOrganizationError,
   type UpdateOrganizationInput,
   updateOrganizationUseCase,
