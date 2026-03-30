@@ -5,7 +5,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRoot,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
   FormWrapper,
   Icon,
@@ -450,7 +449,6 @@ function MembersTable({
                         {member.role === "owner" && isOwner && (
                           <DropdownMenuItem onSelect={() => setTransferOpen(true)}>Transfer ownership</DropdownMenuItem>
                         )}
-                        {member.role === "owner" && isOwner && canChangeRole(member) && <DropdownMenuSeparator />}
                         {canChangeRole(member) && (
                           <DropdownMenuItem onSelect={() => openChangeRoleModal(member)}>Change role</DropdownMenuItem>
                         )}
