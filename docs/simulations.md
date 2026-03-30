@@ -99,9 +99,9 @@ The SDK entrypoint should preserve the proposal shape:
 
 Dataset sources:
 
-- a Latitude dataset id
-- a custom function loader that returns scenarios
-- a query-backed dataset
+- a Latitude dataset CUID
+- a custom function loader that returns scenarios (stored as `"CUSTOM"` sentinel)
+- query-backed datasets are deferred to post-MVP
 
 ## Product Surface
 

@@ -23,7 +23,7 @@ export const scores = latitudeSchema.table(
     value: doublePrecision("value").notNull(), // normalized [0, 1] score value
     passed: boolean("passed").notNull(), // true if passed, false if failed or errored
     feedback: text("feedback").notNull(), // clusterable feedback text used by issues
-    metadata: jsonb("metadata").$type<ScoreMetadata>().notNull().default(sql`'{}'::jsonb`), // JSON-encoded EvaluationScoreMetadata | AnnotationScoreMetadata | CustomScoreMetadata
+    metadata: jsonb("metadata").$type<ScoreMetadata>().notNull(), // JSON-encoded EvaluationScoreMetadata | AnnotationScoreMetadata | CustomScoreMetadata
     error: text("error"), // canonical error text when the score generation truly errored
     errored: boolean("errored").notNull(), // maintained in application/domain code on create or update
 

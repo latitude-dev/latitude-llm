@@ -10,6 +10,8 @@ import {
   SEED_SCORE_ISSUE_LINKED_ID,
   SEED_SCORE_PASSED_ID,
   SEED_SCORE_PENDING_ID,
+  SEED_SCORE_SIMULATION_LINKED_ID,
+  SEED_SIMULATION_ID,
 } from "@domain/shared"
 import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
@@ -170,6 +172,30 @@ const scoreRows = [
     draftedAt: null,
     createdAt: new Date("2026-03-23T14:15:00.000Z"),
     updatedAt: new Date("2026-03-23T14:15:00.000Z"),
+  },
+  {
+    id: SEED_SCORE_SIMULATION_LINKED_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    sessionId: "seed-sim-session-1",
+    traceId: "77777777777777777777777777777777",
+    spanId: "eeeeeeeeeeeeeeee",
+    source: "evaluation" as const,
+    sourceId: SEED_EVALUATION_ID,
+    simulationId: SEED_SIMULATION_ID,
+    issueId: null,
+    value: 0.95,
+    passed: true,
+    feedback: "The agent correctly resolved the support ticket within the expected parameters.",
+    metadata: { evaluationHash: "seed-eval-v1" },
+    error: null,
+    errored: false,
+    duration: 920_000_000,
+    tokens: 2_140,
+    cost: 312_000,
+    draftedAt: null,
+    createdAt: new Date("2026-03-25T14:02:00.000Z"),
+    updatedAt: new Date("2026-03-25T14:02:00.000Z"),
   },
 ] as const
 

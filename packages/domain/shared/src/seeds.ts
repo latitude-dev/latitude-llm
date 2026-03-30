@@ -10,6 +10,7 @@ import {
   OrganizationId,
   ProjectId,
   ScoreId,
+  SimulationId,
   UserId,
 } from "./id.ts"
 
@@ -41,6 +42,9 @@ export const SEED_ANNOTATION_QUEUE_ITEM_PENDING_ID = AnnotationQueueItemId("g7d3
 export const SEED_ANNOTATION_QUEUE_ITEM_COMPLETED_ID = AnnotationQueueItemId("w50qstqvujrivs8xreens7mt")
 export const SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_ID = AnnotationQueueItemId("txispc9i1qpx0vc2cbjrt4kx")
 export const SEED_ANNOTATION_QUEUE_ITEM_LIVE_ID = AnnotationQueueItemId("tin3ni9h6aqwc0c4fcrkxxx7")
+export const SEED_SIMULATION_ID = SimulationId("sim0k7x9g2m4n5p8q1r3s6t0")
+export const SEED_SIMULATION_ERRORED_ID = SimulationId("sim1v2w3x4y5z6a7b8c9d0e1")
+export const SEED_SCORE_SIMULATION_LINKED_ID = ScoreId("wk8m3p5r7t9v1x3z5b7d9f1h")
 
 // Additional constants for seeding
 export const SEED_ORG_NAME = "Acme Inc."

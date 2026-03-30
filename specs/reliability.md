@@ -309,8 +309,7 @@ export const organization = latitudeSchema.table("organization", {
   // existing Better Auth fields...
   settings: jsonb("settings")
     .$type<OrganizationSettings>()
-    .notNull()
-    .default(sql`'{}'::jsonb`),
+    .notNull(),
   ...timestamps(),
 });
 
@@ -323,8 +322,7 @@ export const projects = latitudeSchema.table(
     slug: varchar("slug", { length: 256 }).notNull(),
     settings: jsonb("settings")
       .$type<ProjectSettings>()
-      .notNull()
-      .default(sql`'{}'::jsonb`),
+      .notNull(),
     deletedAt: tzTimestamp("deleted_at"), // existing project soft-delete field
     lastEditedAt: tzTimestamp("last_edited_at").notNull().defaultNow(), // existing project metadata field
     ...timestamps(),
@@ -1069,12 +1067,10 @@ export const annotationQueues = latitudeSchema.table(
     instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
     settings: jsonb("settings")
       .$type<AnnotationQueueSettings>()
-      .notNull()
-      .default(sql`'{}'::jsonb`), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
+      .notNull(), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
     assignees: varchar("assignees", { length: 24 })
       .array()
-      .notNull()
-      .default(sql`'{}'::varchar[]`), // assigned user ids; empty array when unassigned
+      .notNull(), // assigned user ids; empty array when unassigned
     deletedAt: tzTimestamp("deleted_at"), // soft deletion timestamp
     ...timestamps(),
   },
@@ -1380,8 +1376,7 @@ export const scores = latitudeSchema.table(
     feedback: text("feedback").notNull(), // clusterable feedback text used by issues
     metadata: jsonb("metadata")
       .$type<ScoreMetadata>()
-      .notNull()
-      .default(sql`'{}'::jsonb`), // JSON-encoded EvaluationScoreMetadata | AnnotationScoreMetadata | CustomScoreMetadata
+      .notNull(), // JSON-encoded EvaluationScoreMetadata | AnnotationScoreMetadata | CustomScoreMetadata
     error: text("error"), // canonical error text when the score generation truly errored
     errored: boolean("errored").notNull(), // maintained in application/domain code on create or update
 
@@ -2093,6 +2088,8 @@ Because Latitude evaluations are stored as sandboxed JavaScript-like scripts, th
 
 ### Simulation Model
 
+The `dataset` column stores either a Latitude dataset CUID or the `"CUSTOM"` sentinel when the user provides a custom function loader. Query-backed datasets (SQL-like expressions defined in user code) are deferred to post-MVP Phase 22, which will migrate the column from `varchar(24)` to `text`.
+
 ```typescript
 type SimulationMetadata = {
   threshold: number | "CUSTOM"; // percentage [0, 100] or "CUSTOM"
@@ -2112,7 +2109,7 @@ export const simulations = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(), // owning organization
     projectId: cuid("project_id").notNull(), // owning project
     name: varchar("name", { length: 128 }).notNull(), // simulation name (defined in the `*.sim.*` file)
-    dataset: text("dataset").notNull(), // dataset cuid, query, or "CUSTOM"
+    dataset: varchar("dataset", { length: 24 }).notNull(), // dataset CUID or "CUSTOM" sentinel; query-backed datasets are deferred to post-MVP
     evaluations: varchar("evaluations", { length: 128 }).array().notNull(), // evaluation cuids or custom source ids used during the run
     passed: boolean("passed").notNull(), // true if the full simulation run passed
     errored: boolean("errored").notNull(), // derived helper maintained by application code at write time from whether `error` is present
@@ -2176,8 +2173,8 @@ export const simulation = Simulation({
   // like async (results: Record<scenario, results[]>) => results.filter((result) => result.passed).length / results.length >= 0.5
   threshold: 50,
 
-  // Use the dataset in latitude named "goldset. This can be a dynamic dataset query
-  // like "environment = 'production' AND scores.annotation = 0"
+  // Use a Latitude dataset CUID, or "CUSTOM" when the user provides a custom function loader.
+  // Query-backed datasets (e.g. "environment = 'production' AND scores.annotation = 0") are deferred to post-MVP.
   // This can also be a function that loads a list of traces (in genai format) with
   // optional expected output, from wherever you store your existing golden datasets
   // like async () => await fetch('https://api.myapp.com/goldset') as Record<string, any>[]
@@ -2436,12 +2433,12 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: should land before score analytics and post-MVP simulation phases start, but it can run in parallel with phases 3 through 6 once Phase 2 lands.
 
-- [ ] Define the canonical shared Zod schemas for simulations and simulation runs; infer TypeScript types.
-- [ ] Add the Postgres `simulations` table with full Drizzle definition using repo-convention helpers, RLS, and the exact secondary indexes defined by this spec.
-- [ ] Extend telemetry storage with `simulation_id` as a non-null fixed-width CUID link using the empty-string sentinel when absent through a new ClickHouse migration rather than by editing existing migration history.
-- [ ] Add representative seed data for simulations and simulation-linked score/telemetry examples.
-- [ ] Define the simulations-domain named constants for reporting defaults and upload/local-only behavior.
-- [ ] Propagate `simulation_id` into the existing traces and sessions materializations via a new ClickHouse migration rather than by editing existing migration history.
+- [x] Define the canonical shared Zod schemas for simulations and simulation runs; infer TypeScript types.
+- [x] Add the Postgres `simulations` table with full Drizzle definition using repo-convention helpers, RLS, and the exact secondary indexes defined by this spec.
+- [x] Extend telemetry storage with `simulation_id` as a non-null fixed-width CUID link using the empty-string sentinel when absent through a new ClickHouse migration rather than by editing existing migration history.
+- [x] Add representative seed data for simulations and simulation-linked score/telemetry examples.
+- [x] Define the simulations-domain named constants for reporting defaults and upload/local-only behavior.
+- [x] Propagate `simulation_id` into the existing traces and sessions materializations via a new ClickHouse migration rather than by editing existing migration history.
 
 **Exit gate**: simulations schema and table are complete; telemetry has `simulation_id` propagated through spans, traces, and sessions materializations; later phases can build simulation runtime and product surface.
 
@@ -2687,7 +2684,7 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 **Parallelization notes**: can run in parallel with phases 20 and 23 once Phase 19 lands.
 
 - [ ] Harden the evaluation and annotation-queue filter UX around the shared `FilterSet`, including field/operator-aware affordances and approved public/machine-facing filter surfaces where richer UX is required.
-- [ ] Add query-backed simulation datasets and validate their performance characteristics.
+- [ ] Add query-backed simulation datasets and validate their performance characteristics, including migrating the `simulations.dataset` column from `varchar(24)` to `text` to accommodate query strings.
 - [ ] Define and implement the exact ClickHouse materialized score analytics tables once the initial reporting/query shapes have stabilized.
 
 **Exit gate**: shared filters no longer rely on raw JSON editing where richer UX is required, and query-backed datasets plus deferred score analytics materializations are no longer pending definition.
