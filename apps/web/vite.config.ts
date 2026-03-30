@@ -34,8 +34,38 @@ function stripUseDirectives() {
 }
 
 export default defineConfig({
-  plugins: [stripUseDirectives(), tanstackStart({ start: { entry: "./src/start.ts" } }), nitro(), tailwindcss(), react()],
+  plugins: [
+    stripUseDirectives(),
+    tanstackStart({ start: { entry: "./src/start.ts" } }),
+    nitro(),
+    tailwindcss(),
+    react(),
+  ],
   build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              test: /node_modules\/codemirror/,
+              name: "codemirror",
+            },
+            {
+              test: /node_modules\/react/,
+              name: "react",
+            },
+            {
+              test: /node_modules\/react-dom/,
+              name: "react-dom",
+            },
+            {
+              test: /node_modules\/zod/,
+              name: "zod",
+            },
+          ],
+        },
+      },
+    },
     rollupOptions: {
       plugins: bundleAnalyze
         ? [
@@ -49,39 +79,6 @@ export default defineConfig({
             }),
           ]
         : [],
-      output: {
-        manualChunks(id) {
-          if (id.includes("icons/custom-icons/providers/")) {
-            return "vendor-provider-icons"
-          }
-
-          if (!id.includes("node_modules")) {
-            return undefined
-          }
-
-          if (id.includes("@codemirror") || id.includes("codemirror")) {
-            return "vendor-codemirror"
-          }
-
-          if (id.includes("@tanstack")) {
-            return "vendor-tanstack"
-          }
-
-          if (id.includes("zod")) {
-            return "vendor-zod"
-          }
-
-          if (id.includes("papaparse")) {
-            return "vendor-papaparse"
-          }
-
-          if (id.includes("react-dom") || id.includes("/react/")) {
-            return "vendor-react"
-          }
-
-          return undefined
-        },
-      },
     },
   },
   server:
