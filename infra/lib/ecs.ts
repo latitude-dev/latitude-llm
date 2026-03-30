@@ -34,7 +34,6 @@ export function createEcs(
   name: string,
   config: EnvironmentConfig,
   privateSubnets: Ec2Subnet[],
-  publicSubnets: Ec2Subnet[],
   securityGroup: Ec2SecurityGroup,
   secrets: Record<string, SecretsmanagerSecret>,
   rdsSecret: SecretsmanagerSecret,
@@ -157,6 +156,7 @@ export function createEcs(
       rdsAdminSecret,
       cacheRedisHost,
       bullmqRedisHost,
+      s3Bucket,
       imageTag,
       temporalCloud,
     )
@@ -263,6 +263,7 @@ function createTaskDefinition(
   rdsAdminSecret: SecretsmanagerSecret,
   cacheRedisHost: Output<string>,
   bullmqRedisHost: Output<string>,
+  s3Bucket: S3Bucket,
   imageTag: pulumi.Input<string>,
   temporalCloud: TemporalCloudConfig,
 ): EcsTaskDefinition {
@@ -301,6 +302,7 @@ function createTaskDefinition(
       secrets["temporal-api-key"].arn,
       secrets["datadog-api-key"].arn,
       secrets["datadog-site"].arn,
+      s3Bucket.id,
     ])
     .apply(
       ([
@@ -329,6 +331,7 @@ function createTaskDefinition(
         temporalApiKeyArn,
         datadogApiKeyArn,
         datadogSiteArn,
+        s3BucketName,
       ]) => {
         const baseEnvironment: { name: string; value: string }[] = [
           { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
@@ -342,7 +345,7 @@ function createTaskDefinition(
           { name: "LAT_BULLMQ_HOST", value: bullmqRedis },
           { name: "LAT_BULLMQ_PORT", value: "6379" },
           { name: "LAT_STORAGE_DRIVER", value: "s3" },
-          { name: "LAT_STORAGE_S3_BUCKET", value: config.s3.bucketName },
+          { name: "LAT_STORAGE_S3_BUCKET", value: s3BucketName },
           { name: "LAT_STORAGE_S3_REGION", value: config.region },
           { name: "LAT_PG_POOL_MAX", value: "20" },
           { name: "LAT_PG_IDLE_TIMEOUT_MS", value: "30000" },

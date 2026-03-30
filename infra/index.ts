@@ -24,8 +24,7 @@ const domainName = config.get("domainName") ?? defaults.domainName
 const githubOwner = config.get("githubOwner") ?? "latitude-dev"
 const githubRepo = config.get("githubRepo") ?? "latitude"
 
-const temporalCloudAddress =
-  config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
+const temporalCloudAddress = config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
 const temporalCloudNamespace = config.get("temporalCloudNamespace") ?? ""
 const temporalTaskQueue = config.get("temporalTaskQueue") ?? "latitude-workflows"
 
@@ -74,7 +73,6 @@ const ecs = createEcs(
   name,
   envConfig,
   vpc.privateSubnets,
-  vpc.publicSubnets,
   securityGroups.ecs,
   appSecrets.secrets,
   rds.secret,
@@ -122,7 +120,6 @@ export const outputs = {
   certificateArn: certificate.certificate.arn,
 
   githubActionsRoleArn: githubActions.deployRole.arn,
-
 
   bastionInstanceId: bastion.instance.id,
 
