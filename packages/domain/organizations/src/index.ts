@@ -27,6 +27,14 @@ export {
   removeMemberUseCase,
 } from "./use-cases/remove-member.ts"
 export {
+  CannotTransferToNonMemberError,
+  CannotTransferToSelfError,
+  NotOwnerError,
+  type TransferOwnershipError,
+  type TransferOwnershipInput,
+  transferOwnershipUseCase,
+} from "./use-cases/transfer-ownership.ts"
+export {
   type UpdateOrganizationError,
   type UpdateOrganizationInput,
   updateOrganizationUseCase,
