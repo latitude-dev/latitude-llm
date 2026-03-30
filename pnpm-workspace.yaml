@@ -32,7 +32,7 @@ catalog:
   tsx: 4.21.0
   turbo: 2.5.8
   typescript: 5.8.3
-  vite: 7.3.1
+  vite: 8.0.3
   vitest: 4.1.0
   zod: 4.3.6
   weaviate-client: 3.11.0
