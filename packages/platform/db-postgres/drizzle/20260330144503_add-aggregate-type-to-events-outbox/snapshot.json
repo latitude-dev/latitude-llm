@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "71e72f11-ff3e-4ef0-abfc-cb14446ecb2c",
+  "id": "2bbe4651-6d8e-4f1a-8d69-341799f26f5c",
   "prevIds": [
     "8de746a1-e6bc-4028-a73f-2ce9ae91e07c"
   ],
@@ -2166,7 +2166,7 @@
       "typeSchema": null,
       "notNull": true,
       "dimensions": 0,
-      "default": null,
+      "default": "''",
       "generated": null,
       "identity": null,
       "name": "aggregate_type",
