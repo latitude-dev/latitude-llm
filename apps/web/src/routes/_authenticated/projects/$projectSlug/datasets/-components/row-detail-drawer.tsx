@@ -71,7 +71,7 @@ export function RowDetailDrawer({
         <>
           <Button
             variant="ghost"
-            className="w-8 h-8 p-0"
+            size="icon"
             disabled={!canNavigateNext}
             onClick={onNavigateNext}
             aria-label="Next row"
@@ -81,7 +81,7 @@ export function RowDetailDrawer({
           </Button>
           <Button
             variant="ghost"
-            className="w-8 h-8 p-0"
+            size="icon"
             disabled={!canNavigatePrev}
             onClick={onNavigatePrev}
             aria-label="Previous row"
