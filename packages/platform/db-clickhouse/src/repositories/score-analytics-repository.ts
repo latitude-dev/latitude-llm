@@ -465,6 +465,15 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           })
           .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
       },
+      deleteById: (id: ScoreId) =>
+        chSqlClient
+          .query(async (client) => {
+            await client.command({
+              query: "ALTER TABLE scores DELETE WHERE id = {id:FixedString(24)}",
+              query_params: { id },
+            })
+          })
+          .pipe(Effect.asVoid),
     }
   }),
 )

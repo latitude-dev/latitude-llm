@@ -1,4 +1,5 @@
 import { createRoute, type OpenAPIHono, z } from "@hono/zod-openapi"
+import type { AppEnv } from "../types.ts"
 
 const HealthResponseSchema = z
   .object({
@@ -20,12 +21,8 @@ const healthRoute = createRoute({
   },
 })
 
-interface HealthRouteContext {
-  app: OpenAPIHono
-}
-
-export const registerHealthRoute = (context: HealthRouteContext) => {
-  context.app.openapi(healthRoute, (c) => {
+export const registerHealthRoute = ({ app }: { app: OpenAPIHono<AppEnv> }) => {
+  app.openapi(healthRoute, (c) => {
     return c.json({ service: "api" as const, status: "ok" as const }, 200)
   })
 }
