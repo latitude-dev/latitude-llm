@@ -30,7 +30,7 @@ import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouteContext, useRouter } from "@tanstack/react-router"
 import { ChevronDown, Clipboard, Pencil, Trash2 } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   deleteApiKeyMutation,
   updateApiKeyMutation,
@@ -267,6 +267,17 @@ function ChangeRoleModal({
   const [selectedRole, setSelectedRole] = useState<"admin" | "member" | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  // Pre-select current role when modal opens
+  useEffect(() => {
+    if (open && member?.role === "admin") {
+      setSelectedRole("admin")
+    } else if (open && member?.role === "member") {
+      setSelectedRole("member")
+    } else if (!open) {
+      setSelectedRole(null)
+    }
+  }, [open, member])
+
   const handleSubmit = async () => {
     if (!member?.userId || !selectedRole) return
 
@@ -427,13 +438,13 @@ function MembersTable({
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
-                  <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
                   {(member.role === "owner" && isOwner) || canChangeRole(member) ? (
                     <DropdownMenuRoot>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Icon icon={ChevronDown} size="sm" />
-                        </Button>
+                        <div className="flex items-center gap-2 cursor-pointer hover:bg-muted px-2 py-1 rounded transition-colors">
+                          <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+                          <Icon icon={ChevronDown} size="sm" className="text-muted-foreground" />
+                        </div>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {member.role === "owner" && isOwner && (
@@ -449,7 +460,9 @@ function MembersTable({
                         )}
                       </DropdownMenuContent>
                     </DropdownMenuRoot>
-                  ) : null}
+                  ) : (
+                    <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+                  )}
                 </div>
               </TableCell>
               <TableCell>
