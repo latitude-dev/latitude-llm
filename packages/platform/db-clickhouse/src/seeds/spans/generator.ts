@@ -26,6 +26,7 @@ export type SpanRow = {
   span_id: string
   parent_span_id: string
   api_key_id: string
+  simulation_id: string
   start_time: string
   end_time: string
   name: string
@@ -76,6 +77,7 @@ export type TraceConfig = {
   readonly organizationId: string
   readonly projectId: string
   readonly apiKeyId: string
+  readonly simulationId?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -210,6 +212,7 @@ type SpanBase = {
   organizationId: string
   projectId: string
   apiKeyId: string
+  simulationId: string
   tags: string[]
   metadata: Record<string, string>
 }
@@ -224,6 +227,7 @@ function makeBaseSpan(base: SpanBase): SpanRow {
     span_id: randomHex(16),
     parent_span_id: base.parentSpanId,
     api_key_id: base.apiKeyId,
+    simulation_id: base.simulationId,
     start_time: formatClickhouseTime(base.startTime),
     end_time: formatClickhouseTime(addMs(base.startTime, base.durationMs)),
     name: "",
@@ -401,6 +405,7 @@ type TraceContext = {
   organizationId: string
   projectId: string
   apiKeyId: string
+  simulationId: string
   startTime: Date
   sessionId: string
   userId: string
@@ -441,6 +446,7 @@ function newTraceCtx(config: TraceConfig): TraceContext {
     organizationId: config.organizationId,
     projectId: config.projectId,
     apiKeyId: config.apiKeyId,
+    simulationId: config.simulationId ?? "",
     startTime: randomTimeInWindow(config.timeWindow.from, config.timeWindow.to),
     sessionId: "",
     userId: Math.random() > 0.4 ? pick(USER_IDS) : "",
@@ -471,6 +477,7 @@ function toBase(
     organizationId: ctx.organizationId,
     projectId: ctx.projectId,
     apiKeyId: ctx.apiKeyId,
+    simulationId: ctx.simulationId,
     tags: ctx.tags,
     metadata: ctx.metadata,
   }
@@ -1034,6 +1041,7 @@ function generateSessionTraces(config: TraceConfig, sessionSize: number): SpanRo
       organizationId: config.organizationId,
       projectId: config.projectId,
       apiKeyId: config.apiKeyId,
+      simulationId: config.simulationId ?? "",
       startTime: sessionCursor,
       sessionId: session.sessionId,
       userId: session.userId,

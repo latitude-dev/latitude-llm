@@ -20,6 +20,7 @@ import {
   SessionId as toSessionId,
   TraceId as toTraceId,
 } from "@domain/shared"
+import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 // ---------------------------------------------------------------------------
@@ -163,33 +164,30 @@ const toTrendBucket = (row: TrendRow): ScoreTrendBucket => ({
   totalTokens: Number(row.total_tokens),
 })
 
-/** Strip null bytes from FixedString values returned by ClickHouse. */
-const stripNulls = (s: string): string => s.replace(/\0/g, "")
-
 const toTraceRollup = (row: TraceRollupRow): TraceScoreRollup => ({
-  traceId: toTraceId(stripNulls(row.trace_id)),
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
   totalScores: Number(row.total_scores),
   passedCount: Number(row.passed_count),
   failedCount: Number(row.failed_count),
   erroredCount: Number(row.errored_count),
   avgValue: Number(row.avg_value),
   hasIssue: row.has_issue === 1,
-  sources: row.sources.map(stripNulls),
+  sources: row.sources.map(normalizeCHString),
 })
 
 const toSessionRollup = (row: SessionRollupRow): SessionScoreRollup => ({
-  sessionId: toSessionId(stripNulls(row.session_id)),
+  sessionId: toSessionId(normalizeCHString(row.session_id)),
   totalScores: Number(row.total_scores),
   passedCount: Number(row.passed_count),
   failedCount: Number(row.failed_count),
   erroredCount: Number(row.errored_count),
   avgValue: Number(row.avg_value),
   hasIssue: row.has_issue === 1,
-  sources: row.sources.map(stripNulls),
+  sources: row.sources.map(normalizeCHString),
 })
 
 const toIssueOccurrence = (row: IssueOccurrenceRow): IssueOccurrenceAggregate => ({
-  issueId: toIssueId(row.issue_id),
+  issueId: toIssueId(normalizeCHString(row.issue_id)),
   totalOccurrences: Number(row.total_occurrences),
   recentOccurrences: Number(row.recent_occurrences),
   baselineAvgOccurrences: Number(row.baseline_avg_occurrences),

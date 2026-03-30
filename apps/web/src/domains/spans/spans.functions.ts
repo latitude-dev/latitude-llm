@@ -15,6 +15,7 @@ export interface SpanRecord {
   readonly traceId: string
   readonly spanId: string
   readonly parentSpanId: string
+  readonly simulationId: string
   readonly name: string
   readonly serviceName: string
   readonly kind: SpanKind
@@ -77,6 +78,7 @@ const serializeSpan = (span: Span): SpanRecord => ({
   traceId: span.traceId,
   spanId: span.spanId,
   parentSpanId: span.parentSpanId,
+  simulationId: span.simulationId,
   name: span.name,
   serviceName: span.serviceName,
   kind: span.kind,

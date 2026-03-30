@@ -1,6 +1,8 @@
 import type { ChFieldRegistry } from "../filter-builder.ts"
 
 export const SESSION_FIELD_REGISTRY: ChFieldRegistry = {
+  sessionId: { column: "session_id", chType: "String" },
+  simulationId: { column: "simulation_id", chType: "String" },
   userId: { column: "user_id", chType: "String" },
   tags: { column: "tags", chType: "String", isArray: true },
   models: { column: "models", chType: "String", isArray: true },

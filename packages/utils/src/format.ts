@@ -66,6 +66,25 @@ export function parseCHDate(value: string): Date {
   return new Date(`${value} UTC`)
 }
 
+const ZWSP_AND_BOM = /[\u200B-\u200D\uFEFF]/g
+
+/**
+ * Normalizes scalar strings read from CH (ClickHouse) JSON responses.
+ *
+ * `FixedString` columns are often NUL-padded to their width; the client returns those bytes in the
+ * string. Optional id columns also use empty `FixedString` / defaulted strings the same way.
+ * Strip NULs, zero-width/BOM characters, then trim so `"absent"` consistently maps to `""`.
+ */
+export function normalizeCHString(value: string | null | undefined): string {
+  if (value == null) return ""
+  return value.replace(/\0/g, "").replace(ZWSP_AND_BOM, "").trim()
+}
+
+/** True when {@link normalizeCHString} yields an empty string. */
+export function isBlankCHString(value: string | null | undefined): boolean {
+  return normalizeCHString(value) === ""
+}
+
 export function safeStringifyJson(value: unknown, fallback = ""): string {
   if (value === undefined || value === null) return fallback
   if (typeof value === "string") return value

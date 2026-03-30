@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatCount, formatPrice } from "./format.ts"
+import { formatCount, formatPrice, isBlankCHString, normalizeCHString } from "./format.ts"
 
 describe("formatCount", () => {
   it("returns small numbers as-is", () => {
@@ -25,6 +25,25 @@ describe("formatCount", () => {
 
   it("handles negative numbers", () => {
     expect(formatCount(-1500)).toBe("-1.5K")
+  })
+})
+
+describe("normalizeCHString", () => {
+  it("treats nullish as empty", () => {
+    expect(normalizeCHString(undefined)).toBe("")
+    expect(normalizeCHString(null)).toBe("")
+    expect(isBlankCHString(undefined)).toBe(true)
+  })
+
+  it("strips NUL padding from FixedString-style values", () => {
+    expect(normalizeCHString("abc\0\0")).toBe("abc")
+    expect(normalizeCHString("\0\0")).toBe("")
+    expect(isBlankCHString("\0\0")).toBe(true)
+  })
+
+  it("strips zero-width/BOM and trims", () => {
+    expect(normalizeCHString("\u200Bx\uFEFF")).toBe("x")
+    expect(normalizeCHString("  id  ")).toBe("id")
   })
 })
 

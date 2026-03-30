@@ -4,6 +4,7 @@ import {
   type ChSqlClientShape,
   ExternalUserId,
   SessionId,
+  SimulationId,
   SpanId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
@@ -12,7 +13,7 @@ import {
 } from "@domain/shared"
 import type { Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode, ToolDefinition } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
-import { parseCHDate } from "@repo/utils"
+import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
@@ -53,7 +54,7 @@ const INT_TO_STATUS_CODE: Record<number, SpanStatusCode> = {
 // Columns selected for list/trace queries (excludes large blob payloads).
 const LIST_COLUMNS = `
   organization_id, project_id, session_id, user_id, trace_id, span_id,
-  parent_span_id, api_key_id, start_time, end_time,
+  parent_span_id, api_key_id, simulation_id, start_time, end_time,
   name, service_name, kind, status_code, status_message,
   trace_flags, trace_state, error_type, tags, metadata,
   events_json, links_json,
@@ -78,6 +79,7 @@ type SpanListRow = {
   span_id: string
   parent_span_id: string
   api_key_id: string
+  simulation_id: string
   start_time: string
   end_time: string
   name: string
@@ -131,14 +133,15 @@ type SpanDetailRow = SpanListRow & {
 }
 
 const toBaseFields = (row: SpanListRow) => ({
-  organizationId: toOrganizationId(row.organization_id),
-  projectId: toProjectId(row.project_id),
-  sessionId: SessionId(row.session_id),
-  userId: ExternalUserId(row.user_id),
-  traceId: toTraceId(row.trace_id),
-  spanId: SpanId(row.span_id),
-  parentSpanId: row.parent_span_id,
-  apiKeyId: row.api_key_id,
+  organizationId: toOrganizationId(normalizeCHString(row.organization_id)),
+  projectId: toProjectId(normalizeCHString(row.project_id)),
+  sessionId: SessionId(normalizeCHString(row.session_id)),
+  userId: ExternalUserId(normalizeCHString(row.user_id)),
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
+  spanId: SpanId(normalizeCHString(row.span_id)),
+  parentSpanId: normalizeCHString(row.parent_span_id),
+  apiKeyId: normalizeCHString(row.api_key_id),
+  simulationId: SimulationId(normalizeCHString(row.simulation_id)),
   startTime: parseCHDate(row.start_time),
   endTime: parseCHDate(row.end_time),
   name: row.name,
@@ -149,7 +152,7 @@ const toBaseFields = (row: SpanListRow) => ({
   traceFlags: row.trace_flags,
   traceState: row.trace_state,
   errorType: row.error_type,
-  tags: row.tags,
+  tags: row.tags.map(normalizeCHString),
   metadata: row.metadata ?? {},
   eventsJson: row.events_json,
   linksJson: row.links_json,
@@ -168,8 +171,8 @@ const toBaseFields = (row: SpanListRow) => ({
   costIsEstimated: row.cost_is_estimated !== 0,
   timeToFirstTokenNs: Number(row.time_to_first_token_ns),
   isStreaming: row.is_streaming !== 0,
-  responseId: row.response_id,
-  finishReasons: row.finish_reasons,
+  responseId: normalizeCHString(row.response_id),
+  finishReasons: row.finish_reasons.map(normalizeCHString),
   attrString: row.attr_string,
   attrInt: row.attr_int,
   attrFloat: row.attr_float,
@@ -233,8 +236,8 @@ const toDomainSpanDetail = (row: SpanDetailRow): SpanDetail => ({
   outputMessages: parseMessages(row.output_messages),
   systemInstructions: parseSystem(row.system_instructions),
   toolDefinitions: parseToolDefinitions(row.tool_definitions),
-  toolCallId: row.tool_call_id,
-  toolName: row.tool_name,
+  toolCallId: normalizeCHString(row.tool_call_id),
+  toolName: normalizeCHString(row.tool_name),
   toolInput: row.tool_input,
   toolOutput: row.tool_output,
 })
@@ -248,6 +251,7 @@ const toInsertRow = (span: SpanDetail) => ({
   span_id: span.spanId as string,
   parent_span_id: span.parentSpanId,
   api_key_id: span.apiKeyId,
+  simulation_id: span.simulationId as string,
   start_time: toClickhouseDateTime(span.startTime),
   end_time: toClickhouseDateTime(span.endTime),
   name: span.name,

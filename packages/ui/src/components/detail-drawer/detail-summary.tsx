@@ -13,6 +13,16 @@ export type DetailSummaryItem = {
   readonly copyable?: boolean
 }
 
+/** Trims display/copy text; API strings are normalized when read from ClickHouse. */
+function normalizeCopyableScalar(value: string | undefined): string {
+  if (typeof value !== "string") return ""
+  return value.trim()
+}
+
+function hasCopyableDisplayValue(value: string | undefined): boolean {
+  return normalizeCopyableScalar(value).length > 0
+}
+
 function SummaryItemContent({
   value,
   isLoading,
@@ -32,8 +42,9 @@ function SummaryItemContent({
   })
 
   const handleCopy = useCallback(() => {
-    if (copyable && value) {
-      navigator.clipboard.writeText(value)
+    const normalized = normalizeCopyableScalar(value)
+    if (copyable && normalized.length > 0) {
+      navigator.clipboard.writeText(normalized)
       setIsCopied(true)
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
       timeoutRef.current = setTimeout(() => setIsCopied(false), 2000)
@@ -44,23 +55,29 @@ function SummaryItemContent({
     return <Skeleton className="h-4 w-24 inline-block" />
   }
 
-  if (copyable && value) {
+  const normalized = normalizeCopyableScalar(value)
+
+  if (copyable && normalized.length > 0) {
     return (
       <button
         type="button"
         className={cn("flex flex-row items-center gap-2", { "cursor-pointer hover:text-primary": copyable })}
         onClick={handleCopy}
       >
-        <Text.H5 color="foreground">{value}</Text.H5>
+        <Text.H5 color="foreground">{normalized}</Text.H5>
         <Icon icon={isCopied ? CheckIcon : CopyIcon} size="sm" />
       </button>
     )
   }
 
-  return <Text.H5 color="foreground">{value || "-"}</Text.H5>
+  return <Text.H5 color="foreground">{normalized.length > 0 ? normalized : "-"}</Text.H5>
 }
 
 function SummaryItem({ label, value, isLoading, copyable }: DetailSummaryItem) {
+  if (!isLoading && copyable && !hasCopyableDisplayValue(value)) {
+    return null
+  }
+
   return (
     <div className="flex flex-col gap-0.5 min-w-[120px]">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>

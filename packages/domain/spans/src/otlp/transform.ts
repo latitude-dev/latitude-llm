@@ -1,4 +1,4 @@
-import { ExternalUserId, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import { stringAttr } from "./attributes.ts"
 import { parseContent } from "./content/index.ts"
@@ -120,6 +120,7 @@ function transformSpan({
     spanId: SpanId(span.spanId),
     parentSpanId: span.parentSpanId ?? "",
     apiKeyId: context.apiKeyId,
+    simulationId: SimulationId(""),
     startTime: nanosToDate(span.startTimeUnixNano),
     endTime: nanosToDate(span.endTimeUnixNano),
     name: span.name,
