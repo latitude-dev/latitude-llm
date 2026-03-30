@@ -68,14 +68,24 @@ function OrganizationSection() {
   )
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const saveField = useCallback(
-    (patch: { name?: string; settings?: { keepMonitoring: boolean } }) => {
+  const saveName = useCallback(
+    (name: string) => {
       if (!org) return
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
-        updateOrganizationMutation(org.id, patch)
-        toast({ description: patch.name ? "Organization name updated" : "Monitoring preference updated" })
+        updateOrganizationMutation(org.id, { name })
+        toast({ description: "Organization name updated" })
       }, 600)
+    },
+    [org, toast],
+  )
+
+  const handleMonitoringChange = useCallback(
+    (checked: boolean) => {
+      if (!org) return
+      // Update collection immediately - it's optimistic
+      updateOrganizationMutation(org.id, { settings: { keepMonitoring: checked } })
+      toast({ description: "Monitoring preference updated" })
     },
     [org, toast],
   )
@@ -90,7 +100,7 @@ function OrganizationSection() {
         type="text"
         label="Organization Name"
         defaultValue={org.name}
-        onChange={(e) => saveField({ name: e.target.value })}
+        onChange={(e) => saveName(e.target.value)}
         placeholder="Organization name"
       />
       <div className="flex flex-row items-center justify-between">
@@ -103,7 +113,7 @@ function OrganizationSection() {
         <Switch
           id="keep-monitoring"
           checked={org.settings?.keepMonitoring ?? true}
-          onCheckedChange={(checked) => saveField({ settings: { keepMonitoring: checked } })}
+          onCheckedChange={handleMonitoringChange}
         />
       </div>
     </div>
@@ -479,30 +489,37 @@ function MembersTable({
               </TableCell>
               <TableCell align="right">
                 {isAdmin && (member.status === "active" || member.status === "invited") && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      const transaction =
-                        member.status === "invited"
-                          ? cancelMemberInviteMutation(member.id)
-                          : removeMemberMutation(member.id)
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          const transaction =
+                            member.status === "invited"
+                              ? cancelMemberInviteMutation(member.id)
+                              : removeMemberMutation(member.id)
 
-                      void transaction.isPersisted.promise
-                        .then(() => {
-                          toast({
-                            description: member.status === "invited" ? "Invitation canceled" : "Member removed",
-                          })
-                        })
-                        .catch((e) =>
-                          toast({
-                            variant: "destructive",
-                            description: toUserMessage(e),
-                          }),
-                        )
-                    }}
+                          void transaction.isPersisted.promise
+                            .then(() => {
+                              toast({
+                                description: member.status === "invited" ? "Invitation canceled" : "Member removed",
+                              })
+                            })
+                            .catch((e) =>
+                              toast({
+                                variant: "destructive",
+                                description: toUserMessage(e),
+                              }),
+                            )
+                        }}
+                      >
+                        <Icon icon={Trash2} size="sm" />
+                      </Button>
+                    }
                   >
-                    <Icon icon={Trash2} size="sm" />
-                  </Button>
+                    {member.status === "invited" ? "Cancel invitation" : "Remove member"}
+                  </Tooltip>
                 )}
               </TableCell>
             </TableRow>
