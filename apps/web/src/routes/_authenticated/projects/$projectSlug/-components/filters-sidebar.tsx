@@ -37,10 +37,13 @@ interface TextFilterField {
 const TRACES_TEXT_FIELDS: TextFilterField[] = [
   { label: "Name", field: "name", placeholder: "Enter name..." },
   { label: "Session ID", field: "sessionId", placeholder: "Filter by session..." },
+  { label: "Simulation ID", field: "simulationId", placeholder: "Filter by simulation..." },
   { label: "User ID", field: "userId", placeholder: "Filter by user..." },
 ]
 
 const SESSIONS_TEXT_FIELDS: TextFilterField[] = [
+  { label: "Session ID", field: "sessionId", placeholder: "Filter by session..." },
+  { label: "Simulation ID", field: "simulationId", placeholder: "Filter by simulation..." },
   { label: "User ID", field: "userId", placeholder: "Filter by user..." },
 ]
 

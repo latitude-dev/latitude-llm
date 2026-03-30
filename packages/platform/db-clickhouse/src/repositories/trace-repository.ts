@@ -5,6 +5,7 @@ import {
   ExternalUserId,
   type FilterSet,
   SessionId,
+  SimulationId,
   SpanId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
@@ -13,7 +14,7 @@ import {
 } from "@domain/shared"
 import type { Trace, TraceDetail, TraceListPage } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
-import { parseCHDate } from "@repo/utils"
+import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { buildClickHouseWhere } from "../filter-builder.ts"
@@ -49,6 +50,7 @@ const LIST_SELECT = `
   argMaxIfMerge(user_id)       AS user_id,
   groupUniqArrayArray(tags)    AS tags,
   maxMap(metadata)              AS metadata,
+  argMaxIfMerge(simulation_id) AS simulation_id,
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
   groupUniqArrayIfMerge(service_names) AS service_names,
@@ -84,6 +86,7 @@ type TraceListRow = {
   cost_total_microcents: string
   session_id: string
   user_id: string
+  simulation_id: string
   tags: string[]
   metadata: Record<string, string>
   models: string[]
@@ -120,9 +123,9 @@ const parseSystem = (json: string): GenAISystem => {
 }
 
 const toBaseFields = (row: TraceListRow): Trace => ({
-  organizationId: toOrganizationId(row.organization_id),
-  projectId: toProjectId(row.project_id),
-  traceId: toTraceId(row.trace_id),
+  organizationId: toOrganizationId(normalizeCHString(row.organization_id)),
+  projectId: toProjectId(normalizeCHString(row.project_id)),
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
   spanCount: Number(row.span_count),
   errorCount: Number(row.error_count),
   startTime: parseCHDate(row.start_time),
@@ -138,15 +141,16 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   costInputMicrocents: Number(row.cost_input_microcents),
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
-  sessionId: SessionId(row.session_id ?? ""),
-  userId: ExternalUserId(row.user_id ?? ""),
-  tags: row.tags,
+  sessionId: SessionId(normalizeCHString(row.session_id)),
+  userId: ExternalUserId(normalizeCHString(row.user_id)),
+  simulationId: SimulationId(normalizeCHString(row.simulation_id)),
+  tags: row.tags.map(normalizeCHString),
   metadata: row.metadata ?? {},
-  models: row.models,
-  providers: row.providers,
-  serviceNames: row.service_names,
-  rootSpanId: SpanId(row.root_span_id),
-  rootSpanName: row.root_span_name,
+  models: row.models.map(normalizeCHString),
+  providers: row.providers.map(normalizeCHString),
+  serviceNames: row.service_names.map(normalizeCHString),
+  rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
+  rootSpanName: normalizeCHString(row.root_span_name),
 })
 
 const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => {

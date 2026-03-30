@@ -17,6 +17,7 @@ import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
+import { SessionDetailDrawer } from "./-components/session-detail-drawer.tsx"
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
@@ -85,6 +86,7 @@ function ProjectPage() {
   })
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
+  const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
@@ -109,7 +111,13 @@ function ProjectPage() {
   }
 
   const onActiveTraceChange = (traceId: string | undefined) => {
+    setActiveSessionId("")
     setActiveTraceId(traceId ?? "")
+  }
+
+  const onActiveSessionChange = (sessionId: string | undefined) => {
+    setActiveTraceId("")
+    setActiveSessionId(sessionId ?? "")
   }
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
@@ -172,7 +180,7 @@ function ProjectPage() {
           <Layout.ActionRowItem>
             <Tabs
               variant="bordered"
-              hideLabels
+              size="sm"
               options={[
                 {
                   id: "traces",
@@ -186,7 +194,10 @@ function ProjectPage() {
                 },
               ]}
               active={activeTab}
-              onSelect={(id) => setActiveTab(id)}
+              onSelect={(id) => {
+                setActiveTab(id)
+                if (id === "traces") setActiveSessionId("")
+              }}
             />
             <Input
               placeholder={activeTab === "sessions" ? "Search sessions" : "Search traces"}
@@ -207,7 +218,11 @@ function ProjectPage() {
         </div>
       )}
 
-      {activeTab === "traces" ? <TracesView {...sharedViewProps} /> : <SessionsView {...sharedViewProps} />}
+      {activeTab === "traces" ? (
+        <TracesView {...sharedViewProps} />
+      ) : (
+        <SessionsView {...sharedViewProps} onActiveSessionChange={onActiveSessionChange} />
+      )}
 
       {activeTraceId ? (
         <Layout.Aside>
@@ -215,6 +230,14 @@ function ProjectPage() {
             traceId={activeTraceId}
             projectId={project?.id ?? ""}
             onClose={() => setActiveTraceId("")}
+          />
+        </Layout.Aside>
+      ) : activeSessionId && activeTab === "sessions" ? (
+        <Layout.Aside>
+          <SessionDetailDrawer
+            sessionId={activeSessionId}
+            projectId={project?.id ?? ""}
+            onClose={() => setActiveSessionId("")}
           />
         </Layout.Aside>
       ) : null}

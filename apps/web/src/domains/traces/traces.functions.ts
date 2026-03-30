@@ -31,6 +31,7 @@ export interface TraceRecord {
   readonly costTotalMicrocents: number
   readonly sessionId: string
   readonly userId: string
+  readonly simulationId: string
   readonly tags: readonly string[]
   readonly metadata: Readonly<Record<string, string>>
   readonly models: readonly string[]
@@ -61,6 +62,7 @@ const serializeTrace = (trace: Trace): TraceRecord => ({
   costTotalMicrocents: trace.costTotalMicrocents,
   sessionId: trace.sessionId,
   userId: trace.userId,
+  simulationId: trace.simulationId,
   tags: trace.tags,
   metadata: trace.metadata,
   models: trace.models,

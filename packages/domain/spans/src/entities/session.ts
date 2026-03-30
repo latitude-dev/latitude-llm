@@ -1,4 +1,4 @@
-import type { ExternalUserId, OrganizationId, ProjectId, SessionId } from "@domain/shared"
+import type { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId } from "@domain/shared"
 
 /**
  * Session — aggregated from spans that share a session_id.
@@ -33,6 +33,7 @@ export interface Session {
   readonly costTotalMicrocents: number
 
   readonly userId: ExternalUserId
+  readonly simulationId: SimulationId // optional simulation CUID link, empty string when absent
   readonly tags: readonly string[]
   readonly metadata: Readonly<Record<string, string>>
   readonly models: readonly string[]

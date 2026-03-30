@@ -182,11 +182,14 @@ export function TraceTab({
           <DetailSummary
             items={[
               { label: "Trace ID", value: traceId, copyable: true },
-              ...(traceRecord?.sessionId
+              ...(traceRecord?.sessionId?.trim()
                 ? [{ label: "Session ID", value: traceRecord.sessionId, copyable: true }]
                 : []),
-              ...(traceRecord?.userId ? [{ label: "User ID", value: traceRecord.userId, copyable: true }] : []),
-              ...(traceRecord?.rootSpanId
+              ...(traceRecord?.simulationId?.trim()
+                ? [{ label: "Simulation ID", value: traceRecord.simulationId, copyable: true }]
+                : []),
+              ...(traceRecord?.userId?.trim() ? [{ label: "User ID", value: traceRecord.userId, copyable: true }] : []),
+              ...(traceRecord?.rootSpanId?.trim()
                 ? [{ label: "Root Span ID", value: traceRecord.rootSpanId, copyable: true }]
                 : []),
               ...(traceRecord?.serviceNames && traceRecord.serviceNames.length > 0

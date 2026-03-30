@@ -5,12 +5,14 @@ import {
   ExternalUserId,
   type FilterSet,
   SessionId,
+  SimulationId,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
 } from "@domain/shared"
 import type { Session, SessionListPage } from "@domain/spans"
 import { SessionRepository } from "@domain/spans"
+import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
 import { SESSION_FIELD_REGISTRY } from "../registries/session-fields.ts"
@@ -42,7 +44,8 @@ const LIST_SELECT = `
   maxMap(metadata)             AS metadata,
   groupUniqArrayIfMerge(models)        AS models,
   groupUniqArrayIfMerge(providers)     AS providers,
-  groupUniqArrayIfMerge(service_names) AS service_names
+  groupUniqArrayIfMerge(service_names) AS service_names,
+  argMaxIfMerge(simulation_id)         AS simulation_id
 `
 
 type SessionListRow = {
@@ -71,14 +74,15 @@ type SessionListRow = {
   models: string[]
   providers: string[]
   service_names: string[]
+  simulation_id: string
 }
 
 const toDomainSession = (row: SessionListRow): Session => ({
-  organizationId: toOrganizationId(row.organization_id),
-  projectId: toProjectId(row.project_id),
-  sessionId: SessionId(row.session_id),
+  organizationId: toOrganizationId(normalizeCHString(row.organization_id)),
+  projectId: toProjectId(normalizeCHString(row.project_id)),
+  sessionId: SessionId(normalizeCHString(row.session_id)),
   traceCount: Number(row.trace_count),
-  traceIds: row.trace_ids,
+  traceIds: row.trace_ids.map(normalizeCHString),
   spanCount: Number(row.span_count),
   errorCount: Number(row.error_count),
   startTime: new Date(row.start_time),
@@ -93,12 +97,13 @@ const toDomainSession = (row: SessionListRow): Session => ({
   costInputMicrocents: Number(row.cost_input_microcents),
   costOutputMicrocents: Number(row.cost_output_microcents),
   costTotalMicrocents: Number(row.cost_total_microcents),
-  userId: ExternalUserId(row.user_id ?? ""),
-  tags: row.tags,
+  userId: ExternalUserId(normalizeCHString(row.user_id)),
+  simulationId: SimulationId(normalizeCHString(row.simulation_id)),
+  tags: row.tags.map(normalizeCHString),
   metadata: row.metadata ?? {},
-  models: row.models,
-  providers: row.providers,
-  serviceNames: row.service_names,
+  models: row.models.map(normalizeCHString),
+  providers: row.providers.map(normalizeCHString),
+  serviceNames: row.service_names.map(normalizeCHString),
 })
 
 interface SortColumn {

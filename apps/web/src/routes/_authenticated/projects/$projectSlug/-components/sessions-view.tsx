@@ -33,114 +33,134 @@ const EMPTY_CELL = <Text.H5 color="foregroundMuted">-</Text.H5>
 
 const DEFAULT_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
-const columns: InfiniteTableColumn<SessionTableRow>[] = [
-  {
-    key: "startTime",
-    header: "Start Time",
-    sortKey: "startTime",
-    render: (row) => {
-      const time = field(row, "startTime")
-      return (
-        <Tooltip asChild trigger={<span>{relativeTime(new Date(time))}</span>}>
-          {new Date(time).toLocaleString()}
-        </Tooltip>
-      )
+function buildSessionTableColumns(
+  onActiveSessionChange?: (sessionId: string | undefined) => void,
+): InfiniteTableColumn<SessionTableRow>[] {
+  return [
+    {
+      key: "startTime",
+      header: "Start Time",
+      sortKey: "startTime",
+      render: (row) => {
+        const time = field(row, "startTime")
+        return (
+          <Tooltip asChild trigger={<span>{relativeTime(new Date(time))}</span>}>
+            {new Date(time).toLocaleString()}
+          </Tooltip>
+        )
+      },
     },
-  },
-  {
-    key: "name",
-    header: "Name",
-    render: (row) => {
-      if (row.kind === "session") return EMPTY_CELL
-      return row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
+    {
+      key: "name",
+      header: "Name",
+      render: (row) => {
+        if (row.kind === "session") return EMPTY_CELL
+        return row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
+      },
     },
-  },
-  {
-    key: "tags",
-    header: "Tags",
-    render: (row) => <TagList tags={field(row, "tags")} />,
-  },
-  {
-    key: "duration",
-    header: "Duration",
-    align: "end",
-    render: (row) => {
-      if (row.kind === "session") return EMPTY_CELL
-      return formatDuration(row.trace.durationNs)
+    {
+      key: "tags",
+      header: "Tags",
+      render: (row) => <TagList tags={field(row, "tags")} />,
     },
-  },
-  {
-    key: "ttft",
-    header: "Time To First Token",
-    align: "end",
-    render: (row) => {
-      if (row.kind === "session") return EMPTY_CELL
-      return row.trace.timeToFirstTokenNs > 0 ? formatDuration(row.trace.timeToFirstTokenNs) : "-"
+    {
+      key: "duration",
+      header: "Duration",
+      align: "end",
+      render: (row) => {
+        if (row.kind === "session") return EMPTY_CELL
+        return formatDuration(row.trace.durationNs)
+      },
     },
-  },
-  {
-    key: "cost",
-    header: "Cost",
-    align: "end",
-    sortKey: "cost",
-    render: (row) => formatPrice(field(row, "costTotalMicrocents") / 100_000_000),
-  },
-  {
-    key: "sessionId",
-    header: "Session ID",
-    render: (row) => {
-      if (row.kind === "session") return row.session.sessionId
-      return row.trace.sessionId
+    {
+      key: "ttft",
+      header: "Time To First Token",
+      align: "end",
+      render: (row) => {
+        if (row.kind === "session") return EMPTY_CELL
+        return row.trace.timeToFirstTokenNs > 0 ? formatDuration(row.trace.timeToFirstTokenNs) : "-"
+      },
     },
-  },
-  {
-    key: "userId",
-    header: "User ID",
-    render: (row) => field(row, "userId"),
-  },
-  {
-    key: "models",
-    header: "Models",
-    render: (row) => {
-      const providers = field(row, "providers")
-      const models = field(row, "models")
-      return (
-        <div className="flex items-center gap-1.5">
-          {providers.map((p) => (
-            <Tooltip
-              asChild
-              key={p}
-              trigger={
-                <span>
-                  <ProviderIcon provider={p} size="sm" />
-                </span>
-              }
-            >
-              {p}
-            </Tooltip>
-          ))}
-          <span className="truncate">{models.join(", ")}</span>
-        </div>
-      )
+    {
+      key: "cost",
+      header: "Cost",
+      align: "end",
+      sortKey: "cost",
+      render: (row) => formatPrice(field(row, "costTotalMicrocents") / 100_000_000),
     },
-  },
-  {
-    key: "spans",
-    header: "Spans",
-    align: "end",
-    sortKey: "spans",
-    render: (row) => {
-      const spanCount = field(row, "spanCount")
-      const errorCount = field(row, "errorCount")
-      return (
-        <>
-          {formatCount(spanCount)}
-          {errorCount > 0 && <span className="text-destructive"> ({errorCount} err)</span>}
-        </>
-      )
+    {
+      key: "sessionId",
+      header: "Session ID",
+      render: (row) => {
+        if (row.kind === "session") {
+          if (onActiveSessionChange) {
+            return (
+              <button
+                type="button"
+                className="max-w-full truncate text-left font-inherit text-primary hover:underline cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onActiveSessionChange(row.session.sessionId)
+                }}
+              >
+                {row.session.sessionId}
+              </button>
+            )
+          }
+          return row.session.sessionId
+        }
+        return row.trace.sessionId
+      },
     },
-  },
-]
+    {
+      key: "userId",
+      header: "User ID",
+      render: (row) => field(row, "userId"),
+    },
+    {
+      key: "models",
+      header: "Models",
+      render: (row) => {
+        const providers = field(row, "providers")
+        const models = field(row, "models")
+        return (
+          <div className="flex items-center gap-1.5">
+            {providers.map((p) => (
+              <Tooltip
+                asChild
+                key={p}
+                trigger={
+                  <span>
+                    <ProviderIcon provider={p} size="sm" />
+                  </span>
+                }
+              >
+                {p}
+              </Tooltip>
+            ))}
+            <span className="truncate">{models.join(", ")}</span>
+          </div>
+        )
+      },
+    },
+    {
+      key: "spans",
+      header: "Spans",
+      align: "end",
+      sortKey: "spans",
+      render: (row) => {
+        const spanCount = field(row, "spanCount")
+        const errorCount = field(row, "errorCount")
+        return (
+          <>
+            {formatCount(spanCount)}
+            {errorCount > 0 && <span className="text-destructive"> ({errorCount} err)</span>}
+          </>
+        )
+      },
+    },
+  ]
+}
 
 const SESSION_TRACES_LIMIT = 25
 
@@ -279,6 +299,7 @@ interface SessionsViewProps {
   readonly onFiltersChange: (filters: FilterSet) => void
   readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
+  readonly onActiveSessionChange?: (sessionId: string | undefined) => void
 }
 
 export function SessionsView({
@@ -292,6 +313,7 @@ export function SessionsView({
   onFiltersChange,
   onFiltersClose,
   onActiveTraceChange,
+  onActiveSessionChange,
 }: SessionsViewProps) {
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set())
@@ -350,6 +372,8 @@ export function SessionsView({
       isLoading: entry.isLoading,
     }
   }
+
+  const columns = useMemo(() => buildSessionTableColumns(onActiveSessionChange), [onActiveSessionChange])
 
   return (
     <Layout.Body>

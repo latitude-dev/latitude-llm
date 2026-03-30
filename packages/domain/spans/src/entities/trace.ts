@@ -1,4 +1,12 @@
-import type { ExternalUserId, OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import type {
+  ExternalUserId,
+  OrganizationId,
+  ProjectId,
+  SessionId,
+  SimulationId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 
 /**
@@ -33,6 +41,7 @@ export interface Trace {
 
   readonly sessionId: SessionId
   readonly userId: ExternalUserId
+  readonly simulationId: SimulationId // optional simulation CUID link, empty string when absent
   readonly tags: readonly string[]
   readonly metadata: Readonly<Record<string, string>>
   readonly models: readonly string[]

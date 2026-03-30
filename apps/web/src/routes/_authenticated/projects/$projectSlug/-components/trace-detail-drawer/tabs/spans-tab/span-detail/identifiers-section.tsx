@@ -8,12 +8,13 @@ export function IdentifiersSection({ span }: { readonly span: SpanDetailRecord }
       <DetailSummary
         items={[
           { label: "Span ID", value: span.spanId, copyable: true },
-          ...(span.parentSpanId ? [{ label: "Parent Span ID", value: span.parentSpanId, copyable: true }] : []),
+          ...(span.parentSpanId?.trim() ? [{ label: "Parent Span ID", value: span.parentSpanId, copyable: true }] : []),
           { label: "Trace ID", value: span.traceId, copyable: true },
-          ...(span.sessionId ? [{ label: "Session ID", value: span.sessionId, copyable: true }] : []),
-          ...(span.userId ? [{ label: "User ID", value: span.userId, copyable: true }] : []),
-          ...(span.apiKeyId ? [{ label: "API Key ID", value: span.apiKeyId, copyable: true }] : []),
-          ...(span.responseId ? [{ label: "Response ID", value: span.responseId, copyable: true }] : []),
+          ...(span.sessionId?.trim() ? [{ label: "Session ID", value: span.sessionId, copyable: true }] : []),
+          ...(span.simulationId?.trim() ? [{ label: "Simulation ID", value: span.simulationId, copyable: true }] : []),
+          ...(span.userId?.trim() ? [{ label: "User ID", value: span.userId, copyable: true }] : []),
+          ...(span.apiKeyId?.trim() ? [{ label: "API Key ID", value: span.apiKeyId, copyable: true }] : []),
+          ...(span.responseId?.trim() ? [{ label: "Response ID", value: span.responseId, copyable: true }] : []),
         ]}
       />
     </DetailSection>
