@@ -7,7 +7,7 @@ import {
   StorageDisk,
   type StorageError,
 } from "@domain/shared"
-import { Effect } from "effect"
+import { Data, Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
 import { transformOtlpToSpans } from "../otlp/transform.ts"
@@ -24,10 +24,9 @@ export interface ProcessIngestedSpansInput {
   readonly fileKey: string | null
 }
 
-export class SpanDecodingError {
-  readonly _tag = "SpanDecodingError"
-  constructor(readonly reason: string) {}
-}
+export class SpanDecodingError extends Data.TaggedError("SpanDecodingError")<{
+  readonly reason: string
+}> {}
 
 function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
   try {
@@ -54,7 +53,7 @@ function resolvePayload(
     })
   }
 
-  return Effect.fail(new SpanDecodingError("no inline payload or fileKey in message"))
+  return Effect.fail(new SpanDecodingError({ reason: "no inline payload or fileKey in message" }))
 }
 
 function decodeAndTransform(
@@ -64,7 +63,7 @@ function decodeAndTransform(
   return Effect.gen(function* () {
     const request = decodeRequest(payload, input.contentType)
     if (!request) {
-      return yield* Effect.fail(new SpanDecodingError("failed to decode OTLP message"))
+      return yield* Effect.fail(new SpanDecodingError({ reason: "failed to decode OTLP message" }))
     }
 
     if (!request.resourceSpans?.length) {
