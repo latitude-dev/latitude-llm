@@ -110,7 +110,7 @@ export function addTracesToDataset(args: {
     })
     if (traceIds.length === 0) return EMPTY_RESULT
     if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
-      yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
+      return yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
     }
 
     const existingTraceIds = yield* rowRepo.findExistingTraceIds({
@@ -161,7 +161,7 @@ export function createDatasetFromTraces(args: {
         return { datasetId: dataset.id, ...EMPTY_RESULT }
       }
       if (traceIds.length > MAX_TRACES_PER_DATASET_IMPORT) {
-        yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
+        return yield* new TooManyTracesError({ count: traceIds.length, limit: MAX_TRACES_PER_DATASET_IMPORT })
       }
 
       const traces = yield* fetchTraces({
