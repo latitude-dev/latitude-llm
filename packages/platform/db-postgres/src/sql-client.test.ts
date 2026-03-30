@@ -223,11 +223,9 @@ describe("SqlClientLive", () => {
             return null
           })
           return yield* sql.transaction(
-            Effect.gen(function* () {
-              return yield* sql.query(async (_tx, oid) => {
-                seenOrgIds.push(oid)
-                return null
-              })
+            sql.query(async (_tx, oid) => {
+              seenOrgIds.push(oid)
+              return null
             }),
           )
         }),

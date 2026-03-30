@@ -108,16 +108,6 @@
 
   --color-yellow: hsl(var(--yellow));
 
-  --color-latte: hsl(var(--latte));
-  --color-latte-border: hsl(var(--latte-border));
-  --color-latte-background: hsl(var(--latte-background));
-  --color-latte-input: hsl(var(--latte-input-background));
-  --color-latte-input-foreground: hsl(var(--latte-input-foreground));
-  --color-latte-output: hsl(var(--latte-output-foreground));
-  --color-latte-output-foreground: hsl(var(--latte-output-foreground));
-  --color-latte-widget: hsl(var(--latte-widget-background));
-  --color-latte-badge-border: hsl(var(--latte-badge-border));
-
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
   --color-chart-3: hsl(var(--chart-3));
@@ -237,15 +227,6 @@
   --radius: 0.5rem;
   --button-face-inset-shadow: inset 0 3px 8px 0 rgb(255 255 255 / 0.48);
   --button-face-inset-shadow-hover: inset 0 3px 8px 0 rgb(255 255 255 / 0.3);
-  --latte: 45 99% 55%;
-  --latte-border: 42.5 51% 81.5%;
-  --latte-background: 43 71% 98%;
-  --latte-widget-background: 43 51% 82%;
-  --latte-input-background: 43 100% 91%;
-  --latte-input-foreground: 43 100% 23%;
-  --latte-output-foreground: 43 25% 33%;
-  --latte-badge-border: 45 81% 44%;
-
   --chart-1: 12 76% 61%;
   --chart-2: 173 58% 39%;
   --chart-3: 197 37% 24%;
@@ -292,14 +273,6 @@
   --ring: 205 91% 44%;
   --button-face-inset-shadow: inset 0 3px 8px 0 rgb(255 255 255 / 0.3);
   --button-face-inset-shadow-hover: inset 0 3px 8px 0 rgb(255 255 255 / 0.1);
-  --latte: 45 99% 55%;
-  --latte-border: 45 81% 44%;
-  --latte-background: 43 71% 8%;
-  --latte-widget-background: 43 51% 82%;
-  --latte-input-background: 45 99% 55%;
-  --latte-input-foreground: 43 100% 23%;
-  --latte-output-foreground: 43 25% 83%;
-
   --chart-1: 220 70% 50%;
   --chart-2: 160 60% 45%;
   --chart-3: 30 80% 55%;

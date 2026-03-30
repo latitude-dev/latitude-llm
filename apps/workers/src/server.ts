@@ -15,6 +15,7 @@ import { createAnalyticScoresWorker } from "./workers/analytic-scores.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
+import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
@@ -80,6 +81,7 @@ const bootstrap = async () => {
 
     createDomainEventsWorker(ctx)
     createMagicLinkEmailWorker(ctx)
+    createInvitationEmailWorker(ctx)
     createUserDeletionWorker(ctx)
     createApiKeysWorker(ctx)
     createSpanIngestionWorker(ctx)
