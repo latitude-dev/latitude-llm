@@ -6,6 +6,7 @@ import { issueSeeders } from "./issues/index.ts"
 import { organizationSeeders } from "./organizations/index.ts"
 import { projectSeeders } from "./projects/index.ts"
 import { scoreSeeders } from "./scores/index.ts"
+import { simulationSeeders } from "./simulations/index.ts"
 import type { Seeder } from "./types.ts"
 
 export const allSeeders: readonly Seeder[] = [
@@ -15,6 +16,7 @@ export const allSeeders: readonly Seeder[] = [
   ...datasetSeeders,
   ...issueSeeders,
   ...evaluationSeeders,
+  ...simulationSeeders,
   ...scoreSeeders,
   ...annotationQueueSeeders,
 ]

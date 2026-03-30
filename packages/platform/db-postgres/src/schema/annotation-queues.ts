@@ -1,5 +1,4 @@
 import type { AnnotationQueueSettings } from "@domain/annotation-queues"
-import { sql } from "drizzle-orm"
 import { boolean, index, integer, jsonb, text, unique, varchar } from "drizzle-orm/pg-core"
 import { cuid, latitudeSchema, organizationRLSPolicy, timestamps, tzTimestamp } from "../schemaHelpers.ts"
 
@@ -13,8 +12,8 @@ export const annotationQueues = latitudeSchema.table(
     name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project
     description: text("description").notNull(),
     instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
-    settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull().default(sql`'{}'::jsonb`), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
-    assignees: varchar("assignees", { length: 24 }).array().notNull().default(sql`'{}'::varchar[]`), // assigned user ids; empty array when unassigned
+    settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
+    assignees: varchar("assignees", { length: 24 }).array().notNull(), // assigned user ids; empty array when unassigned
     totalItems: integer("total_items").notNull().default(0), // denormalized count of queue items; maintained by item insert/delete
     completedItems: integer("completed_items").notNull().default(0), // denormalized count of completed items; maintained by item complete/uncomplete/delete
     deletedAt: tzTimestamp("deleted_at"), // soft deletion timestamp

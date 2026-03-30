@@ -39,6 +39,7 @@
     "@domain/projects": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@domain/simulations": "workspace:*",
     "@domain/users": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "@platform/env": "workspace:*",

@@ -38,6 +38,7 @@ export type DatasetVersionId = Branded<string, "DatasetVersionId">
 export type ScoreId = Branded<string, "ScoreId">
 export type IssueId = Branded<string, "IssueId">
 export type EvaluationId = Branded<string, "EvaluationId">
+export type SimulationId = Branded<string, "SimulationId">
 export type AnnotationQueueId = Branded<string, "AnnotationQueueId">
 export type AnnotationQueueItemId = Branded<string, "AnnotationQueueItemId">
 
@@ -59,6 +60,7 @@ export const ApiKeyId = (value: string): ApiKeyId => value as ApiKeyId
 export const ScoreId = (value: string): ScoreId => value as ScoreId
 export const IssueId = (value: string): IssueId => value as IssueId
 export const EvaluationId = (value: string): EvaluationId => value as EvaluationId
+export const SimulationId = (value: string): SimulationId => value as SimulationId
 export const AnnotationQueueId = (value: string): AnnotationQueueId => value as AnnotationQueueId
 export const AnnotationQueueItemId = (value: string): AnnotationQueueItemId => value as AnnotationQueueItemId
 export const TraceId = (value: string): TraceId => value as TraceId
