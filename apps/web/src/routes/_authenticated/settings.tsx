@@ -422,7 +422,7 @@ function MembersTable({
             <TableHead>Role</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Invitation</TableHead>
-            <TableHead />
+            {isAdmin && <TableHead />}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -477,7 +477,7 @@ function MembersTable({
                 )}
               </TableCell>
               <TableCell align="right">
-                {(member.status === "active" || member.status === "invited") && (
+                {isAdmin && (member.status === "active" || member.status === "invited") && (
                   <Button
                     variant="ghost"
                     onClick={() => {
@@ -529,9 +529,11 @@ function MembershipsSection() {
         <div className="flex flex-row items-center gap-2">
           <Text.H4 weight="bold">Organization Members</Text.H4>
         </div>
-        <Button variant="outline" onClick={() => setInviteOpen(true)}>
-          Add Member
-        </Button>
+        {isAdmin && (
+          <Button variant="outline" onClick={() => setInviteOpen(true)}>
+            Add Member
+          </Button>
+        )}
       </div>
       <div className="flex flex-col gap-2">
         {isLoading && <TableSkeleton cols={4} rows={3} />}
