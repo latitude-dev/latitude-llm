@@ -163,7 +163,7 @@ export function TracesView({
       {filtersOpen && (
         <FiltersSidebar
           mode="traces"
-          projectId={projectSlug}
+          projectId={projectId}
           filters={filters}
           onFiltersChange={onFiltersChange}
           onClose={onFiltersClose}

@@ -133,7 +133,7 @@ export function TraceDetailDrawer({
         />
       )}
       {activeTab === "conversation" && <ConversationTab traceDetail={traceDetail} isDetailLoading={isDetailLoading} />}
-      {activeTab === "spans" && <SpansTab key={traceId} projectId={projectSlug} traceId={traceId} />}
+      {activeTab === "spans" && <SpansTab key={traceId} projectId={projectId} traceId={traceId} />}
     </DetailDrawer>
   )
 }

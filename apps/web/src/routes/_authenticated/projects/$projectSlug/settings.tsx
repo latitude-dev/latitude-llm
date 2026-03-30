@@ -18,7 +18,7 @@ function ProjectSettingsPage() {
   if (!project) return null
 
   const handleKeepMonitoringChange = (checked: boolean) => {
-    updateProjectMutation(projectId, { settings: { keepMonitoring: checked } })
+    updateProjectMutation(project.id, { settings: { keepMonitoring: checked } })
   }
 
   return (

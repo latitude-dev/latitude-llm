@@ -101,7 +101,7 @@ function DatasetsPage() {
       const datasetId = generateId()
       await createDatasetMutation({
         id: datasetId,
-        projectId: projectId,
+        projectId: project.id,
         name: `Dataset ${new Date().toLocaleString()}`,
       })
       navigate({

@@ -173,37 +173,45 @@ function ProjectSidebar({
       <div className="flex flex-col shrink-0">
         {/* Header */}
         <div
-          className={`flex items-center gap-3 p-4 border-b border-border ${collapsed ? "justify-center" : "justify-between"}`}
+          className={`flex flex-col p-4 border-b border-border ${collapsed ? "justify-center items-center" : "gap-2"}`}
         >
-          {!collapsed && <ProjectEmoji name={project?.name ?? ""} />}
-          {!collapsed && (
+          <div className={`flex items-center gap-3 ${collapsed ? "" : "justify-between"}`}>
+            {!collapsed && <ProjectEmoji name={project?.name ?? ""} />}
+            {!collapsed && (
+              <Text.H5M ellipsis className="flex-1 min-w-0">
+                {project ? extractLeadingEmoji(project.name)[1] : "…"}
+              </Text.H5M>
+            )}
             <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                if (project) {
+              variant="outline"
+              size="icon"
+              onClick={onToggleCollapse}
+              className="h-8 w-8 shrink-0"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
+            </Button>
+          </div>
+          {!collapsed && project && (
+            <div className="flex items-center gap-2">
+              <Text.H6 color="foregroundMuted">{project.slug}</Text.H6>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
                   navigator.clipboard.writeText(project.slug)
                   toast({
                     title: "Copied to clipboard",
                     description: `Project slug "${project.slug}" copied`,
                   })
-                }
-              }}
-              className="flex-1 min-w-0 justify-start px-0 hover:bg-transparent gap-2"
-            >
-              <Text.H5M ellipsis>{project ? extractLeadingEmoji(project.name)[1] : "…"}</Text.H5M>
-              <Icon icon={Clipboard} size="sm" color="foregroundMuted" />
-            </Button>
+                }}
+                className="h-6 w-6 p-0"
+                title="Copy project slug"
+              >
+                <Icon icon={Clipboard} size="xs" color="foregroundMuted" />
+              </Button>
+            </div>
           )}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onToggleCollapse}
-            className="h-8 w-8 shrink-0"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
-          </Button>
         </div>
 
         {/* Nav items */}

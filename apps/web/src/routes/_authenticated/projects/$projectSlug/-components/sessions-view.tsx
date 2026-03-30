@@ -356,7 +356,7 @@ export function SessionsView({
       {filtersOpen && (
         <FiltersSidebar
           mode="sessions"
-          projectId={projectSlug}
+          projectId={projectId}
           filters={filters}
           onFiltersChange={onFiltersChange}
           onClose={onFiltersClose}

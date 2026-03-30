@@ -556,7 +556,7 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
             <CollapsibleSection key={field} label={label} defaultOpen={selectedValues.length > 0}>
               <MultiSelectFilter
                 mode={mode}
-                projectId={projectSlug}
+                projectId={projectId}
                 column={field}
                 selected={selectedValues}
                 onChange={(values) => setField(field, values.length > 0 ? [{ op: "in", value: values }] : [])}
