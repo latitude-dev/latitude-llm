@@ -29,6 +29,7 @@ import {
   deleteProjectMutation,
   renameProjectMutation,
   useProjectsCollection,
+  useProjectsStats,
 } from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
@@ -54,7 +55,15 @@ function ProjectTitle({ name, projectSlug }: { name: string; projectSlug: string
   )
 }
 
-function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
+function ProjectsTable({
+  projects,
+  statsByProjectId,
+  isLoadingStats,
+}: {
+  projects: ProjectRecord[]
+  statsByProjectId: Map<string, { datasetCount: number; tracesLast7Days: number }>
+  isLoadingStats: boolean
+}) {
   const [projectToRename, setProjectToRename] = useState<ProjectRecord | null>(null)
   const router = useRouter()
 
@@ -71,53 +80,64 @@ function ProjectsTable({ projects }: { projects: ProjectRecord[] }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {projects.map((project) => (
-            <TableRow
-              key={project.id}
-              verticalPadding
-              className="cursor-pointer"
-              onClick={() =>
-                void router.navigate({ to: "/projects/$projectSlug", params: { projectSlug: project.slug } })
-              }
-            >
-              <TableCell>
-                <ProjectTitle name={project.name} projectSlug={project.slug} />
-              </TableCell>
-              <TableCell className="w-44">
-                <Text.H5 color="foregroundMuted">—</Text.H5>
-              </TableCell>
-              <TableCell className="w-44">
-                <Text.H5 color="foregroundMuted">—</Text.H5>
-              </TableCell>
-              <TableCell className="w-44">
-                <Text.H5 color="foregroundMuted">—</Text.H5>
-              </TableCell>
-              <TableCell preventDefault>
-                <DropdownMenu
-                  options={[
-                    {
-                      label: "Rename",
-                      onClick: () => {
-                        setProjectToRename(project)
+          {projects.map((project) => {
+            const stats = statsByProjectId.get(project.id)
+            return (
+              <TableRow
+                key={project.id}
+                verticalPadding
+                className="cursor-pointer"
+                onClick={() =>
+                  void router.navigate({ to: "/projects/$projectSlug", params: { projectSlug: project.slug } })
+                }
+              >
+                <TableCell>
+                  <ProjectTitle name={project.name} projectSlug={project.slug} />
+                </TableCell>
+                <TableCell className="w-44">
+                  <Text.H5 color="foregroundMuted">—</Text.H5>
+                </TableCell>
+                <TableCell className="w-44">
+                  {isLoadingStats ? (
+                    <div className="h-4 w-8 bg-muted rounded animate-pulse" />
+                  ) : (
+                    <Text.H5 color="foregroundMuted">{stats?.datasetCount ?? 0}</Text.H5>
+                  )}
+                </TableCell>
+                <TableCell className="w-44">
+                  {isLoadingStats ? (
+                    <div className="h-4 w-8 bg-muted rounded animate-pulse" />
+                  ) : (
+                    <Text.H5 color="foregroundMuted">{stats?.tracesLast7Days ?? 0}</Text.H5>
+                  )}
+                </TableCell>
+                <TableCell preventDefault>
+                  <DropdownMenu
+                    options={[
+                      {
+                        label: "Rename",
+                        onClick: () => {
+                          setProjectToRename(project)
+                        },
                       },
-                    },
-                    {
-                      label: "Delete",
-                      type: "destructive",
-                      onClick: () => {
-                        void deleteProjectMutation(project.id).isPersisted.promise
+                      {
+                        label: "Delete",
+                        type: "destructive",
+                        onClick: () => {
+                          void deleteProjectMutation(project.id).isPersisted.promise
+                        },
                       },
-                    },
-                  ]}
-                  side="bottom"
-                  align="end"
-                  triggerButtonProps={{
-                    className: "border-none justify-end cursor-pointer",
-                  }}
-                />
-              </TableCell>
-            </TableRow>
-          ))}
+                    ]}
+                    side="bottom"
+                    align="end"
+                    triggerButtonProps={{
+                      className: "border-none justify-end cursor-pointer",
+                    }}
+                  />
+                </TableCell>
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
 
@@ -263,8 +283,10 @@ function DashboardPageContent() {
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
   )
-  const { data, isLoading } = useProjectsCollection()
+  const { data, isLoading: isLoadingProjects } = useProjectsCollection()
   const projects = data ?? []
+  const projectIds = projects.map((p) => p.id)
+  const { statsByProjectId, isLoading: isLoadingStats } = useProjectsStats(projectIds)
 
   return (
     <>
@@ -282,10 +304,10 @@ function DashboardPageContent() {
         }
         actions={<TableWithHeader.Button onClick={() => setCreateOpen(true)}>New project</TableWithHeader.Button>}
         table={
-          isLoading ? (
+          isLoadingProjects ? (
             <TableSkeleton cols={5} rows={3} />
           ) : projects.length > 0 ? (
-            <ProjectsTable projects={projects} />
+            <ProjectsTable projects={projects} statsByProjectId={statsByProjectId} isLoadingStats={isLoadingStats} />
           ) : (
             <TableBlankSlate
               description="There are no projects yet. Create one to start adding your prompts."
