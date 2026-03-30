@@ -446,15 +446,11 @@ function MembersTable({
                           <Icon icon={ChevronDown} size="sm" className="text-muted-foreground" />
                         </div>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="border-0">
                         {member.role === "owner" && isOwner && (
-                          <>
-                            <DropdownMenuItem onSelect={() => setTransferOpen(true)}>
-                              Transfer ownership
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                          </>
+                          <DropdownMenuItem onSelect={() => setTransferOpen(true)}>Transfer ownership</DropdownMenuItem>
                         )}
+                        {member.role === "owner" && isOwner && canChangeRole(member) && <DropdownMenuSeparator />}
                         {canChangeRole(member) && (
                           <DropdownMenuItem onSelect={() => openChangeRoleModal(member)}>Change role</DropdownMenuItem>
                         )}
