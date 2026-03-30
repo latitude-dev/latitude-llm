@@ -52,6 +52,7 @@ export const createOrganization = createServerFn({ method: "POST" })
     const outboxWriter = getOutboxWriter()
     await outboxWriter.write({
       eventName: "OrganizationCreated",
+      aggregateType: "organization",
       aggregateId: organization.id,
       organizationId: OrganizationId(organization.id),
       payload: {

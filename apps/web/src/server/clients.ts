@@ -115,6 +115,7 @@ export const getBetterAuth = () => {
 
         await outboxWriter.write({
           eventName: "MagicLinkEmailRequested",
+          aggregateType: "email_request",
           aggregateId: generateId(),
           organizationId: "system",
           payload: {
@@ -132,6 +133,7 @@ export const getBetterAuth = () => {
             : "A teammate"
         await outboxWriter.write({
           eventName: "InvitationEmailRequested",
+          aggregateType: "invitation",
           aggregateId: data.id,
           organizationId: "system",
           payload: {
