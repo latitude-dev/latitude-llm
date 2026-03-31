@@ -9,9 +9,10 @@ import {
   Text,
   Tooltip,
   useMountEffect,
+  useToast,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowUpIcon, CopyIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, ClipboardIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
@@ -60,6 +61,7 @@ export function TraceDetailDrawer({
   readonly canNavigatePrev: boolean
   readonly onTabChange?: (tab: TabId) => void
 }) {
+  const { toast } = useToast()
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
@@ -201,10 +203,11 @@ export function TraceDetailDrawer({
               )}
               onClick={() => {
                 navigator.clipboard.writeText(traceId)
+                toast({ title: "Copied", description: "Trace ID copied to clipboard" })
               }}
             >
-              <Text.H6 color="foregroundMuted">{traceId}</Text.H6>
-              <CopyIcon className="w-4 h-4" />
+              <Text.H6 color="foregroundMuted">{traceId.slice(0, 7)}</Text.H6>
+              <ClipboardIcon className="w-3.5 h-3.5" />
             </button>
           </div>
 
