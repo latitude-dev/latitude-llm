@@ -2,6 +2,10 @@ export type { Session } from "./entities/session.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export {
+  isLlmCompletionOperation,
+  resolveLastLlmCompletionSpanId,
+} from "./helpers/resolve-last-llm-completion-span.ts"
+export {
   SESSION_ID_MAX_LENGTH,
   SPAN_ID_LENGTH,
   sessionIdSchema,

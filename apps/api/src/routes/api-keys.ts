@@ -10,10 +10,19 @@ import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
 import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect } from "effect"
-import { ErrorSchema, OrgAndIdParamsSchema, OrgParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import {
+  errorResponse,
+  jsonBody,
+  jsonResponse,
+  OrgAndIdParamsSchema,
+  OrgParamsSchema,
+  openApiNoContentResponses,
+  openApiResponses,
+  PROTECTED_SECURITY,
+} from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-const ApiKeySchema = z
+const ResponseSchema = z
   .object({
     id: z.string(),
     organizationId: z.string(),
@@ -29,7 +38,7 @@ const ApiKeySchema = z
   })
   .openapi("ApiKey")
 
-const ApiKeyListItemSchema = z
+const ListItemSchema = z
   .object({
     id: z.string(),
     organizationId: z.string(),
@@ -41,13 +50,15 @@ const ApiKeyListItemSchema = z
   })
   .openapi("ApiKeyListItem")
 
-const CreateApiKeyBodySchema = z
+const ListResponseSchema = z.object({ apiKeys: z.array(ListItemSchema) }).openapi("ApiKeyList")
+
+const RequestSchema = z
   .object({
     name: z.string().min(1).openapi({ description: "Human-readable name for the API key" }),
   })
   .openapi("CreateApiKeyBody")
 
-const toApiKeyResponse = (apiKey: ApiKey) => ({
+const toResponse = (apiKey: ApiKey) => ({
   id: apiKey.id as string,
   organizationId: apiKey.organizationId as string,
   name: apiKey.name,
@@ -59,7 +70,7 @@ const toApiKeyResponse = (apiKey: ApiKey) => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-const toApiKeyListItemResponse = (apiKey: ApiKey) => ({
+const toListItemResponse = (apiKey: ApiKey) => ({
   id: apiKey.id as string,
   organizationId: apiKey.organizationId as string,
   name: apiKey.name,
@@ -69,7 +80,7 @@ const toApiKeyListItemResponse = (apiKey: ApiKey) => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-const generateApiKeyRoute = createRoute({
+const generateRoute = createRoute({
   method: "post",
   path: "/",
   tags: ["API Keys"],
@@ -78,76 +89,34 @@ const generateApiKeyRoute = createRoute({
   security: PROTECTED_SECURITY,
   request: {
     params: OrgParamsSchema,
-    body: {
-      content: { "application/json": { schema: CreateApiKeyBodySchema } },
-      required: true,
-    },
+    body: jsonBody(RequestSchema),
   },
-  responses: {
-    201: {
-      content: { "application/json": { schema: ApiKeySchema } },
-      description: "API key generated",
-    },
-    400: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Validation error",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-  },
+  responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "API key generated" }),
 })
 
-const listApiKeysRoute = createRoute({
+const listRoute = createRoute({
   method: "get",
   path: "/",
   tags: ["API Keys"],
   summary: "List API keys",
   description: "Returns all API keys for the organization. Tokens are not included in the list response.",
   security: PROTECTED_SECURITY,
-  request: {
-    params: OrgParamsSchema,
-  },
+  request: { params: OrgParamsSchema },
   responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({ apiKeys: z.array(ApiKeyListItemSchema) }).openapi("ApiKeyList"),
-        },
-      },
-      description: "List of API keys",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
+    200: jsonResponse(ListResponseSchema, "List of API keys"),
+    401: errorResponse("Unauthorized"),
   },
 })
 
-const revokeApiKeyRoute = createRoute({
+const revokeRoute = createRoute({
   method: "delete",
   path: "/{id}",
   tags: ["API Keys"],
   summary: "Revoke API key",
   description: "Soft-deletes an API key, immediately invalidating it.",
   security: PROTECTED_SECURITY,
-  request: {
-    params: OrgAndIdParamsSchema,
-  },
-  responses: {
-    204: {
-      description: "API key revoked",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "API key not found",
-    },
-  },
+  request: { params: OrgAndIdParamsSchema },
+  responses: openApiNoContentResponses({ description: "API key revoked" }),
 })
 
 const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
@@ -161,16 +130,9 @@ const createApiKeyCacheInvalidator = (redis: RedisClient) => ({
 })
 
 export const createApiKeysRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>({
-    defaultHook(result, c) {
-      if (!result.success) {
-        const error = result.error.issues.map((i) => i.message).join(", ")
-        return c.json({ error }, 400)
-      }
-    },
-  })
+  const app = new OpenAPIHono<OrganizationScopedEnv>()
 
-  app.openapi(generateApiKeyRoute, async (c) => {
+  app.openapi(generateRoute, async (c) => {
     const { name } = c.req.valid("json")
 
     const apiKey = await Effect.runPromise(
@@ -178,20 +140,20 @@ export const createApiKeysRoutes = () => {
         withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
       ),
     )
-    return c.json(toApiKeyResponse(apiKey), 201)
+    return c.json(toResponse(apiKey), 201)
   })
 
-  app.openapi(listApiKeysRoute, async (c) => {
+  app.openapi(listRoute, async (c) => {
     const apiKeys = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
         return yield* repo.findAll()
       }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
-    return c.json({ apiKeys: apiKeys.map(toApiKeyListItemResponse) }, 200)
+    return c.json({ apiKeys: apiKeys.map(toListItemResponse) }, 200)
   })
 
-  app.openapi(revokeApiKeyRoute, async (c) => {
+  app.openapi(revokeRoute, async (c) => {
     const { id: idParam } = c.req.valid("param")
 
     await Effect.runPromise(

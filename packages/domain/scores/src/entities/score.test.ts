@@ -115,6 +115,21 @@ describe("annotationScoreSchema", () => {
     expect(result.success).toBe(true)
   })
 
+  it("accepts message anchor metadata without persisting resolved text (coordinates only)", () => {
+    const result = annotationScoreSchema.safeParse({
+      ...buildBaseScoreInput(),
+      source: "annotation",
+      sourceId: "UI",
+      metadata: {
+        rawFeedback: "Bad tone",
+        messageIndex: 1,
+        partIndex: 0,
+      },
+    })
+
+    expect(result.success).toBe(true)
+  })
+
   it("accepts an annotation queue cuid source id", () => {
     const result = annotationScoreSchema.safeParse({
       ...buildBaseScoreInput(),

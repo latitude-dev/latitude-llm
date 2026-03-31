@@ -1,3 +1,4 @@
+import type { ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 import type { Score } from "../entities/score.ts"
 import type { ScoreRepositoryShape } from "../ports/score-repository.ts"
@@ -11,6 +12,10 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
     findById: (id) => Effect.succeed(scores.get(id) ?? null),
     save: (score) => {
       scores.set(score.id, score)
+      return Effect.void
+    },
+    delete: (id: ScoreId) => {
+      scores.delete(id)
       return Effect.void
     },
     listByProjectId: () => Effect.succeed(EMPTY_PAGE),

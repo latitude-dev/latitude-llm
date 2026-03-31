@@ -1,0 +1,24 @@
+{
+  "name": "@platform/ai-vercel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "4.0.0-beta.12",
+    "@ai-sdk/openai": "4.0.0-beta.12",
+    "@domain/ai": "workspace:*",
+    "@platform/ai-credentials": "workspace:*",
+    "ai": "7.0.0-beta.45",
+    "effect": "catalog:",
+    "zod": "catalog:"
+  }
+}
