@@ -1,5 +1,18 @@
+import { createHash } from "node:crypto"
 import { Data, Effect } from "effect"
+import stringify from "fast-json-stable-stringify"
 import { hexDecode, hexEncode } from "./base64.ts"
+
+/**
+ * Produce a deterpministic SHA-256 hex digest for any JSON-compatible value.
+ *
+ * Objects are serialized with sorted keys via `fast-json-stable-stringify`
+ * so the same logical value always yields the same hash regardless of
+ * property insertion order.
+ */
+export const hash = (value: unknown): string => {
+  return createHash("sha256").update(stringify(value), "utf8").digest("hex")
+}
 
 export class CryptoError extends Data.TaggedError("CryptoError")<{
   readonly operation: string

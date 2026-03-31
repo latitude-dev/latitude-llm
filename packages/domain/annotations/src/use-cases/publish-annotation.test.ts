@@ -1,10 +1,5 @@
-import {
-  AI,
-  type AICredentialError,
-  type AIError,
-  type GenerateObjectInput,
-  type GenerateObjectResult,
-} from "@domain/ai"
+import type { AICredentialError, AIError, GenerateInput, GenerateResult } from "@domain/ai"
+import { createFakeAI } from "@domain/ai/testing"
 import { type Score, type ScoreListPage, ScoreRepository } from "@domain/scores"
 import {
   ExternalUserId,
@@ -25,7 +20,7 @@ import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } fro
 import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
-import { publishAnnotationUseCase } from "./publish-annotation.ts"
+import { formatGenAIMessagesForEnrichmentPrompt, publishAnnotationUseCase } from "./publish-annotation.ts"
 
 const cuid = "a".repeat(24)
 const scoreCuid = ScoreId("s".repeat(24))
@@ -111,15 +106,9 @@ function buildDraftAnnotationScore(): Score {
   } as Score
 }
 
-type AIGenerateObject = <T>(
-  input: GenerateObjectInput<T>,
-) => Effect.Effect<GenerateObjectResult<T>, AIError | AICredentialError>
+type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
 
-function createTestLayers(
-  initialScore?: Score,
-  generateObjectOverride?: AIGenerateObject,
-  traceDetail?: TraceDetail | null,
-) {
+function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, traceDetail?: TraceDetail | null) {
   const store = new Map<string, Score>()
   if (initialScore) store.set(initialScore.id, initialScore)
 
@@ -136,7 +125,7 @@ function createTestLayers(
     findByTraceId: () => Effect.succeed([publishDefaultCompletionSpan]),
   })
 
-  const defaultGenerateObject: AIGenerateObject = <T>(input: GenerateObjectInput<T>) =>
+  const defaultGenerate: AIGenerate = <T>(input: GenerateInput<T>) =>
     Effect.succeed({
       object: {
         reasoning: "Mapped raw complaint to a pattern label.",
@@ -144,9 +133,9 @@ function createTestLayers(
       } as T,
       tokens: 15,
       duration: 50_000_000,
-    } as GenerateObjectResult<T>)
+    } as GenerateResult<T>)
 
-  const generateObject = generateObjectOverride ?? defaultGenerateObject
+  const generate = generateOverride ?? defaultGenerate
 
   const ScoreRepositoryTest = Layer.succeed(ScoreRepository, {
     findById: (id) => Effect.succeed(store.get(id) ?? null),
@@ -174,8 +163,8 @@ function createTestLayers(
       }),
   })
 
-  const AITest = Layer.succeed(AI, {
-    generateObject,
+  const { layer: aiLayer } = createFakeAI({
+    generate,
   })
 
   const SqlClientTest = Layer.succeed(SqlClient, {
@@ -200,7 +189,7 @@ function createTestLayers(
     layer: Layer.mergeAll(
       ScoreRepositoryTest,
       OutboxEventWriterTest,
-      AITest,
+      aiLayer,
       SqlClientTest,
       TraceRepositoryTest,
       SpanRepositoryTest,
@@ -246,7 +235,7 @@ describe("publishAnnotationUseCase", () => {
     let capturedPrompt = ""
     const { layer } = createTestLayers(
       draft,
-      <T>(input: GenerateObjectInput<T>) => {
+      <T>(input: GenerateInput<T>) => {
         capturedPrompt = input.prompt
         return Effect.succeed({
           object: {
@@ -255,7 +244,7 @@ describe("publishAnnotationUseCase", () => {
           } as T,
           tokens: 15,
           duration: 50_000_000,
-        } as GenerateObjectResult<T>)
+        } as GenerateResult<T>)
       },
       makeTraceDetail(allMessages),
     )
@@ -289,7 +278,7 @@ describe("publishAnnotationUseCase", () => {
     let capturedPrompt = ""
     const { layer } = createTestLayers(
       draft,
-      <T>(input: GenerateObjectInput<T>) => {
+      <T>(input: GenerateInput<T>) => {
         capturedPrompt = input.prompt
         return Effect.succeed({
           object: {
@@ -298,7 +287,7 @@ describe("publishAnnotationUseCase", () => {
           } as T,
           tokens: 15,
           duration: 50_000_000,
-        } as GenerateObjectResult<T>)
+        } as GenerateResult<T>)
       },
       makeTraceDetail(allMessages),
     )
@@ -380,5 +369,17 @@ describe("publishAnnotationUseCase", () => {
     )
 
     expect(result._tag).toBe("Failure")
+  })
+})
+
+describe("formatGenAIMessagesForEnrichmentPrompt", () => {
+  it("includes message indices and separators", () => {
+    const out = formatGenAIMessagesForEnrichmentPrompt([
+      { role: "user", parts: [{ type: "text", content: "u" }] },
+      { role: "assistant", parts: [{ type: "text", content: "a" }] },
+    ])
+    expect(out).toContain("[message 0] role=user")
+    expect(out).toContain("[message 1] role=assistant")
+    expect(out).toContain("\n\n---\n\n")
   })
 })

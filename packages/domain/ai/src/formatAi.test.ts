@@ -1,11 +1,6 @@
 import type { GenAIPart } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
-import {
-  formatGenAIConversation,
-  formatGenAIMessage,
-  formatGenAIMessagesForEnrichmentPrompt,
-  formatGenAIPart,
-} from "./formatAi.ts"
+import { formatGenAIConversation, formatGenAIMessage, formatGenAIPart } from "./formatAi.ts"
 
 describe("formatGenAIPart", () => {
   it("formats text", () => {
@@ -67,17 +62,5 @@ describe("formatGenAIConversation", () => {
         { role: "assistant", parts: [{ type: "text", content: "Hey" }] },
       ]),
     ).toBe("User: Hi\n\nAssistant: Hey")
-  })
-})
-
-describe("formatGenAIMessagesForEnrichmentPrompt", () => {
-  it("includes message indices and separators", () => {
-    const out = formatGenAIMessagesForEnrichmentPrompt([
-      { role: "user", parts: [{ type: "text", content: "u" }] },
-      { role: "assistant", parts: [{ type: "text", content: "a" }] },
-    ])
-    expect(out).toContain("[message 0] role=user")
-    expect(out).toContain("[message 1] role=assistant")
-    expect(out).toContain("\n\n---\n\n")
   })
 })

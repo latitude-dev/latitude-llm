@@ -1,1 +1,1 @@
-export { AILive } from "./ai.ts"
+export { AIGenerateLive } from "./ai.ts"

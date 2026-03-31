@@ -55,7 +55,7 @@ function formatLooseGenAIPart(part: GenAIPart): string {
   return safeStringifyJson(part, `[${String(t)}]`)
 }
 
-/** Concatenates all parts of a GenAI message (legacy `formatMessage` over `parts[]`). */
+/** Concatenates all parts of a GenAI message */
 export function formatGenAIMessage(message: GenAIMessage): string {
   return message.parts
     .map((p) => formatGenAIPart(p))
@@ -63,7 +63,7 @@ export function formatGenAIMessage(message: GenAIMessage): string {
     .trim()
 }
 
-/** Renders a turn-by-turn transcript (legacy `formatConversation`). */
+/** Renders a turn-by-turn transcript */
 export function formatGenAIConversation(messages: readonly GenAIMessage[]): string {
   let result = ""
   for (const message of messages) {
@@ -73,21 +73,4 @@ export function formatGenAIConversation(messages: readonly GenAIMessage[]): stri
     result += `${speaker}: ${formatGenAIMessage(message)}\n\n`
   }
   return result.trim()
-}
-
-/**
- * Like {@link formatGenAIConversation} but prefixes each turn with `[message i]` and uses `---` separators.
- * Use when the consumer must align text to **0-based indices** in canonical trace payloads (e.g.
- * `AnnotationScoreMetadata.messageIndex`, anchor resolution over `TraceDetail.allMessages`).
- * For a human-style transcript only, use {@link formatGenAIConversation} instead.
- */
-export function formatGenAIMessagesForEnrichmentPrompt(messages: readonly GenAIMessage[]): string {
-  const blocks: string[] = []
-  for (let i = 0; i < messages.length; i++) {
-    const m = messages[i]
-    const text = formatGenAIMessage(m)
-    const body = text || "<no plain text in this message>"
-    blocks.push(`[message ${i}] role=${m.role}\n${body}`)
-  }
-  return blocks.join("\n\n---\n\n")
 }

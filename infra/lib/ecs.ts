@@ -295,6 +295,7 @@ function createTaskDefinition(
       secrets["clickhouse-db"].arn,
       secrets["weaviate-url"].arn,
       secrets["weaviate-api-key"].arn,
+      secrets["voyage-api-key"].arn,
       secrets["mailgun-api-key"].arn,
       secrets["mailgun-domain"].arn,
       secrets["mailgun-from"].arn,
@@ -324,6 +325,7 @@ function createTaskDefinition(
         clickhouseDbArn,
         weaviateUrlArn,
         weaviateApiKeyArn,
+        voyageApiKeyArn,
         mailgunApiKeyArn,
         mailgunDomainArn,
         mailgunFromArn,
@@ -381,6 +383,7 @@ function createTaskDefinition(
           { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
           { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
           { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
+          { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
           { name: "LAT_MAILGUN_API_KEY", valueFrom: mailgunApiKeyArn },
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
@@ -567,6 +570,7 @@ function createMigrationTaskDefinition(
       secrets["clickhouse-db"].arn,
       secrets["weaviate-url"].arn,
       secrets["weaviate-api-key"].arn,
+      secrets["voyage-api-key"].arn,
     ])
     .apply(
       ([
@@ -579,6 +583,7 @@ function createMigrationTaskDefinition(
         clickhouseDbArn,
         weaviateUrlArn,
         weaviateApiKeyArn,
+        voyageApiKeyArn,
       ]) => {
         const def = {
           name: "migrations",
@@ -603,6 +608,7 @@ function createMigrationTaskDefinition(
             { name: "CLICKHOUSE_DB", valueFrom: clickhouseDbArn },
             { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
             { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
+            { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
           ],
         }
         return JSON.stringify([def])

@@ -1,5 +1,5 @@
 {
-  "name": "@repo/utils",
+  "name": "@platform/ai-voyage",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,16 +12,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests"
   },
-  "devDependencies": {
-    "@repo/vitest-config": "workspace:*"
-  },
-  "exports": {
-    ".": "./src/index.ts",
-    "./env": "./src/env.ts"
-  },
   "dependencies": {
-    "dotenv": "catalog:",
+    "@domain/ai": "workspace:*",
+    "@domain/shared": "workspace:*",
+    "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "fast-json-stable-stringify": "catalog:"
+    "voyageai": "catalog:"
   }
 }

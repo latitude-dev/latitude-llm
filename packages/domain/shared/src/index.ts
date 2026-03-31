@@ -1,3 +1,4 @@
+export * from "./cache.ts"
 export * from "./ch-sql-client.ts"
 export * from "./errors.ts"
 export * from "./filter.ts"

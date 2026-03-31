@@ -1,5 +1,6 @@
 import type { WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
+import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, type ClickhouseConfig, createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
@@ -16,6 +17,7 @@ let pgClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseInstance: ClickHouseClient | undefined
 let storageDiskInstance: StorageDiskPort | undefined
+let redisInstance: RedisClient | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 let temporalConfigInstance: TemporalConfig | undefined
 
@@ -49,6 +51,15 @@ export const getStorageDisk = (): StorageDiskPort => {
     storageDiskInstance = createStorageDisk()
   }
   return storageDiskInstance
+}
+
+export const getRedisClient = (): RedisClient => {
+  if (!redisInstance) {
+    const redisConn = createRedisConnection()
+    redisInstance = createRedisClient(redisConn)
+  }
+
+  return redisInstance
 }
 
 function getTemporalConfig(): TemporalConfig {

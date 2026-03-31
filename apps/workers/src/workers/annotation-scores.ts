@@ -2,13 +2,14 @@ import { publishAnnotationUseCase } from "@domain/annotations"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, type ScoreId } from "@domain/shared"
 import { AICredentialsLive } from "@platform/ai-credentials"
-import { AILive } from "@platform/ai-vercel"
+import { AIGenerateLive } from "@platform/ai-vercel"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient } from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("annotation-scores")
 
@@ -17,7 +18,10 @@ interface AnnotationScoresDeps {
   postgresClient?: PostgresClient
 }
 
-const annotationAiLayer = AILive.pipe(Layer.provideMerge(AICredentialsLive))
+const annotationAiLayer = AIGenerateLive.pipe(
+  Layer.provideMerge(AICredentialsLive),
+  Layer.provideMerge(RedisCacheStoreLive(getRedisClient())),
+)
 
 export const createAnnotationScoresWorker = ({ consumer, postgresClient }: AnnotationScoresDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
