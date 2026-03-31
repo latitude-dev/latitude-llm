@@ -113,6 +113,7 @@ export function TraceDetailDrawer({
       actions={
         <>
           <Tooltip
+            asChild
             side="bottom"
             trigger={
               <Button
@@ -130,6 +131,7 @@ export function TraceDetailDrawer({
             Next trace <HotkeyBadge hotkey="Alt+ArrowDown" /> <HotkeyBadge hotkey="J" />
           </Tooltip>
           <Tooltip
+            asChild
             side="bottom"
             trigger={
               <Button

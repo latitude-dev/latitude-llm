@@ -210,6 +210,7 @@ function ProjectPage() {
               <ChevronDown className="h-4 w-4" />
             </Button>
             <Tooltip
+              asChild
               trigger={
                 <Button
                   variant={filtersOpen ? "outline" : "ghost"}

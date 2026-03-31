@@ -117,6 +117,7 @@ export function SpanTree({
           </Tooltip>
           {collapsibleIds.size > 0 && (
             <Tooltip
+              asChild
               side="bottom"
               trigger={
                 <button
@@ -137,6 +138,7 @@ export function SpanTree({
           )}
           {selectedSpanId !== "" && (
             <Tooltip
+              asChild
               side="bottom"
               trigger={
                 <button
