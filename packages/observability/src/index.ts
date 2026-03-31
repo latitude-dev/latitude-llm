@@ -1,4 +1,8 @@
+import type { Span, Tracer } from "@opentelemetry/api"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
+
+export type { Span, Tracer }
+
 import { getEnvironment, getTracesConfig, isObservabilityEnabled } from "./config.ts"
 import { createLogger as createLoggerWithState, emitLog, serializeError } from "./logger.ts"
 import { startTracing } from "./otel.ts"
