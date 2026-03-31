@@ -1,4 +1,4 @@
-import { hashToken } from "@repo/utils"
+import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { resolveApiKeyEncryptionKey } from "./api-key-repository.ts"
@@ -17,7 +17,7 @@ describe("resolveApiKeyEncryptionKey", () => {
     const secret = "legacy-secret-generated-by-random-password"
 
     const key = await Effect.runPromise(resolveApiKeyEncryptionKey(secret))
-    const expected = await Effect.runPromise(hashToken(secret).pipe(Effect.map((h) => Buffer.from(h, "hex"))))
+    const expected = await Effect.runPromise(hash(secret).pipe(Effect.map((h) => Buffer.from(h, "hex"))))
 
     expect(key).toStrictEqual(expected)
     expect(key.length).toBe(32)

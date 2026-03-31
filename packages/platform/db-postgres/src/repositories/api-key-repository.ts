@@ -10,7 +10,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import { parseEnv } from "@platform/env"
-import { type CryptoError, decrypt, encrypt, hashToken } from "@repo/utils"
+import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -28,7 +28,7 @@ export const resolveApiKeyEncryptionKey = (rawSecret: string): Effect.Effect<Buf
     return Effect.succeed(Buffer.from(secret, "hex"))
   }
 
-  return hashToken(secret).pipe(Effect.map((hashed) => Buffer.from(hashed, "hex")))
+  return hash(secret).pipe(Effect.map((hashed) => Buffer.from(hashed, "hex")))
 }
 
 const getEncryptionKey = () =>
