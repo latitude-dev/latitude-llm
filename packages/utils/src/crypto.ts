@@ -2,7 +2,6 @@ import { Data, Effect } from "effect"
 import stringify from "fast-json-stable-stringify"
 import { hexDecode, hexEncode } from "./base64.ts"
 
-
 export class CryptoError extends Data.TaggedError("CryptoError")<{
   readonly operation: string
   readonly cause: unknown
