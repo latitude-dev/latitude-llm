@@ -15,6 +15,9 @@ catalogs:
     '@hono/node-server':
       specifier: 1.19.6
       version: 1.19.6
+    '@opentelemetry/api':
+      specifier: ^1.9.0
+      version: 1.9.0
     '@paralleldrive/cuid2':
       specifier: 3.3.0
       version: 3.3.0
@@ -168,6 +171,9 @@ importers:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.6(hono@4.9.12)
+      '@hono/otel':
+        specifier: ^1.1.1
+        version: 1.1.1(hono@4.9.12)
       '@hono/swagger-ui':
         specifier: ^0.5.0
         version: 0.5.3(hono@4.9.12)
@@ -235,6 +241,9 @@ importers:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 1.19.6(hono@4.9.12)
+      '@hono/otel':
+        specifier: ^1.1.1
+        version: 1.1.1(hono@4.9.12)
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
@@ -299,6 +308,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../../packages/domain/spans
+      '@opentelemetry/api':
+        specifier: 'catalog:'
+        version: 1.9.0
       '@platform/db-clickhouse':
         specifier: workspace:*
         version: link:../../packages/platform/db-clickhouse
@@ -2839,6 +2851,11 @@ packages:
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
+
+  '@hono/otel@1.1.1':
+    resolution: {integrity: sha512-zmTMS0uMMzwjO8f4IG0eFoDlr5D7XwJgiCFSHEa5MMZJRHwuSrRI78SLjn5XdFedttSlSgDwHUsf91hly16MSQ==}
+    peerDependencies:
+      hono: '>=4.0.0'
 
   '@hono/swagger-ui@0.5.3':
     resolution: {integrity: sha512-Hn90DOOJ62ICJQplQvCDVpi9Jcn6EhtRaiffyJIS53wA5RmRLtMCDQGVc0bor8vQD7JIwpkweWjs+3cycp+IvA==}
@@ -12270,6 +12287,12 @@ snapshots:
     dependencies:
       hono: 4.11.4
     optional: true
+
+  '@hono/otel@1.1.1(hono@4.9.12)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/semantic-conventions': 1.40.0
+      hono: 4.9.12
 
   '@hono/swagger-ui@0.5.3(hono@4.9.12)':
     dependencies:
