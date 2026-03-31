@@ -33,10 +33,11 @@ import { ChevronDown, Clipboard, Pencil, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   deleteApiKeyMutation,
+  insertApiKeyMutation,
   updateApiKeyMutation,
   useApiKeysCollection,
 } from "../../domains/api-keys/api-keys.collection.ts"
-import { type ApiKeyRecord, createApiKey } from "../../domains/api-keys/api-keys.functions.ts"
+import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
 import { setActiveOrganization } from "../../domains/auth/auth.functions.ts"
 import {
   cancelMemberInviteMutation,
@@ -573,8 +574,12 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
     },
     onSubmit: async ({ value }) => {
       try {
-        await createApiKey({ data: { name: value.name } })
+        await insertApiKeyMutation(value.name)
         setOpen(false)
+        toast({
+          title: "Success",
+          description: "API key created successfully.",
+        })
       } catch (error) {
         toast({
           variant: "destructive",
