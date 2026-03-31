@@ -1,3 +1,6 @@
+import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node"
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
+import { NodeSDK } from "@opentelemetry/sdk-node"
 import type { TracesConfig } from "./types.ts"
 
 const appendResourceAttribute = (key: string, value: string) => {
@@ -17,10 +20,6 @@ export const startTracing = async ({
   serviceName: string
   environment: string
 }): Promise<() => Promise<void>> => {
-  const { getNodeAutoInstrumentations } = await import("@opentelemetry/auto-instrumentations-node")
-  const { OTLPTraceExporter } = await import("@opentelemetry/exporter-trace-otlp-http")
-  const { NodeSDK } = await import("@opentelemetry/sdk-node")
-
   process.env.OTEL_SERVICE_NAME = serviceName
   process.env.DD_SERVICE = serviceName
   process.env.DD_ENV = environment
