@@ -182,8 +182,9 @@ jobs:
                 --task-definition "${FAMILY}" \
                 --query 'taskDefinition' \
                 --output json | jq \
-                  --arg image "${IMAGE}" '
-                  .containerDefinitions[0].image = $image |
+                  --arg image "${IMAGE}" \
+                  --arg name "${SERVICE}" '
+                  .containerDefinitions |= map(if .name == $name then .image = $image else . end) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
                 ')" > /dev/null
             aws ecs update-service \
@@ -371,8 +372,9 @@ jobs:
                 --task-definition "${FAMILY}" \
                 --query 'taskDefinition' \
                 --output json | jq \
-                  --arg image "${IMAGE}" '
-                  .containerDefinitions[0].image = $image |
+                  --arg image "${IMAGE}" \
+                  --arg name "${SERVICE}" '
+                  .containerDefinitions |= map(if .name == $name then .image = $image else . end) |
                   del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
                 ')" > /dev/null
             aws ecs update-service \
