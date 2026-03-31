@@ -1,5 +1,5 @@
 import { serve } from "@hono/node-server"
-import { otel } from "@hono/otel"
+import { httpInstrumentationMiddleware as otel } from "@hono/otel"
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { parseEnv } from "@platform/env"
