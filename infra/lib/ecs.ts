@@ -71,16 +71,6 @@ export function createEcs(
     })
   }
 
-  // Log group for datadog-agent sidecar
-  const datadogLogGroup = new aws.cloudwatch.LogGroup(`${name}-datadog-agent-logs`, {
-    name: `/ecs/${name}/datadog-agent`,
-    retentionInDays: config.name === "staging" ? 7 : 30,
-    tags: {
-      Name: `${name}-datadog-agent-logs`,
-      Environment: config.name,
-    },
-  })
-
   const executionRole = new aws.iam.Role(`${name}-execution-role`, {
     assumeRolePolicy: JSON.stringify({
       Version: "2012-10-17",
@@ -496,32 +486,29 @@ function createTaskDefinition(
               containerPort: 4318,
               protocol: "tcp",
             },
+            {
+              containerPort: 4317,
+              protocol: "tcp",
+            },
           ],
           environment: [
             { name: "DD_APM_ENABLED", value: "true" },
+            { name: "DD_APM_RECEIVER_PORT", value: "8126" },
             { name: "DD_DOGSTATSD_NON_LOCAL_TRAFFIC", value: "true" },
+            { name: "DD_DOGSTATSD_PORT", value: "8125" },
             { name: "DD_ECS_TASK_COLLECTION_ENABLED", value: "true" },
             { name: "DD_CONTAINER_EXCLUDE", value: "name:datadog-agent" },
             { name: "DD_ENV", value: config.name },
             { name: "DD_SERVICE", value: serviceConfig.name },
             { name: "ECS_FARGATE", value: "true" },
             { name: "DD_OTLP_CONFIG_TRACES_ENABLED", value: "true" },
-            { name: "DD_OTLP_HTTP_ENDPOINT", value: "0.0.0.0:4318" },
-            { name: "DD_OTLP_CONFIG_LOGS_ENABLED", value: "true" },
-            { name: "DD_OTLP_CONFIG_METRICS_ENABLED", value: "true" },
+            { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT", value: "0.0.0.0:4318" },
+            { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT", value: "0.0.0.0:4317" },
           ],
           secrets: [
             { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
             { name: "DD_SITE", valueFrom: datadogSiteArn },
           ],
-          logConfiguration: {
-            logDriver: "awslogs",
-            options: {
-              "awslogs-group": `/ecs/${name}/datadog-agent`,
-              "awslogs-region": config.region,
-              "awslogs-stream-prefix": "datadog-agent",
-            },
-          },
           healthCheck: {
             command: ["CMD-SHELL", "agent health || exit 1"],
             interval: 30,

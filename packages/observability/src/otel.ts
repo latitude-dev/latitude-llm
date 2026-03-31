@@ -20,9 +20,6 @@ export const startTracing = async ({
   serviceName: string
   environment: string
 }): Promise<() => Promise<void>> => {
-  console.log(`[Observability] Starting tracing for ${serviceName} in ${environment}`)
-  console.log(`[Observability] OTLP endpoint: ${tracesConfig.endpoint}`)
-
   process.env.OTEL_SERVICE_NAME = serviceName
   process.env.DD_SERVICE = serviceName
   process.env.DD_ENV = environment
@@ -37,16 +34,7 @@ export const startTracing = async ({
     instrumentations: [getNodeAutoInstrumentations()],
   })
 
-  try {
-    await sdk.start()
-    console.log(`[Observability] Tracing started successfully for ${serviceName}`)
-  } catch (error) {
-    console.error(`[Observability] Failed to start tracing:`, error)
-    throw error
-  }
+  await sdk.start()
 
-  return () => {
-    console.log(`[Observability] Shutting down tracing for ${serviceName}`)
-    return sdk.shutdown()
-  }
+  return () => sdk.shutdown()
 }

@@ -53,25 +53,13 @@ export const getServiceName = (state: ObservabilityState, scope: string) =>
 export const getTracesConfig = (): TracesConfig | undefined => {
   const explicitEndpoint =
     process.env.LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT || process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
-  if (explicitEndpoint) {
-    return {
-      endpoint: explicitEndpoint,
-      headers: {
-        ...parseHeaders(process.env.LAT_OBSERVABILITY_OTLP_HEADERS),
-      },
-    }
-  }
-
-  const datadogApiKey = process.env.LAT_DATADOG_API_KEY
-  if (!datadogApiKey) {
+  if (!explicitEndpoint) {
     return undefined
   }
 
-  const datadogSite = process.env.LAT_DATADOG_SITE || "datadoghq.com"
   return {
-    endpoint: `https://otlp.${datadogSite}/v1/traces`,
+    endpoint: explicitEndpoint,
     headers: {
-      "DD-API-KEY": datadogApiKey,
       ...parseHeaders(process.env.LAT_OBSERVABILITY_OTLP_HEADERS),
     },
   }
