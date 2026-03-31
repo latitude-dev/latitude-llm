@@ -4,8 +4,8 @@ import { HotkeysProvider } from "@tanstack/react-hotkeys"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
-import { AppQueryProvider } from "../lib/data/query-client.tsx"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
+import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
