@@ -210,8 +210,54 @@ jobs:
           done
           exit "${ec}"
 
+  staging-upload-sourcemaps:
+    needs: staging-build
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      deployment: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build all apps
+        run: pnpm --filter "@app/*" build
+        env:
+          NODE_ENV: production
+          VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
+          VITE_LAT_WEB_URL: ${{ vars.VITE_LAT_WEB_URL }}
+
+      - name: Upload sourcemaps to Datadog
+        run: |
+          RELEASE=${{ needs.staging-build.outputs.image_tag }}
+          pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
+            --service web \
+            --release-version "$RELEASE" \
+            --minified-path-prefix ${{ vars.VITE_LAT_WEB_URL }}
+          for SERVICE in api ingest workers workflows; do
+            pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
+              --service "$SERVICE" \
+              --release-version "$RELEASE" \
+              --minified-path-prefix "/app/apps/${SERVICE}/dist"
+          done
+        env:
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+          DATADOG_SITE: ${{ vars.DATADOG_SITE }}
+
   staging-deploy-complete:
-    needs: staging-apply
+    needs: [staging-apply, staging-upload-sourcemaps]
     runs-on: ubuntu-latest
     environment: staging
     steps:
@@ -400,8 +446,54 @@ jobs:
           done
           exit "${ec}"
 
+  production-upload-sourcemaps:
+    needs: production-build
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      deployment: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build all apps
+        run: pnpm --filter "@app/*" build
+        env:
+          NODE_ENV: production
+          VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
+          VITE_LAT_WEB_URL: ${{ vars.VITE_LAT_WEB_URL }}
+
+      - name: Upload sourcemaps to Datadog
+        run: |
+          RELEASE=${{ needs.production-build.outputs.image_tag }}
+          pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
+            --service web \
+            --release-version "$RELEASE" \
+            --minified-path-prefix ${{ vars.VITE_LAT_WEB_URL }}
+          for SERVICE in api ingest workers workflows; do
+            pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
+              --service "$SERVICE" \
+              --release-version "$RELEASE" \
+              --minified-path-prefix "/app/apps/${SERVICE}/dist"
+          done
+        env:
+          DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+          DATADOG_SITE: ${{ vars.DATADOG_SITE }}
+
   production-deploy-complete:
-    needs: production-apply
+    needs: [production-apply, production-upload-sourcemaps]
     runs-on: ubuntu-latest
     environment: production
     steps:

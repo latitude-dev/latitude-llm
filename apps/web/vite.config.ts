@@ -44,6 +44,7 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: true,
     rolldownOptions: {
       // These are Node.js-only packages that must never appear in client chunks.
       // Vite follows dynamic imports in @repo/observability/otel.ts and would
