@@ -40,10 +40,12 @@ export const tracingRequestMiddleware = ({ tracer }: { tracer: Tracer }) =>
 
 export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger: Logger }) =>
   createMiddleware({ type: "function" }).server(async ({ next }) => {
-    return tracer.startActiveSpan("function", async (span: Span) => {
+    return tracer.startActiveSpan("server-fn", async (span: Span) => {
       try {
         return await next()
       } catch (e) {
+        span.recordException(e as Error)
+
         const httpError = isHttpError(e)
         const tag =
           typeof e === "object" && e !== null && "_tag" in (e as DomainError) ? (e as DomainError)._tag : undefined
