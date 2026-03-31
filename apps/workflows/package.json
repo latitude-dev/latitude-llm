@@ -13,7 +13,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/shared": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@platform/ai-voyage": "workspace:*",
+    "@platform/cache-redis": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@platform/db-weaviate": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",

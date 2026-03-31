@@ -53,8 +53,18 @@ export {
 export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
 export { type AssignmentResult, createOrAssignIssueUseCase } from "./use-cases/create-or-assign-issue.ts"
 export {
+  type EmbeddedScoreFeedback,
+  type EmbedScoreFeedbackInput,
+  embedScoreFeedbackUseCase,
+} from "./use-cases/embed-score-feedback.ts"
+export {
+  type HybridSearchIssuesInput,
+  type HybridSearchIssuesResult,
+  hybridSearchIssuesUseCase,
+} from "./use-cases/hybrid-search-issues.ts"
+export {
+  type RerankIssueCandidatesInput,
   type RetrievalResult,
-  type RetrieveAndRerankInput,
-  retrieveAndRerankUseCase,
-} from "./use-cases/retrieve-and-rerank.ts"
+  rerankIssueCandidatesUseCase,
+} from "./use-cases/rerank-issue-candidates.ts"
 export { syncProjectionsUseCase } from "./use-cases/sync-projections.ts"

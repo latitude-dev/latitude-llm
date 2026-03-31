@@ -5,22 +5,41 @@ import {
   checkEligibilityUseCase,
   createOrAssignIssueUseCase,
   DraftScoreNotEligibleForDiscoveryError,
+  type EmbeddedScoreFeedback,
+  type EmbedScoreFeedbackInput,
   ErroredScoreNotEligibleForDiscoveryError,
+  embedScoreFeedbackUseCase,
+  type HybridSearchIssuesInput,
+  type HybridSearchIssuesResult,
+  hybridSearchIssuesUseCase,
   MissingScoreFeedbackForDiscoveryError,
   PassedScoreNotEligibleForDiscoveryError,
+  type RerankIssueCandidatesInput,
   type RetrievalResult,
-  type RetrieveAndRerankInput,
-  retrieveAndRerankUseCase,
+  rerankIssueCandidatesUseCase,
   ScoreAlreadyOwnedByIssueError,
   ScoreDiscoveryOrganizationMismatchError,
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
   syncProjectionsUseCase,
 } from "@domain/issues"
+import { OrganizationId } from "@domain/shared"
+import { AIVoyageLive, createVoyageClientEffect } from "@platform/ai-voyage"
+import { createRedisClient, createRedisConnection, RedisCacheStoreLive } from "@platform/cache-redis"
+import { createPostgresClient, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { createWeaviateClientEffect, IssueProjectionRepositoryLive } from "@platform/db-weaviate"
 import { createLogger } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 
 const logger = createLogger("workflows-issue-discovery")
+const postgresClient = createPostgresClient()
+const redisClient = createRedisClient(createRedisConnection())
+const issueDiscoveryAiLayerEffect = createVoyageClientEffect().pipe(
+  Effect.map((voyageClient) => AIVoyageLive(voyageClient).pipe(Layer.provideMerge(RedisCacheStoreLive(redisClient)))),
+)
+const issueProjectionRepositoryLayerEffect = createWeaviateClientEffect().pipe(
+  Effect.map((weaviateClient) => IssueProjectionRepositoryLive(weaviateClient)),
+)
 
 const eligibilityErrorConstructors = [
   ScoreNotFoundForDiscoveryError,
@@ -40,6 +59,7 @@ const isEligibilityError = (error: unknown): error is CheckEligibilityError => {
 export const checkEligibility = (input: CheckEligibilityInput): Promise<true> =>
   Effect.runPromise(
     checkEligibilityUseCase(input).pipe(
+      withPostgres(ScoreRepositoryLive, postgresClient, OrganizationId(input.organizationId)),
       Effect.tapError((error) =>
         Effect.sync(() => {
           if (isEligibilityError(error)) {
@@ -55,8 +75,35 @@ export const checkEligibility = (input: CheckEligibilityInput): Promise<true> =>
     ),
   )
 
-export const retrieveAndRerank = (input: RetrieveAndRerankInput): Promise<RetrievalResult> =>
-  Effect.runPromise(retrieveAndRerankUseCase(input))
+export const embedScoreFeedback = (input: EmbedScoreFeedbackInput): Promise<EmbeddedScoreFeedback> =>
+  Effect.runPromise(
+    issueDiscoveryAiLayerEffect.pipe(
+      Effect.flatMap((issueDiscoveryAiLayer) =>
+        embedScoreFeedbackUseCase(input).pipe(
+          withPostgres(ScoreRepositoryLive, postgresClient, OrganizationId(input.organizationId)),
+          Effect.provide(issueDiscoveryAiLayer),
+        ),
+      ),
+    ),
+  )
+
+export const hybridSearchIssues = (input: HybridSearchIssuesInput): Promise<HybridSearchIssuesResult> =>
+  Effect.runPromise(
+    issueProjectionRepositoryLayerEffect.pipe(
+      Effect.flatMap((issueProjectionRepositoryLayer) =>
+        hybridSearchIssuesUseCase(input).pipe(Effect.provide(issueProjectionRepositoryLayer)),
+      ),
+    ),
+  )
+
+export const rerankIssueCandidates = (input: RerankIssueCandidatesInput): Promise<RetrievalResult> =>
+  Effect.runPromise(
+    issueDiscoveryAiLayerEffect.pipe(
+      Effect.flatMap((issueDiscoveryAiLayer) =>
+        rerankIssueCandidatesUseCase(input).pipe(Effect.provide(issueDiscoveryAiLayer)),
+      ),
+    ),
+  )
 
 export const createOrAssignIssue = (input: {
   readonly organizationId: string
