@@ -40,7 +40,11 @@ const toRecord = (score: AnnotationScore) => ({
   createdAt: score.createdAt.toISOString(),
   updatedAt: score.updatedAt.toISOString(),
 })
-type AnnotationRecord = ReturnType<typeof toRecord>
+export type AnnotationRecord = ReturnType<typeof toRecord>
+
+export function isDraftAnnotation(annotation: AnnotationRecord): boolean {
+  return annotation.draftedAt !== null
+}
 
 const toListResult = (page: ScoreListPage) => ({
   items: page.items.map((s) => toRecord(s as AnnotationScore)),

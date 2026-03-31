@@ -5,6 +5,7 @@ import { ScrollNavigator, type ScrollNavigatorHandle } from "../scroll-navigator
 import { Message, type ToolCallActions } from "./message.tsx"
 import { Part, type ToolCallResult } from "./part.tsx"
 import { getKnownField } from "./parts/helpers.tsx"
+import { type HighlightRange, type TextSelectionAnchor, TextSelectionProvider } from "./text-selection.tsx"
 
 function SystemInstructionsBlock({ parts }: { readonly parts: readonly GenAIPart[] }) {
   return (
@@ -88,6 +89,9 @@ export function Conversation({
   nextLabel,
   messageActions,
   toolCallActions,
+  onTextSelect,
+  highlightRanges,
+  messageAnnotationSlot,
 }: {
   readonly systemInstructions?: GenAISystem
   readonly messages: readonly (GenAIMessage | null)[]
@@ -109,10 +113,18 @@ export function Conversation({
   readonly messageActions?: ReadonlyMap<number, () => void>
   /** Map of toolCallId → action, renders a navigate button inside each ToolCallBlock. */
   readonly toolCallActions?: ToolCallActions
+  /** Called when the user selects text within a message part. Emits the canonical anchor and popover position. */
+  readonly onTextSelect?: ((anchor: TextSelectionAnchor, position: { x: number; y: number }) => void) | undefined
+  /** Highlight ranges to paint on text parts (e.g. from persisted annotations). */
+  readonly highlightRanges?: ReadonlyArray<HighlightRange> | undefined
+  /** Renders a slot below each message. Receives the original messageIndex and role. */
+  readonly messageAnnotationSlot?: ((messageIndex: number, role: string) => ReactNode) | undefined
 }) {
   const internalNavItemRefs = useRef<(HTMLDivElement | null)[]>([])
   // If the parent provides navItemRefsRef it owns the ScrollNavigator; use their ref directly.
   const navItemRefs = navItemRefsRef ?? internalNavItemRefs
+  const containerRef = useRef<HTMLDivElement>(null)
+  const enableTextSelection = !!onTextSelect || (highlightRanges != null && highlightRanges.length > 0)
 
   const hasSystem = !!(systemInstructions && systemInstructions.length > 0)
   const { resultMap, visibleMessages } = useMemo(() => {
@@ -143,8 +155,8 @@ export function Conversation({
     )
   }
 
-  return (
-    <div className="flex flex-col gap-6">
+  const content = (
+    <div ref={containerRef} className={cn("flex flex-col gap-6", { "select-none": !enableTextSelection })}>
       {hasSystem && (
         <div
           ref={(el) => {
@@ -167,17 +179,20 @@ export function Conversation({
             ref={(el) => {
               navItemRefs.current[navIdx] = el
             }}
+            data-message-index={index}
             className={cn("group relative pl-4", {
               "pl-10 py-2 transition-colors hover:bg-muted/50": isAssistant && messageActions,
             })}
           >
             <Message
               message={message}
+              messageIndex={index}
               alignment={message.role === "user" ? "right" : "left"}
               toolResults={message.role === "assistant" ? resultMap : undefined}
               {...(onNavigate ? { onNavigate } : {})}
               {...(toolCallActions ? { toolCallActions } : {})}
             />
+            {messageAnnotationSlot?.(index, message.role)}
           </div>
         )
       })}
@@ -193,4 +208,19 @@ export function Conversation({
       )}
     </div>
   )
+
+  if (enableTextSelection) {
+    return (
+      <TextSelectionProvider
+        messages={messages}
+        containerRef={containerRef}
+        onSelect={onTextSelect}
+        highlightRanges={highlightRanges}
+      >
+        {content}
+      </TextSelectionProvider>
+    )
+  }
+
+  return content
 }

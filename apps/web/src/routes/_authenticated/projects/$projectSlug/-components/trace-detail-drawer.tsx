@@ -12,17 +12,25 @@ import {
   useMountEffect,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowUpIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  GroupIcon,
+  ListTreeIcon,
+  MessageSquareIcon,
+  MessagesSquareIcon,
+} from "lucide-react"
 import { useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { AnnotationsTab } from "./trace-detail-drawer/tabs/annotations-tab.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
 import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
 
-type TabId = "trace" | "conversation" | "spans"
+type TabId = "trace" | "conversation" | "spans" | "annotations"
 
 const TABS: TabOption<TabId>[] = [
   { id: "trace", label: "Trace", icon: <GroupIcon className="w-4 h-4" />, tooltip: <HotkeyBadge hotkey="Shift+1" /> },
@@ -37,6 +45,12 @@ const TABS: TabOption<TabId>[] = [
     label: "Spans",
     icon: <ListTreeIcon className="w-4 h-4" />,
     tooltip: <HotkeyBadge hotkey="Shift+3" />,
+  },
+  {
+    id: "annotations",
+    label: "Annotations",
+    icon: <MessageSquareIcon className="w-4 h-4" />,
+    tooltip: <HotkeyBadge hotkey="Shift+4" />,
   },
 ]
 
@@ -90,6 +104,7 @@ export function TraceDetailDrawer({
     { hotkey: "Shift+1", callback: () => handleSetActiveTab("trace") },
     { hotkey: "Shift+2", callback: () => handleSetActiveTab("conversation") },
     { hotkey: "Shift+3", callback: () => handleSetActiveTab("spans") },
+    { hotkey: "Shift+4", callback: () => handleSetActiveTab("annotations") },
     {
       hotkey: "Alt+ArrowDown",
       callback: () => onNextTrace?.(),
@@ -231,6 +246,9 @@ export function TraceDetailDrawer({
             isActive={activeTab === "spans"}
           />
         )}
+      </div>
+      <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "annotations" })}>
+        {visitedTabs.has("annotations") && <AnnotationsTab projectId={projectId} traceId={traceId} />}
       </div>
     </DetailDrawer>
   )
