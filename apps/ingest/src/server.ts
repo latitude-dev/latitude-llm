@@ -18,7 +18,6 @@ const start = async () => {
 
   const app = new Hono<IngestEnv>()
   const port = Effect.runSync(parseEnv("LAT_INGEST_PORT", "number", 3002))
-
   const logger = createLogger("ingest")
 
   app.onError((err, c) => {

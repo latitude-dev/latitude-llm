@@ -71,6 +71,16 @@ export function createEcs(
     })
   }
 
+  // Log group for datadog-agent sidecar
+  const datadogLogGroup = new aws.cloudwatch.LogGroup(`${name}-datadog-agent-logs`, {
+    name: `/ecs/${name}/datadog-agent`,
+    retentionInDays: config.name === "staging" ? 7 : 30,
+    tags: {
+      Name: `${name}-datadog-agent-logs`,
+      Environment: config.name,
+    },
+  })
+
   const executionRole = new aws.iam.Role(`${name}-execution-role`, {
     assumeRolePolicy: JSON.stringify({
       Version: "2012-10-17",
@@ -509,6 +519,14 @@ function createTaskDefinition(
             { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
             { name: "DD_SITE", valueFrom: datadogSiteArn },
           ],
+          logConfiguration: {
+            logDriver: "awslogs",
+            options: {
+              "awslogs-group": `/ecs/${name}/datadog-agent`,
+              "awslogs-region": config.region,
+              "awslogs-stream-prefix": "datadog-agent",
+            },
+          },
           healthCheck: {
             command: ["CMD-SHELL", "agent health || exit 1"],
             interval: 30,

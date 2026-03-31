@@ -1,3 +1,4 @@
+import { trace } from "@opentelemetry/api"
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import { NodeSDK } from "@opentelemetry/sdk-node"
@@ -26,15 +27,51 @@ export const startTracing = async ({
   appendResourceAttribute("service.name", serviceName)
   appendResourceAttribute("deployment.environment", environment)
 
+  // Test connectivity to OTLP endpoint
+  try {
+    const testRes = await fetch(tracesConfig.endpoint.replace("/v1/traces", "/health") || tracesConfig.endpoint, {
+      method: "GET",
+      signal: AbortSignal.timeout(5000),
+    }).catch(() => null)
+    console.log(`[Observability] OTLP endpoint connectivity test: ${testRes?.status || "failed"}`)
+  } catch (e) {
+    console.log(`[Observability] OTLP endpoint not reachable for health check (expected): ${e}`)
+  }
+
+  const exporter = new OTLPTraceExporter({
+    url: tracesConfig.endpoint,
+    headers: tracesConfig.headers,
+  })
+
+  // Wrap to log errors
+  const originalExport = exporter.export.bind(exporter)
+  exporter.export = (spans, resultCallback) => {
+    console.log(`[Observability] Exporting ${spans.length} spans`)
+    return originalExport(spans, (result) => {
+      if (result.error) {
+        console.error(`[Observability] OTLP export error:`, result.error)
+      } else if (result.code !== 0) {
+        console.error(`[Observability] OTLP export failed with code:`, result.code)
+      }
+      resultCallback(result)
+    })
+  }
+
   const sdk = new NodeSDK({
-    traceExporter: new OTLPTraceExporter({
-      url: tracesConfig.endpoint,
-      headers: tracesConfig.headers,
-    }),
+    traceExporter: exporter,
     instrumentations: [getNodeAutoInstrumentations()],
   })
 
   await sdk.start()
+
+  // Force a startup trace to verify connectivity
+  const tracer = trace.getTracer("observability-setup")
+  const span = tracer.startSpan("observability.initialized")
+  span.setAttribute("service.name", serviceName)
+  span.setAttribute("deployment.environment", environment)
+  span.end()
+
+  console.log(`[Observability] Started successfully for ${serviceName}`)
 
   return () => sdk.shutdown()
 }
