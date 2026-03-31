@@ -555,6 +555,9 @@ importers:
 
   packages/domain/ai:
     dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -864,6 +867,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
       '@platform/ai-credentials':
         specifier: workspace:*
         version: link:../ai-credentials
@@ -882,6 +888,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -894,9 +903,9 @@ importers:
 
   packages/platform/cache-redis:
     dependencies:
-      '@domain/ai':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../../domain/ai
+        version: link:../../domain/shared
       '@platform/env':
         specifier: workspace:*
         version: link:../env

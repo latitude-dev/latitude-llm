@@ -1,4 +1,4 @@
-export { AICacheLive } from "./ai-cache.ts"
+export { RedisCacheStoreLive } from "./ai-cache.ts"
 
 import { ServiceMap } from "effect"
 

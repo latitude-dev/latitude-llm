@@ -17,6 +17,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/shared": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "rosetta-ai": "catalog:",

@@ -1,4 +1,5 @@
-import { AI, AICache, AIError, withAICache } from "@domain/ai"
+import { AI, AIError, withAICache } from "@domain/ai"
+import { CacheStore } from "@domain/shared"
 import { Effect, Layer, Option } from "effect"
 import type { VoyageAIClient } from "voyageai"
 import { createEmbed } from "./embedding.ts"
@@ -18,7 +19,7 @@ export const AIVoyageLive = (client: VoyageAIClient) =>
   Layer.effect(
     AI,
     Effect.gen(function* () {
-      const cache = yield* Effect.serviceOption(AICache)
+      const cache = yield* Effect.serviceOption(CacheStore)
 
       const ai = {
         generate: () => Effect.fail(new AIError({ message: "generate is not provided by @platform/ai-voyage" })),

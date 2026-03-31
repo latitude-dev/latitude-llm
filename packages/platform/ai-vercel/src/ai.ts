@@ -1,6 +1,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
-import { AI, AICache, AICredentials, AIError, type GenerateInput, withAICache } from "@domain/ai"
+import { AI, AICredentials, AIError, type GenerateInput, withAICache } from "@domain/ai"
+import { CacheStore } from "@domain/shared"
 import { isLatitudeAiProvider, LATITUDE_AI_PROVIDERS } from "@platform/ai-credentials"
 import { generateText, Output } from "ai"
 import { Effect, Layer, Option } from "effect"
@@ -32,7 +33,7 @@ export const AIGenerateLive = Layer.effect(
   AI,
   Effect.gen(function* () {
     const credentials = yield* AICredentials
-    const cache = yield* Effect.serviceOption(AICache)
+    const cache = yield* Effect.serviceOption(CacheStore)
 
     const ai = {
       generate: <T>(input: GenerateInput<T>) =>

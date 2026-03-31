@@ -94,7 +94,7 @@ export class AI extends ServiceMap.Service<
   }
 >()("@domain/ai/AI") {}
 
-export { AICache, withAICache } from "./cache.ts"
+export { withAICache } from "./cache.ts"
 
 export class AICredentials extends ServiceMap.Service<
   AICredentials,

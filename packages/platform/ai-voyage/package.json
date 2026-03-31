@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
     "voyageai": "catalog:"

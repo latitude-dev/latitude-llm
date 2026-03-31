@@ -3,7 +3,7 @@ import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, type ScoreId } from "@domain/shared"
 import { AICredentialsLive } from "@platform/ai-credentials"
 import { AIGenerateLive } from "@platform/ai-vercel"
-import { AICacheLive } from "@platform/cache-redis"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -20,7 +20,7 @@ interface AnnotationScoresDeps {
 
 const annotationAiLayer = AIGenerateLive.pipe(
   Layer.provideMerge(AICredentialsLive),
-  Layer.provideMerge(AICacheLive(getRedisClient())),
+  Layer.provideMerge(RedisCacheStoreLive(getRedisClient())),
 )
 
 export const createAnnotationScoresWorker = ({ consumer, postgresClient }: AnnotationScoresDeps) => {

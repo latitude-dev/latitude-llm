@@ -1,22 +1,33 @@
-import { AICache, AIError } from "@domain/ai"
+import { CacheError, CacheStore } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import type { Redis } from "ioredis"
 
-const DEFAULT_TTL_SECONDS = 24 * 60 * 60 // 1 day
-
-export const AICacheLive = (redis: Redis, ttlSeconds: number = DEFAULT_TTL_SECONDS) =>
-  Layer.succeed(AICache, {
+export const RedisCacheStoreLive = (redis: Redis) =>
+  Layer.succeed(CacheStore, {
     get: (key) =>
       Effect.tryPromise({
         try: () => redis.get(key),
-        catch: (cause) => new AIError({ message: `AICache get failed: ${cause}`, cause }),
+        catch: (cause) => new CacheError({ message: `Cache get failed: ${String(cause)}`, cause }),
       }),
 
-    set: (key, value) =>
+    set: (key, value, options) =>
       Effect.tryPromise({
         try: async () => {
-          await redis.set(key, value, "EX", ttlSeconds)
+          if (options?.ttlSeconds !== undefined) {
+            await redis.set(key, value, "EX", options.ttlSeconds)
+            return
+          }
+
+          await redis.set(key, value)
         },
-        catch: (cause) => new AIError({ message: `AICache set failed: ${cause}`, cause }),
+        catch: (cause) => new CacheError({ message: `Cache set failed: ${String(cause)}`, cause }),
+      }),
+
+    delete: (key) =>
+      Effect.tryPromise({
+        try: async () => {
+          await redis.del(key)
+        },
+        catch: (cause) => new CacheError({ message: `Cache delete failed: ${String(cause)}`, cause }),
       }),
   })
