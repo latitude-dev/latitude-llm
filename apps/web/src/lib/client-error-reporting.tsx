@@ -66,13 +66,10 @@ export function ErrorFallback({
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <Text.H3>Something went wrong</Text.H3>
       <Text.H5 color="foregroundMuted">
-        If this error persists, please contact support and reference this error
-        ID:
+        If this error persists, please contact support and reference this error ID:
       </Text.H5>
       <div className="flex items-center gap-1">
-        <code className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded">
-          {errorId}
-        </code>
+        <code className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded">{errorId}</code>
         <CopyButton value={errorId} tooltip="Copy error ID" />
       </div>
       <Button onClick={reset}>Try again</Button>
