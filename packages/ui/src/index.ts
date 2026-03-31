@@ -124,6 +124,7 @@ export {
 export { Toaster } from "./components/toast/toaster.tsx"
 export { toast, useToast } from "./components/toast/useToast.ts"
 export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger } from "./components/tooltip/tooltip.tsx"
+export { hashToHue, useHashColor } from "./hooks/use-hash-color.ts"
 export { useHover } from "./hooks/use-hover.ts"
 export { useMountEffect } from "./hooks/use-mount-effect.ts"
 // Lib
