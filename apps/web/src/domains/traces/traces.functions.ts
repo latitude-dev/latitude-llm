@@ -158,7 +158,6 @@ export const countTracesByProject = createServerFn({ method: "GET" })
   })
 
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<TraceMetrics | null> => {
     const { organizationId } = await requireSession()
@@ -189,7 +188,6 @@ const traceHistogramInputSchema = z.object({
 })
 
 export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(traceHistogramInputSchema)
   .handler(async ({ data }): Promise<readonly TraceTimeHistogramBucket[]> => {
     const startMs = Date.parse(data.rangeStartIso)

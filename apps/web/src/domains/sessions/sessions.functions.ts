@@ -93,7 +93,6 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
   })
 
 export const getSessionMetricsByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<SessionMetrics | null> => {
     const { organizationId } = await requireSession()
