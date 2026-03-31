@@ -9,9 +9,12 @@ import type {
   TaskPayload,
 } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
+import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { Queue, Worker } from "bullmq"
 import { Effect, Layer } from "effect"
 import { Redis } from "ioredis"
+
+const tracer = trace.getTracer("bullmq")
 
 interface BullMqJobData {
   readonly payload: unknown
@@ -133,7 +136,35 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                   throw new Error(`Missing payload for task "${task}" on topic "${queue}"`)
                 }
 
-                await Effect.runPromise(handler(payload))
+                // Wrap handler execution with OTel instrumentation
+                await tracer.startActiveSpan(
+                  `bullmq.${queue}.${task}`,
+                  {
+                    attributes: {
+                      "messaging.system": "bullmq",
+                      "messaging.destination": queue,
+                      "messaging.operation": "process",
+                      "messaging.message_id": job.id,
+                      "messaging.bullmq.task": task,
+                      "messaging.bullmq.attempts_made": job.attemptsMade,
+                    },
+                  },
+                  async (span) => {
+                    try {
+                      await Effect.runPromise(handler(payload))
+                      span.setStatus({ code: SpanStatusCode.OK })
+                    } catch (error) {
+                      span.recordException(error as Error)
+                      span.setStatus({
+                        code: SpanStatusCode.ERROR,
+                        message: (error as Error).message,
+                      })
+                      throw error
+                    } finally {
+                      span.end()
+                    }
+                  },
+                )
               },
               {
                 connection: new Redis(redisConfig),

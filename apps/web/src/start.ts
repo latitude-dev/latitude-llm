@@ -1,11 +1,8 @@
-import { SpanStatusCode } from "@opentelemetry/api"
-import { initializeObservability, trace } from "@repo/observability"
-import { createMiddleware, createStart } from "@tanstack/react-start"
+// OpenTelemetry instrumentation MUST be imported first
+import "./instrumentation.ts"
 
-// Initialize observability at startup (not per-request)
-await initializeObservability({
-  serviceName: "web",
-})
+import { SpanStatusCode, trace } from "@opentelemetry/api"
+import { createMiddleware, createStart } from "@tanstack/react-start"
 
 const tracer = trace.getTracer("web")
 

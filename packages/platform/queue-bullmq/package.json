@@ -16,6 +16,7 @@
     "@domain/shared": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
+    "@opentelemetry/api": "catalog:",
     "@platform/env": "workspace:*",
     "bullmq": "catalog:",
     "effect": "catalog:",
