@@ -1,11 +1,11 @@
-import { trace } from "@opentelemetry/api"
+import { SpanStatusCode, trace } from "@opentelemetry/api"
 import { getEnvironment, getTracesConfig, isObservabilityEnabled } from "./config.ts"
 import { createLogger as createLoggerWithState, emitLog, serializeError } from "./logger.ts"
 import { startTracing } from "./otel.ts"
 import { getObservabilityState } from "./state.ts"
 import type { InitializeObservabilityOptions } from "./types.ts"
 
-export { trace }
+export { trace, SpanStatusCode }
 export const createLogger = (scope: string) => createLoggerWithState(getObservabilityState(), scope)
 
 export const initializeObservability = async ({ serviceName }: InitializeObservabilityOptions): Promise<void> => {

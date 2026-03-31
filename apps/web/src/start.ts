@@ -1,8 +1,7 @@
 // OpenTelemetry instrumentation MUST be imported first
 
 import type { DomainError } from "@domain/shared"
-import { SpanStatusCode, trace } from "@opentelemetry/api"
-import { createLogger, initializeObservability } from "@repo/observability"
+import { createLogger, initializeObservability, SpanStatusCode, trace } from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { createMiddleware, createStart } from "@tanstack/react-start"
 
