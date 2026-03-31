@@ -71,6 +71,16 @@ export function createEcs(
     })
   }
 
+  // Log group for datadog-agent sidecar
+  const datadogLogGroup = new aws.cloudwatch.LogGroup(`${name}-datadog-agent-logs`, {
+    name: `/ecs/${name}/datadog-agent`,
+    retentionInDays: config.name === "staging" ? 7 : 30,
+    tags: {
+      Name: `${name}-datadog-agent-logs`,
+      Environment: config.name,
+    },
+  })
+
   const executionRole = new aws.iam.Role(`${name}-execution-role`, {
     assumeRolePolicy: JSON.stringify({
       Version: "2012-10-17",
@@ -370,6 +380,8 @@ function createTaskDefinition(
           { name: "DD_DOGSTATSD_HOST", value: "localhost" },
           { name: "DD_DOGSTATSD_PORT", value: "8125" },
           { name: "DD_AGENT_HOST", value: "localhost" },
+          { name: "LAT_OBSERVABILITY_ENABLED", value: "true" },
+          { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
@@ -388,8 +400,6 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
-          { name: "LAT_DATADOG_API_KEY", valueFrom: datadogApiKeyArn },
-          { name: "LAT_DATADOG_SITE", valueFrom: datadogSiteArn },
         ]
 
         // Service-specific environment variables
@@ -482,6 +492,10 @@ function createTaskDefinition(
               containerPort: 8126,
               protocol: "tcp",
             },
+            {
+              containerPort: 4318,
+              protocol: "tcp",
+            },
           ],
           environment: [
             { name: "DD_APM_ENABLED", value: "true" },
@@ -491,11 +505,23 @@ function createTaskDefinition(
             { name: "DD_ENV", value: config.name },
             { name: "DD_SERVICE", value: serviceConfig.name },
             { name: "ECS_FARGATE", value: "true" },
+            { name: "DD_OTLP_CONFIG_TRACES_ENABLED", value: "true" },
+            { name: "DD_OTLP_HTTP_ENDPOINT", value: "0.0.0.0:4318" },
+            { name: "DD_OTLP_CONFIG_LOGS_ENABLED", value: "true" },
+            { name: "DD_OTLP_CONFIG_METRICS_ENABLED", value: "true" },
           ],
           secrets: [
             { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
             { name: "DD_SITE", valueFrom: datadogSiteArn },
           ],
+          logConfiguration: {
+            logDriver: "awslogs",
+            options: {
+              "awslogs-group": `/ecs/${name}/datadog-agent`,
+              "awslogs-region": config.region,
+              "awslogs-stream-prefix": "datadog-agent",
+            },
+          },
           healthCheck: {
             command: ["CMD-SHELL", "agent health || exit 1"],
             interval: 30,

@@ -26,12 +26,19 @@ export const initializeObservability = async ({ serviceName }: InitializeObserva
     state.enabled = enabled
 
     if (!enabled) {
+      console.log(`[Observability] Disabled for ${serviceName} (LAT_OBSERVABILITY_ENABLED is not set to true)`)
       state.initialized = true
       return
     }
 
     const tracesConfig = getTracesConfig()
     if (!tracesConfig) {
+      const envVars = {
+        LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT: process.env.LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT,
+        OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+        LAT_DATADOG_API_KEY: process.env.LAT_DATADOG_API_KEY ? "[REDACTED]" : undefined,
+      }
+      console.log(`[Observability] No traces config for ${serviceName}. Environment:`, envVars)
       emitLog(state, "warn", "observability", [
         "LAT_OBSERVABILITY_ENABLED=true but no exporter is configured. Set LAT_DATADOG_API_KEY or LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT.",
       ])
