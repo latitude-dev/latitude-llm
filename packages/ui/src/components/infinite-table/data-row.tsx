@@ -49,7 +49,7 @@ function DataRowInner<T>({
   return (
     <tr
       data-index={dataIndex}
-      className={cn("transition-colors", {
+      className={cn({
         "bg-secondary": !isSubRow && !isExpanded,
         "bg-muted": isExpanded && !isActive,
         "bg-accent": isActive,
