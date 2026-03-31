@@ -7,7 +7,7 @@ import {
   createEventsPublisher,
   loadBullMqConfig,
 } from "@platform/queue-bullmq"
-import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability/server"
+import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
