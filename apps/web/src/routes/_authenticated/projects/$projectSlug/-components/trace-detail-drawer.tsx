@@ -1,5 +1,6 @@
 import {
   Button,
+  CopyableText,
   cn,
   DetailDrawer,
   ProviderIcon,
@@ -9,10 +10,9 @@ import {
   Text,
   Tooltip,
   useMountEffect,
-  useToast,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowUpIcon, ClipboardIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
@@ -61,7 +61,6 @@ export function TraceDetailDrawer({
   readonly canNavigatePrev: boolean
   readonly onTabChange?: (tab: TabId) => void
 }) {
-  const { toast } = useToast()
   const { data: traceDetail, isLoading: isDetailLoading } = useTraceDetail({
     projectId,
     traceId,
@@ -194,21 +193,7 @@ export function TraceDetailDrawer({
                 </span>
               ) : null}
             </div>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1",
-                "text-xs leading-4 font-medium text-muted-foreground",
-                "hover:text-foreground cursor-pointer",
-              )}
-              onClick={() => {
-                navigator.clipboard.writeText(traceId)
-                toast({ title: "Copied", description: "Trace ID copied to clipboard" })
-              }}
-            >
-              <Text.H6 color="foregroundMuted">{traceId.slice(0, 7)}</Text.H6>
-              <ClipboardIcon className="w-3.5 h-3.5" />
-            </button>
+            <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
           </div>
 
           <Tabs options={TABS} active={activeTab} onSelect={handleSetActiveTab} />

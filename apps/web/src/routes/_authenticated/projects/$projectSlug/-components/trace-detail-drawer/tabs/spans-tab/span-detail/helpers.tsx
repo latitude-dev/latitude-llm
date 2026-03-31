@@ -1,4 +1,4 @@
-import { CodeBlock, CopyButton, cn, Text } from "@repo/ui"
+import { CodeBlock, CopyableText, cn, Text } from "@repo/ui"
 import { useMemo } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 
@@ -42,10 +42,7 @@ export function StatusBadge({
       </span>
       {statusMessage && <Text.H6 color="foregroundMuted">{statusMessage}</Text.H6>}
       <span className="flex-1" />
-      <Text.H6 color="foregroundMuted" noWrap>
-        {spanId}
-      </Text.H6>
-      <CopyButton value={spanId} />
+      <CopyableText value={spanId} size="sm" tooltip="Copy span ID" />
     </div>
   )
 }

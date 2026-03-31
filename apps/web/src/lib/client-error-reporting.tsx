@@ -1,5 +1,5 @@
 import { createLogger, SpanStatusCode, trace } from "@repo/observability"
-import { Button, CopyButton, Text, useMountEffect } from "@repo/ui"
+import { Button, CopyableText, Text, useMountEffect } from "@repo/ui"
 import { createServerFn } from "@tanstack/react-start"
 import { useMemo } from "react"
 import { z } from "zod"
@@ -68,10 +68,7 @@ export function ErrorFallback({
       <Text.H5 color="foregroundMuted">
         If this error persists, please contact support and reference this error ID:
       </Text.H5>
-      <div className="flex items-center gap-1">
-        <code className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded">{errorId}</code>
-        <CopyButton value={errorId} tooltip="Copy error ID" />
-      </div>
+      <CopyableText value={errorId} tooltip="Copy error ID" />
       <Button onClick={reset}>Try again</Button>
     </div>
   )

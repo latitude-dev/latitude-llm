@@ -1,5 +1,6 @@
 import {
   CodeBlock,
+  CopyableText,
   DetailDrawer,
   DetailSection,
   DetailSummary,
@@ -10,7 +11,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
-import { CopyIcon, FingerprintIcon, TextIcon } from "lucide-react"
+import { FingerprintIcon, TextIcon } from "lucide-react"
 import { useMemo } from "react"
 import { useSessionDetail } from "../../../../../domains/sessions/sessions.collection.ts"
 
@@ -70,20 +71,11 @@ export function SessionDetailDrawer({
               </>
             )}
           </div>
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-1 text-xs leading-4 font-medium text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={() => {
-              navigator.clipboard.writeText(sessionId)
-            }}
-          >
-            {isRecordLoading ? (
-              <Skeleton className="h-4 w-56" />
-            ) : (
-              <Text.H6 color="foregroundMuted">{sessionId}</Text.H6>
-            )}
-            <CopyIcon className="w-4 h-4" />
-          </button>
+          {isRecordLoading ? (
+            <Skeleton className="h-4 w-56" />
+          ) : (
+            <CopyableText value={sessionId} size="sm" ellipsis tooltip="Copy session ID" />
+          )}
         </div>
       }
     >
