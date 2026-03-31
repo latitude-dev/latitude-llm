@@ -122,6 +122,8 @@ export type TabOption<T extends string = string> = {
   readonly id: T
   readonly label: string
   readonly icon?: ReactNode
+  /** Extra content appended to the tab's tooltip (e.g. a HotkeyBadge). When hideLabels is true the label is automatically prepended. */
+  readonly tooltip?: ReactNode
 }
 
 export type TabsProps<T extends string = string> = {
@@ -340,7 +342,21 @@ export function Tabs<T extends string>({
         if (hideLabels) {
           return (
             <Tooltip key={option.id} trigger={trigger} asChild>
-              <Text.H6>{option.label}</Text.H6>
+              {option.tooltip ? (
+                <>
+                  {option.label} {option.tooltip}
+                </>
+              ) : (
+                <Text.H6>{option.label}</Text.H6>
+              )}
+            </Tooltip>
+          )
+        }
+
+        if (option.tooltip) {
+          return (
+            <Tooltip key={option.id} trigger={trigger} asChild>
+              {option.tooltip}
             </Tooltip>
           )
         }

@@ -1,5 +1,6 @@
 import { Toaster, useMountEffect } from "@repo/ui"
 import "@repo/ui/styles/globals.css"
+import { HotkeysProvider } from "@tanstack/react-hotkeys"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
@@ -54,7 +55,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <body>
         <HostThemeSync />
         <AppQueryProvider>
-          {children}
+          <HotkeysProvider>{children}</HotkeysProvider>
           <Toaster />
           {AgentationToolbar !== null ? (
             <Suspense fallback={null}>
