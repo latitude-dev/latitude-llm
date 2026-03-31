@@ -18,7 +18,7 @@ const AgentationToolbar = import.meta.env.DEV
 
 export const Route = createRootRoute({
   errorComponent: ({ error, info, reset }) => (
-    <ErrorFallback error={error} componentStack={info?.componentStack} reset={reset} />
+    <ErrorFallback error={error} componentStack={info?.componentStack ?? null} reset={reset} />
   ),
   head: () => ({
     meta: [
