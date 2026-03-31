@@ -5,7 +5,7 @@ import { OpenAPIHono } from "@hono/zod-openapi"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "@platform/testkit"
-import { encrypt, hashToken, hexDecode } from "@repo/utils"
+import { encrypt, hash, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
 import type { TestContext } from "vitest"
 import { afterAll, beforeAll, beforeEach } from "vitest"
@@ -137,7 +137,7 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
   })
 
   const encryptedToken = await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY))
-  const tokenHash = await Effect.runPromise(hashToken(apiKeyToken))
+  const tokenHash = await Effect.runPromise(hash(apiKeyToken))
 
   await database.db.insert(apiKeys).values({
     id: authApiKeyId,

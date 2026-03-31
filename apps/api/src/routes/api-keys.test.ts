@@ -1,7 +1,7 @@
 import { generateId } from "@domain/shared"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
-import { encrypt, hashToken } from "@repo/utils"
+import { encrypt, hash } from "@repo/utils"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import {
@@ -14,7 +14,7 @@ import {
 const createApiKeyRecord = async (database: InMemoryPostgres, organizationId: string, name: string) => {
   const token = crypto.randomUUID()
   const id = generateId()
-  const tokenHash = await Effect.runPromise(hashToken(token))
+  const tokenHash = await Effect.runPromise(hash(token))
   const encryptedToken = await Effect.runPromise(encrypt(token, TEST_ENCRYPTION_KEY))
 
   await database.db.insert(apiKeys).values({

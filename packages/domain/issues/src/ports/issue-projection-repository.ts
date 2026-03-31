@@ -25,8 +25,6 @@ export interface HybridSearchInput {
   readonly query: string
   readonly vector: number[]
   readonly tenantName: string
-  readonly alpha: number
-  readonly limit: number
 }
 
 export type IssuesCollectionProperties = {

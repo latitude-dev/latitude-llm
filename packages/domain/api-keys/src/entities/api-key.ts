@@ -8,8 +8,8 @@ import { ApiKeyId, generateId, type OrganizationId } from "@domain/shared"
  * using crypto.randomUUID().
  *
  * The token is encrypted at the application level (AES-256-GCM)
- * and a SHA-256 hash (tokenHash) is stored for indexed lookups
- * without decryption.
+ * and a SHA-256 hex hash of the UTF-8 token bytes (tokenHash) is stored for indexed
+ * lookups without decryption.
  */
 export interface ApiKey {
   readonly id: ApiKeyId

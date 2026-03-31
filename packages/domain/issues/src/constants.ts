@@ -4,11 +4,6 @@ export const ISSUE_STATES = ["new", "escalating", "resolved", "regressed", "igno
 
 export const NEW_ISSUE_AGE_DAYS = 7
 
-export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75 // 75% vector search, 25% keyword search
-export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8 // 80% similarity (broader score)
-export const ISSUE_DISCOVERY_MIN_KEYWORDS = 1 // At least 1 keyword match
-export const ISSUE_DISCOVERY_MAX_CANDIDATES = 1000 // Large pool to allow filtering merged issues
-
 /**
  * An issue is "escalating" when last-day occurrences exceed the 7-day
  * baseline average by this factor.
@@ -39,20 +34,24 @@ export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
 } as const
 
 // ---------------------------------------------------------------------------
-// Discovery thresholds (hybrid search + rerank)
+// Discovery thresholds (hybrid search)
 // ---------------------------------------------------------------------------
 
-/** Alpha for Weaviate hybrid search: weight given to vector vs BM25 (0 = pure BM25, 1 = pure vector). */
-export const HYBRID_SEARCH_ALPHA = 0.75
+/** Alpha for Weaviate hybrid search: 75% vector search, 25% keyword search */
+export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75
 
-/** Minimum hybrid similarity score to consider a candidate. */
-export const MIN_HYBRID_SIMILARITY = 0.8
+/** Minimum hybrid similarity score to consider a candidate: 80% similarity */
+export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8
 
-/** Minimum BM25 keyword matches required (OR mode). */
-export const MIN_BM25_KEYWORD_MATCHES = 1
+/** Minimum BM25 keyword matches required (OR mode): At least 1 keyword match */
+export const ISSUE_DISCOVERY_MIN_KEYWORDS = 1
 
-/** Maximum initial candidates returned from the hybrid search stage. */
-export const MAX_INITIAL_CANDIDATES = 1000
+/** Maximum initial candidates returned from the hybrid search stage: Large pool */
+export const ISSUE_DISCOVERY_MAX_CANDIDATES = 1000
+
+// ---------------------------------------------------------------------------
+// Discovery thresholds (rerank)
+// ---------------------------------------------------------------------------
 
 /** Maximum candidates sent to the reranker after hybrid search filtering. */
 export const RERANK_LIMIT = 100

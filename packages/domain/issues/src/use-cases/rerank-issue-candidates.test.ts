@@ -31,4 +31,29 @@ describe("rerankIssueCandidatesUseCase", () => {
       similarityScore: 0.92,
     })
   })
+
+  it("uses MIN_RERANK_RELEVANCE as fixed threshold", async () => {
+    const { layer: aiLayer } = createFakeAI({
+      rerank: () =>
+        Effect.succeed([
+          { index: 0, relevanceScore: 0.29 },
+          { index: 1, relevanceScore: 0.2 },
+        ]),
+    })
+
+    const result = await Effect.runPromise(
+      rerankIssueCandidatesUseCase({
+        query: "agent exposes tokens",
+        candidates: [
+          { uuid: "issue-1", title: "bad", description: "candidate one", score: 0.8 },
+          { uuid: "issue-2", title: "good", description: "candidate two", score: 0.7 },
+        ],
+      }).pipe(Effect.provide(aiLayer)),
+    )
+
+    expect(result).toEqual({
+      matchedIssueId: null,
+      similarityScore: 0,
+    })
+  })
 })

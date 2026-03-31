@@ -1,6 +1,6 @@
 import { ApiKeyRepository } from "@domain/api-keys"
 import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { hashToken } from "@repo/utils"
+import { hash } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { MiddlewareHandler } from "hono"
 import { getAdminPostgresClient, getRedisClient } from "../clients.ts"
@@ -72,7 +72,7 @@ const validateApiKey = (token: string) => {
 
   return Effect.gen(function* () {
     const startTime = Date.now()
-    const tokenHash = yield* hashToken(token)
+    const tokenHash = yield* hash(token)
 
     const cached = yield* getCachedApiKey(tokenHash)
     if (cached !== undefined) {

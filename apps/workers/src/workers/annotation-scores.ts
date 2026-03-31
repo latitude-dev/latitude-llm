@@ -18,13 +18,12 @@ interface AnnotationScoresDeps {
   postgresClient?: PostgresClient
 }
 
-const annotationAiLayer = AIGenerateLive.pipe(
-  Layer.provideMerge(AICredentialsLive),
-  Layer.provideMerge(RedisCacheStoreLive(getRedisClient())),
-)
-
 export const createAnnotationScoresWorker = ({ consumer, postgresClient }: AnnotationScoresDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
+  const annotationAiLayer = AIGenerateLive.pipe(
+    Layer.provideMerge(AICredentialsLive),
+    Layer.provideMerge(RedisCacheStoreLive(getRedisClient())),
+  )
 
   const postgresLayers = Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive)
 
