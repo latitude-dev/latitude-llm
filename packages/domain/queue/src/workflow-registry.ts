@@ -7,7 +7,6 @@ const _registry = {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
-    readonly logFile?: string
   }>(),
 }
 

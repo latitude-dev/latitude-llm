@@ -30,6 +30,17 @@ export {
   issueSchema,
   issueStateSchema,
 } from "./entities/issue.ts"
+export {
+  type CheckEligibilityError,
+  DraftScoreNotEligibleForDiscoveryError,
+  ErroredScoreNotEligibleForDiscoveryError,
+  MissingScoreFeedbackForDiscoveryError,
+  PassedScoreNotEligibleForDiscoveryError,
+  ScoreAlreadyOwnedByIssueError,
+  ScoreDiscoveryOrganizationMismatchError,
+  ScoreDiscoveryProjectMismatchError,
+  ScoreNotFoundForDiscoveryError,
+} from "./errors.ts"
 export { emptyIssueCentroid } from "./helpers.ts"
 export {
   type DeleteIssueProjectionInput,
@@ -39,13 +50,11 @@ export {
   type IssuesCollectionProperties,
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
+export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
+export { type AssignmentResult, createOrAssignIssueUseCase } from "./use-cases/create-or-assign-issue.ts"
 export {
-  type AssignmentResult,
-  createOrAssignIssueUseCase,
-  type DiscoverIssueInput,
-  type EligibilityResult,
   type RetrievalResult,
-  recheckEligibilityUseCase,
+  type RetrieveAndRerankInput,
   retrieveAndRerankUseCase,
-  syncProjectionsUseCase,
-} from "./use-cases/discover-issue.ts"
+} from "./use-cases/retrieve-and-rerank.ts"
+export { syncProjectionsUseCase } from "./use-cases/sync-projections.ts"
