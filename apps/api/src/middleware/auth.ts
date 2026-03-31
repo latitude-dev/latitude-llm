@@ -2,7 +2,7 @@ import { ApiKeyRepository } from "@domain/api-keys"
 import { OrganizationId, UnauthorizedError, UserId } from "@domain/shared"
 import type { PostgresClient } from "@platform/db-postgres"
 import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { hashToken } from "@repo/utils"
+import { hash } from "@repo/utils"
 import { Effect, Option } from "effect"
 import type { Context, MiddlewareHandler, Next } from "hono"
 import { getAdminPostgresClient } from "../clients.ts"
@@ -86,7 +86,7 @@ const cacheApiKeyResult = (
  * Validate API key with Redis caching and constant-time execution.
  *
  * Security features:
- * - Incoming token is hashed (SHA-256) before any lookup — raw tokens never touch cache or DB queries
+ * - Incoming token is hashed (SHA-256 of UTF-8 bytes) before any lookup — raw tokens never touch cache or DB queries
  * - All code paths take at least MIN_VALIDATION_TIME_MS (~50ms) to prevent timing attacks
  * - Redis cache provides consistent lookup time for both valid and invalid keys
  * - Invalid keys are cached briefly to prevent repeated DB hits and timing enumeration
@@ -105,7 +105,7 @@ const validateApiKey = (
 
   return Effect.gen(function* () {
     const startTime = Date.now()
-    const tokenHash = yield* hashToken(token)
+    const tokenHash = yield* hash(token)
 
     // Try cache first for consistent lookup time (keyed by hash)
     const cached = yield* getCachedApiKey(redis, tokenHash)

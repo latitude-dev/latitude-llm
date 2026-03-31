@@ -3,7 +3,7 @@ import type { PostgresDb } from "@platform/db-postgres"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
 import { projects } from "@platform/db-postgres/schema/projects"
-import { type CryptoError, encrypt, hashToken } from "@repo/utils"
+import { type CryptoError, encrypt, hash } from "@repo/utils"
 import type { Effect as EffectType } from "effect"
 import { Data, Effect } from "effect"
 
@@ -257,7 +257,7 @@ export const createApiKeyFixture = (
   return Effect.gen(function* () {
     const apiKeyId = generateId()
     const plaintextToken = `lat_test_${generateId()}`
-    const tokenHash = yield* hashToken(plaintextToken)
+    const tokenHash = yield* hash(plaintextToken)
     const encryptedToken = yield* encrypt(plaintextToken, input.encryptionKey)
 
     const [apiKeyRow] = yield* Effect.tryPromise({

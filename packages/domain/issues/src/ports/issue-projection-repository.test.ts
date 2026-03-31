@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import { ISSUE_DISCOVERY_MAX_CANDIDATES } from "../constants.ts"
 import { createFakeIssueProjectionRepository } from "../testing/fake-issue-projection-repository.ts"
 
 const TENANT = "org1:proj1"
@@ -112,8 +113,6 @@ describe("IssueProjectionRepository (fake)", () => {
           query: "secret tokens API keys",
           vector: makeVector(1),
           tenantName: TENANT,
-          alpha: 0.75,
-          limit: 10,
         }),
       )
 
@@ -122,7 +121,7 @@ describe("IssueProjectionRepository (fake)", () => {
       expect(results[0]?.score).toBeGreaterThan(results[1]?.score)
     })
 
-    it("respects the limit parameter", async () => {
+    it("returns all results up to the configured max candidates", async () => {
       const { service } = createFakeIssueProjectionRepository()
 
       for (let i = 0; i < 5; i++) {
@@ -142,12 +141,11 @@ describe("IssueProjectionRepository (fake)", () => {
           query: "tokens",
           vector: makeVector(0),
           tenantName: TENANT,
-          alpha: 0.5,
-          limit: 2,
         }),
       )
 
-      expect(results.length).toBe(2)
+      expect(results.length).toBe(5)
+      expect(results.length).toBeLessThanOrEqual(ISSUE_DISCOVERY_MAX_CANDIDATES)
     })
 
     it("filters by tenant name", async () => {
@@ -178,8 +176,6 @@ describe("IssueProjectionRepository (fake)", () => {
           query: "secret tokens",
           vector: makeVector(1),
           tenantName: "org1:proj1",
-          alpha: 0.75,
-          limit: 10,
         }),
       )
 
@@ -195,8 +191,6 @@ describe("IssueProjectionRepository (fake)", () => {
           query: "anything",
           vector: makeVector(1),
           tenantName: TENANT,
-          alpha: 0.75,
-          limit: 10,
         }),
       )
 

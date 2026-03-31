@@ -15,7 +15,7 @@
     "apps/workflows": {
       "project": ["src/**/*.ts"],
       "ignore": ["src/workflows/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/workflow", "@temporalio/worker"]
+      "ignoreDependencies": ["@temporalio/worker"]
     },
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
