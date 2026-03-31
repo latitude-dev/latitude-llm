@@ -5,6 +5,7 @@ import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-r
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
+import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
@@ -16,6 +17,9 @@ const AgentationToolbar = import.meta.env.DEV
   : null
 
 export const Route = createRootRoute({
+  errorComponent: ({ error, info, reset }) => (
+    <ErrorFallback error={error} componentStack={info?.componentStack} reset={reset} />
+  ),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
