@@ -108,16 +108,20 @@ Issue discovery should follow the original proposal closely:
 8. filter out candidates that do not pass the minimum similarity threshold across the hybrid search stage
 9. rerank candidates with `rerank-2.5`
 10. filter out candidates that do not pass the minimum rerank relevance threshold
-11. match an existing issue or create a new issue
-12. write `scores.issue_id` in Postgres
-13. project the now-immutable score row into ClickHouse
-14. refresh issue name/description asynchronously on debounce
+11. verify the final selected candidate still exists in Postgres for the same organization/project; if missing, treat it as stale projection data and continue as no-match
+12. match an existing issue or create a new issue
+13. if the final selected candidate is stale, delete its projection object asynchronously
+14. write `scores.issue_id` in Postgres
+15. project the now-immutable score row into ClickHouse
+16. refresh issue name/description asynchronously on debounce
 
 Execution rules:
 
 - `issue-discovery` runs after an eligible non-draft failed non-errored score exists and still has no `issue_id`
 - `issues:refresh` runs after the configured debounce window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
+- in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
+- resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
 
 Concrete v1 mechanics worth carrying forward:
 

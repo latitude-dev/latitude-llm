@@ -30,24 +30,30 @@ export const createFakeAI = (overrides?: Partial<FakeAIShape>) => {
     rerank: [],
   }
 
+  const defaultGenerate = <T>(_input: GenerateInput<T>) =>
+    Effect.succeed({
+      object: {} as T,
+      tokens: 0,
+      duration: 0,
+    })
+
+  const defaultEmbed = (_input: EmbedInput) => Effect.succeed({ embedding: [] })
+
+  const defaultRerank = (_input: RerankInput) => Effect.succeed([])
+
   const ai: FakeAIShape = {
     generate: <T>(input: GenerateInput<T>) => {
       calls.generate.push(input as GenerateInput<unknown>)
-      return Effect.succeed({
-        object: {} as T,
-        tokens: 0,
-        duration: 0,
-      })
+      return (overrides?.generate ?? defaultGenerate)(input)
     },
     embed: (input) => {
       calls.embed.push(input)
-      return Effect.succeed({ embedding: [] })
+      return (overrides?.embed ?? defaultEmbed)(input)
     },
     rerank: (input) => {
       calls.rerank.push(input)
-      return Effect.succeed([])
+      return (overrides?.rerank ?? defaultRerank)(input)
     },
-    ...overrides,
   }
 
   return {

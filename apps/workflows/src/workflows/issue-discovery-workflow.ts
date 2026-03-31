@@ -1,9 +1,14 @@
 import { proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 
-const { checkEligibility, retrieveAndRerank, createOrAssignIssue, syncProjections } = proxyActivities<
-  typeof activities
->({ startToCloseTimeout: "5 minutes" })
+const {
+  checkEligibility,
+  embedScoreFeedback,
+  hybridSearchIssues,
+  rerankIssueCandidates,
+  createOrAssignIssue,
+  syncProjections,
+} = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
 
 const eligibilityErrorTags = new Set([
   "ScoreNotFoundForDiscoveryError",
@@ -31,7 +36,17 @@ export const issueDiscoveryWorkflow = async (input: {
     throw error
   }
 
-  const retrieval = await retrieveAndRerank(input)
+  const embeddedScoreFeedback = await embedScoreFeedback(input)
+  const hybridSearch = await hybridSearchIssues({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    query: embeddedScoreFeedback.feedback,
+    normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+  })
+  const retrieval = await rerankIssueCandidates({
+    query: embeddedScoreFeedback.feedback,
+    candidates: hybridSearch.candidates,
+  })
 
   const assignment = await createOrAssignIssue({
     organizationId: input.organizationId,

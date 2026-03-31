@@ -527,6 +527,21 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../packages/domain/shared
+      '@platform/ai-voyage':
+        specifier: workspace:*
+        version: link:../../packages/platform/ai-voyage
+      '@platform/cache-redis':
+        specifier: workspace:*
+        version: link:../../packages/platform/cache-redis
+      '@platform/db-postgres':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-postgres
+      '@platform/db-weaviate':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-weaviate
       '@platform/env':
         specifier: workspace:*
         version: link:../../packages/platform/env
@@ -711,6 +726,9 @@ importers:
 
   packages/domain/issues:
     dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores
