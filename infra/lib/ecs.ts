@@ -269,6 +269,10 @@ function createTaskDefinition(
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
 
+  // Resource allocation for Datadog Agent sidecar container
+  const DATADOG_AGENT_CPU = 256
+  const DATADOG_AGENT_MEMORY = 512
+
   const protocol = "https"
   const webUrl = `${protocol}://${config.domains.web}`
   const apiUrl = `${protocol}://${config.domains.api}`
@@ -498,13 +502,9 @@ function createTaskDefinition(
           },
         }
 
-        return JSON.stringify([datadogAgentDef, def])
+        return JSON.stringify([def, datadogAgentDef])
       },
     )
-
-  // Resource allocation for Datadog Agent sidecar container
-  const DATADOG_AGENT_CPU = 256
-  const DATADOG_AGENT_MEMORY = 512
 
   // Calculate valid Fargate CPU/memory combination
   // Fargate only supports specific predefined values
