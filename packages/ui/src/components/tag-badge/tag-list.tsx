@@ -60,6 +60,10 @@ export const TagList = memo(function TagList({ tags }: TagListProps) {
             break
           }
         }
+
+        // Always show at least one tag — showing only "+N" with no visible
+        // tags is confusing, especially when there is a single tag.
+        if (newCount === 0) newCount = 1
       }
 
       // Apply visibility directly so React doesn't need another paint cycle.

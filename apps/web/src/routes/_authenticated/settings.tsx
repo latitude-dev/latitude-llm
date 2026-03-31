@@ -2,6 +2,7 @@ import {
   Button,
   CloseTrigger,
   Container,
+  CopyableText,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRoot,
@@ -29,7 +30,7 @@ import { relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouteContext, useRouter } from "@tanstack/react-router"
-import { ChevronDown, Clipboard, Pencil, Trash2 } from "lucide-react"
+import { ChevronDown, Pencil, Trash2 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   deleteApiKeyMutation,
@@ -708,31 +709,15 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                 <Text.H5>{apiKey.name || "Latitude API Key"}</Text.H5>
               </TableCell>
               <TableCell>
-                <Tooltip
-                  asChild
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        navigator.clipboard.writeText(apiKey.token)
-                        toast({
-                          title: "Copied to clipboard",
-                        })
-                      }}
-                    >
-                      <div className="flex flex-row items-center gap-2">
-                        <Text.H5 color="foregroundMuted">
-                          {apiKey.token.length > 7
-                            ? `${apiKey.token.slice(0, 3)}********${apiKey.token.slice(-4)}`
-                            : "********"}
-                        </Text.H5>
-                        <Icon icon={Clipboard} size="sm" color="foregroundMuted" />
-                      </div>
-                    </Button>
+                <CopyableText
+                  value={apiKey.token}
+                  displayValue={
+                    apiKey.token.length > 7
+                      ? `${apiKey.token.slice(0, 3)}********${apiKey.token.slice(-4)}`
+                      : "********"
                   }
-                >
-                  Click to copy
-                </Tooltip>
+                  tooltip="Copy API key"
+                />
               </TableCell>
               <TableCell align="right">
                 <div className="flex flex-row items-center gap-1">
@@ -753,7 +738,9 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                         disabled={apiKeys.length === 1}
                         variant="ghost"
                         onClick={() => {
-                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise
+                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise.then(() => {
+                            toast({ description: "API key deleted" })
+                          })
                         }}
                       >
                         <Icon icon={Trash2} size="sm" />

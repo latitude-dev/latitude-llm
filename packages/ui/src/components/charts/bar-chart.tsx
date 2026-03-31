@@ -41,8 +41,9 @@ type EChartsReactBridgeProps = {
   readonly lazyUpdate?: boolean
 }
 
-/** `echarts-for-react` ships a class default export; cast for React 19 JSX typing. */
-const EChartsView = EChartsReact as unknown as ComponentType<EChartsReactBridgeProps>
+/** `echarts-for-react` ships a CJS module; handle ESM interop and cast for React 19 JSX typing. */
+const EChartsView = ((EChartsReact as unknown as { default?: unknown }).default ??
+  EChartsReact) as unknown as ComponentType<EChartsReactBridgeProps>
 
 function BarChart({
   data,

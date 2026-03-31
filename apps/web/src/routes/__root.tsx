@@ -3,7 +3,8 @@ import "@repo/ui/styles/globals.css"
 import { HotkeysProvider } from "@tanstack/react-hotkeys"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
-import { lazy, Suspense } from "react"
+import { lazy, Suspense, useState } from "react"
+import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
@@ -16,6 +17,9 @@ const AgentationToolbar = import.meta.env.DEV
   : null
 
 export const Route = createRootRoute({
+  errorComponent: ({ error, info, reset }) => (
+    <ErrorFallback error={error} componentStack={info?.componentStack ?? null} reset={reset} />
+  ),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -63,9 +67,24 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
             </Suspense>
           ) : null}
         </AppQueryProvider>
+        {import.meta.env.DEV ? <DevCrashButton /> : null}
         <Scripts />
       </body>
     </html>
+  )
+}
+
+function DevCrashButton() {
+  const [shouldThrow, setShouldThrow] = useState(false)
+  if (shouldThrow) throw new Error("Dev: manually triggered client error")
+  return (
+    <button
+      type="button"
+      onClick={() => setShouldThrow(true)}
+      className="fixed bottom-4 left-4 z-50 bg-destructive text-destructive-foreground px-3 py-1.5 rounded text-xs font-mono shadow-lg opacity-60 hover:opacity-100"
+    >
+      Trigger Error
+    </button>
   )
 }
 

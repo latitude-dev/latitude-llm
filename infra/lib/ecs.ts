@@ -377,6 +377,7 @@ function createTaskDefinition(
           { name: "DD_TRACE_ENABLED", value: "true" },
           { name: "DD_ENV", value: config.name },
           { name: "DD_SERVICE", value: serviceConfig.name },
+          { name: "LAT_OBSERVABILITY_ENVIRONMENT", value: config.name },
           { name: "DD_DOGSTATSD_HOST", value: "localhost" },
           { name: "DD_DOGSTATSD_PORT", value: "8125" },
           { name: "DD_AGENT_HOST", value: "localhost" },

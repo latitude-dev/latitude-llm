@@ -1,5 +1,6 @@
 import {
   Button,
+  CopyableText,
   cn,
   DetailDrawer,
   ProviderIcon,
@@ -11,7 +12,7 @@ import {
   useMountEffect,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowUpIcon, CopyIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon, GroupIcon, ListTreeIcon, MessagesSquareIcon } from "lucide-react"
 import { useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
@@ -113,6 +114,7 @@ export function TraceDetailDrawer({
       actions={
         <>
           <Tooltip
+            asChild
             side="bottom"
             trigger={
               <Button
@@ -130,6 +132,7 @@ export function TraceDetailDrawer({
             Next trace <HotkeyBadge hotkey="Alt+ArrowDown" /> <HotkeyBadge hotkey="J" />
           </Tooltip>
           <Tooltip
+            asChild
             side="bottom"
             trigger={
               <Button
@@ -190,20 +193,7 @@ export function TraceDetailDrawer({
                 </span>
               ) : null}
             </div>
-            <button
-              type="button"
-              className={cn(
-                "inline-flex shrink-0 items-center gap-1",
-                "text-xs leading-4 font-medium text-muted-foreground",
-                "hover:text-foreground cursor-pointer",
-              )}
-              onClick={() => {
-                navigator.clipboard.writeText(traceId)
-              }}
-            >
-              <Text.H6 color="foregroundMuted">{traceId}</Text.H6>
-              <CopyIcon className="w-4 h-4" />
-            </button>
+            <CopyableText value={traceId} displayValue={traceId.slice(0, 7)} size="sm" tooltip="Copy trace ID" />
           </div>
 
           <Tabs options={TABS} active={activeTab} onSelect={handleSetActiveTab} />

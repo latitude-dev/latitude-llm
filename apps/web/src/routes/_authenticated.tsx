@@ -1,4 +1,4 @@
-import { DropdownMenu, DropdownMenuTrigger, LatitudeLogo } from "@repo/ui"
+import { cn, DropdownMenu, DropdownMenuTrigger, LatitudeLogo, useHashColor } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
@@ -8,7 +8,6 @@ import { useOrganizationsCollection } from "../domains/organizations/organizatio
 import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
-import { getAvatarBackgroundColor, getAvatarTextColor } from "../lib/avatar.ts"
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
@@ -46,16 +45,10 @@ function UserAvatar({ name }: { name: string }) {
           .join("")
           .toUpperCase() || trimmed.slice(0, 2).toUpperCase()
 
-  const initial = trimmed.charAt(0).toUpperCase()
+  const { style, className } = useHashColor(name)
 
   return (
-    <div
-      className="w-6 h-6 rounded-full flex items-center justify-center"
-      style={{
-        backgroundColor: getAvatarBackgroundColor(initial),
-        color: getAvatarTextColor(initial),
-      }}
-    >
+    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", className)} style={style}>
       <span className="text-xs font-medium leading-none">{initials}</span>
     </div>
   )

@@ -1,11 +1,10 @@
-import { Button, cn, Icon, Text, useToast } from "@repo/ui"
+import { Button, CopyableText, cn, Icon, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router"
 import {
   ChevronDown,
   ChevronRight,
   ChevronsUp,
-  Clipboard,
   History,
   Link2Off,
   MessageSquareText,
@@ -156,7 +155,6 @@ function ProjectSidebar({
   collapsed: boolean
   onToggleCollapse: () => void
 }) {
-  const { toast } = useToast()
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
 
@@ -195,23 +193,7 @@ function ProjectSidebar({
               <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
             </Button>
           </div>
-          {!collapsed && project && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(project.slug)
-                toast({
-                  title: "Copied to clipboard",
-                  description: `Project slug "${project.slug}" copied`,
-                })
-              }}
-              className="flex items-center gap-1 px-2 -ml-2 w-fit"
-            >
-              <Text.H6 color="foregroundMuted">{project.slug}</Text.H6>
-              <Icon icon={Clipboard} size="xs" color="foregroundMuted" />
-            </Button>
-          )}
+          {!collapsed && project && <CopyableText value={project.slug} size="sm" tooltip="Copy project slug" />}
         </div>
 
         {/* Nav items */}

@@ -42,6 +42,7 @@ export function RowDetailDrawer({
       actions={
         <>
           <Tooltip
+            asChild
             side="bottom"
             trigger={
               <Button
@@ -59,6 +60,7 @@ export function RowDetailDrawer({
             Next row <HotkeyBadge hotkey="J" />
           </Tooltip>
           <Tooltip
+            asChild
             side="bottom"
             trigger={
               <Button
@@ -85,6 +87,7 @@ export function RowDetailDrawer({
       rightActions={
         onSave && saveVisible ? (
           <Tooltip
+            asChild
             side="bottom"
             trigger={
               <Button onClick={() => panelSaveRef.current?.save()} variant="default" size="sm" disabled={saving}>
