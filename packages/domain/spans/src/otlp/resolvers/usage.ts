@@ -1,40 +1,7 @@
 import { computeTokenCost, getCostSpec } from "@domain/models"
 import type { OtlpKeyValue } from "../types.ts"
-import { first, fromFloat, fromInt } from "./utils.ts"
-
-// ─── Tokens ──────────────────────────────────────────────
-
-const tokensInputCandidates = [
-  fromInt("gen_ai.usage.input_tokens"),
-  fromInt("gen_ai.usage.prompt_tokens"),
-  fromInt("llm.token_count.prompt"),
-  fromInt("ai.usage.promptTokens"),
-]
-
-const tokensOutputCandidates = [
-  fromInt("gen_ai.usage.output_tokens"),
-  fromInt("gen_ai.usage.completion_tokens"),
-  fromInt("llm.token_count.completion"),
-  fromInt("ai.usage.completionTokens"),
-]
-
-const tokensCacheReadCandidates = [
-  fromInt("gen_ai.usage.cache_read.input_tokens"),
-  fromInt("gen_ai.usage.cache_read_input_tokens"),
-  fromInt("llm.token_count.prompt_details.cache_read"),
-]
-
-const tokensCacheCreateCandidates = [
-  fromInt("gen_ai.usage.cache_creation.input_tokens"),
-  fromInt("llm.token_count.prompt_details.cache_write"),
-]
-
-const tokensReasoningCandidates = [
-  fromInt("gen_ai.usage.reasoning_tokens"),
-  fromInt("llm.token_count.completion_details.reasoning"),
-]
-
-// ─── Cost ────────────────────────────────────────────────
+import { resolveTokens } from "./usage/tokens.ts"
+import { first, fromFloat } from "./utils.ts"
 
 const MICROCENTS_PER_USD = 100_000_000
 
@@ -102,10 +69,15 @@ function estimateCostFromTokens({
 }
 
 export interface ResolvedUsage {
+  /** Non-cached input tokens (additive: total_input = tokensInput + tokensCacheRead + tokensCacheCreate) */
   readonly tokensInput: number
+  /** Non-reasoning output tokens (additive: total_output = tokensOutput + tokensReasoning) */
   readonly tokensOutput: number
+  /** Tokens served from provider cache (subset of total input) */
   readonly tokensCacheRead: number
+  /** Tokens written to provider cache (subset of total input) */
   readonly tokensCacheCreate: number
+  /** Reasoning/thinking tokens (subset of total output) */
   readonly tokensReasoning: number
   readonly costInputMicrocents: number
   readonly costOutputMicrocents: number
@@ -120,12 +92,15 @@ interface ResolveUsageInput {
 }
 
 export function resolveUsage({ attrs, provider, model }: ResolveUsageInput): ResolvedUsage {
-  const tokensInput = first(tokensInputCandidates, attrs) ?? 0
-  const tokensOutput = first(tokensOutputCandidates, attrs) ?? 0
-  const tokensCacheRead = first(tokensCacheReadCandidates, attrs) ?? 0
-  const tokensCacheCreate = first(tokensCacheCreateCandidates, attrs) ?? 0
-  const tokensReasoning = first(tokensReasoningCandidates, attrs) ?? 0
+  const {
+    input: tokensInput,
+    output: tokensOutput,
+    cacheRead: tokensCacheRead,
+    cacheCreate: tokensCacheCreate,
+    reasoning: tokensReasoning,
+  } = resolveTokens(attrs, provider)
 
+  // ── Cost ──
   const attrCostInput = first(costInputCandidates, attrs)
   const attrCostOutput = first(costOutputCandidates, attrs)
   const attrCostTotal = first(costTotalCandidates, attrs)
