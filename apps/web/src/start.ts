@@ -1,6 +1,7 @@
 import type { DomainError } from "@domain/shared"
 import type { Span, Tracer } from "@repo/observability"
-import { createLogger, initializeObservability, SpanStatusCode, trace } from "@repo/observability"
+import { createLogger, SpanStatusCode, trace } from "@repo/observability"
+import { initializeObservability } from "@repo/observability/server"
 import { isHttpError } from "@repo/utils"
 import { createMiddleware, createStart } from "@tanstack/react-start"
 

@@ -1,7 +1,7 @@
 import { serve } from "@hono/node-server"
 import { httpInstrumentationMiddleware as otel } from "@hono/otel"
 import { parseEnv } from "@platform/env"
-import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
+import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability/server"
 import { isHttpError, toHttpResponse } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
