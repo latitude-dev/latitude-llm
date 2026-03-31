@@ -12,7 +12,7 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Trace, TraceDetail, TraceListPage } from "@domain/spans"
+import type { Trace, TraceDetail, TraceListPage, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -152,6 +152,74 @@ const toBaseFields = (row: TraceListRow): Trace => ({
   rootSpanId: SpanId(normalizeCHString(row.root_span_id)),
   rootSpanName: normalizeCHString(row.root_span_name),
 })
+
+type TraceMetricsRow = {
+  row_count: string
+  duration_min: string
+  duration_max: string
+  duration_avg: string
+  duration_median: string
+  duration_sum: string
+  cost_min: string
+  cost_max: string
+  cost_avg: string
+  cost_median: string
+  cost_sum: string
+  span_min: string
+  span_max: string
+  span_avg: string
+  span_median: string
+  span_sum: string
+  tokens_min: string
+  tokens_max: string
+  tokens_avg: string
+  tokens_median: string
+  tokens_sum: string
+  ttft_min: string
+  ttft_max: string
+  ttft_avg: string
+  ttft_median: string
+  ttft_sum: string
+}
+
+const toNumericRollup = (min: string, max: string, avg: string, median: string, sum: string) => ({
+  min: Number(min),
+  max: Number(max),
+  avg: Number(avg),
+  median: Number(median),
+  sum: Number(sum),
+})
+
+/** TTFT uses 0 as sentinel for "no first token"; aggregates only consider rows with TTFT > 0. */
+const finiteOrZero = (raw: string): number => {
+  const n = Number(raw)
+  return Number.isFinite(n) ? n : 0
+}
+
+const toTtftRollup = (row: TraceMetricsRow) => ({
+  min: finiteOrZero(row.ttft_min),
+  max: finiteOrZero(row.ttft_max),
+  avg: finiteOrZero(row.ttft_avg),
+  median: finiteOrZero(row.ttft_median),
+  sum: finiteOrZero(row.ttft_sum),
+})
+
+const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics | null => {
+  if (!row || Number(row.row_count) === 0) return null
+  return {
+    durationNs: toNumericRollup(
+      row.duration_min,
+      row.duration_max,
+      row.duration_avg,
+      row.duration_median,
+      row.duration_sum,
+    ),
+    costTotalMicrocents: toNumericRollup(row.cost_min, row.cost_max, row.cost_avg, row.cost_median, row.cost_sum),
+    spanCount: toNumericRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
+    tokensTotal: toNumericRollup(row.tokens_min, row.tokens_max, row.tokens_avg, row.tokens_median, row.tokens_sum),
+    timeToFirstTokenNs: toTtftRollup(row),
+  }
+}
 
 const toDomainTraceDetail = (row: TraceDetailRow): TraceDetail => {
   const lastInput = parseMessages(row.last_input_messages)
@@ -314,6 +382,112 @@ export const TraceRepositoryLive = Layer.effect(
           .pipe(
             Effect.map((rows) => Number(rows[0]?.total ?? 0)),
             Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+          )
+      },
+
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) => {
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        count() AS row_count,
+                        min(duration_ns) AS duration_min,
+                        max(duration_ns) AS duration_max,
+                        avg(duration_ns) AS duration_avg,
+                        quantileTDigest(0.5)(duration_ns) AS duration_median,
+                        sum(duration_ns) AS duration_sum,
+                        min(cost_total_microcents) AS cost_min,
+                        max(cost_total_microcents) AS cost_max,
+                        avg(cost_total_microcents) AS cost_avg,
+                        quantileTDigest(0.5)(cost_total_microcents) AS cost_median,
+                        sum(cost_total_microcents) AS cost_sum,
+                        min(span_count) AS span_min,
+                        max(span_count) AS span_max,
+                        avg(span_count) AS span_avg,
+                        quantileTDigest(0.5)(span_count) AS span_median,
+                        sum(span_count) AS span_sum,
+                        min(tokens_total) AS tokens_min,
+                        max(tokens_total) AS tokens_max,
+                        avg(tokens_total) AS tokens_avg,
+                        quantileTDigest(0.5)(tokens_total) AS tokens_median,
+                        sum(tokens_total) AS tokens_sum,
+                        minIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_min,
+                        maxIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_max,
+                        avgIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_avg,
+                        quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median,
+                        sumIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_sum
+                      FROM (
+                        SELECT trace_id, ${LIST_SELECT}
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, trace_id
+                        ${havingClause}
+                      )`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                ...filterParams,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<TraceMetricsRow>()
+          })
+          .pipe(
+            Effect.map((rows) => toTraceMetrics(rows[0])),
+            Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
+          )
+      },
+
+      histogramByProjectId: ({ organizationId, projectId, filters, bucketSeconds }) => {
+        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+        const bs = Math.floor(bucketSeconds)
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        toDateTime(
+                          intDiv(toUnixTimestamp(start_time), {bucketSeconds:UInt32}) * {bucketSeconds:UInt32},
+                          'UTC'
+                        ) AS bucket_start,
+                        count() AS trace_count
+                      FROM (
+                        SELECT trace_id, ${LIST_SELECT}
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, trace_id
+                        ${havingClause}
+                      )
+                      GROUP BY bucket_start
+                      ORDER BY bucket_start ASC`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                bucketSeconds: bs,
+                ...filterParams,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<{ bucket_start: string; trace_count: string }>()
+          })
+          .pipe(
+            Effect.map((rows): readonly TraceTimeHistogramBucket[] =>
+              rows.map((row) => ({
+                bucketStart: parseCHDate(row.bucket_start).toISOString(),
+                traceCount: Number(row.trace_count),
+              })),
+            ),
+            Effect.mapError((error) => toRepositoryError(error, "histogramByProjectId")),
           )
       },
 

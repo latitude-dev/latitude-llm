@@ -21,6 +21,20 @@ export interface TraceRepositoryShape {
     readonly filters?: FilterSet
   }): Effect.Effect<number, RepositoryError>
 
+  aggregateMetricsByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+  }): Effect.Effect<TraceMetrics | null, RepositoryError>
+
+  /** Per-bucket trace counts over `start_time`, using the same filter semantics as list/count. */
+  histogramByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+    readonly bucketSeconds: number
+  }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError>
+
   findByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -61,6 +75,29 @@ export interface TraceListPage {
   readonly items: readonly Trace[]
   readonly hasMore: boolean
   readonly nextCursor?: TraceListCursor
+}
+
+/** Min / max / avg / median / sum for one numeric field (project-scoped aggregate, not paginated). */
+export interface NumericRollup {
+  readonly min: number
+  readonly max: number
+  readonly avg: number
+  readonly median: number
+  readonly sum: number
+}
+
+export interface TraceMetrics {
+  readonly durationNs: NumericRollup
+  readonly costTotalMicrocents: NumericRollup
+  readonly spanCount: NumericRollup
+  readonly tokensTotal: NumericRollup
+  readonly timeToFirstTokenNs: NumericRollup
+}
+
+export interface TraceTimeHistogramBucket {
+  /** Bucket start instant (UTC ISO string). */
+  readonly bucketStart: string
+  readonly traceCount: number
 }
 
 export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(

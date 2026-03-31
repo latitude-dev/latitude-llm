@@ -1,5 +1,5 @@
 import { filterSetSchema, OrganizationId, ProjectId } from "@domain/shared"
-import type { Session, SessionDistinctColumn } from "@domain/spans"
+import type { Session, SessionDistinctColumn, SessionMetrics } from "@domain/spans"
 import { SessionRepository } from "@domain/spans"
 import { SessionRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
@@ -92,6 +92,25 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
       hasMore: page.hasMore,
       nextCursor: page.nextCursor,
     }
+  })
+
+export const getSessionMetricsByProject = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .handler(async ({ data }): Promise<SessionMetrics | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SessionRepository
+        return yield* repo.aggregateMetricsByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+        })
+      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId)),
+    )
   })
 
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const

@@ -19,6 +19,7 @@ import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
+import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
 import { SessionDetailDrawer } from "./-components/session-detail-drawer.tsx"
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
@@ -268,6 +269,10 @@ function ProjectPage() {
           </Button>
         </div>
       )}
+
+      <div className="px-6">
+        <TraceAggregationsPanel projectId={project?.id ?? ""} filters={filters} />
+      </div>
 
       {activeTab === "traces" ? (
         <TracesView {...sharedViewProps} />

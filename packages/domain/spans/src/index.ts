@@ -6,6 +6,14 @@ export {
   resolveLastLlmCompletionSpanId,
 } from "./helpers/resolve-last-llm-completion-span.ts"
 export {
+  alignUnixSecondsToHistogramBucket,
+  denseTraceTimeHistogramBuckets,
+  mergeTraceHistogramTimeFilters,
+  parseStartTimeBoundsFromFilters,
+  pickTraceHistogramBucketSeconds,
+  resolveTraceHistogramRangeIso,
+} from "./helpers.ts"
+export {
   SESSION_ID_MAX_LENGTH,
   SPAN_ID_LENGTH,
   sessionIdSchema,
@@ -18,17 +26,21 @@ export type {
   SessionListCursor,
   SessionListOptions,
   SessionListPage,
+  SessionMetrics,
   SessionRepositoryShape,
 } from "./ports/session-repository.ts"
 export { SessionRepository } from "./ports/session-repository.ts"
 export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {
+  NumericRollup,
   TraceDistinctColumn,
   TraceListCursor,
   TraceListOptions,
   TraceListPage,
+  TraceMetrics,
   TraceRepositoryShape,
+  TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
 export { TraceRepository } from "./ports/trace-repository.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"

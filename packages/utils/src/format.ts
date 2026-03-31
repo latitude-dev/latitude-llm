@@ -1,13 +1,23 @@
 const COUNT_UNITS = ["", "K", "M", "B", "T"]
 
+const countFractionFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 0,
+  useGrouping: false,
+})
+
 /**
  * Format a large number into a compact human-readable string.
  *
  * Examples: `128000` -> `"128K"`, `1500000` -> `"1.5M"`, `42` -> `"42"`
+ * Fractional values under 1000 use at most two decimal places (e.g. averages).
  */
 export function formatCount(count: number): string {
   if (count < 0) return `-${formatCount(-count)}`
-  if (count < 1000) return String(count)
+  if (count < 1000) {
+    if (Number.isInteger(count)) return String(count)
+    return countFractionFormatter.format(count)
+  }
 
   let unitIndex = 0
   let value = count

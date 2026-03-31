@@ -5,6 +5,7 @@ export const createFakeSessionRepository = (overrides?: Partial<SessionRepositor
   const repository: SessionRepositoryShape = {
     findByProjectId: () => Effect.succeed({ items: [], hasMore: false }),
     countByProjectId: () => Effect.succeed(0),
+    aggregateMetricsByProjectId: () => Effect.succeed(null),
     distinctFilterValues: () => Effect.succeed([]),
     ...overrides,
   }

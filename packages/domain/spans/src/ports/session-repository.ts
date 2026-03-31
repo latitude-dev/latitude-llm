@@ -1,6 +1,7 @@
 import type { FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Session } from "../entities/session.ts"
+import type { NumericRollup } from "./trace-repository.ts"
 
 /**
  * Repository port for sessions (ClickHouse materialized view).
@@ -20,6 +21,12 @@ export interface SessionRepositoryShape {
     readonly projectId: ProjectId
     readonly filters?: FilterSet
   }): Effect.Effect<number, RepositoryError>
+
+  aggregateMetricsByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+  }): Effect.Effect<SessionMetrics | null, RepositoryError>
 
   distinctFilterValues(input: {
     readonly organizationId: OrganizationId
@@ -49,6 +56,12 @@ export interface SessionListPage {
   readonly items: readonly Session[]
   readonly hasMore: boolean
   readonly nextCursor?: SessionListCursor
+}
+
+export interface SessionMetrics {
+  readonly durationNs: NumericRollup
+  readonly costTotalMicrocents: NumericRollup
+  readonly spanCount: NumericRollup
 }
 
 export class SessionRepository extends ServiceMap.Service<SessionRepository, SessionRepositoryShape>()(

@@ -10,7 +10,7 @@ import {
   ProjectId as toProjectId,
   toRepositoryError,
 } from "@domain/shared"
-import type { Session, SessionListPage } from "@domain/spans"
+import type { Session, SessionListPage, SessionMetrics } from "@domain/spans"
 import { SessionRepository } from "@domain/spans"
 import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -75,6 +75,54 @@ type SessionListRow = {
   providers: string[]
   service_names: string[]
   simulation_id: string
+}
+
+type SessionMetricsRow = {
+  row_count: string
+  duration_min: string
+  duration_max: string
+  duration_avg: string
+  duration_median: string
+  duration_sum: string
+  cost_min: string
+  cost_max: string
+  cost_avg: string
+  cost_median: string
+  cost_sum: string
+  span_min: string
+  span_max: string
+  span_avg: string
+  span_median: string
+  span_sum: string
+}
+
+const toSessionNumericRollup = (min: string, max: string, avg: string, median: string, sum: string) => ({
+  min: Number(min),
+  max: Number(max),
+  avg: Number(avg),
+  median: Number(median),
+  sum: Number(sum),
+})
+
+const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics | null => {
+  if (!row || Number(row.row_count) === 0) return null
+  return {
+    durationNs: toSessionNumericRollup(
+      row.duration_min,
+      row.duration_max,
+      row.duration_avg,
+      row.duration_median,
+      row.duration_sum,
+    ),
+    costTotalMicrocents: toSessionNumericRollup(
+      row.cost_min,
+      row.cost_max,
+      row.cost_avg,
+      row.cost_median,
+      row.cost_sum,
+    ),
+    spanCount: toSessionNumericRollup(row.span_min, row.span_max, row.span_avg, row.span_median, row.span_sum),
+  }
 }
 
 const toDomainSession = (row: SessionListRow): Session => ({
@@ -252,6 +300,55 @@ export const SessionRepositoryLive = Layer.effect(
           .pipe(
             Effect.map((rows) => Number(rows[0]?.total ?? 0)),
             Effect.mapError((error) => toRepositoryError(error, "countByProjectId")),
+          )
+      },
+
+      aggregateMetricsByProjectId: ({ organizationId, projectId, filters }) => {
+        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
+        const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        count() AS row_count,
+                        min(duration_ns) AS duration_min,
+                        max(duration_ns) AS duration_max,
+                        avg(duration_ns) AS duration_avg,
+                        quantileTDigest(0.5)(duration_ns) AS duration_median,
+                        sum(duration_ns) AS duration_sum,
+                        min(cost_total_microcents) AS cost_min,
+                        max(cost_total_microcents) AS cost_max,
+                        avg(cost_total_microcents) AS cost_avg,
+                        quantileTDigest(0.5)(cost_total_microcents) AS cost_median,
+                        sum(cost_total_microcents) AS cost_sum,
+                        min(span_count) AS span_min,
+                        max(span_count) AS span_max,
+                        avg(span_count) AS span_avg,
+                        quantileTDigest(0.5)(span_count) AS span_median,
+                        sum(span_count) AS span_sum
+                      FROM (
+                        SELECT session_id, ${LIST_SELECT}
+                        FROM sessions
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          ${extraWhere}
+                        GROUP BY organization_id, project_id, session_id
+                        ${havingClause}
+                      )`,
+              query_params: {
+                organizationId: organizationId as string,
+                projectId: projectId as string,
+                ...filterParams,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<SessionMetricsRow>()
+          })
+          .pipe(
+            Effect.map((rows) => toSessionMetrics(rows[0])),
+            Effect.mapError((error) => toRepositoryError(error, "aggregateMetricsByProjectId")),
           )
       },
 

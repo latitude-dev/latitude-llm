@@ -1,6 +1,6 @@
 import { filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import type { Trace, TraceDetail, TraceDistinctColumn } from "@domain/spans"
-import { TraceRepository } from "@domain/spans"
+import type { Trace, TraceDetail, TraceDistinctColumn, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
+import { mergeTraceHistogramTimeFilters, TraceRepository } from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -155,6 +155,65 @@ export const countTracesByProject = createServerFn({ method: "GET" })
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
+        })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
+export const getTraceMetricsByProject = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .handler(async ({ data }): Promise<TraceMetrics | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.aggregateMetricsByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+        })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
+const traceHistogramInputSchema = z.object({
+  projectId: z.string(),
+  filters: filterSetSchema.optional(),
+  rangeStartIso: z.string(),
+  rangeEndIso: z.string(),
+  bucketSeconds: z
+    .number()
+    .int()
+    .positive()
+    .max(90 * 24 * 60 * 60),
+})
+
+export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
+  .middleware([errorHandler])
+  .inputValidator(traceHistogramInputSchema)
+  .handler(async ({ data }): Promise<readonly TraceTimeHistogramBucket[]> => {
+    const startMs = Date.parse(data.rangeStartIso)
+    const endMs = Date.parse(data.rangeEndIso)
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+      return []
+    }
+
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const mergedFilters = mergeTraceHistogramTimeFilters(data.filters, data.rangeStartIso, data.rangeEndIso)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* TraceRepository
+        return yield* repo.histogramByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          filters: mergedFilters,
+          bucketSeconds: data.bucketSeconds,
         })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )

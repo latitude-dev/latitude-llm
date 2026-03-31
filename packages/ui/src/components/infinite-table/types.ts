@@ -11,6 +11,8 @@ export interface InfiniteTableColumn<T> {
   resizable?: boolean
   minWidth?: number
   sortKey?: string
+  /** Optional second header row cell; use for summaries. Keep controls `stopPropagation` if the column is sortable. */
+  renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode
 }
 
 export interface InfiniteTableSelection {
