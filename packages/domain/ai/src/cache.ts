@@ -1,6 +1,6 @@
 import type { CacheStoreShape } from "@domain/shared"
 import { hash } from "@repo/utils"
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import {
   type AICredentialError,
   AIError,
@@ -14,6 +14,24 @@ import {
 
 const cacheKey = (namespace: string, input: unknown): string => `ai:${namespace}:${hash(input)}`
 const DEFAULT_AI_CACHE_TTL_SECONDS = 24 * 60 * 60
+const generateResultSchema = Schema.Struct({
+  object: Schema.Unknown,
+  tokens: Schema.Number,
+  duration: Schema.Number,
+})
+const embedResultSchema = Schema.Struct({
+  embedding: Schema.Array(Schema.Number),
+})
+const rerankResultSchema = Schema.Array(
+  Schema.Struct({
+    index: Schema.Number,
+    relevanceScore: Schema.Number,
+  }),
+)
+const generateResultFromJsonStringSchema = Schema.fromJsonString(generateResultSchema)
+const embedResultFromJsonStringSchema = Schema.fromJsonString(embedResultSchema)
+const rerankResultFromJsonStringSchema = Schema.fromJsonString(rerankResultSchema)
+
 const toAIError =
   (operation: string) =>
   (cause: unknown): AIError =>
@@ -49,12 +67,19 @@ export const withAICache = (
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {
-        return JSON.parse(cached) as GenerateResult<T>
+        return yield* Effect.try({
+          try: () => Schema.decodeUnknownSync(generateResultFromJsonStringSchema)(cached) as GenerateResult<T>,
+          catch: toAIError("read"),
+        })
       }
 
       const result = yield* ai.generate(input)
+      const encoded = yield* Effect.try({
+        try: () => Schema.encodeSync(generateResultFromJsonStringSchema)(result as GenerateResult<unknown>),
+        catch: toAIError("write"),
+      })
       yield* cache
-        .set(key, JSON.stringify(result), { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
+        .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
         .pipe(Effect.mapError(toAIError("write")))
       return result
     }),
@@ -65,12 +90,20 @@ export const withAICache = (
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {
-        return JSON.parse(cached) as EmbedResult
+        const decoded = yield* Effect.try({
+          try: () => Schema.decodeUnknownSync(embedResultFromJsonStringSchema)(cached),
+          catch: toAIError("read"),
+        })
+        return { embedding: [...decoded.embedding] } satisfies EmbedResult
       }
 
       const result = yield* ai.embed(input)
+      const encoded = yield* Effect.try({
+        try: () => Schema.encodeSync(embedResultFromJsonStringSchema)(result),
+        catch: toAIError("write"),
+      })
       yield* cache
-        .set(key, JSON.stringify(result), { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
+        .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
         .pipe(Effect.mapError(toAIError("write")))
       return result
     }),
@@ -81,12 +114,19 @@ export const withAICache = (
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {
-        return JSON.parse(cached) as readonly RerankResult[]
+        return yield* Effect.try({
+          try: () => Schema.decodeUnknownSync(rerankResultFromJsonStringSchema)(cached),
+          catch: toAIError("read"),
+        })
       }
 
       const result = yield* ai.rerank(input)
+      const encoded = yield* Effect.try({
+        try: () => Schema.encodeSync(rerankResultFromJsonStringSchema)(result),
+        catch: toAIError("write"),
+      })
       yield* cache
-        .set(key, JSON.stringify(result), { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
+        .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
         .pipe(Effect.mapError(toAIError("write")))
       return result
     }),
