@@ -1,4 +1,5 @@
 import { serve } from "@hono/node-server"
+import { otel } from "@hono/otel"
 import { parseEnv } from "@platform/env"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { isHttpError, toHttpResponse } from "@repo/utils"
@@ -19,6 +20,9 @@ const start = async () => {
   const app = new Hono<IngestEnv>()
   const port = Effect.runSync(parseEnv("LAT_INGEST_PORT", "number", 3002))
   const logger = createLogger("ingest")
+
+  // Add Hono OpenTelemetry middleware
+  app.use(otel())
 
   app.onError((err, c) => {
     if (isHttpError(err)) {

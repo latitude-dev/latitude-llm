@@ -24,6 +24,7 @@
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@opentelemetry/api": "catalog:",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",

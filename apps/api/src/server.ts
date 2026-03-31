@@ -1,4 +1,5 @@
 import { serve } from "@hono/node-server"
+import { otel } from "@hono/otel"
 import { swaggerUI } from "@hono/swagger-ui"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { parseEnv } from "@platform/env"
@@ -29,6 +30,10 @@ const startServer = async () => {
       console.log(message, ...rest)
     }),
   )
+
+  // Add Hono OpenTelemetry middleware
+  app.use(otel())
+
   app.onError(honoErrorHandler)
 
   registerCorsMiddleware(app as unknown as Hono, { nodeEnv })
