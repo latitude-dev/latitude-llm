@@ -1,3 +1,8 @@
+---
+name: architecture-boundaries
+description: Layering and boundaries, web vs public API, app layout (clients, routes, logging), ports/adapters, runtime-portable domain/shared/utils code, multi-tenancy, DDD layout, or anti-patterns.
+---
+
 # Architecture and layer boundaries
 
 **When to use:** Layering and boundaries, web vs public API, **app layout** (clients, routes, logging), ports/adapters, **runtime-portable domain/shared/utils code**, multi-tenancy, DDD layout, or anti-patterns.

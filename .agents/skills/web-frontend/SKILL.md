@@ -1,3 +1,8 @@
+---
+name: web-frontend
+description: apps/web UI — routes, @repo/ui, TanStack Start server functions and collections, forms, Tailwind layout rules, design-system updates, and useEffect / useMountEffect policy.
+---
+
 # Web app frontend (`apps/web`)
 
 **When to use:** `apps/web` UI — routes, `@repo/ui`, TanStack Start server functions and collections, forms, Tailwind layout rules, design-system updates, and **`useEffect` / `useMountEffect` policy**.

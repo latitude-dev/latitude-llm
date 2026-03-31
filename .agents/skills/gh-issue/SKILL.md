@@ -1,3 +1,8 @@
+---
+name: gh-issue
+description: Create clear, actionable GitHub issues for bugs, features, and improvements. Issues are primarily consumed by LLMs, so optimize for agent readability and actionability.
+---
+
 # GitHub Issue Creation
 
 Create clear, actionable GitHub issues for bugs, features, and improvements. Issues are primarily consumed by LLMs, so optimize for agent readability and actionability.

@@ -1,3 +1,8 @@
+---
+name: effect-and-errors
+description: Composing Effect programs, domain errors, HttpError, repository error types, or error propagation at HTTP boundaries.
+---
+
 # Effect TS and HTTP-aware errors
 
 **When to use:** Composing `Effect` programs, domain errors, `HttpError`, repository error types, or error propagation at HTTP boundaries.

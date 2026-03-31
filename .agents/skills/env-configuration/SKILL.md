@@ -1,3 +1,8 @@
+---
+name: env-configuration
+description: Adding or reading env vars, updating .env.example, or validating config at startup with parseEnv / parseEnvOptional.
+---
+
 # Environment configuration
 
 **When to use:** Adding or reading env vars, updating `.env.example`, or validating config at startup with `parseEnv` / `parseEnvOptional`.

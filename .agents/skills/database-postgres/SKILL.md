@@ -1,3 +1,8 @@
+---
+name: database-postgres
+description: Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migrations, psql / reset, or platform mappers (toDomain* / toInsertRow).
+---
+
 # Postgres, SqlClient, schema, migrations, mappers
 
 **When to use:** Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migrations, `psql` / reset, or platform mappers (`toDomain*` / `toInsertRow`).

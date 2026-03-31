@@ -1,3 +1,8 @@
+---
+name: toolchain-commands
+description: Installing dependencies, running dev/build/test/lint, filtering packages, single-test runs, git hooks, preparing a clone (.env.development / .env.test), or Docker-backed local services and dev servers.
+---
+
 # Toolchain, commands, and CI
 
 **When to use:** Installing dependencies, running dev/build/test/lint, filtering packages, single-test runs, git hooks, preparing a clone (`.env.development` / `.env.test`), or **Docker-backed local services and dev servers**.

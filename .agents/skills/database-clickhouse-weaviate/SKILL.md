@@ -1,3 +1,8 @@
+---
+name: database-clickhouse-weaviate
+description: ClickHouse queries, Goose migrations, chdb test schema, Weaviate collections/migrations, or telemetry storage paths.
+---
+
 # ClickHouse and Weaviate
 
 **When to use:** ClickHouse queries, Goose migrations, chdb test schema, Weaviate collections/migrations, or telemetry storage paths.

@@ -1,3 +1,8 @@
+---
+name: async-jobs-and-events
+description: Queues and workers, domain event publishers, async notifications or projections, or not doing that work inside HTTP handlers.
+---
+
 # Background jobs, domain events, and side effects
 
 **When to use:** Queues and workers, domain event publishers, async notifications or projections, or **not** doing that work inside HTTP handlers.
