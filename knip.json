@@ -20,7 +20,7 @@
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignoreDependencies": ["@domain/annotations", "@domain/scores"]
+      "ignoreDependencies": ["@domain/annotations", "@domain/scores", "@opentelemetry/auto-instrumentations-node", "@opentelemetry/exporter-trace-otlp-http", "@opentelemetry/sdk-node"]
     },
     "infra": {
       "entry": [],

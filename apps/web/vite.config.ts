@@ -34,13 +34,7 @@ function stripUseDirectives() {
 }
 
 export default defineConfig({
-  plugins: [
-    stripUseDirectives(),
-    tanstackStart({ start: { entry: "./src/start.ts" } }),
-    nitro(),
-    tailwindcss(),
-    react(),
-  ],
+  plugins: [stripUseDirectives(), tanstackStart(), nitro(), tailwindcss(), react()],
   resolve: {
     alias: {
       // tslib's CJS UMD sets __esModule: true without providing a default

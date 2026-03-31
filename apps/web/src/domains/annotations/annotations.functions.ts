@@ -15,7 +15,6 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 const toRecord = (score: AnnotationScore) => ({
   id: score.id as string,
@@ -53,7 +52,6 @@ const toListResult = (page: ScoreListPage) => ({
 type AnnotationListResult = ReturnType<typeof toListResult>
 
 export const createAnnotation = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -97,7 +95,6 @@ export const createAnnotation = createServerFn({ method: "POST" })
   })
 
 export const updateAnnotation = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       scoreId: z.string(),
@@ -139,7 +136,6 @@ export const updateAnnotation = createServerFn({ method: "POST" })
   })
 
 export const deleteAnnotation = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ scoreId: z.string(), projectId: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
@@ -157,7 +153,6 @@ export const deleteAnnotation = createServerFn({ method: "POST" })
   })
 
 export const listAnnotationsByTrace = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
