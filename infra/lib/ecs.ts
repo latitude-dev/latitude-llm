@@ -358,6 +358,12 @@ function createTaskDefinition(
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
           { name: "VITE_LAT_API_URL", value: `${apiUrl}/v1` },
           { name: "VITE_LAT_WEB_URL", value: webUrl },
+          { name: "DD_TRACE_ENABLED", value: "true" },
+          { name: "DD_ENV", value: config.name },
+          { name: "DD_SERVICE", value: serviceConfig.name },
+          { name: "DD_DOGSTATSD_HOST", value: "localhost" },
+          { name: "DD_DOGSTATSD_PORT", value: "8125" },
+          { name: "DD_AGENT_HOST", value: "localhost" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
@@ -446,15 +452,85 @@ function createTaskDefinition(
             retries: 3,
             startPeriod: 60,
           },
+          dependsOn: [
+            {
+              containerName: "datadog-agent",
+              condition: "START",
+            },
+          ],
         }
-        return JSON.stringify([def])
+
+        const datadogAgentDef = {
+          name: "datadog-agent",
+          image: "public.ecr.aws/datadog/agent:latest",
+          essential: false,
+          cpu: DATADOG_AGENT_CPU,
+          memory: DATADOG_AGENT_MEMORY,
+          portMappings: [
+            {
+              containerPort: 8125,
+              protocol: "udp",
+            },
+            {
+              containerPort: 8126,
+              protocol: "tcp",
+            },
+          ],
+          environment: [
+            { name: "DD_APM_ENABLED", value: "true" },
+            { name: "DD_DOGSTATSD_NON_LOCAL_TRAFFIC", value: "true" },
+            { name: "DD_ECS_TASK_COLLECTION_ENABLED", value: "true" },
+            { name: "DD_CONTAINER_EXCLUDE", value: "name:datadog-agent" },
+            { name: "DD_ENV", value: config.name },
+            { name: "DD_SERVICE", value: serviceConfig.name },
+            { name: "ECS_FARGATE", value: "true" },
+          ],
+          secrets: [
+            { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
+            { name: "DD_SITE", valueFrom: datadogSiteArn },
+          ],
+          healthCheck: {
+            command: ["CMD-SHELL", "agent health || exit 1"],
+            interval: 30,
+            timeout: 5,
+            retries: 3,
+            startPeriod: 15,
+          },
+        }
+
+        return JSON.stringify([datadogAgentDef, def])
       },
     )
 
+  // Resource allocation for Datadog Agent sidecar container
+  const DATADOG_AGENT_CPU = 256
+  const DATADOG_AGENT_MEMORY = 512
+
+  // Calculate valid Fargate CPU/memory combination
+  // Fargate only supports specific predefined values
+  const totalCpu = serviceConfig.cpu + DATADOG_AGENT_CPU
+  const totalMemory = serviceConfig.memory + DATADOG_AGENT_MEMORY
+
+  // Valid Fargate CPU values: 256, 512, 1024, 2048, 4096, 8192, 16384
+  const validCpuValues = [256, 512, 1024, 2048, 4096, 8192, 16384]
+  const taskCpu = validCpuValues.find((cpu) => cpu >= totalCpu) ?? 16384
+
+  // Memory must be at least double the CPU (in MB) and in valid ranges
+  const minMemoryForCpu: Record<number, number> = {
+    256: 512,
+    512: 1024,
+    1024: 2048,
+    2048: 4096,
+    4096: 8192,
+    8192: 16384,
+    16384: 32768,
+  }
+  const taskMemory = Math.max(totalMemory, minMemoryForCpu[taskCpu] ?? 32768)
+
   return new aws.ecs.TaskDefinition(`${name}-${serviceConfig.name}-task`, {
     family: `${name}-${serviceConfig.name}`,
-    cpu: serviceConfig.cpu.toString(),
-    memory: serviceConfig.memory.toString(),
+    cpu: taskCpu.toString(),
+    memory: taskMemory.toString(),
     networkMode: "awsvpc",
     requiresCompatibilities: ["FARGATE"],
     executionRoleArn: executionRole.arn,
