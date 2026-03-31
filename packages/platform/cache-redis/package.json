@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/ai": "workspace:*",
     "@platform/env": "workspace:*",
     "effect": "catalog:",
     "ioredis": "catalog:"

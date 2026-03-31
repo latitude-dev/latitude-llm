@@ -4,7 +4,6 @@ import type { z } from "zod"
 export {
   formatGenAIConversation,
   formatGenAIMessage,
-  formatGenAIMessagesForEnrichmentPrompt,
   formatGenAIPart,
 } from "./formatAi.ts"
 
@@ -18,14 +17,18 @@ export class AICredentialError extends Data.TaggedError("AICredentialError")<{
   readonly message: string
 }> {}
 
+// ---------------------------------------------------------------------------
+// Generate (structured object generation via LLM)
+// ---------------------------------------------------------------------------
+
 /**
- * Structured generation with a Zod schema. The Vercel adapter uses the AI SDK’s
+ * Structured generation with a Zod schema. The Vercel adapter uses the AI SDK's
  * schema-backed object output so responses are validated, not free-form text.
  *
  * Optional fields below mirror Vercel AI SDK `CallSettings` and `providerOptions`
  * (see https://sdk.vercel.ai/docs/ai-sdk-core/settings and provider docs).
  */
-export interface GenerateObjectInput<T> {
+export interface GenerateInput<T> {
   readonly provider: string
   readonly model: string
   readonly system: string
@@ -39,32 +42,59 @@ export interface GenerateObjectInput<T> {
   readonly frequencyPenalty?: number
   readonly stopSequences?: readonly string[]
   readonly seed?: number
-  /**
-   * Reasoning depth for models that support it (AI SDK `reasoning` call setting;
-   * e.g. `low`, `medium`, `high`, `none`, `provider-default`).
-   */
-  readonly reasoning?: string
-  /**
-   * Provider-specific options, namespaced by provider id (e.g. `{ openai: { reasoningEffort: "low" } }`).
-   * Passed through to the adapter’s `generateText({ providerOptions })`.
-   */
+  readonly reasoning?: "none" | "provider-default" | "minimal" | "low" | "medium" | "high" | "xhigh"
   readonly providerOptions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
 }
 
-export interface GenerateObjectResult<T> {
+export interface GenerateResult<T> {
   readonly object: T
   readonly tokens: number
   readonly duration: number // nanoseconds
 }
 
+// ---------------------------------------------------------------------------
+// Embed (vector embeddings)
+// ---------------------------------------------------------------------------
+
+export interface EmbedInput {
+  readonly text: string
+  readonly model: string
+  readonly dimensions: number
+}
+
+export interface EmbedResult {
+  readonly embedding: number[]
+}
+
+// ---------------------------------------------------------------------------
+// Rerank (document reranking)
+// ---------------------------------------------------------------------------
+
+export interface RerankInput {
+  readonly query: string
+  readonly documents: readonly string[]
+  readonly model: string
+}
+
+export interface RerankResult {
+  readonly index: number
+  readonly relevanceScore: number
+}
+
+// ---------------------------------------------------------------------------
+// Unified AI service
+// ---------------------------------------------------------------------------
+
 export class AI extends ServiceMap.Service<
   AI,
   {
-    generateObject<T>(
-      input: GenerateObjectInput<T>,
-    ): Effect.Effect<GenerateObjectResult<T>, AIError | AICredentialError>
+    generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
+    embed(input: EmbedInput): Effect.Effect<EmbedResult, AIError>
+    rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
   }
 >()("@domain/ai/AI") {}
+
+export { AICache, withAICache } from "./cache.ts"
 
 export class AICredentials extends ServiceMap.Service<
   AICredentials,

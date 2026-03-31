@@ -1,3 +1,5 @@
+export { AICacheLive } from "./ai-cache.ts"
+
 import { ServiceMap } from "effect"
 
 export class RedisCacheAdapterTag extends ServiceMap.Service<

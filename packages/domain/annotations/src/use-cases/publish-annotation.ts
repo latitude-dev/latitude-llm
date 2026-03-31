@@ -1,4 +1,4 @@
-import { AI, type AICredentialError, type AIError, formatGenAIMessagesForEnrichmentPrompt } from "@domain/ai"
+import { AI, type AICredentialError, type AIError, formatGenAIMessage } from "@domain/ai"
 import { type AnnotationScore, type AnnotationScoreMetadata, isImmutableScore, ScoreRepository } from "@domain/scores"
 import {
   BadRequestError,
@@ -13,6 +13,7 @@ import {
 } from "@domain/shared"
 import { resolveLastLlmCompletionSpanId, SpanRepository, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
+import type { GenAIMessage } from "rosetta-ai"
 import { z } from "zod"
 import { resolveAnnotationAnchorText } from "../helpers/resolve-annotation-anchor-text.ts"
 
@@ -82,6 +83,23 @@ const buildEnrichmentPrompt = (
   return parts.join("\n\n")
 }
 
+/**
+ * Like {@link formatGenAIConversation} but prefixes each turn with `[message i]` and uses `---` separators.
+ * Use when the consumer must align text to **0-based indices** in canonical trace payloads (e.g.
+ * `AnnotationScoreMetadata.messageIndex`, anchor resolution over `TraceDetail.allMessages`).
+ * For a human-style transcript only, use {@link formatGenAIConversation} instead.
+ */
+export function formatGenAIMessagesForEnrichmentPrompt(messages: readonly GenAIMessage[]): string {
+  const blocks: string[] = []
+  for (let i = 0; i < messages.length; i++) {
+    const m = messages[i]
+    const text = formatGenAIMessage(m)
+    const body = text || "<no plain text in this message>"
+    blocks.push(`[message ${i}] role=${m.role}\n${body}`)
+  }
+  return blocks.join("\n\n---\n\n")
+}
+
 export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
   Effect.gen(function* () {
     const sqlClient = yield* SqlClient
@@ -144,7 +162,7 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
       }
     }
 
-    const result = yield* ai.generateObject({
+    const result = yield* ai.generate({
       ...ENRICHMENT_MODEL,
       system: ENRICHMENT_SYSTEM_PROMPT,
       prompt: buildEnrichmentPrompt(metadata, { fullConversationText, highlightedExcerpt }),

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "dotenv": "catalog:",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "fast-json-stable-stringify": "catalog:"
   }
 }

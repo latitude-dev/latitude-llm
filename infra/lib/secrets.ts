@@ -174,6 +174,17 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["weaviate-api-key"] = weaviateApiKey.secret
   secretVersions["weaviate-api-key"] = weaviateApiKey.secretVersion
 
+  const voyageApiKey = createSingleSecret(
+    baseName,
+    "voyage-api-key",
+    "Voyage API key",
+    process.env.LAT_VOYAGE_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["voyage-api-key"] = voyageApiKey.secret
+  secretVersions["voyage-api-key"] = voyageApiKey.secretVersion
+
   const mailgunApiKey = createSingleSecret(
     baseName,
     "mailgun-api-key",
