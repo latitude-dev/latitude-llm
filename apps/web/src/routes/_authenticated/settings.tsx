@@ -753,7 +753,9 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                         disabled={apiKeys.length === 1}
                         variant="ghost"
                         onClick={() => {
-                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise
+                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise.then(() => {
+                            toast({ description: "API key deleted" })
+                          })
                         }}
                       >
                         <Icon icon={Trash2} size="sm" />
