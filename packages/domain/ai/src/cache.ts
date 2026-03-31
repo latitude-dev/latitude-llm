@@ -12,7 +12,8 @@ import {
   type RerankResult,
 } from "./index.ts"
 
-const cacheKey = (namespace: string, input: unknown) => Effect.map(hash(input), (digest) => `ai:${namespace}:${digest}`)
+const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, never> =>
+  Effect.map(hash(input), (hashValue) => `ai:${namespace}:${hashValue}`).pipe(Effect.orDie)
 const DEFAULT_AI_CACHE_TTL_SECONDS = 24 * 60 * 60
 const generateResultSchema = Schema.Struct({
   object: Schema.Unknown,
@@ -63,7 +64,7 @@ export const withAICache = (
   generate: <T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError> =>
     Effect.gen(function* () {
       const { schema: _, ...hashable } = input
-      const key = yield* cacheKey("generate", hashable).pipe(Effect.mapError(toAIError("cacheKey")))
+      const key = yield* cacheKey("generate", hashable)
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {
@@ -86,7 +87,7 @@ export const withAICache = (
 
   embed: (input: EmbedInput) =>
     Effect.gen(function* () {
-      const key = yield* cacheKey("embed", input).pipe(Effect.mapError(toAIError("cacheKey")))
+      const key = yield* cacheKey("embed", input)
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {
@@ -110,7 +111,7 @@ export const withAICache = (
 
   rerank: (input: RerankInput) =>
     Effect.gen(function* () {
-      const key = yield* cacheKey("rerank", input).pipe(Effect.mapError(toAIError("cacheKey")))
+      const key = yield* cacheKey("rerank", input)
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {

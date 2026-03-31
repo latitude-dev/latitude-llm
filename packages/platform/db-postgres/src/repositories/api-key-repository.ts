@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto"
 import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyRepository } from "@domain/api-keys"
 import {
@@ -11,7 +10,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import { parseEnv } from "@platform/env"
-import { decrypt, encrypt } from "@repo/utils"
+import { decrypt, encrypt, hashToken } from "@repo/utils"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -29,7 +28,8 @@ export const resolveApiKeyEncryptionKey = (rawSecret: string): Buffer => {
     return Buffer.from(secret, "hex")
   }
 
-  return createHash("sha256").update(secret, "utf8").digest()
+  const hashed = Effect.runSync(hashToken(secret))
+  return Buffer.from(hashed, "hex")
 }
 
 const getEncryptionKey = (): Buffer => {
