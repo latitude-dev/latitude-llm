@@ -514,6 +514,7 @@ function createTaskDefinition(
             { name: "DD_OTLP_CONFIG_TRACES_ENABLED", value: "true" },
             { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_HTTP_ENDPOINT", value: "0.0.0.0:4318" },
             { name: "DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_ENDPOINT", value: "0.0.0.0:4317" },
+            { name: "DD_LOG_LEVEL", value: "debug" },
           ],
           secrets: [
             { name: "DD_API_KEY", valueFrom: datadogApiKeyArn },
