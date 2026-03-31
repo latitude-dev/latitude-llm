@@ -8,7 +8,6 @@ import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 export interface TraceRecord {
   readonly organizationId: string
@@ -99,7 +98,6 @@ interface TraceListResult {
 }
 
 export const listTracesByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -142,7 +140,6 @@ export const listTracesByProject = createServerFn({ method: "GET" })
   })
 
 export const countTracesByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<number> => {
     const { organizationId } = await requireSession()
@@ -161,7 +158,6 @@ export const countTracesByProject = createServerFn({ method: "GET" })
   })
 
 export const getTraceMetricsByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<TraceMetrics | null> => {
     const { organizationId } = await requireSession()
@@ -192,7 +188,6 @@ const traceHistogramInputSchema = z.object({
 })
 
 export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(traceHistogramInputSchema)
   .handler(async ({ data }): Promise<readonly TraceTimeHistogramBucket[]> => {
     const startMs = Date.parse(data.rangeStartIso)
@@ -220,7 +215,6 @@ export const getTraceTimeHistogramByProject = createServerFn({ method: "GET" })
   })
 
 export const getTraceDetail = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
   .handler(async ({ data }) => {
     const { organizationId } = await requireSession()
@@ -249,7 +243,6 @@ export const getTraceDetail = createServerFn({ method: "GET" })
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
 
 export const getTraceDistinctValues = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),

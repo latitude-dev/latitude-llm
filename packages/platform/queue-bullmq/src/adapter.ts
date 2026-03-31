@@ -101,6 +101,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
     }
 
     const DEFAULT_CONCURRENCY = 10
+    const services = yield* Effect.services<never>()
     const workers: Map<QueueName, Worker> = new Map()
     const subscriptions = new Map<QueueName, AnyTaskHandlers>()
     const concurrencyOverrides = new Map<QueueName, number>()
@@ -151,7 +152,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                   },
                   async (span) => {
                     try {
-                      await Effect.runPromise(handler(payload))
+                      await Effect.runPromiseWith(services)(handler(payload))
                       span.setStatus({ code: SpanStatusCode.OK })
                     } catch (error) {
                       span.recordException(error as Error)
@@ -176,7 +177,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
             )
 
             worker.on("error", (error) => {
-              void Effect.runPromise(Effect.logError(`BullMQ worker error on queue ${queue}: ${error}`))
+              void Effect.runPromiseWith(services)(Effect.logError(`BullMQ worker error on queue ${queue}: ${error}`))
             })
 
             workers.set(queue, worker)

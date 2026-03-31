@@ -34,13 +34,7 @@ function stripUseDirectives() {
 }
 
 export default defineConfig({
-  plugins: [
-    stripUseDirectives(),
-    tanstackStart({ start: { entry: "./src/start.ts" } }),
-    nitro(),
-    tailwindcss(),
-    react(),
-  ],
+  plugins: [stripUseDirectives(), tanstackStart(), nitro(), tailwindcss(), react()],
   resolve: {
     alias: {
       // tslib's CJS UMD sets __esModule: true without providing a default
@@ -51,6 +45,12 @@ export default defineConfig({
   },
   build: {
     rolldownOptions: {
+      // These are Node.js-only packages that must never appear in client chunks.
+      // Vite follows dynamic imports in @repo/observability/otel.ts and would
+      // otherwise produce ~2 MB of gRPC/OTel lazy chunks in the browser bundle.
+      // Nitro bundles the server output separately from node_modules, so the
+      // server is unaffected by this exclusion.
+      external: [/@opentelemetry\/sdk-node/, /@opentelemetry\/auto-instrumentations-node/],
       output: {
         codeSplitting: {
           groups: [

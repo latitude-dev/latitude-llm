@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto"
 import type { ApiKey } from "@domain/api-keys"
 import { ApiKeyRepository } from "@domain/api-keys"
 import {
@@ -11,7 +10,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import { parseEnv } from "@platform/env"
-import { decrypt, encrypt } from "@repo/utils"
+import { type CryptoError, decrypt, encrypt, hash } from "@repo/utils"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -22,23 +21,24 @@ let encryptionKeyCache: Buffer | undefined
 const VALID_HEX_32_BYTE_KEY = /^[0-9a-f]{64}$/i
 
 // Enforce strict 32-byte key material while allowing any secret format.
-export const resolveApiKeyEncryptionKey = (rawSecret: string): Buffer => {
+export const resolveApiKeyEncryptionKey = (rawSecret: string): Effect.Effect<Buffer, CryptoError> => {
   const secret = rawSecret.trim()
 
   if (VALID_HEX_32_BYTE_KEY.test(secret)) {
-    return Buffer.from(secret, "hex")
+    return Effect.succeed(Buffer.from(secret, "hex"))
   }
 
-  return createHash("sha256").update(secret, "utf8").digest()
+  return hash(secret).pipe(Effect.map((hashed) => Buffer.from(hashed, "hex")))
 }
 
-const getEncryptionKey = (): Buffer => {
-  if (!encryptionKeyCache) {
-    const encryptionKeySecret = Effect.runSync(parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string"))
-    encryptionKeyCache = resolveApiKeyEncryptionKey(encryptionKeySecret)
-  }
-  return encryptionKeyCache
-}
+const getEncryptionKey = () =>
+  Effect.gen(function* () {
+    if (encryptionKeyCache) return encryptionKeyCache
+    const encryptionKeySecret = yield* parseEnv("LAT_MASTER_ENCRYPTION_KEY", "string")
+    const key = yield* resolveApiKeyEncryptionKey(encryptionKeySecret)
+    encryptionKeyCache = key
+    return key
+  })
 
 const toDomainApiKey = (row: typeof apiKeys.$inferSelect, encryptionKey: Buffer) =>
   Effect.gen(function* () {
@@ -77,7 +77,7 @@ export const ApiKeyRepositoryLive = Layer.effect(
   ApiKeyRepository,
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
-    const encryptionKey = getEncryptionKey()
+    const encryptionKey = yield* getEncryptionKey()
 
     return {
       findById: (id: ApiKeyIdType) =>

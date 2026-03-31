@@ -5,7 +5,6 @@ import { getRequestHeaders } from "@tanstack/react-start/server"
 import { Effect } from "effect"
 import z from "zod"
 import { getAdminPostgresClient, getBetterAuth } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 const sendMagicLinkInputSchema = z.object({
   email: z.email(),
@@ -14,7 +13,6 @@ const sendMagicLinkInputSchema = z.object({
 })
 
 export const sendMagicLink = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(sendMagicLinkInputSchema)
   .handler(async ({ data }) => {
     await getBetterAuth().api.signInMagicLink({
@@ -28,7 +26,6 @@ export const sendMagicLink = createServerFn({ method: "POST" })
   })
 
 export const setActiveOrganization = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ organizationId: z.string(), organizationSlug: z.string() }))
   .handler(async ({ data }) => {
     await getBetterAuth().api.setActiveOrganization({
@@ -41,7 +38,6 @@ export const setActiveOrganization = createServerFn({ method: "POST" })
   })
 
 export const getInvitationPreview = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ invitationId: z.string() }))
   .handler(async ({ data }) => {
     const client = getAdminPostgresClient()

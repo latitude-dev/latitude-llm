@@ -7,7 +7,6 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 const serializeSession = (session: Session) => ({
   organizationId: session.organizationId,
@@ -52,7 +51,6 @@ interface SessionListResult {
 }
 
 export const listSessionsByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -95,7 +93,6 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
   })
 
 export const getSessionMetricsByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
   .handler(async ({ data }): Promise<SessionMetrics | null> => {
     const { organizationId } = await requireSession()
@@ -116,7 +113,6 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
 
 export const getSessionBySessionId = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), sessionId: z.string() }))
   .handler(async ({ data }): Promise<SessionRecord | null> => {
     const { organizationId } = await requireSession()
@@ -141,7 +137,6 @@ export const getSessionBySessionId = createServerFn({ method: "GET" })
   })
 
 export const getSessionDistinctValues = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),

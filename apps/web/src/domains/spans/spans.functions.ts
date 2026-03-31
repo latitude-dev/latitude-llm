@@ -7,7 +7,6 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 export interface SpanRecord {
   readonly organizationId: string
@@ -137,7 +136,6 @@ const serializeSpanDetail = (span: SpanDetail): SpanDetailRecord => ({
 })
 
 export const listSpansByTrace = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ traceId: z.string() }))
   .handler(async ({ data }): Promise<SpanRecord[]> => {
     const { organizationId } = await requireSession()
@@ -152,7 +150,6 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
   })
 
 export const mapConversationToSpans = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string(), traceId: z.string() }))
   .handler(
     async ({ data }): Promise<{ messageSpanMap: Record<number, string>; toolCallSpanMap: Record<string, string> }> => {
@@ -183,7 +180,6 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
   )
 
 export const getSpanDetail = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ traceId: z.string(), spanId: z.string() }))
   .handler(async ({ data }): Promise<SpanDetailRecord> => {
     const { organizationId } = await requireSession()

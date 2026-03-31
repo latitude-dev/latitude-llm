@@ -12,7 +12,6 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getBetterAuth, getPostgresClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 export type MemberStatus = "active" | "invited"
 
@@ -28,58 +27,55 @@ export interface MemberRecord {
   readonly expiresAt?: string | null
 }
 
-export const listMembers = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
-  .handler(async (): Promise<MemberRecord[]> => {
-    const { organizationId } = await requireSession()
-    const headers = getRequestHeaders()
-    const client = getPostgresClient()
+export const listMembers = createServerFn({ method: "GET" }).handler(async (): Promise<MemberRecord[]> => {
+  const { organizationId } = await requireSession()
+  const headers = getRequestHeaders()
+  const client = getPostgresClient()
 
-    const members = await Effect.runPromise(
-      Effect.gen(function* () {
-        const membershipRepo = yield* MembershipRepository
-        return yield* membershipRepo.findMembersWithUser(organizationId)
-      }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
-    )
+  const members = await Effect.runPromise(
+    Effect.gen(function* () {
+      const membershipRepo = yield* MembershipRepository
+      return yield* membershipRepo.findMembersWithUser(organizationId)
+    }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
+  )
 
-    const invitationResult = await getBetterAuth().api.listInvitations({
-      headers,
-      query: { organizationId },
-    })
-    const pendingInvites = invitationResult.filter((invitation) => invitation.status === "pending")
+  const invitationResult = await getBetterAuth().api.listInvitations({
+    headers,
+    query: { organizationId },
+  })
+  const pendingInvites = invitationResult.filter((invitation) => invitation.status === "pending")
 
-    const activeMembers: MemberRecord[] = members.map((m) => ({
-      id: m.id,
-      userId: m.userId,
-      name: m.name,
-      email: m.email,
-      role: m.role,
-      status: "active" as const,
-      confirmedAt: m.createdAt ? m.createdAt.toISOString() : null,
-      createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
+  const activeMembers: MemberRecord[] = members.map((m) => ({
+    id: m.id,
+    userId: m.userId,
+    name: m.name,
+    email: m.email,
+    role: m.role,
+    status: "active" as const,
+    confirmedAt: m.createdAt ? m.createdAt.toISOString() : null,
+    createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
+  }))
+
+  const activeMemberEmails = new Set(activeMembers.map((m) => m.email.toLowerCase()))
+
+  const invitedMembers: MemberRecord[] = pendingInvites
+    .filter((invite) => !activeMemberEmails.has(invite.email.toLowerCase()))
+    .map((invite) => ({
+      id: invite.id,
+      userId: null,
+      name: null,
+      email: invite.email,
+      role: invite.role ?? "member",
+      status: "invited" as const,
+      confirmedAt: null,
+      createdAt: new Date(invite.createdAt).toISOString(),
+      expiresAt: invite.expiresAt ? new Date(invite.expiresAt).toISOString() : null,
     }))
 
-    const activeMemberEmails = new Set(activeMembers.map((m) => m.email.toLowerCase()))
-
-    const invitedMembers: MemberRecord[] = pendingInvites
-      .filter((invite) => !activeMemberEmails.has(invite.email.toLowerCase()))
-      .map((invite) => ({
-        id: invite.id,
-        userId: null,
-        name: null,
-        email: invite.email,
-        role: invite.role ?? "member",
-        status: "invited" as const,
-        confirmedAt: null,
-        createdAt: new Date(invite.createdAt).toISOString(),
-        expiresAt: invite.expiresAt ? new Date(invite.expiresAt).toISOString() : null,
-      }))
-
-    return [...activeMembers, ...invitedMembers]
-  })
+  return [...activeMembers, ...invitedMembers]
+})
 
 export const removeMember = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ membershipId: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { userId, organizationId } = await requireSession()
@@ -94,7 +90,6 @@ export const removeMember = createServerFn({ method: "POST" })
   })
 
 export const invite = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       email: z.email(),
@@ -116,7 +111,6 @@ export const invite = createServerFn({ method: "POST" })
   })
 
 export const cancelInvite = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       inviteId: z.string(),
@@ -131,7 +125,6 @@ export const cancelInvite = createServerFn({ method: "POST" })
   })
 
 export const transferOwnership = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ newOwnerUserId: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { userId, organizationId } = await requireSession()
@@ -147,7 +140,6 @@ export const transferOwnership = createServerFn({ method: "POST" })
   })
 
 export const updateMemberRole = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ targetUserId: z.string(), newRole: z.enum(["admin", "member"]) }))
   .handler(async ({ data }): Promise<void> => {
     const { userId, organizationId } = await requireSession()

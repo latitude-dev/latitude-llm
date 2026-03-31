@@ -11,7 +11,6 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 const logger = createLogger("project-stats")
 
@@ -30,24 +29,21 @@ const toRecord = (project: Project) => ({
 
 export type ProjectRecord = ReturnType<typeof toRecord>
 
-export const listProjects = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
-  .handler(async (): Promise<ProjectRecord[]> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
+export const listProjects = createServerFn({ method: "GET" }).handler(async (): Promise<ProjectRecord[]> => {
+  const { organizationId } = await requireSession()
+  const client = getPostgresClient()
 
-    const projects = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ProjectRepository
-        return yield* repo.findAll()
-      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
-    )
+  const projects = await Effect.runPromise(
+    Effect.gen(function* () {
+      const repo = yield* ProjectRepository
+      return yield* repo.findAll()
+    }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+  )
 
-    return projects.map(toRecord)
-  })
+  return projects.map(toRecord)
+})
 
 export const getProjectBySlug = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ slug: z.string() }))
   .handler(async ({ data }): Promise<ProjectRecord> => {
     const { organizationId } = await requireSession()
@@ -64,7 +60,6 @@ export const getProjectBySlug = createServerFn({ method: "GET" })
   })
 
 export const createProject = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       id: z
@@ -95,7 +90,6 @@ const projectSettingsSchema = z.object({
 })
 
 export const updateProject = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       id: z.string(),
@@ -117,7 +111,6 @@ export const updateProject = createServerFn({ method: "POST" })
   })
 
 export const deleteProject = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
@@ -137,7 +130,6 @@ export interface ProjectStats {
 }
 
 export const getProjectStats = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ projectId: z.string() }))
   .handler(async ({ data }): Promise<ProjectStats> => {
     const { organizationId } = await requireSession()

@@ -6,7 +6,6 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 export interface ApiKeyRecord {
   readonly id: string
@@ -28,24 +27,21 @@ const toRecord = (apiKey: ApiKey): ApiKeyRecord => ({
   updatedAt: apiKey.updatedAt.toISOString(),
 })
 
-export const listApiKeys = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
-  .handler(async (): Promise<ApiKeyRecord[]> => {
-    const { organizationId } = await requireSession()
-    const client = getPostgresClient()
+export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): Promise<ApiKeyRecord[]> => {
+  const { organizationId } = await requireSession()
+  const client = getPostgresClient()
 
-    const apiKeys = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* ApiKeyRepository
-        return yield* repo.findAll()
-      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
-    )
+  const apiKeys = await Effect.runPromise(
+    Effect.gen(function* () {
+      const repo = yield* ApiKeyRepository
+      return yield* repo.findAll()
+    }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
+  )
 
-    return apiKeys.map(toRecord)
-  })
+  return apiKeys.map(toRecord)
+})
 
 export const createApiKey = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       id: z
@@ -72,7 +68,6 @@ export const createApiKey = createServerFn({ method: "POST" })
   })
 
 export const updateApiKey = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ id: z.string(), name: z.string().min(1).max(256) }))
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
     const { organizationId } = await requireSession()
@@ -88,7 +83,6 @@ export const updateApiKey = createServerFn({ method: "POST" })
   })
 
 export const deleteApiKey = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
