@@ -22,8 +22,7 @@ function fromJsonStringArray(key: string): Candidate<string[]> {
 }
 
 export const tagsCandidates: Candidate<string[]>[] = [
-  fromStringArray("latitude.tags"), // Latitude (OTLP array)
-  fromJsonStringArray("latitude.tags"), // Latitude (JSON string from baggage)
+  fromJsonStringArray("latitude.tags"), // Latitude (JSON string via baggage)
   fromStringArray("langfuse.trace.tags"), // Langfuse
   fromStringArray("braintrust.tags"), // Braintrust
   fromStringArray("tag.tags"), // OpenInference / Arize Phoenix
