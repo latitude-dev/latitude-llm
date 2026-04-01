@@ -1038,7 +1038,6 @@ type ThrashingFlaggerPayload = {
   tool_call_summary: {
     total_calls: number;
     failed_calls: number;
-    unique_tools_called: number;
     repeated_tool_calls: Array<{ tool_name: string; call_count: number }>; // tools invoked more than once, sorted by call_count desc
     tools_available: string[]; // tool names declared in the trace context
     tools_used: string[]; // deduplicated tool names actually invoked
