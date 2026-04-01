@@ -48,14 +48,18 @@ function ErrorSection({ span }: { readonly span: SpanDetailRecord }) {
       {span.errorType && (
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="destructive">Error Type</Text.H6>
-          <Text.H5><code>{span.errorType}</code></Text.H5>
+          <Text.H5>
+            <code>{span.errorType}</code>
+          </Text.H5>
         </div>
       )}
 
       {(span.statusMessage || exception?.message) && (
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="destructive">Message</Text.H6>
-          <Text.H5><code>{exception?.message || span.statusMessage}</code></Text.H5>
+          <Text.H5>
+            <code>{exception?.message || span.statusMessage}</code>
+          </Text.H5>
         </div>
       )}
 
