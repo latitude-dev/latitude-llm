@@ -27,7 +27,7 @@ import { env } from "../env/index.ts"
 import { type BaseInstrumentation, type CaptureOptions, ManualInstrumentation } from "../instrumentations/index.ts"
 import { DEFAULT_REDACT_SPAN_PROCESSOR } from "./redact.ts"
 
-const TRACES_URL = `${env.GATEWAY_BASE_URL}/v1/traces`
+const TRACES_URL = `${env.EXPORTER_URL}/v1/traces`
 const SERVICE_NAME = process.env.npm_package_name || "unknown"
 const SCOPE_VERSION = process.env.npm_package_version || "unknown"
 

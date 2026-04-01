@@ -1,4 +1,4 @@
-from latitude_telemetry.util import Model, StrEnum
+from latitude_telemetry.util import StrEnum
 
 
 class Instrumentors(StrEnum):
@@ -23,14 +23,3 @@ class Instrumentors(StrEnum):
     Transformers = "transformers"
     VertexAI = "vertexai"
     Watsonx = "watsonx"
-
-
-class GatewayOptions(Model):
-    """Gateway configuration options."""
-
-    base_url: str
-
-    @property
-    def traces_url(self) -> str:
-        """URL for the traces endpoint."""
-        return f"{self.base_url}/v1/traces"
