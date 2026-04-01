@@ -118,14 +118,8 @@ jobs:
                 
                 const issueInput = {
                   title: issue.title,
-                  description: issue.body || '',
-                  teamId: cachedTeamId,
-                  externalLinks: [
-                    {
-                      label: 'GitHub Issue',
-                      url: issue.html_url
-                    }
-                  ]
+                  description: `**GitHub Issue:** ${issue.html_url}\n\n---\n\n${issue.body || ''}`,
+                  teamId: cachedTeamId
                 };
                 
                 const createResponse = await fetch('https://api.linear.app/graphql', {
