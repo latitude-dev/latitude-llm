@@ -36,7 +36,7 @@ from latitude_telemetry.telemetry.types import Instrumentors
 from latitude_telemetry.util import Model, is_package_installed
 
 SERVICE_NAME = "latitude-telemetry-python"
-SCOPE_VERSION = "3.0.0"
+SCOPE_VERSION = "3.0.0a0"
 
 _THREADING_INSTRUMENTOR = "Threading"
 
