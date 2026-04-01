@@ -22,20 +22,17 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-            
-            // Find open issues with "llm" label created in the last 10 minutes
+            // Find all open issues with "llm" label (not time-limited to handle missed runs)
             const { data: issues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               labels: 'llm',
-              since: tenMinutesAgo,
               per_page: 100
             });
             
             if (issues.length === 0) {
-              console.log('No new LLM issues to triage');
+              console.log('No open LLM issues to triage');
               return;
             }
             
@@ -85,14 +82,6 @@ jobs:
             }
             
             for (const issue of issues) {
-              // Skip if issue was created before our cutoff (GitHub's since filter isn't always precise)
-              const issueCreated = new Date(issue.created_at);
-              const cutoff = new Date(tenMinutesAgo);
-              if (issueCreated < cutoff) {
-                console.log(`Skipping issue #${issue.number}: created before cutoff`);
-                continue;
-              }
-              
               // Check if issue already has a Linear triage comment (prevents duplicates on retry)
               const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
