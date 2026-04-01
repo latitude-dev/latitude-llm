@@ -327,6 +327,16 @@ function DatasetRowsView({
     setRid(row.rowId)
   }
 
+  const getRowAriaLabel = useCallback(
+    (r: DatasetRowRecord) => {
+      const idx = displayRows.findIndex((row) => row.rowId === r.rowId)
+      const n = idx >= 0 ? idx + 1 : null
+      const position = n != null ? `row ${n}` : "row"
+      return r.rowId === rid ? `Close details for ${position}` : `View details for ${position}`
+    },
+    [displayRows, rid],
+  )
+
   const rowNavIndex = useMemo(() => (rid ? displayRows.findIndex((r) => r.rowId === rid) : -1), [rid, displayRows])
   const canNavigatePrev = rowNavIndex > 0
   const canNavigateNext = rowNavIndex >= 0 && rowNavIndex < displayRows.length - 1
@@ -611,6 +621,7 @@ function DatasetRowsView({
               columns={rowColumns}
               getRowKey={getRowKey}
               onRowClick={openRow}
+              getRowAriaLabel={getRowAriaLabel}
               activeRowKey={rid}
               activeRowAutoScroll
               selection={selection}
