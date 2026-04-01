@@ -1034,7 +1034,7 @@ type ThrashingFlaggerPayload = {
     tool_name: string;
     call_index: number; // zero-based position in the full trace tool call order
     outcome: "success" | "error" | "empty_result";
-  }>; // ordered list of every tool call in the trace
+  }>; // most recent SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS entries (tail); summary below reflects the full trace
   tool_call_summary: {
     total_calls: number;
     failed_calls: number;
@@ -1058,7 +1058,7 @@ Queue population flows:
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
 - among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
-- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue
+- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages and the most recent `SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS` tool-call entries (tail), plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue; the aggregate tool-call summary (`total_calls`, `failed_calls`, `repeated_tool_calls`, etc.) always reflects the full trace even when the detailed sequence is truncated
 - a trace may match none of the system-created queues, or it may match several of them
 - for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair
 - `system-annotation-queues:annotate` uses a larger validator/drafter LLM with the full conversation context to validate the flag and create the draft annotation in the same call
