@@ -1,5 +1,5 @@
 import { DetailSummary, ModelBadge, Text } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
+import { relativeTime, safeParseJson } from "@repo/utils"
 import { useMemo } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { formatDuration } from "../span-tree/tree-utils.ts"
@@ -11,6 +11,63 @@ import { RawTelemetrySections } from "./raw-telemetry-sections.tsx"
 import { isToolExecutionSpan, ToolExecutionSection } from "./tool-execution-section.tsx"
 import { hasAnyUsage, UsageSummary } from "./usage-summary.tsx"
 import { UserContextSection } from "./user-context-section.tsx"
+
+type ExceptionInfo = {
+  type?: string
+  message?: string
+  stacktrace?: string
+}
+
+function extractException(eventsJson: string): ExceptionInfo | undefined {
+  const events = safeParseJson(eventsJson)
+  if (!Array.isArray(events)) return undefined
+
+  for (const event of events) {
+    if (event?.name !== "exception" || !event.attributes) continue
+    const attrs = event.attributes as Array<{ key: string; value?: { stringValue?: string } }>
+    const info: ExceptionInfo = {}
+    for (const attr of attrs) {
+      if (attr.key === "exception.type") info.type = attr.value?.stringValue
+      if (attr.key === "exception.message") info.message = attr.value?.stringValue
+      if (attr.key === "exception.stacktrace") info.stacktrace = attr.value?.stringValue
+    }
+    if (info.type || info.message || info.stacktrace) return info
+  }
+  return undefined
+}
+
+function ErrorSection({ span }: { readonly span: SpanDetailRecord }) {
+  const exception = useMemo(() => extractException(span.eventsJson), [span.eventsJson])
+
+  if (span.statusCode !== "error" && !span.errorType && !exception) return null
+
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+      {span.errorType && (
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="destructive">Error Type</Text.H6>
+          <Text.H5 monospace>{span.errorType}</Text.H5>
+        </div>
+      )}
+
+      {(span.statusMessage || exception?.message) && (
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="destructive">Message</Text.H6>
+          <Text.H5 monospace>{exception?.message || span.statusMessage}</Text.H5>
+        </div>
+      )}
+
+      {exception?.stacktrace && (
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="destructive">Stack Trace</Text.H6>
+          <pre className="text-xs font-mono text-destructive-foreground bg-destructive/10 rounded p-2 overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
+            {exception.stacktrace}
+          </pre>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord }) {
   const durationMs = useMemo(
@@ -35,12 +92,8 @@ export function SpanDetailContent({ span }: { readonly span: SpanDetailRecord })
       {/* ── Status + Span ID ── */}
       <StatusBadge statusCode={span.statusCode} statusMessage={span.statusMessage} spanId={span.spanId} />
 
-      {span.errorType && (
-        <div className="flex flex-col gap-1">
-          <Text.H6 color="destructive">Error Type</Text.H6>
-          <Text.H5>{span.errorType}</Text.H5>
-        </div>
-      )}
+      {/* ── Error details ── */}
+      <ErrorSection span={span} />
 
       {/* ── Identifiers (collapsed by default) ── */}
       <IdentifiersSection span={span} />

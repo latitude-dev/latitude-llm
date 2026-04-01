@@ -186,7 +186,7 @@ export function TraceTab({
                 ? [{ label: "Root Span ID", value: traceRecord.rootSpanId, copyable: true }]
                 : []),
               ...(traceRecord?.serviceNames && traceRecord.serviceNames.length > 0
-                ? [{ label: "Services", value: traceRecord.serviceNames.join(", ") }]
+                ? [{ label: "Services", value: traceRecord.serviceNames.join(", "), copyable: true }]
                 : []),
             ]}
           />
