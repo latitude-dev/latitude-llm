@@ -158,6 +158,7 @@ export enum Instrumentation {
 }
 
 export type TelemetryOptions = {
+  serviceName?: string
   disableBatch?: boolean
   exporter?: SpanExporter
   processors?: SpanProcessor[]
@@ -203,28 +204,21 @@ export class LatitudeTelemetry {
       }),
     )
 
+    const spanProcessors: SpanProcessor[] = [
+      // Must run before the exporter span processors
+      new BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS),
+      ...(this.options.processors ?? [DEFAULT_REDACT_SPAN_PROCESSOR()]),
+      this.options.disableBatch
+        ? new SimpleSpanProcessor(this.options.exporter)
+        : new BatchSpanProcessor(this.options.exporter),
+    ]
+
     this.nodeProvider = new NodeTracerProvider({
-      resource: new Resource({ [ATTR_SERVICE_NAME]: SERVICE_NAME }),
+      resource: new Resource({ [ATTR_SERVICE_NAME]: this.options.serviceName || SERVICE_NAME }),
+      spanProcessors,
     })
 
     this.lifecycle = new LifecycleManager(this.nodeProvider, this.options.exporter)
-
-    // Must run before the exporter span processors
-    this.nodeProvider.addSpanProcessor(new BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS))
-
-    if (this.options.processors) {
-      for (const processor of this.options.processors) {
-        this.nodeProvider.addSpanProcessor(processor)
-      }
-    } else {
-      this.nodeProvider.addSpanProcessor(DEFAULT_REDACT_SPAN_PROCESSOR())
-    }
-
-    if (this.options.disableBatch) {
-      this.nodeProvider.addSpanProcessor(new SimpleSpanProcessor(this.options.exporter))
-    } else {
-      this.nodeProvider.addSpanProcessor(new BatchSpanProcessor(this.options.exporter))
-    }
 
     this.nodeProvider.register()
 

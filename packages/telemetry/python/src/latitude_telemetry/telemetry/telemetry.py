@@ -46,6 +46,7 @@ T = TypeVar("T")
 class TelemetryOptions(Model):
     """Options for configuring the Telemetry SDK."""
 
+    service_name: str | None = None
     instrumentors: Sequence[Instrumentors] | None = None
     disable_batch: bool | None = None
 
@@ -214,7 +215,7 @@ class Telemetry:
         )
 
         self._tracer_provider = TracerProvider(
-            resource=otel.Resource.create({otel.SERVICE_NAME: SERVICE_NAME}),
+            resource=otel.Resource.create({otel.SERVICE_NAME: self._options.service_name or SERVICE_NAME}),
         )
 
         self._tracer_provider.add_span_processor(BaggageSpanProcessor())
