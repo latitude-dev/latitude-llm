@@ -48,9 +48,14 @@ export {
 } from "./components/dropdown-menu/primitives.tsx"
 export { FormField, type FormFieldProps } from "./components/form-field/form-field.tsx"
 export { FormWrapper } from "./components/form-wrapper/form-wrapper.tsx"
+export {
+  AnnotationPopover,
+  type AnnotationPopoverProps,
+} from "./components/genai-conversation/annotation-popover.tsx"
 export { Conversation } from "./components/genai-conversation/conversation.tsx"
 export { Message } from "./components/genai-conversation/message.tsx"
 export { Part, ReasoningGroup, type ToolCallResult } from "./components/genai-conversation/part.tsx"
+export type { HighlightRange, TextSelectionAnchor } from "./components/genai-conversation/text-selection.tsx"
 export * from "./components/icons/custom-icons/index.tsx"
 export { Icon, type IconProps, type IconSize } from "./components/icons/icons.tsx"
 export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
@@ -86,6 +91,13 @@ export {
   DialogTrigger,
 } from "./components/modal/primitives.tsx"
 export { ModelBadge, type ModelBadgeProps } from "./components/model-badge/model-badge.tsx"
+export {
+  Popover,
+  PopoverAnchor,
+  PopoverClose,
+  PopoverContent,
+  PopoverTrigger,
+} from "./components/popover/primitives.tsx"
 export { RichTextEditor, type RichTextEditorProps } from "./components/rich-text-editor/rich-text-editor.tsx"
 export { ScrollNavigator, type ScrollNavigatorHandle } from "./components/scroll-navigator/scroll-navigator.tsx"
 export { SegmentBar, type SegmentBarItem } from "./components/segment-bar/segment-bar.tsx"
@@ -112,6 +124,7 @@ export {
 } from "./components/tag-badge/tag-badge.tsx"
 export { TagList, type TagListProps } from "./components/tag-badge/tag-list.tsx"
 export { type Common as TextCommonProps, Text, TextAtom, type TextProps } from "./components/text/text.tsx"
+export { Textarea, type TextareaProps } from "./components/textarea/textarea.tsx"
 export type { ToastActionElement, ToastProps } from "./components/toast/toast.tsx"
 export {
   Toast,

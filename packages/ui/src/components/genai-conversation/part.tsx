@@ -5,7 +5,7 @@ import { Text } from "../text/text.tsx"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import { CollapsibleBlock } from "./parts/collapsible-block.tsx"
 import { formatJson, getKnownField, MediaFallback, renderMediaByModality } from "./parts/helpers.tsx"
-import { ReasoningGroup } from "./parts/reasoning-group.tsx"
+import { MarkdownContent } from "./parts/lazy-markdown-content.tsx"
 import { ToolCallBlock } from "./parts/tool-call-block.tsx"
 import type {
   BlobPart,
@@ -25,25 +25,31 @@ export function Part({
   part,
   toolResult,
   onNavigateToSpan,
+  messageIndex,
+  partIndex,
 }: {
   readonly part: GenAIPart
   readonly toolResult?: ToolCallResult | undefined
   readonly onNavigateToSpan?: () => void
+  readonly messageIndex?: number | undefined
+  readonly partIndex?: number | undefined
 }) {
   switch (part.type) {
     case "text": {
       const p = part as TextPart
       const isRefusal = getKnownField<boolean>(p._provider_metadata, "isRefusal") === true
 
+      const refusalBadge = isRefusal ? (
+        <span className="inline-block">
+          <Tooltip trigger={<TriangleAlertIcon className="w-4 h-4 mr-2 text-destructive" />}>Refusal</Tooltip>
+        </span>
+      ) : null
+
       return (
-        <Text.H5 whiteSpace="preWrap" wordBreak="normal">
-          {isRefusal && (
-            <span className="inline-block">
-              <Tooltip trigger={<TriangleAlertIcon className="w-4 h-4 mr-2 text-destructive" />}>Refusal</Tooltip>
-            </span>
-          )}
-          {p.content}
-        </Text.H5>
+        <>
+          {refusalBadge}
+          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} />
+        </>
       )
     }
 
@@ -93,7 +99,11 @@ export function Part({
 
     case "reasoning": {
       const p = part as ReasoningPart
-      return <ReasoningGroup texts={[p.content]} />
+      return (
+        <div className="text-muted-foreground italic">
+          <MarkdownContent content={p.content} messageIndex={messageIndex} partIndex={partIndex} />
+        </div>
+      )
     }
 
     case "tool_call": {

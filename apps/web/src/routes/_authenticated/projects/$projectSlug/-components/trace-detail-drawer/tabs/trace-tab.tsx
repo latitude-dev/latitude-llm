@@ -10,14 +10,7 @@ import {
   Tooltip,
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
-import {
-  ArrowDownRightIcon,
-  ArrowUpRightIcon,
-  BrainIcon,
-  FingerprintIcon,
-  MessageSquareIcon,
-  TextIcon,
-} from "lucide-react"
+import { ArrowDownRightIcon, ArrowUpRightIcon, BrainIcon, FingerprintIcon, TextIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { TraceDetailRecord, TraceRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import { UsageSummary } from "./spans-tab/span-detail/usage-summary.tsx"
@@ -197,15 +190,6 @@ export function TraceTab({
                 : []),
             ]}
           />
-        )}
-      </DetailSection>
-
-      {/* ── Annotations ── */}
-      <DetailSection icon={<MessageSquareIcon className="w-4 h-4" />} label="Annotations" defaultOpen={false}>
-        {() => (
-          <Text.H6 color="foregroundMuted" italic>
-            Coming soon
-          </Text.H6>
         )}
       </DetailSection>
     </div>

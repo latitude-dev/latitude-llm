@@ -11,6 +11,7 @@ import {
   SEED_OWNER_USER_ID,
   SEED_PROJECT_ID,
 } from "@domain/shared"
+import { and, eq, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import { annotationQueueItems, annotationQueues } from "../../schema/annotation-queues.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
@@ -120,20 +121,66 @@ const seedAnnotationQueues: Seeder = {
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
+        // Maps canonical seed queue id → actual db id (may differ on stale envs).
+        const queueIdMap = new Map<string, string>()
+
         for (const row of queueRows) {
           const { id, ...set } = row
-          await ctx.db.insert(annotationQueues).values(row).onConflictDoUpdate({
-            target: annotationQueues.id,
-            set,
-          })
+          // Find existing row by name+project (the natural key) to handle stale ids from previous runs.
+          const [existing] = await ctx.db
+            .select({ id: annotationQueues.id })
+            .from(annotationQueues)
+            .where(
+              and(
+                eq(annotationQueues.organizationId, row.organizationId),
+                eq(annotationQueues.projectId, row.projectId),
+                eq(annotationQueues.name, row.name),
+                isNull(annotationQueues.deletedAt),
+              ),
+            )
+            .limit(1)
+
+          if (existing && existing.id !== id) {
+            // Row exists under a different PK — keep the existing PK to avoid orphaning any
+            // rows that reference it, and record the mapping so queue items resolve correctly.
+            await ctx.db.update(annotationQueues).set(set).where(eq(annotationQueues.id, existing.id))
+            queueIdMap.set(id, existing.id)
+          } else {
+            await ctx.db.insert(annotationQueues).values(row).onConflictDoUpdate({ target: annotationQueues.id, set })
+            queueIdMap.set(id, id)
+          }
         }
 
         for (const row of queueItemRows) {
           const { id, ...set } = row
-          await ctx.db.insert(annotationQueueItems).values(row).onConflictDoUpdate({
-            target: annotationQueueItems.id,
-            set,
-          })
+          // Resolve queueId through the map in case the queue row kept its existing PK.
+          const resolvedQueueId = queueIdMap.get(row.queueId) ?? row.queueId
+          const resolvedRow = { ...row, queueId: resolvedQueueId }
+          const resolvedSet = { ...set, queueId: resolvedQueueId }
+
+          // Find existing row by the natural key: trace within a queue.
+          const [existing] = await ctx.db
+            .select({ id: annotationQueueItems.id })
+            .from(annotationQueueItems)
+            .where(
+              and(
+                eq(annotationQueueItems.organizationId, row.organizationId),
+                eq(annotationQueueItems.projectId, row.projectId),
+                eq(annotationQueueItems.queueId, resolvedQueueId),
+                eq(annotationQueueItems.traceId, row.traceId),
+              ),
+            )
+            .limit(1)
+
+          if (existing && existing.id !== id) {
+            // Keep existing PK, just update other fields.
+            await ctx.db.update(annotationQueueItems).set(resolvedSet).where(eq(annotationQueueItems.id, existing.id))
+          } else {
+            await ctx.db
+              .insert(annotationQueueItems)
+              .values(resolvedRow)
+              .onConflictDoUpdate({ target: annotationQueueItems.id, set: resolvedSet })
+          }
         }
 
         console.log(
