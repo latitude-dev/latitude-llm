@@ -1,8 +1,29 @@
 import type { OtlpKeyValue } from "../types.ts"
 import { type Candidate, fromString, fromStringArray } from "./utils.ts"
 
+// Parse a JSON-encoded string array (e.g. '["a","b"]' from baggage propagation)
+function fromJsonStringArray(key: string): Candidate<string[]> {
+  return {
+    resolve: (attrs) => {
+      const kv = attrs.find((a) => a.key === key)
+      const v = kv?.value?.stringValue
+      if (!v) return undefined
+      try {
+        const parsed: unknown = JSON.parse(v)
+        if (Array.isArray(parsed) && parsed.every((i) => typeof i === "string")) {
+          return parsed.length > 0 ? (parsed as string[]) : undefined
+        }
+      } catch {
+        // not valid JSON
+      }
+      return undefined
+    },
+  }
+}
+
 export const tagsCandidates: Candidate<string[]>[] = [
-  fromStringArray("latitude.tags"), // Latitude
+  fromStringArray("latitude.tags"), // Latitude (OTLP array)
+  fromJsonStringArray("latitude.tags"), // Latitude (JSON string from baggage)
   fromStringArray("langfuse.trace.tags"), // Langfuse
   fromStringArray("braintrust.tags"), // Braintrust
   fromStringArray("tag.tags"), // OpenInference / Arize Phoenix
