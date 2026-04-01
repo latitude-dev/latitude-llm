@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/**
+  - "!packages/telemetry/python/**"
   - infra
 
 catalog:
