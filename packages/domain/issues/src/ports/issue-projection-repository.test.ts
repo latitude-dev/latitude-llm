@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest"
 import { ISSUE_DISCOVERY_MAX_CANDIDATES } from "../constants.ts"
 import { createFakeIssueProjectionRepository } from "../testing/fake-issue-projection-repository.ts"
 
-const TENANT = "org1:proj1"
+const organizationId = "org1"
+const projectId = "proj1"
 
 function makeVector(seed: number, dims = 8): number[] {
   const vec = Array.from({ length: dims }, (_, i) => Math.sin(seed + i))
@@ -18,11 +19,12 @@ describe("IssueProjectionRepository (fake)", () => {
 
       await Effect.runPromise(
         service.upsert({
+          organizationId,
+          projectId,
           uuid: "uuid-1",
           title: "Secret leakage",
           description: "Agent exposes private tokens in answers",
           vector: makeVector(1),
-          tenantName: TENANT,
         }),
       )
 
@@ -34,26 +36,28 @@ describe("IssueProjectionRepository (fake)", () => {
 
       await Effect.runPromise(
         service.upsert({
+          organizationId,
+          projectId,
           uuid: "uuid-1",
           title: "Original title",
           description: "Original description",
           vector: makeVector(1),
-          tenantName: TENANT,
         }),
       )
 
       await Effect.runPromise(
         service.upsert({
+          organizationId,
+          projectId,
           uuid: "uuid-1",
           title: "Updated title",
           description: "Updated description",
           vector: makeVector(2),
-          tenantName: TENANT,
         }),
       )
 
       expect(store.size).toBe(1)
-      const entry = store.get(`${TENANT}::uuid-1`)
+      const entry = store.get(`${organizationId}_${projectId}::uuid-1`)
       expect(entry?.title).toBe("Updated title")
     })
   })
@@ -64,15 +68,16 @@ describe("IssueProjectionRepository (fake)", () => {
 
       await Effect.runPromise(
         service.upsert({
+          organizationId,
+          projectId,
           uuid: "uuid-1",
           title: "To be deleted",
           description: "Will be removed",
           vector: makeVector(1),
-          tenantName: TENANT,
         }),
       )
 
-      await Effect.runPromise(service.delete({ uuid: "uuid-1", tenantName: TENANT }))
+      await Effect.runPromise(service.delete({ organizationId, projectId, uuid: "uuid-1" }))
 
       expect(store.size).toBe(0)
     })
@@ -80,7 +85,7 @@ describe("IssueProjectionRepository (fake)", () => {
     it("does nothing when deleting a non-existent projection", async () => {
       const { service } = createFakeIssueProjectionRepository()
 
-      await Effect.runPromise(service.delete({ uuid: "missing", tenantName: TENANT }))
+      await Effect.runPromise(service.delete({ organizationId, projectId, uuid: "missing" }))
     })
   })
 
@@ -90,29 +95,32 @@ describe("IssueProjectionRepository (fake)", () => {
 
       await Effect.runPromise(
         service.upsert({
+          organizationId,
+          projectId,
           uuid: "uuid-1",
           title: "Secret leakage in answers",
           description: "Agent exposes private tokens and API keys",
           vector: makeVector(1),
-          tenantName: TENANT,
         }),
       )
 
       await Effect.runPromise(
         service.upsert({
+          organizationId,
+          projectId,
           uuid: "uuid-2",
           title: "Hallucinated citations",
           description: "Agent invents fake references and sources",
           vector: makeVector(5),
-          tenantName: TENANT,
         }),
       )
 
       const results = await Effect.runPromise(
         service.hybridSearch({
+          organizationId,
+          projectId,
           query: "secret tokens API keys",
           vector: makeVector(1),
-          tenantName: TENANT,
         }),
       )
 
@@ -127,20 +135,22 @@ describe("IssueProjectionRepository (fake)", () => {
       for (let i = 0; i < 5; i++) {
         await Effect.runPromise(
           service.upsert({
+            organizationId,
+            projectId,
             uuid: `uuid-${i}`,
             title: `Issue ${i} about tokens`,
             description: `Description ${i}`,
             vector: makeVector(i),
-            tenantName: TENANT,
           }),
         )
       }
 
       const results = await Effect.runPromise(
         service.hybridSearch({
+          organizationId,
+          projectId,
           query: "tokens",
           vector: makeVector(0),
-          tenantName: TENANT,
         }),
       )
 
@@ -153,29 +163,32 @@ describe("IssueProjectionRepository (fake)", () => {
 
       await Effect.runPromise(
         service.upsert({
+          organizationId,
+          projectId,
           uuid: "uuid-1",
           title: "Secret leakage",
           description: "Tokens exposed",
           vector: makeVector(1),
-          tenantName: "org1:proj1",
         }),
       )
 
       await Effect.runPromise(
         service.upsert({
+          organizationId: "org2",
+          projectId: "proj2",
           uuid: "uuid-2",
           title: "Secret leakage too",
           description: "Tokens exposed too",
           vector: makeVector(1),
-          tenantName: "org2:proj2",
         }),
       )
 
       const results = await Effect.runPromise(
         service.hybridSearch({
+          organizationId,
+          projectId,
           query: "secret tokens",
           vector: makeVector(1),
-          tenantName: "org1:proj1",
         }),
       )
 
@@ -188,9 +201,10 @@ describe("IssueProjectionRepository (fake)", () => {
 
       const results = await Effect.runPromise(
         service.hybridSearch({
+          organizationId,
+          projectId,
           query: "anything",
           vector: makeVector(1),
-          tenantName: TENANT,
         }),
       )
 

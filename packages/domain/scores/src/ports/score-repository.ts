@@ -22,6 +22,11 @@ export interface ScoreListPage {
 export interface ScoreRepositoryShape {
   findById(id: ScoreId): Effect.Effect<Score | null, RepositoryError>
   save(score: Score): Effect.Effect<void, RepositoryError>
+  assignIssueIfUnowned(input: {
+    readonly scoreId: ScoreId
+    readonly issueId: IssueId
+    readonly updatedAt: Date
+  }): Effect.Effect<boolean, RepositoryError>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError>
   listByProjectId(input: {
     readonly projectId: ProjectId

@@ -1,5 +1,5 @@
-import { listProjectScoresUseCase, listSourceScoresUseCase, writeScoreUseCase } from "@domain/scores"
-import { OrganizationId, ProjectId, ScoreId } from "@domain/shared"
+import { listProjectScoresUseCase, listSourceScoresUseCase, ScoreRepository, writeScoreUseCase } from "@domain/scores"
+import { IssueId, OrganizationId, ProjectId, ScoreId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -57,7 +57,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(persistedRows).toHaveLength(0)
   })
 
-  it("updates drafted scores in place and only queues publication after finalization", async () => {
+  it("updates drafted scores in place without writing issue events when no issue is attached", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const scoreId = "ssssssssssssssssssssssss"
 
@@ -122,14 +122,112 @@ describe("ScoreRepositoryLive + score use cases", () => {
         and(eq(outboxEvents.organizationId, organizationId), eq(outboxEvents.aggregateId, draftedScore.id as string)),
       )
 
+    expect(publicationRequests).toHaveLength(0)
+  })
+
+  it("queues IssueDiscoveryRequested for failed non-draft scores that still need issue assignment", async () => {
+    const organizationId = "ffffffffffffffffffffffff"
+
+    const score = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "custom",
+        sourceId: "api-source",
+        value: 0.1,
+        passed: false,
+        feedback: "The assistant leaks API tokens in its response.",
+        metadata: { channel: "api" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const publicationRequests = await database.db
+      .select()
+      .from(outboxEvents)
+      .where(and(eq(outboxEvents.organizationId, organizationId), eq(outboxEvents.aggregateId, score.id as string)))
+
     expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreImmutable")
+    expect(publicationRequests[0]?.eventName).toBe("IssueDiscoveryRequested")
     expect(publicationRequests[0]?.payload).toEqual({
       organizationId,
-      projectId: draftedScore.projectId,
-      scoreId: draftedScore.id,
-      issueId: null,
+      projectId: customProjectId,
+      scoreId: score.id,
     })
+  })
+
+  it("queues IssueRefreshRequested when an immutable score is already linked to an issue", async () => {
+    const organizationId = "rrrrrrrrrrrrrrrrrrrrrrrr"
+
+    const score = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "custom",
+        sourceId: "api-source",
+        issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+        value: 0.1,
+        passed: false,
+        feedback: "Explicitly assigned to an issue",
+        metadata: { channel: "api" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const publicationRequests = await database.db
+      .select()
+      .from(outboxEvents)
+      .where(and(eq(outboxEvents.organizationId, organizationId), eq(outboxEvents.aggregateId, score.id as string)))
+
+    expect(publicationRequests).toHaveLength(1)
+    expect(publicationRequests[0]?.eventName).toBe("IssueRefreshRequested")
+    expect(publicationRequests[0]?.payload).toEqual({
+      organizationId,
+      projectId: customProjectId,
+      issueId: "iiiiiiiiiiiiiiiiiiiiiiii",
+    })
+  })
+
+  it("claims score issue ownership only once with assignIssueIfUnowned", async () => {
+    const organizationId = "qqqqqqqqqqqqqqqqqqqqqqqq"
+    const score = await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "custom",
+        sourceId: "api-source",
+        value: 0.12,
+        passed: false,
+        feedback: "The assistant leaks API tokens in its response.",
+        metadata: { channel: "api" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const firstClaim = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.assignIssueIfUnowned({
+          scoreId: score.id,
+          issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+          updatedAt: new Date("2026-03-30T12:00:00.000Z"),
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const secondClaim = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.assignIssueIfUnowned({
+          scoreId: score.id,
+          issueId: IssueId("jjjjjjjjjjjjjjjjjjjjjjjj"),
+          updatedAt: new Date("2026-03-30T13:00:00.000Z"),
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const persistedRows = await database.db
+      .select()
+      .from(scoresTable)
+      .where(eq(scoresTable.id, score.id as string))
+
+    expect(firstClaim).toBe(true)
+    expect(secondClaim).toBe(false)
+    expect(persistedRows[0]?.issueId).toBe("iiiiiiiiiiiiiiiiiiiiiiii")
   })
 
   it("excludes drafts by default and supports draft-aware project and source reads", async () => {

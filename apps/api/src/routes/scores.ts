@@ -5,10 +5,13 @@ import {
   customScoreSchema,
   type EvaluationScore,
   evaluationScoreSchema,
+  isImmutableScore,
+  syncScoreAnalyticsUseCase,
   writeScoreUseCase,
 } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
 import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
@@ -143,8 +146,9 @@ export const createScoresRoutes = () => {
         const projectRepository = yield* ProjectRepository
         yield* projectRepository.findById(projectId)
 
+        let score: ApiScore
         if (body._evaluation === true) {
-          return yield* writeScoreUseCase({
+          const evaluationScore = yield* writeScoreUseCase({
             projectId,
             source: "evaluation",
             sourceId: body.sourceId,
@@ -161,31 +165,38 @@ export const createScoresRoutes = () => {
             tokens: body.tokens,
             cost: body.cost,
           })
+          score = evaluationScore as EvaluationScore
+        } else {
+          const customScore = yield* writeScoreUseCase({
+            projectId,
+            source: "custom",
+            sourceId: body.sourceId,
+            sessionId: body.sessionId,
+            traceId: body.traceId,
+            spanId: body.spanId,
+            simulationId: body.simulationId,
+            value: body.value,
+            passed: body.passed,
+            feedback: body.feedback,
+            metadata: body.metadata,
+            error: body.error,
+            duration: body.duration,
+            tokens: body.tokens,
+            cost: body.cost,
+          })
+          score = customScore as CustomScore
         }
 
-        return yield* writeScoreUseCase({
-          projectId,
-          source: "custom",
-          sourceId: body.sourceId,
-          sessionId: body.sessionId,
-          traceId: body.traceId,
-          spanId: body.spanId,
-          simulationId: body.simulationId,
-          value: body.value,
-          passed: body.passed,
-          feedback: body.feedback,
-          metadata: body.metadata,
-          error: body.error,
-          duration: body.duration,
-          tokens: body.tokens,
-          cost: body.cost,
-        })
-      }).pipe(withPostgres(repositoriesLayer, c.var.postgresClient, c.var.organization.id)),
-    )
+        if (isImmutableScore(score)) {
+          yield* syncScoreAnalyticsUseCase({ scoreId: score.id })
+        }
 
-    if (score.source === "annotation") {
-      throw new Error("Unexpected annotation score returned from score API writer")
-    }
+        return score
+      }).pipe(
+        withPostgres(repositoriesLayer, c.var.postgresClient, c.var.organization.id),
+        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, c.var.organization.id),
+      ),
+    )
 
     return c.json(toResponse(score), 201)
   })

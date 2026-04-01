@@ -1,5 +1,5 @@
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
-import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
 import { Data, Effect } from "effect"
@@ -23,9 +23,11 @@ type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
 export const createDomainEventsWorker = ({
   consumer,
   publisher: pub,
+  workflowStarter,
 }: {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
+  workflowStarter: WorkflowStarterShape
 }) => {
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) => pub.publish("magic-link-email", "send", event.payload),
@@ -50,34 +52,24 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    ScoreImmutable: (event) =>
-      Effect.all(
-        [
-          pub.publish("analytic-scores", "save", {
-            organizationId: event.payload.organizationId,
-            projectId: event.payload.projectId,
-            scoreId: event.payload.scoreId,
-          }),
-          ...(event.payload.issueId === null
-            ? []
-            : [
-                pub.publish(
-                  "issues",
-                  "refresh",
-                  {
-                    organizationId: event.payload.organizationId,
-                    projectId: event.payload.projectId,
-                    issueId: event.payload.issueId,
-                  },
-                  {
-                    dedupeKey: `issues:refresh:${event.payload.issueId}`,
-                    debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
-                  },
-                ),
-              ]),
-        ],
-        { concurrency: "unbounded" },
-      ).pipe(Effect.asVoid),
+    IssueDiscoveryRequested: (event) =>
+      workflowStarter.start(
+        "issueDiscoveryWorkflow",
+        {
+          organizationId: event.payload.organizationId,
+          projectId: event.payload.projectId,
+          scoreId: event.payload.scoreId,
+        },
+        {
+          workflowId: `issue-discovery:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.scoreId}`,
+        },
+      ),
+
+    IssueRefreshRequested: (event) =>
+      pub.publish("issues", "refresh", event.payload, {
+        dedupeKey: `issues:refresh:${event.payload.issueId}`,
+        debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,
+      }),
 
     OrganizationCreated: (event) =>
       pub.publish("api-keys", "create", {

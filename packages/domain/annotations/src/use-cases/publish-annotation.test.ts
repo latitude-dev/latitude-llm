@@ -1,6 +1,7 @@
 import type { AICredentialError, AIError, GenerateInput, GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { type Score, type ScoreListPage, ScoreRepository } from "@domain/scores"
+import { type Score, ScoreAnalyticsRepository, type ScoreListPage, ScoreRepository } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
   OrganizationId,
@@ -116,6 +117,7 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
   let lastSavedScore: Score | null = null
 
   const traceDetailForLookup = traceDetail === undefined ? makeTraceDetail([]) : traceDetail
+  const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
 
   const { repository: traceRepository } = createFakeTraceRepository({
     findByTraceId: () => Effect.succeed(traceDetailForLookup),
@@ -143,6 +145,20 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
       Effect.sync(() => {
         store.set(score.id, score)
         lastSavedScore = score
+      }),
+    assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
+      Effect.sync(() => {
+        const score = store.get(scoreId)
+        if (!score || score.issueId !== null) {
+          return false
+        }
+
+        store.set(scoreId, {
+          ...score,
+          issueId,
+          updatedAt,
+        })
+        return true
       }),
     delete: (id) =>
       Effect.sync(() => {
@@ -185,9 +201,11 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
   return {
     store,
     events,
+    insertedAnalytics: inserted,
     getLastSavedScore: () => lastSavedScore,
     layer: Layer.mergeAll(
       ScoreRepositoryTest,
+      Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository),
       OutboxEventWriterTest,
       aiLayer,
       SqlClientTest,
@@ -314,34 +332,57 @@ describe("publishAnnotationUseCase", () => {
     expect(events.length).toBe(0)
   })
 
-  it("emits ScoreImmutable for failed non-errored annotations without issue", async () => {
+  it("emits IssueDiscoveryRequested for failed non-errored annotations without issue", async () => {
     const draft = buildDraftAnnotationScore()
     const { events, layer } = createTestLayers(draft)
 
     await Effect.runPromise(publishAnnotationUseCase({ scoreId: scoreCuid }).pipe(Effect.provide(layer)))
 
-    // Failed, non-errored, no issueId → not yet immutable (needs issue assignment)
-    // Actually: isImmutableScore checks passed || errored || issueId !== null
-    // This score: passed=false, errored=false, issueId=null → NOT immutable
-    expect(events.length).toBe(0)
+    expect(events).toEqual([
+      expect.objectContaining({
+        eventName: "IssueDiscoveryRequested",
+        payload: expect.objectContaining({
+          organizationId: cuid,
+          projectId: projectCuid,
+          scoreId: scoreCuid,
+        }),
+      }),
+    ])
   })
 
-  it("emits ScoreImmutable for passed annotations", async () => {
+  it("syncs analytics directly for passed annotations", async () => {
     const draft = {
       ...buildDraftAnnotationScore(),
       value: 0.8,
       passed: true,
     } as Score
-    const { events, layer } = createTestLayers(draft)
+    const { events, insertedAnalytics, layer } = createTestLayers(draft)
 
     await Effect.runPromise(publishAnnotationUseCase({ scoreId: scoreCuid }).pipe(Effect.provide(layer)))
 
-    expect(events.length).toBe(1)
-    expect(events[0]).toEqual(
+    expect(events).toHaveLength(0)
+    expect(insertedAnalytics).toEqual([scoreCuid])
+  })
+
+  it("publishes IssueRefreshRequested and syncs analytics for immutable annotations already linked to an issue", async () => {
+    const draft = {
+      ...buildDraftAnnotationScore(),
+      issueId: "i".repeat(24),
+    } as Score
+    const { events, insertedAnalytics, layer } = createTestLayers(draft)
+
+    await Effect.runPromise(publishAnnotationUseCase({ scoreId: scoreCuid }).pipe(Effect.provide(layer)))
+
+    expect(events).toEqual([
       expect.objectContaining({
-        eventName: "ScoreImmutable",
+        eventName: "IssueRefreshRequested",
+        payload: expect.objectContaining({
+          projectId: projectCuid,
+          issueId: "i".repeat(24),
+        }),
       }),
-    )
+    ])
+    expect(insertedAnalytics).toEqual([scoreCuid])
   })
 
   it("returns BadRequestError for non-existent score", async () => {

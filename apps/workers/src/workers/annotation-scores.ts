@@ -4,7 +4,12 @@ import { OrganizationId, type ScoreId } from "@domain/shared"
 import { AICredentialsLive } from "@platform/ai-credentials"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
-import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  ScoreAnalyticsRepositoryLive,
+  SpanRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
 import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
@@ -32,7 +37,7 @@ export const createAnnotationScoresWorker = ({ consumer, postgresClient }: Annot
       publishAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
         withPostgres(postgresLayers, pgClient, OrganizationId(payload.organizationId)),
         withClickHouse(
-          Layer.merge(TraceRepositoryLive, SpanRepositoryLive),
+          Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
           getClickhouseClient(),
           OrganizationId(payload.organizationId),
         ),

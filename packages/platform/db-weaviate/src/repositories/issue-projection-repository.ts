@@ -8,9 +8,10 @@ import {
 import { RepositoryError } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { Bm25Operator, type WeaviateClient } from "weaviate-client"
-import { getCollectionForTenant, WeaviateCollection } from "../collections.ts"
+import { getCollectionForTenant, issuesCollectionTenantName, WeaviateCollection } from "../collections.ts"
 
-function getIssuesCollection(client: WeaviateClient, tenantName: string) {
+function getIssuesCollection(client: WeaviateClient, organizationId: string, projectId: string) {
+  const tenantName = issuesCollectionTenantName({ organizationId, projectId })
   return getCollectionForTenant(
     {
       tenantName,
@@ -25,7 +26,7 @@ export const IssueProjectionRepositoryLive = (client: WeaviateClient) =>
     upsert: (input) =>
       Effect.tryPromise({
         try: async () => {
-          const collection = await getIssuesCollection(client, input.tenantName)
+          const collection = await getIssuesCollection(client, input.organizationId, input.projectId)
           const exists = await collection.data.exists(input.uuid)
           if (exists) {
             await collection.data.replace({
@@ -57,7 +58,7 @@ export const IssueProjectionRepositoryLive = (client: WeaviateClient) =>
     delete: (input) =>
       Effect.tryPromise({
         try: async () => {
-          const collection = await getIssuesCollection(client, input.tenantName)
+          const collection = await getIssuesCollection(client, input.organizationId, input.projectId)
           const exists = await collection.data.exists(input.uuid)
           if (!exists) {
             // Note: if this happens the vector db is out of sync
@@ -69,7 +70,7 @@ export const IssueProjectionRepositoryLive = (client: WeaviateClient) =>
           await collection.data.deleteById(input.uuid)
           const count = await collection.length()
           if (count === 0) {
-            await collection.tenants.remove(input.tenantName)
+            await collection.tenants.remove(issuesCollectionTenantName(input))
           }
         },
         catch: (cause) =>
@@ -82,7 +83,7 @@ export const IssueProjectionRepositoryLive = (client: WeaviateClient) =>
     hybridSearch: (input) =>
       Effect.tryPromise({
         try: async () => {
-          const collection = await getIssuesCollection(client, input.tenantName)
+          const collection = await getIssuesCollection(client, input.organizationId, input.projectId)
           const { objects } = await collection.query.hybrid(input.query, {
             vector: input.vector,
             alpha: ISSUE_DISCOVERY_SEARCH_RATIO,

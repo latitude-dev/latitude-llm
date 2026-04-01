@@ -80,14 +80,6 @@ const _registry = {
     }
   }>(),
 
-  "analytic-scores": payloads<{
-    save: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly scoreId: string
-    }
-  }>(),
-
   "annotation-scores": payloads<{
     publish: {
       readonly organizationId: string

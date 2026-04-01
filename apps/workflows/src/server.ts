@@ -7,6 +7,7 @@ import { createLogger, initializeObservability, shutdownObservability } from "@r
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import * as activities from "./activities/index.ts"
+import { getClickhouseClient } from "./clients.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -92,6 +93,7 @@ const bootstrap = async () => {
     }
 
     await shutdownObservability()
+    await getClickhouseClient().close()
     process.exit(0)
   }
 

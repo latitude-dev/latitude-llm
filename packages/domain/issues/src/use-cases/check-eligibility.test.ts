@@ -53,10 +53,11 @@ const runEligibility = (
 }
 
 describe("checkEligibilityUseCase", () => {
-  it("returns true for non-draft, failed, non-errored, unowned scores with feedback", async () => {
-    const result = await runEligibility(makeScore())
+  it("returns the eligible score for non-draft, failed, non-errored, unowned scores with feedback", async () => {
+    const score = makeScore()
+    const result = await runEligibility(score)
 
-    expect(result).toBe(true)
+    expect(result).toEqual(score)
   })
 
   it("rejects missing scores", async () => {

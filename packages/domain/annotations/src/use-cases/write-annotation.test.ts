@@ -379,7 +379,7 @@ describe("writeAnnotationUseCase", () => {
     expect(store.size).toBe(1)
   })
 
-  it("does not emit ScoreImmutable for drafts", async () => {
+  it("does not emit issue events for drafts", async () => {
     const { events, layer } = createTestLayers()
 
     await Effect.runPromise(

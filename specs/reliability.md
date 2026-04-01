@@ -217,18 +217,20 @@ Initial reliability domain-event contracts:
 
 - `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to publish `live-traces:end`
 - `TraceEnded`: published directly into `domain-events` by `live-traces:end` through `createEventsPublisher(queuePublisher)` after its debounce window elapses; consumed by the `domain-events` dispatcher to publish `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:flag`
-- `ScoreImmutable`: written transactionally after a canonical score row reaches immutability; consumed by the `domain-events` dispatcher to publish `analytic-scores:save`, and to publish `issues:refresh` as well when the immutable score already carries an `issue_id`
+- `IssueDiscoveryRequested`: written transactionally after a canonical failed non-errored score becomes eligible for similarity discovery; consumed by the `domain-events` dispatcher to start the `issue-discovery` workflow
+- `IssueRefreshRequested`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be debounced; consumed by the `domain-events` dispatcher to publish `issues:refresh`
 
 Rationale for the mixed publication rails:
 
 - `SpanIngested` and `TraceEnded` stay on direct `createEventsPublisher(queuePublisher)` publication because they are high-volume append-only flows whose upstream writes are already durable before publication.
-- `ScoreImmutable` intentionally uses the transactional outbox rail so score persistence and immutable-save intent are atomic; this avoids losing immutable-score analytics save intent if a process crashes between score commit and queue publication.
+- `IssueDiscoveryRequested` and `IssueRefreshRequested` intentionally use the transactional outbox rail so canonical Postgres writes stay atomic with the downstream workflow-start or debounced refresh request.
+- ClickHouse analytics sync and Weaviate projection sync are intentionally not routed through an extra domain-event hop; they run directly after the owning Postgres transaction succeeds so the non-Postgres projections do not stay stale longer than necessary.
 
 Initial reliability topic/task contracts:
 
 - `live-traces` / `end`: debounced end-of-trace detection keyed by `(organizationId, projectId, traceId)`; each new `SpanIngested` event for the same trace replaces/reschedules the pending task using BullMQ-backed dedupe/debounce, with the debounce window defined by a named constant whose initial default is `5 minutes`
-- `analytic-scores` / `save`: retry-safe ClickHouse analytics save for one canonical immutable score, keyed by the canonical score id
 - `annotation-scores` / `publish`: debounced finalization of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
+- `issues` / `refresh`: debounced asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue
 - `live-evaluations` / `enqueue`: lists active evaluations for one ended trace and publishes `execute` tasks for matches
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
 - `live-annotation-queues` / `curate`: materializes live queue membership for one ended trace
@@ -237,10 +239,10 @@ Initial reliability topic/task contracts:
 
 Initial reliability workflows:
 
-- `issue-discovery`: multi-activity workflow for create-or-match issue discovery, assignment, projection sync, and post-immutability publication
+- `issue-discovery`: multi-activity workflow for create-or-match issue discovery, a separate retryable synchronous first issue name/description generation activity for brand-new issues, assignment, projection sync, and post-immutability publication
 - `evaluation-alignment`: multi-activity workflow for evaluation generation or realignment; for now the GEPA optimization pass stays a single activity, while example collection and post-alignment regeneration are separate activities
 
-Issue name/description regeneration (`issue-refresh`) is a single-step debounced task, not a multi-step orchestration. It uses a BullMQ delayed job via the `@domain/queue` topic/task abstraction with dedupe/debounce options, not a Temporal workflow.
+Issue name/description regeneration (`issue:refresh`) is a single-step debounced task for subsequent refreshes of existing issues, not a multi-step orchestration. The initial name/description for a brand-new issue must be generated synchronously inside `issue-discovery` before the first issue row is persisted, but both the synchronous first-generation path and the later asynchronous refresh path must call the same shared issue-details generation use case underneath. `issue:refresh` uses a BullMQ delayed job via the `@domain/queue` topic/task abstraction with dedupe/debounce options, not a Temporal workflow.
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
@@ -1565,7 +1567,7 @@ Publication rules:
 - when a draft becomes non-draft and still has `issue_id = null`, it may now participate in issue discovery
 - when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - publishing to ClickHouse analytics must be retry-safe and preserve at-most-one row per score id
-- the canonical Postgres write transaction should request immutable-score analytics save through a transactional `ScoreImmutable` domain event; the downstream `analytic-scores:save` task must re-fetch the canonical score row and insert into ClickHouse only if it is still immutable and not already present in analytics so retries remain safe and stale save requests become no-ops
+- the canonical Postgres write transaction must not talk to ClickHouse directly; after that transaction commits, the caller must run the shared `syncScoreAnalyticsUseCase`, which re-fetches the canonical score row and inserts into ClickHouse only if it is still immutable and not already present in analytics so retries remain safe and stale sync attempts become no-ops
 
 Draft-specific rules:
 
@@ -1690,7 +1692,7 @@ Issue discovery must remain close to the original proposal and to the proven par
 9. rerank candidates with VoyageAI `rerank-2.5`
 10. filter out candidates that do not pass the minimum rerank relevance threshold
 11. if a candidate passes thresholds, assign the score to that issue in Postgres
-12. otherwise create a new issue, assign the score to it in Postgres, and generate its name/description
+12. otherwise call a separate retryable issue-details-generation activity to synchronously generate the initial issue name/description from that first score, outside the final create/assign transaction, then persist the new issue with those details and assign the score to it in Postgres
 13. once the score has `issue_id`, project the now-immutable score into ClickHouse
 
 All similarity, rerank, visibility, and debounce thresholds must be configurable constants defined inside the owning domain package rather than as scattered inline literals.
@@ -1698,7 +1700,9 @@ All similarity, rerank, visibility, and debounce thresholds must be configurable
 Discovery/refresh execution rules:
 
 - eligible non-draft failed non-errored scores should start the `issue-discovery` workflow after commit rather than running embeddings/search inline in request or annotation-edit paths
-- issue name/description regeneration should run through a debounced BullMQ task on the `issue-refresh` topic once the refresh window elapses
+- the very first name/description for a brand-new issue must be generated synchronously inside `issue-discovery` before the issue row is first persisted
+- the synchronous first-generation step must happen in its own workflow activity, outside and before the final create/assign transaction, so LLM generation retries do not hold the ownership-write transaction open and the first persisted issue row already carries the generated name/description
+- subsequent issue name/description regeneration should run through a debounced BullMQ task on the `issue:refresh` topic once the refresh window elapses
 - workflows and debounced tasks should recheck persisted Postgres eligibility and current ownership state for correctness and idempotency rather than trusting queue or workflow history alone
 
 Proven v1 retrieval defaults to carry forward and revalidate:
@@ -1905,6 +1909,10 @@ Issue naming and centroid semantics:
 - they must stay generic enough to group scores that point to the same underlying problem even when the exact background details differ
 - they should not overfit to one conversation, one user message, or one concrete example
 - the centroid is generated from the clustered score feedback embeddings and drives semantic matching; the text fields help both human understanding and BM25 matching
+- synchronous first-generation and later asynchronous `issue:refresh` regeneration must both call the same shared issue-details generation use case so prompt logic, score selection, and stabilization behavior live in one place
+- for existing issues, that shared use case should generate from the last `25` assigned scores' canonical feedback, using the previous issue `name` and `description` as baseline context so the model avoids unnecessary churn and may keep the current details unchanged when they already capture the underlying issue well
+- for brand-new issues, that shared use case must accept optional explicit score input as one score or an array of scores, because the synchronous first-generation path runs before the score is yet linked to the new issue and therefore cannot rely only on repository-loaded assigned scores
+- after asynchronous issue detail regeneration changes the canonical Postgres `name` or `description`, the Weaviate issue projection must be upserted again so BM25-searchable text stays in sync with Postgres
 
 Search projection in Weaviate:
 
@@ -2561,16 +2569,18 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
   - [x] Add Voyage embedding support to the shared AI service surface (`AI.embed`) via `@platform/ai-voyage`.
   - [x] Wire issue-discovery embedding calls to enforce `voyage-4-large` with `2048` dimensions.
   - [x] Wire embedding caching in the issue-discovery embedding flow.
-- [ ] Implement hybrid search in Weaviate with `RelativeScore` fusion over centroid vectors plus BM25 text search, including explicit tenant-existence guards on read/search paths.
+- [x] Implement hybrid search in Weaviate with `RelativeScore` fusion over centroid vectors plus BM25 text search, including explicit tenant-existence guards on read/search paths.
 - [x] Implement reranking with `rerank-2.5`, fixed threshold constants, and the v1-style search sequence of hybrid retrieval first and rerank second.
   - [x] Add Voyage reranking support to the shared AI service surface (`AI.rerank`) via `@platform/ai-voyage`.
   - [x] Wire issue-discovery rerank calls to enforce `rerank-2.5`.
   - [x] Implement and verify the retrieval order: hybrid retrieval first, rerank second.
 - [x] Implement the running centroid math with source weights and decay, adapting the v1 math to the new `IssueCentroid` shape while using `clusteredAt` as the decay anchor instead of generic row `updatedAt`.
-- [ ] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, issue creation or assignment, Weaviate projection sync, and post-immutability ClickHouse save, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable; reuse the shared `@domain/issues` centroid helpers (`createIssueCentroid`, `updateIssueCentroid`, `normalizeIssueCentroid`) in that flow instead of reimplementing centroid math in workflow/activity code.
-- [ ] Implement asynchronous issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issue-refresh` topic with dedupe/debounce options, using retry-safe coordination between Postgres state and Weaviate projection updates.
+- [~] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, synchronous first issue-details generation for new issues, issue creation or assignment, direct `syncIssueProjectionsUseCase` Weaviate projection sync, and direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable; reuse the shared `@domain/issues` centroid helpers (`createIssueCentroid`, `updateIssueCentroid`, `normalizeIssueCentroid`) plus the shared hybrid-search path instead of reimplementing centroid math or raw Weaviate issue search in workflow/activity code.
+  - [x] Wire the current `issue-discovery` workflow and activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, issue creation or assignment, direct `syncIssueProjectionsUseCase` Weaviate projection sync, and direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work and single-owner `scores.issue_id` claiming.
+  - [ ] Generate the first issue name/description synchronously inside `issue-discovery` from the initial score before the new issue row is first persisted; this must happen in its own retryable workflow activity outside and before the final create/assign transaction, and that transaction must persist the new issue already carrying those generated details. It must reuse the same shared issue-details generation use case that later async refreshes also call.
+- [ ] Implement asynchronous subsequent issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issue:refresh` topic with dedupe/debounce options, reusing the same shared issue-details generation use case as the synchronous new-issue path, generating from the last `25` assigned scores plus previous issue details as baseline, and upserting the Weaviate issue projection again after any persisted name/description change.
 - [ ] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
-- [ ] Implement immutable-score save into ClickHouse after issue assignment without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
+- [x] Implement immutable-score save into ClickHouse after issue assignment through the shared direct `syncScoreAnalyticsUseCase` path, without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
 - [ ] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue and ignored-issue rematching, stale Weaviate-candidate fallback after final Postgres existence check, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
 
 **Exit gate**: new failed scores can match existing issues or create new ones; issue centroids move correctly over time; canonical score ownership cannot race into multiple active issues; issue visibility is denoised without reintroducing the v1 merge system.
