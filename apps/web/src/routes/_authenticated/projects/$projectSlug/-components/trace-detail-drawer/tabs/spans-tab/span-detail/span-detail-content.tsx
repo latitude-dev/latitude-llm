@@ -60,7 +60,7 @@ function ErrorSection({ span }: { readonly span: SpanDetailRecord }) {
       {exception?.stacktrace && (
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="destructive">Stack Trace</Text.H6>
-          <pre className="text-xs font-mono text-destructive-foreground bg-destructive/10 rounded p-2 overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
+          <pre className="text-xs font-mono text-foreground bg-muted rounded p-2 overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
             {exception.stacktrace}
           </pre>
         </div>
