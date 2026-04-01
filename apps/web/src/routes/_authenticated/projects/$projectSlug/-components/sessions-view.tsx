@@ -388,6 +388,18 @@ export function SessionsView({
     }
   }
 
+  const getRowAriaLabel = useCallback(
+    (row: SessionTableRow) => {
+      if (row.kind === "session") {
+        const id = row.session.sessionId
+        return expandedIds.has(id) ? `Collapse session ${id}` : `Expand session ${id}`
+      }
+      const short = row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
+      return row.trace.traceId === activeTraceId ? `Deselect trace ${short}` : `View trace ${short}`
+    },
+    [expandedIds, activeTraceId],
+  )
+
   const getExpandedRows = (row: SessionTableRow): ExpandedRows<SessionTableRow> => {
     if (row.kind !== "session") return { data: [] }
     const entry = traceMap.get(row.session.sessionId)
@@ -416,6 +428,7 @@ export function SessionsView({
           columns={columns}
           getRowKey={getRowKey}
           onRowClick={onRowClick}
+          getRowAriaLabel={getRowAriaLabel}
           {...(activeTraceId ? { activeRowKey: activeTraceId } : {})}
           selection={selection}
           infiniteScroll={infiniteScroll}

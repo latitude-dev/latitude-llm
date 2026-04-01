@@ -25,6 +25,8 @@ export function InfiniteTable<T>({
   columns,
   getRowKey,
   onRowClick,
+  rowInteractionRole = "button",
+  getRowAriaLabel,
   activeRowKey,
   activeRowAutoScroll = false,
   selection,
@@ -230,7 +232,13 @@ export function InfiniteTable<T>({
                           onToggleRow: selection.toggleRow,
                         }
                       : {})}
-                    {...(onRowClick ? { onClick: onRowClick } : {})}
+                    {...(onRowClick
+                      ? {
+                          onClick: onRowClick,
+                          rowInteractionRole,
+                          ...(getRowAriaLabel ? { rowAriaLabel: getRowAriaLabel(row) } : {}),
+                        }
+                      : {})}
                     dataIndex={virtualRow.index}
                   />
                   {expanded?.isLoading &&
@@ -258,7 +266,13 @@ export function InfiniteTable<T>({
                                 onToggleRow: selection.toggleRow,
                               }
                             : {})}
-                          {...(onRowClick ? { onClick: onRowClick } : {})}
+                          {...(onRowClick
+                            ? {
+                                onClick: onRowClick,
+                                rowInteractionRole,
+                                ...(getRowAriaLabel ? { rowAriaLabel: getRowAriaLabel(subRow) } : {}),
+                              }
+                            : {})}
                           dataIndex={virtualRow.index}
                           isSubRow
                         />

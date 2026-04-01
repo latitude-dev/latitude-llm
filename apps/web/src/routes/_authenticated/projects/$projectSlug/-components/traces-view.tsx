@@ -9,7 +9,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { type RefObject, useMemo, useState } from "react"
+import { type RefObject, useCallback, useMemo, useState } from "react"
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -192,6 +192,14 @@ export function TracesView({
     onActiveTraceChange(t.traceId === activeTraceId ? undefined : t.traceId)
   }
 
+  const getRowAriaLabel = useCallback(
+    (t: TraceRecord) => {
+      const short = t.rootSpanName || t.traceId.slice(0, 8)
+      return t.traceId === activeTraceId ? `Deselect trace ${short}` : `View trace ${short}`
+    },
+    [activeTraceId],
+  )
+
   // J/K hotkeys: navigate through traces. Disabled when spans tab is active (span tree takes over J/K).
   const jkEnabled = activeDrawerTab !== "spans"
   useHotkeys([
@@ -234,6 +242,7 @@ export function TracesView({
           columns={columns}
           getRowKey={(t: TraceRecord) => t.traceId}
           onRowClick={onRowClick}
+          getRowAriaLabel={getRowAriaLabel}
           {...(activeTraceId ? { activeRowKey: activeTraceId } : {})}
           selection={selection}
           infiniteScroll={infiniteScroll}

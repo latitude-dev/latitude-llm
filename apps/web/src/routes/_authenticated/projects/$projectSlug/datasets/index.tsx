@@ -88,6 +88,8 @@ function DatasetsPage() {
     [navigate, projectSlug],
   )
 
+  const getRowAriaLabel = useCallback((d: DatasetRecord) => `Open dataset ${d.name}`, [])
+
   const handleCreate = useCallback(async () => {
     setCreating(true)
     try {
@@ -129,6 +131,8 @@ function DatasetsPage() {
             columns={columns}
             getRowKey={getRowKey}
             onRowClick={onRowClick}
+            rowInteractionRole="link"
+            getRowAriaLabel={getRowAriaLabel}
             infiniteScroll={infiniteScroll}
             sorting={sorting}
             defaultSorting={DEFAULT_SORTING}
