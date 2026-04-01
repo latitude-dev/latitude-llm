@@ -1,5 +1,5 @@
 import type * as otel from "@opentelemetry/api"
-import type { ReadableSpan, SpanProcessor } from "@opentelemetry/sdk-trace-node"
+import type { ReadableSpan, Span, SpanProcessor } from "@opentelemetry/sdk-trace-node"
 
 export interface RedactSpanProcessorOptions {
   attributes: (string | RegExp)[]
@@ -17,7 +17,7 @@ export class RedactSpanProcessor implements SpanProcessor {
     }
   }
 
-  onStart(_span: ReadableSpan, _context: otel.Context): void {
+  onStart(_span: Span, _context: otel.Context): void {
     // Noop
   }
 

@@ -57,9 +57,9 @@ export class ManualInstrumentation implements BaseInstrumentation {
     if (ctx.baggage) {
       const baggageEntries: Record<string, otel.BaggageEntry> = {}
       for (const pair of ctx.baggage.split(",")) {
-        const [key, value] = pair.split("=")
+        const [key, value] = pair.split("=", 2)
         if (key && value) {
-          baggageEntries[key] = { value: decodeURIComponent(value) }
+          baggageEntries[decodeURIComponent(key)] = { value: decodeURIComponent(value) }
         }
       }
       const baggage = propagation.createBaggage(baggageEntries)

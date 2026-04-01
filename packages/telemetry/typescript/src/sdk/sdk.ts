@@ -222,8 +222,8 @@ export class LatitudeTelemetry {
 
     this.nodeProvider.register()
 
-    process.on("SIGTERM", async () => this.shutdown)
-    process.on("SIGINT", async () => this.shutdown)
+    process.on("SIGTERM", () => this.shutdown())
+    process.on("SIGINT", () => this.shutdown())
 
     this.instrumentationsList = []
     const tracerManager = new TracerManager(this.nodeProvider, SCOPE_VERSION)
