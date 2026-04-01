@@ -33,6 +33,7 @@ from latitude_telemetry.instrumentations import (
     ManualInstrumentation,
 )
 from latitude_telemetry.telemetry.baggage_span_processor import BaggageSpanProcessor
+from latitude_telemetry.telemetry.redact_span_processor import default_redact_span_processor
 from latitude_telemetry.telemetry.types import Instrumentors
 from latitude_telemetry.util import Model, is_package_installed
 
@@ -257,6 +258,7 @@ class Telemetry:
         )
 
         self._tracer_provider.add_span_processor(BaggageSpanProcessor())
+        self._tracer_provider.add_span_processor(default_redact_span_processor())
 
         if self._options.disable_batch:
             self._tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))

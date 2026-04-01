@@ -31,6 +31,10 @@ from latitude_telemetry.instrumentations import (
     ManualInstrumentation,
     TraceContext,
 )
+from latitude_telemetry.telemetry.redact_span_processor import (
+    RedactSpanProcessor,
+    default_redact_span_processor,
+)
 from latitude_telemetry.telemetry.telemetry import (
     CaptureContext,
     Telemetry,
@@ -48,4 +52,7 @@ __all__ = [
     "ManualInstrumentation",
     "TraceContext",
     "CaptureOptions",
+    # Redact
+    "RedactSpanProcessor",
+    "default_redact_span_processor",
 ]
