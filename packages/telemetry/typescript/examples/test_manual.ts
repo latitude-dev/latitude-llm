@@ -5,7 +5,7 @@
  * - LATITUDE_API_KEY
  * - LATITUDE_PROJECT_SLUG
  *
- * Uses raw OpenTelemetry tracer API with GenAI semantic conventions.
+ * Uses raw OpenTelemetry tracer API with GenAI semantic conventions (v1.37+).
  * No provider SDK needed — simulates a multi-turn agent conversation.
  */
 
@@ -33,23 +33,27 @@ async function runFirstCompletion(): Promise<void> {
       span.setAttribute('gen_ai.request.temperature', 0.7)
       span.setAttribute('gen_ai.request.max_tokens', 2048)
 
-      // Input messages (Traceloop indexed format)
-      span.setAttribute('gen_ai.prompt.0.role', 'system')
-      span.setAttribute('gen_ai.prompt.0.content', 'You are a helpful travel planning assistant.')
-      span.setAttribute('gen_ai.prompt.1.role', 'user')
-      span.setAttribute('gen_ai.prompt.1.content', 'Plan a weekend trip to Barcelona.')
+      // Modern GenAI v1.37+ format: JSON arrays
+      span.setAttribute('gen_ai.input.messages', JSON.stringify([
+        { role: 'system', content: 'You are a helpful travel planning assistant.' },
+        { role: 'user', content: 'Plan a weekend trip to Barcelona.' },
+      ]))
 
       await sleep(800)
 
-      // Output
-      span.setAttribute('gen_ai.completion.0.role', 'assistant')
-      span.setAttribute('gen_ai.completion.0.content', 'Let me check the weather and find attractions for you.')
-      span.setAttribute('gen_ai.completion.0.finish_reason', 'tool_calls')
+      span.setAttribute('gen_ai.output.messages', JSON.stringify([
+        {
+          role: 'assistant',
+          content: 'Let me check the weather and find attractions for you.',
+          tool_calls: [
+            { id: 'call_weather_1', type: 'function', function: { name: 'get_weather', arguments: '{"city":"Barcelona"}' } },
+          ],
+        },
+      ]))
 
-      // Usage
       span.setAttribute('gen_ai.response.model', 'gpt-4o-2024-08-06')
-      span.setAttribute('gen_ai.usage.prompt_tokens', 85)
-      span.setAttribute('gen_ai.usage.completion_tokens', 42)
+      span.setAttribute('gen_ai.usage.input_tokens', 85)
+      span.setAttribute('gen_ai.usage.output_tokens', 42)
       span.setAttributes({ 'gen_ai.response.finish_reasons': ['tool_calls'] })
 
       span.setStatus({ code: SpanStatusCode.OK })
@@ -111,21 +115,23 @@ async function runSecondCompletion(): Promise<void> {
       span.setAttribute('gen_ai.system', 'openai')
       span.setAttribute('gen_ai.request.model', 'gpt-4o')
 
-      span.setAttribute('gen_ai.prompt.0.role', 'tool')
-      span.setAttribute('gen_ai.prompt.0.content', '{"temp":22,"condition":"sunny"}')
-      span.setAttribute('gen_ai.prompt.1.role', 'tool')
-      span.setAttribute('gen_ai.prompt.1.content', 'BookingUnavailableError: No rooms available')
+      span.setAttribute('gen_ai.input.messages', JSON.stringify([
+        { role: 'tool', content: '{"temp":22,"condition":"sunny"}', tool_call_id: 'call_weather_1' },
+        { role: 'tool', content: 'BookingUnavailableError: No rooms available', tool_call_id: 'call_hotel_1' },
+      ]))
 
       await sleep(600)
 
-      span.setAttribute('gen_ai.completion.0.role', 'assistant')
-      span.setAttribute('gen_ai.completion.0.content',
-        'The weather in Barcelona is 22°C and sunny! Unfortunately the hotel booking failed. Let me search for attractions instead.')
-      span.setAttribute('gen_ai.completion.0.finish_reason', 'stop')
+      span.setAttribute('gen_ai.output.messages', JSON.stringify([
+        {
+          role: 'assistant',
+          content: 'The weather in Barcelona is 22°C and sunny! Unfortunately the hotel booking failed. Let me search for attractions instead.',
+        },
+      ]))
 
       span.setAttribute('gen_ai.response.model', 'gpt-4o-2024-08-06')
-      span.setAttribute('gen_ai.usage.prompt_tokens', 320)
-      span.setAttribute('gen_ai.usage.completion_tokens', 95)
+      span.setAttribute('gen_ai.usage.input_tokens', 320)
+      span.setAttribute('gen_ai.usage.output_tokens', 95)
       span.setAttributes({ 'gen_ai.response.finish_reasons': ['stop'] })
 
       span.setStatus({ code: SpanStatusCode.OK })
@@ -142,24 +148,27 @@ async function runAnthropicCompletion(): Promise<void> {
     { kind: SpanKind.CLIENT },
     async (span) => {
       span.setAttribute('gen_ai.operation.name', 'chat')
-      span.setAttribute('gen_ai.system', 'anthropic')
+      span.setAttribute('gen_ai.provider.name', 'anthropic')
       span.setAttribute('gen_ai.request.model', 'claude-3-opus-20240229')
       span.setAttribute('gen_ai.request.temperature', 0.5)
       span.setAttribute('gen_ai.request.max_tokens', 4096)
 
-      span.setAttribute('gen_ai.prompt.0.role', 'user')
-      span.setAttribute('gen_ai.prompt.0.content', 'Summarize the Barcelona trip plan so far.')
+      span.setAttribute('gen_ai.input.messages', JSON.stringify([
+        { role: 'user', content: 'Summarize the Barcelona trip plan so far.' },
+      ]))
 
       await sleep(900)
 
-      span.setAttribute('gen_ai.completion.0.role', 'assistant')
-      span.setAttribute('gen_ai.completion.0.content',
-        '## Barcelona Weekend Trip\n\n- **Weather**: 22°C, sunny\n- **Hotel**: Still looking for options\n- **Attractions**: Sagrada Familia, Park Güell, La Rambla')
-      span.setAttribute('gen_ai.completion.0.finish_reason', 'end_turn')
+      span.setAttribute('gen_ai.output.messages', JSON.stringify([
+        {
+          role: 'assistant',
+          content: '## Barcelona Weekend Trip\n\n- **Weather**: 22°C, sunny\n- **Hotel**: Still looking for options\n- **Attractions**: Sagrada Familia, Park Güell, La Rambla',
+        },
+      ]))
 
       span.setAttribute('gen_ai.response.model', 'claude-3-opus-20240229')
-      span.setAttribute('gen_ai.usage.prompt_tokens', 480)
-      span.setAttribute('gen_ai.usage.completion_tokens', 120)
+      span.setAttribute('gen_ai.usage.input_tokens', 480)
+      span.setAttribute('gen_ai.usage.output_tokens', 120)
       span.setAttributes({ 'gen_ai.response.finish_reasons': ['end_turn'] })
 
       span.setStatus({ code: SpanStatusCode.OK })
