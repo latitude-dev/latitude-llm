@@ -1018,6 +1018,33 @@ System-created default queues:
 - description: the trace has unusually high latency, cost, or usage
 - instructions: review traces whose latency, token usage, or cost materially exceeds project norms. This queue is primarily detected through deterministic outlier checks based on project medians and configured thresholds rather than the low-cost flagger model.
 
+#### Thrashing
+
+- description: the agent cycles between tools without making progress
+- instructions: review traces where the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.
+
+The flagger for this queue receives a structured payload derived from the trace's span tree rather than raw conversation messages alone. The payload must include the ordered tool call sequence so the flagger can detect repetition and cycling patterns:
+
+```typescript
+type ThrashingFlaggerPayload = {
+  conversation_excerpt: Array<{ role: string; content: string }>; // last N assistant/user turns for goal context
+  system_prompt_excerpt: string; // leading portion of the system prompt, truncated to a fixed token budget
+  turn_count: number; // total conversation turns in the trace
+  tool_call_sequence: Array<{
+    tool_name: string;
+    call_index: number; // zero-based position in the full trace tool call order
+    outcome: "success" | "error" | "empty_result";
+  }>; // most recent SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS entries (tail); summary below reflects the full trace
+  tool_call_summary: {
+    total_calls: number;
+    failed_calls: number;
+    repeated_tool_calls: Array<{ tool_name: string; call_count: number }>; // tools invoked more than once, sorted by call_count desc
+    tools_available: string[]; // tool names declared in the trace context
+    tools_used: string[]; // deduplicated tool names actually invoked
+  };
+};
+```
+
 Queue population flows:
 
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table
@@ -1030,7 +1057,7 @@ Queue population flows:
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
 - among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
-- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue
+- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages and the most recent `SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS` tool-call entries (tail), plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue; the aggregate tool-call summary (`total_calls`, `failed_calls`, `repeated_tool_calls`, etc.) always reflects the full trace even when the detailed sequence is truncated
 - a trace may match none of the system-created queues, or it may match several of them
 - for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair
 - `system-annotation-queues:annotate` uses a larger validator/drafter LLM with the full conversation context to validate the flag and create the draft annotation in the same call
