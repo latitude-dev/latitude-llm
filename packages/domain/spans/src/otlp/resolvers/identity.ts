@@ -47,14 +47,19 @@ export const responseModelCandidates = [
 ]
 
 export const sessionIdCandidates = [
-  fromString("gen_ai.conversation.id"), // GenAI semconv
+  fromString("session.id"), // OpenInference / Arize Phoenix. Also, OTEL standard for sessions.
+  fromString("gen_ai.session.id"), // Proposed, not accepted yet.
   fromString("langfuse.session.id"), // Langfuse
-  fromString("session.id"), // OpenInference / Arize Phoenix
   fromString("traceloop.association.properties.session_id"), // Traceloop / OpenLLMetry
   fromString("langsmith.trace.session_id"), // LangSmith
   fromString("session_id"), // Datadog / HoneyHive
+
+  // Fallbacks
+  // These do not actually represent sessions, they represent specific threads.
+  // However, it is still a good fallback to have, at least for single-threaded sessions.
   fromString("wandb.thread_id"), // W&B Weave
   fromString("ai.telemetry.metadata.threadId"), // Opik (via Vercel AI SDK metadata)
+  fromString("gen_ai.conversation.id"), // GenAI semconv
 ]
 
 export const userIdCandidates = [
