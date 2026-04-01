@@ -15,23 +15,18 @@ import os
 from ibm_watsonx_ai.foundation_models import Model
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.Watsonx],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["watsonx"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-watsonx-completion", {"tags": ["test"], "session_id": "example"})
 def test_watsonx_completion():
     model = Model(
         model_id="ibm/granite-13b-chat-v2",
@@ -56,4 +51,4 @@ def test_watsonx_completion():
 
 if __name__ == "__main__":
     test_watsonx_completion()
-    telemetry.flush()
+    latitude["flush"]()

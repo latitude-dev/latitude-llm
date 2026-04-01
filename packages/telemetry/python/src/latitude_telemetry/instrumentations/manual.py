@@ -1,14 +1,11 @@
 """
-Manual instrumentation — exposes OTel tracer primitives for custom span creation.
+Manual instrumentation - exposes OTel tracer primitives for custom span creation.
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
-from urllib.parse import unquote
 
 from opentelemetry import context as otel_context
 from opentelemetry import trace
-from opentelemetry.baggage import set_baggage
 from opentelemetry.context import Context
 from opentelemetry.trace import Tracer
 
@@ -23,16 +20,6 @@ class TraceContext:
     baggage: str | None = None
 
 
-@dataclass
-class CaptureOptions:
-    """Options for capture method — trace-wide context attributes."""
-
-    tags: List[str] | None = None
-    metadata: Dict[str, Any] | None = None
-    session_id: str | None = None
-    user_id: str | None = None
-
-
 class ManualInstrumentation(BaseInstrumentation):
     """
     Thin wrapper around OpenTelemetry tracer.
@@ -45,7 +32,6 @@ class ManualInstrumentation(BaseInstrumentation):
 
     @property
     def tracer(self) -> Tracer:
-        """The underlying OpenTelemetry tracer for creating custom spans."""
         return self._tracer
 
     def is_enabled(self) -> bool:
@@ -74,13 +60,4 @@ class ManualInstrumentation(BaseInstrumentation):
             trace_flags=trace.TraceFlags(int(flags, 16)),
         )
 
-        context = trace.set_span_in_context(trace.NonRecordingSpan(span_context), otel_context.get_current())
-
-        if ctx.baggage:
-            for pair in ctx.baggage.split(","):
-                if "=" in pair:
-                    key, value = pair.split("=", 1)
-                    if key and value:
-                        context = set_baggage(key, unquote(value), context)
-
-        return context
+        return trace.set_span_in_context(trace.NonRecordingSpan(span_context), otel_context.get_current())

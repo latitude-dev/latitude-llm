@@ -3,19 +3,19 @@ Span processor that redacts sensitive attribute values before export.
 """
 
 import re
+from dataclasses import dataclass
 from typing import Callable, Sequence
 
 from opentelemetry.context import Context
-from opentelemetry.sdk.trace import ReadableSpan, SpanProcessor
+from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
+
+
+def _default_mask(attr: str, value: object) -> str:
+    return "******"
 
 
 class RedactSpanProcessor(SpanProcessor):
-    """
-    Redacts span attributes matching the given patterns.
-
-    Patterns can be exact strings or compiled regex patterns.
-    Matched attribute values are replaced with the mask function output.
-    """
+    """Span processor that redacts sensitive attributes from spans."""
 
     def __init__(
         self,
@@ -23,36 +23,48 @@ class RedactSpanProcessor(SpanProcessor):
         mask: Callable[[str, object], str] | None = None,
     ):
         self._attributes = attributes
-        self._mask = mask or (lambda _attr, _value: "******")
+        self._mask = mask or _default_mask
+        self._processed_spans: set[int] = set()
 
-    def on_start(self, span: ReadableSpan, parent_context: Context | None = None) -> None:
+    def on_start(self, span: Span, parent_context: Context | None = None) -> None:
         pass
 
     def on_end(self, span: ReadableSpan) -> None:
-        if not hasattr(span, "_attributes") or span._attributes is None:
+        span_id = id(span)
+        if span_id in self._processed_spans:
             return
 
-        redacted = {}
-        for key, value in span._attributes.items():
+        attributes = getattr(span, "_attributes", None)
+        if attributes is None:
+            return
+
+        redacted_attrs = {}
+        for key, value in attributes.items():
             if self._should_redact(key):
-                redacted[key] = self._mask(key, value)
+                redacted_attrs[key] = self._mask(key, value)
 
-        if redacted:
-            span._attributes = {**span._attributes, **redacted}
+        if redacted_attrs:
+            attributes.update(redacted_attrs)
 
-        if hasattr(span, "_events"):
-            for event in span._events:
-                if not hasattr(event, "attributes") or event.attributes is None:
+        events = getattr(span, "_events", None)
+        if events:
+            for event in events:
+                evt_attrs = getattr(event, "attributes", None) or getattr(event, "_attributes", None)
+                if evt_attrs is None:
                     continue
+
                 evt_redacted = {}
-                for key, value in event.attributes.items():
+                for key, value in evt_attrs.items():
                     if self._should_redact(key):
                         evt_redacted[key] = self._mask(key, value)
+
                 if evt_redacted:
-                    event._attributes = {**event.attributes, **evt_redacted}
+                    evt_attrs.update(evt_redacted)
+
+        self._processed_spans.add(span_id)
 
     def shutdown(self) -> None:
-        pass
+        self._processed_spans.clear()
 
     def force_flush(self, timeout_millis: int = 30000) -> bool:
         return True
@@ -66,6 +78,14 @@ class RedactSpanProcessor(SpanProcessor):
                 if pattern.search(attribute):
                     return True
         return False
+
+
+@dataclass
+class RedactSpanProcessorOptions:
+    """Options for configuring the RedactSpanProcessor."""
+
+    attributes: Sequence[str | re.Pattern[str]]
+    mask: Callable[[str, object], str] | None = None
 
 
 DEFAULT_REDACT_PATTERNS: list[str | re.Pattern[str]] = [

@@ -12,23 +12,18 @@ import os
 
 from llama_index.llms.openai import OpenAI
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.LlamaIndex],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["llamaindex"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-llamaindex-completion", {"tags": ["test"], "session_id": "example"})
 def test_llamaindex_completion():
     llm = OpenAI(model="gpt-4o-mini", max_tokens=50)
 
@@ -39,4 +34,4 @@ def test_llamaindex_completion():
 
 if __name__ == "__main__":
     test_llamaindex_completion()
-    telemetry.flush()
+    latitude["flush"]()

@@ -917,7 +917,7 @@ wheels = [
 
 [[package]]
 name = "latitude-telemetry"
-version = "3.0.0a0"
+version = "3.0.0a1"
 source = { editable = "." }
 dependencies = [
     { name = "openinference-instrumentation-dspy" },

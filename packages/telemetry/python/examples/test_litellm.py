@@ -12,30 +12,23 @@ import os
 
 import litellm
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.LiteLLM],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["litellm"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-litellm-completion", {"tags": ["test"], "session_id": "example"})
 def test_litellm_completion():
     # LiteLLM can call any provider - using OpenAI here as example
     response = litellm.completion(
         model="gpt-4o-mini",
-        messages=[
-            {"role": "user", "content": "Say 'Hello from LiteLLM!' in exactly 5 words."}
-        ],
+        messages=[{"role": "user", "content": "Say 'Hello from LiteLLM!' in exactly 5 words."}],
         max_tokens=50,
     )
 
@@ -44,4 +37,4 @@ def test_litellm_completion():
 
 if __name__ == "__main__":
     test_litellm_completion()
-    telemetry.flush()
+    latitude["flush"]()

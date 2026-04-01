@@ -9,39 +9,38 @@
  * Install: npm install langchain @langchain/openai @langchain/core
  */
 
-import { ChatOpenAI } from '@langchain/openai'
-import { HumanMessage } from '@langchain/core/messages'
-import * as CallbackManager from '@langchain/core/callbacks/manager'
-import { LatitudeTelemetry, Instrumentation } from '../src'
+import { HumanMessage } from "@langchain/core/messages"
+import { ChatOpenAI } from "@langchain/openai"
+import { capture, initLatitude } from "../src"
 
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: {
-    [Instrumentation.Langchain]: {
-      callbackManagerModule: CallbackManager,
-    },
-  },
+  instrumentations: ["langchain"],
 })
 
 async function main() {
+  // Wait for instrumentations to be ready
+  await latitude.ready
+
   const model = new ChatOpenAI({
-    modelName: 'gpt-4o-mini',
+    modelName: "gpt-4o-mini",
     maxTokens: 50,
   })
 
-  await telemetry.capture(
-    { tags: ['test', 'langchain'], sessionId: 'example' },
+  await capture(
+    "langchain-chat",
     async () => {
-      const messages = [
-        new HumanMessage("Say 'Hello from LangChain!' in exactly 5 words."),
-      ]
+      const messages = [new HumanMessage("Say 'Hello from LangChain!' in exactly 5 words.")]
 
       const response = await model.invoke(messages)
       return response.content
     },
+    { tags: ["test", "langchain"], sessionId: "example" },
   )
 
-  await telemetry.flush()
+  await latitude.flush()
 }
 
 main().catch(console.error)

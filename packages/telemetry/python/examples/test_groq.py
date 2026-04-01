@@ -12,31 +12,24 @@ import os
 
 from groq import Groq
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.Groq],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["groq"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-groq-completion", {"tags": ["test"], "session_id": "example"})
 def test_groq_completion():
     client = Groq()
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[
-            {"role": "user", "content": "Say 'Hello from Groq!' in exactly 5 words."}
-        ],
+        messages=[{"role": "user", "content": "Say 'Hello from Groq!' in exactly 5 words."}],
         max_tokens=50,
     )
 
@@ -45,4 +38,4 @@ def test_groq_completion():
 
 if __name__ == "__main__":
     test_groq_completion()
-    telemetry.flush()
+    latitude["flush"]()

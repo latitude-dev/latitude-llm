@@ -1,11 +1,12 @@
 import unittest
 from typing import Any, Dict, List, Optional
 
-from opentelemetry.sdk.trace import ReadableSpan
+from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from latitude_telemetry import Telemetry, TelemetryOptions
+from latitude_telemetry import LatitudeSpanProcessor
+from latitude_telemetry.telemetry.latitude_span_processor import LatitudeSpanProcessorOptions
 
 
 class TestExporter(SpanExporter):
@@ -32,40 +33,55 @@ class TestExporter(SpanExporter):
 
 
 class TestCase(unittest.TestCase):
-    telemetry: Telemetry
+    """Base test case for Latitude Telemetry tests."""
+
+    provider: TracerProvider
     test_exporter: TestExporter
 
     def setUp(self):
         self.maxDiff = None
-
         self.api_key = "fake-api-key"
 
         # Create test exporter that captures spans
         self.test_exporter = TestExporter()
 
-        # Create telemetry with the test exporter
-        self.telemetry = Telemetry(
-            self.api_key,
-            "test-project",
-            TelemetryOptions(
-                instrumentors=[],
-                disable_batch=True,
-            ),
+        # Create provider with test exporter
+        self.provider = TracerProvider()
+        self.provider.add_span_processor(
+            LatitudeSpanProcessor(
+                self.api_key,
+                "test-project",
+                options=LatitudeSpanProcessorOptions(
+                    disable_batch=True,
+                    disable_smart_filter=True,
+                ),
+            )
         )
 
-        # Replace the exporter with our test exporter
-        # The span processor has already been added, so we need to access it
-        for processor in self.telemetry._tracer_provider._active_span_processor._span_processors:
-            if hasattr(processor, 'span_exporter'):
+        def patch_span_exporter(processor: object) -> bool:
+            if hasattr(processor, "span_exporter"):
                 processor.span_exporter = self.test_exporter
+                return True
+            inner = getattr(processor, "_inner", None)
+            if inner is not None and patch_span_exporter(inner):
+                return True
+            export_processor = getattr(processor, "_export_processor", None)
+            if export_processor is not None and patch_span_exporter(export_processor):
+                return True
+            return False
+
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+
+        for processor in self.provider._active_span_processor._span_processors:
+            patch_span_exporter(processor)
 
     def tearDown(self):
-        self.telemetry.uninstrument()
+        self.provider.shutdown()
         self.test_exporter.clear()
 
     def get_exported_spans(self) -> List[ReadableSpan]:
         """Get all exported spans."""
-        self.telemetry.flush()
+        self.provider.force_flush()
         return self.test_exporter.get_spans()
 
     def get_span_attributes(self, span: ReadableSpan) -> Dict[str, Any]:
@@ -76,7 +92,7 @@ class TestCase(unittest.TestCase):
         self,
         span: ReadableSpan,
         key: str,
-        expected_value: Optional[Any] = None,
+        expected_value: Any | None = None,
     ):
         """Assert that a span has a specific attribute."""
         attrs = self.get_span_attributes(span)
@@ -92,7 +108,7 @@ class TestCase(unittest.TestCase):
         """Assert that a span has a specific name."""
         self.assertEqual(span.name, expected_name)
 
-    def find_span_by_name(self, name: str) -> Optional[ReadableSpan]:
+    def find_span_by_name(self, name: str) -> ReadableSpan | None:
         """Find a span by name."""
         for span in self.get_exported_spans():
             if span.name == name:

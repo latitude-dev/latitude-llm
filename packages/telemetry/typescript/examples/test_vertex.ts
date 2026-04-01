@@ -10,38 +10,40 @@
  * Install: npm install @google-cloud/vertexai
  */
 
-import { VertexAI } from '@google-cloud/vertexai'
-import { LatitudeTelemetry, Instrumentation } from '../src'
+import { VertexAI } from "@google-cloud/vertexai"
+import { capture, initLatitude } from "../src"
 
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: {
-    [Instrumentation.VertexAI]: { VertexAI },
-  },
+  instrumentations: ["vertexai"],
 })
 
 async function main() {
+  // Wait for instrumentations to be ready
+  await latitude.ready
+
   const vertexAI = new VertexAI({
     project: process.env.GOOGLE_CLOUD_PROJECT!,
-    location: 'us-central1',
+    location: "us-central1",
   })
 
   const model = vertexAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: "gemini-1.5-flash",
   })
 
-  await telemetry.capture(
-    { tags: ['test', 'vertex'], sessionId: 'example' },
+  await capture(
+    "vertex-chat",
     async () => {
-      const response = await model.generateContent(
-        "Say 'Hello from Vertex!' in exactly 5 words.",
-      )
+      const response = await model.generateContent("Say 'Hello from Vertex!' in exactly 5 words.")
 
-      return response.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+      return response.response.candidates?.[0]?.content?.parts?.[0]?.text || ""
     },
+    { tags: ["test", "vertex"], sessionId: "example" },
   )
 
-  await telemetry.flush()
+  await latitude.flush()
 }
 
 main().catch(console.error)

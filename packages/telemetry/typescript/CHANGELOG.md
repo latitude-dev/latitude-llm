@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.1] - 2026-04-01
+
+### Breaking Changes
+
+- **Complete SDK re-architecture** — monolithic `Telemetry` class replaced with modular, composable API
+- **New bootstrap API** — `initLatitude()` replaces `new Telemetry()` as primary entry point
+- **`capture()` no longer creates spans** — now only attaches context to spans created by auto-instrumentation
+- **Context propagation changed** — uses OpenTelemetry's native Context API instead of baggage
+- Removed manual instrumentation (`telemetry.tracer` still available via advanced setup)
+- Removed `Telemetry` class and `TelemetryOptions` interface
+- Removed `Instrumentors` enum — now use string literals via `registerLatitudeInstrumentations()`
+
+### Added
+
+- `initLatitude()` — one-call bootstrap for complete OTel + LLM instrumentation setup
+- `LatitudeSpanProcessor` — composable span processor for shared-provider setups
+- `registerLatitudeInstrumentations()` — register LLM auto-instrumentations (OpenAI, Anthropic, etc.)
+- Smart span filtering — only LLM-relevant spans exported by default (gen_ai.*, llm.*, openinference.*, ai.* attributes)
+- `disableSmartFilter` option — export all spans instead of just LLM spans
+- `shouldExportSpan` callback — custom span filtering
+- `blockedInstrumentationScopes` option — filter out unwanted instrumentation scopes
+- `capture()` now supports nested calls with proper context merging (tags dedupe, metadata shallow merge, last-write-wins for userId/sessionId)
+- Integration examples for Datadog and Sentry
+
+### Changed
+
+- SDK is now OpenTelemetry-first — designed for composability with existing OTel setups
+- `capture()` uses OTel's `context.with()` for reliable async context propagation
+- Span processors use standard OTel APIs (no deprecated methods)
+- Package structure: SDK split into `sdk/init.ts`, `sdk/context.ts`, `sdk/processor.ts`, `sdk/span-filter.ts`, `sdk/types.ts`
+
 ## [3.0.0-alpha.0] - 2026-04-01
 
 ### Breaking Changes
