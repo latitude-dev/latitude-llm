@@ -17,11 +17,12 @@ from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, Inter
 # Initialize telemetry pointing to local instance
 telemetry = Telemetry(
     os.environ["LATITUDE_API_KEY"],
+    os.environ["LATITUDE_PROJECT_SLUG"],
     TelemetryOptions(
         instrumentors=[Instrumentors.Transformers],
         disable_batch=True,
         internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:8787"),
+            gateway=GatewayOptions(base_url="http://localhost:3002"),
         ),
     ),
 )

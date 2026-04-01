@@ -17,11 +17,12 @@ from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, Inter
 # Initialize telemetry BEFORE importing openai so instrumentation can patch it
 telemetry = Telemetry(
     os.environ["LATITUDE_API_KEY"],
+    os.environ["LATITUDE_PROJECT_SLUG"],
     TelemetryOptions(
         instrumentors=[Instrumentors.OpenAI],
         disable_batch=True,
         internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:8787"),
+            gateway=GatewayOptions(base_url="http://localhost:3002"),
         ),
     ),
 )

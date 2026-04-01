@@ -132,7 +132,7 @@ def main():
     else:
         tests_to_run = list(TESTS.keys())
 
-    print(f"\nRunning {len(tests_to_run)} test(s) against localhost:8787\n")
+    print(f"\nRunning {len(tests_to_run)} test(s) against localhost:3002\n")
 
     passed = 0
     failed = 0

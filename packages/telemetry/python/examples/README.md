@@ -4,7 +4,7 @@ Manual test examples for each instrumented provider against a local Latitude ins
 
 ## Setup
 
-1. Start your local Latitude instance at `localhost:8787`
+1. Start your local Latitude instance at `localhost:3002`
 
 2. Set up environment variables using one of these methods:
 

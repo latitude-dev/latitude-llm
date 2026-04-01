@@ -19,11 +19,12 @@ from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, Inter
 # Note: CrewAI uses OpenAI by default, so we instrument both
 telemetry = Telemetry(
     os.environ["LATITUDE_API_KEY"],
+    os.environ["LATITUDE_PROJECT_SLUG"],
     TelemetryOptions(
         instrumentors=[Instrumentors.CrewAI, Instrumentors.OpenAI],
         disable_batch=True,
         internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:8787"),
+            gateway=GatewayOptions(base_url="http://localhost:3002"),
         ),
     ),
 )
