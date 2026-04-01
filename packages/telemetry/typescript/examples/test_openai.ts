@@ -22,7 +22,7 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
 async function main() {
   const client = new OpenAI()
 
-  await telemetry.capture({ tags: ["test", "openai"], userId: "Jon", sessionId: "example" }, async () => {
+  await telemetry.capture({ tags: ["test", "openai"], userId: "Jon", sessionId: "example", metadata: { env: "local", version: "3.0.0" } }, async () => {
     const response = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [{ role: "user", content: "Say 'Hello from OpenAI!' in exactly 5 words." }],
