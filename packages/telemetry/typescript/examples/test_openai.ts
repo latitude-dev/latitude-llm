@@ -9,8 +9,8 @@
  * Install: npm install openai
  */
 
-import OpenAI from 'openai'
-import { LatitudeTelemetry, Instrumentation } from '../src'
+import OpenAI from "openai"
+import { LatitudeTelemetry, Instrumentation } from "../src"
 
 const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
   disableBatch: true,
@@ -22,46 +22,38 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
 async function main() {
   const client = new OpenAI()
 
-  await telemetry.capture(
-    { tags: ['test', 'openai'], sessionId: 'example' },
-    async () => {
-      const response = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'user', content: "Say 'Hello from OpenAI!' in exactly 5 words." },
-        ],
-        max_tokens: 50,
-      })
+  await telemetry.capture({ tags: ["test", "openai"], userId: "Jon", sessionId: "example" }, async () => {
+    const response = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: "Say 'Hello from OpenAI!' in exactly 5 words." }],
+      max_tokens: 50,
+    })
 
-      return response.choices[0]?.message?.content
-    },
-  )
+    return response.choices[0]?.message?.content
+  })
 
-  await telemetry.capture(
-    { tags: ['test', 'openai', 'stream'], sessionId: 'example' },
-    async () => {
-      const stream = await client.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'user',
-            content: "Say 'Hello from OpenAI stream!' in exactly 6 words.",
-          },
-        ],
-        max_tokens: 50,
-        stream: true,
-        stream_options: { include_usage: true },
-      })
+  await telemetry.capture({ tags: ["test", "openai", "stream"], userId: "Jon", sessionId: "example" }, async () => {
+    const stream = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: "Say 'Hello from OpenAI stream!' in exactly 6 words.",
+        },
+      ],
+      max_tokens: 50,
+      stream: true,
+      stream_options: { include_usage: true },
+    })
 
-      const chunks: string[] = []
-      for await (const chunk of stream) {
-        const delta = chunk.choices[0]?.delta?.content
-        if (delta) chunks.push(delta)
-      }
+    const chunks: string[] = []
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content
+      if (delta) chunks.push(delta)
+    }
 
-      return chunks.join('')
-    },
-  )
+    return chunks.join("")
+  })
 
   await telemetry.flush()
 }

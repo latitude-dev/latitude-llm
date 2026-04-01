@@ -94,10 +94,7 @@ function reassembleIndexedMessages(attrs: readonly OtlpKeyValue[], prefix: strin
   return indices.map((i) => messageMap.get(i)!)
 }
 
-function resolveMessages(
-  attrs: readonly OtlpKeyValue[],
-  prefix: string,
-): Record<string, unknown>[] | undefined {
+function resolveMessages(attrs: readonly OtlpKeyValue[], prefix: string): Record<string, unknown>[] | undefined {
   // Try JSON string format first
   const jsonRaw = parseJsonString(attrs, prefix)
   if (Array.isArray(jsonRaw) && jsonRaw.length > 0) return jsonRaw
