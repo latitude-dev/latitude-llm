@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - ANTHROPIC_API_KEY
  *
  * Install: npm install @anthropic-ai/sdk
@@ -41,10 +41,7 @@ async function main() {
   console.log('Testing Anthropic instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/anthropic',
-    },
+    { tags: ['test', 'anthropic'], sessionId: 'example' },
     testAnthropicCompletion,
   )
 

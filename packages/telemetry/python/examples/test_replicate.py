@@ -3,7 +3,6 @@ Test Replicate instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - REPLICATE_API_TOKEN
 
 Install: uv add replicate
@@ -13,7 +12,7 @@ import os
 
 import replicate
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry pointing to local instance
 telemetry = Telemetry(
@@ -22,16 +21,13 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.Replicate],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/replicate",
+    tags=["test"],
+    session_id="example",
 )
 def test_replicate_completion():
     output = replicate.run(

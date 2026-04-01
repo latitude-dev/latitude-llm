@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - COHERE_API_KEY
  *
  * Install: npm install cohere-ai
@@ -37,10 +37,7 @@ async function main() {
   console.log('Testing Cohere instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/cohere',
-    },
+    { tags: ['test', 'cohere'], sessionId: 'example' },
     testCohereCompletion,
   )
 

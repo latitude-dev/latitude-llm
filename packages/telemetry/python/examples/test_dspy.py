@@ -3,7 +3,6 @@ Test DSPy instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - OPENAI_API_KEY
 
 Install: uv add dspy
@@ -11,7 +10,7 @@ Install: uv add dspy
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry BEFORE importing dspy so instrumentation can patch it
 telemetry = Telemetry(
@@ -20,9 +19,6 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.DSPy],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
@@ -38,8 +34,8 @@ class SimpleQA(dspy.Signature):
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/dspy",
+    tags=["test"],
+    session_id="example",
 )
 def test_dspy_completion():
     # Configure DSPy with OpenAI

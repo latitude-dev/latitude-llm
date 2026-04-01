@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - AZURE_OPENAI_API_KEY
  * - AZURE_OPENAI_ENDPOINT
  * - AZURE_OPENAI_DEPLOYMENT (optional, default: gpt-4o-mini)
@@ -46,10 +46,7 @@ async function main() {
   console.log('Testing Azure OpenAI instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/azure-openai',
-    },
+    { tags: ['test', 'azure-openai'], sessionId: 'example' },
     testAzureCompletion,
   )
 

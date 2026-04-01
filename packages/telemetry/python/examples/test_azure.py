@@ -3,7 +3,6 @@ Test Azure OpenAI instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - AZURE_OPENAI_API_KEY
 - AZURE_OPENAI_ENDPOINT
 
@@ -12,7 +11,7 @@ Install: uv add openai
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry BEFORE importing openai so instrumentation can patch it
 telemetry = Telemetry(
@@ -21,9 +20,6 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.OpenAI],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
@@ -32,8 +28,8 @@ from openai import AzureOpenAI
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/azure-openai",
+    tags=["test"],
+    session_id="example",
 )
 def test_azure_completion():
     client = AzureOpenAI(

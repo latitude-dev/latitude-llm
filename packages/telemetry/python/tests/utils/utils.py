@@ -5,7 +5,7 @@ from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from latitude_telemetry import GatewayOptions, InternalOptions, Telemetry, TelemetryOptions
+from latitude_telemetry import Telemetry, TelemetryOptions
 
 
 class TestExporter(SpanExporter):
@@ -38,11 +38,6 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.maxDiff = None
 
-        self.base_url = "https://fake-host.com"
-        self.internal_options = InternalOptions(
-            gateway=GatewayOptions(base_url=self.base_url),
-            timeout=30,
-        )
         self.api_key = "fake-api-key"
 
         # Create test exporter that captures spans
@@ -55,7 +50,6 @@ class TestCase(unittest.TestCase):
             TelemetryOptions(
                 instrumentors=[],
                 disable_batch=True,
-                internal=self.internal_options,
             ),
         )
 

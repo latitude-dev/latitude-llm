@@ -3,7 +3,6 @@ Test LiteLLM instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - OPENAI_API_KEY (or other provider keys depending on model)
 
 Install: uv add litellm
@@ -13,7 +12,7 @@ import os
 
 import litellm
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry pointing to local instance
 telemetry = Telemetry(
@@ -22,16 +21,13 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.LiteLLM],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/litellm",
+    tags=["test"],
+    session_id="example",
 )
 def test_litellm_completion():
     # LiteLLM can call any provider - using OpenAI here as example

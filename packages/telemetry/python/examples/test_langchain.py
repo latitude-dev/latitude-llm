@@ -3,7 +3,6 @@ Test LangChain instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - OPENAI_API_KEY
 
 Install: uv add langchain-core langchain-openai
@@ -11,7 +10,7 @@ Install: uv add langchain-core langchain-openai
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry BEFORE importing langchain so instrumentation can patch it
 telemetry = Telemetry(
@@ -20,9 +19,6 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.Langchain],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
@@ -32,8 +28,8 @@ from langchain_core.messages import HumanMessage
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/langchain",
+    tags=["test"],
+    session_id="example",
 )
 def test_langchain_completion():
     llm = ChatOpenAI(model="gpt-4o-mini", max_tokens=50)

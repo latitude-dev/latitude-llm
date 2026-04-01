@@ -44,8 +44,8 @@ def check_common_env():
     missing = []
     if not os.environ.get("LATITUDE_API_KEY"):
         missing.append("LATITUDE_API_KEY")
-    if not os.environ.get("LATITUDE_PROJECT_ID"):
-        missing.append("LATITUDE_PROJECT_ID")
+    if not os.environ.get("LATITUDE_PROJECT_SLUG"):
+        missing.append("LATITUDE_PROJECT_SLUG")
     return missing
 
 
@@ -123,7 +123,7 @@ def main():
         print(f"Error: Missing required env vars: {', '.join(missing_common)}")
         print("\nSet these first:")
         print("  export LATITUDE_API_KEY='your-key'")
-        print("  export LATITUDE_PROJECT_ID='your-project-id'")
+        print("  export LATITUDE_PROJECT_SLUG='your-project-slug'")
         sys.exit(1)
 
     # Determine which tests to run

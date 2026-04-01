@@ -3,7 +3,6 @@ Test Gemini instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - GEMINI_API_KEY
 
 Install: uv add google-genai
@@ -11,7 +10,7 @@ Install: uv add google-genai
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry BEFORE importing google.genai so instrumentation can patch it
 telemetry = Telemetry(
@@ -20,9 +19,6 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.GoogleGenerativeAI],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
@@ -31,8 +27,8 @@ from google import genai
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/gemini",
+    tags=["test"],
+    session_id="example",
 )
 def test_gemini_completion():
     client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])

@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - TOGETHER_API_KEY
  *
  * Install: npm install together-ai
@@ -40,10 +40,7 @@ async function main() {
   console.log('Testing Together AI instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/together',
-    },
+    { tags: ['test', 'together'], sessionId: 'example' },
     testTogetherCompletion,
   )
 

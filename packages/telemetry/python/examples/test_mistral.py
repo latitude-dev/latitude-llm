@@ -3,7 +3,6 @@ Test Mistral instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - MISTRAL_API_KEY
 
 Install: uv add mistralai
@@ -11,7 +10,7 @@ Install: uv add mistralai
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry BEFORE importing mistralai so instrumentation can patch it
 telemetry = Telemetry(
@@ -20,9 +19,6 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.MistralAI],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
@@ -31,8 +27,8 @@ from mistralai import Mistral
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/mistral",
+    tags=["test"],
+    session_id="example",
 )
 def test_mistral_completion():
     from mistralai.models import UserMessage

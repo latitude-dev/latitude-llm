@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - GOOGLE_APPLICATION_CREDENTIALS (path to service account JSON)
  * - GOOGLE_CLOUD_PROJECT
  *
@@ -41,10 +41,7 @@ async function main() {
   console.log('Testing Vertex AI instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/vertex',
-    },
+    { tags: ['test', 'vertex'], sessionId: 'example' },
     testVertexCompletion,
   )
 

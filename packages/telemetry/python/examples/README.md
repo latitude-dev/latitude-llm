@@ -32,7 +32,7 @@ uv run python examples/test_openai.py
 
 ```bash
 export LATITUDE_API_KEY="your-latitude-api-key"
-export LATITUDE_PROJECT_ID="your-project-id"
+export LATITUDE_PROJECT_SLUG="your-project-slug"
 
 # Provider-specific API keys (set the ones you want to test)
 export OPENAI_API_KEY="your-openai-key"
@@ -131,7 +131,7 @@ Each example should:
 
 Check the Latitude dashboard to verify:
 
-- The trace appears under the specified `path`
+- The trace appears with the specified tags
 - Input/output messages are captured
 - Token usage is recorded (where supported)
 - Model information is correct

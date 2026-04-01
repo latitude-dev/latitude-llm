@@ -3,7 +3,6 @@ Test AWS SageMaker instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - AWS_ACCESS_KEY_ID
 - AWS_SECRET_ACCESS_KEY
 - AWS_REGION
@@ -17,7 +16,7 @@ import os
 
 import boto3
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry pointing to local instance
 telemetry = Telemetry(
@@ -26,16 +25,13 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.Sagemaker],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/sagemaker",
+    tags=["test"],
+    session_id="example",
 )
 def test_sagemaker_completion():
     client = boto3.client(

@@ -3,7 +3,6 @@ Test Vertex AI instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 - GOOGLE_APPLICATION_CREDENTIALS (path to service account JSON)
 - GOOGLE_CLOUD_PROJECT
 
@@ -15,7 +14,7 @@ import os
 import vertexai
 from vertexai.generative_models import GenerativeModel
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry pointing to local instance
 telemetry = Telemetry(
@@ -24,16 +23,13 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.VertexAI],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/vertex",
+    tags=["test"],
+    session_id="example",
 )
 def test_vertex_completion():
     # Initialize Vertex AI

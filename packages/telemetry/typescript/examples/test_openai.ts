@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
  * Install: npm install openai
@@ -65,10 +65,7 @@ async function main() {
   console.log('Testing OpenAI instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/openai',
-    },
+    { tags: ['test', 'openai'], sessionId: 'example' },
     testOpenAICompletion,
   )
 
@@ -76,10 +73,7 @@ async function main() {
 
   console.log('Testing OpenAI streaming instrumentation...')
   const streamResult = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/openai-stream-ts',
-    },
+    { tags: ['test', 'openai', 'stream'], sessionId: 'example' },
     testOpenAIStreamingCompletion,
   )
 

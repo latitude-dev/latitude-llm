@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - OPENAI_API_KEY
  *
  * Install: npm install llamaindex
@@ -36,10 +36,7 @@ async function main() {
   console.log('Testing LlamaIndex instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/llamaindex',
-    },
+    { tags: ['test', 'llamaindex'], sessionId: 'example' },
     testLlamaIndexCompletion,
   )
 

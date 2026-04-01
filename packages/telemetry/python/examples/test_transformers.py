@@ -3,7 +3,6 @@ Test Hugging Face Transformers instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
-- LATITUDE_PROJECT_ID
 
 Install: uv add transformers torch
 """
@@ -12,7 +11,7 @@ import os
 
 from transformers import pipeline
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions, InternalOptions, GatewayOptions
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
 # Initialize telemetry pointing to local instance
 telemetry = Telemetry(
@@ -21,16 +20,13 @@ telemetry = Telemetry(
     TelemetryOptions(
         instrumentors=[Instrumentors.Transformers],
         disable_batch=True,
-        internal=InternalOptions(
-            gateway=GatewayOptions(base_url="http://localhost:3002"),
-        ),
     ),
 )
 
 
 @telemetry.capture(
-    project_id=int(os.environ["LATITUDE_PROJECT_ID"]),
-    path="test/transformers",
+    tags=["test"],
+    session_id="example",
 )
 def test_transformers_completion():
     # Using a small model for testing

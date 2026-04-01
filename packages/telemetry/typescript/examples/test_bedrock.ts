@@ -3,7 +3,7 @@
  *
  * Required env vars:
  * - LATITUDE_API_KEY
- * - LATITUDE_PROJECT_ID
+ * - LATITUDE_PROJECT_SLUG
  * - AWS_ACCESS_KEY_ID
  * - AWS_SECRET_ACCESS_KEY
  * - AWS_REGION (default: us-east-1)
@@ -57,10 +57,7 @@ async function main() {
   console.log('Testing AWS Bedrock instrumentation...')
 
   const result = await telemetry.capture(
-    {
-      projectId: parseInt(process.env.LATITUDE_PROJECT_ID!),
-      path: 'test/bedrock',
-    },
+    { tags: ['test', 'bedrock'], sessionId: 'example' },
     testBedrockCompletion,
   )
 
