@@ -27,9 +27,11 @@ function extractException(eventsJson: string): ExceptionInfo | undefined {
     const attrs = event.attributes as Array<{ key: string; value?: { stringValue?: string } }>
     const info: ExceptionInfo = {}
     for (const attr of attrs) {
-      if (attr.key === "exception.type") info.type = attr.value?.stringValue
-      if (attr.key === "exception.message") info.message = attr.value?.stringValue
-      if (attr.key === "exception.stacktrace") info.stacktrace = attr.value?.stringValue
+      const v = attr.value?.stringValue
+      if (!v) continue
+      if (attr.key === "exception.type") info.type = v
+      if (attr.key === "exception.message") info.message = v
+      if (attr.key === "exception.stacktrace") info.stacktrace = v
     }
     if (info.type || info.message || info.stacktrace) return info
   }
@@ -46,14 +48,14 @@ function ErrorSection({ span }: { readonly span: SpanDetailRecord }) {
       {span.errorType && (
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="destructive">Error Type</Text.H6>
-          <Text.H5 monospace>{span.errorType}</Text.H5>
+          <Text.H5><code>{span.errorType}</code></Text.H5>
         </div>
       )}
 
       {(span.statusMessage || exception?.message) && (
         <div className="flex flex-col gap-0.5">
           <Text.H6 color="destructive">Message</Text.H6>
-          <Text.H5 monospace>{exception?.message || span.statusMessage}</Text.H5>
+          <Text.H5><code>{exception?.message || span.statusMessage}</code></Text.H5>
         </div>
       )}
 
