@@ -91,7 +91,10 @@ function reassembleIndexedMessages(attrs: readonly OtlpKeyValue[], prefix: strin
   }
 
   const indices = [...messageMap.keys()].sort((a, b) => a - b)
-  return indices.map((i) => messageMap.get(i)!)
+  return indices.flatMap((i) => {
+    const msg = messageMap.get(i)
+    return msg ? [msg] : []
+  })
 }
 
 function resolveMessages(attrs: readonly OtlpKeyValue[], prefix: string): Record<string, unknown>[] | undefined {
