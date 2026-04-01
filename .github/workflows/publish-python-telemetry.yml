@@ -75,17 +75,30 @@ jobs:
           cd packages/telemetry/python
           uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
 
+      - name: Extract changelog
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          awk -v ver="$VERSION" '
+            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
+            found { print }
+          ' packages/telemetry/python/CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "Package updates and improvements" > release_notes.md
+          fi
+          {
+            echo "body<<EOF"
+            cat release_notes.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         if: steps.check_version.outputs.should_publish == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: python-telemetry-${{ steps.get_version.outputs.version }}
           name: Python Telemetry v${{ steps.get_version.outputs.version }}
-          body: |
-            Published `latitude-telemetry==${{ steps.get_version.outputs.version }}` to PyPI.
-
-            ```sh
-            pip install latitude-telemetry==${{ steps.get_version.outputs.version }}
-            ```
+          body: ${{ steps.changelog.outputs.body }}
           draft: false
           prerelease: ${{ contains(steps.get_version.outputs.version, 'a') || contains(steps.get_version.outputs.version, 'b') || contains(steps.get_version.outputs.version, 'rc') }}
