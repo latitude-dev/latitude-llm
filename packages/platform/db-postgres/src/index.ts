@@ -28,6 +28,7 @@ export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 // Repository implementations
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
+export { IssueRepositoryLive } from "./repositories/issue-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"
 export { OrganizationRepositoryLive } from "./repositories/organization-repository.ts"
 export { ProjectRepositoryLive } from "./repositories/project-repository.ts"

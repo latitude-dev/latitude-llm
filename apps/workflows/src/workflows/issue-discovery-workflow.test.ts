@@ -36,8 +36,11 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         issueId: "issue-1",
       }
     }),
-    syncProjections: vi.fn(async () => {
-      callOrder.push("syncProjections")
+    syncScoreAnalytics: vi.fn(async () => {
+      callOrder.push("syncScoreAnalytics")
+    }),
+    syncIssueProjections: vi.fn(async () => {
+      callOrder.push("syncIssueProjections")
     }),
   }
 
@@ -77,7 +80,8 @@ describe("issueDiscoveryWorkflow", () => {
       "hybridSearchIssues",
       "rerankIssueCandidates",
       "createOrAssignIssue",
-      "syncProjections",
+      "syncScoreAnalytics",
+      "syncIssueProjections",
     ])
 
     expect(mockActivities.hybridSearchIssues).toHaveBeenCalledWith({
@@ -89,6 +93,21 @@ describe("issueDiscoveryWorkflow", () => {
     expect(mockActivities.rerankIssueCandidates).toHaveBeenCalledWith({
       query: "token leakage in tool output",
       candidates: [{ uuid: "issue-1", title: "Token leakage", description: "tokens exposed", score: 0.9 }],
+    })
+    expect(mockActivities.createOrAssignIssue).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+      matchedIssueId: "issue-1",
+      normalizedEmbedding: [0.6, 0.8],
+    })
+    expect(mockActivities.syncScoreAnalytics).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      scoreId: "score-1",
+    })
+    expect(mockActivities.syncIssueProjections).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      issueId: "issue-1",
     })
   })
 
@@ -110,5 +129,8 @@ describe("issueDiscoveryWorkflow", () => {
     expect(mockActivities.embedScoreFeedback).not.toHaveBeenCalled()
     expect(mockActivities.hybridSearchIssues).not.toHaveBeenCalled()
     expect(mockActivities.rerankIssueCandidates).not.toHaveBeenCalled()
+    expect(mockActivities.createOrAssignIssue).not.toHaveBeenCalled()
+    expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
+    expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
   })
 })

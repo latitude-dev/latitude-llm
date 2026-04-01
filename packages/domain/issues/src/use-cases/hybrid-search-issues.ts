@@ -15,12 +15,12 @@ export interface HybridSearchIssuesResult {
 export const hybridSearchIssuesUseCase = (input: HybridSearchIssuesInput) =>
   Effect.gen(function* () {
     const issueProjectionRepository = yield* IssueProjectionRepository
-    const tenantName = `${input.organizationId}:${input.projectId}`
 
     const candidates = yield* issueProjectionRepository.hybridSearch({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
       query: input.query,
       vector: input.normalizedEmbedding,
-      tenantName,
     })
 
     return {

@@ -7,7 +7,8 @@ const {
   hybridSearchIssues,
   rerankIssueCandidates,
   createOrAssignIssue,
-  syncProjections,
+  syncIssueProjections,
+  syncScoreAnalytics,
 } = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
 
 const eligibilityErrorTags = new Set([
@@ -37,12 +38,14 @@ export const issueDiscoveryWorkflow = async (input: {
   }
 
   const embeddedScoreFeedback = await embedScoreFeedback(input)
+
   const hybridSearch = await hybridSearchIssues({
     organizationId: input.organizationId,
     projectId: input.projectId,
     query: embeddedScoreFeedback.feedback,
     normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
   })
+
   const retrieval = await rerankIssueCandidates({
     query: embeddedScoreFeedback.feedback,
     candidates: hybridSearch.candidates,
@@ -53,9 +56,15 @@ export const issueDiscoveryWorkflow = async (input: {
     projectId: input.projectId,
     scoreId: input.scoreId,
     matchedIssueId: retrieval.matchedIssueId,
+    normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
   })
 
-  await syncProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
+  await syncScoreAnalytics({
+    organizationId: input.organizationId,
+    scoreId: input.scoreId,
+  })
+
+  await syncIssueProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
 
   return { action: assignment.action, issueId: assignment.issueId }
 }

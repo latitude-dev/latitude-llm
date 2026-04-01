@@ -4,7 +4,12 @@ import { generateId } from "@domain/shared"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
-import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "@platform/testkit"
+import {
+  closeInMemoryPostgres,
+  createInMemoryPostgres,
+  type InMemoryPostgres,
+  setupTestClickHouse,
+} from "@platform/testkit"
 import { encrypt, hash, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
 import type { TestContext } from "vitest"
@@ -23,6 +28,7 @@ export const TEST_ENCRYPTION_KEY = hexDecode(TEST_ENCRYPTION_KEY_HEX)
 export interface ApiTestContext extends TestContext {
   app: OpenAPIHono<AppEnv>
   database: InMemoryPostgres
+  clickhouse: ClickHouseClient
 }
 
 /**
@@ -64,6 +70,7 @@ const releaseDatabase = async () => {
 export const setupTestApi = () => {
   let database: InMemoryPostgres
   let app: OpenAPIHono<AppEnv>
+  const clickhouse = setupTestClickHouse()
 
   beforeAll(async () => {
     process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
@@ -80,7 +87,7 @@ export const setupTestApi = () => {
     registerRoutes(app, {
       database: database.appPostgresClient,
       adminDatabase: database.adminPostgresClient,
-      clickhouse: {} as ClickHouseClient,
+      clickhouse: clickhouse.client,
       redis: createFakeRedis(),
       queuePublisher: fakePublisher,
       logTouchBuffer: false,
@@ -94,6 +101,7 @@ export const setupTestApi = () => {
   beforeEach<ApiTestContext>((context) => {
     context.app = app
     context.database = database
+    context.clickhouse = clickhouse.client
   })
 
   afterAll(async () => {

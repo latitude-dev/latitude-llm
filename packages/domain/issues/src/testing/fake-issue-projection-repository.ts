@@ -13,7 +13,8 @@ interface StoredProjection {
   title: string
   description: string
   vector: number[]
-  tenantName: string
+  organizationId: string
+  projectId: string
 }
 
 const cosineSimilarity = (a: number[], b: number[]): number => {
@@ -39,18 +40,19 @@ const bm25TermScore = (term: string, text: string): number => {
 export const createFakeIssueProjectionRepository = () => {
   const store = new Map<string, StoredProjection>()
 
-  const keyOf = (tenantName: string, uuid: string) => `${tenantName}::${uuid}`
+  const keyOf = (organizationId: string, projectId: string, uuid: string) => `${organizationId}_${projectId}::${uuid}`
 
   const service = {
     upsert: (input: UpsertIssueProjectionInput) =>
       Effect.try({
         try: () => {
-          store.set(keyOf(input.tenantName, input.uuid), {
+          store.set(keyOf(input.organizationId, input.projectId, input.uuid), {
             uuid: input.uuid,
             title: input.title,
             description: input.description,
             vector: input.vector,
-            tenantName: input.tenantName,
+            organizationId: input.organizationId,
+            projectId: input.projectId,
           })
         },
         catch: (cause) => new RepositoryError({ cause, operation: "IssueProjectionRepository.upsert" }),
@@ -59,7 +61,7 @@ export const createFakeIssueProjectionRepository = () => {
     delete: (input: DeleteIssueProjectionInput) =>
       Effect.try({
         try: () => {
-          store.delete(keyOf(input.tenantName, input.uuid))
+          store.delete(keyOf(input.organizationId, input.projectId, input.uuid))
         },
         catch: (cause) => new RepositoryError({ cause, operation: "IssueProjectionRepository.delete" }),
       }),
@@ -70,7 +72,7 @@ export const createFakeIssueProjectionRepository = () => {
           const candidates: (StoredProjection & { score: number })[] = []
 
           for (const projection of store.values()) {
-            if (projection.tenantName !== input.tenantName) continue
+            if (projection.organizationId !== input.organizationId || projection.projectId !== input.projectId) continue
 
             const vectorScore = cosineSimilarity(input.vector, projection.vector)
 

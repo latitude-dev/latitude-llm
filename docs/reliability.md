@@ -164,15 +164,15 @@ Rules:
 
 Initial reliability async contracts:
 
-- domain events: `SpanIngested`, `TraceEnded`, `ScoreImmutable`
-- topic tasks: `live-traces:end`, `analytic-scores:save`, `annotation-scores:publish`, `issues:refresh`, `live-evaluations:enqueue`, `live-evaluations:execute`, `live-annotation-queues:curate`, `system-annotation-queues:flag`, `system-annotation-queues:annotate`
+- domain events: `SpanIngested`, `TraceEnded`, `IssueDiscoveryRequested`, `IssueRefreshRequested`
+- topic tasks: `live-traces:end`, `annotation-scores:publish`, `issues:refresh`, `live-evaluations:enqueue`, `live-evaluations:execute`, `live-annotation-queues:curate`, `system-annotation-queues:flag`, `system-annotation-queues:annotate`
 - workflows: `issue-discovery`, `evaluation-alignment`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
 For the initial reliability events, `SpanIngested` and `TraceEnded` publish directly through `createEventsPublisher(queuePublisher)` because they come from high-volume append-only flows whose upstream writes are already durable before publication.
 
-`ScoreImmutable` is intentionally different: it is recorded through the transactional outbox rail so score-row persistence and immutable-save intent are atomic. This prevents dropped immutable-score analytics save intent if a process exits after Postgres commit but before direct queue publication.
+`IssueDiscoveryRequested` and `IssueRefreshRequested` are intentionally different from the direct-publication telemetry events: they are recorded through the transactional outbox rail so score-row persistence stays atomic with downstream workflow-start or debounced refresh intent.
 
 ## Spec Governance
 
@@ -194,7 +194,8 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - annotation ingestion remains on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though it still writes canonical `source = "annotation"` score rows
 - all score writes land in Postgres first
 - ClickHouse only receives immutable score analytics rows after the score lifecycle is ready for analytics save
-- immutable-score analytics save is requested transactionally through `ScoreImmutable`, then carried out asynchronously by the `analytic-scores:save` task after it re-checks current Postgres immutability and dedupes by score id
+- eligible non-draft failed non-errored scores request issue discovery transactionally through `IssueDiscoveryRequested`, and the `domain-events` dispatcher starts `issue-discovery` with a stable per-score workflow id
+- immutable-score analytics sync runs directly after the owning Postgres transaction commits through the shared `syncScoreAnalyticsUseCase`, which re-checks current Postgres immutability and dedupes by score id
 - annotation-originated feedback can be enriched before issue discovery
 - draft annotations use the same annotation score model, but stay drafts through `draftedAt` instead of a fake error value
 - the canonical `feedback` text must stay human/LLM-friendly and intentionally clusterable, because discovery uses it for both embeddings and BM25 matching
@@ -215,7 +216,7 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 
 - failed non-errored scores are embedded and searched against issue centroids/text
 - drafted scores stay out of discovery until `draftedAt` is cleared
-- eligible non-draft failed non-errored scores start the `issue-discovery` workflow after commit instead of running embedding/search inline in request paths
+- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher starts the `issue-discovery` workflow from that event instead of running embedding/search inline in request paths
 - managed annotation flows can bypass similarity discovery by linking to an existing issue or creating a new issue inline; those explicit human paths write canonical issue ownership directly
 - issue-linked evaluation scores bypass discovery and assign directly
 - annotations are primary, but unlinked failed evaluation scores and failed custom scores may also create new issues
@@ -225,6 +226,7 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - the proven v1 search shape is hybrid Weaviate search with `RelativeScore` fusion, then Voyage reranking
 - v2 keeps the v1 storage split of Postgres state plus Weaviate projection, but upgrades tenancy and product search behavior intentionally
 - in the `issue-discovery` workflow, keep retrieval as explicit sequential activities: feedback embedding/normalization, hybrid Weaviate search, then reranking
+- the create-or-assign activity re-checks eligibility in Postgres, conditionally claims `scores.issue_id`, updates or creates the canonical issue row and centroid, then the workflow runs direct `syncScoreAnalyticsUseCase` and `syncIssueProjectionsUseCase` activities after the transaction commits; only assignments into an existing issue write `IssueRefreshRequested` transactionally for later debounced issue-details regeneration
 - resolved and ignored issues remain valid match targets in discovery; lifecycle semantics are handled after assignment (including regression and ignored ownership behavior), not by pre-filtering them out of retrieval
 - after rerank selects a best candidate, verify the selected issue row still exists in Postgres for the same organization/project before assignment; if missing, treat as no-match and create a new issue
 

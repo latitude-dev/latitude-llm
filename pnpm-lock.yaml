@@ -445,9 +445,6 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
-      '@domain/scores':
-        specifier: workspace:*
-        version: link:../../packages/domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -515,6 +512,9 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../../packages/domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
@@ -524,6 +524,9 @@ importers:
       '@platform/cache-redis':
         specifier: workspace:*
         version: link:../../packages/platform/cache-redis
+      '@platform/db-clickhouse':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-clickhouse
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres

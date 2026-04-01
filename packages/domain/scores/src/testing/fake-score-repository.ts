@@ -14,6 +14,19 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
       scores.set(score.id, score)
       return Effect.void
     },
+    assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) => {
+      const score = scores.get(scoreId)
+      if (!score || score.issueId !== null) {
+        return Effect.succeed(false)
+      }
+
+      scores.set(scoreId, {
+        ...score,
+        issueId,
+        updatedAt,
+      })
+      return Effect.succeed(true)
+    },
     delete: (id: ScoreId) => {
       scores.delete(id)
       return Effect.void

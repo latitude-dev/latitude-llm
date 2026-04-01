@@ -1,6 +1,6 @@
 import type { WorkflowStarterShape } from "@domain/queue"
 import { createLogger } from "@repo/observability"
-import { Client, Connection } from "@temporalio/client"
+import { Client, Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
 import { Effect } from "effect"
 import type { TemporalConfig } from "./config.ts"
 
@@ -26,16 +26,27 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
   return {
     start: (workflow, input, options) =>
       Effect.promise(async () => {
-        const handle = await client.workflow.start(workflow, {
-          workflowId: options.workflowId,
-          taskQueue: config.taskQueue,
-          args: [input],
-        })
-        logger.info("started workflow", {
-          workflow,
-          workflowId: options.workflowId,
-          runId: handle.firstExecutionRunId,
-        })
+        try {
+          const handle = await client.workflow.start(workflow, {
+            workflowId: options.workflowId,
+            taskQueue: config.taskQueue,
+            args: [input],
+          })
+          logger.info("started workflow", {
+            workflow,
+            workflowId: options.workflowId,
+            runId: handle.firstExecutionRunId,
+          })
+        } catch (error) {
+          if (error instanceof WorkflowExecutionAlreadyStartedError) {
+            logger.info("workflow already started", {
+              workflow,
+              workflowId: options.workflowId,
+            })
+            return
+          }
+          throw error
+        }
       }),
   }
 }

@@ -19,7 +19,7 @@ import {
   type Score,
   scoreSchema,
 } from "../entities/score.ts"
-import { isImmutableScore } from "../helpers.ts"
+import { shouldDiscoverIssue } from "../helpers.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
 
 const baseWritableScoreSchema = baseScoreSchema.omit({
@@ -183,10 +183,10 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
 
         yield* scoreRepository.save(score)
 
-        if (isImmutableScore(score)) {
+        if (shouldDiscoverIssue(score)) {
           yield* outboxEventWriter
             .write({
-              eventName: "ScoreImmutable",
+              eventName: "IssueDiscoveryRequested",
               aggregateType: "score",
               aggregateId: score.id,
               organizationId: score.organizationId,
@@ -194,6 +194,19 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
                 organizationId: score.organizationId,
                 projectId: score.projectId,
                 scoreId: score.id,
+              },
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
+        } else if (score.issueId !== null) {
+          yield* outboxEventWriter
+            .write({
+              eventName: "IssueRefreshRequested",
+              aggregateType: "score",
+              aggregateId: score.id,
+              organizationId: score.organizationId,
+              payload: {
+                organizationId: score.organizationId,
+                projectId: score.projectId,
                 issueId: score.issueId,
               },
             })

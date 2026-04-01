@@ -22,7 +22,7 @@ The main contracts are:
 
 Rules:
 
-- eligible non-draft failed non-errored scores start `issue-discovery` after commit instead of running embedding/search inline in request or annotation-edit paths
+- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher starts `issue-discovery` from that event
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
 - debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
@@ -112,8 +112,10 @@ Issue discovery should follow the original proposal closely:
 12. match an existing issue or create a new issue
 13. if the final selected candidate is stale, delete its projection object asynchronously
 14. write `scores.issue_id` in Postgres
-15. project the now-immutable score row into ClickHouse
-16. refresh issue name/description asynchronously on debounce
+15. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
+16. after the create-or-assign transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
+17. after the same transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
+18. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`
 
 Execution rules:
 
@@ -121,6 +123,7 @@ Execution rules:
 - `issues:refresh` runs after the configured debounce window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
+- the create-or-assign step must use a conditional `scores.issue_id` claim so only one concurrent owner wins, then update/create the canonical issue row and centroid in the same transaction
 - resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
 
 Concrete v1 mechanics worth carrying forward:

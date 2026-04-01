@@ -152,6 +152,20 @@ export const ScoreRepositoryLive = Layer.effect(
           )
         }),
 
+      assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
+        sqlClient
+          .query((db) =>
+            db
+              .update(scores)
+              .set({
+                issueId,
+                updatedAt,
+              })
+              .where(and(eq(scores.id, scoreId), isNull(scores.issueId)))
+              .returning({ id: scores.id }),
+          )
+          .pipe(Effect.map((rows) => rows.length > 0)),
+
       delete: (id: ScoreId) => sqlClient.query((db) => db.delete(scores).where(eq(scores.id, id))),
 
       listByProjectId: ({

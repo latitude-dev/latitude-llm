@@ -1,4 +1,4 @@
-import { ScoreRepository } from "@domain/scores"
+import { type Score, ScoreRepository } from "@domain/scores"
 import type { RepositoryError } from "@domain/shared"
 import { ScoreId } from "@domain/shared"
 import { Effect } from "effect"
@@ -58,5 +58,5 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
       return yield* new PassedScoreNotEligibleForDiscoveryError({ scoreId: input.scoreId })
     }
 
-    return true as const
-  }) as Effect.Effect<true, CheckEligibilityError | RepositoryError>
+    return score
+  }) as Effect.Effect<Score, CheckEligibilityError | RepositoryError>

@@ -9,7 +9,7 @@ Notes from a design conversation (2026-03-26) about how domain events, the outbo
 - **Two ways** messages can reach the `domain-events` BullMQ topic today:
   1. **Outbox**: writers use `OutboxWriter` → `latitude.outbox_events` → `createPollingOutboxConsumer` → `createEventsPublisher` → `domain-events` / `dispatch`.
   2. **Direct**: high-volume paths (e.g. span ingestion after ClickHouse write) call `EventsPublisher.publish` → same `domain-events` / `dispatch` without an outbox row.
-- **`apps/workers/src/workers/domain-events.ts`** subscribes to `domain-events`, validates `EventEnvelopeSchema`, and **dispatches** by event name: mostly `QueuePublisher.publish` to other topics or `WorkflowStarterShape.start` (e.g. `ScoreFinalized` → Temporal + `issues:refresh`).
+- **`apps/workers/src/workers/domain-events.ts`** subscribes to `domain-events`, validates `EventEnvelopeSchema`, and **dispatches** by event name: mostly `QueuePublisher.publish` to other topics or `WorkflowStarterShape.start` (e.g. `IssueDiscoveryRequested` → Temporal, `IssueRefreshRequested` → `issues:refresh`).
 - **Non–domain-event queues** exist for concrete work: `span-ingestion`, `magic-link-email`, `user-deletion`, `api-keys`, `dataset-export`, etc. Ingest uses `QueuePublisher` directly to `span-ingestion` (`ingestSpansUseCase`).
 
 This duplicates a mental model: “domain event” can mean an outbox row *or* a direct enqueue to the same dispatcher topic.

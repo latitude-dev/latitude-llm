@@ -28,11 +28,15 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
   }
-  ScoreImmutable: {
+  IssueDiscoveryRequested: {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
-    readonly issueId: string | null
+  }
+  IssueRefreshRequested: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
   }
   OrganizationCreated: {
     readonly organizationId: string

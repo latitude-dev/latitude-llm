@@ -1,8 +1,10 @@
+import { queryClickhouse } from "@platform/db-clickhouse"
 import { eq } from "@platform/db-postgres"
 import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { API_TEST_ANCHOR_TRACE_ID } from "../test-utils/api-test-trace-repository.ts"
 import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
@@ -16,12 +18,30 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
   })
 }
 
+const queryAnalyticsScores = (clickhouse: ApiTestContext["clickhouse"], organizationId: string, scoreId: string) =>
+  Effect.runPromise(
+    queryClickhouse<{ id: string; source_id: string }>(
+      clickhouse,
+      `SELECT id, source_id
+       FROM scores
+       WHERE organization_id = {organizationId:String}
+         AND id = {scoreId:FixedString(24)}`,
+      { organizationId, scoreId },
+    ),
+  ).then((rows) =>
+    rows.map((row) => ({
+      ...row,
+      source_id: row.source_id.replace(/\0+$/u, ""),
+    })),
+  )
+
 describe("Scores Routes Integration", () => {
   setupTestApi()
 
-  it<ApiTestContext>("creates an instrumented custom score and queues publication when the score is immutable", async ({
+  it<ApiTestContext>("creates an instrumented custom score and syncs analytics immediately when the score is immutable", async ({
     app,
     database,
+    clickhouse,
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "cccccccccccccccccccccccc"
@@ -76,13 +96,17 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreImmutable")
+    expect(publicationRequests).toHaveLength(0)
+
+    const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
+    expect(analyticsRows).toHaveLength(1)
+    expect(analyticsRows[0]?.source_id).toBe("api-source")
   })
 
-  it<ApiTestContext>("creates an evaluation score through the shared scores endpoint when `_evaluation` is true", async ({
+  it<ApiTestContext>("creates an evaluation score through the shared scores endpoint and syncs analytics when `_evaluation` is true", async ({
     app,
     database,
+    clickhouse,
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
@@ -138,11 +162,14 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreImmutable")
+    expect(publicationRequests).toHaveLength(0)
+
+    const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
+    expect(analyticsRows).toHaveLength(1)
+    expect(analyticsRows[0]?.source_id).toBe(evaluationId)
   })
 
-  it<ApiTestContext>("creates an uninstrumented custom score without queueing publication for failed non-errored results", async ({
+  it<ApiTestContext>("creates an uninstrumented custom score and requests issue discovery for failed non-errored results", async ({
     app,
     database,
   }) => {
@@ -190,7 +217,8 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(0)
+    expect(publicationRequests).toHaveLength(1)
+    expect(publicationRequests[0]?.eventName).toBe("IssueDiscoveryRequested")
   })
 
   it<ApiTestContext>("rejects invalid score lifecycle payloads", async ({ app, database }) => {

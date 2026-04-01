@@ -1,5 +1,12 @@
 import { AI, type AICredentialError, type AIError, formatGenAIMessage } from "@domain/ai"
-import { type AnnotationScore, type AnnotationScoreMetadata, isImmutableScore, ScoreRepository } from "@domain/scores"
+import {
+  type AnnotationScore,
+  type AnnotationScoreMetadata,
+  isImmutableScore,
+  ScoreRepository,
+  shouldDiscoverIssue,
+  syncScoreAnalyticsUseCase,
+} from "@domain/scores"
 import {
   BadRequestError,
   OrganizationId,
@@ -183,14 +190,14 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
       updatedAt: new Date(),
     }
 
-    return yield* sqlClient.transaction(
+    const persistedScore = yield* sqlClient.transaction(
       Effect.gen(function* () {
         yield* scoreRepository.save(publishedScore as AnnotationScore)
 
-        if (isImmutableScore(publishedScore as AnnotationScore)) {
+        if (shouldDiscoverIssue(publishedScore as AnnotationScore)) {
           yield* outboxEventWriter
             .write({
-              eventName: "ScoreImmutable",
+              eventName: "IssueDiscoveryRequested",
               aggregateId: publishedScore.id,
               aggregateType: "score",
               organizationId: publishedScore.organizationId,
@@ -198,6 +205,19 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
                 organizationId: publishedScore.organizationId,
                 projectId: publishedScore.projectId,
                 scoreId: publishedScore.id,
+              },
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
+        } else if (publishedScore.issueId !== null) {
+          yield* outboxEventWriter
+            .write({
+              eventName: "IssueRefreshRequested",
+              aggregateId: publishedScore.id,
+              aggregateType: "score",
+              organizationId: publishedScore.organizationId,
+              payload: {
+                organizationId: publishedScore.organizationId,
+                projectId: publishedScore.projectId,
                 issueId: publishedScore.issueId,
               },
             })
@@ -207,4 +227,10 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
         return publishedScore as AnnotationScore
       }),
     )
+
+    if (isImmutableScore(persistedScore)) {
+      yield* syncScoreAnalyticsUseCase({ scoreId: persistedScore.id })
+    }
+
+    return persistedScore
   })

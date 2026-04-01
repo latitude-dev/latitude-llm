@@ -11,7 +11,6 @@ import { createLogger, initializeObservability, shutdownObservability } from "@r
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
-import { createAnalyticScoresWorker } from "./workers/analytic-scores.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
@@ -88,7 +87,6 @@ const bootstrap = async () => {
     createDatasetExportWorker(ctx)
     createLiveTracesWorker(ctx)
     createIssuesWorker(ctx)
-    createAnalyticScoresWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createLiveAnnotationQueuesWorker(ctx)

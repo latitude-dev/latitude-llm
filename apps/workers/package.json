@@ -18,7 +18,6 @@
     "@domain/email": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/queue": "workspace:*",
-    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@domain/users": "workspace:*",

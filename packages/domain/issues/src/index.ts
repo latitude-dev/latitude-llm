@@ -52,8 +52,13 @@ export {
   type IssuesCollectionProperties,
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
+export { IssueRepository } from "./ports/issue-repository.ts"
 export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
-export { type AssignmentResult, createOrAssignIssueUseCase } from "./use-cases/create-or-assign-issue.ts"
+export {
+  type AssignmentResult,
+  type CreateOrAssignIssueInput,
+  createOrAssignIssueUseCase,
+} from "./use-cases/create-or-assign-issue.ts"
 export {
   type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
@@ -69,4 +74,4 @@ export {
   type RetrievalResult,
   rerankIssueCandidatesUseCase,
 } from "./use-cases/rerank-issue-candidates.ts"
-export { syncProjectionsUseCase } from "./use-cases/sync-projections.ts"
+export { type SyncIssueProjectionsInput, syncIssueProjectionsUseCase } from "./use-cases/sync-projections.ts"

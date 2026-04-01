@@ -2,6 +2,7 @@ import {
   type AssignmentResult,
   type CheckEligibilityError,
   type CheckEligibilityInput,
+  type CreateOrAssignIssueInput,
   checkEligibilityUseCase,
   createOrAssignIssueUseCase,
   DraftScoreNotEligibleForDiscoveryError,
@@ -21,13 +22,17 @@ import {
   ScoreDiscoveryOrganizationMismatchError,
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
-  syncProjectionsUseCase,
+  type SyncIssueProjectionsInput,
+  syncIssueProjectionsUseCase,
 } from "@domain/issues"
+import { syncScoreAnalyticsUseCase } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
-import { ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import {
+  getClickhouseClient,
   getIssueDiscoveryAiLayerEffect,
   getIssueProjectionRepositoryLayerEffect,
   getPostgresClient,
@@ -50,7 +55,7 @@ const isEligibilityError = (error: unknown): error is CheckEligibilityError => {
   return eligibilityErrorConstructors.some((Ctor) => error instanceof Ctor)
 }
 
-export const checkEligibility = (input: CheckEligibilityInput): Promise<true> =>
+export const checkEligibility = (input: CheckEligibilityInput) =>
   Effect.runPromise(
     checkEligibilityUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
@@ -99,12 +104,38 @@ export const rerankIssueCandidates = (input: RerankIssueCandidatesInput): Promis
     ),
   )
 
-export const createOrAssignIssue = (input: {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly scoreId: string
-  readonly matchedIssueId: string | null
-}): Promise<AssignmentResult> => Effect.runPromise(createOrAssignIssueUseCase(input))
+export const createOrAssignIssue = (input: CreateOrAssignIssueInput): Promise<AssignmentResult> =>
+  Effect.runPromise(
+    createOrAssignIssueUseCase(input).pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
+      ),
+    ),
+  )
 
-export const syncProjections = (input: { readonly organizationId: string; readonly issueId: string }): Promise<void> =>
-  Effect.runPromise(syncProjectionsUseCase(input))
+export interface SyncScoreAnalyticsActivityInput {
+  readonly organizationId: string
+  readonly scoreId: string
+}
+
+export const syncScoreAnalytics = (input: SyncScoreAnalyticsActivityInput): Promise<void> =>
+  Effect.runPromise(
+    syncScoreAnalyticsUseCase({ scoreId: input.scoreId }).pipe(
+      withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+    ),
+  )
+
+export const syncIssueProjections = (input: SyncIssueProjectionsInput): Promise<void> =>
+  Effect.runPromise(
+    getIssueProjectionRepositoryLayerEffect().pipe(
+      Effect.flatMap((issueProjectionRepositoryLayer) =>
+        syncIssueProjectionsUseCase(input).pipe(
+          withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+          Effect.provide(issueProjectionRepositoryLayer),
+        ),
+      ),
+    ),
+  )
