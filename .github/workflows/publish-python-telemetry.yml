@@ -1,0 +1,91 @@
+name: Publish Python Telemetry
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - packages/telemetry/python/**
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Get current version
+        id: get_version
+        run: |
+          cd packages/telemetry/python
+          CURRENT_VERSION=$(python -c "
+          import re
+          with open('pyproject.toml') as f:
+              match = re.search(r'version\s*=\s*\"(.+?)\"', f.read())
+              print(match.group(1) if match else '0.0.0')
+          ")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check version on PyPI
+        id: check_version
+        run: |
+          CURRENT_VERSION="${{ steps.get_version.outputs.version }}"
+          if curl -s "https://pypi.org/pypi/latitude-telemetry/$CURRENT_VERSION/json" | grep -q '"version"'; then
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv venv
+          uv sync --all-extras --all-groups
+
+      - name: Run tests
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv run pytest tests/telemetry/ -x
+
+      - name: Build package
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv build
+
+      - name: Publish to PyPI
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: |
+          cd packages/telemetry/python
+          uv publish --username __token__ --password ${{ secrets.PYPI_TOKEN }}
+
+      - name: Create GitHub Release
+        if: steps.check_version.outputs.should_publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: python-telemetry-${{ steps.get_version.outputs.version }}
+          name: Python Telemetry v${{ steps.get_version.outputs.version }}
+          body: |
+            Published `latitude-telemetry==${{ steps.get_version.outputs.version }}` to PyPI.
+
+            ```sh
+            pip install latitude-telemetry==${{ steps.get_version.outputs.version }}
+            ```
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'a') || contains(steps.get_version.outputs.version, 'b') || contains(steps.get_version.outputs.version, 'rc') }}
