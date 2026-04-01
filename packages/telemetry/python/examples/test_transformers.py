@@ -42,8 +42,5 @@ def test_transformers_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Hugging Face Transformers instrumentation...")
-    print("Note: This will download the model on first run")
-    result = test_transformers_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/transformers")
+    test_transformers_completion()
+    telemetry.flush()

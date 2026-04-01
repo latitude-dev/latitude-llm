@@ -53,7 +53,5 @@ def test_azure_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Azure OpenAI instrumentation...")
-    result = test_azure_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/azure-openai")
+    test_azure_completion()
+    telemetry.flush()

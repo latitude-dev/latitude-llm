@@ -55,7 +55,5 @@ def test_watsonx_completion():
 
 
 if __name__ == "__main__":
-    print("Testing IBM watsonx.ai instrumentation...")
-    result = test_watsonx_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/watsonx")
+    test_watsonx_completion()
+    telemetry.flush()

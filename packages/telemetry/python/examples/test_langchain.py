@@ -44,7 +44,5 @@ def test_langchain_completion():
 
 
 if __name__ == "__main__":
-    print("Testing LangChain instrumentation...")
-    result = test_langchain_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/langchain")
+    test_langchain_completion()
+    telemetry.flush()

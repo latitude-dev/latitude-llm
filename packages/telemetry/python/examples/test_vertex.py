@@ -45,7 +45,5 @@ def test_vertex_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Vertex AI instrumentation...")
-    result = test_vertex_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/vertex")
+    test_vertex_completion()
+    telemetry.flush()

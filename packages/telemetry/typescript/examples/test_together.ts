@@ -19,33 +19,28 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testTogetherCompletion() {
+async function main() {
   const client = new Together()
 
-  const response = await client.chat.completions.create({
-    model: 'meta-llama/Llama-3.2-3B-Instruct-Turbo',
-    messages: [
-      {
-        role: 'user',
-        content: "Say 'Hello from Together!' in exactly 5 words.",
-      },
-    ],
-    max_tokens: 50,
-  })
-
-  return response.choices[0]?.message?.content
-}
-
-async function main() {
-  console.log('Testing Together AI instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'together'], sessionId: 'example' },
-    testTogetherCompletion,
+    async () => {
+      const response = await client.chat.completions.create({
+        model: 'meta-llama/Llama-3.2-3B-Instruct-Turbo',
+        messages: [
+          {
+            role: 'user',
+            content: "Say 'Hello from Together!' in exactly 5 words.",
+          },
+        ],
+        max_tokens: 50,
+      })
+
+      return response.choices[0]?.message?.content
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/together')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

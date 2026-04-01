@@ -44,7 +44,5 @@ def test_together_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Together AI instrumentation...")
-    result = test_together_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/together")
+    test_together_completion()
+    telemetry.flush()

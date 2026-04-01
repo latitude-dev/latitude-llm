@@ -43,7 +43,5 @@ def test_aleph_alpha_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Aleph Alpha instrumentation...")
-    result = test_aleph_alpha_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/aleph-alpha")
+    test_aleph_alpha_completion()
+    telemetry.flush()

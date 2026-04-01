@@ -44,7 +44,5 @@ def test_groq_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Groq instrumentation...")
-    result = test_groq_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/groq")
+    test_groq_completion()
+    telemetry.flush()

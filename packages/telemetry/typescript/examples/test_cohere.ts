@@ -19,30 +19,25 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testCohereCompletion() {
+async function main() {
   const client = new CohereClient({
     token: process.env.COHERE_API_KEY,
   })
 
-  const response = await client.chat({
-    model: 'command-r',
-    message: "Say 'Hello from Cohere!' in exactly 5 words.",
-    maxTokens: 50,
-  })
-
-  return response.text
-}
-
-async function main() {
-  console.log('Testing Cohere instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'cohere'], sessionId: 'example' },
-    testCohereCompletion,
+    async () => {
+      const response = await client.chat({
+        model: 'command-r',
+        message: "Say 'Hello from Cohere!' in exactly 5 words.",
+        maxTokens: 50,
+      })
+
+      return response.text
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/cohere')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

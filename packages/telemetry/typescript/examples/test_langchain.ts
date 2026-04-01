@@ -23,31 +23,25 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testLangchainCompletion() {
+async function main() {
   const model = new ChatOpenAI({
     modelName: 'gpt-4o-mini',
     maxTokens: 50,
   })
 
-  const messages = [
-    new HumanMessage("Say 'Hello from LangChain!' in exactly 5 words."),
-  ]
-
-  const response = await model.invoke(messages)
-
-  return response.content
-}
-
-async function main() {
-  console.log('Testing LangChain instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'langchain'], sessionId: 'example' },
-    testLangchainCompletion,
+    async () => {
+      const messages = [
+        new HumanMessage("Say 'Hello from LangChain!' in exactly 5 words."),
+      ]
+
+      const response = await model.invoke(messages)
+      return response.content
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/langchain')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

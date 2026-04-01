@@ -55,7 +55,5 @@ def test_crewai_crew():
 
 
 if __name__ == "__main__":
-    print("Testing CrewAI instrumentation...")
-    result = test_crewai_crew()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/crewai")
+    test_crewai_crew()
+    telemetry.flush()

@@ -47,7 +47,5 @@ def test_mistral_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Mistral instrumentation...")
-    result = test_mistral_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/mistral")
+    test_mistral_completion()
+    telemetry.flush()

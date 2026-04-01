@@ -60,8 +60,5 @@ def test_sagemaker_completion():
 
 
 if __name__ == "__main__":
-    print("Testing AWS SageMaker instrumentation...")
-    print("Note: Requires a deployed SageMaker endpoint")
-    result = test_sagemaker_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/sagemaker")
+    test_sagemaker_completion()
+    telemetry.flush()

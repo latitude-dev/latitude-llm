@@ -19,34 +19,29 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testAnthropicCompletion() {
+async function main() {
   const client = new Anthropic()
 
-  const response = await client.messages.create({
-    model: 'claude-3-5-haiku-latest',
-    max_tokens: 50,
-    messages: [
-      {
-        role: 'user',
-        content: "Say 'Hello from Anthropic!' in exactly 5 words.",
-      },
-    ],
-  })
-
-  const content = response.content[0]
-  return content?.type === 'text' ? content.text : ''
-}
-
-async function main() {
-  console.log('Testing Anthropic instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'anthropic'], sessionId: 'example' },
-    testAnthropicCompletion,
+    async () => {
+      const response = await client.messages.create({
+        model: 'claude-3-5-haiku-latest',
+        max_tokens: 50,
+        messages: [
+          {
+            role: 'user',
+            content: "Say 'Hello from Anthropic!' in exactly 5 words.",
+          },
+        ],
+      })
+
+      const content = response.content[0]
+      return content?.type === 'text' ? content.text : ''
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/anthropic')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

@@ -43,7 +43,5 @@ def test_replicate_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Replicate instrumentation...")
-    result = test_replicate_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/replicate")
+    test_replicate_completion()
+    telemetry.flush()

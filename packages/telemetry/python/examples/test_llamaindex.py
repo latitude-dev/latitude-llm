@@ -38,7 +38,5 @@ def test_llamaindex_completion():
 
 
 if __name__ == "__main__":
-    print("Testing LlamaIndex instrumentation...")
-    result = test_llamaindex_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/llamaindex")
+    test_llamaindex_completion()
+    telemetry.flush()

@@ -42,7 +42,5 @@ def test_gemini_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Gemini instrumentation...")
-    result = test_gemini_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/gemini")
+    test_gemini_completion()
+    telemetry.flush()

@@ -50,7 +50,5 @@ def test_haystack_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Haystack instrumentation...")
-    result = test_haystack_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/haystack")
+    test_haystack_completion()
+    telemetry.flush()

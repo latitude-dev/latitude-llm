@@ -369,44 +369,20 @@ async function runFinalCompletion(): Promise<string> {
   )
 }
 
-async function testComplexMultiTurnConversation(): Promise<string> {
-  console.log('  Turn 1: Initial analysis request with image and file...')
-  await runFirstCompletion()
-
-  console.log(
-    '  Turn 2: Executing tools (CSV parsing success, weather API failure)...',
-  )
-  await runToolExecutions()
-
-  console.log('  Turn 3: Response with tool results...')
-  await runSecondCompletion()
-
-  console.log('  Turn 4: Multi-tool request (web search, calculator, chart)...')
-  await runMultiToolCompletion()
-
-  console.log('  Turn 5: Executing multiple tools...')
-  await runMultipleToolExecutions()
-
-  console.log('  Turn 6: Final summary...')
-  const finalOutput = await runFinalCompletion()
-
-  return finalOutput
-}
-
 async function main() {
-  console.log(
-    'Testing Manual instrumentation with complex multi-turn conversation...',
-  )
-  console.log('\n')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'manual'], sessionId: 'example' },
-    testComplexMultiTurnConversation,
+    async () => {
+      await runFirstCompletion()
+      await runToolExecutions()
+      await runSecondCompletion()
+      await runMultiToolCompletion()
+      await runMultipleToolExecutions()
+      await runFinalCompletion()
+    },
   )
 
-  console.log('\n')
-  console.log(`Final response: ${result.substring(0, 100)}...`)
-  console.log('Check Latitude dashboard for manual trace')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

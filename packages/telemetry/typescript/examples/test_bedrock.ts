@@ -24,45 +24,40 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testBedrockCompletion() {
+async function main() {
   const client = new BedrockRuntimeClient({
     region: process.env.AWS_REGION || 'us-east-1',
   })
 
-  const body = JSON.stringify({
-    anthropic_version: 'bedrock-2023-05-31',
-    max_tokens: 50,
-    messages: [
-      {
-        role: 'user',
-        content: "Say 'Hello from Bedrock!' in exactly 5 words.",
-      },
-    ],
-  })
-
-  const command = new InvokeModelCommand({
-    modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
-    body: body,
-    contentType: 'application/json',
-    accept: 'application/json',
-  })
-
-  const response = await client.send(command)
-  const responseBody = JSON.parse(new TextDecoder().decode(response.body))
-
-  return responseBody.content[0].text
-}
-
-async function main() {
-  console.log('Testing AWS Bedrock instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'bedrock'], sessionId: 'example' },
-    testBedrockCompletion,
+    async () => {
+      const body = JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: 50,
+        messages: [
+          {
+            role: 'user',
+            content: "Say 'Hello from Bedrock!' in exactly 5 words.",
+          },
+        ],
+      })
+
+      const command = new InvokeModelCommand({
+        modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
+        body: body,
+        contentType: 'application/json',
+        accept: 'application/json',
+      })
+
+      const response = await client.send(command)
+      const responseBody = JSON.parse(new TextDecoder().decode(response.body))
+
+      return responseBody.content[0].text
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/bedrock')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

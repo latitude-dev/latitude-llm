@@ -70,18 +70,11 @@ def test_openai_streaming_completion():
         if delta is None:
             continue
 
-        print(delta, end="", flush=True)
         chunks.append(delta)
 
-    print()
     return "".join(chunks)
 
 
 if __name__ == "__main__":
-    print("Testing OpenAI instrumentation...")
-    result = test_openai_completion()
-    print(f"Response: {result}")
-    print("Testing OpenAI streaming instrumentation...")
-    stream_result = test_openai_streaming_completion()
-    print(f"Streaming response: {stream_result}")
-    print("Check Latitude dashboard for trace at path: test/openai")
+    test_openai_completion()
+    telemetry.flush()

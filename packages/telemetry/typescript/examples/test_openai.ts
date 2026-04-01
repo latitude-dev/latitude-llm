@@ -19,66 +19,51 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testOpenAICompletion() {
-  const client = new OpenAI()
-
-  const response = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'user', content: "Say 'Hello from OpenAI!' in exactly 5 words." },
-    ],
-    max_tokens: 50,
-  })
-
-  return response.choices[0]?.message?.content
-}
-
-async function testOpenAIStreamingCompletion() {
-  const client = new OpenAI()
-  const stream = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'user',
-        content: "Say 'Hello from OpenAI stream!' in exactly 6 words.",
-      },
-    ],
-    max_tokens: 50,
-    stream: true,
-    stream_options: { include_usage: true },
-  })
-
-  const chunks: string[] = []
-  for await (const chunk of stream) {
-    const delta = chunk.choices[0]?.delta?.content
-    if (!delta) continue
-
-    process.stdout.write(delta)
-    chunks.push(delta)
-  }
-
-  process.stdout.write('\n')
-  return chunks.join('')
-}
-
 async function main() {
-  console.log('Testing OpenAI instrumentation...')
+  const client = new OpenAI()
 
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'openai'], sessionId: 'example' },
-    testOpenAICompletion,
+    async () => {
+      const response = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'user', content: "Say 'Hello from OpenAI!' in exactly 5 words." },
+        ],
+        max_tokens: 50,
+      })
+
+      return response.choices[0]?.message?.content
+    },
   )
 
-  console.log(`Response: ${result}`)
-
-  console.log('Testing OpenAI streaming instrumentation...')
-  const streamResult = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'openai', 'stream'], sessionId: 'example' },
-    testOpenAIStreamingCompletion,
+    async () => {
+      const stream = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: "Say 'Hello from OpenAI stream!' in exactly 6 words.",
+          },
+        ],
+        max_tokens: 50,
+        stream: true,
+        stream_options: { include_usage: true },
+      })
+
+      const chunks: string[] = []
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content
+        if (delta) chunks.push(delta)
+      }
+
+      return chunks.join('')
+    },
   )
 
-  console.log(`Streaming response: ${streamResult}`)
-  console.log('Check Latitude dashboard for trace at path: test/openai')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

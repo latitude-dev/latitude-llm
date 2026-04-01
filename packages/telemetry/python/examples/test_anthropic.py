@@ -44,7 +44,5 @@ def test_anthropic_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Anthropic instrumentation...")
-    result = test_anthropic_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/anthropic")
+    test_anthropic_completion()
+    telemetry.flush()

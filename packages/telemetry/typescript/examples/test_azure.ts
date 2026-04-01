@@ -22,7 +22,7 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testAzureCompletion() {
+async function main() {
   const client = new AzureOpenAI({
     apiKey: process.env.AZURE_OPENAI_API_KEY,
     apiVersion: '2024-02-01',
@@ -31,27 +31,22 @@ async function testAzureCompletion() {
 
   const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini'
 
-  const response = await client.chat.completions.create({
-    model: deploymentName,
-    messages: [
-      { role: 'user', content: "Say 'Hello from Azure!' in exactly 5 words." },
-    ],
-    max_tokens: 50,
-  })
-
-  return response.choices[0]?.message?.content
-}
-
-async function main() {
-  console.log('Testing Azure OpenAI instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'azure-openai'], sessionId: 'example' },
-    testAzureCompletion,
+    async () => {
+      const response = await client.chat.completions.create({
+        model: deploymentName,
+        messages: [
+          { role: 'user', content: "Say 'Hello from Azure!' in exactly 5 words." },
+        ],
+        max_tokens: 50,
+      })
+
+      return response.choices[0]?.message?.content
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/azure-openai')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

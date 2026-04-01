@@ -43,8 +43,5 @@ def test_ollama_completion():
 
 
 if __name__ == "__main__":
-    print("Testing Ollama instrumentation...")
-    print("Make sure Ollama is running locally with 'ollama serve'")
-    result = test_ollama_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/ollama")
+    test_ollama_completion()
+    telemetry.flush()

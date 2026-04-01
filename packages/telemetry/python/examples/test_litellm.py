@@ -43,7 +43,5 @@ def test_litellm_completion():
 
 
 if __name__ == "__main__":
-    print("Testing LiteLLM instrumentation...")
-    result = test_litellm_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/litellm")
+    test_litellm_completion()
+    telemetry.flush()

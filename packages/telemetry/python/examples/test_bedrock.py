@@ -54,7 +54,5 @@ def test_bedrock_completion():
 
 
 if __name__ == "__main__":
-    print("Testing AWS Bedrock instrumentation...")
-    result = test_bedrock_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/bedrock")
+    test_bedrock_completion()
+    telemetry.flush()

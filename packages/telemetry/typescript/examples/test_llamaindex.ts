@@ -19,29 +19,24 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testLlamaIndexCompletion() {
+async function main() {
   const llm = new OpenAI({
     model: 'gpt-4o-mini',
     maxTokens: 50,
   })
 
-  const response = await llm.complete({
-    prompt: "Say 'Hello from LlamaIndex!' in exactly 5 words.",
-  })
-
-  return response.text
-}
-
-async function main() {
-  console.log('Testing LlamaIndex instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'llamaindex'], sessionId: 'example' },
-    testLlamaIndexCompletion,
+    async () => {
+      const response = await llm.complete({
+        prompt: "Say 'Hello from LlamaIndex!' in exactly 5 words.",
+      })
+
+      return response.text
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/llamaindex')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

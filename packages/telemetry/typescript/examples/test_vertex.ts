@@ -20,7 +20,7 @@ const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.e
   },
 })
 
-async function testVertexCompletion() {
+async function main() {
   const vertexAI = new VertexAI({
     project: process.env.GOOGLE_CLOUD_PROJECT!,
     location: 'us-central1',
@@ -30,23 +30,18 @@ async function testVertexCompletion() {
     model: 'gemini-1.5-flash',
   })
 
-  const response = await model.generateContent(
-    "Say 'Hello from Vertex!' in exactly 5 words.",
-  )
-
-  return response.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
-}
-
-async function main() {
-  console.log('Testing Vertex AI instrumentation...')
-
-  const result = await telemetry.capture(
+  await telemetry.capture(
     { tags: ['test', 'vertex'], sessionId: 'example' },
-    testVertexCompletion,
+    async () => {
+      const response = await model.generateContent(
+        "Say 'Hello from Vertex!' in exactly 5 words.",
+      )
+
+      return response.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    },
   )
 
-  console.log(`Response: ${result}`)
-  console.log('Check Latitude dashboard for trace at path: test/vertex')
+  await telemetry.flush()
 }
 
 main().catch(console.error)

@@ -51,7 +51,5 @@ def test_dspy_completion():
 
 
 if __name__ == "__main__":
-    print("Testing DSPy instrumentation...")
-    result = test_dspy_completion()
-    print(f"Response: {result}")
-    print("Check Latitude dashboard for trace at path: test/dspy")
+    test_dspy_completion()
+    telemetry.flush()
