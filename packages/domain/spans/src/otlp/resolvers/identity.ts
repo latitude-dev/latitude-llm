@@ -63,9 +63,9 @@ export const sessionIdCandidates = [
 ]
 
 export const userIdCandidates = [
-  fromString("langfuse.user.id"), // Langfuse
   fromString("user.id"), // OpenInference / Arize Phoenix
+  fromString("gen_ai.request.user"), // OpenLIT (mirrors OpenAI API user param)
   fromString("traceloop.association.properties.user_id"), // Traceloop / OpenLLMetry
   fromString("langsmith.metadata.user_id"), // LangSmith
-  fromString("gen_ai.request.user"), // OpenLIT (mirrors OpenAI API user param)
+  fromString("langfuse.user.id"), // Langfuse
 ]

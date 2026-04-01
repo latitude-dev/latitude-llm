@@ -2,6 +2,7 @@ import type { OtlpKeyValue } from "../types.ts"
 import { type Candidate, fromString, fromStringArray } from "./utils.ts"
 
 export const tagsCandidates: Candidate<string[]>[] = [
+  fromStringArray("latitude.tags"), // Latitude
   fromStringArray("langfuse.trace.tags"), // Langfuse
   fromStringArray("braintrust.tags"), // Braintrust
   fromStringArray("tag.tags"), // OpenInference / Arize Phoenix
@@ -65,6 +66,7 @@ function fromDotFlattened(prefix: string): Candidate<Record<string, string>> {
 
 export function resolveMetadata(attrs: readonly OtlpKeyValue[]): Record<string, string> {
   const candidates: Candidate<Record<string, string>>[] = [
+    fromJsonString("latitude.metadata"), // Latitude (JSON string)
     fromJsonString("braintrust.metadata"), // Braintrust (JSON string)
     fromJsonString("metadata"), // OpenInference / HoneyHive (JSON string)
     fromDotFlattened("langfuse.trace.metadata"), // Langfuse (trace-level, dot-flattened)
