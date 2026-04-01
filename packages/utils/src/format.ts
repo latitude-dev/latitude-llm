@@ -33,12 +33,17 @@ export function formatCount(count: number): string {
 /**
  * Format a dollar amount for display.
  *
- * Examples: `0` -> `"$0"`, `2.5` -> `"$2.50"`, `0.003` -> `"$0.003"`
+ * Examples: `0` -> `"$0"`, `2.5` -> `"$2.50"`, `0.003` -> `"$0.003"`, `0.0000075` -> `"$0.0000075"`
+ *
+ * Uses enough decimal places to always show a non-zero digit for positive values.
  */
 export function formatPrice(price: number): string {
   if (price === 0) return "$0"
-  if (price < 0.01) return `$${price.toFixed(3)}`
-  return `$${price.toFixed(2)}`
+  if (price >= 0.01) return `$${price.toFixed(2)}`
+  // Find the first non-zero decimal digit and show one more
+  const digits = Math.max(3, -Math.floor(Math.log10(price)) + 1)
+  const s = price.toFixed(digits).replace(/0+$/, "").replace(/\.$/, "")
+  return `$${s}`
 }
 
 /**

@@ -299,6 +299,10 @@ export class LatitudeTelemetry {
    * Wrap a block of code with trace-wide context attributes.
    * Baggage entries (tags, metadata, sessionId, userId) are propagated
    * to all spans created within the callback via BaggageSpanProcessor.
+   *
+   * If there is no active span, a root span is created so all child spans
+   * are grouped under a single trace. If a span is already active, only
+   * baggage is set without creating an extra wrapper span.
    */
   async capture<T>(options: CaptureOptions, fn: (ctx: TelemetryContext) => T | Promise<T>): Promise<T> {
     const baggageEntries: Record<string, otel.BaggageEntry> = {}
@@ -319,8 +323,35 @@ export class LatitudeTelemetry {
       baggageEntries[ATTRIBUTES.userId] = { value: options.userId }
     }
 
-    const captureContext = propagation.setBaggage(otel.ROOT_CONTEXT, propagation.createBaggage(baggageEntries))
+    const baggage = propagation.createBaggage(baggageEntries)
+    const activeSpan = otel.trace.getSpan(context.active())
 
-    return await context.with(captureContext, async () => await fn(captureContext))
+    if (activeSpan) {
+      const ctx = propagation.setBaggage(context.active(), baggage)
+      return await context.with(ctx, async () => await fn(ctx))
+    }
+
+    const rootContext = propagation.setBaggage(otel.ROOT_CONTEXT, baggage)
+    return await this.tracer.startActiveSpan(
+      "latitude.trace",
+      { kind: otel.SpanKind.INTERNAL },
+      rootContext,
+      async (span) => {
+        try {
+          const result = await fn(context.active())
+          span.setStatus({ code: otel.SpanStatusCode.OK })
+          return result
+        } catch (error) {
+          span.setStatus({
+            code: otel.SpanStatusCode.ERROR,
+            message: error instanceof Error ? error.message : String(error),
+          })
+          span.recordException(error instanceof Error ? error : new Error(String(error)))
+          throw error
+        } finally {
+          span.end()
+        }
+      },
+    )
   }
 }
