@@ -1,0 +1,57 @@
+"""
+Test Azure OpenAI instrumentation against local Latitude instance.
+
+Required env vars:
+- LATITUDE_API_KEY
+- AZURE_OPENAI_API_KEY
+- AZURE_OPENAI_ENDPOINT
+
+Install: uv add openai
+"""
+
+import os
+
+from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+
+# Initialize telemetry BEFORE importing openai so instrumentation can patch it
+telemetry = Telemetry(
+    os.environ["LATITUDE_API_KEY"],
+    os.environ["LATITUDE_PROJECT_SLUG"],
+    TelemetryOptions(
+        instrumentors=[Instrumentors.OpenAI],
+        disable_batch=True,
+    ),
+)
+
+# Import after telemetry initialization
+from openai import AzureOpenAI
+
+
+@telemetry.capture(
+    tags=["test"],
+    session_id="example",
+)
+def test_azure_completion():
+    client = AzureOpenAI(
+        api_key=os.environ["AZURE_OPENAI_API_KEY"],
+        api_version="2024-02-01",
+        azure_endpoint=os.environ["AZURE_OPENAI_ENDPOINT"],
+    )
+
+    # Replace with your deployment name
+    deployment_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT", "gpt-4o")
+
+    response = client.chat.completions.create(
+        model=deployment_name,
+        messages=[
+            {"role": "user", "content": "Say 'Hello from Azure!' in exactly 5 words."}
+        ],
+        max_tokens=50,
+    )
+
+    return response.choices[0].message.content
+
+
+if __name__ == "__main__":
+    test_azure_completion()
+    telemetry.flush()

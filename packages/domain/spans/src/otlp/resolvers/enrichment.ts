@@ -1,7 +1,28 @@
 import type { OtlpKeyValue } from "../types.ts"
 import { type Candidate, fromString, fromStringArray } from "./utils.ts"
 
+// Parse a JSON-encoded string array (e.g. '["a","b"]' from baggage propagation)
+function fromJsonStringArray(key: string): Candidate<string[]> {
+  return {
+    resolve: (attrs) => {
+      const kv = attrs.find((a) => a.key === key)
+      const v = kv?.value?.stringValue
+      if (!v) return undefined
+      try {
+        const parsed: unknown = JSON.parse(v)
+        if (Array.isArray(parsed) && parsed.every((i) => typeof i === "string")) {
+          return parsed.length > 0 ? (parsed as string[]) : undefined
+        }
+      } catch {
+        // not valid JSON
+      }
+      return undefined
+    },
+  }
+}
+
 export const tagsCandidates: Candidate<string[]>[] = [
+  fromJsonStringArray("latitude.tags"), // Latitude (JSON string via baggage)
   fromStringArray("langfuse.trace.tags"), // Langfuse
   fromStringArray("braintrust.tags"), // Braintrust
   fromStringArray("tag.tags"), // OpenInference / Arize Phoenix
@@ -65,6 +86,7 @@ function fromDotFlattened(prefix: string): Candidate<Record<string, string>> {
 
 export function resolveMetadata(attrs: readonly OtlpKeyValue[]): Record<string, string> {
   const candidates: Candidate<Record<string, string>>[] = [
+    fromJsonString("latitude.metadata"), // Latitude (JSON string)
     fromJsonString("braintrust.metadata"), // Braintrust (JSON string)
     fromJsonString("metadata"), // OpenInference / HoneyHive (JSON string)
     fromDotFlattened("langfuse.trace.metadata"), // Langfuse (trace-level, dot-flattened)

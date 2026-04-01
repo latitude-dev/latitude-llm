@@ -67,4 +67,10 @@ describe("formatPrice", () => {
   it("formats very small prices with 3 decimals", () => {
     expect(formatPrice(0.003)).toBe("$0.003")
   })
+
+  it("shows enough decimals for very small values", () => {
+    expect(formatPrice(0.0000075)).toBe("$0.0000075")
+    expect(formatPrice(0.0001)).toBe("$0.0001")
+    expect(formatPrice(0.0009)).toBe("$0.0009")
+  })
 })

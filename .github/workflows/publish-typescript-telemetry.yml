@@ -1,0 +1,99 @@
+name: Publish TypeScript Telemetry
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - packages/telemetry/typescript/**
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Get package version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./packages/telemetry/typescript/package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check version on npm
+        id: check_version
+        run: |
+          NPM_VERSION=$(npm view @latitude-data/telemetry version 2>/dev/null || echo "0.0.0")
+          if [ "${{ steps.get_version.outputs.version }}" != "$NPM_VERSION" ]; then
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm --filter @latitude-data/telemetry build
+
+      - name: Typecheck
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm --filter @latitude-data/telemetry typecheck
+
+      - name: Lint
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm --filter @latitude-data/telemetry check
+
+      - name: Test
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm --filter @latitude-data/telemetry test
+
+      - name: Publish to npm
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm publish --access public --filter @latitude-data/telemetry --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Extract changelog
+        if: steps.check_version.outputs.should_publish == 'true'
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          awk -v ver="$VERSION" '
+            /^## \[/ { if (found) exit; if (index($0, "[" ver "]")) { found=1; next } }
+            found { print }
+          ' packages/telemetry/typescript/CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "Package updates and improvements" > release_notes.md
+          fi
+          {
+            echo "body<<EOF"
+            cat release_notes.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: steps.check_version.outputs.should_publish == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: typescript-telemetry-${{ steps.get_version.outputs.version }}
+          name: TypeScript Telemetry v${{ steps.get_version.outputs.version }}
+          body: ${{ steps.changelog.outputs.body }}
+          draft: false
+          prerelease: ${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}

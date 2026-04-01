@@ -52,6 +52,10 @@
     "packages/tsconfig": {
       "entry": [],
       "project": []
+    },
+    "packages/telemetry/typescript": {
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/constants/**/*.ts"]
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],
