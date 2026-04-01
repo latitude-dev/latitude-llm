@@ -27,7 +27,6 @@ class TraceContext:
 class CaptureOptions:
     """Options for capture method — trace-wide context attributes."""
 
-    name: str | None = None
     tags: List[str] | None = None
     metadata: Dict[str, Any] | None = None
     session_id: str | None = None

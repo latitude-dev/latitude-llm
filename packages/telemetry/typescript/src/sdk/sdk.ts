@@ -297,9 +297,8 @@ export class LatitudeTelemetry {
 
   /**
    * Wrap a block of code with trace-wide context attributes.
-   * Creates a root span so all child spans (including auto-instrumented ones)
-   * are grouped under a single trace. Baggage entries (tags, metadata,
-   * sessionId, userId) are propagated to all child spans via BaggageSpanProcessor.
+   * Baggage entries (tags, metadata, sessionId, userId) are propagated
+   * to all spans created within the callback via BaggageSpanProcessor.
    */
   async capture<T>(options: CaptureOptions, fn: (ctx: TelemetryContext) => T | Promise<T>): Promise<T> {
     const baggageEntries: Record<string, otel.BaggageEntry> = {}
@@ -320,28 +319,8 @@ export class LatitudeTelemetry {
       baggageEntries[ATTRIBUTES.userId] = { value: options.userId }
     }
 
-    const baggageContext = propagation.setBaggage(otel.ROOT_CONTEXT, propagation.createBaggage(baggageEntries))
+    const captureContext = propagation.setBaggage(otel.ROOT_CONTEXT, propagation.createBaggage(baggageEntries))
 
-    return await this.tracer.startActiveSpan(
-      options.name ?? "latitude.trace",
-      { kind: otel.SpanKind.INTERNAL },
-      baggageContext,
-      async (span) => {
-        try {
-          const result = await fn(context.active())
-          span.setStatus({ code: otel.SpanStatusCode.OK })
-          return result
-        } catch (error) {
-          span.setStatus({
-            code: otel.SpanStatusCode.ERROR,
-            message: error instanceof Error ? error.message : String(error),
-          })
-          span.recordException(error instanceof Error ? error : new Error(String(error)))
-          throw error
-        } finally {
-          span.end()
-        }
-      },
-    )
+    return await context.with(captureContext, async () => await fn(captureContext))
   }
 }

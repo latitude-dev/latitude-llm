@@ -21,8 +21,7 @@ from opentelemetry.instrumentation.threading import ThreadingInstrumentor
 from opentelemetry.sdk import resources as otel
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
-from opentelemetry import trace
-from opentelemetry.trace import StatusCode, Tracer
+from opentelemetry.trace import Tracer
 
 from latitude_telemetry.constants import ATTRIBUTES, SCOPE_LATITUDE
 from latitude_telemetry.env import env
@@ -61,9 +60,8 @@ DEFAULT_TELEMETRY_OPTIONS = TelemetryOptions(
 class CaptureContext:
     """
     Context that can be used as both a decorator and a context manager.
-    Creates a root span and sets trace-wide baggage attributes
-    (tags, metadata, session_id, user_id) so all child spans are grouped
-    under a single trace.
+    Sets trace-wide baggage attributes (tags, metadata, session_id, user_id)
+    that are propagated to all spans via BaggageSpanProcessor.
 
     As a decorator:
         @telemetry.capture(tags=["prod"], user_id="user-123")
@@ -76,14 +74,12 @@ class CaptureContext:
             response = openai.chat.completions.create(...)
     """
 
-    def __init__(self, options: CaptureOptions, tracer: Tracer):
+    def __init__(self, options: CaptureOptions):
         self._options = options
-        self._tracer = tracer
         self._token: Token[Context] | None = None
-        self._span: Any | None = None
 
     def _start(self) -> None:
-        """Create root span and set baggage entries as active context."""
+        """Set baggage entries as active context."""
         ctx = otel_context.get_current()
 
         if self._options.tags:
@@ -98,28 +94,16 @@ class CaptureContext:
         if self._options.user_id:
             ctx = set_baggage(ATTRIBUTES.user_id, self._options.user_id, ctx)
 
-        span_name = self._options.name or "latitude.trace"
-        self._span = self._tracer.start_span(span_name, context=ctx)
-        ctx = trace.set_span_in_context(self._span, ctx)
         self._token = otel_context.attach(ctx)
 
-    def _end(self, error: Exception | None = None) -> None:
-        """End root span and restore the previous context."""
-        if self._span is not None:
-            if error is not None:
-                self._span.set_status(StatusCode.ERROR, str(error))
-                self._span.record_exception(error)
-            else:
-                self._span.set_status(StatusCode.OK)
-            self._span.end()
-            self._span = None
-
+    def _end(self) -> None:
+        """Restore the previous context."""
         if self._token is not None:
             otel_context.detach(self._token)
             self._token = None
 
     def _create_new(self) -> "CaptureContext":
-        return CaptureContext(options=self._options, tracer=self._tracer)
+        return CaptureContext(options=self._options)
 
     def __call__(self, fn: Callable[..., T]) -> Callable[..., T]:
         if inspect.isasyncgenfunction(fn):
@@ -128,15 +112,11 @@ class CaptureContext:
             async def async_gen_wrapper(*args: Any, **kwargs: Any) -> Any:
                 ctx = self._create_new()
                 ctx._start()
-                error: Exception | None = None
                 try:
                     async for item in fn(*args, **kwargs):
                         yield item
-                except Exception as e:
-                    error = e
-                    raise
                 finally:
-                    ctx._end(error)
+                    ctx._end()
 
             return async_gen_wrapper  # type: ignore[return-value]
 
@@ -146,14 +126,10 @@ class CaptureContext:
             def sync_gen_wrapper(*args: Any, **kwargs: Any) -> Any:
                 ctx = self._create_new()
                 ctx._start()
-                error: Exception | None = None
                 try:
                     yield from fn(*args, **kwargs)
-                except Exception as e:
-                    error = e
-                    raise
                 finally:
-                    ctx._end(error)
+                    ctx._end()
 
             return sync_gen_wrapper  # type: ignore[return-value]
 
@@ -163,14 +139,10 @@ class CaptureContext:
             async def async_wrapper(*args: Any, **kwargs: Any) -> T:
                 ctx = self._create_new()
                 ctx._start()
-                error: Exception | None = None
                 try:
                     return await fn(*args, **kwargs)
-                except Exception as e:
-                    error = e
-                    raise
                 finally:
-                    ctx._end(error)
+                    ctx._end()
 
             return async_wrapper  # type: ignore[return-value]
         else:
@@ -179,14 +151,10 @@ class CaptureContext:
             def sync_wrapper(*args: Any, **kwargs: Any) -> T:
                 ctx = self._create_new()
                 ctx._start()
-                error: Exception | None = None
                 try:
                     return fn(*args, **kwargs)
-                except Exception as e:
-                    error = e
-                    raise
                 finally:
-                    ctx._end(error)
+                    ctx._end()
 
             return sync_wrapper  # type: ignore[return-value]
 
@@ -195,7 +163,7 @@ class CaptureContext:
         return self
 
     def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any | None) -> bool:
-        self._end(exc_val)
+        self._end()
         return False
 
     async def __aenter__(self) -> "CaptureContext":
@@ -203,7 +171,7 @@ class CaptureContext:
         return self
 
     async def __aexit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: Any | None) -> bool:
-        self._end(exc_val)
+        self._end()
         return False
 
 
@@ -381,7 +349,6 @@ class Telemetry:
 
     def capture(
         self,
-        name: str | None = None,
         tags: List[str] | None = None,
         metadata: Dict[str, Any] | None = None,
         session_id: str | None = None,
@@ -389,12 +356,11 @@ class Telemetry:
     ) -> CaptureContext:
         """
         Set trace-wide context attributes on all spans created within the scope.
-        Creates a root span so all child spans are grouped under a single trace.
+        Baggage entries are propagated to all spans via BaggageSpanProcessor.
 
         Can be used as a decorator or context manager.
 
         Args:
-            name: Name for the root span (defaults to "latitude.trace").
             tags: Tags to attach to all spans in the trace.
             metadata: Arbitrary metadata to attach to all spans.
             session_id: Session identifier (session.id OTel attribute).
@@ -402,11 +368,9 @@ class Telemetry:
         """
         return CaptureContext(
             options=CaptureOptions(
-                name=name,
                 tags=tags,
                 metadata=metadata,
                 session_id=session_id,
                 user_id=user_id,
             ),
-            tracer=self.tracer,
         )
