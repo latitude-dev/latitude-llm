@@ -3,6 +3,7 @@ import { propagation, trace } from "@opentelemetry/api"
 import type { BaseInstrumentation } from "./base.ts"
 
 export type CaptureOptions = {
+  name?: string
   tags?: string[]
   metadata?: Record<string, unknown>
   sessionId?: string
