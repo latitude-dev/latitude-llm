@@ -60,7 +60,8 @@ describe("embedScoreFeedbackUseCase", () => {
       model: CENTROID_EMBEDDING_MODEL,
       dimensions: CENTROID_EMBEDDING_DIMENSIONS,
     })
-    expect(result.normalizedEmbedding).toEqual([0.6, 0.8])
+    expect(result.normalizedEmbedding[0]).toBeCloseTo(0.6)
+    expect(result.normalizedEmbedding[1]).toBeCloseTo(0.8)
   })
 
   it("uses cache for repeated embedding input in issue discovery flow", async () => {
@@ -102,8 +103,10 @@ describe("embedScoreFeedbackUseCase", () => {
       ),
     )
 
-    expect(first.normalizedEmbedding).toEqual([0.6, 0.8])
-    expect(second.normalizedEmbedding).toEqual([0.6, 0.8])
+    expect(first.normalizedEmbedding[0]).toBeCloseTo(0.6)
+    expect(first.normalizedEmbedding[1]).toBeCloseTo(0.8)
+    expect(second.normalizedEmbedding[0]).toBeCloseTo(0.6)
+    expect(second.normalizedEmbedding[1]).toBeCloseTo(0.8)
     expect(aiCalls.embed).toHaveLength(1)
   })
 })

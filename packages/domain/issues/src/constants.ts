@@ -17,6 +17,17 @@ export const AUTO_RESOLVE_INACTIVITY_DAYS = 14
 // Centroid configuration
 // ---------------------------------------------------------------------------
 
+/**
+ * Critical issue-discovery configuration.
+ *
+ * These values define the persisted `IssueCentroid` space and the query vectors
+ * matched against it during issue discovery. Do not change them directly in
+ * place: changing model, dimensions, decay semantics, or source weights
+ * requires explicit support for old and new embedding spaces plus a centroid
+ * rebuild/migration strategy, otherwise historical and new contributions become
+ * incompatible.
+ */
+
 /** Half-life for exponential decay of centroid contributions, in seconds (14 days). */
 export const CENTROID_HALF_LIFE_SECONDS = 14 * 24 * 60 * 60
 

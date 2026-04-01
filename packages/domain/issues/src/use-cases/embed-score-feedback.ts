@@ -4,6 +4,7 @@ import { ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
 import { ScoreNotFoundForDiscoveryError } from "../errors.ts"
+import { normalizeEmbedding } from "../helpers.ts"
 
 export interface EmbedScoreFeedbackInput {
   readonly organizationId: string
@@ -15,16 +16,6 @@ export interface EmbeddedScoreFeedback {
   readonly scoreId: string
   readonly feedback: string
   readonly normalizedEmbedding: number[]
-}
-
-const normalizeEmbedding = (embedding: readonly number[]): number[] => {
-  const squaredMagnitude = embedding.reduce((sum, value) => sum + value * value, 0)
-  const magnitude = Math.sqrt(squaredMagnitude)
-  if (magnitude === 0) {
-    return [...embedding]
-  }
-
-  return embedding.map((value) => value / magnitude)
 }
 
 export const embedScoreFeedbackUseCase = (input: EmbedScoreFeedbackInput) =>
