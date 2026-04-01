@@ -37,7 +37,13 @@ export {
   ScoreDiscoveryProjectMismatchError,
   ScoreNotFoundForDiscoveryError,
 } from "./errors.ts"
-export { emptyIssueCentroid } from "./helpers.ts"
+export {
+  createIssueCentroid,
+  normalizeEmbedding,
+  normalizeIssueCentroid,
+  type UpdateIssueCentroidInput,
+  updateIssueCentroid,
+} from "./helpers.ts"
 export {
   type DeleteIssueProjectionInput,
   type HybridSearchInput,

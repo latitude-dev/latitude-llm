@@ -34,6 +34,7 @@ export interface GenerateInput<T> {
   readonly system: string
   readonly prompt: string
   readonly schema: z.ZodType<T>
+  readonly reasoning?: "none" | "provider-default" | "minimal" | "low" | "medium" | "high" | "xhigh"
   readonly maxTokens?: number
   readonly temperature?: number
   readonly topP?: number
@@ -42,7 +43,6 @@ export interface GenerateInput<T> {
   readonly frequencyPenalty?: number
   readonly stopSequences?: readonly string[]
   readonly seed?: number
-  readonly reasoning?: "none" | "provider-default" | "minimal" | "low" | "medium" | "high" | "xhigh"
   readonly providerOptions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
 }
 

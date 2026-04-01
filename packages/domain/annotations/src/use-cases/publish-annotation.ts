@@ -15,6 +15,7 @@ import { resolveLastLlmCompletionSpanId, SpanRepository, TraceRepository } from 
 import { Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { z } from "zod"
+import { ANNOTATION_ENRICHMENT_MODEL } from "../constants.ts"
 import { resolveAnnotationAnchorText } from "../helpers/resolve-annotation-anchor-text.ts"
 
 export interface PublishAnnotationInput {
@@ -23,37 +24,37 @@ export interface PublishAnnotationInput {
 
 export type PublishAnnotationError = RepositoryError | BadRequestError | AIError | AICredentialError
 
-const ENRICHMENT_MODEL = { provider: "openai", model: "gpt-5.4" } as const
-
 const annotationPublicationEnrichmentSchema = z.object({
   reasoning: z
     .string()
     .describe("Brief rationale for how you distilled the raw feedback into the clusterable sentence"),
-  enrichedSentence: z
+  enrichedFeedback: z
     .string()
     .describe(
       "Exactly one sentence describing the underlying failure pattern, suitable for clustering similar failures",
     ),
 })
 
-const ENRICHMENT_SYSTEM_PROMPT = `You are a reliability annotation publication assistant. Your job is to transform raw human feedback about an LLM agent interaction into a concise, structured sentence suitable for clustering similar failure patterns.
+const ENRICHMENT_SYSTEM_PROMPT = `
+You are a reliability annotation publication assistant. Your job is to transform raw human feedback about an LLM agent interaction into a concise, structured sentence suitable for clustering similar failure patterns.
 
 You will receive the full canonical conversation when available, plus optional raw human feedback and an optional exact highlighted substring when the human selected specific text. Use the full conversation for context; the highlight alone is often too short to interpret (e.g. a single word). When there is no highlight, the feedback refers to the conversation as a whole.
 
-You must respond as structured data with two fields: "reasoning" (why you chose the phrasing) and "enrichedSentence" (the single clusterable sentence).
+You must respond as structured data with two fields: \`reasoning\` (why you chose the phrasing) and \`enrichedFeedback\` (the single clusterable sentence).
 
-Rules for enrichedSentence:
+Rules for \`enrichedFeedback\`:
 - Output exactly ONE sentence that describes the underlying failure pattern
 - Be specific about what went wrong, not just that something was wrong
 - Remove references to specific entities, dates, or details that are incidental to the failure pattern
 - Keep the language neutral and descriptive
 - The output must be useful for grouping similar failures together
 
-Examples (enrichedSentence only — you still supply reasoning in your output):
+Examples (only \`enrichedFeedback\` — you still supply reasoning in your output):
 - Raw: "this is wrong, the model hallucinated the date" → "Hallucinations of temporal information in the response"
-- Raw: "it forgot my previous instructions" → "Earlier instructions were dropped and not applied in later turns"
+- Raw: "it forgot my previous instructions" → "Instructions not being followed"
 - Raw: "the response is way too long and rambling" → "Excessively verbose and unfocused response"
-- Raw: "good answer" → "Satisfactory and correct response to the request"`
+- Raw: "good answer" → "Satisfactory and correct response to the request"
+`.trim()
 
 const buildEnrichmentPrompt = (
   metadata: AnnotationScoreMetadata,
@@ -64,21 +65,22 @@ const buildEnrichmentPrompt = (
 ): string => {
   const parts: string[] = []
 
-  parts.push(`Raw human feedback: "${metadata.rawFeedback}"`)
-
   const conversation = options.fullConversationText?.trim()
   if (conversation) {
-    parts.push(`Full conversation (canonical messages; primary context):\n${conversation}`)
+    parts.push(`Full conversation:\n${conversation}`)
+  }
+
+  const feedback = metadata.rawFeedback.trim()
+  if (feedback) {
+    parts.push(`Human feedback:\n${feedback}`)
   }
 
   const highlight = options.highlightedExcerpt?.trim()
   if (highlight) {
-    parts.push(
-      `Annotated text (exact substring the human selected within the conversation above; use together with the full conversation): "${highlight}"`,
-    )
+    parts.push(`Highlighted text:\n${highlight}`)
   }
 
-  parts.push("\nProduce reasoning and enrichedSentence per the schema:")
+  parts.push("Produce `reasoning` and `enrichedFeedback` per the schema:")
 
   return parts.join("\n\n")
 }
@@ -163,14 +165,14 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
     }
 
     const result = yield* ai.generate({
-      ...ENRICHMENT_MODEL,
+      ...ANNOTATION_ENRICHMENT_MODEL,
       system: ENRICHMENT_SYSTEM_PROMPT,
       prompt: buildEnrichmentPrompt(metadata, { fullConversationText, highlightedExcerpt }),
       schema: annotationPublicationEnrichmentSchema,
       temperature: 1,
     })
 
-    const enrichedFeedback = result.object.enrichedSentence.trim() || metadata.rawFeedback
+    const enrichedFeedback = result.object.enrichedFeedback.trim() || metadata.rawFeedback
 
     const publishedScore = {
       ...annotationScore,

@@ -1,3 +1,4 @@
+export { ANNOTATION_ENRICHMENT_MODEL } from "./constants.ts"
 export {
   type Annotation,
   type AnnotationAnchor,

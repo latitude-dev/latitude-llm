@@ -7,6 +7,9 @@ import { generateText, Output } from "ai"
 import { Effect, Layer, Option } from "effect"
 
 type GenerateTextCall = Parameters<typeof generateText>[0]
+type ProviderOptions = NonNullable<GenerateTextCall["providerOptions"]>
+
+const DEFAULT_MAX_OUTPUT_TOKENS = 8192
 
 /**
  * Creates a Vercel AI SDK language model for supported providers.
@@ -49,22 +52,16 @@ export const AIGenerateLive = Layer.effect(
                 system: input.system,
                 prompt: input.prompt,
                 output: Output.object({ schema: input.schema }),
-                maxOutputTokens: input.maxTokens ?? 256,
-                temperature: input.temperature ?? 0.3,
+                reasoning: input.reasoning ?? "provider-default",
+                maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+                ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
                 ...(input.topP !== undefined ? { topP: input.topP } : {}),
                 ...(input.topK !== undefined ? { topK: input.topK } : {}),
                 ...(input.presencePenalty !== undefined ? { presencePenalty: input.presencePenalty } : {}),
                 ...(input.frequencyPenalty !== undefined ? { frequencyPenalty: input.frequencyPenalty } : {}),
                 ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
                 ...(input.seed !== undefined ? { seed: input.seed } : {}),
-                ...(input.reasoning !== undefined
-                  ? { reasoning: input.reasoning as GenerateTextCall["reasoning"] }
-                  : {}),
-                ...(input.providerOptions !== undefined
-                  ? {
-                      providerOptions: input.providerOptions as NonNullable<GenerateTextCall["providerOptions"]>,
-                    }
-                  : {}),
+                providerOptions: input.providerOptions as ProviderOptions,
               }
 
               const result = await generateText(call)

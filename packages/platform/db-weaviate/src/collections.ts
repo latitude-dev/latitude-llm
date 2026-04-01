@@ -66,7 +66,7 @@ export const defaultWeaviateCollectionDefinitions = defineWeaviateCollections([
         vectorizePropertyName: false,
       },
     ],
-    // Self-provided vectors equal to the normalized issue centroid (emitCentroidVector);
+    // Self-provided vectors equal to the normalized issue centroid (normalizeIssueCentroid);
     // cosine distance; dynamic indexing switches from flat to HNSW at 10k objects; no quantization
     vectorizers: vectors.selfProvided({
       quantizer: configure.vectorIndex.quantizer.none(),

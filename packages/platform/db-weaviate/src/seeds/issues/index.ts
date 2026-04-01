@@ -11,7 +11,7 @@ const TENANT_NAME = issuesCollectionTenantName({
 
 /**
  * Random unit vector for seed data only.
- * In production, vectors come from `emitCentroidVector` — a normalized
+ * In production, vectors come from `normalizeIssueCentroid` — a normalized
  * accumulation of real score embeddings from the `voyage-4-large` model.
  */
 const randomUnitVector = (dims: number): number[] => {

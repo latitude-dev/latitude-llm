@@ -129,7 +129,7 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
     Effect.succeed({
       object: {
         reasoning: "Mapped raw complaint to a pattern label.",
-        enrichedSentence: `Enriched: ${input.prompt.match(/"(.+?)"/)?.[1] ?? ""}`,
+        enrichedFeedback: `Enriched: ${input.prompt.match(/Human feedback:\n(.+?)(?:\n\n|$)/)?.[1] ?? ""}`,
       } as T,
       tokens: 15,
       duration: 50_000_000,
@@ -240,7 +240,7 @@ describe("publishAnnotationUseCase", () => {
         return Effect.succeed({
           object: {
             reasoning: "test",
-            enrichedSentence: "Enriched",
+            enrichedFeedback: "Enriched",
           } as T,
           tokens: 15,
           duration: 50_000_000,
@@ -255,8 +255,8 @@ describe("publishAnnotationUseCase", () => {
     expect(capturedPrompt).toContain("[message 0]")
     expect(capturedPrompt).toContain("prefixMarch 2025")
     expect(capturedPrompt).toContain("March 2025")
-    expect(capturedPrompt).toContain("Annotated text")
-    expect(capturedPrompt).toContain("Raw human feedback")
+    expect(capturedPrompt).toContain("Highlighted text")
+    expect(capturedPrompt).toContain("Human feedback")
     expect(capturedPrompt).not.toContain("messageIndex")
     expect(capturedPrompt).not.toContain("partIndex")
     expect(capturedPrompt).not.toContain("startOffset")
@@ -283,7 +283,7 @@ describe("publishAnnotationUseCase", () => {
         return Effect.succeed({
           object: {
             reasoning: "test",
-            enrichedSentence: "Enriched",
+            enrichedFeedback: "Enriched",
           } as T,
           tokens: 15,
           duration: 50_000_000,
@@ -297,7 +297,7 @@ describe("publishAnnotationUseCase", () => {
     expect(capturedPrompt).toContain("Full conversation")
     expect(capturedPrompt).toContain("Summarize this doc")
     expect(capturedPrompt).toContain("Here is a short summary.")
-    expect(capturedPrompt).not.toContain("Annotated text")
+    expect(capturedPrompt).not.toContain("Highlighted text")
   })
 
   it("is idempotent on already-published annotation", async () => {
