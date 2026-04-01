@@ -1,4 +1,4 @@
-import { DetailSummary, ModelBadge, Text } from "@repo/ui"
+import { CopyButton, DetailSummary, ModelBadge, Text } from "@repo/ui"
 import { relativeTime, safeParseJson } from "@repo/utils"
 import { useMemo } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
@@ -59,7 +59,10 @@ function ErrorSection({ span }: { readonly span: SpanDetailRecord }) {
 
       {exception?.stacktrace && (
         <div className="flex flex-col gap-0.5">
-          <Text.H6 color="destructive">Stack Trace</Text.H6>
+          <div className="flex flex-row items-center gap-1">
+            <Text.H6 color="destructive">Stack Trace</Text.H6>
+            <CopyButton value={exception.stacktrace} />
+          </div>
           <pre className="text-xs font-mono text-foreground bg-muted rounded p-2 overflow-x-auto max-h-48 whitespace-pre-wrap break-all">
             {exception.stacktrace}
           </pre>
