@@ -1,49 +1,33 @@
-from latitude_telemetry import SpanPrompt
-from tests.utils import TestCase
+"""Tests for manual span creation via the tracer."""
+
+import pytest
+from unittest.mock import patch
+
+from latitude_telemetry import Telemetry, TelemetryOptions
 
 
-class TestSpan(TestCase):
-    def test_legacy_span_creates_spans(self):
-        """Test that legacy_span creates spans with proper nesting."""
-        with self.telemetry.legacy_span(
-            name="first",
-            prompt=SpanPrompt(
-                uuid="prompt-uuid",
-                version_uuid="version-uuid",
-                parameters={"parameter": "value"},
-            ),
-            distinct_id="distinct-id",
-            metadata={"key": "value"},
-        ):
-            with self.telemetry.legacy_span("second"):
-                pass
+class TestTracerAccess:
+    """Tests that the tracer is properly exposed."""
 
-        spans = self.get_exported_spans()
-        self.assertEqual(len(spans), 2)
+    @pytest.fixture
+    def telemetry(self):
+        with patch("latitude_telemetry.telemetry.telemetry.create_exporter"):
+            t = Telemetry("test-api-key", "test-project", TelemetryOptions(disable_batch=True))
+            yield t
+            t.shutdown()
 
-        # Find spans by name
-        first_span = self.find_span_by_name("first")
-        second_span = self.find_span_by_name("second")
+    def test_tracer_is_exposed(self, telemetry):
+        """Test that telemetry.tracer is available."""
+        assert telemetry.tracer is not None
 
-        self.assertIsNotNone(first_span)
-        self.assertIsNotNone(second_span)
+    def test_tracer_can_start_span(self, telemetry):
+        """Test that we can create spans via the tracer."""
+        span = telemetry.tracer.start_span("test-span")
+        assert span is not None
+        span.end()
 
-        # Verify first span has correct attributes
-        self.assert_span_has_attribute(first_span, "latitude.prompt")
-        self.assert_span_has_attribute(first_span, "latitude.distinctId", "distinct-id")
-        self.assert_span_has_attribute(first_span, "latitude.metadata")
-
-        # Verify parent-child relationship
-        self.assertIsNotNone(second_span.parent)
-        self.assertEqual(second_span.parent.span_id, first_span.context.span_id)
-
-    def test_single_span(self):
-        """Test creating a single span."""
-        with self.telemetry.legacy_span("test-span"):
-            pass
-
-        spans = self.get_exported_spans()
-        self.assertEqual(len(spans), 1)
-
-        span = spans[0]
-        self.assert_span_name(span, "test-span")
+    def test_tracer_start_as_current_span(self, telemetry):
+        """Test using start_as_current_span context manager."""
+        with telemetry.tracer.start_as_current_span("test-span") as span:
+            assert span is not None
+            span.set_attribute("test.key", "test-value")

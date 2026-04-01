@@ -10,6 +10,5 @@ export default defineConfig({
   external: [
     /^@opentelemetry\//,
     /^@traceloop\//,
-    "rosetta-ai",
   ],
 })

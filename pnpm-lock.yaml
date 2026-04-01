@@ -1298,9 +1298,6 @@ importers:
       '@traceloop/instrumentation-vertexai':
         specifier: ^0.22.0
         version: 0.22.5
-      rosetta-ai:
-        specifier: 'catalog:'
-        version: 2.0.0
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'

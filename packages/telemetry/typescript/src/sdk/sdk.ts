@@ -22,21 +22,9 @@ import { LlamaIndexInstrumentation } from "@traceloop/instrumentation-llamaindex
 import { OpenAIInstrumentation } from "@traceloop/instrumentation-openai"
 import { TogetherInstrumentation } from "@traceloop/instrumentation-together"
 import { AIPlatformInstrumentation, VertexAIInstrumentation } from "@traceloop/instrumentation-vertexai"
-import { ATTRIBUTES, DOCUMENT_PATH_REGEXP, SCOPE_LATITUDE } from "../constants/index.ts"
+import { ATTRIBUTES, SCOPE_LATITUDE } from "../constants/index.ts"
 import { env } from "../env/index.ts"
-import {
-  type BaseInstrumentation,
-  type CaptureOptions,
-  type ChatSpanOptions,
-  type ExternalSpanOptions,
-  ManualInstrumentation,
-  type ManualInstrumentationOptions,
-  type PromptSpanOptions,
-  type StartCompletionSpanOptions,
-  type StartHttpSpanOptions,
-  type StartSpanOptions,
-  type StartToolSpanOptions,
-} from "../instrumentations/index.ts"
+import { type BaseInstrumentation, type CaptureOptions, ManualInstrumentation } from "../instrumentations/index.ts"
 import { DEFAULT_REDACT_SPAN_PROCESSOR } from "./redact.ts"
 
 const TRACES_URL = `${env.GATEWAY_BASE_URL}/v1/traces`
@@ -44,47 +32,6 @@ const SERVICE_NAME = process.env.npm_package_name || "unknown"
 const SCOPE_VERSION = process.env.npm_package_version || "unknown"
 
 export type TelemetryContext = otel.Context
-export const BACKGROUND = () => otel.ROOT_CONTEXT
-
-class SpanFactory {
-  private readonly telemetry: ManualInstrumentation
-
-  constructor(telemetry: ManualInstrumentation) {
-    this.telemetry = telemetry
-  }
-
-  span(options?: StartSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.unknown(ctx ?? context.active(), options)
-  }
-
-  tool(options: StartToolSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.tool(ctx ?? context.active(), options)
-  }
-
-  completion(options: StartCompletionSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.completion(ctx ?? context.active(), options)
-  }
-
-  embedding(options?: StartSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.embedding(ctx ?? context.active(), options)
-  }
-
-  http(options: StartHttpSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.http(ctx ?? context.active(), options)
-  }
-
-  prompt(options: PromptSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.prompt(ctx ?? context.active(), options)
-  }
-
-  chat(options: ChatSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.chat(ctx ?? context.active(), options)
-  }
-
-  external(options: ExternalSpanOptions, ctx?: TelemetryContext) {
-    return this.telemetry.external(ctx ?? context.active(), options)
-  }
-}
 
 class ContextManager {
   private readonly telemetry: ManualInstrumentation
@@ -119,15 +66,15 @@ class InstrumentationManager {
   }
 
   enable() {
-    this.instrumentations.forEach((instrumentation) => {
+    for (const instrumentation of this.instrumentations) {
       if (!instrumentation.isEnabled()) instrumentation.enable()
-    })
+    }
   }
 
   disable() {
-    this.instrumentations.forEach((instrumentation) => {
+    for (const instrumentation of this.instrumentations) {
       if (instrumentation.isEnabled()) instrumentation.disable()
-    })
+    }
   }
 }
 
@@ -227,20 +174,18 @@ export type TelemetryOptions = {
     [Instrumentation.Langchain]?: {
       callbackManagerModule?: unknown
     }
-    [Instrumentation.Manual]?: ManualInstrumentationOptions
   }
 }
 
 export class LatitudeTelemetry {
   private options: TelemetryOptions
   private nodeProvider: NodeTracerProvider
-  private manualInstrumentation: ManualInstrumentation
   private instrumentationsList: BaseInstrumentation[]
 
-  readonly span: SpanFactory
+  /** OpenTelemetry tracer for creating custom spans. */
+  readonly tracer: otel.Tracer
   readonly context: ContextManager
   readonly instrumentation: InstrumentationManager
-  readonly tracer: TracerManager
   private readonly lifecycle: LifecycleManager
 
   constructor(apiKey: string, projectSlug: string, options?: TelemetryOptions) {
@@ -268,9 +213,9 @@ export class LatitudeTelemetry {
     this.nodeProvider.addSpanProcessor(new BaggageSpanProcessor(ALLOW_ALL_BAGGAGE_KEYS))
 
     if (this.options.processors) {
-      this.options.processors.forEach((processor) => {
+      for (const processor of this.options.processors) {
         this.nodeProvider.addSpanProcessor(processor)
-      })
+      }
     } else {
       this.nodeProvider.addSpanProcessor(DEFAULT_REDACT_SPAN_PROCESSOR())
     }
@@ -286,15 +231,22 @@ export class LatitudeTelemetry {
     process.on("SIGTERM", async () => this.shutdown)
     process.on("SIGINT", async () => this.shutdown)
 
-    this.manualInstrumentation = null as unknown as ManualInstrumentation
     this.instrumentationsList = []
-    this.tracer = new TracerManager(this.nodeProvider, SCOPE_VERSION)
-    this.initInstrumentations()
+    const tracerManager = new TracerManager(this.nodeProvider, SCOPE_VERSION)
+
+    // Manual instrumentation for context management
+    const manualTracer = tracerManager.get(Instrumentation.Manual)
+    const manualInstrumentation = new ManualInstrumentation(manualTracer)
+    this.instrumentationsList.push(manualInstrumentation)
+
+    // Expose tracer for custom span creation
+    this.tracer = manualTracer
+
+    this.initProviderInstrumentations(tracerManager)
     this.instrumentation = new InstrumentationManager(this.instrumentationsList)
     this.instrumentation.enable()
 
-    this.span = new SpanFactory(this.manualInstrumentation)
-    this.context = new ContextManager(this.manualInstrumentation)
+    this.context = new ContextManager(manualInstrumentation)
   }
 
   async flush() {
@@ -305,13 +257,7 @@ export class LatitudeTelemetry {
     await this.lifecycle.shutdown()
   }
 
-  private initInstrumentations() {
-    this.instrumentationsList = []
-
-    const tracer = this.tracer.get(Instrumentation.Manual)
-    this.manualInstrumentation = new ManualInstrumentation(tracer, this.options.instrumentations?.manual)
-    this.instrumentationsList.push(this.manualInstrumentation)
-
+  private initProviderInstrumentations(tracerManager: TracerManager) {
     type InstrumentationClass =
       | typeof AnthropicInstrumentation
       | typeof AIPlatformInstrumentation
@@ -323,72 +269,64 @@ export class LatitudeTelemetry {
       | typeof TogetherInstrumentation
       | typeof VertexAIInstrumentation
 
-    const configureInstrumentation = (
-      instrumentationType: Instrumentation,
-      InstrumentationConstructor: InstrumentationClass,
-      instrumentationOptions?: { enrichTokens?: boolean },
+    type ProviderInstrumentation = Exclude<Instrumentation, Instrumentation.Manual>
+
+    const configure = (
+      type: ProviderInstrumentation,
+      Ctor: InstrumentationClass,
+      opts?: { enrichTokens?: boolean },
     ) => {
-      const providerPkg = this.options.instrumentations?.[instrumentationType]
+      const providerPkg = this.options.instrumentations?.[type]
       if (!providerPkg) return
 
-      const provider = this.tracer.provider(instrumentationType)
-      const instrumentation = new InstrumentationConstructor(instrumentationOptions)
-      instrumentation.setTracerProvider(provider)
-      instrumentation.manuallyInstrument(providerPkg)
+      const provider = tracerManager.provider(type)
+      const inst = new Ctor(opts)
+      inst.setTracerProvider(provider)
+      inst.manuallyInstrument(providerPkg)
       registerInstrumentations({
-        instrumentations: [instrumentation],
+        instrumentations: [inst],
         tracerProvider: provider,
       })
-      this.instrumentationsList.push(instrumentation)
+      this.instrumentationsList.push(inst)
     }
 
-    configureInstrumentation(Instrumentation.Anthropic, AnthropicInstrumentation)
-    configureInstrumentation(Instrumentation.AIPlatform, AIPlatformInstrumentation)
-    configureInstrumentation(Instrumentation.Bedrock, BedrockInstrumentation)
-    configureInstrumentation(Instrumentation.Cohere, CohereInstrumentation)
-    configureInstrumentation(Instrumentation.Langchain, LangChainInstrumentation)
-    configureInstrumentation(Instrumentation.LlamaIndex, LlamaIndexInstrumentation)
-    configureInstrumentation(Instrumentation.OpenAI, OpenAIInstrumentation, { enrichTokens: true })
-    configureInstrumentation(Instrumentation.TogetherAI, TogetherInstrumentation, { enrichTokens: false })
-    configureInstrumentation(Instrumentation.VertexAI, VertexAIInstrumentation)
+    configure(Instrumentation.Anthropic, AnthropicInstrumentation)
+    configure(Instrumentation.AIPlatform, AIPlatformInstrumentation)
+    configure(Instrumentation.Bedrock, BedrockInstrumentation)
+    configure(Instrumentation.Cohere, CohereInstrumentation)
+    configure(Instrumentation.Langchain, LangChainInstrumentation)
+    configure(Instrumentation.LlamaIndex, LlamaIndexInstrumentation)
+    configure(Instrumentation.OpenAI, OpenAIInstrumentation, { enrichTokens: true })
+    configure(Instrumentation.TogetherAI, TogetherInstrumentation, { enrichTokens: false })
+    configure(Instrumentation.VertexAI, VertexAIInstrumentation)
   }
 
+  /**
+   * Wrap a block of code with trace-wide context attributes.
+   * All spans created within the callback will inherit the baggage entries
+   * (tags, metadata, sessionId, userId) via the BaggageSpanProcessor.
+   */
   async capture<T>(options: CaptureOptions, fn: (ctx: TelemetryContext) => T | Promise<T>): Promise<T> {
-    if (!DOCUMENT_PATH_REGEXP.test(options.path)) {
-      throw new Error("Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'")
+    const baggageEntries: Record<string, otel.BaggageEntry> = {}
+
+    if (options.tags?.length) {
+      baggageEntries[ATTRIBUTES.tags] = { value: JSON.stringify(options.tags) }
     }
 
-    const captureBaggageEntries: Record<string, otel.BaggageEntry> = {
-      [ATTRIBUTES.LATITUDE.promptPath]: { value: options.path },
-      [ATTRIBUTES.LATITUDE.projectId]: { value: String(options.projectId) },
+    if (options.metadata) {
+      baggageEntries[ATTRIBUTES.metadata] = { value: JSON.stringify(options.metadata) }
     }
 
-    if (options.versionUuid) {
-      captureBaggageEntries[ATTRIBUTES.LATITUDE.commitUuid] = {
-        value: options.versionUuid,
-      }
+    if (options.sessionId) {
+      baggageEntries[ATTRIBUTES.sessionId] = { value: options.sessionId }
     }
 
-    if (options.conversationUuid) {
-      captureBaggageEntries[ATTRIBUTES.LATITUDE.documentLogUuid] = {
-        value: options.conversationUuid,
-      }
+    if (options.userId) {
+      baggageEntries[ATTRIBUTES.userId] = { value: options.userId }
     }
 
-    const captureContext = propagation.setBaggage(BACKGROUND(), propagation.createBaggage(captureBaggageEntries))
+    const captureContext = propagation.setBaggage(otel.ROOT_CONTEXT, propagation.createBaggage(baggageEntries))
 
-    const span = this.manualInstrumentation.unresolvedExternal(captureContext, options)
-
-    let result: T
-    try {
-      result = await context.with(span.context, async () => await fn(span.context))
-    } catch (error) {
-      span.fail(error as Error)
-      throw error
-    }
-
-    span.end()
-
-    return result
+    return await context.with(captureContext, async () => await fn(captureContext))
   }
 }

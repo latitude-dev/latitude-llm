@@ -1,6 +1,4 @@
-from typing import Any, Dict
-
-from latitude_telemetry.util import Field, Model, StrEnum
+from latitude_telemetry.util import Model, StrEnum
 
 
 class Instrumentors(StrEnum):
@@ -25,23 +23,6 @@ class Instrumentors(StrEnum):
     Transformers = "transformers"
     VertexAI = "vertexai"
     Watsonx = "watsonx"
-
-
-class TelemetryAttributes(StrEnum):
-    Root = "latitude"
-    Span = f"{Root}.span"
-    Prompt = f"{Root}.prompt"
-    DistinctID = f"{Root}.distinctId"
-    Metadata = f"{Root}.metadata"
-
-
-class SpanPrompt(Model):
-    uuid: str
-    version_uuid: str | None = Field(default=None, alias=str("versionUuid"))
-    parameters: Dict[str, Any] | None = None
-
-
-SpanMetadata = Dict[str, Any]
 
 
 class GatewayOptions(Model):
