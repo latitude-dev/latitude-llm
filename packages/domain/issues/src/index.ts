@@ -52,8 +52,21 @@ export {
   type IssuesCollectionProperties,
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
-export { IssueRepository } from "./ports/issue-repository.ts"
-export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
+export {
+  type CreateIssueInput as CreateIssueRepositoryInput,
+  type IssueListPage,
+  IssueRepository,
+  type ListIssuesInput,
+} from "./ports/issue-repository.ts"
+export {
+  type CheckEligibilityInput,
+  checkEligibilityUseCase,
+} from "./use-cases/check-eligibility.ts"
+export {
+  type CreateIssueError,
+  type CreateIssueInput,
+  createIssueUseCase,
+} from "./use-cases/create-issue.ts"
 export {
   type AssignmentResult,
   type CreateOrAssignIssueInput,
@@ -70,8 +83,16 @@ export {
   hybridSearchIssuesUseCase,
 } from "./use-cases/hybrid-search-issues.ts"
 export {
+  type ListProjectIssuesError,
+  type ListProjectIssuesInput,
+  listProjectIssuesUseCase,
+} from "./use-cases/list-project-issues.ts"
+export {
   type RerankIssueCandidatesInput,
   type RetrievalResult,
   rerankIssueCandidatesUseCase,
 } from "./use-cases/rerank-issue-candidates.ts"
-export { type SyncIssueProjectionsInput, syncIssueProjectionsUseCase } from "./use-cases/sync-projections.ts"
+export {
+  type SyncIssueProjectionsInput,
+  syncIssueProjectionsUseCase,
+} from "./use-cases/sync-projections.ts"

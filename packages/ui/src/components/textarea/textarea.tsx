@@ -23,20 +23,12 @@ export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaE
 }
 
 export function Textarea({ className, label, description, info, errors, inline, ...props }: TextareaProps) {
-  const textarea = (
-    <textarea
-      className={cn(textareaBaseClass, errors && errors.length > 0 && "border-destructive", className)}
-      {...props}
-    />
+  return (
+    <FormField label={label} description={description} info={info} errors={errors} inline={inline}>
+      <textarea
+        className={cn(textareaBaseClass, errors && errors.length > 0 && "border-destructive", className)}
+        {...props}
+      />
+    </FormField>
   )
-
-  if (label || description || errors) {
-    return (
-      <FormField label={label} description={description} info={info} errors={errors} inline={inline}>
-        {textarea}
-      </FormField>
-    )
-  }
-
-  return textarea
 }

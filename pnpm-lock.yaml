@@ -291,6 +291,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../packages/domain/datasets
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../../packages/domain/issues
       '@domain/organizations':
         specifier: workspace:*
         version: link:../../packages/domain/organizations
