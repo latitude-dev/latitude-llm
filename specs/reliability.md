@@ -1033,12 +1033,14 @@ Detection relies on data already present on GenAI spans:
 
 2. **Output extraction** — the checker reads `output_messages` from the span detail. For spans that requested structured output, the relevant content is the textual body of the final assistant message (the content string that the model was expected to fill with JSON). If `output_messages` is empty or absent, the span is treated as a validation failure only when a schema was discovered in step 1.
 
-3. **Deterministic checks** — the following checks run in order; the first failure is sufficient to flag the span:
+3. **Exclusion** — if `finish_reasons` contains `"content_filter"`, the span is skipped. A content-safety block is a distinct failure mode; the empty or malformed output it produces should not be attributed to a schema-conformance problem.
+
+4. **Deterministic checks** — the following checks run in order; the first failure is sufficient to flag the span:
    - **Truncation**: `finish_reasons` contains `"length"` — the model ran out of tokens before completing the structured output.
    - **Parse failure**: the output content is not valid JSON.
    - **Schema violation**: a JSON Schema was discovered in step 1 and the parsed output does not validate against it. Validation uses standard JSON Schema draft-2020-12 semantics (or the draft declared in the schema's `$schema` field). The checker should use a lightweight, dependency-minimal JSON Schema validator.
 
-4. **Trace-level rollup** — if any GenAI span in the trace fails one of the above checks, the trace is flagged for this queue. The draft annotation created by the downstream `system-annotation-queues:annotate` step should reference the specific span(s) that failed and the failure reason (truncation, parse error, or schema violation details).
+5. **Trace-level rollup** — if any GenAI span in the trace fails one of the above checks, the trace is flagged for this queue. The draft annotation created by the downstream `system-annotation-queues:annotate` step should reference the specific span(s) that failed and the failure reason (truncation, parse error, or schema violation details).
 
 #### Empty Response
 
@@ -1047,7 +1049,7 @@ Detection relies on data already present on GenAI spans:
 
 This queue is detected entirely through deterministic checks rather than the low-cost flagger model. Detection inspects the final assistant output on every GenAI span in the trace:
 
-1. **Scope** — only GenAI spans with a non-empty `operation` field are inspected. Tool-execution spans (spans where `toolName` is set and `operation` is empty) are excluded.
+1. **Scope** — only GenAI spans whose `operation` field is non-empty **and** is not `"execute_tool"` are inspected. Tool-execution spans (`operation = "execute_tool"`) are excluded because they carry tool results rather than assistant-generated content and typically have no `output_messages`.
 
 2. **Output extraction** — the checker reads `output_messages` from the span detail and extracts the concatenated textual content of the final assistant message, after stripping leading/trailing whitespace. This is referred to as the _effective output_.
 
