@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import type { MiddlewareHandler } from "hono"
 import { getAdminPostgresClient, getRedisClient } from "../clients.ts"
 import type { IngestEnv } from "../types.ts"
+import { createTouchBuffer } from "./touch-buffer.ts"
 
 export const authMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {
   const authHeader = c.req.header("Authorization")
@@ -11,10 +12,14 @@ export const authMiddleware: MiddlewareHandler<IngestEnv> = async (c, next) => {
   }
 
   const token = authHeader.slice(7)
+  const adminClient = getAdminPostgresClient()
+  const touchBuffer = createTouchBuffer(adminClient)
+
   const result = await Effect.runPromise(
     validateApiKey(token, {
       redis: getRedisClient(),
-      adminClient: getAdminPostgresClient(),
+      adminClient,
+      onKeyValidated: (keyId) => touchBuffer.touch(keyId),
     }),
   )
 

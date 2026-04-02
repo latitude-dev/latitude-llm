@@ -7,6 +7,7 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
 import { getQueuePublisher } from "./clients.ts"
+import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { IngestEnv } from "./types.ts"
 
@@ -49,6 +50,12 @@ const start = async () => {
   const handleShutdown = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down ingest...`)
     server.close()
+
+    try {
+      await destroyTouchBuffer()
+    } catch (error) {
+      logger.error("Failed to flush touch buffer during shutdown", error)
+    }
 
     try {
       const publisher = await getQueuePublisher().catch(() => undefined)

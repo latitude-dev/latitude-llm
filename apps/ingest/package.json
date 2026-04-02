@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/api-keys": "workspace:*",
     "@domain/projects": "workspace:^",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",

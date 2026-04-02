@@ -227,6 +227,9 @@ importers:
 
   apps/ingest:
     dependencies:
+      '@domain/api-keys':
+        specifier: workspace:*
+        version: link:../../packages/domain/api-keys
       '@domain/projects':
         specifier: workspace:^
         version: link:../../packages/domain/projects
