@@ -2,6 +2,7 @@ import type { Score, ScoreListOptions, ScoreSource } from "@domain/scores"
 import { ScoreRepository, scoreSchema } from "@domain/scores"
 import {
   type IssueId,
+  NotFoundError,
   type ProjectId,
   type ScoreId,
   type SessionId,
@@ -118,7 +119,15 @@ export const ScoreRepositoryLive = Layer.effect(
       findById: (id: ScoreId) =>
         sqlClient
           .query((db) => db.select().from(scores).where(eq(scores.id, id)).limit(1))
-          .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null))),
+          .pipe(
+            Effect.flatMap((rows) => {
+              const row = rows[0]
+              if (!row) {
+                return Effect.fail(new NotFoundError({ entity: "Score", id }))
+              }
+              return Effect.succeed(toDomainScore(row))
+            }),
+          ),
 
       save: (score: Score) =>
         Effect.gen(function* () {

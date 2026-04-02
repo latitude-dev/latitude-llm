@@ -1,5 +1,5 @@
 import { listProjectScoresUseCase, listSourceScoresUseCase, ScoreRepository, writeScoreUseCase } from "@domain/scores"
-import { IssueId, OrganizationId, ProjectId, ScoreId } from "@domain/shared"
+import { IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -228,6 +228,18 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(firstClaim).toBe(true)
     expect(secondClaim).toBe(false)
     expect(persistedRows[0]?.issueId).toBe("iiiiiiiiiiiiiiiiiiiiiiii")
+  })
+
+  it("findById fails with NotFoundError when the score does not exist", async () => {
+    const organizationId = "nnnnnnnnnnnnnnnnnnnnnnnn"
+    const missingId = ScoreId("zzzzzzzzzzzzzzzzzzzzzzzz")
+
+    const program = Effect.gen(function* () {
+      const repository = yield* ScoreRepository
+      return yield* repository.findById(missingId)
+    }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId)))
+
+    await expect(Effect.runPromise(program)).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it("excludes drafts by default and supports draft-aware project and source reads", async () => {

@@ -1,4 +1,13 @@
-import type { IssueId, ProjectId, RepositoryError, ScoreId, SessionId, SpanId, TraceId } from "@domain/shared"
+import type {
+  IssueId,
+  NotFoundError,
+  ProjectId,
+  RepositoryError,
+  ScoreId,
+  SessionId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
@@ -20,7 +29,7 @@ export interface ScoreListPage {
 }
 
 export interface ScoreRepositoryShape {
-  findById(id: ScoreId): Effect.Effect<Score | null, RepositoryError>
+  findById(id: ScoreId): Effect.Effect<Score, NotFoundError | RepositoryError>
   save(score: Score): Effect.Effect<void, RepositoryError>
   assignIssueIfUnowned(input: {
     readonly scoreId: ScoreId

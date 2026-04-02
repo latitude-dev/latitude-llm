@@ -4,6 +4,7 @@ import { type Score, ScoreAnalyticsRepository, type ScoreListPage, ScoreReposito
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
+  NotFoundError,
   OrganizationId,
   OutboxEventWriter,
   ProjectId,
@@ -140,7 +141,13 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
   const generate = generateOverride ?? defaultGenerate
 
   const ScoreRepositoryTest = Layer.succeed(ScoreRepository, {
-    findById: (id) => Effect.succeed(store.get(id) ?? null),
+    findById: (id) => {
+      const score = store.get(id)
+      if (!score) {
+        return Effect.fail(new NotFoundError({ entity: "Score", id }))
+      }
+      return Effect.succeed(score)
+    },
     save: (score) =>
       Effect.sync(() => {
         store.set(score.id, score)

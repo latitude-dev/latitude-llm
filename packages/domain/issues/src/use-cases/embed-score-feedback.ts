@@ -23,10 +23,13 @@ export const embedScoreFeedbackUseCase = (input: EmbedScoreFeedbackInput) =>
     const scoreRepository = yield* ScoreRepository
     const ai = yield* AI
 
-    const score = yield* scoreRepository.findById(ScoreId(input.scoreId))
-    if (!score) {
-      return yield* new ScoreNotFoundForDiscoveryError({ scoreId: input.scoreId })
-    }
+    const score = yield* scoreRepository
+      .findById(ScoreId(input.scoreId))
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new ScoreNotFoundForDiscoveryError({ scoreId: input.scoreId })),
+        ),
+      )
 
     const embedding = yield* ai.embed({
       text: score.feedback,
