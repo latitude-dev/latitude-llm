@@ -1,4 +1,4 @@
-import { Data, type Effect, ServiceMap } from "effect"
+import { type Effect, ServiceMap } from "effect"
 import type { z } from "zod"
 
 export {
@@ -7,33 +7,9 @@ export {
   formatGenAIPart,
 } from "./formatAi.ts"
 
-export class AIError extends Data.TaggedError("AIError")<{
-  readonly message: string
-  readonly cause?: unknown
-}> {
-  /** Upstream or model failure; safe to expose to API consumers. */
-  readonly httpStatus = 502
-  get httpMessage(): string {
-    return this.message
-  }
-}
+import type { AICredentialError, AIError } from "./errors.ts"
 
-export class AICredentialError extends Data.TaggedError("AICredentialError")<{
-  readonly provider: string
-  readonly message: string
-  /**
-   * HTTP status when this error is returned from an HTTP boundary.
-   * Defaults to 503 (AI unavailable due to missing or invalid server-side credentials).
-   */
-  readonly statusCode?: number
-}> {
-  get httpStatus(): number {
-    return this.statusCode ?? 503
-  }
-  get httpMessage(): string {
-    return this.message
-  }
-}
+export { AICredentialError, AIError } from "./errors.ts"
 
 // ---------------------------------------------------------------------------
 // Generate (structured object generation via LLM)
