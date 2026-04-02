@@ -48,10 +48,6 @@ export {
 } from "./components/dropdown-menu/primitives.tsx"
 export { FormField, type FormFieldProps } from "./components/form-field/form-field.tsx"
 export { FormWrapper } from "./components/form-wrapper/form-wrapper.tsx"
-export {
-  AnnotationPopover,
-  type AnnotationPopoverProps,
-} from "./components/genai-conversation/annotation-popover.tsx"
 export { Conversation } from "./components/genai-conversation/conversation.tsx"
 export { Message } from "./components/genai-conversation/message.tsx"
 export { Part, ReasoningGroup, type ToolCallResult } from "./components/genai-conversation/part.tsx"

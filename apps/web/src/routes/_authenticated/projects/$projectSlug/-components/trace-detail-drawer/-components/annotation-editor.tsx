@@ -1,13 +1,14 @@
 /**
- * Shared inline editor for an existing annotation (draft or published).
- * Handles thumb toggle, comment editing, and deletion with confirmation modal.
- * Used at every annotation level: trace-level, message-level, and text-selection.
+ * Shared inline UI for an existing annotation (draft or published).
+ * Draft (`isDraftAnnotation`) only gates **mutations** (thumbs, comment save, issue link, delete semantics).
+ * Compact vs expanded is mostly **`listStartsCompact`** (trace list density). **Drafts with no real comment yet**
+ * (whitespace-only feedback from create) still open **expanded** so you can add a description after picking thumbs.
  */
 
 import type { AnnotationAnchor } from "@domain/scores"
-import { Button, cn, Modal, Text, Textarea } from "@repo/ui"
-import { ThumbsDownIcon, ThumbsUpIcon, TrashIcon } from "lucide-react"
-import { useState } from "react"
+import { Button, Icon, Modal, Text, Textarea, Tooltip } from "@repo/ui"
+import { PencilIcon, TrashIcon, XIcon } from "lucide-react"
+import { useEffect, useState } from "react"
 import {
   useDeleteAnnotation,
   useUpdateAnnotation,
@@ -16,21 +17,43 @@ import {
   type AnnotationRecord,
   isDraftAnnotation,
 } from "../../../../../../../domains/annotations/annotations.functions.ts"
+import { useListIssues } from "../../../../../../../domains/issues/issues.collection.ts"
+import { AnnotationThumbToggle } from "./annotation-thumb-toggle.tsx"
+import { IssueSelector } from "./issue-selector.tsx"
 
 export function AnnotationEditor({
   annotation,
   projectId,
   traceId,
   anchor,
+  allowCompactSummary = true,
+  listStartsCompact = false,
 }: {
   readonly annotation: AnnotationRecord
   readonly projectId: string
   readonly traceId: string
   readonly anchor?: AnnotationAnchor | undefined
+  /**
+   * When true (default), list rows may show a compact summary until Edit is used.
+   * Set false for contexts that should always show the full form (e.g. popovers).
+   */
+  readonly allowCompactSummary?: boolean
+  /**
+   * Trace + message list rows: start **compact** when there is real feedback (or published). **New drafts**
+   * with only placeholder feedback open **expanded** so comment entry isn’t skipped after create.
+   */
+  readonly listStartsCompact?: boolean
 }) {
   const isEditable = isDraftAnnotation(annotation)
   const [localComment, setLocalComment] = useState(annotation.feedback?.trim() ?? "")
+  const [localIssueId, setLocalIssueId] = useState<string | null>(annotation.issueId)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [expanded, setExpanded] = useState(() => {
+    if (!allowCompactSummary) return true
+    const hasReadableFeedback = (annotation.feedback?.trim() ?? "").length > 0
+    const draftNeedsDescription = isEditable && !hasReadableFeedback
+    return !listStartsCompact || draftNeedsDescription
+  })
 
   const updateMutation = useUpdateAnnotation()
   const deleteMutation = useDeleteAnnotation()
@@ -38,73 +61,150 @@ export function AnnotationEditor({
 
   const isDirty = localComment.trim() !== (annotation.feedback?.trim() ?? "")
 
-  function handleSaveComment() {
-    if (!isEditable || isLoading || !isDirty) return
-    updateMutation.mutate({
+  const { data: issues = [] } = useListIssues({
+    projectId,
+    enabled: allowCompactSummary && annotation.passed === false && annotation.issueId !== null,
+  })
+  const linkedIssueName = annotation.issueId ? issues.find((i) => i.id === annotation.issueId)?.name : undefined
+
+  // TODO(frontend-use-effect-policy): mirrors server annotation into comment/issue fields after refetch;
+  // consider lifting state or narrowing sync triggers if this pattern grows.
+  useEffect(() => {
+    setLocalComment(annotation.feedback?.trim() ?? "")
+    setLocalIssueId(annotation.issueId)
+  }, [annotation.feedback, annotation.id, annotation.issueId])
+
+  function buildUpdatePayload(overrides?: { passed?: boolean; issueId?: string | null }) {
+    return {
       scoreId: annotation.id,
       projectId,
       traceId,
-      value: annotation.value,
-      passed: annotation.passed,
+      value: overrides?.passed !== undefined ? (overrides.passed ? 1 : 0) : annotation.value,
+      passed: overrides?.passed ?? annotation.passed,
       feedback: localComment.trim() || " ",
+      issueId: (overrides?.issueId !== undefined ? overrides.issueId : localIssueId) ?? undefined,
       ...(anchor ? { anchor } : {}),
-    })
+    }
+  }
+
+  function handleSaveComment() {
+    if (!isEditable || isLoading || !isDirty) return
+    updateMutation.mutate(buildUpdatePayload())
   }
 
   function handleThumbClick(newPassed: boolean) {
     if (!isEditable || isLoading) return
-    updateMutation.mutate({
-      scoreId: annotation.id,
-      projectId,
-      traceId,
-      value: newPassed ? 1 : 0,
-      passed: newPassed,
-      feedback: localComment.trim() || " ",
-      ...(anchor ? { anchor } : {}),
-    })
+    updateMutation.mutate(buildUpdatePayload({ passed: newPassed }))
+  }
+
+  function handleIssueChange(issueId: string | null) {
+    if (!isEditable || isLoading) return
+    setLocalIssueId(issueId)
+    updateMutation.mutate(buildUpdatePayload({ issueId }))
   }
 
   function handleDelete() {
     deleteMutation.mutate({ scoreId: annotation.id, projectId }, { onSuccess: () => setDeleteModalOpen(false) })
   }
 
+  function handleCollapseSummary() {
+    setLocalComment(annotation.feedback?.trim() ?? "")
+    setLocalIssueId(annotation.issueId)
+    setExpanded(false)
+  }
+
+  const showExpanded = !allowCompactSummary || expanded
+  const summaryFeedback = annotation.feedback?.trim() ?? ""
+
+  if (!showExpanded) {
+    return (
+      <div className="flex gap-2 items-start">
+        <AnnotationThumbToggle
+          passed={annotation.passed}
+          disabled
+          editable={false}
+          onThumbUp={() => {}}
+          onThumbDown={() => {}}
+        />
+        <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+          {summaryFeedback ? (
+            <span className="min-w-0 block" title={summaryFeedback}>
+              <Text.H6 color="foregroundMuted" lineClamp={2} wordBreak="words">
+                {summaryFeedback}
+              </Text.H6>
+            </span>
+          ) : (
+            <Text.H6 color="foregroundMuted" italic>
+              No comment
+            </Text.H6>
+          )}
+          {annotation.passed === false && annotation.issueId ? (
+            <span className="min-w-0 block" title={linkedIssueName ?? "Issue linked"}>
+              <Text.H6 color="foregroundMuted" className="truncate block">
+                {linkedIssueName ?? "Issue linked"}
+              </Text.H6>
+            </span>
+          ) : null}
+        </div>
+        <Tooltip
+          asChild
+          trigger={
+            <button
+              type="button"
+              aria-expanded={false}
+              aria-label={isEditable ? "Edit annotation" : "View full annotation"}
+              className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              onClick={() => setExpanded(true)}
+            >
+              <Icon icon={PencilIcon} size="sm" color="foregroundMuted" />
+            </button>
+          }
+        >
+          {isEditable ? "Edit annotation" : "View full annotation"}
+        </Tooltip>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
+      <div className="flex w-full items-center gap-1">
+        <AnnotationThumbToggle
+          passed={annotation.passed}
           disabled={!isEditable || isLoading}
-          onClick={() => handleThumbClick(true)}
-          className={cn("flex items-center rounded-md p-1.5 transition-colors", {
-            "text-emerald-600 bg-emerald-100 dark:bg-emerald-400/20": annotation.passed === true,
-            "text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20":
-              annotation.passed !== true && isEditable,
-            "text-muted-foreground cursor-default opacity-60": !isEditable,
-          })}
-        >
-          <ThumbsUpIcon className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          disabled={!isEditable || isLoading}
-          onClick={() => handleThumbClick(false)}
-          className={cn("flex items-center rounded-md p-1.5 transition-colors", {
-            "text-red-600 bg-red-100 dark:bg-red-400/20": annotation.passed === false,
-            "text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20":
-              annotation.passed !== false && isEditable,
-            "text-muted-foreground cursor-default opacity-60": !isEditable,
-          })}
-        >
-          <ThumbsDownIcon className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          disabled={isLoading}
-          onClick={() => setDeleteModalOpen(true)}
-          className="ml-auto rounded-md p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-        >
-          <TrashIcon className="h-4 w-4" />
-        </button>
+          editable={isEditable}
+          onThumbUp={() => handleThumbClick(true)}
+          onThumbDown={() => handleThumbClick(false)}
+        />
+        <div className="flex items-center gap-1 ml-auto">
+          {allowCompactSummary ? (
+            <Tooltip
+              asChild
+              trigger={
+                <button
+                  type="button"
+                  aria-expanded
+                  aria-label={isEditable ? "Cancel editing" : "Close"}
+                  disabled={isLoading}
+                  className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  onClick={handleCollapseSummary}
+                >
+                  <Icon icon={XIcon} size="sm" color="foregroundMuted" />
+                </button>
+              }
+            >
+              {isEditable ? "Cancel" : "Close"}
+            </Tooltip>
+          ) : null}
+          <button
+            type="button"
+            disabled={isLoading}
+            onClick={() => setDeleteModalOpen(true)}
+            className="rounded-md p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+          >
+            <TrashIcon className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {isEditable ? (
@@ -124,8 +224,19 @@ export function AnnotationEditor({
           )}
         </>
       ) : annotation.feedback?.trim() ? (
-        <Text.H6 color="foregroundMuted">{annotation.feedback.trim()}</Text.H6>
+        <Text.H6 color="foregroundMuted" wordBreak="words">
+          {annotation.feedback.trim()}
+        </Text.H6>
       ) : null}
+
+      {annotation.passed === false &&
+        (isEditable ? (
+          <IssueSelector projectId={projectId} value={localIssueId} onChange={handleIssueChange} />
+        ) : annotation.issueId ? (
+          <Text.H6 color="foregroundMuted" wordBreak="words">
+            {linkedIssueName ?? "Issue linked"}
+          </Text.H6>
+        ) : null)}
 
       <Modal
         dismissible

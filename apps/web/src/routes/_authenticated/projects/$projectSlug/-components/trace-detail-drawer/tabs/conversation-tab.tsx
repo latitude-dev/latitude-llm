@@ -1,5 +1,4 @@
 import {
-  AnnotationPopover,
   Conversation,
   type HighlightRange,
   ScrollNavigator,
@@ -24,6 +23,7 @@ import {
 } from "../../../../../../../domains/annotations/annotations.functions.ts"
 import { mapConversationToSpans } from "../../../../../../../domains/spans/spans.functions.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
+import { AnnotationPopover } from "../-components/annotation-popover.tsx"
 import { MessageAnnotationRow } from "./conversation-tab/message-annotation-row.tsx"
 
 // Popover state for text-selection annotations (Goal C).
@@ -31,6 +31,7 @@ type PopoverState = {
   position: { x: number; y: number }
   passed: boolean | null
   comment: string
+  issueId: string | null
 } & ({ kind: "new"; anchor: TextSelectionAnchor } | { kind: "existing"; annotation: AnnotationRecord })
 
 function ConversationContent({
@@ -80,6 +81,19 @@ function ConversationContent({
   const deleteMutation = useDeleteAnnotation()
 
   const [popoverState, setPopoverState] = useState<PopoverState | null>(null)
+  const openPopover = isActive && popoverState ? popoverState : null
+
+  const openAnnotationPopover = useCallback(
+    (next: PopoverState) => {
+      if (!isActive) return
+      setPopoverState(next)
+    },
+    [isActive],
+  )
+
+  const closeAnnotationPopover = useCallback(() => {
+    setPopoverState(null)
+  }, [])
 
   // Text-level annotations (all 4 anchor fields) → highlight ranges with onClick.
   // Message-level annotations (messageIndex only, no partIndex) → message annotation row via slot.
@@ -108,12 +122,13 @@ function ConversationContent({
           passed: a.passed,
           id: a.id,
           onClick: (position) => {
-            setPopoverState({
+            openAnnotationPopover({
               kind: "existing",
               annotation,
               position,
               passed: annotation.passed,
               comment: annotation.feedback ?? "",
+              issueId: annotation.issueId,
             })
           },
         })
@@ -123,7 +138,7 @@ function ConversationContent({
     }
 
     return { highlightRanges: ranges, messageLevelAnnotations: messageMap }
-  }, [annotations])
+  }, [annotations, openAnnotationPopover])
 
   const handleTextSelect = useCallback(
     (anchor: TextSelectionAnchor, position: { x: number; y: number }) => {
@@ -138,30 +153,32 @@ function ConversationContent({
       if (existing?.id) {
         const annotation = annotations?.items.find((a) => a.id === existing.id)
         if (annotation) {
-          setPopoverState({
+          openAnnotationPopover({
             kind: "existing",
             annotation,
             position,
             passed: annotation.passed,
             comment: annotation.feedback ?? "",
+            issueId: annotation.issueId,
           })
           return
         }
       }
-      setPopoverState({
+      openAnnotationPopover({
         kind: "new",
         anchor,
         position,
         passed: null,
         comment: "",
+        issueId: null,
       })
     },
-    [highlightRanges, annotations],
+    [highlightRanges, annotations, openAnnotationPopover],
   )
 
   function handlePopoverConfirm() {
     if (!popoverState || popoverState.passed === null) return
-    const { passed, comment } = popoverState
+    const { passed, comment, issueId } = popoverState
     const feedback = comment.trim() || " "
 
     if (popoverState.kind === "new") {
@@ -173,6 +190,7 @@ function ConversationContent({
           value: passed ? 1 : 0,
           passed,
           feedback,
+          ...(issueId ? { issueId } : {}),
           anchor: {
             messageIndex: anchor.messageIndex,
             partIndex: anchor.partIndex,
@@ -180,7 +198,7 @@ function ConversationContent({
             endOffset: anchor.endOffset,
           },
         },
-        { onSuccess: () => setPopoverState(null) },
+        { onSuccess: closeAnnotationPopover },
       )
     } else {
       const { annotation } = popoverState
@@ -192,6 +210,7 @@ function ConversationContent({
           value: passed ? 1 : 0,
           passed,
           feedback,
+          ...(issueId ? { issueId } : {}),
           ...(annotation.metadata.messageIndex !== undefined
             ? {
                 anchor: {
@@ -203,17 +222,14 @@ function ConversationContent({
               }
             : {}),
         },
-        { onSuccess: () => setPopoverState(null) },
+        { onSuccess: closeAnnotationPopover },
       )
     }
   }
 
   function handlePopoverDelete() {
     if (!popoverState || popoverState.kind !== "existing") return
-    deleteMutation.mutate(
-      { scoreId: popoverState.annotation.id, projectId },
-      { onSuccess: () => setPopoverState(null) },
-    )
+    deleteMutation.mutate({ scoreId: popoverState.annotation.id, projectId }, { onSuccess: closeAnnotationPopover })
   }
 
   const messageActions =
@@ -234,7 +250,7 @@ function ConversationContent({
       : undefined
 
   const popoverIsLoading = createMutation.isPending || updateMutation.isPending || deleteMutation.isPending
-  const isPopoverEditable = popoverState?.kind === "existing" ? isDraftAnnotation(popoverState.annotation) : true
+  const isPopoverEditable = openPopover?.kind === "existing" ? isDraftAnnotation(openPopover.annotation) : true
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
@@ -265,17 +281,20 @@ function ConversationContent({
           {...(toolCallActions ? { toolCallActions } : {})}
         />
         <AnnotationPopover
-          position={popoverState?.position ?? null}
-          passed={popoverState?.passed ?? null}
-          comment={popoverState?.comment ?? ""}
+          position={openPopover?.position ?? null}
+          passed={openPopover?.passed ?? null}
+          comment={openPopover?.comment ?? ""}
+          issueId={openPopover?.issueId ?? null}
+          projectId={projectId}
           isEditable={isPopoverEditable}
-          isExisting={popoverState?.kind === "existing"}
+          isExisting={openPopover?.kind === "existing"}
           isLoading={popoverIsLoading}
           onPassedChange={(p) => setPopoverState((prev) => (prev ? { ...prev, passed: p } : null))}
           onCommentChange={(c) => setPopoverState((prev) => (prev ? { ...prev, comment: c } : null))}
+          onIssueChange={(id) => setPopoverState((prev) => (prev ? { ...prev, issueId: id } : null))}
           onConfirm={handlePopoverConfirm}
           onDelete={handlePopoverDelete}
-          onClose={() => setPopoverState(null)}
+          onClose={closeAnnotationPopover}
         />
       </div>
       <div className="absolute top-4 right-4 z-10">

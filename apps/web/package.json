@@ -18,6 +18,7 @@
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/datasets": "workspace:*",
+    "@domain/issues": "workspace:*",
     "@domain/organizations": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/queue": "workspace:*",

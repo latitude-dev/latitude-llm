@@ -56,7 +56,8 @@ function reassembleIndexedMessages(attrs: readonly OtlpKeyValue[], prefix: strin
     if (!messageMap.has(index)) {
       messageMap.set(index, {})
     }
-    const msg = messageMap.get(index)!
+    const msg = messageMap.get(index)
+    if (!msg) continue
 
     const attrValue = value?.stringValue ?? value?.intValue?.toString() ?? value?.boolValue?.toString()
     if (attrValue === undefined) continue
@@ -83,7 +84,8 @@ function reassembleIndexedMessages(attrs: readonly OtlpKeyValue[], prefix: strin
 
       const toolCalls = msg.tool_calls as Record<string, unknown>[]
       while (toolCalls.length <= tcIndex) toolCalls.push({})
-      const tc = toolCalls[tcIndex]!
+      const tc = toolCalls[tcIndex]
+      if (typeof tc !== "object" || tc === null) continue
       if (tcField === "id") tc.id = attrValue
       else if (tcField === "name") tc.name = attrValue
       else if (tcField === "arguments") tc.arguments = attrValue

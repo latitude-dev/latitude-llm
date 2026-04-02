@@ -85,8 +85,8 @@ export function CopyableText({
   if (!tooltip) return button
 
   return (
-    <Tooltip trigger={button}>
-      <Text.Mono size="h6">{tooltip}</Text.Mono>
+    <Tooltip trigger={button} asChild>
+      {tooltip}
     </Tooltip>
   )
 }
