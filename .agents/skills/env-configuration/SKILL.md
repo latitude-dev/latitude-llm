@@ -52,3 +52,9 @@ const dbUrl = Effect.runSync(parseEnv("LAT_DATABASE_URL", "string"))
 ```
 
 For where configuration is wired in apps (clients, routes), see [architecture-boundaries](../architecture-boundaries/SKILL.md).
+
+## Errors from `parseEnv` / `parseEnvOptional`
+
+Failures are typed **`MissingEnvValueError`** or **`InvalidEnvValueError`** (exported from `@platform/env`). Keep them in the `Effect` error channel (`Effect.catchTag`, `Effect.mapError`, or let them propagate) instead of converting to untyped `Error`.
+
+These types are the **reference TaggedError implementation** for other `packages/platform/*` code: readonly payload, string tag, and overridden `message` / `stack` for clear operator-facing output. Full guidelines and examples live in [effect-and-errors](../effect-and-errors/SKILL.md#reference-taggederror-in-platformenv).
