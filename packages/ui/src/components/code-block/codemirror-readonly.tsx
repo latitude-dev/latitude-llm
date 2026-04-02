@@ -2,7 +2,7 @@ import { json } from "@codemirror/lang-json"
 import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { EditorState } from "@codemirror/state"
 import { EditorView, lineNumbers } from "@codemirror/view"
-import { useEffect, useMemo, useRef } from "react"
+import { useLayoutEffect, useMemo, useRef } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
 
@@ -86,9 +86,8 @@ export function CodeMirrorReadonly({ value, className }: CodeMirrorReadonlyProps
     }
   })
 
-  // TODO(frontend-use-effect-policy): CodeMirror is imperative; this syncs the
-  // parent-driven value prop into the editor state without remounting the widget.
-  useEffect(() => {
+  // CodeMirror is imperative; useLayoutEffect syncs the parent-driven value without remounting the widget.
+  useLayoutEffect(() => {
     const view = viewRef.current
     if (!view) return
     if (view.state.doc.toString() !== value) {

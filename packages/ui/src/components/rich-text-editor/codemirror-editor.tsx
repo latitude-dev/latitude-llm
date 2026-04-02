@@ -3,7 +3,7 @@ import { json } from "@codemirror/lang-json"
 import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { EditorState } from "@codemirror/state"
 import { EditorView, keymap, lineNumbers } from "@codemirror/view"
-import { useEffect, useRef } from "react"
+import { useLayoutEffect, useMemo, useRef } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
 import type { RichTextEditorProps } from "./rich-text-editor.tsx"
@@ -94,7 +94,7 @@ export function CodeMirrorEditor({ value, onChange, readOnly = false, className,
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const initialValueRef = useRef(value)
-  const isJsonContent = useRef(isJson(value)).current
+  const isJsonContent = useMemo(() => isJson(value), [value])
 
   useMountEffect(() => {
     const container = containerRef.current
@@ -117,10 +117,8 @@ export function CodeMirrorEditor({ value, onChange, readOnly = false, className,
     }
   })
 
-  // TODO(frontend-use-effect-policy): replace this prop->CodeMirror synchronization effect with a declarative
-  // controlled-adapter strategy. CodeMirror mutates an imperative external editor instance, and this update
-  // path still needs a safe way to apply parent-driven value changes without remounting on every keystroke.
-  useEffect(() => {
+  // CodeMirror is imperative; useLayoutEffect applies parent-driven doc/readOnly updates without remounting per keystroke.
+  useLayoutEffect(() => {
     const view = viewRef.current
     if (!view) return
 
