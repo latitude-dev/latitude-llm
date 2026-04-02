@@ -98,6 +98,22 @@ After new ClickHouse migrations, regenerate the in-memory test schema (only if t
 pnpm --filter @platform/db-clickhouse ch:schema:dump
 ```
 
+## Worker and queue-handler tests (`apps/workers` harness)
+
+**Reference implementation:** `apps/workers/src/workers/*.test.ts` (for example `dataset-export.test.ts`, `api-keys.test.ts`, `span-ingestion.test.ts`, `domain-events.test.ts`).
+
+Queue workers subscribe to named queues and tasks. In tests, **do not** run BullMQ or a real broker. Instead:
+
+1. **Fake `QueueConsumer`** — Implement `subscribe` so it records the `TaskHandlers` map for each `QueueName`. Expose `dispatchTask(queue, task, payload)` that looks up the handler and runs it with `Effect.runPromise(handler(payload))`. Some tests use a single-queue variant (see `domain-events.test.ts`) when the worker only registers one subscription.
+
+2. **Real infra via testkit** — At module scope, call `setupTestPostgres()` and/or `setupTestClickHouse()` from `@platform/testkit` (same Postgres helpers as `@platform/db-postgres/testing`). Pass `pg.appPostgresClient` into the worker factory when handlers must respect **RLS**; use `pg.db` / Drizzle for seed data when the test needs owner-level inserts.
+
+3. **Other ports as fakes** — Prefer package `/testing` exports and domain test doubles, for example `FakeStorageDisk` from `@platform/storage-object/testing`, `createFakeQueuePublisher` from `@domain/queue/testing`, or small inline `Effect`-based fakes for email or event publishers.
+
+4. **Wire and assert** — Call `create*Worker({ consumer, ...deps })`, then `dispatchTask` with a realistic payload. Assert on database rows, published queue messages, disk state, or sent email captures.
+
+**Guidelines for new app-level queue tests:** Reuse the same shape (in-memory DBs, fake consumer, real repositories wired with `withPostgres` / `withClickHouse` where needed). Keep worker factories accepting concrete ports so tests stay fast and deterministic without `vi.mock` on repositories.
+
 ## Why not `vi.mock`?
 
 Mocking repositories with `vi.fn()` tests the wiring, not the queries. In-memory databases catch real bugs: wrong column names, broken `argMax` aggregations, incorrect `GROUP BY` clauses, and schema mismatches. They run quickly with zero external dependencies.
