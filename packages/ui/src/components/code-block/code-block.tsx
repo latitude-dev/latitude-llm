@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react"
+import { lazy, Suspense, useMemo, useState } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
 import { CopyButton } from "../copy-button/index.tsx"
@@ -23,6 +23,11 @@ function CodeBlockFallback({ className }: { readonly className?: string }) {
 
 export function CodeBlock({ value, copyable, className }: CodeBlockProps) {
   const [mounted, setMounted] = useState(false)
+  const remountKey = useMemo(() => {
+    let h = 0
+    for (let i = 0; i < value.length; i++) h = (Math.imul(31, h) + value.charCodeAt(i)) | 0
+    return String(h)
+  }, [value])
 
   useMountEffect(() => {
     setMounted(true)
@@ -35,7 +40,7 @@ export function CodeBlock({ value, copyable, className }: CodeBlockProps) {
   return (
     <div className="relative">
       <Suspense fallback={<CodeBlockFallback {...(className != null && { className })} />}>
-        <CodeMirrorReadonly value={value} {...(className != null && { className })} />
+        <CodeMirrorReadonly key={remountKey} value={value} {...(className != null && { className })} />
       </Suspense>
       {copyable && (
         <div className="absolute top-1 right-1">

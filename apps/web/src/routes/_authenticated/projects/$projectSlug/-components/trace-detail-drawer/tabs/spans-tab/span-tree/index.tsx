@@ -1,7 +1,7 @@
 import { cn, Text, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon, MaximizeIcon, MinimizeIcon } from "lucide-react"
-import { type RefObject, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../../../components/hotkey-badge.tsx"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { MIN_TREE_WIDTH, MIN_WATERFALL_WIDTH, MINIMIZED_MAX_HEIGHT, ROW_HEIGHT } from "./helpers.ts"
@@ -70,7 +70,7 @@ export function SpanTree({
     setCollapsed((prev) => (prev.size === collapsibleIds.size ? new Set() : new Set(collapsibleIds)))
   }, [collapsibleIds])
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!selectedSpanId || spans.length === 0) return
     onBeforeScrollToSelectedSpan?.()
     const root = scrollIntoViewRootRef?.current ?? containerRef.current

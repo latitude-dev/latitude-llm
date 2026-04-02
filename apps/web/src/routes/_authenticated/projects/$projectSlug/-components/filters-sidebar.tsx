@@ -1,7 +1,7 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
 import { Button, Checkbox, Input, Skeleton, Text } from "@repo/ui"
 import { ChevronDown, ChevronUp, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
-import { type ComponentProps, type ReactNode, useCallback, useLayoutEffect, useMemo, useState } from "react"
+import { type ComponentProps, type ReactNode, useCallback, useMemo, useRef, useState } from "react"
 import { useDebounce } from "react-use"
 import { useSessionDistinctValues } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceDistinctValues } from "../../../../../domains/traces/traces.collection.ts"
@@ -124,6 +124,12 @@ function DebouncedInput({
 }) {
   const [local, setLocal] = useState(value)
   const [pendingChange, setPendingChange] = useState<string | null>(null)
+  const lastCommittedValue = useRef(value)
+  if (lastCommittedValue.current !== value) {
+    lastCommittedValue.current = value
+    setLocal(value)
+    setPendingChange(null)
+  }
 
   useDebounce(
     () => {
@@ -133,11 +139,6 @@ function DebouncedInput({
     300,
     [pendingChange, onDebouncedChange],
   )
-
-  useLayoutEffect(() => {
-    setLocal(value)
-    setPendingChange(null)
-  }, [value])
 
   return (
     <div className="relative">
@@ -311,12 +312,16 @@ function NumberRangeFilter({
     [pendingMax, onMaxChange],
   )
 
-  useLayoutEffect(() => {
+  const lastMin = useRef(minValue)
+  const lastMax = useRef(maxValue)
+  if (lastMin.current !== minValue || lastMax.current !== maxValue) {
+    lastMin.current = minValue
+    lastMax.current = maxValue
     setLocalMin(minValue?.toString() ?? "")
     setPendingMin(null)
     setLocalMax(maxValue?.toString() ?? "")
     setPendingMax(null)
-  }, [minValue, maxValue])
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -357,10 +362,11 @@ function MetadataFilter({
   readonly onChange: (entries: { key: string; value: string }[]) => void
 }) {
   const [localEntries, setLocalEntries] = useState<{ key: string; value: string }[]>([...committedEntries])
-
-  useLayoutEffect(() => {
+  const lastCommittedRef = useRef(committedEntries)
+  if (lastCommittedRef.current !== committedEntries) {
+    lastCommittedRef.current = committedEntries
     setLocalEntries([...committedEntries])
-  }, [committedEntries])
+  }
 
   const propagate = useCallback(
     (entries: { key: string; value: string }[]) => {

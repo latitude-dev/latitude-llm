@@ -3,7 +3,7 @@ import { json } from "@codemirror/lang-json"
 import { defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language"
 import { EditorState } from "@codemirror/state"
 import { EditorView, keymap, lineNumbers } from "@codemirror/view"
-import { useLayoutEffect, useMemo, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
 import type { RichTextEditorProps } from "./rich-text-editor.tsx"
@@ -117,8 +117,8 @@ export function CodeMirrorEditor({ value, onChange, readOnly = false, className,
     }
   })
 
-  // CodeMirror is imperative; useLayoutEffect applies parent-driven doc/readOnly updates without remounting per keystroke.
-  useLayoutEffect(() => {
+  // TODO(frontend-use-effect-policy): CodeMirror is an imperative widget; parent-driven doc/readOnly updates must run after commit via the view API (not derivable in render).
+  useEffect(() => {
     const view = viewRef.current
     if (!view) return
 

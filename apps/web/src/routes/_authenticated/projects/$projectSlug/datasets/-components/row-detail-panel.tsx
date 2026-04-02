@@ -1,6 +1,6 @@
 import { DetailSection, RichTextEditor } from "@repo/ui"
 import { ArrowDownRightIcon, ArrowUpRightIcon, TextIcon } from "lucide-react"
-import { useCallback, useEffect, useImperativeHandle, useState } from "react"
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 import type { DatasetRowRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 
 export type RowDetailPanelSaveRef = { save: () => void }
@@ -33,6 +33,14 @@ export function RowDetailPanel({
   const [outputText, setOutputText] = useState(() => formatField(row.output))
   const [metadataText, setMetadataText] = useState(() => formatField(row.metadata))
 
+  const rowIdentityRef = useRef({ rowId: row.rowId, version: row.version })
+  if (rowIdentityRef.current.rowId !== row.rowId || rowIdentityRef.current.version !== row.version) {
+    rowIdentityRef.current = { rowId: row.rowId, version: row.version }
+    setInputText(formatField(row.input))
+    setOutputText(formatField(row.output))
+    setMetadataText(formatField(row.metadata))
+  }
+
   const handleSave = useCallback(() => {
     onSave?.({ input: inputText, output: outputText, metadata: metadataText })
   }, [inputText, outputText, metadataText, onSave])
@@ -60,21 +68,21 @@ export function RowDetailPanel({
         label="Input"
         contentClassName="max-h-none overflow-visible"
       >
-        <RichTextEditor value={inputText} onChange={setInputText} />
+        <RichTextEditor key={`${row.rowId}-input-${row.version}`} value={inputText} onChange={setInputText} />
       </DetailSection>
       <DetailSection
         icon={<ArrowUpRightIcon className="h-4 w-4" />}
         label="Output"
         contentClassName="max-h-none overflow-visible"
       >
-        <RichTextEditor value={outputText} onChange={setOutputText} />
+        <RichTextEditor key={`${row.rowId}-output-${row.version}`} value={outputText} onChange={setOutputText} />
       </DetailSection>
       <DetailSection
         icon={<TextIcon className="h-4 w-4" />}
         label="Metadata"
         contentClassName="max-h-none overflow-visible"
       >
-        <RichTextEditor value={metadataText} onChange={setMetadataText} />
+        <RichTextEditor key={`${row.rowId}-metadata-${row.version}`} value={metadataText} onChange={setMetadataText} />
       </DetailSection>
     </div>
   )
