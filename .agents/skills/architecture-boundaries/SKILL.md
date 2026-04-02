@@ -57,6 +57,7 @@ Business logic lives here. Domain packages expose:
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `packages/domain/*/src/helpers.ts`.
 - Types and schemas that exist only as inputs to one domain use-case belong in that use-case file rather than a generic side module, unless several use-cases truly share the exact same contract.
 - App and platform layers should build boundary-specific schemas by reusing or deriving from domain entity/use-case schemas whenever practical rather than redefining the same contract from scratch.
+- Expose the package’s stable API through `src/index.ts` with explicit named re-exports grouped as constants, entities, helpers, then use-cases. Prefer `@domain/annotations`’s `src/index.ts` as the reference; details live in [`docs/domain-packages.md`](../../../docs/domain-packages.md).
 
 ## Infrastructure (`packages/platform/*`)
 

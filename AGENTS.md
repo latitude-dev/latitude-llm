@@ -68,6 +68,7 @@ details when the documentation isn't enough.
 - Domain package errors belong in `src/errors.ts`.
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `src/helpers.ts`.
 - Schemas and types that exist only as inputs to one domain use-case should be defined in that use-case file. Only promote them into shared modules when several use-cases truly share the same contract.
+- Domain packages should expose their stable surface through `src/index.ts` using explicit named re-exports (constants, entities, helpers, use-cases). See [docs/domain-packages.md](docs/domain-packages.md); [`@domain/annotations`](packages/domain/annotations/src/index.ts) is the reference barrel.
 
 ## Async Contract Scoping Convention
 
