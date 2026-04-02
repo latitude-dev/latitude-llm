@@ -1,8 +1,8 @@
 import { Text } from "@repo/ui"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { useSpansByTraceCollection } from "../../../../../../../domains/spans/spans.collection.ts"
 import { SpanDetail } from "./spans-tab/span-detail/index.tsx"
-import { SpanTree, scrollSpanIntoView } from "./spans-tab/span-tree/index.tsx"
+import { SpanTree } from "./spans-tab/span-tree/index.tsx"
 
 export function SpansTab({
   traceId,
@@ -18,19 +18,6 @@ export function SpansTab({
   const { data: spans } = useSpansByTraceCollection(traceId)
   const [isMinimized, setIsMinimized] = useState(() => selectedSpanId !== "")
   const treeContainerRef = useRef<HTMLDivElement | null>(null)
-
-  // TODO(frontend-use-effect-policy): scrollSpanIntoView is an imperative DOM
-  // operation that cannot be derived during render. It must fire both when
-  // selectedSpanId changes externally (navigation from conversation tab) and
-  // when spans first load with a pre-set selectedSpanId, so an event handler
-  // alone is not sufficient.
-  useEffect(() => {
-    if (!selectedSpanId || !spans || spans.length === 0) return
-    setIsMinimized(true)
-    requestAnimationFrame(() => {
-      scrollSpanIntoView(treeContainerRef.current, selectedSpanId)
-    })
-  }, [selectedSpanId, spans?.length])
 
   function handleSelectSpan(spanId: string) {
     if (spanId === selectedSpanId) {
@@ -75,6 +62,8 @@ export function SpansTab({
         isMinimized={isMinimized}
         onToggleMinimized={handleToggleMinimized}
         isActive={isActive}
+        scrollIntoViewRootRef={treeContainerRef}
+        onBeforeScrollToSelectedSpan={() => setIsMinimized(true)}
       />
       {selectedSpanId !== "" && <SpanDetail traceId={traceId} spanId={selectedSpanId} onClose={handleCloseDetail} />}
     </div>

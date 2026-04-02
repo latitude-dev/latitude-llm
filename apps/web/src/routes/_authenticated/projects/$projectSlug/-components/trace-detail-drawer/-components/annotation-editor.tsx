@@ -8,7 +8,7 @@
 import type { AnnotationAnchor } from "@domain/scores"
 import { Button, Icon, Modal, Text, Textarea, Tooltip } from "@repo/ui"
 import { PencilIcon, TrashIcon, XIcon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useLayoutEffect, useState } from "react"
 import {
   useDeleteAnnotation,
   useUpdateAnnotation,
@@ -67,9 +67,8 @@ export function AnnotationEditor({
   })
   const linkedIssueName = annotation.issueId ? issues.find((i) => i.id === annotation.issueId)?.name : undefined
 
-  // TODO(frontend-use-effect-policy): mirrors server annotation into comment/issue fields after refetch;
-  // consider lifting state or narrowing sync triggers if this pattern grows.
-  useEffect(() => {
+  // Mirror server fields after refetch; useLayoutEffect avoids flash before paint (controlled fields + draft state).
+  useLayoutEffect(() => {
     setLocalComment(annotation.feedback?.trim() ?? "")
     setLocalIssueId(annotation.issueId)
   }, [annotation.feedback, annotation.id, annotation.issueId])

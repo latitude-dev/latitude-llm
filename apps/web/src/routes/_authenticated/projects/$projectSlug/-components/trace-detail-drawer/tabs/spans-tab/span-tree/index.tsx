@@ -1,7 +1,7 @@
 import { cn, Text, Tooltip } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { ChevronsDownUpIcon, ChevronsUpDownIcon, MaximizeIcon, MinimizeIcon } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { type RefObject, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../../../components/hotkey-badge.tsx"
 import type { SpanRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
 import { MIN_TREE_WIDTH, MIN_WATERFALL_WIDTH, MINIMIZED_MAX_HEIGHT, ROW_HEIGHT } from "./helpers.ts"
@@ -17,6 +17,8 @@ export function SpanTree({
   isMinimized,
   onToggleMinimized,
   isActive,
+  scrollIntoViewRootRef,
+  onBeforeScrollToSelectedSpan,
 }: {
   readonly spans: readonly SpanRecord[]
   readonly selectedSpanId: string
@@ -24,6 +26,8 @@ export function SpanTree({
   readonly isMinimized: boolean
   readonly onToggleMinimized: () => void
   readonly isActive: boolean
+  readonly scrollIntoViewRootRef?: RefObject<HTMLElement | null>
+  readonly onBeforeScrollToSelectedSpan?: () => void
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -65,6 +69,15 @@ export function SpanTree({
   const toggleAll = useCallback(() => {
     setCollapsed((prev) => (prev.size === collapsibleIds.size ? new Set() : new Set(collapsibleIds)))
   }, [collapsibleIds])
+
+  useLayoutEffect(() => {
+    if (!selectedSpanId || spans.length === 0) return
+    onBeforeScrollToSelectedSpan?.()
+    const root = scrollIntoViewRootRef?.current ?? containerRef.current
+    requestAnimationFrame(() => {
+      scrollSpanIntoView(root, selectedSpanId)
+    })
+  }, [selectedSpanId, spans.length, onBeforeScrollToSelectedSpan, scrollIntoViewRootRef])
 
   // J/K/E/Escape hotkeys — only active when this tab is visible
   useHotkeys([

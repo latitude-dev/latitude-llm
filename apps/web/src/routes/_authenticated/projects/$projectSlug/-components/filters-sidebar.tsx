@@ -1,7 +1,7 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
 import { Button, Checkbox, Input, Skeleton, Text } from "@repo/ui"
 import { ChevronDown, ChevronUp, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
-import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
+import { type ComponentProps, type ReactNode, useCallback, useLayoutEffect, useMemo, useState } from "react"
 import { useDebounce } from "react-use"
 import { useSessionDistinctValues } from "../../../../../domains/sessions/sessions.collection.ts"
 import { useTraceDistinctValues } from "../../../../../domains/traces/traces.collection.ts"
@@ -134,8 +134,7 @@ function DebouncedInput({
     [pendingChange, onDebouncedChange],
   )
 
-  // TODO(frontend-use-effect-policy): keep local input state in sync with externally-controlled filter updates.
-  useEffect(() => {
+  useLayoutEffect(() => {
     setLocal(value)
     setPendingChange(null)
   }, [value])
@@ -312,16 +311,12 @@ function NumberRangeFilter({
     [pendingMax, onMaxChange],
   )
 
-  // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
-  useEffect(() => {
+  useLayoutEffect(() => {
     setLocalMin(minValue?.toString() ?? "")
     setPendingMin(null)
-  }, [minValue])
-  // TODO(frontend-use-effect-policy): keep local range inputs in sync with externally-controlled filter updates.
-  useEffect(() => {
     setLocalMax(maxValue?.toString() ?? "")
     setPendingMax(null)
-  }, [maxValue])
+  }, [minValue, maxValue])
 
   return (
     <div className="flex items-center gap-2">
@@ -363,8 +358,7 @@ function MetadataFilter({
 }) {
   const [localEntries, setLocalEntries] = useState<{ key: string; value: string }[]>([...committedEntries])
 
-  // TODO(frontend-use-effect-policy): keep draft metadata rows in sync with externally-controlled filter updates.
-  useEffect(() => {
+  useLayoutEffect(() => {
     setLocalEntries([...committedEntries])
   }, [committedEntries])
 
