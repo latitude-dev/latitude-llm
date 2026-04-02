@@ -13,6 +13,7 @@ import {
 } from "@domain/shared"
 import type { Span, SpanDetail, SpanKind, SpanMessagesData, SpanStatusCode, ToolDefinition } from "@domain/spans"
 import { SpanRepository } from "@domain/spans"
+import { createLogger } from "@repo/observability"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -301,6 +302,20 @@ const toInsertRow = (span: SpanDetail) => ({
   ingested_at: toClickhouseDateTime(span.ingestedAt),
 })
 
+const spanInsertLogContext = (spans: readonly SpanDetail[]) => ({
+  spanCount: spans.length,
+  sampleSpans: spans.slice(0, 5).map((s) => ({
+    organizationId: s.organizationId as string,
+    projectId: s.projectId as string,
+    traceId: s.traceId as string,
+    spanId: s.spanId as string,
+    name: s.name,
+    errorType: s.errorType,
+  })),
+})
+
+const logger = createLogger("db-clickhouse-span-repository")
+
 export const SpanRepositoryLive = Layer.effect(
   SpanRepository,
   Effect.gen(function* () {
@@ -324,7 +339,7 @@ export const SpanRepositoryLive = Layer.effect(
           })
           .pipe(
             Effect.mapError((error) => {
-              console.log("Error inserting spans", error)
+              logger.error("Error inserting spans", { ...spanInsertLogContext(spans), cause: error })
               return toRepositoryError(error, "insert")
             }),
           ),

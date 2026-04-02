@@ -982,6 +982,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../env
+      '@repo/observability':
+        specifier: workspace:*
+        version: link:../../observability
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
