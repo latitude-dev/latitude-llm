@@ -288,6 +288,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@domain/annotation-queues':
+        specifier: workspace:*
+        version: link:../../packages/domain/annotation-queues
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -628,6 +631,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6

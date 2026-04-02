@@ -9,7 +9,10 @@ export interface InfiniteTableColumn<T> {
   render: (row: T, rowIndex: number) => ReactNode
   align?: "start" | "end"
   resizable?: boolean
+  /** Minimum width (px); used for resize limits and header measurement. */
   minWidth?: number
+  /** Preferred default width (px) for this column; applied to the header cell so `table-fixed` allocates space. */
+  width?: number
   sortKey?: string
   /** Optional second header row cell; use for summaries. Keep controls `stopPropagation` if the column is sortable. */
   renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode

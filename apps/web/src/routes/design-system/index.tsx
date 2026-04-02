@@ -1,5 +1,8 @@
 import type { CheckedState } from "@repo/ui"
 import {
+  Avatar,
+  AvatarGroup,
+  Badge,
   BarChart,
   Button,
   Card,
@@ -89,6 +92,50 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           <Text.H5>Heading 5</Text.H5>
           <Text.H6>Heading 6</Text.H6>
           <Text.Mono>const status = "ready";</Text.Mono>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Avatar & AvatarGroup"
+        description="Hash-colored initials, optional image, and stacked group with overflow."
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-2">
+              <Text.H6 weight="semibold">Sizes</Text.H6>
+              <div className="flex items-center gap-3">
+                <Avatar name="Ada Lovelace" size="sm" />
+                <Avatar name="Grace Hopper" size="md" />
+                <Avatar name="Margaret Hamilton" size="lg" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Text.H6 weight="semibold">Stacked ring (AvatarGroup)</Text.H6>
+              <Avatar name="Queue assignee" size="md" stacked />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">AvatarGroup (3 visible + overflow)</Text.H6>
+            <AvatarGroup
+              size="md"
+              items={[
+                { id: "1", name: "Alex Rivera" },
+                { id: "2", name: "Sam Chen" },
+                { id: "3", name: "Jordan Lee" },
+                { id: "4", name: "Taylor Kim" },
+                { id: "5", name: "Riley Patel" },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Badge uppercase</Text.H6>
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="outline" size="small" uppercase noWrap>
+                live
+              </Badge>
+            </div>
+          </div>
         </div>
       </ShowcaseSection>
 

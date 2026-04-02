@@ -6,7 +6,7 @@ import {
   ChevronRight,
   ChevronsUp,
   History,
-  Link2Off,
+  ListOrdered,
   MessageSquareText,
   PanelLeft,
   PanelLeftClose,
@@ -15,8 +15,12 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
+import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
+  staticData: {
+    breadcrumb: ProjectBreadcrumbSegment,
+  },
   component: ProjectLayout,
   beforeLoad: async ({ params }) => {
     try {
@@ -126,24 +130,6 @@ function NavItem({
   )
 }
 
-function NavChild({ label, to }: { label: string; to?: string }) {
-  const content = (
-    <div className="px-2 py-2 rounded-lg text-muted-foreground hover:bg-muted cursor-pointer transition-colors">
-      <Text.H5M color="foregroundMuted" ellipsis>
-        {label}
-      </Text.H5M>
-    </div>
-  )
-
-  return to ? (
-    <Link to={to} className="block">
-      {content}
-    </Link>
-  ) : (
-    content
-  )
-}
-
 function ProjectSidebar({
   project,
   projectSlug,
@@ -165,6 +151,7 @@ function ProjectSidebar({
   const isIssuesActive = pathname.startsWith(`/projects/${projectSlug}/issues`)
   const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
   const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
+  const isAnnotationQueuesActive = pathname.startsWith(`/projects/${projectSlug}/annotation-queues`)
 
   return (
     <aside
@@ -205,10 +192,13 @@ function ProjectSidebar({
             active={isTracesActive}
             collapsed={collapsed}
           />
-          <NavItem icon={Link2Off} label="Annotation queues" defaultExpanded={false} collapsed={collapsed}>
-            <NavChild label="Another queue" />
-            <NavChild label="Cute queue" />
-          </NavItem>
+          <NavItem
+            icon={ListOrdered}
+            label="Annotation queues"
+            to={`/projects/${projectSlug}/annotation-queues`}
+            active={isAnnotationQueuesActive}
+            collapsed={collapsed}
+          />
           <NavItem
             icon={ShieldAlert}
             label="Issues"

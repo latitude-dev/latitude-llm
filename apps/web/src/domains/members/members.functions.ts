@@ -20,6 +20,7 @@ export interface MemberRecord {
   readonly userId: string | null
   readonly name: string | null
   readonly email: string
+  readonly image: string | null
   readonly role: string
   readonly status: MemberStatus
   readonly confirmedAt: string | null
@@ -50,6 +51,7 @@ export const listMembers = createServerFn({ method: "GET" }).handler(async (): P
     userId: m.userId,
     name: m.name,
     email: m.email,
+    image: m.image,
     role: m.role,
     status: "active" as const,
     confirmedAt: m.createdAt ? m.createdAt.toISOString() : null,
@@ -65,6 +67,7 @@ export const listMembers = createServerFn({ method: "GET" }).handler(async (): P
       userId: null,
       name: null,
       email: invite.email,
+      image: null,
       role: invite.role ?? "member",
       status: "invited" as const,
       confirmedAt: null,

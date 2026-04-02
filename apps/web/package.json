@@ -15,6 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@domain/annotation-queues": "workspace:*",
     "@domain/annotations": "workspace:*",
     "@domain/api-keys": "workspace:*",
     "@domain/datasets": "workspace:*",

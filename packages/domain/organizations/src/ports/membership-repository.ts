@@ -10,6 +10,7 @@ export interface MemberWithUser {
   createdAt: Date
   name: string | null
   email: string
+  image: string | null
 }
 
 // MembershipRepository Service with all methods needed by use cases
