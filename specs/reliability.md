@@ -899,18 +899,18 @@ Rules:
 
 ### Annotation Issue Intent
 
-When an annotation is created through Latitude-managed UI, the annotator must be able to choose one of three issue paths:
+When an annotation is created through Latitude-managed UI, the annotator can currently choose one of two issue paths:
 
 - leave the annotation unlinked and let issue discovery decide
 - link the annotation to an existing issue explicitly
-- create a new issue inline while annotating
+
+Inline manual issue creation from the annotation flow is intentionally cancelled for now to keep the managed annotation UX and ownership rules simpler while Phase 11 finishes.
 
 Rules:
 
-- explicit link/create choices are human overrides and bypass similarity-based issue discovery for that annotation score
+- explicit link choices are human overrides and bypass similarity-based issue discovery for that annotation score
 - linking an existing issue writes the canonical `score.issue_id` directly
-- inline issue creation persists the new issue immediately and assigns the annotation score to it directly
-- manually created or manually linked annotation issues are immediately visible in the product
+- explicitly linked annotation issues are immediately visible in the product
 
 ### Annotation Enrichment
 
@@ -1622,7 +1622,7 @@ Issues are the entrypoint for:
 Issue creation eligibility in MVP:
 
 - annotations are the primary signal
-- during annotation creation, a human may also link an annotation to an existing issue or create a new issue inline; those explicit human paths bypass similarity discovery for that annotation score
+- during annotation creation, a human may also link an annotation to an existing issue explicitly; that human path bypasses similarity discovery for that annotation score
 - failed scores from evaluations that are not already linked to an issue may also create new issues
 - failed custom scores may also create new issues
 
@@ -1664,14 +1664,13 @@ Manual resolution behavior:
 
 ### Manual Creation From Annotations
 
-Issue discovery is not the only way an issue can be created or assigned.
+Issue discovery is not the only way an issue can be assigned.
 
 When annotating a conversation in managed UI, the annotator may:
 
-- create a new issue inline
 - link the annotation to an existing issue
 
-For those explicit human actions:
+For that explicit human action:
 
 - do not run similarity search for that annotation score
 - assign canonical ownership directly through `scores.issue_id`
@@ -1742,6 +1741,7 @@ Concurrency and ownership rules learned from v1:
 - revalidate under lock before the final assignment write
 - only save the score to ClickHouse after that final Postgres ownership write makes it immutable
 - do not recreate the v1 race where one failing result could end up attached to multiple active issues at once; in v2, canonical ownership must be the single `scores.issue_id` contract
+- do not let two parallel no-match discovery flows for different scores turn into duplicate visible issues for the same emerging problem; the intended solution can live in the later denoising/provisional workflow rather than the Phase 11 MVP flow, but the product must still absorb that noise before it reaches the main issue surface
 - preserve resolved-issue and ignored-issue rematching so regressions can be surfaced and ignored ownership stays stable across future matching scores
 
 Legacy v1 reference paths for this section:
@@ -1826,6 +1826,7 @@ Post-MVP, the system may adopt a stronger buffered/provisional creation workflow
 - newly created issue candidates are persisted immediately
 - provisional issues stay hidden from the main UI until they reach a promotion threshold, receive annotation evidence, or are explicitly promoted
 - annotation-linked issues remain immediately visible
+- the stronger workflow may also absorb duplicate/noisy concurrent no-match issue candidates before they become visible in the main Issues UI
 - this stronger workflow is a post-MVP discovery policy, not a change to the canonical issue entity shape
 
 ### Issue Monitoring
@@ -2520,15 +2521,12 @@ Row click opens a detailed view with:
 
 - [x] Implement the public API for annotation ingestion under `/:organizationId/projects/:projectId/annotations` with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
 - [x] Introduce the shared text-generation capability in the first phase that needs it, and define the concrete `annotation-scores:publish` topic-task payload/schema plus dedupe key semantics keyed by the canonical score id.
-- [x] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, inline manual issue creation, debounced draft finalization through `annotation-scores:publish` keyed by the canonical score id, and post-finalization immutability after the debounce window closes.
+- [x] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, debounced draft finalization through `annotation-scores:publish` keyed by the canonical score id, and post-finalization immutability after the debounce window closes.
 - [x] Implement annotation feedback enrichment using surrounding context before issue discovery, persist the enriched canonical feedback, and preserve the original raw human text separately in metadata.
 - [x] Implement annotation read/query surfaces needed by issue discovery, issue visibility, evaluation alignment, draft-aware editing, and queue review, with default exclusion of drafts outside draft-aware surfaces.
 - [x] Ensure UI-created and API-created annotations converge on the exact same score contract and behavior, including the canonical `source_id` provenance rules for `"UI"`, `"API"`, and annotation queues plus shared `draftedAt` semantics.
 - [x] Add integration tests covering UI/API annotation parity, raw/enriched feedback preservation, refresh-safe draft visibility, debounce-based finalization through `annotation-scores:publish`, deletion after finalization, and reliable reopening of message-level and text-range anchors. Not done out of scope, tested manually that annotations UI worked.
-- [ ] Fix and harden the manual `createIssueUseCase` path used when humans create an issue from annotations (repository contract, org/project scoping, empty-centroid defaults, error surfaces) and add automated tests for the use case plus any missing coverage for the web `createIssue` server function.
-- [ ] Add AI-generated suggested issue title and description to auto-populate the annotations issue selector / manual-create flow (editable by the human), driven from annotation context and canonical feedback where available, reusing the same shared issue-details generation contract as synchronous new-issue generation and async issue refresh in Phase 11 so prompts and models stay consistent.
-
-**Exit gate**: annotations are a reliable human ground-truth source across UI and API; enriched feedback is available for clustering without losing original human wording; explicit annotation-side issue creation/linking preserves human ownership without relying on similarity discovery.
+**Exit gate**: annotations are a reliable human ground-truth source across UI and API; enriched feedback is available for clustering without losing original human wording; explicit annotation-side issue linking preserves human ownership without relying on similarity discovery.
 
 ### (LAT-468) Phase 11 - Issues Discovery And Cluster Maintenance
 
@@ -2550,10 +2548,11 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
   - [x] Wire issue-discovery rerank calls to enforce `rerank-2.5`.
   - [x] Implement and verify the retrieval order: hybrid retrieval first, rerank second.
 - [x] Implement the running centroid math with source weights and decay, adapting the v1 math to the new `IssueCentroid` shape while using `clusteredAt` as the decay anchor instead of generic row `updatedAt`.
-- [~] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, synchronous first issue-details generation for new issues, issue creation or assignment, direct `syncIssueProjectionsUseCase` Weaviate projection sync, and direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable; reuse the shared `@domain/issues` centroid helpers (`createIssueCentroid`, `updateIssueCentroid`, `normalizeIssueCentroid`) plus the shared hybrid-search path instead of reimplementing centroid math or raw Weaviate issue search in workflow/activity code.
-  - [x] Wire the current `issue-discovery` workflow and activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, issue creation or assignment, direct `syncIssueProjectionsUseCase` Weaviate projection sync, and direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work and single-owner `scores.issue_id` claiming.
-  - [ ] Generate the first issue name/description synchronously inside `issue-discovery` from the initial score before the new issue row is first persisted; this must happen in its own retryable workflow activity outside and before the final create/assign transaction, and that transaction must persist the new issue already carrying those generated details. It must reuse the same shared issue-details generation use case that later async refreshes also call.
-- [ ] Implement asynchronous subsequent issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issue:refresh` topic with dedupe/debounce options, reusing the same shared issue-details generation use case as the synchronous new-issue path, generating from the last `25` assigned scores plus previous issue details as baseline, and upserting the Weaviate issue projection again after any persisted name/description change.
+- [x] Implement the create-or-match discovery flow as the `issue-discovery` workflow in the existing Temporal-backed `apps/workflows` service, with separate activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, matched-issue resolution against canonical Postgres state, synchronous first issue-details generation inside the create-from-score path for brand-new issues, separate issue creation and existing-issue assignment mutations, direct `syncIssueProjectionsUseCase` Weaviate projection sync before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work, single-owner invariants around canonical `scores.issue_id`, and one-time ClickHouse save after the score becomes immutable; reuse the shared `@domain/issues` centroid helpers (`createIssueCentroid`, `updateIssueCentroid`, `normalizeIssueCentroid`) plus the shared hybrid-search path instead of reimplementing centroid math or raw Weaviate issue search in workflow/activity code.
+  - [x] Wire the current `issue-discovery` workflow and activities for eligibility recheck, feedback embedding/normalization, hybrid Weaviate search, reranking, canonical matched-issue resolution, separate create-from-score and assign-to-issue mutations, direct `syncIssueProjectionsUseCase` Weaviate projection sync before direct `syncScoreAnalyticsUseCase` ClickHouse sync after the create/assign transaction commits, preserving recheck-before-work and single-owner `scores.issue_id` claiming.
+  - [x] Lock the canonical issue row during existing-issue assignment so concurrent discovery workflows updating the same issue serialize centroid mutations instead of losing one occurrence.
+  - [x] Generate the first issue name/description synchronously inside `issue-discovery` from the initial score before the new issue row is first persisted; this must happen in its own retryable workflow activity outside and before the final create/assign transaction, and that transaction must persist the new issue already carrying those generated details. It must reuse the same shared issue-details generation use case that later async refreshes also call.
+- [ ] Implement asynchronous subsequent issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issue:refresh` topic with dedupe/debounce options, reusing the same shared issue-details generation use case as the synchronous new-issue path, generating from the last `25` assigned occurrences plus previous issue details as baseline, and upserting the Weaviate issue projection again after any persisted name/description change.
 - [ ] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
 - [x] Implement immutable-score save into ClickHouse after issue assignment through the shared direct `syncScoreAnalyticsUseCase` path, without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
 - [ ] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue and ignored-issue rematching, stale Weaviate-candidate fallback after final Postgres existence check, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
@@ -2758,9 +2757,10 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 - [ ] Design the stronger buffered/provisional issue creation workflow on top of the existing issue model.
 - [ ] Persist provisional issues and hide them from the main UI until promotion rules pass.
 - [ ] Define and implement promotion rules based on evidence thresholds, annotation evidence, and explicit manual promotion.
+- [ ] Ensure the stronger denoising/provisional workflow absorbs duplicate or noisy concurrent no-match issue candidates before they become visible in the main Issues UI.
 - [ ] Validate that the stronger denoising workflow reduces duplicate/noisy issues without reintroducing the v1 merge system.
 
-**Exit gate**: the system supports a stronger provisional workflow without changing the canonical issue entity or bringing back issue merging.
+**Exit gate**: the system supports a stronger provisional workflow without changing the canonical issue entity or bringing back issue merging, and duplicate/noisy concurrent no-match issue candidates are absorbed before they become visible in the main issue surface.
 
 ### (LAT-486) Phase 25 - Provider/Model Settings And Hosted Execution Configuration
 

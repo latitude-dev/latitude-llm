@@ -1,7 +1,7 @@
 import { scoreSourceSchema } from "@domain/scores"
 import { cuidSchema, IssueId } from "@domain/shared"
 import { z } from "zod"
-import { ISSUE_STATES } from "../constants.ts"
+import { ISSUE_NAME_MAX_LENGTH, ISSUE_STATES } from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // IssueState
@@ -43,7 +43,7 @@ export const issueSchema = z.object({
   uuid: z.string().uuid(), // links the Postgres row with the Weaviate object
   organizationId: cuidSchema, // owning organization
   projectId: cuidSchema, // owning project
-  name: z.string().min(1).max(128), // generated from clustered score feedback and related evaluation/annotation context; generic enough to represent the shared failure pattern across different backgrounds
+  name: z.string().min(1).max(ISSUE_NAME_MAX_LENGTH), // generated from clustered score feedback and related evaluation/annotation context; generic enough to represent the shared failure pattern across different backgrounds
   description: z.string().min(1), // generated from clustered score feedback; focused on the underlying problem rather than one specific conversation; helps both human understanding and BM25 matching
   centroid: issueCentroidSchema, // running weighted sum of clustered score feedback embeddings; drives semantic matching in Weaviate
   clusteredAt: z.date(), // last time the centroid/cluster state was refreshed; authoritative decay anchor (not updatedAt)

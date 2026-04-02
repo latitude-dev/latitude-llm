@@ -1,10 +1,13 @@
 import {
-  type AssignmentResult,
+  type AssignScoreToIssueInput,
+  type AssignScoreToIssueResult,
+  assignScoreToIssueUseCase,
   type CheckEligibilityError,
   type CheckEligibilityInput,
-  type CreateOrAssignIssueInput,
+  type CreateIssueFromScoreInput,
+  type CreateIssueFromScoreResult,
   checkEligibilityUseCase,
-  createOrAssignIssueUseCase,
+  createIssueFromScoreUseCase,
   DraftScoreNotEligibleForDiscoveryError,
   type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
@@ -16,8 +19,10 @@ import {
   MissingScoreFeedbackForDiscoveryError,
   PassedScoreNotEligibleForDiscoveryError,
   type RerankIssueCandidatesInput,
+  type ResolvedIssueMatch,
   type RetrievalResult,
   rerankIssueCandidatesUseCase,
+  resolveMatchedIssueUseCase,
   ScoreAlreadyOwnedByIssueError,
   ScoreDiscoveryOrganizationMismatchError,
   ScoreDiscoveryProjectMismatchError,
@@ -104,9 +109,39 @@ export const rerankIssueCandidates = (input: RerankIssueCandidatesInput): Promis
     ),
   )
 
-export const createOrAssignIssue = (input: CreateOrAssignIssueInput): Promise<AssignmentResult> =>
+export interface ResolveMatchedIssueActivityInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly matchedIssueUuid: string | null
+}
+
+export const resolveMatchedIssue = (input: ResolveMatchedIssueActivityInput): Promise<ResolvedIssueMatch> =>
   Effect.runPromise(
-    createOrAssignIssueUseCase(input).pipe(
+    resolveMatchedIssueUseCase({
+      projectId: input.projectId,
+      matchedIssueUuid: input.matchedIssueUuid,
+    }).pipe(withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId))),
+  )
+
+export const createIssueFromScore = (input: CreateIssueFromScoreInput): Promise<CreateIssueFromScoreResult> =>
+  Effect.runPromise(
+    getIssueDiscoveryAiLayerEffect().pipe(
+      Effect.flatMap((issueDiscoveryAiLayer) =>
+        createIssueFromScoreUseCase(input).pipe(
+          withPostgres(
+            Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive),
+            getPostgresClient(),
+            OrganizationId(input.organizationId),
+          ),
+          Effect.provide(issueDiscoveryAiLayer),
+        ),
+      ),
+    ),
+  )
+
+export const assignScoreToIssue = (input: AssignScoreToIssueInput): Promise<AssignScoreToIssueResult> =>
+  Effect.runPromise(
+    assignScoreToIssueUseCase(input).pipe(
       withPostgres(
         Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive),
         getPostgresClient(),

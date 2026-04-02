@@ -1,5 +1,5 @@
 import { createIssueCentroid, type Issue, IssueRepository } from "@domain/issues"
-import { IssueId, OrganizationId, ProjectId } from "@domain/shared"
+import { IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
@@ -8,7 +8,6 @@ import { IssueRepositoryLive } from "./issue-repository.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
-/** Isolated project for `list` tests so other cases in this file do not affect row counts or ordering. */
 const listTestProjectId = "rrrrrrrrrrrrrrrrrrrrrrrr"
 const otherProjectId = "qqqqqqqqqqqqqqqqqqqqqqqq"
 
@@ -71,7 +70,7 @@ describe("IssueRepositoryLive", () => {
     expect(loadedByUuid).toEqual(issue)
   })
 
-  it("lists issues scoped to project, newest-first, paginates with hasMore, and filters names with ilike", async () => {
+  it("lists issues scoped to project, newest-first, and paginates with hasMore", async () => {
     const older = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
       uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -85,7 +84,7 @@ describe("IssueRepositoryLive", () => {
       id: IssueId("bbbbbbbbbbbbbbbbbbbbbbbb"),
       uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       projectId: listTestProjectId,
-      name: "Beta Token mention",
+      name: "Beta token mention",
       createdAt: new Date("2026-03-30T09:00:00.000Z"),
       updatedAt: new Date("2026-03-30T09:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T09:00:00.000Z"),
@@ -94,7 +93,7 @@ describe("IssueRepositoryLive", () => {
       id: IssueId("cccccccccccccccccccccccc"),
       uuid: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       projectId: listTestProjectId,
-      name: "Nothing like filter",
+      name: "Most recent issue",
       createdAt: new Date("2026-03-30T11:00:00.000Z"),
       updatedAt: new Date("2026-03-30T11:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T11:00:00.000Z"),
@@ -103,7 +102,7 @@ describe("IssueRepositoryLive", () => {
       id: IssueId("dddddddddddddddddddddddd"),
       uuid: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       projectId: otherProjectId,
-      name: "Wrong project TOKEN",
+      name: "Wrong project issue",
       createdAt: new Date("2026-03-30T12:00:00.000Z"),
       updatedAt: new Date("2026-03-30T12:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T12:00:00.000Z"),
@@ -125,14 +124,14 @@ describe("IssueRepositoryLive", () => {
       Effect.gen(function* () {
         const repository = yield* IssueRepository
         return yield* repository.list({
-          projectId: listTestProjectId,
+          projectId: ProjectId(listTestProjectId),
           limit: 2,
           offset: 0,
         })
       }).pipe(layer),
     )
 
-    expect(page1.items.map((i) => i.id)).toEqual([newest.id, mid.id])
+    expect(page1.items.map((issue) => issue.id)).toEqual([newest.id, mid.id])
     expect(page1.hasMore).toBe(true)
     expect(page1.limit).toBe(2)
     expect(page1.offset).toBe(0)
@@ -141,30 +140,36 @@ describe("IssueRepositoryLive", () => {
       Effect.gen(function* () {
         const repository = yield* IssueRepository
         return yield* repository.list({
-          projectId: listTestProjectId,
+          projectId: ProjectId(listTestProjectId),
           limit: 2,
           offset: 2,
         })
       }).pipe(layer),
     )
 
-    expect(page2.items.map((i) => i.id)).toEqual([older.id])
+    expect(page2.items.map((issue) => issue.id)).toEqual([older.id])
     expect(page2.hasMore).toBe(false)
+  })
 
-    const filtered = await Effect.runPromise(
+  it("can lock an issue row by id inside a transaction", async () => {
+    const issue = makeIssue()
+
+    await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* IssueRepository
-        return yield* repository.list({
-          projectId: listTestProjectId,
-          limit: 10,
-          offset: 0,
-          nameFilter: "token",
-        })
-      }).pipe(layer),
+        yield* repository.save(issue)
+      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
     )
 
-    expect(filtered.items).toHaveLength(1)
-    expect(filtered.items[0]?.id).toBe(mid.id)
-    expect(filtered.hasMore).toBe(false)
+    const lockedIssue = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        const sqlClient = yield* SqlClient
+
+        return yield* sqlClient.transaction(repository.findByIdForUpdate(issue.id))
+      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(lockedIssue).toEqual(issue)
   })
 })

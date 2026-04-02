@@ -1,14 +1,14 @@
-import { type Score, ScoreRepository } from "@domain/scores"
+import type { GenerateInput, GenerateResult } from "@domain/ai"
+import { createFakeAI } from "@domain/ai/testing"
+import { type AnnotationScore, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { IssueId, OrganizationId, OutboxEventWriter, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
-import type { Issue } from "../entities/issue.ts"
-import { createIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
-import { createOrAssignIssueUseCase } from "./create-or-assign-issue.ts"
+import { createIssueFromScoreUseCase } from "./create-issue-from-score.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
@@ -20,14 +20,14 @@ const makeEmbedding = (): number[] =>
     return 0
   })
 
-const makeScore = (): Score => ({
+const makeScore = (overrides: Partial<AnnotationScore> = {}): AnnotationScore => ({
   id: ScoreId("ssssssssssssssssssssssss"),
   organizationId,
   projectId,
   sessionId: null,
   traceId: null,
   spanId: null,
-  source: "annotation" as const,
+  source: "annotation",
   sourceId: "UI",
   simulationId: null,
   issueId: null,
@@ -45,28 +45,12 @@ const makeScore = (): Score => ({
   draftedAt: null,
   createdAt: new Date("2026-03-30T10:00:00.000Z"),
   updatedAt: new Date("2026-03-30T10:00:00.000Z"),
-})
-
-const makeIssue = (overrides?: Partial<Issue>): Issue => ({
-  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  uuid: "11111111-1111-4111-8111-111111111111",
-  organizationId,
-  projectId,
-  name: "Token leakage in responses",
-  description: "The assistant leaks API tokens in its response.",
-  centroid: createIssueCentroid(),
-  clusteredAt: new Date("2026-03-29T10:00:00.000Z"),
-  escalatedAt: null,
-  resolvedAt: null,
-  ignoredAt: null,
-  createdAt: new Date("2026-03-29T10:00:00.000Z"),
-  updatedAt: new Date("2026-03-29T10:00:00.000Z"),
   ...overrides,
 })
 
-const createPassthroughSqlClient = (organizationId: string): SqlClientShape => {
+const createPassthroughSqlClient = (id: string): SqlClientShape => {
   const sqlClient: SqlClientShape = {
-    organizationId: OrganizationId(organizationId),
+    organizationId: OrganizationId(id),
     transaction: (effect) => effect.pipe(Effect.provideService(SqlClient, sqlClient)),
     query: () => Effect.die("Unexpected direct SQL query in unit test"),
   }
@@ -74,31 +58,43 @@ const createPassthroughSqlClient = (organizationId: string): SqlClientShape => {
   return sqlClient
 }
 
-describe("createOrAssignIssueUseCase", () => {
-  it("creates a new issue and claims score ownership without requesting async refresh", async () => {
+type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>>
+
+const createGenerateIssueDetails =
+  (name: string, description: string): AIGenerate =>
+  <T>(input: GenerateInput<T>) =>
+    Effect.succeed({
+      object: input.schema.parse({
+        name,
+        description,
+      }),
+      tokens: 10,
+      duration: 5,
+    })
+
+describe("createIssueFromScoreUseCase", () => {
+  it("generates details, creates a new issue, and claims score ownership", async () => {
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateIssueDetails(
+        "Token leakage in assistant responses",
+        "The assistant exposes secrets or tokens in its replies.",
+      ),
+    })
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
     const { repository: issueRepository, issues } = createFakeIssueRepository()
     const score = makeScore()
     scores.set(score.id, score)
 
-    const writtenEvents: unknown[] = []
-
     const result = await Effect.runPromise(
-      createOrAssignIssueUseCase({
+      createIssueFromScoreUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        matchedIssueId: null,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
+        Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(OutboxEventWriter, {
-          write: (event) =>
-            Effect.sync(() => {
-              writtenEvents.push(event)
-            }),
-        }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
       ),
     )
@@ -106,58 +102,51 @@ describe("createOrAssignIssueUseCase", () => {
     expect(result.action).toBe("created")
     expect(result.issueId).toHaveLength(24)
     expect(scores.get(score.id)?.issueId).toBe(result.issueId)
+    expect(issues.get(result.issueId)?.name).toBe("Token leakage in assistant responses")
+    expect(issues.get(result.issueId)?.description).toBe("The assistant exposes secrets or tokens in its replies.")
     expect(issues.get(result.issueId)?.centroid.mass).toBeGreaterThan(0)
-    expect(writtenEvents).toHaveLength(0)
+    expect(calls.generate).toHaveLength(1)
   })
 
-  it("assigns to an existing issue and requests async refresh", async () => {
-    const existingIssue = makeIssue()
+  it("returns already-assigned before generation when the score already belongs to an issue", async () => {
+    const { layer: aiLayer, calls } = createFakeAI()
     const { repository: scoreRepository, scores } = createFakeScoreRepository()
-    const { repository: issueRepository, issues } = createFakeIssueRepository([existingIssue])
-    const score = makeScore()
+    const { repository: issueRepository, issues } = createFakeIssueRepository()
+    const score = makeScore({
+      issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+    })
     scores.set(score.id, score)
-    const writtenEvents: unknown[] = []
 
     const result = await Effect.runPromise(
-      createOrAssignIssueUseCase({
+      createIssueFromScoreUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        matchedIssueId: existingIssue.uuid,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
+        Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(OutboxEventWriter, {
-          write: (event) =>
-            Effect.sync(() => {
-              writtenEvents.push(event)
-            }),
-        }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
       ),
     )
 
     expect(result).toEqual({
-      action: "assigned-existing",
-      issueId: existingIssue.id,
+      action: "already-assigned",
+      issueId: score.issueId,
     })
-    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
-    expect(issues.get(existingIssue.id)?.centroid.mass).toBeGreaterThan(0)
-    expect(writtenEvents).toEqual([
-      expect.objectContaining({
-        eventName: "IssueRefreshRequested",
-        aggregateId: score.id,
-        payload: expect.objectContaining({
-          projectId,
-          issueId: existingIssue.id,
-        }),
-      }),
-    ])
+    expect(issues.size).toBe(0)
+    expect(calls.generate).toHaveLength(0)
   })
 
-  it("returns already-assigned when another worker claims the score first", async () => {
+  it("returns already-assigned when another worker claims the score during creation", async () => {
     const winningIssueId = IssueId("wwwwwwwwwwwwwwwwwwwwwwww")
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: createGenerateIssueDetails(
+        "Token leakage in assistant responses",
+        "The assistant exposes secrets or tokens in its replies.",
+      ),
+    })
     const { repository: scoreRepository, scores } = createFakeScoreRepository({
       assignIssueIfUnowned: ({ scoreId, updatedAt }) => {
         const score = scores.get(scoreId)
@@ -175,24 +164,16 @@ describe("createOrAssignIssueUseCase", () => {
     const score = makeScore()
     scores.set(score.id, score)
 
-    const writtenEvents: unknown[] = []
-
     const result = await Effect.runPromise(
-      createOrAssignIssueUseCase({
+      createIssueFromScoreUseCase({
         organizationId,
         projectId,
         scoreId: score.id,
-        matchedIssueId: null,
         normalizedEmbedding: makeEmbedding(),
       }).pipe(
+        Effect.provide(aiLayer),
         Effect.provideService(ScoreRepository, scoreRepository),
         Effect.provideService(IssueRepository, issueRepository),
-        Effect.provideService(OutboxEventWriter, {
-          write: (event) =>
-            Effect.sync(() => {
-              writtenEvents.push(event)
-            }),
-        }),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
       ),
     )
@@ -202,6 +183,6 @@ describe("createOrAssignIssueUseCase", () => {
       issueId: winningIssueId,
     })
     expect(issues.size).toBe(0)
-    expect(writtenEvents).toHaveLength(0)
+    expect(calls.generate).toHaveLength(1)
   })
 })

@@ -53,10 +53,11 @@ const SelectTrigger = React.forwardRef<React.ComponentRef<typeof SelectPrimitive
             >
               <X className="h-3.5 w-3.5" aria-hidden />
             </button>
-          ) : null}
-          <SelectPrimitive.Icon asChild>
-            <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
-          </SelectPrimitive.Icon>
+          ) : (
+            <SelectPrimitive.Icon asChild>
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+            </SelectPrimitive.Icon>
+          )}
         </div>
       </div>
     </SelectPrimitive.Trigger>
@@ -68,22 +69,28 @@ interface SelectValueProps {
   selected: unknown
   options: readonly { label: string; value: unknown; icon?: React.ReactNode }[]
   placeholder?: string
+  placeholderIcon?: React.ReactNode
 }
 
-function SelectValue({ selected, options, placeholder }: SelectValueProps) {
+function SelectValue({ selected, options, placeholder, placeholderIcon }: SelectValueProps) {
   const match = options.find((o) => String(o.value) === String(selected))
   if (!match) {
     return (
-      <span className="text-muted-foreground">
-        <Text.H5 color="foregroundMuted">{placeholder ?? "Select an option"}</Text.H5>
-      </span>
+      <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
+        {placeholderIcon ? <span className="shrink-0">{placeholderIcon}</span> : null}
+        <Text.H5 color="foregroundMuted" display="block" className="min-w-0 truncate">
+          {placeholder ?? "Select an option"}
+        </Text.H5>
+      </div>
     )
   }
   return (
-    <span className="flex items-center gap-2 truncate">
-      {match.icon}
-      <Text.H5>{match.label}</Text.H5>
-    </span>
+    <div className="flex min-w-0 items-center gap-2">
+      {match.icon ? <span className="shrink-0">{match.icon}</span> : null}
+      <Text.H5 display="block" className="min-w-0 truncate">
+        {match.label}
+      </Text.H5>
+    </div>
   )
 }
 

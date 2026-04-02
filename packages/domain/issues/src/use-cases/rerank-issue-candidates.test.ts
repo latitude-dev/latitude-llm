@@ -27,7 +27,7 @@ describe("rerankIssueCandidatesUseCase", () => {
     expect(aiCalls.rerank).toHaveLength(1)
     expect(aiCalls.rerank[0]?.model).toBe(RERANK_MODEL)
     expect(result).toEqual({
-      matchedIssueId: "issue-2",
+      matchedIssueUuid: "issue-2",
       similarityScore: 0.92,
     })
   })
@@ -52,7 +52,7 @@ describe("rerankIssueCandidatesUseCase", () => {
     )
 
     expect(result).toEqual({
-      matchedIssueId: null,
+      matchedIssueUuid: null,
       similarityScore: 0,
     })
   })

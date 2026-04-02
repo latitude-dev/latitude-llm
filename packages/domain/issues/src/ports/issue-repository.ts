@@ -9,32 +9,21 @@ export interface IssueListPage {
   readonly offset: number
 }
 
-export interface ListIssuesInput {
-  readonly projectId: string
+export interface ListIssuesRepositoryInput {
+  readonly projectId: ProjectId
   readonly limit: number
   readonly offset: number
-  readonly nameFilter?: string | undefined
-}
-
-export interface CreateIssueInput {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly uuid: string
-  readonly name: string
-  readonly description: string
-  readonly centroid: Issue["centroid"]
-  readonly clusteredAt: Date
 }
 
 export interface IssueRepositoryShape {
   findById(id: IssueId): Effect.Effect<Issue | null, RepositoryError>
+  findByIdForUpdate(id: IssueId): Effect.Effect<Issue | null, RepositoryError>
   findByUuid(input: {
     readonly projectId: ProjectId
     readonly uuid: string
   }): Effect.Effect<Issue | null, RepositoryError>
   save(issue: Issue): Effect.Effect<void, RepositoryError>
-  list(input: ListIssuesInput): Effect.Effect<IssueListPage, RepositoryError>
-  create(input: CreateIssueInput): Effect.Effect<Issue, RepositoryError>
+  list(input: ListIssuesRepositoryInput): Effect.Effect<IssueListPage, RepositoryError>
 }
 
 export class IssueRepository extends ServiceMap.Service<IssueRepository, IssueRepositoryShape>()(

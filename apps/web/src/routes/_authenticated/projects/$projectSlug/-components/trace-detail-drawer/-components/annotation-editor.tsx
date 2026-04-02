@@ -75,14 +75,18 @@ export function AnnotationEditor({
   }, [annotation.feedback, annotation.id, annotation.issueId])
 
   function buildUpdatePayload(overrides?: { passed?: boolean; issueId?: string | null }) {
+    const nextPassed = overrides?.passed ?? annotation.passed
+    const nextIssueId =
+      nextPassed === true ? null : ((overrides?.issueId !== undefined ? overrides.issueId : localIssueId) ?? null)
+
     return {
       scoreId: annotation.id,
       projectId,
       traceId,
       value: overrides?.passed !== undefined ? (overrides.passed ? 1 : 0) : annotation.value,
-      passed: overrides?.passed ?? annotation.passed,
+      passed: nextPassed,
       feedback: localComment.trim() || " ",
-      issueId: (overrides?.issueId !== undefined ? overrides.issueId : localIssueId) ?? undefined,
+      issueId: nextIssueId ?? undefined,
       ...(anchor ? { anchor } : {}),
     }
   }
@@ -94,6 +98,9 @@ export function AnnotationEditor({
 
   function handleThumbClick(newPassed: boolean) {
     if (!isEditable || isLoading) return
+    if (newPassed) {
+      setLocalIssueId(null)
+    }
     updateMutation.mutate(buildUpdatePayload({ passed: newPassed }))
   }
 
@@ -118,7 +125,7 @@ export function AnnotationEditor({
 
   if (!showExpanded) {
     return (
-      <div className="flex gap-2 items-start">
+      <div className="flex gap-2 items-center">
         <AnnotationThumbToggle
           passed={annotation.passed}
           disabled
@@ -134,9 +141,11 @@ export function AnnotationEditor({
               </Text.H6>
             </span>
           ) : (
-            <Text.H6 color="foregroundMuted" italic>
-              No comment
-            </Text.H6>
+            <span className="min-w-0 block">
+              <Text.H6 color="foregroundMuted" italic display="block">
+                No comment
+              </Text.H6>
+            </span>
           )}
           {annotation.passed === false && annotation.issueId ? (
             <span className="min-w-0 block" title={linkedIssueName ?? "Issue linked"}>

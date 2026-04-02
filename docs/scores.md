@@ -206,7 +206,7 @@ Publication rules:
 - when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - ClickHouse analytics save must be retry-safe and preserve at-most-one row per score id
 - the canonical Postgres write transaction must never talk to ClickHouse directly; after commit, the caller runs `syncScoreAnalyticsUseCase`, which re-fetches the canonical score row and inserts into ClickHouse analytics only if the row is still immutable and not already present in analytics
-- for discovery-owned failures, the `issue-discovery` workflow runs `syncScoreAnalyticsUseCase` as a dedicated post-transaction activity after `createOrAssignIssueUseCase`
+- for discovery-owned failures, the `issue-discovery` workflow runs `syncScoreAnalyticsUseCase` as a dedicated post-transaction activity after either `createIssueFromScoreUseCase` or `assignScoreToIssueUseCase`
 - when an immutable score lands on an existing issue, the same Postgres transaction writes `IssueRefreshRequested` to the outbox so debounced issue-details regeneration still remains atomic with the canonical ownership change
 - this differs from direct-publication reliability events such as `SpanIngested` and `TraceEnded`: immutable score analytics save stays synchronous-after-commit for freshness, while only the slower debounced issue-details refresh remains event-driven
 

@@ -217,16 +217,20 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - failed non-errored scores are embedded and searched against issue centroids/text
 - drafted scores stay out of discovery until `draftedAt` is cleared
 - eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher starts the `issue-discovery` workflow from that event instead of running embedding/search inline in request paths
-- managed annotation flows can bypass similarity discovery by linking to an existing issue or creating a new issue inline; those explicit human paths write canonical issue ownership directly
+- managed annotation flows can bypass similarity discovery by linking to an existing issue explicitly; that human path writes canonical issue ownership directly
 - issue-linked evaluation scores bypass discovery and assign directly
 - annotations are primary, but unlinked failed evaluation scores and failed custom scores may also create new issues
+- when discovery creates a brand-new issue, the workflow goes through a dedicated create-from-score step that generates issue details from the initial occurrence before the first issue row is persisted
 - issue name/description regeneration runs through the debounced `issues:refresh` task
-- new issues are named from evidence; users can later generate evaluations from those issues when they want active monitoring
+- new issues are named from occurrences; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
 - the proven v1 search shape is hybrid Weaviate search with `RelativeScore` fusion, then Voyage reranking
 - v2 keeps the v1 storage split of Postgres state plus Weaviate projection, but upgrades tenancy and product search behavior intentionally
 - in the `issue-discovery` workflow, keep retrieval as explicit sequential activities: feedback embedding/normalization, hybrid Weaviate search, then reranking
-- the create-or-assign activity re-checks eligibility in Postgres, conditionally claims `scores.issue_id`, updates or creates the canonical issue row and centroid, then the workflow runs direct `syncScoreAnalyticsUseCase` and `syncIssueProjectionsUseCase` activities after the transaction commits; only assignments into an existing issue write `IssueRefreshRequested` transactionally for later debounced issue-details regeneration
+- the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues
+- after rerank picks a candidate, the workflow resolves that matched issue against canonical Postgres state before deciding between the separate create-from-score and assign-to-issue activities
+- the create-from-score and assign-to-issue activities re-check canonical Postgres state, conditionally claim `scores.issue_id`, persist the canonical issue row and centroid update, then the workflow runs direct `syncIssueProjectionsUseCase` and `syncScoreAnalyticsUseCase` activities after commit; only assignments into an existing issue write `IssueRefreshRequested` transactionally for later debounced issue-details regeneration
+- existing-issue assignment must lock the canonical issue row before recomputing and saving centroid state so concurrent discovery workflows targeting the same issue serialize their centroid updates instead of losing one occurrence
 - resolved and ignored issues remain valid match targets in discovery; lifecycle semantics are handled after assignment (including regression and ignored ownership behavior), not by pre-filtering them out of retrieval
 - after rerank selects a best candidate, verify the selected issue row still exists in Postgres for the same organization/project before assignment; if missing, treat as no-match and create a new issue
 
