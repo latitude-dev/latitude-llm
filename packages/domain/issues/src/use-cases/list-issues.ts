@@ -3,27 +3,25 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { type IssueListPage, IssueRepository } from "../ports/issue-repository.ts"
 
-const listProjectIssuesInputSchema = z.object({
+const listIssuesInputSchema = z.object({
   projectId: cuidSchema.transform(ProjectId),
   limit: z.number().int().min(1).max(100).default(50),
   offset: z.number().int().min(0).default(0),
-  nameFilter: z.string().optional(),
 })
 
-export type ListProjectIssuesInput = z.input<typeof listProjectIssuesInputSchema>
-export type ListProjectIssuesError = RepositoryError
+export type ListIssuesInput = z.input<typeof listIssuesInputSchema>
+export type ListIssuesError = RepositoryError
 
-export const listProjectIssuesUseCase = (
-  input: ListProjectIssuesInput,
-): Effect.Effect<IssueListPage, ListProjectIssuesError, IssueRepository> =>
+export const listIssuesUseCase = (
+  input: ListIssuesInput,
+): Effect.Effect<IssueListPage, ListIssuesError, IssueRepository> =>
   Effect.gen(function* () {
-    const parsed = listProjectIssuesInputSchema.parse(input)
+    const parsed = listIssuesInputSchema.parse(input)
     const repo = yield* IssueRepository
 
     return yield* repo.list({
       projectId: parsed.projectId,
       limit: parsed.limit,
       offset: parsed.offset,
-      nameFilter: parsed.nameFilter,
     })
   })

@@ -34,9 +34,11 @@ export type PublishAnnotationError = RepositoryError | BadRequestError | AIError
 const annotationPublicationEnrichmentSchema = z.object({
   reasoning: z
     .string()
+    .min(1)
     .describe("Brief rationale for how you distilled the raw feedback into the clusterable sentence"),
   enrichedFeedback: z
     .string()
+    .min(1)
     .describe(
       "Exactly one sentence describing the underlying failure pattern, suitable for clustering similar failures",
     ),
@@ -176,7 +178,6 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
       system: ENRICHMENT_SYSTEM_PROMPT,
       prompt: buildEnrichmentPrompt(metadata, { fullConversationText, highlightedExcerpt }),
       schema: annotationPublicationEnrichmentSchema,
-      temperature: 1,
     })
 
     const enrichedFeedback = result.object.enrichedFeedback.trim() || metadata.rawFeedback

@@ -62,6 +62,29 @@ export class PassedScoreNotEligibleForDiscoveryError extends Data.TaggedError(
   readonly httpMessage = "Passed scores are not eligible for issue discovery"
 }
 
+export class IssueNotFoundForDetailsGenerationError extends Data.TaggedError("IssueNotFoundForDetailsGenerationError")<{
+  readonly issueId: string
+}> {
+  readonly httpStatus = 404
+  readonly httpMessage = "Issue not found for details generation"
+}
+
+export class MissingIssueOccurrencesForDetailsGenerationError extends Data.TaggedError(
+  "MissingIssueOccurrencesForDetailsGenerationError",
+)<{
+  readonly projectId: string
+}> {
+  readonly httpStatus = 400
+  readonly httpMessage = "Issue details generation requires issue occurrences"
+}
+
+export class IssueNotFoundForAssignmentError extends Data.TaggedError("IssueNotFoundForAssignmentError")<{
+  readonly issueId: string
+}> {
+  readonly httpStatus = 404
+  readonly httpMessage = "Issue not found for assignment"
+}
+
 export type CheckEligibilityError =
   | ScoreNotFoundForDiscoveryError
   | ScoreDiscoveryOrganizationMismatchError

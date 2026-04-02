@@ -53,17 +53,18 @@ Rules:
 
 ## Manual Issue Selection
 
-When annotations are created through Latitude-managed UI, the annotator can choose one of three issue intents:
+When annotations are created through Latitude-managed UI, the annotator can choose one of two issue intents:
 
 - leave issue assignment automatic and let discovery decide
 - link the annotation to an existing issue
-- create a new issue inline while annotating
 
-Explicit link/create choices are human overrides:
+Inline manual issue creation from the annotation flow is intentionally deferred for now to keep the managed annotation UX and ownership rules simpler.
+
+Explicit link choices are human overrides:
 
 - they bypass similarity-based issue discovery for that annotation score
 - they write canonical ownership directly through `scores.issue_id`
-- manually created or manually linked issues remain immediately visible
+- explicitly linked issues remain immediately visible
 
 ## Managed Queue Review
 
@@ -154,9 +155,8 @@ Important v2 carry-forward:
 5. while `draftedAt` is still set, keep the score out of issue discovery, evaluation alignment, and ClickHouse analytics
 6. when the human-editable draft becomes due, the `annotation-scores:publish` task clears `draftedAt`
 7. if the annotator linked an existing issue, keep direct `issue_id` ownership on the canonical score row
-8. if the annotator created a new issue inline, persist it and keep direct `issue_id` ownership on the canonical score row
-9. if the finalized annotation is failed and non-errored with no direct issue ownership, run issue discovery against the enriched canonical score
-10. if the finalized annotation is now immutable and ready for analytics save, save it to ClickHouse analytics
+8. if the finalized annotation is failed and non-errored with no direct issue ownership, run issue discovery against the enriched canonical score
+9. if the finalized annotation is now immutable and ready for analytics save, save it to ClickHouse analytics
 
 ## Relationship To Issues
 

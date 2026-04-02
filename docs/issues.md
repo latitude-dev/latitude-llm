@@ -74,11 +74,11 @@ Important state timestamps:
 Issue creation eligibility:
 
 - annotations are the primary signal
-- annotation flows can also link to an existing issue or create a new issue inline; those explicit human choices bypass discovery for that score
+- annotation flows can also link to an existing issue explicitly; that human choice bypasses discovery for that score
 - failed scores from evaluations that are not already linked to an issue may also create new issues
 - failed custom scores may also create new issues
 
-## Manual Creation From Annotations
+## Manual Linking From Annotations
 
 Issue discovery is not the only entrypoint.
 
@@ -86,9 +86,10 @@ When annotating in managed UI, the annotator may:
 
 - leave issue assignment automatic
 - link the annotation to an existing issue
-- create a new issue inline
 
-For explicit link/create actions:
+Inline manual issue creation from the annotation flow is intentionally deferred for now to keep the managed annotation UX and ownership rules simpler.
+
+For explicit link actions:
 
 - skip similarity-based discovery for that annotation score
 - write canonical ownership directly through `scores.issue_id`
@@ -109,13 +110,14 @@ Issue discovery should follow the original proposal closely:
 9. rerank candidates with `rerank-2.5`
 10. filter out candidates that do not pass the minimum rerank relevance threshold
 11. verify the final selected candidate still exists in Postgres for the same organization/project; if missing, treat it as stale projection data and continue as no-match
-12. match an existing issue or create a new issue
-13. if the final selected candidate is stale, delete its projection object asynchronously
-14. write `scores.issue_id` in Postgres
-15. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
-16. after the create-or-assign transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-17. after the same transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
-18. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`
+12. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
+13. match an existing issue or create a new issue
+14. if the final selected candidate is stale, delete its projection object asynchronously
+15. write `scores.issue_id` in Postgres
+16. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
+17. after the create or assign transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
+18. after the same transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
+19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`
 
 Execution rules:
 
@@ -123,7 +125,10 @@ Execution rules:
 - `issues:refresh` runs after the configured debounce window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
-- the create-or-assign step must use a conditional `scores.issue_id` claim so only one concurrent owner wins, then update/create the canonical issue row and centroid in the same transaction
+- the brand-new issue path must generate its first name/description before the issue row is first persisted, and that synchronous generation step must reuse the same shared issue-details generation use case that later debounced refreshes call
+- after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
+- both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
+- the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions
 - resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
 
 Concrete v1 mechanics worth carrying forward:
@@ -220,6 +225,7 @@ The system may also support a stronger buffered/provisional workflow on top of t
 - persist newly created issue candidates immediately
 - keep provisional issues hidden until they pass promotion rules
 - promote them when enough evidence accumulates, when annotation evidence lands, or when a user explicitly promotes them
+- let the stronger provisional workflow absorb duplicate or noisy concurrent no-match issue candidates before they become visible in the main Issues UI
 - keep the core issue entity shape unchanged
 
 ## Naming
@@ -229,7 +235,7 @@ Issue names and descriptions are summaries, not the cluster identity itself.
 The actual cluster identity is driven by:
 
 - centroid state
-- incoming evidence stream
+- incoming occurrence stream
 - assignment history
 
 Required Postgres indexes on the issue row:
@@ -239,7 +245,7 @@ Required Postgres indexes on the issue row:
 - do not add Postgres text-search indexes on `name` or `description`; issue search lives in Weaviate
 - do not add JSONB indexes on `centroid` in the issues foundation phase; centroid search is served by the Weaviate projection and centroid updates are driven by explicit ownership events
 
-Names/descriptions are generated from evidence and refreshed on debounce.
+Names/descriptions are generated from occurrences and refreshed on debounce.
 
 They may use:
 

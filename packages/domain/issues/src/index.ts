@@ -5,6 +5,8 @@ export {
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
   ESCALATION_THRESHOLD_FACTOR,
+  ISSUE_DETAILS_GENERATION_MODEL,
+  ISSUE_DETAILS_MAX_OCCURRENCES,
   ISSUE_DISCOVERY_MAX_CANDIDATES,
   ISSUE_DISCOVERY_MIN_KEYWORDS,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
@@ -30,6 +32,9 @@ export {
   type CheckEligibilityError,
   DraftScoreNotEligibleForDiscoveryError,
   ErroredScoreNotEligibleForDiscoveryError,
+  IssueNotFoundForAssignmentError,
+  IssueNotFoundForDetailsGenerationError,
+  MissingIssueOccurrencesForDetailsGenerationError,
   MissingScoreFeedbackForDiscoveryError,
   PassedScoreNotEligibleForDiscoveryError,
   ScoreAlreadyOwnedByIssueError,
@@ -52,47 +57,50 @@ export {
   type IssuesCollectionProperties,
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
+export { IssueRepository } from "./ports/issue-repository.ts"
 export {
-  type CreateIssueInput as CreateIssueRepositoryInput,
-  type IssueListPage,
-  IssueRepository,
-  type ListIssuesInput,
-} from "./ports/issue-repository.ts"
+  type AssignScoreToIssueError,
+  type AssignScoreToIssueInput,
+  type AssignScoreToIssueResult,
+  assignScoreToIssueUseCase,
+} from "./use-cases/assign-score-to-issue.ts"
+export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
 export {
-  type CheckEligibilityInput,
-  checkEligibilityUseCase,
-} from "./use-cases/check-eligibility.ts"
-export {
-  type CreateIssueError,
-  type CreateIssueInput,
-  createIssueUseCase,
-} from "./use-cases/create-issue.ts"
-export {
-  type AssignmentResult,
-  type CreateOrAssignIssueInput,
-  createOrAssignIssueUseCase,
-} from "./use-cases/create-or-assign-issue.ts"
+  type CreateIssueFromScoreError,
+  type CreateIssueFromScoreInput,
+  type CreateIssueFromScoreResult,
+  createIssueFromScoreUseCase,
+} from "./use-cases/create-issue-from-score.ts"
 export {
   type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
 } from "./use-cases/embed-score-feedback.ts"
 export {
+  type GeneratedIssueDetails,
+  type GenerateIssueDetailsError,
+  type GenerateIssueDetailsInput,
+  generateIssueDetailsUseCase,
+  type IssueOccurrenceInput,
+} from "./use-cases/generate-issue-details.ts"
+export {
   type HybridSearchIssuesInput,
   type HybridSearchIssuesResult,
   hybridSearchIssuesUseCase,
 } from "./use-cases/hybrid-search-issues.ts"
 export {
-  type ListProjectIssuesError,
-  type ListProjectIssuesInput,
-  listProjectIssuesUseCase,
-} from "./use-cases/list-project-issues.ts"
+  type ListIssuesError,
+  type ListIssuesInput,
+  listIssuesUseCase,
+} from "./use-cases/list-issues.ts"
 export {
   type RerankIssueCandidatesInput,
   type RetrievalResult,
   rerankIssueCandidatesUseCase,
 } from "./use-cases/rerank-issue-candidates.ts"
 export {
-  type SyncIssueProjectionsInput,
-  syncIssueProjectionsUseCase,
-} from "./use-cases/sync-projections.ts"
+  type ResolvedIssueMatch,
+  type ResolveMatchedIssueInput,
+  resolveMatchedIssueUseCase,
+} from "./use-cases/resolve-matched-issue.ts"
+export { type SyncIssueProjectionsInput, syncIssueProjectionsUseCase } from "./use-cases/sync-projections.ts"

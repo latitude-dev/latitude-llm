@@ -2,6 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const { callOrder, mockActivities } = vi.hoisted(() => {
   const callOrder: string[] = []
+  type MockRetrievalResult = {
+    matchedIssueUuid: string | null
+    similarityScore: number
+  }
+  type MockResolvedIssueMatch = {
+    issueId: string | null
+  }
+  type MockAssignmentResult = {
+    action: "created" | "assigned-existing" | "already-assigned"
+    issueId: string
+  }
 
   const mockActivities = {
     checkEligibility: vi.fn(async () => {
@@ -22,17 +33,30 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
         candidates: [{ uuid: "issue-1", title: "Token leakage", description: "tokens exposed", score: 0.9 }],
       }
     }),
-    rerankIssueCandidates: vi.fn(async () => {
+    rerankIssueCandidates: vi.fn<() => Promise<MockRetrievalResult>>(async () => {
       callOrder.push("rerankIssueCandidates")
       return {
-        matchedIssueId: "issue-1",
+        matchedIssueUuid: "issue-1",
         similarityScore: 0.91,
       }
     }),
-    createOrAssignIssue: vi.fn(async () => {
-      callOrder.push("createOrAssignIssue")
+    resolveMatchedIssue: vi.fn<() => Promise<MockResolvedIssueMatch>>(async () => {
+      callOrder.push("resolveMatchedIssue")
       return {
-        action: "assigned-existing" as const,
+        issueId: "issue-1",
+      }
+    }),
+    createIssueFromScore: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
+      callOrder.push("createIssueFromScore")
+      return {
+        action: "created",
+        issueId: "issue-new",
+      }
+    }),
+    assignScoreToIssue: vi.fn<() => Promise<MockAssignmentResult>>(async () => {
+      callOrder.push("assignScoreToIssue")
+      return {
+        action: "assigned-existing",
         issueId: "issue-1",
       }
     }),
@@ -79,9 +103,10 @@ describe("issueDiscoveryWorkflow", () => {
       "embedScoreFeedback",
       "hybridSearchIssues",
       "rerankIssueCandidates",
-      "createOrAssignIssue",
-      "syncScoreAnalytics",
+      "resolveMatchedIssue",
+      "assignScoreToIssue",
       "syncIssueProjections",
+      "syncScoreAnalytics",
     ])
 
     expect(mockActivities.hybridSearchIssues).toHaveBeenCalledWith({
@@ -94,13 +119,19 @@ describe("issueDiscoveryWorkflow", () => {
       query: "token leakage in tool output",
       candidates: [{ uuid: "issue-1", title: "Token leakage", description: "tokens exposed", score: 0.9 }],
     })
-    expect(mockActivities.createOrAssignIssue).toHaveBeenCalledWith({
+    expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      matchedIssueUuid: "issue-1",
+    })
+    expect(mockActivities.assignScoreToIssue).toHaveBeenCalledWith({
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-1",
-      matchedIssueId: "issue-1",
+      issueId: "issue-1",
       normalizedEmbedding: [0.6, 0.8],
     })
+    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).toHaveBeenCalledWith({
       organizationId: "org-1",
       scoreId: "score-1",
@@ -129,8 +160,115 @@ describe("issueDiscoveryWorkflow", () => {
     expect(mockActivities.embedScoreFeedback).not.toHaveBeenCalled()
     expect(mockActivities.hybridSearchIssues).not.toHaveBeenCalled()
     expect(mockActivities.rerankIssueCandidates).not.toHaveBeenCalled()
-    expect(mockActivities.createOrAssignIssue).not.toHaveBeenCalled()
+    expect(mockActivities.resolveMatchedIssue).not.toHaveBeenCalled()
+    expect(mockActivities.createIssueFromScore).not.toHaveBeenCalled()
+    expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
     expect(mockActivities.syncScoreAnalytics).not.toHaveBeenCalled()
     expect(mockActivities.syncIssueProjections).not.toHaveBeenCalled()
+  })
+
+  it("creates a brand-new issue after resolving to no canonical match", async () => {
+    mockActivities.rerankIssueCandidates.mockImplementationOnce(async () => {
+      callOrder.push("rerankIssueCandidates")
+      return {
+        matchedIssueUuid: null,
+        similarityScore: 0,
+      }
+    })
+    mockActivities.resolveMatchedIssue.mockImplementationOnce(async () => {
+      callOrder.push("resolveMatchedIssue")
+      return {
+        issueId: null,
+      }
+    })
+    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
+      callOrder.push("createIssueFromScore")
+      return {
+        action: "created",
+        issueId: "issue-new",
+      }
+    })
+
+    const result = await issueDiscoveryWorkflow({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+    })
+
+    expect(result).toEqual({
+      action: "created",
+      issueId: "issue-new",
+    })
+    expect(callOrder).toEqual([
+      "checkEligibility",
+      "embedScoreFeedback",
+      "hybridSearchIssues",
+      "rerankIssueCandidates",
+      "resolveMatchedIssue",
+      "createIssueFromScore",
+      "syncIssueProjections",
+      "syncScoreAnalytics",
+    ])
+    expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      matchedIssueUuid: null,
+    })
+    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+      normalizedEmbedding: [0.6, 0.8],
+    })
+    expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
+  })
+
+  it("falls back to create flow when the reranked candidate is stale in Postgres", async () => {
+    mockActivities.resolveMatchedIssue.mockImplementationOnce(async () => {
+      callOrder.push("resolveMatchedIssue")
+      return {
+        issueId: null,
+      }
+    })
+    mockActivities.createIssueFromScore.mockImplementationOnce(async () => {
+      callOrder.push("createIssueFromScore")
+      return {
+        action: "created",
+        issueId: "issue-new",
+      }
+    })
+
+    const result = await issueDiscoveryWorkflow({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+    })
+
+    expect(result).toEqual({
+      action: "created",
+      issueId: "issue-new",
+    })
+    expect(callOrder).toEqual([
+      "checkEligibility",
+      "embedScoreFeedback",
+      "hybridSearchIssues",
+      "rerankIssueCandidates",
+      "resolveMatchedIssue",
+      "createIssueFromScore",
+      "syncIssueProjections",
+      "syncScoreAnalytics",
+    ])
+    expect(mockActivities.resolveMatchedIssue).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      matchedIssueUuid: "issue-1",
+    })
+    expect(mockActivities.createIssueFromScore).toHaveBeenCalledWith({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-1",
+      normalizedEmbedding: [0.6, 0.8],
+    })
+    expect(mockActivities.assignScoreToIssue).not.toHaveBeenCalled()
   })
 })

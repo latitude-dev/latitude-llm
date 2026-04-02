@@ -1,5 +1,5 @@
 import { Check, Loader2, Search } from "lucide-react"
-import { type ReactNode, useCallback, useMemo, useState } from "react"
+import { type KeyboardEvent, type ReactNode, useCallback, useMemo, useState } from "react"
 
 import { cn } from "../../utils/cn.ts"
 import { Text } from "../text/text.tsx"
@@ -40,6 +40,19 @@ export function SearchableSelectList<V = unknown>({
     onSearchChange?.(value)
   }
 
+  const stopEventPropagation = (event: { stopPropagation(): void }) => {
+    event.stopPropagation()
+  }
+
+  const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape" || event.key === "Tab") {
+      return
+    }
+
+    // Prevent Radix Select typeahead from stealing keystrokes from the search input.
+    event.stopPropagation()
+  }
+
   const filtered = useMemo(() => {
     if (!search) return options
     const lower = search.toLowerCase()
@@ -55,6 +68,12 @@ export function SearchableSelectList<V = unknown>({
           type="text"
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
+          onPointerDown={stopEventPropagation}
+          onPointerUp={stopEventPropagation}
+          onMouseDown={stopEventPropagation}
+          onMouseUp={stopEventPropagation}
+          onClick={stopEventPropagation}
+          onKeyDown={handleInputKeyDown}
           placeholder={searchPlaceholder}
           className="flex h-7 w-full rounded-md bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         />

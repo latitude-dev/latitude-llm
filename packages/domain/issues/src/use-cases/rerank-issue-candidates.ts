@@ -9,7 +9,7 @@ export interface RerankIssueCandidatesInput {
 }
 
 export interface RetrievalResult {
-  readonly matchedIssueId: string | null
+  readonly matchedIssueUuid: string | null
   readonly similarityScore: number
 }
 
@@ -17,7 +17,7 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
   Effect.gen(function* () {
     if (input.candidates.length === 0) {
       return {
-        matchedIssueId: null,
+        matchedIssueUuid: null,
         similarityScore: 0,
       } satisfies RetrievalResult
     }
@@ -35,7 +35,7 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
 
     if (!best) {
       return {
-        matchedIssueId: null,
+        matchedIssueUuid: null,
         similarityScore: 0,
       } satisfies RetrievalResult
     }
@@ -43,13 +43,13 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
     const matchedIssue = input.candidates[best.index]
     if (!matchedIssue) {
       return {
-        matchedIssueId: null,
+        matchedIssueUuid: null,
         similarityScore: 0,
       } satisfies RetrievalResult
     }
 
     return {
-      matchedIssueId: matchedIssue.uuid,
+      matchedIssueUuid: matchedIssue.uuid,
       similarityScore: best.relevanceScore,
     } satisfies RetrievalResult
   })

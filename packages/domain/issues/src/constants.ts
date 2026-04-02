@@ -1,5 +1,7 @@
 import type { ScoreSource } from "@domain/scores"
 
+export const ISSUE_NAME_MAX_LENGTH = 128
+
 export const ISSUE_STATES = ["new", "escalating", "resolved", "regressed", "ignored"] as const
 
 export const NEW_ISSUE_AGE_DAYS = 7
@@ -72,6 +74,20 @@ export const MIN_RERANK_RELEVANCE = 0.3
 
 /** Rerank model identifier. */
 export const RERANK_MODEL = "rerank-2.5"
+
+// ---------------------------------------------------------------------------
+// Issue details generation
+// ---------------------------------------------------------------------------
+
+/** Language model used to generate stable issue names/descriptions. */
+export const ISSUE_DETAILS_GENERATION_MODEL = {
+  provider: "openai",
+  model: "gpt-5.4",
+  reasoning: "medium",
+} as const
+
+/** Maximum recent assigned issue occurrences used when regenerating existing issue details. */
+export const ISSUE_DETAILS_MAX_OCCURRENCES = 25
 
 // ---------------------------------------------------------------------------
 // Issue refresh debounce

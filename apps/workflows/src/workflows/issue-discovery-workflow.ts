@@ -6,7 +6,9 @@ const {
   embedScoreFeedback,
   hybridSearchIssues,
   rerankIssueCandidates,
-  createOrAssignIssue,
+  resolveMatchedIssue,
+  createIssueFromScore,
+  assignScoreToIssue,
   syncIssueProjections,
   syncScoreAnalytics,
 } = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
@@ -51,20 +53,34 @@ export const issueDiscoveryWorkflow = async (input: {
     candidates: hybridSearch.candidates,
   })
 
-  const assignment = await createOrAssignIssue({
+  const matchedIssue = await resolveMatchedIssue({
     organizationId: input.organizationId,
     projectId: input.projectId,
-    scoreId: input.scoreId,
-    matchedIssueId: retrieval.matchedIssueId,
-    normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+    matchedIssueUuid: retrieval.matchedIssueUuid,
   })
+
+  const assignment =
+    matchedIssue.issueId === null
+      ? await createIssueFromScore({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          scoreId: input.scoreId,
+          normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+        })
+      : await assignScoreToIssue({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          scoreId: input.scoreId,
+          issueId: matchedIssue.issueId,
+          normalizedEmbedding: embeddedScoreFeedback.normalizedEmbedding,
+        })
+
+  await syncIssueProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
 
   await syncScoreAnalytics({
     organizationId: input.organizationId,
     scoreId: input.scoreId,
   })
-
-  await syncIssueProjections({ organizationId: input.organizationId, issueId: assignment.issueId })
 
   return { action: assignment.action, issueId: assignment.issueId }
 }

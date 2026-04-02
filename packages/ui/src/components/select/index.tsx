@@ -50,6 +50,7 @@ export type SelectProps<V = unknown> = Omit<FormFieldProps, "children"> &
     value?: V | undefined
     trigger?: ReactNode
     placeholder?: string
+    placeholderIcon?: ReactNode
     loading?: boolean
     disabled?: boolean
     required?: boolean
@@ -82,6 +83,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     errors,
     trigger,
     placeholder,
+    placeholderIcon,
     options,
     defaultValue,
     value,
@@ -177,6 +179,7 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
                   selected={selectedValue}
                   options={options}
                   placeholder={placeholder ?? "Select an option"}
+                  placeholderIcon={placeholderIcon}
                 />
               </SelectTrigger>
             )}
@@ -185,6 +188,13 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
               side={side}
               {...(sideOffset !== undefined ? { sideOffset } : {})}
               {...(alignOffset !== undefined ? { alignOffset } : {})}
+              {...(searchable
+                ? {
+                    onOpenAutoFocus: (event: Event) => {
+                      event.preventDefault()
+                    },
+                  }
+                : {})}
               className={cn(zIndex.dropdown, "p-0")}
             >
               {searchable ? (

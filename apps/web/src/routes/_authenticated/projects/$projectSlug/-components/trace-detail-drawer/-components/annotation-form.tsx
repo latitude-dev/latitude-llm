@@ -32,7 +32,10 @@ export function AnnotationForm({
       <AnnotationThumbToggle
         passed={passed}
         disabled={isLoading}
-        onThumbUp={() => onPassedChange(true)}
+        onThumbUp={() => {
+          onPassedChange(true)
+          onIssueChange(null)
+        }}
         onThumbDown={() => onPassedChange(false)}
       />
 
