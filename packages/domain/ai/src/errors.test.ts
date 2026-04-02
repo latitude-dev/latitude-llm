@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest"
 import { isHttpError } from "@repo/utils"
-import { AIError, AICredentialError } from "./index.ts"
+import { describe, expect, it } from "vitest"
+import { AICredentialError, AIError } from "./index.ts"
 
 describe("AIError", () => {
   it("implements HttpError with 502 and exposes message as httpMessage", () => {
