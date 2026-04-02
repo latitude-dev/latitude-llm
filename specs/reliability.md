@@ -1018,6 +1018,28 @@ System-created default queues:
 - description: the trace has unusually high latency, cost, or usage
 - instructions: review traces whose latency, token usage, or cost materially exceeds project norms. This queue is primarily detected through deterministic outlier checks based on project medians and configured thresholds rather than the low-cost flagger model.
 
+#### Output Schema Validation
+
+- description: a structured-output response did not conform to the declared schema
+- instructions: review traces where the LLM was asked to produce structured output (JSON schema, JSON object, or tool-call response format) and the actual output either failed to parse, violated the declared schema, or was truncated before completion. This queue is detected entirely through deterministic validation rather than the low-cost flagger model.
+
+Detection relies on data already present on GenAI spans:
+
+1. **Schema discovery** — the checker scans `attr_string` on every GenAI span in the trace for known response-format attribute keys. Recognized keys, checked in precedence order:
+   - `gen_ai.request.response_format` (vendor-neutral, preferred)
+   - `gen_ai.openai.request.response_format` (OpenAI-specific)
+   The attribute value is expected to be a JSON string. When the parsed value contains a `json_schema` field with a nested `schema` object, that object is the JSON Schema used for validation. When the parsed value is `{ "type": "json_object" }` without an explicit schema, the checker only verifies that the output is well-formed JSON.
+   If none of the recognized keys are present, the span is skipped — this queue never flags spans that did not request structured output.
+
+2. **Output extraction** — the checker reads `output_messages` from the span detail. For spans that requested structured output, the relevant content is the textual body of the final assistant message (the content string that the model was expected to fill with JSON). If `output_messages` is empty or absent, the span is treated as a validation failure only when a schema was discovered in step 1.
+
+3. **Deterministic checks** — the following checks run in order; the first failure is sufficient to flag the span:
+   - **Truncation**: `finish_reasons` contains `"length"` — the model ran out of tokens before completing the structured output.
+   - **Parse failure**: the output content is not valid JSON.
+   - **Schema violation**: a JSON Schema was discovered in step 1 and the parsed output does not validate against it. Validation uses standard JSON Schema draft-2020-12 semantics (or the draft declared in the schema's `$schema` field). The checker should use a lightweight, dependency-minimal JSON Schema validator.
+
+4. **Trace-level rollup** — if any GenAI span in the trace fails one of the above checks, the trace is flagged for this queue. The draft annotation created by the downstream `system-annotation-queues:annotate` step should reference the specific span(s) that failed and the failure reason (truncation, parse error, or schema violation details).
+
 Queue population flows:
 
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table
@@ -1029,7 +1051,7 @@ Queue population flows:
 - when a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `system-annotation-queues` message with task `flag` for that trace
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
-- among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
+- among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors`, `Resource Outliers`, and `Output Schema Validation`
 - for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue
 - a trace may match none of the system-created queues, or it may match several of them
 - for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair
