@@ -29,7 +29,6 @@
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@platform/env": "workspace:*",
-    "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "rosetta-ai": "catalog:"
