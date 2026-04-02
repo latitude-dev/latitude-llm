@@ -2,9 +2,9 @@ export {
   createMembership,
   isAdminRole,
   type Membership,
+  type MembershipRole,
   membershipRoleSchema,
   membershipSchema,
-  type MembershipRole,
 } from "./entities/membership.ts"
 export {
   createOrganization,

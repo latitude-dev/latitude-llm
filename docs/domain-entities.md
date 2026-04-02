@@ -1,69 +1,53 @@
-# Domain entities: Zod schemas vs TypeScript types
+# Domain entities: Zod golden path
 
-This document explains how `@domain/*` packages model **entities** in `src/entities/<entity>.ts`, why both **Zod schemas** and **plain TypeScript interfaces / types** appear today, and how to choose for **new** code.
+Every **`packages/domain/*`** package that defines persisted or shared **entities** uses **Zod** as the single source of truth in `src/entities/<entity>.ts`:
+
+1. Export `entitySchema` (and nested `*Schema` values as needed).
+2. Export `export type Entity = z.infer<typeof entitySchema>` (or `z.output` if you use transforms everywhere and need output types explicitly).
+3. **Factories and mutators** that build entities should end with `entitySchema.parse(...)` (or `safeParse` at boundaries) so invariants stay enforced when you add refinements later.
 
 Canonical layout for any domain package is still: entities in `src/entities/`, constants in `src/constants.ts`, errors in `src/errors.ts` (see `AGENTS.md`).
 
-## Decision criteria
+## Shared building blocks (`@domain/shared`)
 
-Use the table below when adding or reshaping an entity.
+- **`cuidSchema`** and **`*IdSchema`** helpers (e.g. `projectIdSchema`, `organizationIdSchema`, `simulationIdOrEmptySchema` for telemetry’s empty-string sentinel) — parse strings into branded IDs. Prefer these in entity schemas instead of raw `z.string()`.
+- **`organizationSettingsSchema`** / **`projectSettingsSchema`** — settings blobs embedded on org/project entities.
 
-| Concern | Prefer **Zod** (`*Schema` + `z.infer<typeof *Schema>`) | Prefer **TypeScript only** (`interface` / `type`) |
-| --- | --- | --- |
-| **Validation** | You need **runtime** checks: string lengths, numeric ranges, unions with sentinels, refinements across fields (`superRefine`), or parsing **untrusted** input (HTTP body, queue payload, external tool output). | Shape is **only** produced by trusted code (e.g. repository mapper from DB row you control) and invalid states are treated as bugs, not user-facing validation errors. |
-| **Serialization / parsing** | You parse or coerce **wire or storage** shapes (JSON, string dates, optional fields) and want one definition for both parse and type. | Serialization is handled entirely at the boundary with separate Zod (or other) schemas, and the domain entity is purely the in-memory shape after mapping. |
-| **Runtime type checking** | You want `safeParse` / `parse` in tests, workers, or use-cases to assert invariants on composed objects (metadata blobs, discriminated variants). | Compile-time typing is enough; no need to re-validate full entities at runtime in domain code. |
-| **Shared contracts** | Other packages or apps should **import the same schema** to avoid duplicating field rules (lengths, literals, branded ids). | The shape is internal to one package and duplicated field rules are not a maintenance risk. |
+Import from `@domain/shared` in entity files; do not duplicate CUID length or settings field rules.
 
-**Practical default for new entities:** define a **Zod schema** as the source of truth and export `export type Entity = z.infer<typeof entitySchema>` unless you have a clear reason from the table to stay TypeScript-only (for example, a large telemetry DTO that is only ever built inside a typed adapter).
+## When Zod adds the most value
 
-**Not mutually exclusive:** a package may use Zod for some entities and TypeScript types for others. Prefer consistency **within** a bounded context when touch points (validation, tests, cross-package reuse) are similar.
+Use schemas for:
 
-## Package inventory (current state)
+- **Runtime validation** — lengths, ranges, unions, `superRefine` across fields.
+- **Parsing** — wire JSON, queue payloads, or external data coerced into domain types.
+- **Shared contracts** — the same `entitySchema` imported at HTTP boundaries and in tests (`safeParse`).
 
-The following lists **`packages/domain/*`** packages that define `src/entities/*` today. Rationale summarizes why the current style is reasonable; it is not a requirement to migrate immediately.
+Even when a row is built in a trusted repository mapper, keeping a schema documents allowed shapes and gives a single place to tighten rules.
 
-### Zod-first canonical entities
+## Readonly and complex fields
 
-| Package | Notes |
-| --- | --- |
-| `@domain/scores` | Rich metadata variants, anchors, cross-field rules; heavy reuse by annotations and reliability flows. |
-| `@domain/evaluations` | Structured evaluation model, matrices, alignment; benefits from shared parseable contracts. |
-| `@domain/issues` | Lifecycle and centroid shapes; validation aligned with discovery and API surfaces. |
-| `@domain/simulations` | Sentinels, thresholds, and cross-field invariants (`passed` / `errored` / `error`, timestamps). |
-| `@domain/annotation-queues` | Queue settings embed filter sets; entity and item shapes parsed at boundaries. |
+- For **telemetry list DTOs** (`Span`, `Trace`, `Session`), use **`.readonly()`** on `z.array` and `z.record` so inferred types stay compatible with `readonly` arrays/objects from OTLP mappers.
+- For **third-party types** (e.g. `GenAIMessage` from `rosetta-ai`), use **`z.custom<GenAIMessage>(...)`** with a minimal structural guard when you cannot describe the shape in Zod.
 
-### Zod via re-export
+## Package reference
 
-| Package | Notes |
-| --- | --- |
-| `@domain/annotations` | Annotation entity **is** the annotation score shape; re-exports `@domain/scores` schemas and types to keep a single canonical definition. |
+All domain packages under `packages/domain/*` that define `src/entities/*` use Zod for those entities, including:
 
-### TypeScript interfaces / types only
+`api-keys`, `annotation-queues`, `annotations` (re-exports scores), `datasets`, `email`, `evaluations`, `issues`, `models`, `organizations`, `projects`, `scores`, `simulations`, `spans`, `users`.
 
-| Package | Notes |
-| --- | --- |
-| `@domain/spans` | Large telemetry-oriented shapes (`Span`, `Trace`); typically constructed in platform mappers from trusted pipelines rather than validated as a whole with Zod in domain. |
-| `@domain/models` | Pricing and cost helpers; mostly typed data structures without a single persisted “entity” document boundary in domain. |
-| `@domain/projects` | Small CRUD-style row projection; validation often lives at HTTP/repository boundary. |
-| `@domain/organizations` | Membership and org rows; same pattern as projects. |
-| `@domain/users` | User projection; boundary validation elsewhere. |
-| `@domain/email` | Template/content types for mail; not persisted domain aggregates in the same sense as reliability entities. |
-| `@domain/datasets` | Dataset and row shapes; flexible row payloads (`Record<string, unknown>`) skew toward mapper-level handling. |
-| `@domain/api-keys` | Credential metadata; often mapped from DB with boundary validation for creation only. |
+Packages without an `entities/` tree (e.g. `shared`, `queue`, `events`) are not entity packages.
 
-Packages under `packages/domain` **without** an `entities/` tree (e.g. shared kernel, queue, events) are out of scope for this split.
+## New entity checklist
 
-## Guidelines for new entity files
-
-1. **Name exports consistently:** `entitySchema` and `Entity = z.infer<typeof entitySchema>` when using Zod; `Entity` as `interface` or `type` when not.
-2. **Reuse, do not duplicate:** import field schemas, branded id schemas, and constants from `@domain/shared` or sibling domains instead of re-stating lengths and literals.
-3. **Keep use-case-only inputs in use-case files** until a second consumer needs them (`AGENTS.md`).
-4. **Tests:** for Zod entities, add `safeParse` tests for invalid cases that encode business rules (see `@domain/scores` / `@domain/issues` entity tests).
-5. **Migrating** an existing TypeScript-only entity to Zod is optional; do it when you need runtime validation or shared schemas and the churn is justified.
+1. Add **`entitySchema`** in `src/entities/<entity>.ts` and **`export type Entity = z.infer<typeof entitySchema>`**.
+2. Reuse **`@domain/shared`** id and settings schemas; reuse **constants** from `src/constants.ts` for max lengths and sentinels.
+3. Export the schema from the package **`index.ts`** when other packages or apps need the same parse rules.
+4. Add **`safeParse` tests** when the schema encodes non-obvious business rules (see `@domain/scores`, `@domain/issues`).
+5. Keep **use-case-only inputs** in the use-case file until a second consumer needs them (`AGENTS.md`).
 
 ## Related documentation
 
-- [ADR 0001: Domain entity schema style](./adr/0001-domain-entity-schema-style.md) — records the default for new entities and why both styles coexist.
-- [Domain errors reference pattern](./issues.md#domain-errors-domainissues-reference-pattern) — orthogonal concern; entities vs errors.
-- `AGENTS.md` — module layout and “canonical entity schema” convention.
+- [ADR 0001: Domain entity schema style](./adr/0001-domain-entity-schema-style.md) — decision to standardize on Zod for domain entities.
+- [Domain errors reference pattern](./issues.md#domain-errors-domainissues-reference-pattern) — orthogonal; entities vs errors.
+- `AGENTS.md` — module layout and canonical entity location.

@@ -1,11 +1,11 @@
 import {
   generateId,
-  organizationIdSchema,
   type OrganizationId,
-  projectIdSchema,
+  organizationIdSchema,
   type ProjectId,
-  projectSettingsSchema,
   type ProjectSettings,
+  projectIdSchema,
+  projectSettingsSchema,
 } from "@domain/shared"
 import { z } from "zod"
 

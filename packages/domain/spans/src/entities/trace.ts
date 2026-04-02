@@ -1,4 +1,3 @@
-import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import {
   externalUserIdSchema,
   organizationIdSchema,
@@ -8,6 +7,7 @@ import {
   spanIdSchema,
   traceIdSchema,
 } from "@domain/shared"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 
 /**

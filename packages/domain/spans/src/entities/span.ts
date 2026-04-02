@@ -1,4 +1,3 @@
-import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import {
   externalUserIdSchema,
   organizationIdSchema,
@@ -8,16 +7,10 @@ import {
   spanIdSchema,
   traceIdSchema,
 } from "@domain/shared"
+import type { GenAIMessage, GenAISystem } from "rosetta-ai"
 import { z } from "zod"
 
-export const spanKindSchema = z.enum([
-  "unspecified",
-  "internal",
-  "server",
-  "client",
-  "producer",
-  "consumer",
-])
+export const spanKindSchema = z.enum(["unspecified", "internal", "server", "client", "producer", "consumer"])
 export type SpanKind = z.infer<typeof spanKindSchema>
 
 export const spanStatusCodeSchema = z.enum(["unset", "ok", "error"])

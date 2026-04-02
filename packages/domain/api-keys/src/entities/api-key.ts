@@ -1,4 +1,4 @@
-import { apiKeyIdSchema, type ApiKeyId, generateId, organizationIdSchema, type OrganizationId } from "@domain/shared"
+import { type ApiKeyId, apiKeyIdSchema, generateId, type OrganizationId, organizationIdSchema } from "@domain/shared"
 import { z } from "zod"
 
 /**

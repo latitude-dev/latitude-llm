@@ -61,7 +61,7 @@ details when the documentation isn't enough.
 
 ## Domain Schema And Module Conventions
 
-- For **when to use Zod vs plain TypeScript** for entities, default choices, and a per-package inventory, see [`docs/domain-entities.md`](docs/domain-entities.md) and [`docs/adr/0001-domain-entity-schema-style.md`](docs/adr/0001-domain-entity-schema-style.md).
+- Domain **entities** are **Zod-first**: `entitySchema` + `z.infer<typeof entitySchema>` in `src/entities/<entity>.ts`. See [`docs/domain-entities.md`](docs/domain-entities.md) and [`docs/adr/0001-domain-entity-schema-style.md`](docs/adr/0001-domain-entity-schema-style.md).
 - Treat canonical domain entity schemas as the source of truth. Schemas and types elsewhere in the same domain, plus app/platform boundary schemas, should derive from or reuse the entity shapes whenever practical instead of re-declaring the same fields.
 - When a boundary schema must differ materially from the entity shape, still reuse the relevant domain constants, field schemas, and literal unions rather than hardcoding duplicated lengths or sentinel values again.
 - Domain entity schemas and their inferred entity types belong in `src/entities/<entity>.ts`.
