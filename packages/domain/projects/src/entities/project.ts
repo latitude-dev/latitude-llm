@@ -1,16 +1,27 @@
-import { generateId, type OrganizationId, type ProjectId, type ProjectSettings } from "@domain/shared"
+import {
+  generateId,
+  organizationIdSchema,
+  type OrganizationId,
+  projectIdSchema,
+  type ProjectId,
+  projectSettingsSchema,
+  type ProjectSettings,
+} from "@domain/shared"
+import { z } from "zod"
 
-export interface Project {
-  readonly id: ProjectId
-  readonly organizationId: OrganizationId
-  readonly name: string
-  readonly slug: string
-  readonly settings: ProjectSettings | null
-  readonly deletedAt: Date | null
-  readonly lastEditedAt: Date
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+export const projectSchema = z.object({
+  id: projectIdSchema,
+  organizationId: organizationIdSchema,
+  name: z.string().min(1),
+  slug: z.string().min(1),
+  settings: projectSettingsSchema.nullable(),
+  deletedAt: z.date().nullable(),
+  lastEditedAt: z.date(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type Project = z.infer<typeof projectSchema>
 
 export const createProject = (params: {
   id?: ProjectId | undefined
@@ -24,7 +35,7 @@ export const createProject = (params: {
   updatedAt?: Date
 }): Project => {
   const now = new Date()
-  return {
+  return projectSchema.parse({
     id: params.id ?? generateId<"ProjectId">(),
     organizationId: params.organizationId,
     name: params.name,
@@ -34,7 +45,7 @@ export const createProject = (params: {
     lastEditedAt: params.lastEditedAt ?? now,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
-  }
+  })
 }
 
 /**
@@ -49,12 +60,12 @@ export const isProjectDeleted = (project: Project): boolean => {
  */
 export const markProjectDeleted = (project: Project): Project => {
   const now = new Date()
-  return {
+  return projectSchema.parse({
     ...project,
     deletedAt: now,
     lastEditedAt: now,
     updatedAt: now,
-  }
+  })
 }
 
 /**
@@ -62,10 +73,10 @@ export const markProjectDeleted = (project: Project): Project => {
  */
 export const restoreProject = (project: Project): Project => {
   const now = new Date()
-  return {
+  return projectSchema.parse({
     ...project,
     deletedAt: null,
     lastEditedAt: now,
     updatedAt: now,
-  }
+  })
 }

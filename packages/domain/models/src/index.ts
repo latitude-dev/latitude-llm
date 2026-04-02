@@ -8,6 +8,15 @@ export type {
   TokenUsage,
 } from "./entities/cost.ts"
 export {
+  costBreakdownSchema,
+  costLookupResultSchema,
+  modelCostSpecSchema,
+  modelCostTierSchema,
+  tokenCostEntrySchema,
+  tokenTypeSchema,
+  tokenUsageSchema,
+} from "./entities/cost.ts"
+export {
   computeCostBreakdown,
   computeTokenCost,
   estimateTotalCost,
@@ -18,7 +27,13 @@ export type {
   ModelModality,
   ModelPricing,
 } from "./entities/model.ts"
-export { parseModelsDevData } from "./entities/model.ts"
+export {
+  modelModalitySchema,
+  modelModalitiesSchema,
+  modelPricingSchema,
+  modelSchema,
+  parseModelsDevData,
+} from "./entities/model.ts"
 
 export {
   costBreakdownKey,

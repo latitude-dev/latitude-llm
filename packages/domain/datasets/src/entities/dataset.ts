@@ -1,31 +1,41 @@
-import type { DatasetId, DatasetVersionId, OrganizationId, ProjectId } from "@domain/shared"
+import {
+  datasetIdSchema,
+  datasetVersionIdSchema,
+  organizationIdSchema,
+  projectIdSchema,
+} from "@domain/shared"
 import { Data } from "effect"
+import { z } from "zod"
 
-export interface Dataset {
-  readonly id: DatasetId
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly name: string
-  readonly description: string | null
-  readonly fileKey: string | null
-  readonly currentVersion: number
-  readonly latestVersionId: DatasetVersionId | null
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+export const datasetSchema = z.object({
+  id: datasetIdSchema,
+  organizationId: organizationIdSchema,
+  projectId: projectIdSchema,
+  name: z.string().min(1),
+  description: z.string().nullable(),
+  fileKey: z.string().nullable(),
+  currentVersion: z.number().int().nonnegative(),
+  latestVersionId: datasetVersionIdSchema.nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
 
-export interface DatasetVersion {
-  readonly id: DatasetVersionId
-  readonly datasetId: DatasetId
-  readonly version: number
-  readonly rowsInserted: number
-  readonly rowsUpdated: number
-  readonly rowsDeleted: number
-  readonly source: string
-  readonly actorId: string | null
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+export type Dataset = z.infer<typeof datasetSchema>
+
+export const datasetVersionSchema = z.object({
+  id: datasetVersionIdSchema,
+  datasetId: datasetIdSchema,
+  version: z.number().int().positive(),
+  rowsInserted: z.number().int().nonnegative(),
+  rowsUpdated: z.number().int().nonnegative(),
+  rowsDeleted: z.number().int().nonnegative(),
+  source: z.string().min(1),
+  actorId: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type DatasetVersion = z.infer<typeof datasetVersionSchema>
 
 export class DatasetNotFoundError extends Data.TaggedError("DatasetNotFoundError")<{
   readonly datasetId: string

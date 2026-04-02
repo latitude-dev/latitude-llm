@@ -77,6 +77,23 @@ export const DatasetRowId = (value: string): DatasetRowId => value as DatasetRow
 export const DatasetVersionId = (value: string): DatasetVersionId => value as DatasetVersionId
 export const ExternalUserId = (value: string): ExternalUserId => value as ExternalUserId
 
+/** Zod schemas that parse strings into branded domain IDs (CUID2, length {@link CUID_LENGTH}). */
+export const userIdSchema = cuidSchema.transform(UserId)
+export const organizationIdSchema = cuidSchema.transform(OrganizationId)
+export const membershipIdSchema = cuidSchema.transform(MembershipId)
+export const projectIdSchema = cuidSchema.transform(ProjectId)
+export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
+export const datasetIdSchema = cuidSchema.transform(DatasetId)
+export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)
+export const datasetVersionIdSchema = cuidSchema.transform(DatasetVersionId)
+export const traceIdSchema = cuidSchema.transform(TraceId)
+export const spanIdSchema = cuidSchema.transform(SpanId)
+export const sessionIdSchema = cuidSchema.transform(SessionId)
+export const simulationIdSchema = cuidSchema.transform(SimulationId)
+/** Telemetry uses an empty string when no simulation is linked (not a CUID). */
+export const simulationIdOrEmptySchema = z.union([z.literal(""), cuidSchema]).transform(SimulationId)
+export const externalUserIdSchema = cuidSchema.transform(ExternalUserId)
+
 /**
  * Generate a unique ID using CUID2.
  * CUID2 provides 24-25 character URL-safe unique identifiers.

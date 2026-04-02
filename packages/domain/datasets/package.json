@@ -20,7 +20,8 @@
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "effect": "catalog:",
-    "papaparse": "^5.5.3"
+    "papaparse": "^5.5.3",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/papaparse": "^5.5.2"

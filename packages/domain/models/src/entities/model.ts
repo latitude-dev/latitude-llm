@@ -6,38 +6,44 @@
  * standardized model metadata across providers.
  */
 
-export type ModelModality = "text" | "image" | "audio" | "video" | "pdf"
+import { z } from "zod"
 
-export type ModelModalities = {
-  readonly input: ModelModality[]
-  readonly output: ModelModality[]
-}
+export const modelModalitySchema = z.enum(["text", "image", "audio", "video", "pdf"])
+export type ModelModality = z.infer<typeof modelModalitySchema>
 
-export type ModelPricing = {
-  readonly input: number
-  readonly output: number
-  readonly cacheRead?: number | undefined
-  readonly cacheWrite?: number | undefined
-  readonly reasoning?: number | undefined
-}
+export const modelModalitiesSchema = z.object({
+  input: z.array(modelModalitySchema),
+  output: z.array(modelModalitySchema),
+})
+export type ModelModalities = z.infer<typeof modelModalitiesSchema>
 
-export type Model = {
-  readonly id: string
-  readonly name: string
-  readonly provider: string
-  readonly toolCall?: boolean | undefined
-  readonly reasoning?: boolean | undefined
-  readonly attachment?: boolean | undefined
-  readonly supportsTemperature?: boolean | undefined
-  readonly structuredOutput?: boolean | undefined
-  readonly knowledgeCutoff?: string | undefined
-  readonly releaseDate?: string | undefined
-  readonly modalities?: ModelModalities | undefined
-  readonly contextLimit?: number | undefined
-  readonly outputLimit?: number | undefined
-  readonly openWeights?: boolean | undefined
-  readonly pricing?: ModelPricing | undefined
-}
+export const modelPricingSchema = z.object({
+  input: z.number(),
+  output: z.number(),
+  cacheRead: z.number().optional(),
+  cacheWrite: z.number().optional(),
+  reasoning: z.number().optional(),
+})
+export type ModelPricing = z.infer<typeof modelPricingSchema>
+
+export const modelSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  toolCall: z.boolean().optional(),
+  reasoning: z.boolean().optional(),
+  attachment: z.boolean().optional(),
+  supportsTemperature: z.boolean().optional(),
+  structuredOutput: z.boolean().optional(),
+  knowledgeCutoff: z.string().optional(),
+  releaseDate: z.string().optional(),
+  modalities: modelModalitiesSchema.optional(),
+  contextLimit: z.number().optional(),
+  outputLimit: z.number().optional(),
+  openWeights: z.boolean().optional(),
+  pricing: modelPricingSchema.optional(),
+})
+export type Model = z.infer<typeof modelSchema>
 
 type RawModel = {
   id: string
@@ -129,7 +135,7 @@ export function parseModelsDevData(data: unknown): Model[] {
       const raw = provider.models[modelId]
       if (!isRawModel(raw)) continue
 
-      models.push({
+      const candidate = {
         id: raw.id,
         name: raw.name,
         provider: providerId,
@@ -153,7 +159,12 @@ export function parseModelsDevData(data: unknown): Model[] {
               reasoning: raw.cost.reasoning,
             }
           : undefined,
-      })
+      }
+
+      const parsed = modelSchema.safeParse(candidate)
+      if (parsed.success) {
+        models.push(parsed.data)
+      }
     }
   }
 

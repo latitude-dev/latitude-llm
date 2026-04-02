@@ -1,5 +1,13 @@
-import type { MembershipId, OrganizationId, UserId } from "@domain/shared"
-import { generateId } from "@domain/shared"
+import {
+  generateId,
+  membershipIdSchema,
+  type MembershipId,
+  organizationIdSchema,
+  type OrganizationId,
+  userIdSchema,
+  type UserId,
+} from "@domain/shared"
+import { z } from "zod"
 
 /**
  * Membership entity - represents a user's membership in an organization.
@@ -10,15 +18,19 @@ import { generateId } from "@domain/shared"
  * Invitation and confirmation state is tracked by Better Auth invitation
  * records, not on the membership record itself.
  */
-export interface Membership {
-  readonly id: MembershipId
-  readonly organizationId: OrganizationId
-  readonly userId: UserId
-  readonly role: MembershipRole
-  readonly createdAt: Date
-}
+export const membershipRoleSchema = z.enum(["owner", "admin", "member"])
 
-export type MembershipRole = "owner" | "admin" | "member"
+export const membershipSchema = z.object({
+  id: membershipIdSchema,
+  organizationId: organizationIdSchema,
+  userId: userIdSchema,
+  role: membershipRoleSchema,
+  createdAt: z.date(),
+})
+
+export type Membership = z.infer<typeof membershipSchema>
+
+export type MembershipRole = Membership["role"]
 
 export const isAdminRole = (role: MembershipRole): boolean => role === "owner" || role === "admin"
 
@@ -29,11 +41,11 @@ export const createMembership = (params: {
   role: MembershipRole
   createdAt?: Date
 }): Membership => {
-  return {
+  return membershipSchema.parse({
     id: params.id ?? generateId<"MembershipId">(),
     organizationId: params.organizationId,
     userId: params.userId,
     role: params.role,
     createdAt: params.createdAt ?? new Date(),
-  }
+  })
 }
