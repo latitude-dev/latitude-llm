@@ -1,4 +1,4 @@
-import { generateId, OrganizationId, type OrganizationSettings } from "@domain/shared"
+import { generateId, type OrganizationId, type OrganizationSettings } from "@domain/shared"
 
 /**
  * Organization entity - represents a tenant/workspace.
@@ -32,7 +32,7 @@ export const createOrganization = (params: {
 }): Organization => {
   const now = new Date()
   return {
-    id: params.id ?? OrganizationId(generateId()),
+    id: params.id ?? generateId<"OrganizationId">(),
     name: params.name,
     slug: params.slug,
     logo: params.logo ?? null,

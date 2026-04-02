@@ -1,4 +1,4 @@
-import { generateId, type OrganizationId, ProjectId, type ProjectSettings } from "@domain/shared"
+import { generateId, type OrganizationId, type ProjectId, type ProjectSettings } from "@domain/shared"
 
 export interface Project {
   readonly id: ProjectId
@@ -25,7 +25,7 @@ export const createProject = (params: {
 }): Project => {
   const now = new Date()
   return {
-    id: params.id ?? ProjectId(generateId()),
+    id: params.id ?? generateId<"ProjectId">(),
     organizationId: params.organizationId,
     name: params.name,
     slug: params.slug,

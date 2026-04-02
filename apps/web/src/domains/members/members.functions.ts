@@ -4,7 +4,7 @@ import {
   transferOwnershipUseCase,
   updateMemberRoleUseCase,
 } from "@domain/organizations"
-import { UserId } from "@domain/shared"
+import { MembershipId, UserId } from "@domain/shared"
 import { MembershipRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
@@ -83,8 +83,8 @@ export const removeMember = createServerFn({ method: "POST" })
 
     await Effect.runPromise(
       removeMemberUseCase({
-        membershipId: data.membershipId,
-        requestingUserId: userId,
+        membershipId: MembershipId(data.membershipId),
+        requestingUserId: UserId(userId),
       }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
     )
   })

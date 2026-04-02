@@ -5,7 +5,6 @@ import {
   OutboxEventWriter,
   ProjectId,
   type RepositoryError,
-  ScoreId,
   SqlClient,
   toRepositoryError,
 } from "@domain/shared"
@@ -125,7 +124,7 @@ const buildScore = ({
   return parseOrBadRequest(
     scoreSchema,
     {
-      id: input.id ?? ScoreId(generateId()),
+      id: input.id ?? generateId<"ScoreId">(),
       organizationId,
       projectId: input.projectId,
       sessionId: input.sessionId,

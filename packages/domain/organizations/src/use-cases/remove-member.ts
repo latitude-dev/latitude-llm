@@ -1,9 +1,9 @@
-import type { RepositoryError } from "@domain/shared"
+import type { MembershipId, RepositoryError } from "@domain/shared"
 import { Data, Effect } from "effect"
 import { MembershipRepository } from "../ports/membership-repository.ts"
 
 export interface RemoveMemberInput {
-  readonly membershipId: string
+  readonly membershipId: MembershipId
   readonly requestingUserId: string
 }
 
