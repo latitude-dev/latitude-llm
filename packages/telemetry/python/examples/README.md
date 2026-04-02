@@ -124,10 +124,32 @@ uv run python examples/test_openai.py
 
 Each example should:
 
-1. Initialize telemetry with the appropriate instrumentor
-2. Make an LLM call wrapped in `telemetry.capture`
+1. Initialize telemetry with `init_latitude()`
+2. Wrap the LLM call with `@capture` decorator
 3. Print the response
 4. Send a trace to your local Latitude instance
+
+Example pattern:
+
+```python
+from latitude_telemetry import init_latitude, capture
+
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["openai"],
+    disable_batch=True,
+)
+
+@capture("test-name", {"tags": ["test"], "session_id": "example"})
+def test_function():
+    # Your LLM call here
+    ...
+
+if __name__ == "__main__":
+    test_function()
+    latitude["flush"]()
+```
 
 Check the Latitude dashboard to verify:
 

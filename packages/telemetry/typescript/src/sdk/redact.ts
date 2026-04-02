@@ -68,9 +68,11 @@ export class RedactSpanProcessor implements SpanProcessor {
 export const DEFAULT_REDACT_SPAN_PROCESSOR = () =>
   new RedactSpanProcessor({
     attributes: [
+      // HTTP security headers
       /^http\.request\.header\.authorization$/i,
       /^http\.request\.header\.cookie$/i,
       /^http\.request\.header\.x[-_]api[-_]key$/i,
+      // Database statements may contain sensitive data
       /^db\.statement$/i,
     ],
   })

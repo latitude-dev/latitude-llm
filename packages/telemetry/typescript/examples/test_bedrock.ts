@@ -11,43 +11,43 @@
  * Install: npm install @aws-sdk/client-bedrock-runtime
  */
 
-import {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-} from '@aws-sdk/client-bedrock-runtime'
-import { LatitudeTelemetry, Instrumentation } from '../src'
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime"
+import { capture, initLatitude } from "../src"
 
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: {
-    [Instrumentation.Bedrock]: { BedrockRuntimeClient },
-  },
+  instrumentations: ["bedrock"],
 })
 
 async function main() {
+  // Wait for instrumentations to be ready
+  await latitude.ready
+
   const client = new BedrockRuntimeClient({
-    region: process.env.AWS_REGION || 'us-east-1',
+    region: process.env.AWS_REGION || "us-east-1",
   })
 
-  await telemetry.capture(
-    { tags: ['test', 'bedrock'], sessionId: 'example' },
+  await capture(
+    "bedrock-chat",
     async () => {
       const body = JSON.stringify({
-        anthropic_version: 'bedrock-2023-05-31',
+        anthropic_version: "bedrock-2023-05-31",
         max_tokens: 50,
         messages: [
           {
-            role: 'user',
+            role: "user",
             content: "Say 'Hello from Bedrock!' in exactly 5 words.",
           },
         ],
       })
 
       const command = new InvokeModelCommand({
-        modelId: 'anthropic.claude-3-haiku-20240307-v1:0',
+        modelId: "anthropic.claude-3-haiku-20240307-v1:0",
         body: body,
-        contentType: 'application/json',
-        accept: 'application/json',
+        contentType: "application/json",
+        accept: "application/json",
       })
 
       const response = await client.send(command)
@@ -55,9 +55,10 @@ async function main() {
 
       return responseBody.content[0].text
     },
+    { tags: ["test", "bedrock"], sessionId: "example" },
   )
 
-  await telemetry.flush()
+  await latitude.flush()
 }
 
 main().catch(console.error)

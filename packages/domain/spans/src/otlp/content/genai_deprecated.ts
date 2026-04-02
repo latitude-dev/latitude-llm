@@ -85,7 +85,7 @@ function reassembleIndexedMessages(attrs: readonly OtlpKeyValue[], prefix: strin
       const toolCalls = msg.tool_calls as Record<string, unknown>[]
       while (toolCalls.length <= tcIndex) toolCalls.push({})
       const tc = toolCalls[tcIndex]
-      if (typeof tc !== "object" || tc === null) continue
+      if (typeof tc !== "object" || !tc) continue
       if (tcField === "id") tc.id = attrValue
       else if (tcField === "name") tc.name = attrValue
       else if (tcField === "arguments") tc.arguments = attrValue

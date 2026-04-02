@@ -3,6 +3,7 @@ Test Azure OpenAI instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
+- LATITUDE_PROJECT_SLUG
 - AZURE_OPENAI_API_KEY
 - AZURE_OPENAI_ENDPOINT
 
@@ -11,26 +12,21 @@ Install: uv add openai
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry BEFORE importing openai so instrumentation can patch it
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.OpenAI],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["openai"],
+    disable_batch=True,
 )
 
 # Import after telemetry initialization
 from openai import AzureOpenAI
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-azure-completion", {"tags": ["test"], "session_id": "example"})
 def test_azure_completion():
     client = AzureOpenAI(
         api_key=os.environ["AZURE_OPENAI_API_KEY"],
@@ -43,9 +39,7 @@ def test_azure_completion():
 
     response = client.chat.completions.create(
         model=deployment_name,
-        messages=[
-            {"role": "user", "content": "Say 'Hello from Azure!' in exactly 5 words."}
-        ],
+        messages=[{"role": "user", "content": "Say 'Hello from Azure!' in exactly 5 words."}],
         max_tokens=50,
     )
 
@@ -54,4 +48,4 @@ def test_azure_completion():
 
 if __name__ == "__main__":
     test_azure_completion()
-    telemetry.flush()
+    latitude["flush"]()

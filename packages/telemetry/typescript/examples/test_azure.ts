@@ -11,42 +11,44 @@
  * Install: npm install openai
  */
 
-import { AzureOpenAI } from 'openai'
-import { LatitudeTelemetry, Instrumentation } from '../src'
+import { AzureOpenAI } from "openai"
+import { capture, initLatitude } from "../src"
 
 // Note: Azure OpenAI uses the same OpenAI instrumentor
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: {
-    [Instrumentation.OpenAI]: { AzureOpenAI },
-  },
+  instrumentations: ["openai"],
 })
 
 async function main() {
+  // Wait for instrumentations to be ready
+  await latitude.ready
+
   const client = new AzureOpenAI({
     apiKey: process.env.AZURE_OPENAI_API_KEY,
-    apiVersion: '2024-02-01',
+    apiVersion: "2024-02-01",
     endpoint: process.env.AZURE_OPENAI_ENDPOINT,
   })
 
-  const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini'
+  const deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT || "gpt-4o-mini"
 
-  await telemetry.capture(
-    { tags: ['test', 'azure-openai'], sessionId: 'example' },
+  await capture(
+    "azure-chat",
     async () => {
       const response = await client.chat.completions.create({
         model: deploymentName,
-        messages: [
-          { role: 'user', content: "Say 'Hello from Azure!' in exactly 5 words." },
-        ],
+        messages: [{ role: "user", content: "Say 'Hello from Azure!' in exactly 5 words." }],
         max_tokens: 50,
       })
 
       return response.choices[0]?.message?.content
     },
+    { tags: ["test", "azure-openai"], sessionId: "example" },
   )
 
-  await telemetry.flush()
+  await latitude.flush()
 }
 
 main().catch(console.error)

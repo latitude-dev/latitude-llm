@@ -12,31 +12,24 @@ import os
 
 from together import Together
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.Together],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["together"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-together-completion", {"tags": ["test"], "session_id": "example"})
 def test_together_completion():
     client = Together()
 
     response = client.chat.completions.create(
         model="meta-llama/Llama-3.2-3B-Instruct-Turbo",
-        messages=[
-            {"role": "user", "content": "Say 'Hello from Together!' in exactly 5 words."}
-        ],
+        messages=[{"role": "user", "content": "Say 'Hello from Together!' in exactly 5 words."}],
         max_tokens=50,
     )
 
@@ -45,4 +38,4 @@ def test_together_completion():
 
 if __name__ == "__main__":
     test_together_completion()
-    telemetry.flush()
+    latitude["flush"]()

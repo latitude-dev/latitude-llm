@@ -3,6 +3,7 @@ Test CrewAI instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
+- LATITUDE_PROJECT_SLUG
 - OPENAI_API_KEY (CrewAI uses OpenAI by default)
 
 Install: uv add crewai
@@ -10,26 +11,21 @@ Install: uv add crewai
 
 import os
 
-from crewai import Agent, Task, Crew
+from crewai import Agent, Crew, Task
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
 # Note: CrewAI uses OpenAI by default, so we instrument both
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.CrewAI, Instrumentors.OpenAI],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["crewai", "openai"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-crewai-crew", {"tags": ["test"], "session_id": "example"})
 def test_crewai_crew():
     researcher = Agent(
         role="Researcher",
@@ -56,4 +52,4 @@ def test_crewai_crew():
 
 if __name__ == "__main__":
     test_crewai_crew()
-    telemetry.flush()
+    latitude["flush"]()

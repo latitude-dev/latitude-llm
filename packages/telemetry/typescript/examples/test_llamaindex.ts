@@ -9,24 +9,27 @@
  * Install: npm install llamaindex
  */
 
-import { OpenAI } from 'llamaindex'
-import { LatitudeTelemetry, Instrumentation } from '../src'
+import { OpenAI } from "llamaindex"
+import { capture, initLatitude } from "../src"
 
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: {
-    [Instrumentation.LlamaIndex]: { OpenAI },
-  },
+  instrumentations: ["llamaindex"],
 })
 
 async function main() {
+  // Wait for instrumentations to be ready
+  await latitude.ready
+
   const llm = new OpenAI({
-    model: 'gpt-4o-mini',
+    model: "gpt-4o-mini",
     maxTokens: 50,
   })
 
-  await telemetry.capture(
-    { tags: ['test', 'llamaindex'], sessionId: 'example' },
+  await capture(
+    "llamaindex-chat",
     async () => {
       const response = await llm.complete({
         prompt: "Say 'Hello from LlamaIndex!' in exactly 5 words.",
@@ -34,9 +37,10 @@ async function main() {
 
       return response.text
     },
+    { tags: ["test", "llamaindex"], sessionId: "example" },
   )
 
-  await telemetry.flush()
+  await latitude.flush()
 }
 
 main().catch(console.error)

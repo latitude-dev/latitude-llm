@@ -10,33 +10,26 @@ Install: uv add langchain-core langchain-openai
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry BEFORE importing langchain so instrumentation can patch it
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.Langchain],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["langchain"],
+    disable_batch=True,
 )
 
 # Import after telemetry is initialized
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-langchain-completion", {"tags": ["test"], "session_id": "example"})
 def test_langchain_completion():
     llm = ChatOpenAI(model="gpt-4o-mini", max_tokens=50)
 
-    messages = [
-        HumanMessage(content="Say 'Hello from LangChain!' in exactly 5 words.")
-    ]
+    messages = [HumanMessage(content="Say 'Hello from LangChain!' in exactly 5 words.")]
 
     response = llm.invoke(messages)
 
@@ -45,4 +38,4 @@ def test_langchain_completion():
 
 if __name__ == "__main__":
     test_langchain_completion()
-    telemetry.flush()
+    latitude["flush"]()

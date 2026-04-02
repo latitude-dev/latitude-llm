@@ -3,6 +3,7 @@ Test Cohere instrumentation against local Latitude instance.
 
 Required env vars:
 - LATITUDE_API_KEY
+- LATITUDE_PROJECT_SLUG
 - COHERE_API_KEY
 
 Install: uv add cohere
@@ -12,23 +13,18 @@ import os
 
 import cohere
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.Cohere],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["cohere"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-cohere-completion", {"tags": ["test"], "session_id": "example"})
 def test_cohere_completion():
     client = cohere.Client(api_key=os.environ["COHERE_API_KEY"])
 
@@ -43,4 +39,4 @@ def test_cohere_completion():
 
 if __name__ == "__main__":
     test_cohere_completion()
-    telemetry.flush()
+    latitude["flush"]()

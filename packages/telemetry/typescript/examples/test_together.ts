@@ -9,27 +9,30 @@
  * Install: npm install together-ai
  */
 
-import Together from 'together-ai'
-import { LatitudeTelemetry, Instrumentation } from '../src'
+import Together from "together-ai"
+import { capture, initLatitude } from "../src"
 
-const telemetry = new LatitudeTelemetry(process.env.LATITUDE_API_KEY!, process.env.LATITUDE_PROJECT_SLUG!, {
+const latitude = initLatitude({
+  apiKey: process.env.LATITUDE_API_KEY!,
+  projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
   disableBatch: true,
-  instrumentations: {
-    [Instrumentation.TogetherAI]: Together,
-  },
+  instrumentations: ["togetherai"],
 })
 
 async function main() {
+  // Wait for instrumentations to be ready
+  await latitude.ready
+
   const client = new Together()
 
-  await telemetry.capture(
-    { tags: ['test', 'together'], sessionId: 'example' },
+  await capture(
+    "together-chat",
     async () => {
       const response = await client.chat.completions.create({
-        model: 'meta-llama/Llama-3.2-3B-Instruct-Turbo',
+        model: "meta-llama/Llama-3.2-3B-Instruct-Turbo",
         messages: [
           {
-            role: 'user',
+            role: "user",
             content: "Say 'Hello from Together!' in exactly 5 words.",
           },
         ],
@@ -38,9 +41,10 @@ async function main() {
 
       return response.choices[0]?.message?.content
     },
+    { tags: ["test", "together"], sessionId: "example" },
   )
 
-  await telemetry.flush()
+  await latitude.flush()
 }
 
 main().catch(console.error)

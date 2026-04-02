@@ -16,23 +16,18 @@ import os
 
 import boto3
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry pointing to local instance
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.Sagemaker],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["sagemaker"],
+    disable_batch=True,
 )
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-sagemaker-completion", {"tags": ["test"], "session_id": "example"})
 def test_sagemaker_completion():
     client = boto3.client(
         "sagemaker-runtime",
@@ -42,12 +37,14 @@ def test_sagemaker_completion():
     endpoint_name = os.environ["SAGEMAKER_ENDPOINT_NAME"]
 
     # Payload format depends on your deployed model
-    payload = json.dumps({
-        "inputs": "Say 'Hello from SageMaker!' in exactly 5 words.",
-        "parameters": {
-            "max_new_tokens": 50,
-        },
-    })
+    payload = json.dumps(
+        {
+            "inputs": "Say 'Hello from SageMaker!' in exactly 5 words.",
+            "parameters": {
+                "max_new_tokens": 50,
+            },
+        }
+    )
 
     response = client.invoke_endpoint(
         EndpointName=endpoint_name,
@@ -61,4 +58,4 @@ def test_sagemaker_completion():
 
 if __name__ == "__main__":
     test_sagemaker_completion()
-    telemetry.flush()
+    latitude["flush"]()

@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "3.0.0-alpha.0",
+  "version": "3.0.0-alpha.1",
   "description": "Latitude Telemetry for TypeScript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -43,11 +43,11 @@
   },
   "dependencies": {
     "@opentelemetry/api": "catalog:",
-    "@opentelemetry/baggage-span-processor": "^0.3.0",
     "@opentelemetry/context-async-hooks": "^1.30.0",
     "@opentelemetry/core": "^1.30.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
     "@opentelemetry/instrumentation": "^0.57.0",
+    "@traceloop/instrumentation-openai": "^0.22.0",
     "@opentelemetry/resources": "^1.30.0",
     "@opentelemetry/sdk-trace-node": "^1.30.0",
     "@opentelemetry/semantic-conventions": "^1.34.0",
@@ -56,7 +56,6 @@
     "@traceloop/instrumentation-cohere": "^0.22.0",
     "@traceloop/instrumentation-langchain": "^0.22.0",
     "@traceloop/instrumentation-llamaindex": "^0.22.0",
-    "@traceloop/instrumentation-openai": "^0.22.0",
     "@traceloop/instrumentation-together": "^0.22.0",
     "@traceloop/instrumentation-vertexai": "^0.22.0"
   },

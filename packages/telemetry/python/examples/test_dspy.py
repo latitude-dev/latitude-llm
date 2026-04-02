@@ -10,16 +10,14 @@ Install: uv add dspy
 
 import os
 
-from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+from latitude_telemetry import capture, init_latitude
 
 # Initialize telemetry BEFORE importing dspy so instrumentation can patch it
-telemetry = Telemetry(
-    os.environ["LATITUDE_API_KEY"],
-    os.environ["LATITUDE_PROJECT_SLUG"],
-    TelemetryOptions(
-        instrumentors=[Instrumentors.DSPy],
-        disable_batch=True,
-    ),
+latitude = init_latitude(
+    api_key=os.environ["LATITUDE_API_KEY"],
+    project_slug=os.environ["LATITUDE_PROJECT_SLUG"],
+    instrumentations=["dspy"],
+    disable_batch=True,
 )
 
 # Import after telemetry is initialized
@@ -29,14 +27,12 @@ import dspy
 # Define a simple DSPy signature
 class SimpleQA(dspy.Signature):
     """Answer questions with short responses."""
+
     question: str = dspy.InputField()
     answer: str = dspy.OutputField()
 
 
-@telemetry.capture(
-    tags=["test"],
-    session_id="example",
-)
+@capture("test-dspy-completion", {"tags": ["test"], "session_id": "example"})
 def test_dspy_completion():
     # Configure DSPy with OpenAI
     lm = dspy.LM("openai/gpt-4o-mini")
@@ -52,4 +48,4 @@ def test_dspy_completion():
 
 if __name__ == "__main__":
     test_dspy_completion()
-    telemetry.flush()
+    latitude["flush"]()

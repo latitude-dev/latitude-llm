@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0a1] - 2026-04-01
+
+### Breaking Changes
+
+- **Complete SDK re-architecture** — monolithic `Telemetry` class replaced with modular, composable API
+- **New bootstrap API** — `init_latitude()` replaces `Telemetry()` as primary entry point
+- **`capture()` no longer creates spans** — now only attaches context to spans created by auto-instrumentation
+- **Context propagation changed** — uses OpenTelemetry's native Context API instead of baggage
+- Removed `Telemetry` class and `TelemetryOptions` — use `init_latitude()` or `LatitudeSpanProcessor`
+- Removed `Instrumentors` enum — now use string literals via `register_latitude_instrumentations()`
+- Removed `CaptureOptions` — now `ContextOptions` with slightly different structure
+- Removed `BaggageSpanProcessor` — replaced with context-based approach in `LatitudeSpanProcessor`
+
+### Added
+
+- `init_latitude()` — one-call bootstrap for complete OTel + LLM instrumentation setup
+- `LatitudeSpanProcessor` — composable span processor for shared-provider setups
+- `register_latitude_instrumentations()` — register LLM auto-instrumentations (OpenAI, Anthropic, etc.)
+- Smart span filtering — only LLM-relevant spans exported by default (gen_ai.*, llm.*, openinference.*, ai.* attributes)
+- `disable_smart_filter` option — export all spans instead of just LLM spans
+- `should_export_span` callback — custom span filtering
+- `blocked_instrumentation_scopes` option — filter out unwanted instrumentation scopes
+- `capture()` now supports nested calls with proper context merging (tags dedupe, metadata shallow merge, last-write-wins for user_id/session_id)
+- `RedactSpanProcessorOptions` for configurable PII redaction
+- New SDK module structure: `sdk/init.py`, `sdk/context.py`, `sdk/instrumentations.py`, `sdk/types.py`
+
+### Changed
+
+- SDK is now OpenTelemetry-first — designed for composability with existing OTel setups
+- `capture()` uses OTel's `context.attach()`/`context.detach()` for reliable async context propagation
+- `LatitudeSpanProcessor` is now a proper OTel SpanProcessor that reads context and stamps attributes
+
 ## [3.0.0a0] - 2026-04-01
 
 ### Breaking Changes

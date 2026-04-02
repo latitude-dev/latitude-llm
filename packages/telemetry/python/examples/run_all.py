@@ -91,7 +91,7 @@ def run_test(test_name: str) -> bool:
             print(f"  [OK] Response: {result[:100]}..." if len(str(result)) > 100 else f"  [OK] Response: {result}")
             return True
         else:
-            print(f"  [FAIL] No test function found")
+            print("  [FAIL] No test function found")
             return False
 
     except Exception as e:
