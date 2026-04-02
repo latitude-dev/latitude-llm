@@ -19,6 +19,8 @@ There is no separate `/signup` page; all first-touch auth starts at `/login`, an
 
 API boundaries in `apps/api` and `apps/ingest` use API key authentication, not Better Auth sessions.
 
+Shared implementation: `packages/platform/api-key-auth` exports `validateApiKey`, which both apps call from their Hono middleware so cache TTLs, token hashing, minimum validation timing, and repository lookup stay aligned. `apps/api` additionally wires `onKeyValidated` to the touch buffer for batched `lastUsedAt` updates; ingest uses the same validator without that hook.
+
 ## Core invariants
 
 1. Browser boundaries must have a Better Auth session (`getSession`) to access protected pages.
