@@ -1,3 +1,4 @@
+import type { RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
 
 export interface EventPayloads {
@@ -78,5 +79,5 @@ export type OutboxWriter = {
     readonly organizationId: string
     readonly payload: EventPayloads[TEventName]
     readonly occurredAt?: Date
-  }): Promise<void>
+  }): Effect.Effect<void, RepositoryError>
 }

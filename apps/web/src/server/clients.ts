@@ -113,38 +113,42 @@ export const getBetterAuth = () => {
       sendMagicLink: async ({ email, url }) => {
         const emailFlow = getEmailFlowFromMagicLinkUrl({ magicLinkUrl: url, webUrl })
 
-        await outboxWriter.write({
-          eventName: "MagicLinkEmailRequested",
-          aggregateType: "email_request",
-          aggregateId: generateId(),
-          organizationId: "system",
-          payload: {
-            email,
-            magicLinkUrl: url,
+        await Effect.runPromise(
+          outboxWriter.write({
+            eventName: "MagicLinkEmailRequested",
+            aggregateType: "email_request",
+            aggregateId: generateId(),
             organizationId: "system",
-            emailFlow,
-          },
-        })
+            payload: {
+              email,
+              magicLinkUrl: url,
+              organizationId: "system",
+              emailFlow,
+            },
+          }),
+        )
       },
       sendInvitationEmail: async (data) => {
         const inviterName =
           typeof data.inviter.user.name === "string" && data.inviter.user.name.trim().length > 0
             ? data.inviter.user.name.trim()
             : "A teammate"
-        await outboxWriter.write({
-          eventName: "InvitationEmailRequested",
-          aggregateType: "invitation",
-          aggregateId: data.id,
-          organizationId: "system",
-          payload: {
-            email: data.email,
-            invitationUrl: `${webUrl}/auth/invite?invitationId=${encodeURIComponent(data.id)}`,
+        await Effect.runPromise(
+          outboxWriter.write({
+            eventName: "InvitationEmailRequested",
+            aggregateType: "invitation",
+            aggregateId: data.id,
             organizationId: "system",
-            organizationName: data.organization.name,
-            inviterName,
-          },
-          occurredAt: new Date(),
-        })
+            payload: {
+              email: data.email,
+              invitationUrl: `${webUrl}/auth/invite?invitationId=${encodeURIComponent(data.id)}`,
+              organizationId: "system",
+              organizationName: data.organization.name,
+              inviterName,
+            },
+            occurredAt: new Date(),
+          }),
+        )
       },
     })
   }

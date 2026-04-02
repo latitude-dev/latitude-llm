@@ -1,6 +1,7 @@
 import { generateId } from "@domain/shared"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
+import { Effect } from "effect"
 import { z } from "zod"
 import { getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
 
@@ -55,18 +56,20 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
   const outboxWriter = getOutboxWriter()
 
   // Write a domain event for background deletion
-  await outboxWriter.write({
-    id: generateId(),
-    eventName: "UserDeletionRequested",
-    aggregateType: "user",
-    aggregateId: userId,
-    organizationId: "system",
-    payload: {
-      organizationId: session.session.activeOrganizationId ?? "system",
-      userId,
-    },
-    occurredAt: new Date(),
-  })
+  await Effect.runPromise(
+    outboxWriter.write({
+      id: generateId(),
+      eventName: "UserDeletionRequested",
+      aggregateType: "user",
+      aggregateId: userId,
+      organizationId: "system",
+      payload: {
+        organizationId: session.session.activeOrganizationId ?? "system",
+        userId,
+      },
+      occurredAt: new Date(),
+    }),
+  )
 
   // Revoke the session so the user is logged out
   await auth.api.revokeSession({ headers, body: { token: session.session.token } })
