@@ -65,7 +65,7 @@ export const resolveWriteAnnotationTraceContext = (input: {
 
     if (needsSpanResolution) {
       const spanRepository = yield* SpanRepository
-      const spans = yield* spanRepository.findByTraceId({
+      const spans = yield* spanRepository.listByTraceId({
         organizationId: input.organizationId,
         traceId: input.traceId,
       })

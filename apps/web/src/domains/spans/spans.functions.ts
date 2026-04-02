@@ -143,7 +143,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.findByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
+        return yield* repo.listByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
     )
     return spans.map(serializeSpan)

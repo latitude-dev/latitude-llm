@@ -115,7 +115,7 @@ export const listTracesByProject = createServerFn({ method: "GET" })
     const page = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TraceRepository
-        return yield* repo.findByProjectId({
+        return yield* repo.listByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           options: {

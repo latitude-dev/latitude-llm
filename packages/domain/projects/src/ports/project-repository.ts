@@ -7,7 +7,11 @@ export class ProjectRepository extends ServiceMap.Service<
   {
     findById(id: string): Effect.Effect<Project, NotFoundError | RepositoryError>
     findBySlug(slug: string): Effect.Effect<Project, NotFoundError | RepositoryError>
+    list(): Effect.Effect<readonly Project[], RepositoryError>
+    /** @deprecated Use `list` */
     findAll(): Effect.Effect<readonly Project[], RepositoryError>
+    listIncludingDeleted(): Effect.Effect<readonly Project[], RepositoryError>
+    /** @deprecated Use `listIncludingDeleted` */
     findAllIncludingDeleted(): Effect.Effect<readonly Project[], RepositoryError>
     save(project: Project): Effect.Effect<void, RepositoryError>
     softDelete(id: string): Effect.Effect<void, NotFoundError | RepositoryError>

@@ -79,6 +79,18 @@ export const ApiKeyRepositoryLive = Layer.effect(
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
     const encryptionKey = yield* getEncryptionKey()
 
+    const list = () =>
+      Effect.gen(function* () {
+        const results = yield* sqlClient.query((db, organizationId) =>
+          db
+            .select()
+            .from(apiKeys)
+            .where(and(eq(apiKeys.organizationId, organizationId), isNull(apiKeys.deletedAt))),
+        )
+
+        return yield* Effect.all(results.map((row) => toDomainApiKey(row, encryptionKey)))
+      })
+
     return {
       findById: (id: ApiKeyIdType) =>
         Effect.gen(function* () {
@@ -95,17 +107,8 @@ export const ApiKeyRepositoryLive = Layer.effect(
           return yield* toDomainApiKey(result, encryptionKey)
         }),
 
-      findAll: () =>
-        Effect.gen(function* () {
-          const results = yield* sqlClient.query((db, organizationId) =>
-            db
-              .select()
-              .from(apiKeys)
-              .where(and(eq(apiKeys.organizationId, organizationId), isNull(apiKeys.deletedAt))),
-          )
-
-          return yield* Effect.all(results.map((row) => toDomainApiKey(row, encryptionKey)))
-        }),
+      list,
+      findAll: list,
 
       delete: (id: ApiKeyIdType) =>
         sqlClient.query((db, organizationId) =>

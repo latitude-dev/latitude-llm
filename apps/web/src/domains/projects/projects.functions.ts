@@ -36,7 +36,7 @@ export const listProjects = createServerFn({ method: "GET" }).handler(async (): 
   const projects = await Effect.runPromise(
     Effect.gen(function* () {
       const repo = yield* ProjectRepository
-      return yield* repo.findAll()
+      return yield* repo.list()
     }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
   )
 

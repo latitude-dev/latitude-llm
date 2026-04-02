@@ -9,6 +9,12 @@ import type { Trace, TraceDetail } from "../entities/trace.ts"
  * by a materialized view on each insert into spans.
  */
 export interface TraceRepositoryShape {
+  listByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly options: TraceListOptions
+  }): Effect.Effect<TraceListPage, RepositoryError>
+  /** @deprecated Use `listByProjectId` */
   findByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -41,6 +47,12 @@ export interface TraceRepositoryShape {
     readonly traceId: TraceId
   }): Effect.Effect<TraceDetail | null, RepositoryError>
 
+  listByTraceIds(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceIds: readonly TraceId[]
+  }): Effect.Effect<readonly TraceDetail[], RepositoryError>
+  /** @deprecated Use `listByTraceIds` */
   findByTraceIds(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

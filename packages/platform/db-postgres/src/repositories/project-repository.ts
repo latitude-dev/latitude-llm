@@ -43,6 +43,14 @@ export const ProjectRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
+    const list = () =>
+      sqlClient
+        .query((db) => db.select().from(projects).where(isNull(projects.deletedAt)))
+        .pipe(Effect.map((results) => results.map(toDomainProject)))
+
+    const listIncludingDeleted = () =>
+      sqlClient.query((db) => db.select().from(projects)).pipe(Effect.map((results) => results.map(toDomainProject)))
+
     return {
       findById: (id: ProjectIdType) =>
         sqlClient
@@ -82,13 +90,11 @@ export const ProjectRepositoryLive = Layer.effect(
             }),
           ),
 
-      findAll: () =>
-        sqlClient
-          .query((db) => db.select().from(projects).where(isNull(projects.deletedAt)))
-          .pipe(Effect.map((results) => results.map(toDomainProject))),
+      list,
+      findAll: list,
 
-      findAllIncludingDeleted: () =>
-        sqlClient.query((db) => db.select().from(projects)).pipe(Effect.map((results) => results.map(toDomainProject))),
+      listIncludingDeleted,
+      findAllIncludingDeleted: listIncludingDeleted,
 
       save: (project: Project) =>
         Effect.gen(function* () {

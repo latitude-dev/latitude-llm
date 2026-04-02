@@ -147,7 +147,7 @@ export const createProjectsRoutes = () => {
     const projects = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
-        return yield* repo.findAll()
+        return yield* repo.list()
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
 

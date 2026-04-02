@@ -15,10 +15,10 @@ export const cleanupUserMembershipsUseCase = (
     const membershipRepo = yield* MembershipRepository
     const orgRepo = yield* OrganizationRepository
 
-    const memberships = yield* membershipRepo.findByUserId(input.userId)
+    const memberships = yield* membershipRepo.listByUserId(input.userId)
 
     for (const membership of memberships) {
-      const orgMembers = yield* membershipRepo.findByOrganizationId(membership.organizationId)
+      const orgMembers = yield* membershipRepo.listByOrganizationId(membership.organizationId)
 
       if (orgMembers.length === 1) {
         // User is the sole member — delete the organization (cascades to membership)

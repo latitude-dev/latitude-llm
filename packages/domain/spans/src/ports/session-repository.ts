@@ -10,6 +10,12 @@ import type { NumericRollup } from "./trace-repository.ts"
  * by a materialized view on each insert into spans.
  */
 export interface SessionRepositoryShape {
+  listByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly options: SessionListOptions
+  }): Effect.Effect<SessionListPage, RepositoryError>
+  /** @deprecated Use `listByProjectId` */
   findByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

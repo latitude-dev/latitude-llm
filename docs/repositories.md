@@ -52,30 +52,23 @@ The following tables list **current** port methods in `packages/domain/*/src/por
 
 ### Compliant or intentionally specialized
 
-- **ProjectRepository** — `findById`, `findBySlug`, `save`, `softDelete`, `hardDelete`, `existsByName`, `existsBySlug` align; `hardDelete` is explicit vs `softDelete`.
+- **ProjectRepository** — `findById`, `findBySlug`, `list`, `listIncludingDeleted`, `save`, `softDelete`, `hardDelete`, `existsByName`, `existsBySlug`; `findAll` / `findAllIncludingDeleted` are deprecated aliases.
 - **DatasetRepository** — `findById`, `listByProject`, `softDelete`, `save` split into `create` / `updateName` / … is acceptable for partial updates.
 - **DatasetRowRepository** — `list`, `listPage`, `count`, `findById`, `insertBatch`, `updateRow`, `deleteBatch`, `deleteAll`.
 - **ScoreRepository** — `listBy*`, `save`, `delete`, `assignIssueIfUnowned`.
-- **ScoreAnalyticsRepository** — `insert` / `deleteById` for ClickHouse append/analytics; `aggregateBy*`, `rollupBy*`, `trendBy*`.
+- **ScoreAnalyticsRepository** — `insert`, `delete` (row mask), `deleteById` (deprecated alias); `aggregateBy*`, `rollupBy*`, `trendBy*`.
 - **IssueProjectionRepository** — `upsert`, `delete`, `hybridSearch` (projection store).
 - **InvitationRepository** — `findPublicPendingPreviewById` (descriptive single-object read).
 - **UserRepository** — `findByEmail`, `setNameIfMissing`, `delete`.
-- **ApiKeyRepository** — `findById`, `findByTokenHash`, `save`, `delete`, `touch`, `touchBatch`.
-- **TraceRepository** / **SessionRepository** — `countByProjectId`, `aggregateMetricsByProjectId`, `histogramByProjectId`, `distinctFilterValues`, `findByTraceId` (single trace detail).
+- **ApiKeyRepository** — `list`, `findById`, `findByTokenHash`, `save`, `delete`, `touch`, `touchBatch` (`findAll` deprecated alias of `list`).
+- **OrganizationRepository** — `listByUserId` for many orgs per user (`findByUserId` deprecated alias).
+- **MembershipRepository** — `listByOrganizationId`, `listByUserId`, `listMembersWithUser` (deprecated aliases: `findByOrganizationId`, `findByUserId`, `findMembersWithUser`).
+- **TraceRepository** / **SessionRepository** — `listByProjectId`, `listByTraceIds` (trace only), `countByProjectId`, `aggregateMetricsByProjectId`, `histogramByProjectId` (trace only), `distinctFilterValues`, `findByTraceId` (single trace detail). Deprecated aliases: `findByProjectId`, `findByTraceIds`.
+- **SpanRepository** — `listByTraceId`, `listByProjectId` for collections (`findByTraceId`, `findByProjectId` deprecated aliases); `findBySpanId` remains for optional single-span detail.
 
-### Renaming candidates (backward compatibility optional)
+### Deprecated aliases (remove in a later major cleanup)
 
-| Port | Method(s) | Note |
-| --- | --- | --- |
-| **OrganizationRepository** | `findByUserId` | Returns many orgs → prefer **`listByUserId`**. |
-| **MembershipRepository** | `findByOrganizationId`, `findByUserId` | Return arrays → prefer **`listByOrganizationId`**, **`listByUserId`**. |
-| **MembershipRepository** | `findMembersWithUser` | Returns a list → prefer **`listMembersWithUser`**. |
-| **ProjectRepository** | `findAll`, `findAllIncludingDeleted` | Prefer **`list`**, **`listIncludingDeleted`** (or `listByOrganization` if scoped explicitly in the API). |
-| **ApiKeyRepository** | `findAll` | Prefer **`list`**. |
-| **SpanRepository** | `findByTraceId`, `findByProjectId` | Return span collections → prefer **`listByTraceId`**, **`listByProjectId`**. |
-| **TraceRepository** | `findByProjectId`, `findByTraceIds` | List/page semantics → prefer **`listByProjectId`**, **`listByTraceIds`**. |
-| **SessionRepository** | `findByProjectId` | Prefer **`listByProjectId`**. |
-| **ScoreAnalyticsRepository** | `deleteById` vs **ScoreRepository** `delete` | Consider aligning on **`delete`** for parity within the scores domain (low priority). |
+Ports and live layers still expose the old names as **deprecated** methods delegating to the new ones so external or forked code keeps compiling. Prefer the new names in all in-tree call sites; drop aliases once nothing depends on them.
 
 ### Nullable `findById` / optional lookup (legacy)
 

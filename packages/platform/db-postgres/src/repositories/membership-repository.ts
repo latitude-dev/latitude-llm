@@ -21,6 +21,44 @@ export const MembershipRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
+    const listByOrganizationId = (organizationId: OrganizationId) =>
+      sqlClient
+        .query((db) => db.select().from(members).where(eq(members.organizationId, organizationId)))
+        .pipe(Effect.map((rows) => rows.map(toDomainMembership)))
+
+    const listByUserId = (userId: string) =>
+      sqlClient
+        .query((db) => db.select().from(members).where(eq(members.userId, userId)))
+        .pipe(Effect.map((rows) => rows.map(toDomainMembership)))
+
+    const listMembersWithUser = (organizationId: OrganizationId) =>
+      sqlClient
+        .query((db) =>
+          db
+            .select({
+              id: members.id,
+              organizationId: members.organizationId,
+              userId: members.userId,
+              role: members.role,
+              createdAt: members.createdAt,
+              name: users.name,
+              email: users.email,
+            })
+            .from(members)
+            .innerJoin(users, eq(members.userId, users.id))
+            .where(eq(members.organizationId, organizationId)),
+        )
+        .pipe(
+          Effect.map((rows) =>
+            rows.map((row) => ({
+              ...row,
+              id: MembershipId(row.id),
+              organizationId: OrganizationId(row.organizationId),
+              userId: UserId(row.userId),
+            })),
+          ),
+        )
+
     return {
       findById: (id: MembershipId) =>
         sqlClient
@@ -35,15 +73,11 @@ export const MembershipRepositoryLive = Layer.effect(
             }),
           ),
 
-      findByOrganizationId: (organizationId: OrganizationId) =>
-        sqlClient
-          .query((db) => db.select().from(members).where(eq(members.organizationId, organizationId)))
-          .pipe(Effect.map((members) => members.map(toDomainMembership))),
+      listByOrganizationId,
+      findByOrganizationId: listByOrganizationId,
 
-      findByUserId: (userId: string) =>
-        sqlClient
-          .query((db) => db.select().from(members).where(eq(members.userId, userId)))
-          .pipe(Effect.map((members) => members.map(toDomainMembership))),
+      listByUserId,
+      findByUserId: listByUserId,
 
       findByOrganizationAndUser: (organizationId: OrganizationId, userId: string) =>
         sqlClient
@@ -64,33 +98,8 @@ export const MembershipRepositoryLive = Layer.effect(
             }),
           ),
 
-      findMembersWithUser: (organizationId: OrganizationId) =>
-        sqlClient
-          .query((db) =>
-            db
-              .select({
-                id: members.id,
-                organizationId: members.organizationId,
-                userId: members.userId,
-                role: members.role,
-                createdAt: members.createdAt,
-                name: users.name,
-                email: users.email,
-              })
-              .from(members)
-              .innerJoin(users, eq(members.userId, users.id))
-              .where(eq(members.organizationId, organizationId)),
-          )
-          .pipe(
-            Effect.map((rows) =>
-              rows.map((row) => ({
-                ...row,
-                id: MembershipId(row.id),
-                organizationId: OrganizationId(row.organizationId),
-                userId: UserId(row.userId),
-              })),
-            ),
-          ),
+      listMembersWithUser,
+      findMembersWithUser: listMembersWithUser,
 
       isMember: (organizationId: OrganizationId, userId: string) =>
         sqlClient

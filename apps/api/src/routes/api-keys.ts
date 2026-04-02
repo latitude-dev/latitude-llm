@@ -147,7 +147,7 @@ export const createApiKeysRoutes = () => {
     const apiKeys = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
-        return yield* repo.findAll()
+        return yield* repo.list()
       }).pipe(withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
     return c.json({ apiKeys: apiKeys.map(toListItemResponse) }, 200)

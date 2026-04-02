@@ -11,7 +11,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import type { Session, SessionListPage, SessionMetrics } from "@domain/spans"
-import { SessionRepository } from "@domain/spans"
+import { SessionRepository, type SessionRepositoryShape } from "@domain/spans"
 import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
@@ -205,8 +205,7 @@ export const SessionRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
-    return {
-      findByProjectId: ({ organizationId, projectId, options }) => {
+    const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
         const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
         const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
         const cmp = orderDir === "DESC" ? "<" : ">"
@@ -266,9 +265,13 @@ export const SessionRepositoryLive = Layer.effect(
                 nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
               }
             }),
-            Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
+            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
           )
-      },
+    }
+
+    return {
+      listByProjectId,
+      findByProjectId: listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)

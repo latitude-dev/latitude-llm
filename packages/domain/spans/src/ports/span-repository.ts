@@ -21,11 +21,22 @@ export interface SpanMessagesData {
 export interface SpanRepositoryShape {
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError>
 
+  listByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly traceId: TraceId
+  }): Effect.Effect<readonly Span[], RepositoryError>
+  /** @deprecated Use `listByTraceId` */
   findByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly traceId: TraceId
   }): Effect.Effect<readonly Span[], RepositoryError>
 
+  listByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly options: SpanListOptions
+  }): Effect.Effect<readonly Span[], RepositoryError>
+  /** @deprecated Use `listByProjectId` */
   findByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

@@ -13,7 +13,7 @@ import {
   TraceId as toTraceId,
 } from "@domain/shared"
 import type { Trace, TraceDetail, TraceListPage, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
-import { TraceRepository } from "@domain/spans"
+import { TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -287,8 +287,7 @@ export const TraceRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
-    return {
-      findByProjectId: ({ organizationId, projectId, options }) => {
+    const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
         const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
         const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
         const cmp = orderDir === "DESC" ? "<" : ">"
@@ -348,9 +347,40 @@ export const TraceRepositoryLive = Layer.effect(
                 nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
               }
             }),
-            Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
+            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
           )
-      },
+    }
+
+    const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = ({ organizationId, projectId, traceIds }) => {
+      if (traceIds.length === 0) return Effect.succeed([])
+
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT ${DETAIL_SELECT}
+                    FROM traces
+                    WHERE organization_id = {organizationId:String}
+                      AND project_id = {projectId:String}
+                      AND trace_id IN ({traceIds:Array(String)})
+                    GROUP BY organization_id, project_id, trace_id`,
+            query_params: {
+              organizationId: organizationId as string,
+              projectId: projectId as string,
+              traceIds: Array.from(traceIds) as string[],
+            },
+            format: "JSONEachRow",
+          })
+          return result.json<TraceDetailRow>()
+        })
+        .pipe(
+          Effect.map((rows) => rows.map(toDomainTraceDetail)),
+          Effect.mapError((error) => toRepositoryError(error, "listByTraceIds")),
+        )
+    }
+
+    return {
+      listByProjectId,
+      findByProjectId: listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
@@ -519,32 +549,8 @@ export const TraceRepositoryLive = Layer.effect(
             Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
           ),
 
-      findByTraceIds: ({ organizationId, projectId, traceIds }) => {
-        if (traceIds.length === 0) return Effect.succeed([])
-
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${DETAIL_SELECT}
-                      FROM traces
-                      WHERE organization_id = {organizationId:String}
-                        AND project_id = {projectId:String}
-                        AND trace_id IN ({traceIds:Array(String)})
-                      GROUP BY organization_id, project_id, trace_id`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                traceIds: Array.from(traceIds) as string[],
-              },
-              format: "JSONEachRow",
-            })
-            return result.json<TraceDetailRow>()
-          })
-          .pipe(
-            Effect.map((rows) => rows.map(toDomainTraceDetail)),
-            Effect.mapError((error) => toRepositoryError(error, "findByTraceIds")),
-          )
-      },
+      listByTraceIds,
+      findByTraceIds: listByTraceIds,
 
       distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) => {
         const COLUMN_EXPRS: Record<string, string> = {

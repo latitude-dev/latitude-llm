@@ -158,7 +158,7 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
         }
         if (resolvedSpanId === null) {
           const spanRepository = yield* SpanRepository
-          const spans = yield* spanRepository.findByTraceId({
+          const spans = yield* spanRepository.listByTraceId({
             organizationId: OrganizationId(score.organizationId),
             traceId: TraceId(score.traceId),
           })
