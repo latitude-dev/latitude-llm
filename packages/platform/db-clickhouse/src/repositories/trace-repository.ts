@@ -288,28 +288,28 @@ export const TraceRepositoryLive = Layer.effect(
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
     const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
-        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
-        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
-        const cmp = orderDir === "DESC" ? "<" : ">"
-        const limit = options.limit ?? 50
+      const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+      const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+      const cmp = orderDir === "DESC" ? "<" : ">"
+      const limit = options.limit ?? 50
 
-        const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
+      const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(options.filters)
 
-        const havingParts: string[] = [...havingClauses]
-        if (options.cursor) {
-          havingParts.push(
-            `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
+      const havingParts: string[] = [...havingClauses]
+      if (options.cursor) {
+        havingParts.push(
+          `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
               OR (${sort.expr} = {cursorSortValue:${sort.chType}}
                   AND trace_id ${cmp} {cursorTraceId:FixedString(32)}))`,
-          )
-        }
-        const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+        )
+      }
+      const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${LIST_SELECT}
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT ${LIST_SELECT}
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -318,37 +318,37 @@ export const TraceRepositoryLive = Layer.effect(
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, trace_id ${orderDir}
                       LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: limit + 1,
-                ...filterParams,
-                ...(options.cursor
-                  ? {
-                      cursorSortValue: options.cursor.sortValue,
-                      cursorTraceId: options.cursor.traceId,
-                    }
-                  : {}),
-              },
-              format: "JSONEachRow",
-            })
-            return result.json<TraceListRow>()
+            query_params: {
+              organizationId: organizationId as string,
+              projectId: projectId as string,
+              limit: limit + 1,
+              ...filterParams,
+              ...(options.cursor
+                ? {
+                    cursorSortValue: options.cursor.sortValue,
+                    cursorTraceId: options.cursor.traceId,
+                  }
+                : {}),
+            },
+            format: "JSONEachRow",
           })
-          .pipe(
-            Effect.map((rows): TraceListPage => {
-              const hasMore = rows.length > limit
-              const pageRows = hasMore ? rows.slice(0, limit) : rows
-              const items = pageRows.map(toBaseFields)
-              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-              if (!last) return { items, hasMore }
-              return {
-                items,
-                hasMore,
-                nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
-              }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
-          )
+          return result.json<TraceListRow>()
+        })
+        .pipe(
+          Effect.map((rows): TraceListPage => {
+            const hasMore = rows.length > limit
+            const pageRows = hasMore ? rows.slice(0, limit) : rows
+            const items = pageRows.map(toBaseFields)
+            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+            if (!last) return { items, hasMore }
+            return {
+              items,
+              hasMore,
+              nextCursor: { sortValue: String(last[sort.rowKey]), traceId: last.trace_id },
+            }
+          }),
+          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+        )
     }
 
     const listByTraceIds: TraceRepositoryShape["listByTraceIds"] = ({ organizationId, projectId, traceIds }) => {
