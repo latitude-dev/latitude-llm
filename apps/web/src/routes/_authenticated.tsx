@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthenticatedLayout,
 })
 
-function UserAvatar({ name }: { name: string }) {
+function UserAvatar({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
   const trimmed = name.trim()
   const initials =
     trimmed.length === 0
@@ -46,6 +46,14 @@ function UserAvatar({ name }: { name: string }) {
           .toUpperCase() || trimmed.slice(0, 2).toUpperCase()
 
   const { style, className } = useHashColor(name)
+
+  if (imageUrl?.trim()) {
+    return (
+      <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-muted">
+        <img src={imageUrl} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
+      </div>
+    )
+  }
 
   return (
     <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", className)} style={style}>
@@ -213,7 +221,7 @@ function NavHeader() {
           trigger={() => (
             <DropdownMenuTrigger asChild>
               <button type="button" className="cursor-pointer">
-                <UserAvatar name={user.name?.trim() ? user.name : user.email} />
+                <UserAvatar name={user.name?.trim() ? user.name : user.email} imageUrl={user.image} />
               </button>
             </DropdownMenuTrigger>
           )}
