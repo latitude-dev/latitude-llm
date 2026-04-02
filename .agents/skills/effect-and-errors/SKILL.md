@@ -80,3 +80,5 @@ export class NotFoundError extends Data.TaggedError("NotFoundError")<{
 ```typescript
 findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
 ```
+
+Repository **method naming** (`findById` vs `listByXxx`, `delete` vs `softDelete`, etc.) is documented in [docs/repositories.md](../../../docs/repositories.md). Prefer `NotFoundError` (or domain-specific not-found) over `Entity | null` on new ports; legacy nullable lookups should migrate when touched.

@@ -190,6 +190,10 @@ pnpm --filter @platform/db-postgres pg:migrate
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
 
+## Repository port naming
+
+Domain repository ports and method naming conventions (including Effect result shapes and when to use `listBy*` vs `findBy*`) live in [docs/repositories.md](../../../docs/repositories.md). Prefer that vocabulary for new Postgres-backed ports and when renaming existing methods.
+
 ## Mapper conventions
 
 When writing `toDomain*` and `toInsertRow` functions in platform repositories:

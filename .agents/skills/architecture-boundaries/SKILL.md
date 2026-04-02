@@ -99,6 +99,7 @@ When writing a utility function that is not specific to a single domain or packa
 - Platform packages implement adapters
 - Composition roots in apps provide live layers
 - Domain must never import concrete DB/cache/queue/object storage clients
+- **Repository method names:** Use the standard verbs in [docs/repositories.md](../../../docs/repositories.md) (`findById`, `findByXxx` for unique keys, `listByXxx` / `list` for collections, `save`, `delete` vs `softDelete`, etc.).
 - Reliability async contracts should stay project-scoped as well as organization-scoped: include both `organizationId` and `projectId` in event/task/workflow payloads by default (except `MagicLinkEmailRequested`, `UserDeletionRequested`, `domain-events`, `magic-link-email`, and `user-deletion` payloads).
 
 ## Web standards first (domain, utils, shared)
