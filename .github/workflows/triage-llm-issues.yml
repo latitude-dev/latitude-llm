@@ -31,7 +31,10 @@ jobs:
               per_page: 100
             });
             
-            if (issues.length === 0) {
+            // Limit to 10 issues per run to avoid hitting downstream rate limits
+            const issuesToProcess = issues.slice(0, 10);
+            
+            if (issuesToProcess.length === 0) {
               console.log('No open LLM issues to triage');
               return;
             }
@@ -81,7 +84,7 @@ jobs:
               throw error;
             }
             
-            for (const issue of issues) {
+            for (const issue of issuesToProcess) {
               // Check if issue already has a Linear triage comment (prevents duplicates on retry)
               const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
@@ -179,4 +182,4 @@ jobs:
               }
             }
             
-            console.log(`Processed ${issues.length} issues`);
+            console.log(`Processed ${issuesToProcess.length} issues (limited to 10 per run)`);
