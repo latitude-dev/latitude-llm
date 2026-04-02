@@ -1040,6 +1040,28 @@ Detection relies on data already present on GenAI spans:
 
 4. **Trace-level rollup** — if any GenAI span in the trace fails one of the above checks, the trace is flagged for this queue. The draft annotation created by the downstream `system-annotation-queues:annotate` step should reference the specific span(s) that failed and the failure reason (truncation, parse error, or schema violation details).
 
+#### Empty Response
+
+- description: the assistant returned an empty or degenerate response
+- instructions: review traces where a GenAI span produced no meaningful output — the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. Do not use this queue for intentionally empty tool-call-only responses where the model delegates entirely to tool use, or for spans whose `finish_reasons` indicate a content filter block (those are a distinct failure mode).
+
+This queue is detected entirely through deterministic checks rather than the low-cost flagger model. Detection inspects the final assistant output on every GenAI span in the trace:
+
+1. **Scope** — only GenAI spans with a non-empty `operation` field are inspected. Tool-execution spans (spans where `toolName` is set and `operation` is empty) are excluded.
+
+2. **Output extraction** — the checker reads `output_messages` from the span detail and extracts the concatenated textual content of the final assistant message, after stripping leading/trailing whitespace. This is referred to as the _effective output_.
+
+3. **Deterministic checks** — any of the following conditions flags the span:
+   - **Missing output**: `output_messages` is absent or contains no assistant message.
+   - **Empty / whitespace-only**: the effective output is the empty string.
+   - **Degenerate repetition**: the effective output consists of a single character repeated (e.g., `"......"`, `"________"`), or a single token repeated with no other content. The checker uses a simple heuristic: after collapsing runs of the same Unicode codepoint the result is a single character, and the original length exceeds a small threshold (e.g., 3 characters).
+
+4. **Exclusions** — a span is not flagged when:
+   - `finish_reasons` contains `"content_filter"` — the empty output was caused by a content-safety block, not a model failure.
+   - The assistant message contains tool-call parts but no textual content — the model intentionally delegated to tool use with no accompanying text, which is normal behavior for agentic spans.
+
+5. **Trace-level rollup** — if any in-scope GenAI span fails the above checks, the trace is flagged for this queue. The draft annotation should reference the specific span(s) and the failure reason (missing output, empty, or degenerate repetition).
+
 Queue population flows:
 
 - user-managed manual queues are populated from the trace dashboard table and the sessions dashboard table
@@ -1051,7 +1073,7 @@ Queue population flows:
 - when a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `system-annotation-queues` message with task `flag` for that trace
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
-- among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors`, `Resource Outliers`, and `Output Schema Validation`
+- among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors`, `Resource Outliers`, `Output Schema Validation`, and `Empty Response`
 - for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue
 - a trace may match none of the system-created queues, or it may match several of them
 - for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair
