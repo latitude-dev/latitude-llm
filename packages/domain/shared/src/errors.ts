@@ -99,3 +99,21 @@ export const isNotFoundError = (error: unknown): error is NotFoundError => error
 export const isConflictError = (error: unknown): error is ConflictError => error instanceof ConflictError
 
 export const isValidationError = (error: unknown): error is ValidationError => error instanceof ValidationError
+
+export class CacheError extends Data.TaggedError("CacheError")<{
+  readonly message: string
+  readonly cause?: unknown
+}> {
+  readonly httpStatus = 500
+  get httpMessage() {
+    return this.message
+  }
+}
+
+export class StorageError extends Data.TaggedError("StorageError")<{
+  readonly cause: unknown
+  readonly operation: string
+}> {
+  readonly httpStatus = 500
+  readonly httpMessage = "Storage operation failed"
+}

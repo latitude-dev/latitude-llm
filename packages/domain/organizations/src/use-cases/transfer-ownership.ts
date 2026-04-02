@@ -1,48 +1,19 @@
-import type { OrganizationId, RepositoryError, UserId } from "@domain/shared"
-import { Data, Effect } from "effect"
+import type { OrganizationId, UserId } from "@domain/shared"
+import { Effect } from "effect"
 import type { Membership } from "../entities/membership.ts"
-import { MembershipRepository } from "../index.ts"
+import {
+  CannotTransferToNonMemberError,
+  CannotTransferToSelfError,
+  MembershipNotFoundError,
+  NotOwnerError,
+} from "../errors.ts"
+import { MembershipRepository } from "../ports/membership-repository.ts"
 
 export interface TransferOwnershipInput {
   readonly organizationId: OrganizationId
   readonly currentOwnerUserId: UserId
   readonly newOwnerUserId: UserId
 }
-
-export class NotOwnerError extends Data.TaggedError("NotOwnerError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 403
-  readonly httpMessage = "Only the organization owner can transfer ownership"
-}
-
-class MembershipNotFoundError extends Data.TaggedError("MembershipNotFoundError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Membership not found"
-}
-
-export class CannotTransferToSelfError extends Data.TaggedError("CannotTransferToSelfError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 400
-  readonly httpMessage = "Cannot transfer ownership to yourself"
-}
-
-export class CannotTransferToNonMemberError extends Data.TaggedError("CannotTransferToNonMemberError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 400
-  readonly httpMessage = "Can only transfer ownership to an existing member"
-}
-
-export type TransferOwnershipError =
-  | RepositoryError
-  | NotOwnerError
-  | MembershipNotFoundError
-  | CannotTransferToSelfError
-  | CannotTransferToNonMemberError
 
 export const transferOwnershipUseCase = (input: TransferOwnershipInput) =>
   Effect.gen(function* () {

@@ -67,7 +67,7 @@ details when the documentation isn't enough.
 - Domain entity schemas and their inferred entity types belong in `src/entities/<entity>.ts`.
 - Domain package constants belong in `src/constants.ts`.
 - Domain package errors belong in `src/errors.ts`.
-- For **how** to structure those errors (tagged classes, HTTP fields, unions per flow, naming), treat `packages/domain/issues` as the reference: see `packages/domain/issues/src/errors.ts` and the section *Domain errors (`@domain/issues` reference pattern)* in `docs/issues.md`.
+- For **how** to structure those errors (tagged classes, HTTP fields, unions per flow, naming), treat `packages/domain/issues` as the reference: see `packages/domain/issues/src/errors.ts` and the section *Domain errors (`@domain/issues` reference pattern)* in `docs/issues.md`. A full inventory lives in `docs/domain-errors.md`.
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `src/helpers.ts`.
 - Schemas and types that exist only as inputs to one domain use-case should be defined in that use-case file. Only promote them into shared modules when several use-cases truly share the same contract.
 

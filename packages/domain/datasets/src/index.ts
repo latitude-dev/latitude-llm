@@ -1,22 +1,12 @@
 export { DATASET_DOWNLOAD_DIRECT_THRESHOLD, MAX_TRACES_PER_DATASET_IMPORT } from "./constants.ts"
+export type { Dataset, DatasetVersion } from "./entities/dataset.ts"
+export type { DatasetRow, RowFieldValue } from "./entities/dataset-row.ts"
 export {
-  type Dataset,
   DatasetNotFoundError,
-  type DatasetVersion,
   DuplicateDatasetNameError,
-  datasetSchema,
-  datasetVersionSchema,
-  TooManyTracesError,
-} from "./entities/dataset.ts"
-export {
-  type DatasetRow,
-  datasetRowSchema,
-  type InsertRowFieldValue,
-  insertRowFieldValueSchema,
-  type RowFieldValue,
   RowNotFoundError,
-  rowFieldValueSchema,
-} from "./entities/dataset-row.ts"
+  TooManyTracesError,
+} from "./errors.ts"
 export {
   buildDatasetCsvExport,
   type CsvRow,

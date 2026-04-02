@@ -1,12 +1,9 @@
 import { generateId, toSlug } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
+import { SlugGenerationError } from "../errors.ts"
 import { OrganizationRepository } from "../ports/organization-repository.ts"
 
 const MAX_SLUG_ATTEMPTS = 20
-
-class SlugGenerationError extends Data.TaggedError("SlugGenerationError")<{
-  readonly message: string
-}> {}
 
 export const generateUniqueOrganizationSlugUseCase = (input: { name: string }) =>
   Effect.gen(function* () {

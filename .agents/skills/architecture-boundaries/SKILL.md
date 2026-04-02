@@ -53,7 +53,7 @@ Business logic lives here. Domain packages expose:
 
 - Canonical entity schemas and their inferred entity types belong in `packages/domain/*/src/entities/<entity>.ts`.
 - Domain package constants belong in `packages/domain/*/src/constants.ts`.
-- Domain package errors belong in `packages/domain/*/src/errors.ts`.
+- Domain package errors belong in `packages/domain/*/src/errors.ts`. A full package-by-package inventory and import rules live in [`docs/domain-errors.md`](../../../docs/domain-errors.md).
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `packages/domain/*/src/helpers.ts`.
 - Types and schemas that exist only as inputs to one domain use-case belong in that use-case file rather than a generic side module, unless several use-cases truly share the exact same contract.
 - App and platform layers should build boundary-specific schemas by reusing or deriving from domain entity/use-case schemas whenever practical rather than redefining the same contract from scratch.

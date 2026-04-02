@@ -1,6 +1,7 @@
 import type { DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
-import type { DatasetRow, InsertRowFieldValue, RowFieldValue, RowNotFoundError } from "../entities/dataset-row.ts"
+import type { DatasetRow, InsertRowFieldValue, RowFieldValue } from "../entities/dataset-row.ts"
+import type { RowNotFoundError } from "../errors.ts"
 
 export interface DatasetRowRepositoryShape {
   findExistingTraceIds(args: {
