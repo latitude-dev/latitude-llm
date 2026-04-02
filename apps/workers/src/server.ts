@@ -27,13 +27,15 @@ import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-
 
 loadDevelopmentEnvironments(import.meta.url)
 
+const log = createLogger("workers")
+
 const bootstrap = async () => {
   await initializeObservability({
     serviceName: "workers",
   })
 
   const pgClient = getPostgresClient(10)
-  const logger = createLogger("workers")
+  const logger = log
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
@@ -136,6 +138,6 @@ const bootstrap = async () => {
 }
 
 void bootstrap().catch((error) => {
-  console.error(error)
+  log.error("Failed to bootstrap workers", error)
   process.exit(1)
 })

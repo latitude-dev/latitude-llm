@@ -1,7 +1,10 @@
 import { parseEnv, parseEnvOptional } from "@platform/env"
+import { createLogger } from "@repo/observability"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { Effect } from "effect"
 import { Pool } from "pg"
+
+const poolLogger = createLogger("db-postgres")
 
 export type PostgresDb = ReturnType<typeof drizzle>
 type TransactionDb = Parameters<Parameters<PostgresDb["transaction"]>[0]>[0]
@@ -77,7 +80,7 @@ const buildPostgresClient = (pool: Pool): PostgresClient => {
   // receive errors (e.g. after a DB restart). The pool automatically
   // removes errored clients and creates fresh ones on the next checkout.
   pool.on("error", (err) => {
-    console.error("[pg.Pool] Idle client error (connection will be recycled):", err.message)
+    poolLogger.error("[pg.Pool] Idle client error (connection will be recycled):", err.message)
   })
 
   const db = drizzle({ client: pool })

@@ -43,6 +43,7 @@
     "@domain/users": "workspace:*",
     "@paralleldrive/cuid2": "catalog:",
     "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
