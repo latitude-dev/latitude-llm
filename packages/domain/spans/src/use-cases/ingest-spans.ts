@@ -5,6 +5,12 @@ import { Effect } from "effect"
 
 const INLINE_PAYLOAD_MAX_BYTES = 50_000 // 50 KB
 
+/** RFC 4648 base64 for inline queue payloads (web-standard `btoa`, no Node `Buffer`). */
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")
+  return globalThis.btoa(binary)
+}
+
 export interface IngestSpansInput {
   readonly organizationId: OrganizationId
   readonly projectId: ProjectId
@@ -23,7 +29,7 @@ export const ingestSpansUseCase = (
     let inlinePayload: string | null = null
 
     if (input.payload.byteLength <= INLINE_PAYLOAD_MAX_BYTES) {
-      inlinePayload = Buffer.from(input.payload).toString("base64")
+      inlinePayload = uint8ArrayToBase64(input.payload)
     } else {
       const disk = yield* StorageDisk
       fileKey = yield* putInDisk(disk, {
