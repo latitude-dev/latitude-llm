@@ -112,10 +112,12 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     socialProviders: {
       ...(googleClientId &&
         googleClientSecret && {
-          google: {
+          google: async () => ({
             clientId: googleClientId,
             clientSecret: googleClientSecret,
-          },
+            /** Keep `users.image` in sync with Google profile photos on each sign-in. */
+            overrideUserInfoOnSignIn: true,
+          }),
         }),
       ...(githubClientId &&
         githubClientSecret && {
