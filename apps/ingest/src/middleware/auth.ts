@@ -40,8 +40,14 @@ const getCachedApiKey = (tokenHash: string): Effect.Effect<ApiKeyResult | null |
     try: async () => {
       const cached = await withTimeout(redis.get(cacheKey), null)
       if (!cached) return undefined
-      const parsed = JSON.parse(cached)
-      return isCachedResult(parsed) ? parsed : undefined
+      try {
+        const parsed = JSON.parse(cached)
+        return isCachedResult(parsed) ? parsed : undefined
+      } catch {
+        // Corrupted cache entry — treat as cache miss so the caller
+        // falls through to the database lookup instead of crashing.
+        return undefined
+      }
     },
     catch: () => undefined,
   }).pipe(Effect.orDie)
