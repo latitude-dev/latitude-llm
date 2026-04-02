@@ -22,6 +22,15 @@ description: Composing Effect programs, domain errors, HttpError, repository err
 - Handle errors at boundaries; propagate through Effect error channel internally
 - Every domain error must implement the `HttpError` interface (`httpStatus` and `httpMessage`), even when the error is not yet surfaced over HTTP—that may change. Use a readonly field for static messages and a getter for messages computed from error fields.
 
+## Domain package layout (reference: `@domain/issues`)
+
+Use `packages/domain/issues/src/errors.ts` as the **gold standard** for organizing domain-specific errors:
+
+- Colocate package-wide tagged error classes in `src/errors.ts`; use-cases import from `../errors.ts`.
+- Prefer **specific** error class names for domain rules; reserve `@domain/shared` errors for generic infrastructure shapes (`RepositoryError`, generic `NotFoundError`, etc.).
+- Export **union types** per flow or use-case group (for example `CheckEligibilityError`) so `Effect` error channels stay explicit.
+- Durable documentation for this pattern lives in `docs/issues.md` under *Domain errors (`@domain/issues` reference pattern)* and in `AGENTS.md` (domain schema conventions).
+
 ## HTTP error handling pattern
 
 All domain errors implement the `HttpError` interface from `@repo/utils`:
