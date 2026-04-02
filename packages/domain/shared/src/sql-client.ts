@@ -1,7 +1,7 @@
 import type { Effect } from "effect"
 import { ServiceMap } from "effect"
 import { z } from "zod"
-import type { RepositoryError } from "./errors.ts"
+import type { ConcurrentSqlTransactionError, RepositoryError } from "./errors.ts"
 import type { OrganizationId } from "./id.ts"
 
 export const sortDirectionSchema = z.enum(["asc", "desc"])
@@ -26,7 +26,7 @@ export interface SqlClientShape<X = unknown> {
    */
   readonly transaction: <A, E, R>(
     effect: Effect.Effect<A, E, R>,
-  ) => Effect.Effect<A, E | RepositoryError, R | SqlClient>
+  ) => Effect.Effect<A, E | RepositoryError | ConcurrentSqlTransactionError, R | SqlClient>
 
   /**
    * Run a callback inside an RLS-enabled transaction.
