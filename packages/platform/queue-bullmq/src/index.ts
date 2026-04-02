@@ -1,5 +1,7 @@
 export {
+  type BullMqFailedJobContext,
   type BullMqRedisConfig,
+  type BullMqWorkerIncident,
   createBullMqQueueConsumer,
   createBullMqQueuePublisher,
   QueuePublisherLive,
