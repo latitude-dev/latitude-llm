@@ -11,6 +11,8 @@ import { getClickhouseClient } from "./clients.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
+const log = createLogger("workflows")
+
 function resolveWorkflowsPath(): string {
   const override = process.env.LAT_TEMPORAL_WORKFLOWS_PATH
   if (override !== undefined && override.length > 0) {
@@ -32,7 +34,7 @@ const bootstrap = async () => {
     serviceName: "workflows",
   })
 
-  const logger = createLogger("workflows")
+  const logger = log
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKFLOWS_HEALTH_PORT", "number", 9091))
@@ -106,6 +108,6 @@ const bootstrap = async () => {
 }
 
 void bootstrap().catch((error) => {
-  console.error(error)
+  log.error("Failed to bootstrap workflows worker", error)
   process.exit(1)
 })

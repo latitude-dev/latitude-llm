@@ -27,7 +27,7 @@ const startServer = async () => {
 
   app.use(
     honoLogger((message: string, ...rest: string[]) => {
-      console.log(message, ...rest)
+      logger.info(message, ...rest)
     }),
   )
 

@@ -322,12 +322,7 @@ export const SpanRepositoryLive = Layer.effect(
               },
             })
           })
-          .pipe(
-            Effect.mapError((error) => {
-              console.log("Error inserting spans", error)
-              return toRepositoryError(error, "insert")
-            }),
-          ),
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "insert"))),
 
       findByTraceId: ({ organizationId, traceId }) =>
         chSqlClient
