@@ -14,8 +14,9 @@ import { UserRepository } from "../ports/user-repository.ts"
 import { createFakeUserRepository } from "../testing/fake-user-repository.ts"
 import { deleteUserUseCase } from "./delete-user.ts"
 
-const USER_ID = "user_1"
-const ORG_ID = OrganizationId("org_1")
+/** CUID-shaped ids — entity factories validate via Zod (`@domain/shared` seeds). */
+const USER_ID = "ye9d77pxi50nh1gyqljkffnb"
+const ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")
 
 const createTestUser = (id: string): User => ({
   id: UserId(id),
