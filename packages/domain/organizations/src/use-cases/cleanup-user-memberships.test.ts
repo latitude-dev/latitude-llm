@@ -1,4 +1,4 @@
-import { OrganizationId, SqlClient, UserId } from "@domain/shared"
+import { type MembershipId, OrganizationId, SqlClient, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
@@ -43,7 +43,7 @@ const seedOrganization = (
 }
 
 const seedMembership = (
-  memberships: Map<string, ReturnType<typeof createMembership>>,
+  memberships: Map<MembershipId, ReturnType<typeof createMembership>>,
   orgId: OrganizationId,
   userId: string,
 ) => {

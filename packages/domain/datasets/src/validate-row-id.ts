@@ -1,4 +1,4 @@
-import { type DatasetRowId, generateId, DatasetRowId as mkDatasetRowId, ValidationError } from "@domain/shared"
+import { type DatasetRowId, generateId, ValidationError } from "@domain/shared"
 import { Effect } from "effect"
 
 const MAX_ROW_ID_LENGTH = 128
@@ -20,7 +20,7 @@ const ROW_ID_PATTERN = /^[\w.~-]+$/
  */
 export function buildValidRowId(id?: DatasetRowId): Effect.Effect<DatasetRowId, ValidationError> {
   if (id === undefined) {
-    return Effect.succeed(mkDatasetRowId(generateId()))
+    return Effect.succeed(generateId<"DatasetRowId">())
   }
 
   if (id.length > MAX_ROW_ID_LENGTH) {

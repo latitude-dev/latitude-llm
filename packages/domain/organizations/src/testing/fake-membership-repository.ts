@@ -1,4 +1,4 @@
-import { NotFoundError } from "@domain/shared"
+import { type MembershipId, NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import type { Membership } from "../entities/membership.ts"
 import type { MembershipRepository } from "../ports/membership-repository.ts"
@@ -6,7 +6,7 @@ import type { MembershipRepository } from "../ports/membership-repository.ts"
 type MembershipRepositoryShape = (typeof MembershipRepository)["Service"]
 
 export const createFakeMembershipRepository = (overrides?: Partial<MembershipRepositoryShape>) => {
-  const memberships = new Map<string, Membership>()
+  const memberships = new Map<MembershipId, Membership>()
 
   const repository: MembershipRepositoryShape = {
     findById: (id) => {

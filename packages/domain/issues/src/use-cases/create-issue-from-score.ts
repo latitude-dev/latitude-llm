@@ -1,5 +1,5 @@
 import { type Score, ScoreRepository } from "@domain/scores"
-import { generateId, IssueId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { generateId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Issue } from "../entities/issue.ts"
 import type { CheckEligibilityError } from "../errors.ts"
@@ -87,7 +87,7 @@ const buildNewIssueFromScore = ({
   })
 
   return {
-    id: IssueId(generateId()),
+    id: generateId<"IssueId">(),
     uuid: crypto.randomUUID(),
     organizationId: score.organizationId,
     projectId: score.projectId,

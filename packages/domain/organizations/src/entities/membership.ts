@@ -1,4 +1,4 @@
-import type { OrganizationId, UserId } from "@domain/shared"
+import type { MembershipId, OrganizationId, UserId } from "@domain/shared"
 import { generateId } from "@domain/shared"
 
 /**
@@ -11,7 +11,7 @@ import { generateId } from "@domain/shared"
  * records, not on the membership record itself.
  */
 export interface Membership {
-  readonly id: string
+  readonly id: MembershipId
   readonly organizationId: OrganizationId
   readonly userId: UserId
   readonly role: MembershipRole
@@ -23,14 +23,14 @@ export type MembershipRole = "owner" | "admin" | "member"
 export const isAdminRole = (role: MembershipRole): boolean => role === "owner" || role === "admin"
 
 export const createMembership = (params: {
-  id?: string | undefined
+  id?: MembershipId | undefined
   organizationId: OrganizationId
   userId: UserId
   role: MembershipRole
   createdAt?: Date
 }): Membership => {
   return {
-    id: params.id ?? generateId(),
+    id: params.id ?? generateId<"MembershipId">(),
     organizationId: params.organizationId,
     userId: params.userId,
     role: params.role,

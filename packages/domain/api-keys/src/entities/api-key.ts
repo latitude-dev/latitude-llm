@@ -1,4 +1,4 @@
-import { ApiKeyId, generateId, type OrganizationId } from "@domain/shared"
+import { type ApiKeyId, generateId, type OrganizationId } from "@domain/shared"
 
 /**
  * API Key entity - authenticates organization-bound requests.
@@ -39,7 +39,7 @@ export const createApiKey = (params: {
 }): ApiKey => {
   const now = new Date()
   return {
-    id: params.id ?? ApiKeyId(generateId()),
+    id: params.id ?? generateId<"ApiKeyId">(),
     organizationId: params.organizationId,
     token: params.token,
     tokenHash: params.tokenHash,
