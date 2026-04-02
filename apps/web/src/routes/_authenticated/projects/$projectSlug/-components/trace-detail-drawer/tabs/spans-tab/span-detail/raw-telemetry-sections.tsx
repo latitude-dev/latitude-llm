@@ -2,7 +2,7 @@ import { DetailSection, Text } from "@repo/ui"
 import { CodeIcon, LayersIcon, LinkIcon, ZapIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
-import { isNonEmptyJson, JsonBlock } from "./helpers.tsx"
+import { JsonBlock, tryParseJson } from "./helpers.tsx"
 
 export function RawTelemetrySections({
   span,
@@ -13,14 +13,8 @@ export function RawTelemetrySections({
 }) {
   const hasAttrs = Object.keys(mergedAttrs).length > 0
   const hasResourceAttrs = Object.keys(span.resourceString).length > 0
-  const parsedEvents = useMemo(
-    () => (isNonEmptyJson(span.eventsJson) ? JSON.parse(span.eventsJson) : null),
-    [span.eventsJson],
-  )
-  const parsedLinks = useMemo(
-    () => (isNonEmptyJson(span.linksJson) ? JSON.parse(span.linksJson) : null),
-    [span.linksJson],
-  )
+  const parsedEvents = useMemo(() => tryParseJson(span.eventsJson), [span.eventsJson])
+  const parsedLinks = useMemo(() => tryParseJson(span.linksJson), [span.linksJson])
 
   return (
     <>

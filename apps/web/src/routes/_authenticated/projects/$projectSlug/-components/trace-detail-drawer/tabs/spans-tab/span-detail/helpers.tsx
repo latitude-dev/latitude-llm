@@ -15,6 +15,15 @@ export function isNonEmptyJson(json: string): boolean {
   return json !== "" && json !== "[]" && json !== "{}" && json !== "null"
 }
 
+export function tryParseJson(value: string): unknown | null {
+  if (!value) return null
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
+  }
+}
+
 export function JsonBlock({ value }: { readonly value: unknown }) {
   const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
   return <CodeBlock value={formatted} copyable />

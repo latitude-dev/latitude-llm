@@ -2,16 +2,7 @@ import { CopyButton, DetailSection, DetailSummary, Text } from "@repo/ui"
 import { ArrowDownRightIcon, ArrowUpRightIcon, WrenchIcon } from "lucide-react"
 import { useMemo } from "react"
 import type { SpanDetailRecord } from "../../../../../../../../../domains/spans/spans.functions.ts"
-import { JsonBlock } from "./helpers.tsx"
-
-function tryParseJson(value: string): unknown | null {
-  if (!value) return null
-  try {
-    return JSON.parse(value)
-  } catch {
-    return null
-  }
-}
+import { JsonBlock, tryParseJson } from "./helpers.tsx"
 
 export function isToolExecutionSpan(span: SpanDetailRecord): boolean {
   return (
