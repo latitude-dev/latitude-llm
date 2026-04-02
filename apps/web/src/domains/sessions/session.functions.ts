@@ -1,8 +1,15 @@
-import { generateId } from "@domain/shared"
+import { generateId, UnauthorizedError } from "@domain/shared"
 import { createServerFn } from "@tanstack/react-start"
 import { getRequestHeaders } from "@tanstack/react-start/server"
 import { z } from "zod"
 import { getBetterAuth, getOutboxWriter } from "../../server/clients.ts"
+
+/** Throws {@link UnauthorizedError} when there is no authenticated session (for use inside server handlers). */
+export function assertAuthenticatedSession<T>(session: T | null | undefined): asserts session is NonNullable<T> {
+  if (session == null) {
+    throw new UnauthorizedError({ message: "Unauthorized" })
+  }
+}
 
 export const getSession = createServerFn({ method: "GET" }).handler(async () => {
   const headers = getRequestHeaders()
@@ -16,9 +23,7 @@ export const getSession = createServerFn({ method: "GET" }).handler(async () => 
 export const ensureSession = createServerFn({ method: "GET" }).handler(async () => {
   const session = await getSession()
 
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
+  assertAuthenticatedSession(session)
 
   return session
 })
@@ -30,9 +35,7 @@ export const updateUserName = createServerFn({ method: "POST" })
     const auth = getBetterAuth()
 
     const session = await auth.api.getSession({ headers })
-    if (!session) {
-      throw new Error("Unauthorized")
-    }
+    assertAuthenticatedSession(session)
 
     const updated = await auth.api.updateUser({
       headers,
@@ -47,9 +50,7 @@ export const deleteCurrentUser = createServerFn({ method: "POST" }).handler(asyn
   const auth = getBetterAuth()
 
   const session = await auth.api.getSession({ headers })
-  if (!session) {
-    throw new Error("Unauthorized")
-  }
+  assertAuthenticatedSession(session)
 
   const userId = session.user.id
   const outboxWriter = getOutboxWriter()
