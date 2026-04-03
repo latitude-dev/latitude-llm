@@ -79,8 +79,6 @@ export interface ScoreAnalyticsRepositoryShape {
   existsById(id: ScoreId): Effect.Effect<boolean, RepositoryError>
   insert(score: Score): Effect.Effect<void, RepositoryError>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError>
-  /** @deprecated Use `delete` */
-  deleteById(id: ScoreId): Effect.Effect<void, RepositoryError>
 
   // -- Project-wide aggregates -----------------------------------------------
   aggregateByProject(input: {

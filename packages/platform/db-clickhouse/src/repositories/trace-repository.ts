@@ -380,7 +380,6 @@ export const TraceRepositoryLive = Layer.effect(
 
     return {
       listByProjectId,
-      findByProjectId: listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
@@ -550,7 +549,6 @@ export const TraceRepositoryLive = Layer.effect(
           ),
 
       listByTraceIds,
-      findByTraceIds: listByTraceIds,
 
       distinctFilterValues: ({ organizationId, projectId, column, limit: maxValues, search }) => {
         const COLUMN_EXPRS: Record<string, string> = {

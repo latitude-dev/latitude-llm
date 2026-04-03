@@ -75,7 +75,6 @@ export const OrganizationRepositoryLive = Layer.effect(
           ),
 
       listByUserId,
-      findByUserId: listByUserId,
 
       save: (org: {
         id: string

@@ -475,7 +475,6 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
       },
       // Lightweight DELETE (row mask); omits deleted rows from subsequent SELECTs without full part rewrite.
       delete: deleteScore,
-      deleteById: deleteScore,
     }
   }),
 )

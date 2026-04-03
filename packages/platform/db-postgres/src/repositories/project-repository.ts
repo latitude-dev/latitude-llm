@@ -91,10 +91,8 @@ export const ProjectRepositoryLive = Layer.effect(
           ),
 
       list,
-      findAll: list,
 
       listIncludingDeleted,
-      findAllIncludingDeleted: listIncludingDeleted,
 
       save: (project: Project) =>
         Effect.gen(function* () {

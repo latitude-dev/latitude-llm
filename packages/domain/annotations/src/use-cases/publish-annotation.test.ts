@@ -125,7 +125,7 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
   })
 
   const { repository: spanRepository } = createFakeSpanRepository({
-    findByTraceId: () => Effect.succeed([publishDefaultCompletionSpan]),
+    listByTraceId: () => Effect.succeed([publishDefaultCompletionSpan]),
   })
 
   const defaultGenerate: AIGenerate = <T>(input: GenerateInput<T>) =>

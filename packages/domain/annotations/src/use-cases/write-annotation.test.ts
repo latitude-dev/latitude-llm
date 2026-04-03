@@ -92,7 +92,7 @@ function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansFor
 
   const spans = options?.spansForTrace ?? [defaultCompletionSpan()]
   const { repository: spanRepository } = createFakeSpanRepository({
-    findByTraceId: () => Effect.succeed([...spans]),
+    listByTraceId: () => Effect.succeed([...spans]),
   })
 
   const ScoreRepositoryTest = Layer.succeed(ScoreRepository, scoreRepository)

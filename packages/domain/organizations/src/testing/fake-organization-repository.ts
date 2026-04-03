@@ -16,7 +16,6 @@ export const createFakeOrganizationRepository = (overrides?: Partial<Organizatio
     },
 
     listByUserId: () => Effect.succeed([]),
-    findByUserId: () => Effect.succeed([]),
 
     save: (org) =>
       Effect.sync(() => {

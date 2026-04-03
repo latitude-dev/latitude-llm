@@ -374,10 +374,8 @@ export const SpanRepositoryLive = Layer.effect(
           .pipe(Effect.mapError((error) => toRepositoryError(error, "insert"))),
 
       listByTraceId,
-      findByTraceId: listByTraceId,
 
       listByProjectId,
-      findByProjectId: listByProjectId,
 
       findBySpanId: ({ organizationId, traceId, spanId }) =>
         chSqlClient

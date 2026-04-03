@@ -69,7 +69,7 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // delete (lightweight DELETE — rows masked from SELECTs); deleteById is a deprecated alias
+  // delete (lightweight DELETE — rows masked from SELECTs)
   // ------------------------------------------------------------------
 
   describe("delete", () => {

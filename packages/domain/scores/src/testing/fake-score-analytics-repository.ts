@@ -34,11 +34,6 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
         const index = inserted.indexOf(id)
         if (index !== -1) inserted.splice(index, 1)
       }),
-    deleteById: (id) =>
-      Effect.sync(() => {
-        const index = inserted.indexOf(id)
-        if (index !== -1) inserted.splice(index, 1)
-      }),
     ...overrides,
   }
 

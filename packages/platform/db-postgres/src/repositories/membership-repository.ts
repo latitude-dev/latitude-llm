@@ -74,10 +74,8 @@ export const MembershipRepositoryLive = Layer.effect(
           ),
 
       listByOrganizationId,
-      findByOrganizationId: listByOrganizationId,
 
       listByUserId,
-      findByUserId: listByUserId,
 
       findByOrganizationAndUser: (organizationId: OrganizationId, userId: string) =>
         sqlClient
@@ -99,7 +97,6 @@ export const MembershipRepositoryLive = Layer.effect(
           ),
 
       listMembersWithUser,
-      findMembersWithUser: listMembersWithUser,
 
       isMember: (organizationId: OrganizationId, userId: string) =>
         sqlClient

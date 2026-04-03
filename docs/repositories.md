@@ -48,27 +48,23 @@ interface WidgetRepository {
 
 ## Audit: domain repository ports (AGE-47)
 
-The following tables list **current** port methods in `packages/domain/*/src/ports/*repository*.ts` and flag names that **diverge** from the vocabulary above. Renames are **not** required immediately; use this when touching a port or adding methods. Large renames should use **deprecated aliases** on the port implementation if external stability is a concern (this repo’s primary consumers are in-tree).
+The following lists **current** port methods in `packages/domain/*/src/ports/*repository*.ts` against the vocabulary above. Update this section when you add or rename port methods.
 
 ### Compliant or intentionally specialized
 
-- **ProjectRepository** — `findById`, `findBySlug`, `list`, `listIncludingDeleted`, `save`, `softDelete`, `hardDelete`, `existsByName`, `existsBySlug`; `findAll` / `findAllIncludingDeleted` are deprecated aliases.
+- **ProjectRepository** — `findById`, `findBySlug`, `list`, `listIncludingDeleted`, `save`, `softDelete`, `hardDelete`, `existsByName`, `existsBySlug`.
 - **DatasetRepository** — `findById`, `listByProject`, `softDelete`, `save` split into `create` / `updateName` / … is acceptable for partial updates.
 - **DatasetRowRepository** — `list`, `listPage`, `count`, `findById`, `insertBatch`, `updateRow`, `deleteBatch`, `deleteAll`.
 - **ScoreRepository** — `listBy*`, `save`, `delete`, `assignIssueIfUnowned`.
-- **ScoreAnalyticsRepository** — `insert`, `delete` (row mask), `deleteById` (deprecated alias); `aggregateBy*`, `rollupBy*`, `trendBy*`.
+- **ScoreAnalyticsRepository** — `insert`, `delete` (row mask); `aggregateBy*`, `rollupBy*`, `trendBy*`.
 - **IssueProjectionRepository** — `upsert`, `delete`, `hybridSearch` (projection store).
 - **InvitationRepository** — `findPublicPendingPreviewById` (descriptive single-object read).
 - **UserRepository** — `findByEmail`, `setNameIfMissing`, `delete`.
-- **ApiKeyRepository** — `list`, `findById`, `findByTokenHash`, `save`, `delete`, `touch`, `touchBatch` (`findAll` deprecated alias of `list`).
-- **OrganizationRepository** — `listByUserId` for many orgs per user (`findByUserId` deprecated alias).
-- **MembershipRepository** — `listByOrganizationId`, `listByUserId`, `listMembersWithUser` (deprecated aliases: `findByOrganizationId`, `findByUserId`, `findMembersWithUser`).
-- **TraceRepository** / **SessionRepository** — `listByProjectId`, `listByTraceIds` (trace only), `countByProjectId`, `aggregateMetricsByProjectId`, `histogramByProjectId` (trace only), `distinctFilterValues`, `findByTraceId` (single trace detail). Deprecated aliases: `findByProjectId`, `findByTraceIds`.
-- **SpanRepository** — `listByTraceId`, `listByProjectId` for collections (`findByTraceId`, `findByProjectId` deprecated aliases); `findBySpanId` remains for optional single-span detail.
-
-### Deprecated aliases (remove in a later major cleanup)
-
-Ports and live layers still expose the old names as **deprecated** methods delegating to the new ones so external or forked code keeps compiling. Prefer the new names in all in-tree call sites; drop aliases once nothing depends on them.
+- **ApiKeyRepository** — `list`, `findById`, `findByTokenHash`, `save`, `delete`, `touch`, `touchBatch`.
+- **OrganizationRepository** — `listByUserId` for many orgs per user.
+- **MembershipRepository** — `listByOrganizationId`, `listByUserId`, `listMembersWithUser`.
+- **TraceRepository** / **SessionRepository** — `listByProjectId`, `listByTraceIds` (trace only), `countByProjectId`, `aggregateMetricsByProjectId`, `histogramByProjectId` (trace only), `distinctFilterValues`; **TraceRepository** also `findByTraceId` (single trace detail, nullable).
+- **SpanRepository** — `listByTraceId`, `listByProjectId` for collections; `findBySpanId` for optional single-span detail.
 
 ### Nullable `findById` / optional lookup (legacy)
 

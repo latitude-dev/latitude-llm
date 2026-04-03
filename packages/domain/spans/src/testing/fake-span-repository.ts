@@ -5,20 +5,13 @@ import type { SpanRepositoryShape } from "../ports/span-repository.ts"
 export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape>) => {
   const inserted: SpanDetail[][] = []
 
-  const listByTraceId = overrides?.listByTraceId ?? overrides?.findByTraceId ?? (() => Effect.succeed([]))
-  const findByTraceId = overrides?.findByTraceId ?? overrides?.listByTraceId ?? listByTraceId
-  const listByProjectId = overrides?.listByProjectId ?? overrides?.findByProjectId ?? (() => Effect.succeed([]))
-  const findByProjectId = overrides?.findByProjectId ?? overrides?.listByProjectId ?? listByProjectId
-
   const repository: SpanRepositoryShape = {
     insert: (spans) => {
       inserted.push([...spans])
       return Effect.void
     },
-    listByTraceId,
-    findByTraceId,
-    listByProjectId,
-    findByProjectId,
+    listByTraceId: () => Effect.succeed([]),
+    listByProjectId: () => Effect.succeed([]),
     findBySpanId: () => Effect.succeed(null),
     findMessagesForTrace: () => Effect.succeed([]),
     ...overrides,

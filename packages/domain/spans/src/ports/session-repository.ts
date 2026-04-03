@@ -15,12 +15,6 @@ export interface SessionRepositoryShape {
     readonly projectId: ProjectId
     readonly options: SessionListOptions
   }): Effect.Effect<SessionListPage, RepositoryError>
-  /** @deprecated Use `listByProjectId` */
-  findByProjectId(input: {
-    readonly organizationId: OrganizationId
-    readonly projectId: ProjectId
-    readonly options: SessionListOptions
-  }): Effect.Effect<SessionListPage, RepositoryError>
 
   countByProjectId(input: {
     readonly organizationId: OrganizationId

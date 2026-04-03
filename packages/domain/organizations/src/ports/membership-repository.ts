@@ -18,18 +18,12 @@ export class MembershipRepository extends ServiceMap.Service<
   {
     findById: (id: MembershipId) => Effect.Effect<Membership, NotFoundError | RepositoryError>
     listByOrganizationId: (organizationId: OrganizationId) => Effect.Effect<Membership[], RepositoryError>
-    /** @deprecated Use `listByOrganizationId` */
-    findByOrganizationId: (organizationId: OrganizationId) => Effect.Effect<Membership[], RepositoryError>
     listByUserId: (userId: string) => Effect.Effect<Membership[], RepositoryError>
-    /** @deprecated Use `listByUserId` */
-    findByUserId: (userId: string) => Effect.Effect<Membership[], RepositoryError>
     findByOrganizationAndUser: (
       organizationId: OrganizationId,
       userId: string,
     ) => Effect.Effect<Membership, NotFoundError | RepositoryError>
     listMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError>
-    /** @deprecated Use `listMembersWithUser` */
-    findMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError>
     isMember: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError>
     isAdmin: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError>
     save: (membership: Membership) => Effect.Effect<void, RepositoryError>

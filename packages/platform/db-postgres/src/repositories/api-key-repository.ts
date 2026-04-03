@@ -108,7 +108,6 @@ export const ApiKeyRepositoryLive = Layer.effect(
         }),
 
       list,
-      findAll: list,
 
       delete: (id: ApiKeyIdType) =>
         sqlClient.query((db, organizationId) =>

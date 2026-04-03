@@ -271,7 +271,6 @@ export const SessionRepositoryLive = Layer.effect(
 
     return {
       listByProjectId,
-      findByProjectId: listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)
