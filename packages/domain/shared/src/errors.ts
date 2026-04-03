@@ -8,6 +8,20 @@ export class RepositoryError extends Data.TaggedError("RepositoryError")<{
   readonly httpMessage = "Internal server error"
 }
 
+/**
+ * Raised when two `SqlClient.transaction()` calls overlap on the same client
+ * instance (e.g. `Effect.all(..., { concurrency: 2 })`). Callers should run
+ * transactions sequentially or use separate SqlClient layer instances.
+ */
+// Empty payload: concurrent use is purely a client lifecycle mistake.
+export class ConcurrentSqlTransactionError extends Data.TaggedError("ConcurrentSqlTransactionError")<{
+  readonly _void?: undefined
+}> {
+  readonly httpStatus = 409
+  readonly httpMessage =
+    "Concurrent transaction requests on the same database client are not allowed. Run transactions sequentially or use separate client instances."
+}
+
 export class ValidationError extends Data.TaggedError("ValidationError")<{
   readonly field: string
   readonly message: string
@@ -69,6 +83,7 @@ export class PermissionError extends Data.TaggedError("PermissionError")<{
 
 export type DomainError =
   | RepositoryError
+  | ConcurrentSqlTransactionError
   | ValidationError
   | NotFoundError
   | ConflictError

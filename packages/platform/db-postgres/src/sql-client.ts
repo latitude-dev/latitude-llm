@@ -1,4 +1,10 @@
-import { OrganizationId, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
+import {
+  ConcurrentSqlTransactionError,
+  OrganizationId,
+  SqlClient,
+  type SqlClientShape,
+  toRepositoryError,
+} from "@domain/shared"
 import { sql } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import type { Operator, PostgresClient } from "./client.ts"
@@ -21,7 +27,7 @@ import type { Operator, PostgresClient } from "./client.ts"
  * concurrency > 1). `activeTx` has no fiber identity, so concurrent
  * transactions will overwrite each other's operator and corrupt both
  * connections. Use separate `SqlClientLive` layer instances instead.
- * A concurrent call is detected at runtime and killed with Effect.die.
+ * A concurrent call is detected at runtime and fails with ConcurrentSqlTransactionError.
  */
 const setRlsContext = (tx: Operator, organizationId: OrganizationId) => {
   if (organizationId === "system") return Promise.resolve()
@@ -41,12 +47,7 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
         transaction: <A, E, R>(effect: Effect.Effect<A, E, R>) => {
           if (activeTx) return effect
           if (txOpening) {
-            return Effect.die(
-              new Error(
-                "SqlClient: concurrent transaction() calls detected on the same instance. " +
-                  "Use separate SqlClientLive layer instances for parallel transactions.",
-              ),
-            )
+            return Effect.fail(new ConcurrentSqlTransactionError({}))
           }
 
           txOpening = true
