@@ -48,13 +48,13 @@ export const AICredentialsLive = Layer.succeed(AICredentials, {
       )
     }
     const envKey = getEnvKey(provider)
-    return Effect.try({
-      try: () => Effect.runSync(parseEnv(envKey, "string")),
-      catch: () =>
+    return Effect.mapError(
+      parseEnv(envKey, "string"),
+      () =>
         new AICredentialError({
           provider,
           message: `AI is unavailable: no API key for provider "${provider}". Set ${envKey} or configure organization credentials.`,
         }),
-    })
+    )
   },
 })
