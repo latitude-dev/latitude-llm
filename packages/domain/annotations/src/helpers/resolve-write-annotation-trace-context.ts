@@ -45,10 +45,11 @@ export const resolveWriteAnnotationTraceContext = (input: {
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
-    })
-    if (!detail) {
-      return yield* new BadRequestError({ message: "Trace not found for annotation" })
-    }
+    }).pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new BadRequestError({ message: "Trace not found for annotation" })),
+      ),
+    )
 
     if (needsTraceForAnchor && input.anchor) {
       const resolved = resolveAnnotationAnchorText(detail.allMessages, input.anchor)

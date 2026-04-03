@@ -44,7 +44,9 @@ export const getInvitationPreview = createServerFn({ method: "GET" })
     return await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* InvitationRepository
-        return yield* repo.findPublicPendingPreviewById(data.invitationId)
+        return yield* repo.findPublicPendingPreviewById(data.invitationId).pipe(
+          Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+        )
       }).pipe(withPostgres(InvitationRepositoryLive, client)),
     )
   })

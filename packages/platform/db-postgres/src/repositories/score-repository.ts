@@ -122,9 +122,7 @@ export const ScoreRepositoryLive = Layer.effect(
           .pipe(
             Effect.flatMap((rows) => {
               const row = rows[0]
-              if (!row) {
-                return Effect.fail(new NotFoundError({ entity: "Score", id }))
-              }
+              if (!row) return Effect.fail(new NotFoundError({ entity: "Score", id }))
               return Effect.succeed(toDomainScore(row))
             }),
           ),

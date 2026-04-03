@@ -1,4 +1,4 @@
-import type { IssueId, ProjectId, RepositoryError } from "@domain/shared"
+import type { IssueId, NotFoundError, ProjectId, RepositoryError } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Issue } from "../entities/issue.ts"
 
@@ -16,12 +16,12 @@ export interface ListIssuesRepositoryInput {
 }
 
 export interface IssueRepositoryShape {
-  findById(id: IssueId): Effect.Effect<Issue | null, RepositoryError>
-  findByIdForUpdate(id: IssueId): Effect.Effect<Issue | null, RepositoryError>
+  findById(id: IssueId): Effect.Effect<Issue, NotFoundError | RepositoryError>
+  findByIdForUpdate(id: IssueId): Effect.Effect<Issue, NotFoundError | RepositoryError>
   findByUuid(input: {
     readonly projectId: ProjectId
     readonly uuid: string
-  }): Effect.Effect<Issue | null, RepositoryError>
+  }): Effect.Effect<Issue, NotFoundError | RepositoryError>
   save(issue: Issue): Effect.Effect<void, RepositoryError>
   list(input: ListIssuesRepositoryInput): Effect.Effect<IssueListPage, RepositoryError>
 }

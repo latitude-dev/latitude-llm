@@ -6,6 +6,8 @@ import {
   SessionId,
   SimulationId,
   SpanId,
+  isNotFoundError,
+  NotFoundError,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
@@ -396,11 +398,16 @@ export const SpanRepositoryLive = Layer.effect(
             return result.json<SpanDetailRow>()
           })
           .pipe(
-            Effect.map((rows) => {
+            Effect.flatMap((rows) => {
               const first = rows[0]
-              return first ? toDomainSpanDetail(first) : null
+              if (!first) {
+                return Effect.fail(
+                  new NotFoundError({ entity: "Span", id: spanId as string }),
+                )
+              }
+              return Effect.succeed(toDomainSpanDetail(first))
             }),
-            Effect.mapError((error) => toRepositoryError(error, "findBySpanId")),
+            Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findBySpanId"))),
           ),
 
       findMessagesForTrace: ({ organizationId, traceId }) =>

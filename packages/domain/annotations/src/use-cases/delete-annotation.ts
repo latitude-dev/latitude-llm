@@ -17,13 +17,11 @@ export const deleteAnnotationUseCase = (input: DeleteAnnotationInput) =>
         const scoreRepository = yield* ScoreRepository
         const analyticsRepository = yield* ScoreAnalyticsRepository
 
-        const score = yield* scoreRepository
-          .findById(input.scoreId)
-          .pipe(
-            Effect.catchTag("NotFoundError", () =>
-              Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
-            ),
-          )
+        const score = yield* scoreRepository.findById(input.scoreId).pipe(
+          Effect.catchTag("NotFoundError", () =>
+            Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
+          ),
+        )
 
         if (score.source !== "annotation") {
           return yield* new BadRequestError({

@@ -118,13 +118,11 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
     const ai = yield* AI
     const outboxEventWriter = yield* OutboxEventWriter
 
-    const score = yield* scoreRepository
-      .findById(input.scoreId)
-      .pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
-        ),
-      )
+    const score = yield* scoreRepository.findById(input.scoreId).pipe(
+      Effect.catchTag("NotFoundError", () =>
+        Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
+      ),
+    )
 
     // Idempotent: already published
     if (score.draftedAt === null) {
@@ -147,11 +145,13 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
 
     if (score.traceId !== null) {
       const traceRepository = yield* TraceRepository
-      const detail = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(score.organizationId),
-        projectId: ProjectId(score.projectId),
-        traceId: TraceId(score.traceId),
-      })
+      const detail = yield* traceRepository
+        .findByTraceId({
+          organizationId: OrganizationId(score.organizationId),
+          projectId: ProjectId(score.projectId),
+          traceId: TraceId(score.traceId),
+        })
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       if (detail) {
         if (resolvedSessionId === null) {
           resolvedSessionId = detail.sessionId

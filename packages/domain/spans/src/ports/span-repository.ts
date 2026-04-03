@@ -1,4 +1,4 @@
-import type { OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
+import type { NotFoundError, OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
@@ -36,7 +36,7 @@ export interface SpanRepositoryShape {
     readonly organizationId: OrganizationId
     readonly traceId: TraceId
     readonly spanId: SpanId
-  }): Effect.Effect<SpanDetail | null, RepositoryError>
+  }): Effect.Effect<SpanDetail, NotFoundError | RepositoryError>
 
   findMessagesForTrace(input: {
     readonly organizationId: OrganizationId

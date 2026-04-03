@@ -11,7 +11,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import type { Session, SessionListPage, SessionMetrics } from "@domain/spans"
-import { SessionRepository, type SessionRepositoryShape } from "@domain/spans"
+import { emptySessionMetrics, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
 import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
@@ -104,8 +104,8 @@ const toSessionNumericRollup = (min: string, max: string, avg: string, median: s
   sum: Number(sum),
 })
 
-const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics | null => {
-  if (!row || Number(row.row_count) === 0) return null
+const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics => {
+  if (!row || Number(row.row_count) === 0) return emptySessionMetrics()
   return {
     durationNs: toSessionNumericRollup(
       row.duration_min,

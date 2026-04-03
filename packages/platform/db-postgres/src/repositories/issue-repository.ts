@@ -1,5 +1,5 @@
 import { type Issue, IssueRepository, issueSchema } from "@domain/issues"
-import { type IssueId, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { type IssueId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, desc, eq } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -66,12 +66,24 @@ export const IssueRepositoryLive = Layer.effect(
       findById: (id: IssueId) =>
         sqlClient
           .query((db) => db.select().from(issues).where(eq(issues.id, id)).limit(1))
-          .pipe(Effect.map((rows) => (rows[0] ? toDomainIssue(rows[0]) : null))),
+          .pipe(
+            Effect.flatMap((rows) => {
+              const row = rows[0]
+              if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
+              return Effect.succeed(toDomainIssue(row))
+            }),
+          ),
 
       findByIdForUpdate: (id: IssueId) =>
         sqlClient
           .query((db) => db.select().from(issues).where(eq(issues.id, id)).limit(1).for("update"))
-          .pipe(Effect.map((rows) => (rows[0] ? toDomainIssue(rows[0]) : null))),
+          .pipe(
+            Effect.flatMap((rows) => {
+              const row = rows[0]
+              if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id }))
+              return Effect.succeed(toDomainIssue(row))
+            }),
+          ),
 
       findByUuid: ({ projectId, uuid }: { readonly projectId: ProjectId; readonly uuid: string }) =>
         sqlClient
@@ -82,7 +94,13 @@ export const IssueRepositoryLive = Layer.effect(
               .where(and(eq(issues.projectId, projectId), eq(issues.uuid, uuid)))
               .limit(1),
           )
-          .pipe(Effect.map((rows) => (rows[0] ? toDomainIssue(rows[0]) : null))),
+          .pipe(
+            Effect.flatMap((rows) => {
+              const row = rows[0]
+              if (!row) return Effect.fail(new NotFoundError({ entity: "Issue", id: uuid }))
+              return Effect.succeed(toDomainIssue(row))
+            }),
+          ),
 
       save: (issue: Issue) =>
         Effect.gen(function* () {

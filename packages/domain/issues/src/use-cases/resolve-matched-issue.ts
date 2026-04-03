@@ -20,10 +20,12 @@ export const resolveMatchedIssueUseCase = (input: ResolveMatchedIssueInput) =>
     }
 
     const issueRepository = yield* IssueRepository
-    const issue = yield* issueRepository.findByUuid({
-      projectId: ProjectId(input.projectId),
-      uuid: input.matchedIssueUuid,
-    })
+    const issue = yield* issueRepository
+      .findByUuid({
+        projectId: ProjectId(input.projectId),
+        uuid: input.matchedIssueUuid,
+      })
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
     return {
       issueId: issue?.id ?? null,

@@ -223,11 +223,13 @@ export const getTraceDetail = createServerFn({ method: "GET" })
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* TraceRepository
-        const detail = yield* repo.findByTraceId({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          traceId: TraceId(data.traceId),
-        })
+        const detail = yield* repo
+          .findByTraceId({
+            organizationId: orgId,
+            projectId: ProjectId(data.projectId),
+            traceId: TraceId(data.traceId),
+          })
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         return detail ? serializeTraceDetail(detail) : null
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )

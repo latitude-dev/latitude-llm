@@ -81,4 +81,4 @@ export class NotFoundError extends Data.TaggedError("NotFoundError")<{
 findById(id: OrganizationId): Effect.Effect<Organization, NotFoundError | RepositoryError>
 ```
 
-Repository **method naming** (`findById` vs `listByXxx`, `delete` vs `softDelete`, etc.) is documented in [docs/repositories.md](../../../docs/repositories.md). Prefer `NotFoundError` (or domain-specific not-found) over `Entity | null` on new ports; legacy nullable lookups should migrate when touched.
+Repository **method naming** (`findById` vs `listByXxx`, `delete` vs `softDelete`, etc.) is documented in [docs/repositories.md](../../../docs/repositories.md). **`findBy*` must not return `Entity | null` for missing rows** — use `NotFoundError` (or domain-specific not-found) on the error channel; boundaries may catch and map to optional UX when required.

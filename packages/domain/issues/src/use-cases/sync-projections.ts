@@ -14,7 +14,9 @@ export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
     const issueProjectionRepository = yield* IssueProjectionRepository
     const issueRepository = yield* IssueRepository
 
-    const issue = yield* issueRepository.findById(IssueId(input.issueId))
+    const issue = yield* issueRepository.findById(IssueId(input.issueId)).pipe(
+      Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+    )
     if (!issue) {
       return
     }

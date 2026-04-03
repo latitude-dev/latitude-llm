@@ -162,9 +162,9 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
         const outboxEventWriter = yield* OutboxEventWriter
 
         const existingScore = parsedInput.id
-          ? yield* scoreRepository
-              .findById(parsedInput.id)
-              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+          ? yield* scoreRepository.findById(parsedInput.id).pipe(
+              Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
+            )
           : null
 
         if (existingScore && existingScore.draftedAt === null) {

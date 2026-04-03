@@ -7,13 +7,15 @@ import {
   SessionId,
   SimulationId,
   SpanId,
+  isNotFoundError,
+  NotFoundError,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
 import type { Trace, TraceDetail, TraceListPage, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
-import { TraceRepository, type TraceRepositoryShape } from "@domain/spans"
+import { emptyTraceMetrics, TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import type { GenAIMessage, GenAISystem } from "rosetta-ai"
@@ -204,8 +206,8 @@ const toTtftRollup = (row: TraceMetricsRow) => ({
   sum: finiteOrZero(row.ttft_sum),
 })
 
-const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics | null => {
-  if (!row || Number(row.row_count) === 0) return null
+const toTraceMetrics = (row: TraceMetricsRow | undefined): TraceMetrics => {
+  if (!row || Number(row.row_count) === 0) return emptyTraceMetrics()
   return {
     durationNs: toNumericRollup(
       row.duration_min,
@@ -541,11 +543,16 @@ export const TraceRepositoryLive = Layer.effect(
             return result.json<TraceDetailRow>()
           })
           .pipe(
-            Effect.map((rows) => {
+            Effect.flatMap((rows) => {
               const first = rows[0]
-              return first ? toDomainTraceDetail(first) : null
+              if (!first) {
+                return Effect.fail(
+                  new NotFoundError({ entity: "Trace", id: traceId as string }),
+                )
+              }
+              return Effect.succeed(toDomainTraceDetail(first))
             }),
-            Effect.mapError((error) => toRepositoryError(error, "findByTraceId")),
+            Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
           ),
 
       listByTraceIds,

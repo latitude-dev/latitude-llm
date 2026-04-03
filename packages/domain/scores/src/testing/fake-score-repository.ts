@@ -1,4 +1,4 @@
-import { NotFoundError, type ScoreId } from "@domain/shared"
+import { type ScoreId, NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import type { Score } from "../entities/score.ts"
 import type { ScoreRepositoryShape } from "../ports/score-repository.ts"
@@ -11,9 +11,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
   const repository: ScoreRepositoryShape = {
     findById: (id) => {
       const score = scores.get(id)
-      if (!score) {
-        return Effect.fail(new NotFoundError({ entity: "Score", id }))
-      }
+      if (!score) return Effect.fail(new NotFoundError({ entity: "Score", id }))
       return Effect.succeed(score)
     },
     save: (score) => {

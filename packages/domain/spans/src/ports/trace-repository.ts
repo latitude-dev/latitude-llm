@@ -1,4 +1,11 @@
-import type { FilterSet, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import type {
+  FilterSet,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  TraceId,
+} from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 
@@ -25,7 +32,7 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
-  }): Effect.Effect<TraceMetrics | null, RepositoryError>
+  }): Effect.Effect<TraceMetrics, RepositoryError>
 
   /** Per-bucket trace counts over `start_time`, using the same filter semantics as list/count. */
   histogramByProjectId(input: {
@@ -39,7 +46,7 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly traceId: TraceId
-  }): Effect.Effect<TraceDetail | null, RepositoryError>
+  }): Effect.Effect<TraceDetail, NotFoundError | RepositoryError>
 
   listByTraceIds(input: {
     readonly organizationId: OrganizationId
@@ -93,6 +100,17 @@ export interface TraceMetrics {
   readonly tokensTotal: NumericRollup
   readonly timeToFirstTokenNs: NumericRollup
 }
+
+const zeroRollup = (): NumericRollup => ({ min: 0, max: 0, avg: 0, median: 0, sum: 0 })
+
+/** Metrics when no traces match the filter (same shape as a populated aggregate). */
+export const emptyTraceMetrics = (): TraceMetrics => ({
+  durationNs: zeroRollup(),
+  costTotalMicrocents: zeroRollup(),
+  spanCount: zeroRollup(),
+  tokensTotal: zeroRollup(),
+  timeToFirstTokenNs: zeroRollup(),
+})
 
 export interface TraceTimeHistogramBucket {
   /** Bucket start instant (UTC ISO string). */
