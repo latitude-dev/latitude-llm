@@ -70,7 +70,22 @@ const bootstrap = async () => {
       ),
     )
 
-    const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
+    const queueConsumer = await Effect.runPromise(
+      createBullMqQueueConsumer({
+        redis: bullMqConfig,
+        onWorkerIncident: (incident) => {
+          if (incident.kind === "worker_error") {
+            logger.error("BullMQ worker infrastructure error", incident.queue, incident.error)
+            return
+          }
+          if (incident.kind === "job_failed") {
+            logger.error("BullMQ job failed", incident.queue, incident.job, incident.error)
+            return
+          }
+          logger.warn("BullMQ job stalled", incident.queue, incident.jobId)
+        },
+      }),
+    )
     const workflowStarter = await getWorkflowStarter()
 
     const ctx = {

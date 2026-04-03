@@ -18,6 +18,7 @@
     "@domain/queue": "workspace:*",
     "@opentelemetry/api": "catalog:",
     "@platform/env": "workspace:*",
+    "@repo/observability": "workspace:*",
     "bullmq": "catalog:",
     "effect": "catalog:",
     "ioredis": "catalog:",
