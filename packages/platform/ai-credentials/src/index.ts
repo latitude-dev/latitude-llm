@@ -42,7 +42,8 @@ export const AICredentialsLive = Layer.succeed(AICredentials, {
       return Effect.fail(
         new AICredentialError({
           provider,
-          message: `Unsupported AI provider "${provider}" for Latitude-managed credentials`,
+          message: `Unsupported AI provider "${provider}" for Latitude-managed credentials. Use a supported provider or configure credentials for this provider.`,
+          statusCode: 400,
         }),
       )
     }
@@ -52,7 +53,7 @@ export const AICredentialsLive = Layer.succeed(AICredentials, {
       catch: () =>
         new AICredentialError({
           provider,
-          message: `Missing API key for provider "${provider}": set ${envKey}`,
+          message: `AI is unavailable: no API key for provider "${provider}". Set ${envKey} or configure organization credentials.`,
         }),
     })
   },
