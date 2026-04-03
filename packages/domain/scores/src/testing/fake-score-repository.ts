@@ -1,4 +1,4 @@
-import { type ScoreId, NotFoundError } from "@domain/shared"
+import { NotFoundError, type ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 import type { Score } from "../entities/score.ts"
 import type { ScoreRepositoryShape } from "../ports/score-repository.ts"

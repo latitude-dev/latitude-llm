@@ -1,6 +1,6 @@
-import { emptySessionMetrics } from "../ports/session-repository.ts"
 import { Effect } from "effect"
 import type { SessionRepositoryShape } from "../ports/session-repository.ts"
+import { emptySessionMetrics } from "../ports/session-repository.ts"
 
 export const createFakeSessionRepository = (overrides?: Partial<SessionRepositoryShape>) => {
   const repository: SessionRepositoryShape = {

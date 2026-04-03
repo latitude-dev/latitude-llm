@@ -112,13 +112,13 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
     if (input.issueId) {
       const issueRepository = yield* IssueRepository
       const scoreRepository = yield* ScoreRepository
-      const issue = yield* issueRepository.findById(IssueId(input.issueId)).pipe(
-        Effect.catchTag("NotFoundError", () =>
-          Effect.fail(
-            new IssueNotFoundForDetailsGenerationError({ issueId: String(input.issueId) }),
+      const issue = yield* issueRepository
+        .findById(IssueId(input.issueId))
+        .pipe(
+          Effect.catchTag("NotFoundError", () =>
+            Effect.fail(new IssueNotFoundForDetailsGenerationError({ issueId: String(input.issueId) })),
           ),
-        ),
-      )
+        )
 
       previousName = issue.name
       previousDescription = issue.description

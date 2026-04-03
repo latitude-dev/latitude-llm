@@ -4,11 +4,11 @@ import {
   type ChSqlClientShape,
   ExternalUserId,
   type FilterSet,
+  isNotFoundError,
+  NotFoundError,
   SessionId,
   SimulationId,
   SpanId,
-  isNotFoundError,
-  NotFoundError,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
@@ -546,9 +546,7 @@ export const TraceRepositoryLive = Layer.effect(
             Effect.flatMap((rows) => {
               const first = rows[0]
               if (!first) {
-                return Effect.fail(
-                  new NotFoundError({ entity: "Trace", id: traceId as string }),
-                )
+                return Effect.fail(new NotFoundError({ entity: "Trace", id: traceId as string }))
               }
               return Effect.succeed(toDomainTraceDetail(first))
             }),

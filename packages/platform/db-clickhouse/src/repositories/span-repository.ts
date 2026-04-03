@@ -3,11 +3,11 @@ import {
   ChSqlClient,
   type ChSqlClientShape,
   ExternalUserId,
+  isNotFoundError,
+  NotFoundError,
   SessionId,
   SimulationId,
   SpanId,
-  isNotFoundError,
-  NotFoundError,
   OrganizationId as toOrganizationId,
   ProjectId as toProjectId,
   toRepositoryError,
@@ -401,9 +401,7 @@ export const SpanRepositoryLive = Layer.effect(
             Effect.flatMap((rows) => {
               const first = rows[0]
               if (!first) {
-                return Effect.fail(
-                  new NotFoundError({ entity: "Span", id: spanId as string }),
-                )
+                return Effect.fail(new NotFoundError({ entity: "Span", id: spanId as string }))
               }
               return Effect.succeed(toDomainSpanDetail(first))
             }),

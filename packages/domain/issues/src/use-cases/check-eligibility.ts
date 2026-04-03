@@ -24,11 +24,13 @@ export const checkEligibilityUseCase = (input: CheckEligibilityInput) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
 
-    const score = yield* scoreRepository.findById(ScoreId(input.scoreId)).pipe(
-      Effect.catchTag("NotFoundError", () =>
-        Effect.fail(new ScoreNotFoundForDiscoveryError({ scoreId: input.scoreId })),
-      ),
-    )
+    const score = yield* scoreRepository
+      .findById(ScoreId(input.scoreId))
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new ScoreNotFoundForDiscoveryError({ scoreId: input.scoreId })),
+        ),
+      )
 
     if (score.organizationId !== input.organizationId) {
       return yield* new ScoreDiscoveryOrganizationMismatchError({ scoreId: input.scoreId })

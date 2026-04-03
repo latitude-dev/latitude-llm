@@ -4,10 +4,10 @@ import { type Score, ScoreAnalyticsRepository, type ScoreListPage, ScoreReposito
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
+  NotFoundError,
   OrganizationId,
   OutboxEventWriter,
   ProjectId,
-  NotFoundError,
   RepositoryError,
   ScoreId,
   SessionId,
@@ -121,7 +121,12 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
   const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
 
   const { repository: traceRepository } = createFakeTraceRepository({
-    findByTraceId: () => Effect.succeed(traceDetailForLookup),
+    findByTraceId: () => {
+      if (traceDetailForLookup === null) {
+        return Effect.fail(new NotFoundError({ entity: "Trace", id: "" }))
+      }
+      return Effect.succeed(traceDetailForLookup)
+    },
   })
 
   const { repository: spanRepository } = createFakeSpanRepository({

@@ -44,9 +44,9 @@ const loadEligibleScoreOrCurrentOwner = (input: {
     Effect.catchTag("ScoreAlreadyOwnedByIssueError", () =>
       Effect.gen(function* () {
         const scoreRepository = yield* ScoreRepository
-        const currentScore = yield* scoreRepository.findById(ScoreId(input.scoreId)).pipe(
-          Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
-        )
+        const currentScore = yield* scoreRepository
+          .findById(ScoreId(input.scoreId))
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
         const existingIssueId = currentScore?.issueId
 
         if (existingIssueId != null) {
@@ -157,9 +157,9 @@ export const createIssueFromScoreUseCase = (input: CreateIssueFromScoreInput) =>
         })
 
         if (!claimed) {
-          const currentScore = yield* scoreRepository.findById(score.id).pipe(
-            Effect.catchTag("NotFoundError", () => Effect.succeed(null)),
-          )
+          const currentScore = yield* scoreRepository
+            .findById(score.id)
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
           if (currentScore && currentScore.issueId !== null) {
             return {
               action: "already-assigned",

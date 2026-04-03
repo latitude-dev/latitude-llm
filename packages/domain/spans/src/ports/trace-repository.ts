@@ -1,11 +1,4 @@
-import type {
-  FilterSet,
-  NotFoundError,
-  OrganizationId,
-  ProjectId,
-  RepositoryError,
-  TraceId,
-} from "@domain/shared"
+import type { FilterSet, NotFoundError, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 

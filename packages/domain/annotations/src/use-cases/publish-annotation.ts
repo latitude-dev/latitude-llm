@@ -118,11 +118,13 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
     const ai = yield* AI
     const outboxEventWriter = yield* OutboxEventWriter
 
-    const score = yield* scoreRepository.findById(input.scoreId).pipe(
-      Effect.catchTag("NotFoundError", () =>
-        Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
-      ),
-    )
+    const score = yield* scoreRepository
+      .findById(input.scoreId)
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new BadRequestError({ message: `Score ${input.scoreId} not found` })),
+        ),
+      )
 
     // Idempotent: already published
     if (score.draftedAt === null) {
