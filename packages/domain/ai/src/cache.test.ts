@@ -35,7 +35,7 @@ describe("withAICache", () => {
       expect(err).toBeInstanceOf(AIError)
       if (err instanceof AIError) {
         expect(err.message).toContain("read")
-        expect(err.httpStatus).toBe(500)
+        expect(err.httpStatus).toBe(502)
       }
     }
   })

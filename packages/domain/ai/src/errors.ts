@@ -4,7 +4,7 @@ export class AIError extends Data.TaggedError("AIError")<{
   readonly message: string
   readonly cause?: unknown
 }> {
-  readonly httpStatus = 500
+  readonly httpStatus = 502
   get httpMessage() {
     return this.message
   }
@@ -13,9 +13,10 @@ export class AIError extends Data.TaggedError("AIError")<{
 export class AICredentialError extends Data.TaggedError("AICredentialError")<{
   readonly provider: string
   readonly message: string
+  readonly statusCode?: number
 }> {
   get httpStatus() {
-    return this.message.startsWith("Unsupported AI provider") ? 400 : 500
+    return this.statusCode ?? 503
   }
   get httpMessage() {
     return this.message
