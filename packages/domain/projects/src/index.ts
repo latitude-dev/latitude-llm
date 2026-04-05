@@ -3,6 +3,7 @@ export {
   isProjectDeleted,
   markProjectDeleted,
   type Project,
+  projectSchema,
   restoreProject,
 } from "./entities/project.ts"
 export { ProjectRepository } from "./ports/project-repository.ts"

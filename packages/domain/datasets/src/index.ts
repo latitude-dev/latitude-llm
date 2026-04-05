@@ -4,9 +4,19 @@ export {
   DatasetNotFoundError,
   type DatasetVersion,
   DuplicateDatasetNameError,
+  datasetSchema,
+  datasetVersionSchema,
   TooManyTracesError,
 } from "./entities/dataset.ts"
-export { type DatasetRow, type RowFieldValue, RowNotFoundError } from "./entities/dataset-row.ts"
+export {
+  type DatasetRow,
+  datasetRowSchema,
+  type InsertRowFieldValue,
+  insertRowFieldValueSchema,
+  type RowFieldValue,
+  RowNotFoundError,
+  rowFieldValueSchema,
+} from "./entities/dataset-row.ts"
 export {
   buildDatasetCsvExport,
   type CsvRow,

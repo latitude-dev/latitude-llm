@@ -670,6 +670,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/domain/datasets:
     dependencies:
@@ -685,6 +688,9 @@ importers:
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@types/papaparse':
         specifier: ^5.5.2
@@ -701,6 +707,9 @@ importers:
       react:
         specifier: 'catalog:'
         version: 19.2.4
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -766,6 +775,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*
@@ -779,6 +791,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/domain/projects:
     dependencies:
@@ -788,6 +803,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/domain/queue:
     dependencies:
@@ -883,6 +901,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
 
   packages/observability:
     dependencies:

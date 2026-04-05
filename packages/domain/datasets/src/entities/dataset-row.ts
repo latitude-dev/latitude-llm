@@ -1,19 +1,34 @@
-import type { DatasetId, DatasetRowId } from "@domain/shared"
+import { datasetIdSchema, datasetRowIdSchema } from "@domain/shared"
 import { Data } from "effect"
+import { z } from "zod"
 
-export type RowFieldValue = string | Record<string, unknown>
+export const rowFieldValueSchema: z.ZodType<string | Record<string, unknown>> = z.union([
+  z.string(),
+  z.record(z.string(), z.unknown()),
+])
 
-export type InsertRowFieldValue = RowFieldValue | number | boolean | null
+export type RowFieldValue = z.infer<typeof rowFieldValueSchema>
 
-export interface DatasetRow {
-  readonly rowId: DatasetRowId
-  readonly datasetId: DatasetId
-  readonly input: RowFieldValue
-  readonly output: RowFieldValue
-  readonly metadata: RowFieldValue
-  readonly createdAt: Date
-  readonly version: number
-}
+export const insertRowFieldValueSchema: z.ZodType<RowFieldValue | number | boolean | null> = z.union([
+  rowFieldValueSchema,
+  z.number(),
+  z.boolean(),
+  z.null(),
+])
+
+export type InsertRowFieldValue = z.infer<typeof insertRowFieldValueSchema>
+
+export const datasetRowSchema = z.object({
+  rowId: datasetRowIdSchema,
+  datasetId: datasetIdSchema,
+  input: rowFieldValueSchema,
+  output: rowFieldValueSchema,
+  metadata: rowFieldValueSchema,
+  createdAt: z.date(),
+  version: z.number().int().nonnegative(),
+})
+
+export type DatasetRow = z.infer<typeof datasetRowSchema>
 
 export class RowNotFoundError extends Data.TaggedError("RowNotFoundError")<{
   readonly rowId: string

@@ -3,9 +3,18 @@ export {
   isAdminRole,
   type Membership,
   type MembershipRole,
+  membershipRoleSchema,
+  membershipSchema,
 } from "./entities/membership.ts"
-export { createOrganization, type Organization } from "./entities/organization.ts"
-export type { PublicInvitationPreview } from "./entities/public-invitation-preview.ts"
+export {
+  createOrganization,
+  type Organization,
+  organizationSchema,
+} from "./entities/organization.ts"
+export {
+  type PublicInvitationPreview,
+  publicInvitationPreviewSchema,
+} from "./entities/public-invitation-preview.ts"
 export { InvitationRepository } from "./ports/invitation-repository.ts"
 export {
   MembershipRepository,

@@ -1,5 +1,6 @@
 export {
   type ApiKey,
+  apiKeySchema,
   createApiKey,
   generateApiKeyToken,
   isActive,

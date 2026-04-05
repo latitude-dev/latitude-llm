@@ -1,4 +1,11 @@
-import type { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId } from "@domain/shared"
+import {
+  externalUserIdSchema,
+  organizationIdSchema,
+  projectIdSchema,
+  sessionIdSchema,
+  simulationIdOrEmptySchema,
+} from "@domain/shared"
+import { z } from "zod"
 
 /**
  * Session — aggregated from spans that share a session_id.
@@ -7,36 +14,38 @@ import type { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId
  * interactions between a user and the system. Populated by a
  * ClickHouse materialized view on each insert into spans.
  */
-export interface Session {
-  readonly organizationId: OrganizationId
-  readonly projectId: ProjectId
-  readonly sessionId: SessionId
+export const sessionSchema = z.object({
+  organizationId: organizationIdSchema,
+  projectId: projectIdSchema,
+  sessionId: sessionIdSchema,
 
-  readonly traceCount: number
-  readonly traceIds: readonly string[]
-  readonly spanCount: number
-  readonly errorCount: number
+  traceCount: z.number().int().nonnegative(),
+  traceIds: z.array(z.string()).readonly(),
+  spanCount: z.number().int().nonnegative(),
+  errorCount: z.number().int().nonnegative(),
 
-  readonly startTime: Date
-  readonly endTime: Date
-  readonly durationNs: number
+  startTime: z.date(),
+  endTime: z.date(),
+  durationNs: z.number(),
 
-  readonly tokensInput: number
-  readonly tokensOutput: number
-  readonly tokensCacheRead: number
-  readonly tokensCacheCreate: number
-  readonly tokensReasoning: number
-  readonly tokensTotal: number
+  tokensInput: z.number(),
+  tokensOutput: z.number(),
+  tokensCacheRead: z.number(),
+  tokensCacheCreate: z.number(),
+  tokensReasoning: z.number(),
+  tokensTotal: z.number(),
 
-  readonly costInputMicrocents: number
-  readonly costOutputMicrocents: number
-  readonly costTotalMicrocents: number
+  costInputMicrocents: z.number(),
+  costOutputMicrocents: z.number(),
+  costTotalMicrocents: z.number(),
 
-  readonly userId: ExternalUserId
-  readonly simulationId: SimulationId // optional simulation CUID link, empty string when absent
-  readonly tags: readonly string[]
-  readonly metadata: Readonly<Record<string, string>>
-  readonly models: readonly string[]
-  readonly providers: readonly string[]
-  readonly serviceNames: readonly string[]
-}
+  userId: externalUserIdSchema,
+  simulationId: simulationIdOrEmptySchema, // optional simulation CUID link, empty string when absent
+  tags: z.array(z.string()).readonly(),
+  metadata: z.record(z.string(), z.string()).readonly(),
+  models: z.array(z.string()).readonly(),
+  providers: z.array(z.string()).readonly(),
+  serviceNames: z.array(z.string()).readonly(),
+})
+
+export type Session = z.infer<typeof sessionSchema>

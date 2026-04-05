@@ -1,6 +1,16 @@
 export type { Session } from "./entities/session.ts"
+export { sessionSchema } from "./entities/session.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
+export {
+  operationSchema,
+  spanDetailSchema,
+  spanKindSchema,
+  spanSchema,
+  spanStatusCodeSchema,
+  toolDefinitionSchema,
+} from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
+export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
