@@ -24,7 +24,7 @@ catalog:
   drizzle-kit: 1.0.0-beta.15-859cf75
   drizzle-orm: 1.0.0-beta.15-859cf75
   fast-json-stable-stringify: 2.1.0
-  effect: 4.0.0-beta.0
+  effect: 4.0.0-beta.1
   hono: 4.9.12
   ioredis: 5.8.2
   pg: 8.16.0
@@ -35,7 +35,7 @@ catalog:
   tsx: 4.21.0
   turbo: 2.5.8
   typescript: 5.8.3
-  vite: 8.0.3
+  vite: 8.0.5
   vitest: 4.1.0
   zod: 4.3.6
   voyageai: 0.2.1
