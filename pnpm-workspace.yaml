@@ -22,7 +22,7 @@ catalog:
   bullmq: 5.28.2
   dotenv: 17.3.1
   drizzle-kit: 1.0.0-beta.15-859cf75
-  drizzle-orm: 1.0.0-beta.15-859cf75
+  drizzle-orm: 1.0.0-beta.20
   fast-json-stable-stringify: 2.1.0
   effect: 4.0.0-beta.0
   hono: 4.9.12
