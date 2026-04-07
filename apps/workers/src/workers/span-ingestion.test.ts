@@ -4,7 +4,7 @@ import { queryClickhouse } from "@platform/db-clickhouse"
 import { FakeStorageDisk } from "@platform/storage-object/testing"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { createSpanIngestionWorker } from "./span-ingestion.ts"
 
 type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
@@ -158,32 +158,38 @@ describe("createSpanIngestionWorker", () => {
   })
 
   it("drops invalid payloads without inserting spans", async () => {
-    const consumer = new TestQueueConsumer()
-    const disk = new FakeStorageDisk()
-    const pub = createFakeEventsPublisher()
-    const fileKey = "span-ingestion/test-invalid.json"
-    disk.putBytes(fileKey, Buffer.from("not-json", "utf-8"))
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const consumer = new TestQueueConsumer()
+      const disk = new FakeStorageDisk()
+      const pub = createFakeEventsPublisher()
+      const fileKey = "span-ingestion/test-invalid.json"
+      disk.putBytes(fileKey, Buffer.from("not-json", "utf-8"))
 
-    createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
+      createSpanIngestionWorker({ consumer, eventsPublisher: pub, clickhouseClient: ch.client, disk })
 
-    await consumer.dispatchTask("span-ingestion", "ingest", {
-      fileKey,
-      inlinePayload: null,
-      contentType: "application/json",
-      organizationId: "org_span_ingestion_test",
-      projectId: "proj_span_ingestion_test",
-      apiKeyId: "api_key_span_ingestion_test",
-      ingestedAt: "2026-03-18T10:00:00.000Z",
-    })
+      await consumer.dispatchTask("span-ingestion", "ingest", {
+        fileKey,
+        inlinePayload: null,
+        contentType: "application/json",
+        organizationId: "org_span_ingestion_test",
+        projectId: "proj_span_ingestion_test",
+        apiKeyId: "api_key_span_ingestion_test",
+        ingestedAt: "2026-03-18T10:00:00.000Z",
+      })
 
-    const [count] = await Effect.runPromise(
-      queryClickhouse<{ total: string }>(
-        ch.client,
-        "SELECT count() AS total FROM spans WHERE organization_id = {organizationId:String}",
-        { organizationId: "org_span_ingestion_test" },
-      ),
-    )
+      const [count] = await Effect.runPromise(
+        queryClickhouse<{ total: string }>(
+          ch.client,
+          "SELECT count() AS total FROM spans WHERE organization_id = {organizationId:String}",
+          { organizationId: "org_span_ingestion_test" },
+        ),
+      )
 
-    expect(Number(count?.total ?? 0)).toBe(0)
+      expect(Number(count?.total ?? 0)).toBe(0)
+      expect(warnSpy).toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 })
