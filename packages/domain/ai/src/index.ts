@@ -1,3 +1,4 @@
+import type { ContextOptions } from "@latitude-data/telemetry"
 import { type Effect, ServiceMap } from "effect"
 import type { z } from "zod"
 import type { AICredentialError, AIError } from "./errors.ts"
@@ -12,6 +13,17 @@ export {
 // ---------------------------------------------------------------------------
 // Generate (structured object generation via LLM)
 // ---------------------------------------------------------------------------
+
+export type { ContextOptions } from "@latitude-data/telemetry"
+
+/**
+ * Latitude `capture` third-argument options (`ContextOptions` from `@latitude-data/telemetry`) plus the
+ * required root span name (first argument to `capture`). Optional `name` here is the merged-context
+ * override in `ContextOptions`, distinct from `spanName`.
+ */
+export type GenerateTelemetryCapture = ContextOptions & {
+  readonly spanName: string
+}
 
 /**
  * Structured generation with a Zod schema. The Vercel adapter uses the AI SDK's
@@ -36,6 +48,11 @@ export interface GenerateInput<T> {
   readonly stopSequences?: readonly string[]
   readonly seed?: number
   readonly providerOptions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  /**
+   * When set, the Vercel adapter wraps the provider call in Latitude `capture` for tracing.
+   * Does not affect generation semantics; excluded from AI cache keys (see `withAICache`).
+   */
+  readonly telemetry?: GenerateTelemetryCapture
 }
 
 export interface GenerateResult<T> {
@@ -52,6 +69,11 @@ export interface EmbedInput {
   readonly text: string
   readonly model: string
   readonly dimensions: number
+  /**
+   * When set, the Voyage adapter wraps the provider call in Latitude `capture` for tracing.
+   * Excluded from AI cache keys (see `withAICache`).
+   */
+  readonly telemetry?: GenerateTelemetryCapture
 }
 
 export interface EmbedResult {
@@ -66,6 +88,11 @@ export interface RerankInput {
   readonly query: string
   readonly documents: readonly string[]
   readonly model: string
+  /**
+   * When set, the Voyage adapter wraps the provider call in Latitude `capture` for tracing.
+   * Excluded from AI cache keys (see `withAICache`).
+   */
+  readonly telemetry?: GenerateTelemetryCapture
 }
 
 export interface RerankResult {

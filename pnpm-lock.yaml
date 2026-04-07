@@ -610,6 +610,12 @@ importers:
 
   packages/domain/ai:
     dependencies:
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../shared
+      '@latitude-data/telemetry':
+        specifier: workspace:*
+        version: link:../../telemetry/typescript
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -916,6 +922,9 @@ importers:
 
   packages/observability:
     dependencies:
+      '@latitude-data/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry/typescript
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -928,6 +937,12 @@ importers:
       '@opentelemetry/sdk-node':
         specifier: ^0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.0)
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../platform/env
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.3
 
   packages/platform/ai:
     dependencies:
@@ -944,6 +959,15 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
 
+  packages/platform/ai-latitude:
+    dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../domain/ai
+      '@latitude-data/telemetry':
+        specifier: workspace:*
+        version: link:../../telemetry/typescript
+
   packages/platform/ai-vercel:
     dependencies:
       '@ai-sdk/anthropic':
@@ -955,9 +979,12 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
-      '@platform/env':
+      '@domain/shared':
         specifier: workspace:*
-        version: link:../env
+        version: link:../../domain/shared
+      '@platform/ai-latitude':
+        specifier: workspace:*
+        version: link:../ai-latitude
       ai:
         specifier: 7.0.0-beta.45
         version: 7.0.0-beta.45(zod@4.3.6)
@@ -973,6 +1000,12 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
+      '@domain/shared':
+        specifier: workspace:*
+        version: link:../../domain/shared
+      '@platform/ai-latitude':
+        specifier: workspace:*
+        version: link:../ai-latitude
       '@platform/env':
         specifier: workspace:*
         version: link:../env
@@ -18747,7 +18780,7 @@ snapshots:
       '@noble/ciphers': 2.1.1
       '@noble/hashes': 2.0.1
       better-call: 1.1.8(zod@4.3.6)
-      defu: 6.1.4
+      defu: 6.1.6
       jose: 6.1.3
       kysely: 0.28.14
       nanostores: 1.1.1
@@ -18781,7 +18814,7 @@ snapshots:
       '@noble/ciphers': 2.1.1
       '@noble/hashes': 2.0.1
       better-call: 1.3.2(zod@4.3.6)
-      defu: 6.1.4
+      defu: 6.1.6
       jose: 6.1.3
       kysely: 0.28.14
       nanostores: 1.1.1
@@ -18818,7 +18851,7 @@ snapshots:
       '@noble/ciphers': 2.1.1
       '@noble/hashes': 2.0.1
       better-call: 1.3.2(zod@4.3.6)
-      defu: 6.1.4
+      defu: 6.1.6
       jose: 6.1.3
       kysely: 0.28.14
       nanostores: 1.1.1
@@ -18980,7 +19013,7 @@ snapshots:
     dependencies:
       chokidar: 5.0.0
       confbox: 0.2.4
-      defu: 6.1.4
+      defu: 6.1.6
       dotenv: 17.3.1
       exsolve: 1.0.8
       giget: 2.0.0
@@ -19355,8 +19388,7 @@ snapshots:
 
   defu@6.1.4: {}
 
-  defu@6.1.6:
-    optional: true
+  defu@6.1.6: {}
 
   delayed-stream@1.0.0: {}
 
@@ -20024,7 +20056,7 @@ snapshots:
     dependencies:
       citty: 0.1.6
       consola: 3.4.2
-      defu: 6.1.4
+      defu: 6.1.6
       node-fetch-native: 1.6.7
       nypm: 0.6.5
       pathe: 2.0.3
@@ -22174,7 +22206,7 @@ snapshots:
 
   rc9@2.1.2:
     dependencies:
-      defu: 6.1.4
+      defu: 6.1.6
       destr: 2.0.5
 
   rc@1.2.8:
