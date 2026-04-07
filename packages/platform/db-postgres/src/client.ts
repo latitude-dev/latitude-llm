@@ -1,7 +1,6 @@
-import { parseEnv, parseEnvOptional } from "@platform/env"
+import { parseEnvOptionalSync, parseEnvSync } from "@platform/env"
 import { createLogger } from "@repo/observability"
 import { drizzle } from "drizzle-orm/node-postgres"
-import { Effect } from "effect"
 import { Pool } from "pg"
 
 const poolLogger = createLogger("db-postgres")
@@ -30,11 +29,15 @@ export interface PostgresClient {
 /**
  * Create a Postgres connection pool with environment-based configuration.
  *
+ * Pool creation is synchronous: the pool opens connections lazily on first use.
+ * Env validation runs here (not at module import), so importing this module has
+ * no database or env side effects.
+ *
  * @param config Optional overrides for pool configuration
  * @returns A pg.Pool instance
  */
 export const createPostgresPool = (config: PostgresConfig = {}): Pool => {
-  const poolConfig = Effect.runSync(parsePostgresPoolConfig(config))
+  const poolConfig = resolvePostgresPoolConfig(config)
   return new Pool(poolConfig)
 }
 
@@ -61,19 +64,16 @@ const DEFAULT_IDLE_TIMEOUT_MS = 30_000
 /** Default connection timeout: 5 seconds. Allows fast failure when the DB is temporarily unreachable. */
 const DEFAULT_CONNECTION_TIMEOUT_MS = 5_000
 
-const parsePostgresPoolConfig = (config: PostgresConfig = {}) =>
-  Effect.all({
-    connectionString: config.databaseUrl ? Effect.succeed(config.databaseUrl) : parseEnv("LAT_DATABASE_URL", "string"),
-    max: config.maxConnections ? Effect.succeed(config.maxConnections) : parseEnvOptional("LAT_PG_POOL_MAX", "number"),
-    idleTimeoutMillis: config.idleTimeoutMs
-      ? Effect.succeed(config.idleTimeoutMs)
-      : parseEnvOptional("LAT_PG_IDLE_TIMEOUT_MS", "number").pipe(Effect.map((v) => v ?? DEFAULT_IDLE_TIMEOUT_MS)),
-    connectionTimeoutMillis: config.connectionTimeoutMs
-      ? Effect.succeed(config.connectionTimeoutMs)
-      : parseEnvOptional("LAT_PG_CONNECT_TIMEOUT_MS", "number").pipe(
-          Effect.map((v) => v ?? DEFAULT_CONNECTION_TIMEOUT_MS),
-        ),
-  })
+const resolvePostgresPoolConfig = (config: PostgresConfig = {}) => ({
+  connectionString: config.databaseUrl ?? parseEnvSync("LAT_DATABASE_URL", "string"),
+  max: config.maxConnections ?? parseEnvOptionalSync("LAT_PG_POOL_MAX", "number"),
+  idleTimeoutMillis:
+    config.idleTimeoutMs ?? parseEnvOptionalSync("LAT_PG_IDLE_TIMEOUT_MS", "number") ?? DEFAULT_IDLE_TIMEOUT_MS,
+  connectionTimeoutMillis:
+    config.connectionTimeoutMs ??
+    parseEnvOptionalSync("LAT_PG_CONNECT_TIMEOUT_MS", "number") ??
+    DEFAULT_CONNECTION_TIMEOUT_MS,
+})
 
 const buildPostgresClient = (pool: Pool): PostgresClient => {
   // Prevent unhandled rejection crashes when idle connections
