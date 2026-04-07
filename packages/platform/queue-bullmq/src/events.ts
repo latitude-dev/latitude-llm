@@ -27,9 +27,17 @@ export const mapEnvelopeToDispatchPayload = (envelope: EventEnvelope) => ({
 
 export const createEventsPublisher = (queuePublisher: QueuePublisherShape): EventsPublisher<QueuePublishError> => ({
   publish: (event: DomainEvent) =>
-    queuePublisher.publish("domain-events", "dispatch", {
-      id: generateId(),
-      event,
-      occurredAt: new Date().toISOString(),
-    }),
+    queuePublisher.publish(
+      "domain-events",
+      "dispatch",
+      {
+        id: generateId(),
+        event,
+        occurredAt: new Date().toISOString(),
+      },
+      {
+        attempts: 8,
+        backoff: { type: "exponential", delay: 2000 },
+      },
+    ),
 })

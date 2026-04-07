@@ -102,6 +102,12 @@ export const createBullMqQueuePublisher = (
                 }
               }
             }
+            if (options?.attempts !== undefined) {
+              bullmqOptions.attempts = options.attempts
+            }
+            if (options?.backoff !== undefined) {
+              bullmqOptions.backoff = options.backoff
+            }
             await getQueue(queue).add(task, { payload } satisfies BullMqJobData, bullmqOptions)
           },
           catch: (cause: unknown) => new QueuePublishError({ cause, queue }),
