@@ -30,6 +30,7 @@ All Postgres access flows through `SqlClient`—a domain-level service that abst
 - RLS policies filter all queries by this organization ID at the database level
 - Nested transactions share the same connection (pass-through proxy—no nested transaction overhead)
 - Domain errors propagate through Effect error channel; database errors become `RepositoryError`
+- On effect failure, `SqlClientLive` still awaits the Drizzle transaction promise so the connection returns to the pool; if the driver surfaces a **different** error than the Effect failure (for example rollback/commit), that secondary error is logged via `@repo/observability` while the original failure remains the propagated error
 
 **Usage in boundaries (apps):**
 
