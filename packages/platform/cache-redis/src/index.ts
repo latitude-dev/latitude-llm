@@ -20,3 +20,6 @@ export {
   createRedisConnection,
   createRedisConnectionEffect,
 } from "./connection.ts"
+export type { RedisConnectionStatus, RedisHealthReport, RedisPingStatus } from "./health.ts"
+export { checkRedisHealth } from "./health.ts"
+export { closeRedis } from "./lifecycle.ts"
