@@ -1,4 +1,5 @@
 import type { WorkflowStarterShape } from "@domain/queue"
+import { WorkflowStartError } from "@domain/queue"
 import { createLogger } from "@repo/observability"
 import { Client, Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
 import { Data, Effect } from "effect"
@@ -51,28 +52,36 @@ export const createTemporalClient = (config: TemporalConfig): Promise<Client> =>
 export function createWorkflowStarter(client: Client, config: TemporalConfig): WorkflowStarterShape {
   return {
     start: (workflow, input, options) =>
-      Effect.promise(async () => {
-        try {
-          const handle = await client.workflow.start(workflow, {
-            workflowId: options.workflowId,
-            taskQueue: config.taskQueue,
-            args: [input],
-          })
-          logger.info("started workflow", {
-            workflow,
-            workflowId: options.workflowId,
-            runId: handle.firstExecutionRunId,
-          })
-        } catch (error) {
-          if (error instanceof WorkflowExecutionAlreadyStartedError) {
-            logger.info("workflow already started", {
+      Effect.tryPromise({
+        try: async () => {
+          try {
+            const handle = await client.workflow.start(workflow, {
+              workflowId: options.workflowId,
+              taskQueue: config.taskQueue,
+              args: [input],
+            })
+            logger.info("started workflow", {
               workflow,
               workflowId: options.workflowId,
+              runId: handle.firstExecutionRunId,
             })
-            return
+          } catch (error) {
+            if (error instanceof WorkflowExecutionAlreadyStartedError) {
+              logger.info("workflow already started", {
+                workflow,
+                workflowId: options.workflowId,
+              })
+              return
+            }
+            throw error
           }
-          throw error
-        }
-      }),
+        },
+        catch: (cause) =>
+          new WorkflowStartError({
+            workflow,
+            workflowId: options.workflowId,
+            cause,
+          }),
+      }).pipe(Effect.asVoid),
   }
 }

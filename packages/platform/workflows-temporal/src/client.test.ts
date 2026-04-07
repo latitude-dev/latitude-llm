@@ -1,3 +1,4 @@
+import { WorkflowStartError } from "@domain/queue"
 import type { Client } from "@temporalio/client"
 import { Connection, WorkflowExecutionAlreadyStartedError } from "@temporalio/client"
 import { Cause, Effect } from "effect"
@@ -62,6 +63,48 @@ describe("createWorkflowStarter", () => {
         ),
       ),
     ).resolves.toBeUndefined()
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it("maps unexpected start errors to WorkflowStartError", async () => {
+    const start = vi.fn(async () => {
+      throw new Error("grpc unavailable")
+    })
+    const client = {
+      workflow: {
+        start,
+      },
+    } as unknown as Client
+
+    const starter = createWorkflowStarter(client, {
+      address: "127.0.0.1:7233",
+      namespace: "default",
+      taskQueue: "workflows",
+    })
+
+    const exit = await Effect.runPromise(
+      Effect.exit(
+        starter.start(
+          "issueDiscoveryWorkflow",
+          {
+            organizationId: "org-1",
+            projectId: "proj-1",
+            scoreId: "score-1",
+          },
+          { workflowId: "issue-discovery:org-1:proj-1:score-1" },
+        ),
+      ),
+    )
+
+    expect(exit._tag).toBe("Failure")
+    if (exit._tag === "Failure") {
+      const errOpt = Cause.findErrorOption(exit.cause)
+      expect(errOpt._tag).toBe("Some")
+      if (errOpt._tag === "Some") {
+        expect(errOpt.value).toBeInstanceOf(WorkflowStartError)
+        expect((errOpt.value as WorkflowStartError).workflowId).toBe("issue-discovery:org-1:proj-1:score-1")
+      }
+    }
     expect(start).toHaveBeenCalledTimes(1)
   })
 })
