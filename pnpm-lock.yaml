@@ -15,6 +15,9 @@ catalogs:
     '@hono/node-server':
       specifier: 1.19.13
       version: 1.19.13
+    '@latitude-data/telemetry':
+      specifier: 3.0.0-alpha.3
+      version: 3.0.0-alpha.3
     '@opentelemetry/api':
       specifier: ^1.9.0
       version: 1.9.0
@@ -614,7 +617,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@latitude-data/telemetry':
-        specifier: workspace:*
+        specifier: 'catalog:'
         version: link:../../telemetry/typescript
       '@repo/utils':
         specifier: workspace:*
@@ -923,7 +926,7 @@ importers:
   packages/observability:
     dependencies:
       '@latitude-data/telemetry':
-        specifier: workspace:*
+        specifier: 'catalog:'
         version: link:../telemetry/typescript
       '@opentelemetry/api':
         specifier: ^1.9.0
@@ -965,7 +968,7 @@ importers:
         specifier: workspace:*
         version: link:../../domain/ai
       '@latitude-data/telemetry':
-        specifier: workspace:*
+        specifier: 'catalog:'
         version: link:../../telemetry/typescript
 
   packages/platform/ai-vercel:
