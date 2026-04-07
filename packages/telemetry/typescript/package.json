@@ -45,7 +45,7 @@
     "@opentelemetry/api": "catalog:",
     "@opentelemetry/context-async-hooks": "^1.30.0",
     "@opentelemetry/core": "^1.30.0",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
     "@opentelemetry/instrumentation": "^0.57.0",
     "@traceloop/instrumentation-openai": "^0.22.0",
     "@opentelemetry/resources": "^1.30.0",
