@@ -1,5 +1,5 @@
 import { type Effect, ServiceMap } from "effect"
-import type { QueuePublishError, QueueSubscribeError } from "./errors.ts"
+import type { QueuePublishError, QueueSubscribeError, WorkflowStartError } from "./errors.ts"
 import type { TopicRegistry as TR } from "./topic-registry.ts"
 import type { WorkflowRegistry as WR } from "./workflow-registry.ts"
 
@@ -22,12 +22,18 @@ export interface WorkflowStarterShape {
     workflow: W,
     input: WorkflowInput<W>,
     options: { readonly workflowId: string },
-  ) => Effect.Effect<void>
+  ) => Effect.Effect<void, WorkflowStartError>
 }
 
 export interface PublishOptions {
   readonly dedupeKey?: string
   readonly debounceMs?: number
+  /** BullMQ job retries (passed through on `Queue.add`). */
+  readonly attempts?: number
+  readonly backoff?: {
+    readonly type: "exponential" | "fixed"
+    readonly delay: number
+  }
 }
 
 export interface QueuePublisherShape {
@@ -54,4 +60,4 @@ export interface QueueConsumer {
   readonly subscribe: <T extends QueueName>(queue: T, handlers: TaskHandlers<T>, options?: SubscribeOptions) => void
 }
 
-export { QueueClientError, QueuePublishError, QueueSubscribeError } from "./errors.ts"
+export { QueueClientError, QueuePublishError, QueueSubscribeError, WorkflowStartError } from "./errors.ts"

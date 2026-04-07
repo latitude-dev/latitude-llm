@@ -26,3 +26,14 @@ export class QueueClientError extends Data.TaggedError("QueueClientError")<{
   readonly httpStatus = 503
   readonly httpMessage = "Queue client not connectable"
 }
+
+export class WorkflowStartError extends Data.TaggedError("WorkflowStartError")<{
+  readonly workflow: string
+  readonly workflowId: string
+  readonly cause: unknown
+}> {
+  readonly httpStatus = 502
+  get httpMessage() {
+    return `Failed to start workflow "${this.workflow}"`
+  }
+}
