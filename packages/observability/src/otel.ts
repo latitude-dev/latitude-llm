@@ -44,6 +44,7 @@ export const startTracing = async ({
       ? {
           spanProcessors: [
             new LatitudeSpanProcessor(apiKey, projectSlug, {
+              serviceName,
               exporter: new OTLPTraceExporter({
                 url: `${latitudeIngestBase}/v1/traces`,
                 headers: {

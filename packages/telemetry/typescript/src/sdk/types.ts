@@ -19,6 +19,8 @@ export type InitLatitudeOptions = SmartFilterOptions & {
   redact?: RedactSpanProcessorOptions
   disableBatch?: boolean
   exporter?: SpanExporter
+  /** Sets `service.name` on exported spans (and on the provider resource when using `initLatitude`). */
+  serviceName?: string
 }
 
 export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
@@ -26,6 +28,8 @@ export type LatitudeSpanProcessorOptions = SmartFilterOptions & {
   redact?: RedactSpanProcessorOptions
   disableBatch?: boolean
   exporter?: SpanExporter
+  /** Sets `service.name` on each span so Latitude ingest can attribute telemetry to your service. */
+  serviceName?: string
 }
 
 export type { InstrumentationType } from "./instrumentations.ts"

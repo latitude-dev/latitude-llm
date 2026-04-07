@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.3] - 2026-04-07
+
+### Added
+
+- **`serviceName` on `LatitudeSpanProcessor` and `initLatitude()`** — optional `LatitudeSpanProcessorOptions.serviceName` / `InitLatitudeOptions.serviceName` sets OpenTelemetry **`service.name`** on each span so Latitude ingest can attribute telemetry to your service. When using `initLatitude()`, the value is also applied to the `NodeTracerProvider` resource (falling back to `npm_package_name` or `"unknown"` when omitted).
+
 ## [3.0.0-alpha.2] - 2026-04-07
 
 ### Changed
