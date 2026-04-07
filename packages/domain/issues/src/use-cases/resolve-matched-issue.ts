@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { IssueRepository } from "../ports/issue-repository.ts"
 
 export interface ResolveMatchedIssueInput {
+  readonly organizationId: string
   readonly projectId: string
   readonly matchedIssueUuid: string | null
 }

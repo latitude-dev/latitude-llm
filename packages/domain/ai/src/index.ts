@@ -74,23 +74,31 @@ export interface RerankResult {
 }
 
 // ---------------------------------------------------------------------------
+// AI capability services
+// ---------------------------------------------------------------------------
+
+export interface AIGenerateShape {
+  generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
+}
+
+export interface AIEmbedShape {
+  embed(input: EmbedInput): Effect.Effect<EmbedResult, AIError>
+}
+
+export interface AIRerankShape {
+  rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
+}
+
+export type AIShape = AIGenerateShape & AIEmbedShape & AIRerankShape
+
+export class AIGenerate extends ServiceMap.Service<AIGenerate, AIGenerateShape>()("@domain/ai/AIGenerate") {}
+
+export class AIEmbed extends ServiceMap.Service<AIEmbed, AIEmbedShape>()("@domain/ai/AIEmbed") {}
+
+export class AIRerank extends ServiceMap.Service<AIRerank, AIRerankShape>()("@domain/ai/AIRerank") {}
+
+// ---------------------------------------------------------------------------
 // Unified AI service
 // ---------------------------------------------------------------------------
 
-export class AI extends ServiceMap.Service<
-  AI,
-  {
-    generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
-    embed(input: EmbedInput): Effect.Effect<EmbedResult, AIError>
-    rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
-  }
->()("@domain/ai/AI") {}
-
-export { withAICache } from "./cache.ts"
-
-export class AICredentials extends ServiceMap.Service<
-  AICredentials,
-  {
-    getApiKey(provider: string): Effect.Effect<string, AICredentialError>
-  }
->()("@domain/ai/AICredentials") {}
+export class AI extends ServiceMap.Service<AI, AIShape>()("@domain/ai/AI") {}

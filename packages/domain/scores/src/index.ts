@@ -66,9 +66,7 @@ export {
   listSourceScoresUseCase,
 } from "./use-cases/list-scores.ts"
 export {
-  type SyncScoreAnalyticsError,
   type SyncScoreAnalyticsInput,
-  syncScoreAnalyticsInputSchema,
   syncScoreAnalyticsUseCase,
 } from "./use-cases/save-score-analytics.ts"
 export {

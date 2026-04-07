@@ -221,15 +221,16 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - issue-linked evaluation scores bypass discovery and assign directly
 - annotations are primary, but unlinked failed evaluation scores and failed custom scores may also create new issues
 - when discovery creates a brand-new issue, the workflow goes through a dedicated create-from-score step that generates issue details from the initial occurrence before the first issue row is persisted
-- issue name/description regeneration runs through the debounced `issues:refresh` task
+- issue name/description regeneration for existing issues runs through the debounced `issues:refresh` task keyed by the canonical issue id
 - new issues are named from occurrences; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
 - the proven v1 search shape is hybrid Weaviate search with `RelativeScore` fusion, then Voyage reranking
 - v2 keeps the v1 storage split of Postgres state plus Weaviate projection, but upgrades tenancy and product search behavior intentionally
 - in the `issue-discovery` workflow, keep retrieval as explicit sequential activities: feedback embedding/normalization, hybrid Weaviate search, then reranking
-- the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues
+- the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues from the last `25` assigned occurrences plus the current details as the stabilization baseline
 - after rerank picks a candidate, the workflow resolves that matched issue against canonical Postgres state before deciding between the separate create-from-score and assign-to-issue activities
 - the create-from-score and assign-to-issue activities re-check canonical Postgres state, conditionally claim `scores.issue_id`, persist the canonical issue row and centroid update, then the workflow runs direct `syncIssueProjectionsUseCase` and `syncScoreAnalyticsUseCase` activities after commit; only assignments into an existing issue write `IssueRefreshRequested` transactionally for later debounced issue-details regeneration
+- the `issues:refresh` worker must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update, and it reruns `syncIssueProjectionsUseCase` only when the persisted name/description actually changed
 - existing-issue assignment must lock the canonical issue row before recomputing and saving centroid state so concurrent discovery workflows targeting the same issue serialize their centroid updates instead of losing one occurrence
 - resolved and ignored issues remain valid match targets in discovery; lifecycle semantics are handled after assignment (including regression and ignored ownership behavior), not by pre-filtering them out of retrieval
 - after rerank selects a best candidate, verify the selected issue row still exists in Postgres for the same organization/project before assignment; if missing, treat as no-match and create a new issue

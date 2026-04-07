@@ -188,7 +188,10 @@ export const createScoresRoutes = () => {
         }
 
         if (isImmutableScore(score)) {
-          yield* syncScoreAnalyticsUseCase({ scoreId: score.id })
+          yield* syncScoreAnalyticsUseCase({
+            organizationId: score.organizationId,
+            scoreId: score.id,
+          })
         }
 
         return score

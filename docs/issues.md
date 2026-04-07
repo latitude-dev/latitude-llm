@@ -44,6 +44,7 @@ Rules:
 - eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher starts `issue-discovery` from that event
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
 - debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
+- `IssueRefreshRequested` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour debounce window
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - issue-generated evaluation creation is also asynchronous: kickoff returns a `jobId`, and the frontend polls a status endpoint backed by a Redis job-status key for that alignment run
 
@@ -136,7 +137,7 @@ Issue discovery should follow the original proposal closely:
 16. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
 17. after the create or assign transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
 18. after the same transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`
+19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
 
 Execution rules:
 
@@ -145,6 +146,8 @@ Execution rules:
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
 - the brand-new issue path must generate its first name/description before the issue row is first persisted, and that synchronous generation step must reuse the same shared issue-details generation use case that later debounced refreshes call
+- the debounced `issues:refresh` path must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update
+- after `issues:refresh` persists changed details, it must upsert the Weaviate issue projection again; if the issue disappeared or the generated details were unchanged, it should skip the projection write
 - after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
 - both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
 - the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions

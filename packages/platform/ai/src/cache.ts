@@ -1,31 +1,20 @@
-import type { CacheStoreShape } from "@domain/shared"
+import {
+  type AICredentialError,
+  AIError,
+  type AIShape,
+  type EmbedInput,
+  type EmbedResult,
+  type GenerateInput,
+  type GenerateResult,
+  type RerankInput,
+  type RerankResult,
+} from "@domain/ai"
+import type { CacheStoreShape } from "@platform/cache-redis"
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect, Schema } from "effect"
-import { AIError } from "./errors.ts"
-import type {
-  AICredentialError,
-  EmbedInput,
-  EmbedResult,
-  GenerateInput,
-  GenerateResult,
-  RerankInput,
-  RerankResult,
-} from "./index.ts"
 
-const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, AIError> =>
-  hash(input).pipe(
-    Effect.map((hashValue) => `ai:${namespace}:${hashValue}`),
-    Effect.mapError(
-      (cryptoError: CryptoError) =>
-        new AIError({
-          message: `AI cache key failed (${cryptoError.operation}): ${
-            cryptoError.cause instanceof Error ? cryptoError.cause.message : String(cryptoError.cause)
-          }`,
-          cause: cryptoError,
-        }),
-    ),
-  )
 const DEFAULT_AI_CACHE_TTL_SECONDS = 24 * 60 * 60
+
 const generateResultSchema = Schema.Struct({
   object: Schema.Unknown,
   tokens: Schema.Number,
@@ -52,26 +41,21 @@ const toAIError =
       cause,
     })
 
-/**
- * Applies cache-aside behavior to an existing `AI` implementation.
- *
- * Given the same inputs to `generate`, `embed`, or `rerank`, this wrapper
- * checks the cache first. On a miss it delegates to the underlying AI
- * implementation, serializes the result, and stores it before returning.
- *
- * `generate` is keyed on every field except `schema` (Zod objects are not
- * serializable). Two calls that differ only in schema shape but share the
- * same prompt/model/settings will share a cache entry — callers that need
- * schema-level isolation should add a discriminator via `providerOptions`.
- */
-export const withAICache = (
-  ai: {
-    generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
-    embed(input: EmbedInput): Effect.Effect<EmbedResult, AIError>
-    rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
-  },
-  cache: CacheStoreShape,
-) => ({
+const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, AIError> =>
+  hash({ namespace, input }).pipe(
+    Effect.map((hashValue) => `ai:${namespace}:${hashValue}`),
+    Effect.mapError(
+      (cause: CryptoError) =>
+        new AIError({
+          message: `AI cache key failed (${cause.operation}): ${
+            cause.cause instanceof Error ? cause.cause.message : String(cause.cause)
+          }`,
+          cause,
+        }),
+    ),
+  )
+
+export const withAiCache = (ai: AIShape, cache: CacheStoreShape): AIShape => ({
   generate: <T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError> =>
     Effect.gen(function* () {
       const { schema: _, ...hashable } = input
@@ -94,9 +78,9 @@ export const withAICache = (
         .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
         .pipe(Effect.mapError(toAIError("write")))
       return result
-    }),
+    }) as Effect.Effect<GenerateResult<T>, AIError | AICredentialError, never>,
 
-  embed: (input: EmbedInput) =>
+  embed: (input: EmbedInput): Effect.Effect<EmbedResult, AIError> =>
     Effect.gen(function* () {
       const key = yield* cacheKey("embed", input)
 
@@ -118,9 +102,9 @@ export const withAICache = (
         .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
         .pipe(Effect.mapError(toAIError("write")))
       return result
-    }),
+    }) as Effect.Effect<EmbedResult, AIError, never>,
 
-  rerank: (input: RerankInput) =>
+  rerank: (input: RerankInput): Effect.Effect<readonly RerankResult[], AIError> =>
     Effect.gen(function* () {
       const key = yield* cacheKey("rerank", input)
 
@@ -141,5 +125,5 @@ export const withAICache = (
         .set(key, encoded, { ttlSeconds: DEFAULT_AI_CACHE_TTL_SECONDS })
         .pipe(Effect.mapError(toAIError("write")))
       return result
-    }),
+    }) as Effect.Effect<readonly RerankResult[], AIError, never>,
 })
