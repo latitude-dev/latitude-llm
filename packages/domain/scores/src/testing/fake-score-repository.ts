@@ -11,9 +11,7 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
   const repository: ScoreRepositoryShape = {
     findById: (id) => {
       const score = scores.get(id)
-      if (!score) {
-        return Effect.fail(new NotFoundError({ entity: "Score", id }))
-      }
+      if (!score) return Effect.fail(new NotFoundError({ entity: "Score", id }))
       return Effect.succeed(score)
     },
     save: (score) => {

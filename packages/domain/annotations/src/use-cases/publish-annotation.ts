@@ -147,18 +147,20 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
 
     if (score.traceId !== null) {
       const traceRepository = yield* TraceRepository
-      const detail = yield* traceRepository.findByTraceId({
-        organizationId: OrganizationId(score.organizationId),
-        projectId: ProjectId(score.projectId),
-        traceId: TraceId(score.traceId),
-      })
+      const detail = yield* traceRepository
+        .findByTraceId({
+          organizationId: OrganizationId(score.organizationId),
+          projectId: ProjectId(score.projectId),
+          traceId: TraceId(score.traceId),
+        })
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
       if (detail) {
         if (resolvedSessionId === null) {
           resolvedSessionId = detail.sessionId
         }
         if (resolvedSpanId === null) {
           const spanRepository = yield* SpanRepository
-          const spans = yield* spanRepository.findByTraceId({
+          const spans = yield* spanRepository.listByTraceId({
             organizationId: OrganizationId(score.organizationId),
             traceId: TraceId(score.traceId),
           })

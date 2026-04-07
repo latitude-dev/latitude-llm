@@ -36,7 +36,7 @@ export const deleteAnnotationUseCase = (input: DeleteAnnotationInput) =>
         // If already in ClickHouse analytics, issue rare delete mutation
         const existsInAnalytics = yield* analyticsRepository.existsById(input.scoreId)
         if (existsInAnalytics) {
-          yield* analyticsRepository.deleteById(input.scoreId)
+          yield* analyticsRepository.delete(input.scoreId)
         }
       }),
     )

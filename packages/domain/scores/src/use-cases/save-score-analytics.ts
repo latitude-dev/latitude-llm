@@ -37,7 +37,7 @@ export const syncScoreAnalyticsUseCase = (input: SyncScoreAnalyticsInput) =>
     const score = yield* scoreRepository
       .findById(parsedInput.scoreId)
       .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
-    if (score === null || !isImmutableScore(score)) {
+    if (!score || !isImmutableScore(score)) {
       return
     }
 

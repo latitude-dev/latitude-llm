@@ -35,7 +35,7 @@ export const listMembers = createServerFn({ method: "GET" }).handler(async (): P
   const members = await Effect.runPromise(
     Effect.gen(function* () {
       const membershipRepo = yield* MembershipRepository
-      return yield* membershipRepo.findMembersWithUser(organizationId)
+      return yield* membershipRepo.listMembersWithUser(organizationId)
     }).pipe(withPostgres(MembershipRepositoryLive, client, organizationId)),
   )
 

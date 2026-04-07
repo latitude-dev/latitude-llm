@@ -45,7 +45,7 @@ function collectAllTraceIds(args: { readonly organizationId: OrganizationId; rea
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const page = yield* repo.findByProjectId({
+      const page = yield* repo.listByProjectId({
         organizationId: args.organizationId,
         projectId: args.projectId,
         options: { limit: PAGE_SIZE, ...(cursor ? { cursor } : {}) },
@@ -88,7 +88,7 @@ function fetchTraces(args: {
 }) {
   return Effect.gen(function* () {
     const repo = yield* TraceRepository
-    return yield* repo.findByTraceIds(args)
+    return yield* repo.listByTraceIds(args)
   })
 }
 

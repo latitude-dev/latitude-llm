@@ -121,11 +121,16 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
   const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
 
   const { repository: traceRepository } = createFakeTraceRepository({
-    findByTraceId: () => Effect.succeed(traceDetailForLookup),
+    findByTraceId: () => {
+      if (traceDetailForLookup === null) {
+        return Effect.fail(new NotFoundError({ entity: "Trace", id: "" }))
+      }
+      return Effect.succeed(traceDetailForLookup)
+    },
   })
 
   const { repository: spanRepository } = createFakeSpanRepository({
-    findByTraceId: () => Effect.succeed([publishDefaultCompletionSpan]),
+    listByTraceId: () => Effect.succeed([publishDefaultCompletionSpan]),
   })
 
   const defaultGenerate: AIGenerate = <T>(input: GenerateInput<T>) =>
@@ -143,9 +148,7 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
   const ScoreRepositoryTest = Layer.succeed(ScoreRepository, {
     findById: (id) => {
       const score = store.get(id)
-      if (!score) {
-        return Effect.fail(new NotFoundError({ entity: "Score", id }))
-      }
+      if (!score) return Effect.fail(new NotFoundError({ entity: "Score", id }))
       return Effect.succeed(score)
     },
     save: (score) =>

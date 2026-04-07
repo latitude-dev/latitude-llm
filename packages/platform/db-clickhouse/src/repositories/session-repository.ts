@@ -11,7 +11,7 @@ import {
   toRepositoryError,
 } from "@domain/shared"
 import type { Session, SessionListPage, SessionMetrics } from "@domain/spans"
-import { SessionRepository } from "@domain/spans"
+import { emptySessionMetrics, SessionRepository, type SessionRepositoryShape } from "@domain/spans"
 import { normalizeCHString } from "@repo/utils"
 import { Effect, Layer } from "effect"
 import { buildClickHouseWhere } from "../filter-builder.ts"
@@ -104,8 +104,8 @@ const toSessionNumericRollup = (min: string, max: string, avg: string, median: s
   sum: Number(sum),
 })
 
-const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics | null => {
-  if (!row || Number(row.row_count) === 0) return null
+const toSessionMetrics = (row: SessionMetricsRow | undefined): SessionMetrics => {
+  if (!row || Number(row.row_count) === 0) return emptySessionMetrics()
   return {
     durationNs: toSessionNumericRollup(
       row.duration_min,
@@ -205,30 +205,29 @@ export const SessionRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
-    return {
-      findByProjectId: ({ organizationId, projectId, options }) => {
-        const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
-        const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
-        const cmp = orderDir === "DESC" ? "<" : ">"
-        const limit = options.limit ?? 50
+    const listByProjectId: SessionRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
+      const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
+      const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
+      const cmp = orderDir === "DESC" ? "<" : ">"
+      const limit = options.limit ?? 50
 
-        const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
+      const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(options.filters)
 
-        const havingParts: string[] = [...havingClauses]
-        if (options.cursor) {
-          havingParts.push(
-            `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
+      const havingParts: string[] = [...havingClauses]
+      if (options.cursor) {
+        havingParts.push(
+          `(${sort.expr} ${cmp} {cursorSortValue:${sort.chType}}
               OR (${sort.expr} = {cursorSortValue:${sort.chType}}
                   AND session_id ${cmp} {cursorSessionId:String}))`,
-          )
-        }
-        const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
-        const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+        )
+      }
+      const havingClause = havingParts.length > 0 ? `HAVING ${havingParts.join(" AND ")}` : ""
+      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
 
-        return chSqlClient
-          .query(async (client) => {
-            const result = await client.query({
-              query: `SELECT ${LIST_SELECT}
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT ${LIST_SELECT}
                       FROM sessions
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -237,38 +236,41 @@ export const SessionRepositoryLive = Layer.effect(
                       ${havingClause}
                       ORDER BY ${sort.expr} ${orderDir}, session_id ${orderDir}
                       LIMIT {limit:UInt32}`,
-              query_params: {
-                organizationId: organizationId as string,
-                projectId: projectId as string,
-                limit: limit + 1,
-                ...filterParams,
-                ...(options.cursor
-                  ? {
-                      cursorSortValue: options.cursor.sortValue,
-                      cursorSessionId: options.cursor.sessionId,
-                    }
-                  : {}),
-              },
-              format: "JSONEachRow",
-            })
-            return result.json<SessionListRow>()
+            query_params: {
+              organizationId: organizationId as string,
+              projectId: projectId as string,
+              limit: limit + 1,
+              ...filterParams,
+              ...(options.cursor
+                ? {
+                    cursorSortValue: options.cursor.sortValue,
+                    cursorSessionId: options.cursor.sessionId,
+                  }
+                : {}),
+            },
+            format: "JSONEachRow",
           })
-          .pipe(
-            Effect.map((rows): SessionListPage => {
-              const hasMore = rows.length > limit
-              const pageRows = hasMore ? rows.slice(0, limit) : rows
-              const items = pageRows.map(toDomainSession)
-              const last = hasMore ? pageRows[pageRows.length - 1] : undefined
-              if (!last) return { items, hasMore }
-              return {
-                items,
-                hasMore,
-                nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
-              }
-            }),
-            Effect.mapError((error) => toRepositoryError(error, "findByProjectId")),
-          )
-      },
+          return result.json<SessionListRow>()
+        })
+        .pipe(
+          Effect.map((rows): SessionListPage => {
+            const hasMore = rows.length > limit
+            const pageRows = hasMore ? rows.slice(0, limit) : rows
+            const items = pageRows.map(toDomainSession)
+            const last = hasMore ? pageRows[pageRows.length - 1] : undefined
+            if (!last) return { items, hasMore }
+            return {
+              items,
+              hasMore,
+              nextCursor: { sortValue: String(last[sort.rowKey]), sessionId: last.session_id },
+            }
+          }),
+          Effect.mapError((error) => toRepositoryError(error, "listByProjectId")),
+        )
+    }
+
+    return {
+      listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) => {
         const { havingClauses, whereClauses, params: filterParams } = buildSessionFilterClauses(filters)

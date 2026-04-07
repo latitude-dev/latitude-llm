@@ -68,7 +68,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
     const page = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SessionRepository
-        return yield* repo.findByProjectId({
+        return yield* repo.listByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           options: {
@@ -121,7 +121,7 @@ export const getSessionBySessionId = createServerFn({ method: "GET" })
     const page = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SessionRepository
-        return yield* repo.findByProjectId({
+        return yield* repo.listByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           options: {

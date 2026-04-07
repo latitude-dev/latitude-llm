@@ -15,10 +15,10 @@ export const createFakeMembershipRepository = (overrides?: Partial<MembershipRep
       return Effect.succeed(m)
     },
 
-    findByOrganizationId: (organizationId) =>
+    listByOrganizationId: (organizationId) =>
       Effect.succeed([...memberships.values()].filter((m) => m.organizationId === organizationId)),
 
-    findByUserId: (userId) => Effect.succeed([...memberships.values()].filter((m) => m.userId === userId)),
+    listByUserId: (userId) => Effect.succeed([...memberships.values()].filter((m) => m.userId === userId)),
 
     findByOrganizationAndUser: (organizationId, userId) => {
       const m = [...memberships.values()].find((m) => m.organizationId === organizationId && m.userId === userId)
@@ -26,7 +26,7 @@ export const createFakeMembershipRepository = (overrides?: Partial<MembershipRep
       return Effect.succeed(m)
     },
 
-    findMembersWithUser: () => Effect.succeed([]),
+    listMembersWithUser: () => Effect.succeed([]),
 
     isMember: (organizationId, userId) =>
       Effect.succeed([...memberships.values()].some((m) => m.organizationId === organizationId && m.userId === userId)),

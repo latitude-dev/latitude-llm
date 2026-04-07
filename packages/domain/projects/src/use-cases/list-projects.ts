@@ -13,7 +13,7 @@ export const listAllProjectsUseCase = (
 ): Effect.Effect<readonly Project[], RepositoryError, ProjectRepository> =>
   Effect.gen(function* () {
     const repo = yield* ProjectRepository
-    if (input.includeDeleted) return yield* repo.findAllIncludingDeleted()
+    if (input.includeDeleted) return yield* repo.listIncludingDeleted()
 
-    return yield* repo.findAll()
+    return yield* repo.list()
   })

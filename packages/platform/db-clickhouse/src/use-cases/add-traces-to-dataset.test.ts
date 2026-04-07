@@ -42,7 +42,7 @@ const ch = setupTestClickHouse()
 
 function makeFakeTraceRepository(traces: TraceDetail[]) {
   return createFakeTraceRepository({
-    findByTraceIds: () => Effect.succeed(traces),
+    listByTraceIds: () => Effect.succeed(traces),
   }).repository
 }
 

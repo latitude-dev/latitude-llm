@@ -1,4 +1,4 @@
-import { RepositoryError } from "@domain/shared"
+import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import type { Issue } from "../entities/issue.ts"
 import type { IssueRepositoryShape } from "../ports/issue-repository.ts"
@@ -8,46 +8,43 @@ export const createFakeIssueRepository = (seed: readonly Issue[] = [], overrides
 
   const repository: IssueRepositoryShape = {
     findById: (id) =>
-      Effect.try({
-        try: () => issues.get(id) ?? null,
-        catch: (cause) => new RepositoryError({ cause, operation: "IssueRepository.findById" }),
+      Effect.gen(function* () {
+        const issue = issues.get(id)
+        if (!issue) return yield* new NotFoundError({ entity: "Issue", id })
+        return issue
       }),
 
     findByIdForUpdate: (id) =>
-      Effect.try({
-        try: () => issues.get(id) ?? null,
-        catch: (cause) => new RepositoryError({ cause, operation: "IssueRepository.findByIdForUpdate" }),
+      Effect.gen(function* () {
+        const issue = issues.get(id)
+        if (!issue) return yield* new NotFoundError({ entity: "Issue", id })
+        return issue
       }),
 
     findByUuid: ({ projectId, uuid }) =>
-      Effect.try({
-        try: () => [...issues.values()].find((issue) => issue.projectId === projectId && issue.uuid === uuid) ?? null,
-        catch: (cause) => new RepositoryError({ cause, operation: "IssueRepository.findByUuid" }),
+      Effect.gen(function* () {
+        const issue = [...issues.values()].find((i) => i.projectId === projectId && i.uuid === uuid)
+        if (!issue) return yield* new NotFoundError({ entity: "Issue", id: uuid })
+        return issue
       }),
 
     save: (issue) =>
-      Effect.try({
-        try: () => {
-          issues.set(issue.id, issue)
-        },
-        catch: (cause) => new RepositoryError({ cause, operation: "IssueRepository.save" }),
+      Effect.sync(() => {
+        issues.set(issue.id, issue)
       }),
 
     list: ({ projectId, limit, offset }) =>
-      Effect.try({
-        try: () => {
-          const rows = [...issues.values()]
-            .filter((issue) => issue.projectId === projectId)
-            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-          const window = rows.slice(offset, offset + limit + 1)
-          return {
-            items: window.slice(0, limit),
-            hasMore: window.length > limit,
-            limit,
-            offset,
-          }
-        },
-        catch: (cause) => new RepositoryError({ cause, operation: "IssueRepository.list" }),
+      Effect.sync(() => {
+        const rows = [...issues.values()]
+          .filter((issue) => issue.projectId === projectId)
+          .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        const window = rows.slice(offset, offset + limit + 1)
+        return {
+          items: window.slice(0, limit),
+          hasMore: window.length > limit,
+          limit,
+          offset,
+        }
       }),
 
     ...overrides,

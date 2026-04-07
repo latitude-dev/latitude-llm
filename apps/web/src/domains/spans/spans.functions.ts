@@ -1,4 +1,4 @@
-import { NotFoundError, OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
+import { OrganizationId, ProjectId, SpanId, TraceId } from "@domain/shared"
 import type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode } from "@domain/spans"
 import { buildConversationSpanMaps, SpanRepository, TraceRepository } from "@domain/spans"
 import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
@@ -143,7 +143,7 @@ export const listSpansByTrace = createServerFn({ method: "GET" })
     const spans = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SpanRepository
-        return yield* repo.findByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
+        return yield* repo.listByTraceId({ organizationId: orgId, traceId: TraceId(data.traceId) })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
     )
     return spans.map(serializeSpan)
@@ -163,11 +163,13 @@ export const mapConversationToSpans = createServerFn({ method: "GET" })
           const spanRepo = yield* SpanRepository
 
           const [traceDetail, spans] = yield* Effect.all([
-            traceRepo.findByTraceId({
-              organizationId: orgId,
-              projectId: ProjectId(data.projectId),
-              traceId,
-            }),
+            traceRepo
+              .findByTraceId({
+                organizationId: orgId,
+                projectId: ProjectId(data.projectId),
+                traceId,
+              })
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null))),
             spanRepo.findMessagesForTrace({ organizationId: orgId, traceId }),
           ])
 
@@ -194,8 +196,5 @@ export const getSpanDetail = createServerFn({ method: "GET" })
         })
       }).pipe(withClickHouse(SpanRepositoryLive, getClickhouseClient(), orgId)),
     )
-    if (!span) {
-      throw new NotFoundError({ entity: "Span", id: data.spanId })
-    }
     return serializeSpanDetail(span)
   })

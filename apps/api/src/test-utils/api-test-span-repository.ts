@@ -6,7 +6,7 @@ import { Effect, Layer } from "effect"
 const placeholderProjectId = ProjectId("0".repeat(24))
 
 const { repository: apiTestSpanRepository } = createFakeSpanRepository({
-  findByTraceId: (input) =>
+  listByTraceId: (input) =>
     Effect.succeed([
       stubListSpan({
         organizationId: input.organizationId,

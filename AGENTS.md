@@ -71,6 +71,10 @@ details when the documentation isn't enough.
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `src/helpers.ts`.
 - Schemas and types that exist only as inputs to one domain use-case should be defined in that use-case file. Only promote them into shared modules when several use-cases truly share the same contract.
 
+## Repository method naming
+
+- Standard verbs for domain repository ports: `findById`, `findByXxx` (unique lookup), `listByXxx` or `list` (collections), `save` (create/update), explicit `delete` vs `softDelete`, and specialized names for analytics (`aggregateBy*`, `countBy*`, etc.). Full rules, examples, and a port-by-port audit live in [docs/repositories.md](docs/repositories.md).
+
 ## Async Contract Scoping Convention
 
 - Reliability domain-event payloads, queue topic/task payloads, and workflow inputs should include both `organizationId` and `projectId` by default so async execution remains project-scoped end-to-end.

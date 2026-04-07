@@ -41,14 +41,17 @@ export const resolveWriteAnnotationTraceContext = (input: {
     }
 
     const traceRepository = yield* TraceRepository
-    const detail = yield* traceRepository.findByTraceId({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      traceId: input.traceId,
-    })
-    if (!detail) {
-      return yield* new BadRequestError({ message: "Trace not found for annotation" })
-    }
+    const detail = yield* traceRepository
+      .findByTraceId({
+        organizationId: input.organizationId,
+        projectId: input.projectId,
+        traceId: input.traceId,
+      })
+      .pipe(
+        Effect.catchTag("NotFoundError", () =>
+          Effect.fail(new BadRequestError({ message: "Trace not found for annotation" })),
+        ),
+      )
 
     if (needsTraceForAnchor && input.anchor) {
       const resolved = resolveAnnotationAnchorText(detail.allMessages, input.anchor)
@@ -65,7 +68,7 @@ export const resolveWriteAnnotationTraceContext = (input: {
 
     if (needsSpanResolution) {
       const spanRepository = yield* SpanRepository
-      const spans = yield* spanRepository.findByTraceId({
+      const spans = yield* spanRepository.listByTraceId({
         organizationId: input.organizationId,
         traceId: input.traceId,
       })

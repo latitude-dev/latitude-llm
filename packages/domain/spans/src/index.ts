@@ -39,7 +39,7 @@ export type {
   SessionMetrics,
   SessionRepositoryShape,
 } from "./ports/session-repository.ts"
-export { SessionRepository } from "./ports/session-repository.ts"
+export { emptySessionMetrics, SessionRepository } from "./ports/session-repository.ts"
 export type { SpanListOptions, SpanMessagesData, SpanRepositoryShape } from "./ports/span-repository.ts"
 export { SpanRepository } from "./ports/span-repository.ts"
 export type {
@@ -52,7 +52,7 @@ export type {
   TraceRepositoryShape,
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
-export { TraceRepository } from "./ports/trace-repository.ts"
+export { emptyTraceMetrics, TraceRepository } from "./ports/trace-repository.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"

@@ -56,7 +56,7 @@ describe("createApiKeysWorker", () => {
     const keys = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ApiKeyRepository
-        return yield* repo.findAll()
+        return yield* repo.list()
       }).pipe(withPostgres(ApiKeyRepositoryLive, pg.appPostgresClient, ORG_ID)),
     )
 

@@ -17,13 +17,13 @@ export class MembershipRepository extends ServiceMap.Service<
   MembershipRepository,
   {
     findById: (id: MembershipId) => Effect.Effect<Membership, NotFoundError | RepositoryError>
-    findByOrganizationId: (organizationId: OrganizationId) => Effect.Effect<Membership[], RepositoryError>
-    findByUserId: (userId: string) => Effect.Effect<Membership[], RepositoryError>
+    listByOrganizationId: (organizationId: OrganizationId) => Effect.Effect<Membership[], RepositoryError>
+    listByUserId: (userId: string) => Effect.Effect<Membership[], RepositoryError>
     findByOrganizationAndUser: (
       organizationId: OrganizationId,
       userId: string,
     ) => Effect.Effect<Membership, NotFoundError | RepositoryError>
-    findMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError>
+    listMembersWithUser: (organizationId: OrganizationId) => Effect.Effect<MemberWithUser[], RepositoryError>
     isMember: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError>
     isAdmin: (organizationId: OrganizationId, userId: string) => Effect.Effect<boolean, RepositoryError>
     save: (membership: Membership) => Effect.Effect<void, RepositoryError>

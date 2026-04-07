@@ -4,6 +4,7 @@ import { SCORE_PUBLICATION_DEBOUNCE, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
+  NotFoundError,
   OrganizationId,
   OutboxEventWriter,
   ProjectId,
@@ -87,12 +88,17 @@ function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansFor
     options === undefined || options.traceDetail === undefined ? makeTraceDetail([]) : options.traceDetail
 
   const { repository: traceRepository } = createFakeTraceRepository({
-    findByTraceId: () => Effect.succeed(traceDetailForLookup),
+    findByTraceId: () => {
+      if (traceDetailForLookup === null) {
+        return Effect.fail(new NotFoundError({ entity: "Trace", id: "" }))
+      }
+      return Effect.succeed(traceDetailForLookup)
+    },
   })
 
   const spans = options?.spansForTrace ?? [defaultCompletionSpan()]
   const { repository: spanRepository } = createFakeSpanRepository({
-    findByTraceId: () => Effect.succeed([...spans]),
+    listByTraceId: () => Effect.succeed([...spans]),
   })
 
   const ScoreRepositoryTest = Layer.succeed(ScoreRepository, scoreRepository)

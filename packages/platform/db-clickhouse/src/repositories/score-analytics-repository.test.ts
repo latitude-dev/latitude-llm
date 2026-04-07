@@ -69,10 +69,10 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
-  // deleteById (lightweight DELETE — rows masked from SELECTs)
+  // delete (lightweight DELETE — rows masked from SELECTs)
   // ------------------------------------------------------------------
 
-  describe("deleteById", () => {
+  describe("delete", () => {
     it("hides the score from existsById and aggregates after lightweight delete", async () => {
       const id = "dddddddddddddddddddddddd"
       await insertScores([makeScoreRow({ id, value: 0.99, passed: true, cost: 999, tokens: 10, duration: 1 })])
@@ -84,7 +84,7 @@ describe("ScoreAnalyticsRepository", () => {
       )
       const countBefore = beforeAgg.totalScores
 
-      await Effect.runPromise(repo.deleteById(id as ScoreId))
+      await Effect.runPromise(repo.delete(id as ScoreId))
 
       expect(await Effect.runPromise(repo.existsById(id as ScoreId))).toBe(false)
 

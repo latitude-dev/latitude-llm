@@ -34,7 +34,7 @@ export const listApiKeys = createServerFn({ method: "GET" }).handler(async (): P
   const apiKeys = await Effect.runPromise(
     Effect.gen(function* () {
       const repo = yield* ApiKeyRepository
-      return yield* repo.findAll()
+      return yield* repo.list()
     }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
   )
 

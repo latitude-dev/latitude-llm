@@ -83,7 +83,7 @@ const buildListDataQueryOffset = (versionClause: string, searchClause: string, s
 }
 
 /**
- * Keyset: same shape as traces `findByProjectId` (trace-repository.ts) — cursor goes in HAVING
+ * Keyset: same shape as traces `listByProjectId` (trace-repository.ts) — cursor goes in HAVING
  * using SELECT aliases (`created_at`), not repeated aggregates like `min(created_at)` (that nested
  * aggregate error). ClickHouse allows aliases from SELECT in HAVING.
  */

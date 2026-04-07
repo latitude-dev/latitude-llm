@@ -19,7 +19,7 @@ export const listOrganizations = createServerFn({ method: "GET" }).handler(async
   return await Effect.runPromise(
     Effect.gen(function* () {
       const repo = yield* OrganizationRepository
-      return yield* repo.findByUserId(UserId(userId))
+      return yield* repo.listByUserId(UserId(userId))
     }).pipe(withPostgres(repoLayer, client)),
   )
 })

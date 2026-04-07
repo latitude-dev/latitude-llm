@@ -111,10 +111,13 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
           } satisfies AssignScoreToIssueResult
         }
 
-        const issue = yield* issueRepository.findByIdForUpdate(IssueId(input.issueId))
-        if (!issue) {
-          return yield* new IssueNotFoundForAssignmentError({ issueId: input.issueId })
-        }
+        const issue = yield* issueRepository
+          .findByIdForUpdate(IssueId(input.issueId))
+          .pipe(
+            Effect.catchTag("NotFoundError", () =>
+              Effect.fail(new IssueNotFoundForAssignmentError({ issueId: input.issueId })),
+            ),
+          )
 
         const score = scoreResult.score
         const assignedAt = new Date()
