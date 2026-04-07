@@ -1,7 +1,7 @@
 import type { QueuePublisherShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
 import type { RedisClient } from "@platform/cache-redis"
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
+import { closeRedis, createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
@@ -35,6 +35,13 @@ export const getRedisClient = (): RedisClient => {
     redisInstance = createRedisClient(redisConn)
   }
   return redisInstance
+}
+
+export const closeRedisClient = async (): Promise<void> => {
+  if (redisInstance) {
+    await closeRedis(redisInstance)
+    redisInstance = undefined
+  }
 }
 
 export const getQueuePublisher = (): Promise<QueuePublisherShape> => {

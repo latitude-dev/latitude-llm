@@ -6,7 +6,7 @@ import { isHttpError, toHttpResponse } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
-import { getQueuePublisher } from "./clients.ts"
+import { closeRedisClient, getQueuePublisher, getRedisClient } from "./clients.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
 import { registerRoutes } from "./routes/index.ts"
 import type { IngestEnv } from "./types.ts"
@@ -35,7 +35,7 @@ const start = async () => {
     return c.json({ error: "Internal server error" }, 500)
   })
 
-  registerRoutes({ app })
+  registerRoutes({ app, redis: getRedisClient() })
 
   const server = serve(
     {
@@ -64,6 +64,12 @@ const start = async () => {
       }
     } catch (error) {
       logger.error("Error during shutdown", error)
+    }
+
+    try {
+      await closeRedisClient()
+    } catch (error) {
+      logger.error("Failed to close Redis during shutdown", error)
     }
 
     await shutdownObservability()

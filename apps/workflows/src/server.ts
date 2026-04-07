@@ -1,13 +1,14 @@
 import { existsSync } from "node:fs"
 import { createServer } from "node:http"
 import { join } from "node:path"
+import { checkRedisHealth } from "@platform/cache-redis"
 import { parseEnv } from "@platform/env"
 import { loadTemporalConfig, runTemporalWorker } from "@platform/workflows-temporal"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import * as activities from "./activities/index.ts"
-import { getClickhouseClient } from "./clients.ts"
+import { closeRedisClient, getClickhouseClient, getRedisClient } from "./clients.ts"
 
 loadDevelopmentEnvironments(import.meta.url)
 
@@ -38,11 +39,24 @@ const bootstrap = async () => {
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKFLOWS_HEALTH_PORT", "number", 9091))
-  const healthServer = createServer((req, res) => {
+  const healthServer = createServer(async (req, res) => {
     if (req.url === "/health" && req.method === "GET") {
-      const status = ready ? 200 : 503
-      res.writeHead(status, { "Content-Type": "application/json" })
-      res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
+      if (!ready) {
+        res.writeHead(503, { "Content-Type": "application/json" })
+        res.end(JSON.stringify({ service: "workflows", status: "starting" }))
+        return
+      }
+      const redisReport = await checkRedisHealth(getRedisClient())
+      const redisOk = redisReport.ping === "ok"
+      const httpStatus = redisOk ? 200 : 503
+      res.writeHead(httpStatus, { "Content-Type": "application/json" })
+      res.end(
+        JSON.stringify({
+          service: "workflows",
+          status: redisOk ? "ok" : "degraded",
+          redis: redisReport,
+        }),
+      )
     } else {
       res.writeHead(404)
       res.end()
@@ -92,6 +106,12 @@ const bootstrap = async () => {
       }
     } catch (error) {
       logger.error("Error during shutdown (worker may not have started)", error)
+    }
+
+    try {
+      await closeRedisClient()
+    } catch (error) {
+      logger.error("Failed to close Redis during shutdown", error)
     }
 
     await shutdownObservability()

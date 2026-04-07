@@ -1,6 +1,6 @@
 import type { WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
-import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
+import { closeRedis, createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, type ClickhouseConfig, createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
@@ -60,6 +60,13 @@ export const getRedisClient = (): RedisClient => {
   }
 
   return redisInstance
+}
+
+export const closeRedisClient = async (): Promise<void> => {
+  if (redisInstance) {
+    await closeRedis(redisInstance)
+    redisInstance = undefined
+  }
 }
 
 function getTemporalConfig(): TemporalConfig {

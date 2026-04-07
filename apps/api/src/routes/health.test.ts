@@ -9,7 +9,11 @@ describe("GET /health", () => {
     expect(res.status).toBe(200)
 
     const body = await res.json()
-    expect(body).toEqual({ service: "api", status: "ok" })
+    expect(body).toMatchObject({
+      service: "api",
+      status: "ok",
+      redis: { status: "ready", ping: "ok" },
+    })
   })
 
   it<ApiTestContext>("should return JSON content type", async ({ app }) => {

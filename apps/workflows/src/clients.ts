@@ -12,7 +12,13 @@ import {
 import { AICredentialsLive } from "@platform/ai-credentials"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIVoyageLive, type CreateVoyageClientError, createVoyageClientEffect } from "@platform/ai-voyage"
-import { createRedisClient, createRedisConnection, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
+import {
+  closeRedis,
+  createRedisClient,
+  createRedisConnection,
+  RedisCacheStoreLive,
+  type RedisClient,
+} from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { createWeaviateClientEffect, IssueProjectionRepositoryLive } from "@platform/db-weaviate"
@@ -44,11 +50,18 @@ export const getClickhouseClient = (): ClickHouseClient => {
   return clickhouseClientInstance
 }
 
-const getRedisClient = (): RedisClient => {
+export const getRedisClient = (): RedisClient => {
   if (!redisInstance) {
     redisInstance = createRedisClient(createRedisConnection())
   }
   return redisInstance
+}
+
+export const closeRedisClient = async (): Promise<void> => {
+  if (redisInstance) {
+    await closeRedis(redisInstance)
+    redisInstance = undefined
+  }
 }
 
 const getAiServiceFromLayer = <E>(layer: Layer.Layer<AI, E, never>) =>

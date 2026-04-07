@@ -17,7 +17,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   const v1 = new OpenAPIHono<AppEnv>()
   const routes = new OpenAPIHono<ProtectedEnv>()
 
-  registerHealthRoute({ app })
+  registerHealthRoute({ app, redis: options.redis })
 
   v1.use("*", async (c, next) => {
     c.set("db", options.database.db)

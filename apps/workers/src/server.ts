@@ -1,4 +1,5 @@
 import { createServer } from "node:http"
+import { checkRedisHealth } from "@platform/cache-redis"
 import { createPollingOutboxConsumer } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
 import {
@@ -10,7 +11,13 @@ import {
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
+import {
+  closeRedisClient,
+  getClickhouseClient,
+  getPostgresClient,
+  getRedisClient,
+  getWorkflowStarter,
+} from "./clients.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
@@ -39,11 +46,24 @@ const bootstrap = async () => {
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
-  const healthServer = createServer((req, res) => {
+  const healthServer = createServer(async (req, res) => {
     if (req.url === "/health" && req.method === "GET") {
-      const status = ready ? 200 : 503
-      res.writeHead(status, { "Content-Type": "application/json" })
-      res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
+      if (!ready) {
+        res.writeHead(503, { "Content-Type": "application/json" })
+        res.end(JSON.stringify({ service: "workers", status: "starting" }))
+        return
+      }
+      const redisReport = await checkRedisHealth(getRedisClient())
+      const redisOk = redisReport.ping === "ok"
+      const httpStatus = redisOk ? 200 : 503
+      res.writeHead(httpStatus, { "Content-Type": "application/json" })
+      res.end(
+        JSON.stringify({
+          service: "workers",
+          status: redisOk ? "ok" : "degraded",
+          redis: redisReport,
+        }),
+      )
     } else {
       res.writeHead(404)
       res.end()
@@ -136,6 +156,12 @@ const bootstrap = async () => {
       await Effect.runPromise(queuePublisher.close())
     } catch (error) {
       logger.error("Error during shutdown (workers may not have started)", error)
+    }
+
+    try {
+      await closeRedisClient()
+    } catch (error) {
+      logger.error("Failed to close Redis during shutdown", error)
     }
 
     await shutdownObservability()

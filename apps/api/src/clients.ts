@@ -1,7 +1,7 @@
 import type { ClickHouseClient } from "@clickhouse/client"
 import type { QueuePublisherShape } from "@domain/queue"
 import type { RedisClient } from "@platform/cache-redis"
-import { createRedisClient, createRedisConnection } from "@platform/cache-redis"
+import { closeRedis, createRedisClient, createRedisConnection } from "@platform/cache-redis"
 import { createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv } from "@platform/env"
@@ -54,6 +54,16 @@ export const getRedisClient = (): RedisClient => {
     redisInstance = createRedisClient(redisConn)
   }
   return redisInstance
+}
+
+/**
+ * Close the singleton Redis connection if it was opened. Idempotent.
+ */
+export const closeRedisClient = async (): Promise<void> => {
+  if (redisInstance) {
+    await closeRedis(redisInstance)
+    redisInstance = undefined
+  }
 }
 
 export const getQueuePublisher = (): Promise<QueuePublisherShape> => {

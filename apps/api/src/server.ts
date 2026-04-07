@@ -8,7 +8,13 @@ import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import type { Hono } from "hono"
 import { logger as honoLogger } from "hono/logger"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher, getRedisClient } from "./clients.ts"
+import {
+  closeRedisClient,
+  getClickhouseClient,
+  getPostgresClient,
+  getQueuePublisher,
+  getRedisClient,
+} from "./clients.ts"
 import { registerCorsMiddleware } from "./middleware/cors.ts"
 import { honoErrorHandler } from "./middleware/error-handler.ts"
 import { destroyTouchBuffer } from "./middleware/touch-buffer.ts"
@@ -79,6 +85,13 @@ const startServer = async () => {
       logger.info("Touch buffer flushed successfully")
     } catch (error) {
       logger.error(`Failed to flush touch buffer: ${error instanceof Error ? error.message : "Unknown error"}`)
+    }
+
+    try {
+      await closeRedisClient()
+      logger.info("Redis connection closed")
+    } catch (error) {
+      logger.error(`Failed to close Redis: ${error instanceof Error ? error.message : "Unknown error"}`)
     }
 
     await shutdownObservability()
