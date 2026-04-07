@@ -1,7 +1,6 @@
 import {
   type AICredentialError,
   AIError,
-  type AIShape,
   type EmbedInput,
   type EmbedResult,
   type GenerateInput,
@@ -10,7 +9,6 @@ import {
   type RerankResult,
 } from "@domain/ai"
 import type { CacheStoreShape } from "@platform/cache-redis"
-import { type CryptoError, hash } from "@repo/utils"
 import { Effect, Schema } from "effect"
 
 const DEFAULT_AI_CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -40,6 +38,25 @@ const toAIError =
       message: `AI cache ${operation} failed: ${cause instanceof Error ? cause.message : String(cause)}`,
       cause,
     })
+
+const stableStringify = (value: unknown): string =>
+  JSON.stringify(value, (_key, currentValue) => {
+    if (currentValue === null || typeof currentValue !== "object" || Array.isArray(currentValue)) {
+      return currentValue
+    }
+
+    return Object.fromEntries(
+      Object.entries(currentValue)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nestedValue]) => [key, nestedValue]),
+    )
+  })
+
+const cacheKey = (operation: string, input: unknown): Effect.Effect<string, AIError> =>
+  Effect.try({
+    try: () => `ai:${operation}:${stableStringify(input)}`,
+    catch: toAIError("key"),
+  })
 
 /**
  * Applies cache-aside behavior to an existing `AI` implementation.

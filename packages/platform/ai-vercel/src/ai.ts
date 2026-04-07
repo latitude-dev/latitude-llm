@@ -1,11 +1,16 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
-import { AI, AICredentials, AIError, type GenerateInput, withAICache } from "@domain/ai"
-import { CacheStore } from "@domain/shared"
-import { isLatitudeAiProvider, LATITUDE_AI_PROVIDERS } from "@platform/ai-credentials"
+import {
+  AICredentialError,
+  AIError,
+  AIGenerate,
+  type AIGenerateShape,
+  type GenerateInput,
+  type GenerateResult,
+} from "@domain/ai"
 import { runWithAiTelemetry } from "@platform/ai-latitude"
 import { generateText, Output } from "ai"
-import { Effect, Layer, Option } from "effect"
+import { Effect, Layer } from "effect"
 
 type GenerateTextCall = Parameters<typeof generateText>[0]
 type ProviderOptions = NonNullable<GenerateTextCall["providerOptions"]>
@@ -13,33 +18,56 @@ type ProviderModel = GenerateTextCall["model"]
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
 
+const getRequiredApiKey = (provider: string, envVar: string): Effect.Effect<string, AICredentialError> => {
+  const apiKey = process.env[envVar]
+
+  if (apiKey && apiKey.length > 0) {
+    return Effect.succeed(apiKey)
+  }
+
+  return Effect.fail(
+    new AICredentialError({
+      provider,
+      message: `${provider === "anthropic" ? "Anthropic" : "OpenAI"} is unavailable: set ${envVar}.`,
+    }),
+  )
+}
+
 /**
  * Creates a Vercel AI SDK language model for supported providers.
- * Failures are returned on the Effect error channel (no synchronous throw for expected cases).
+ * Failures are returned on the Effect error channel.
  */
-export const createProviderModel = (provider: string, model: string, apiKey: string): ProviderModel => {
+export const createProviderModel = (
+  provider: string,
+  model: string,
+): Effect.Effect<ProviderModel, AICredentialError> => {
   switch (provider) {
     case "anthropic":
-      return createAnthropic({ apiKey })(model)
+      return getRequiredApiKey(provider, "LAT_ANTHROPIC_API_KEY").pipe(
+        Effect.map((apiKey) => createAnthropic({ apiKey })(model)),
+      )
     case "openai":
-      return createOpenAI({ apiKey })(model)
+      return getRequiredApiKey(provider, "LAT_OPENAI_API_KEY").pipe(
+        Effect.map((apiKey) => createOpenAI({ apiKey })(model)),
+      )
     default:
-      throw new Error(`Unsupported AI provider "${provider}".`)
+      return Effect.fail(
+        new AICredentialError({
+          provider,
+          message: `Unsupported AI provider "${provider}".`,
+          statusCode: 400,
+        }),
+      )
   }
 }
 
-export const AIVercelLive = Layer.effect(
-  AI,
+export const AIGenerateLive = Layer.effect(
+  AIGenerate,
   Effect.gen(function* () {
-    const credentials = yield* AICredentials
-    const maybeCache = yield* Effect.serviceOption(CacheStore)
-    const cache = Option.fromNullable(maybeCache)
-
-    const ai = {
+    return {
       generate: <T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError> =>
         Effect.gen(function* () {
-          const isLatitude = isLatitudeAiProvider(input.provider)
-          const apiKey = yield* credentials.get(input.provider)
+          const providerModel = yield* createProviderModel(input.provider, input.model)
 
           return yield* Effect.tryPromise({
             try: async () => {
@@ -47,7 +75,7 @@ export const AIVercelLive = Layer.effect(
                 const startTime = performance.now()
 
                 const call: GenerateTextCall = {
-                  model: createProviderModel(input.provider, input.model, apiKey),
+                  model: providerModel,
                   system: input.system,
                   prompt: input.prompt,
                   output: Output.object({ schema: input.schema }),
@@ -60,18 +88,18 @@ export const AIVercelLive = Layer.effect(
                   ...(input.frequencyPenalty !== undefined ? { frequencyPenalty: input.frequencyPenalty } : {}),
                   ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
                   ...(input.seed !== undefined ? { seed: input.seed } : {}),
-                  providerOptions: input.providerOptions as ProviderOptions,
+                  ...(input.providerOptions !== undefined
+                    ? { providerOptions: input.providerOptions as ProviderOptions }
+                    : {}),
                 }
 
                 const result = await generateText(call)
 
-                const durationNs = Math.round((performance.now() - startTime) * 1_000_000)
-
                 return {
                   object: result.output,
                   tokens: result.usage?.totalTokens ?? 0,
-                  duration: durationNs,
-                }
+                  duration: Math.round((performance.now() - startTime) * 1_000_000),
+                } satisfies GenerateResult<T>
               }
 
               return await runWithAiTelemetry(input.telemetry, execute)
@@ -83,15 +111,6 @@ export const AIVercelLive = Layer.effect(
               }),
           })
         }),
-
-      embed: () => Effect.fail(new AIError({ message: "embed is not provided by @platform/ai-vercel" })),
-
-      rerank: () => Effect.fail(new AIError({ message: "rerank is not provided by @platform/ai-vercel" })),
-    }
-
-    return Option.match(cache, {
-      onNone: () => ai,
-      onSome: (aiCache) => withAICache(ai, aiCache),
-    })
+    } satisfies AIGenerateShape
   }),
 )

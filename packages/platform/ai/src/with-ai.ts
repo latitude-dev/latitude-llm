@@ -1,7 +1,7 @@
 import { AI, AIEmbed, AIError, AIGenerate, AIRerank, type AIShape } from "@domain/ai"
 import { CacheStore, type CacheStoreShape, RedisCacheStoreLive, type RedisClient } from "@platform/cache-redis"
 import { Effect, Layer } from "effect"
-import { withAiCache } from "./cache.ts"
+import { withAICache } from "./cache.ts"
 
 type AIServiceShape = AIShape
 
@@ -64,7 +64,7 @@ export const createAiLayer = <A, E, R>(
     Effect.gen(function* () {
       const ai = yield* AI
       const cacheStore = yield* getCacheStore(redisClient)
-      return withAiCache(ai, cacheStore)
+      return withAICache(ai, cacheStore)
     }),
   ).pipe(Layer.provideMerge(aiLayer))
 }

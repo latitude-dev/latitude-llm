@@ -17,7 +17,6 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/shared": "workspace:*",
     "@latitude-data/telemetry": "catalog:",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",

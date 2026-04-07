@@ -15,7 +15,6 @@
   "dependencies": {
     "@domain/ai": "workspace:*",
     "@platform/cache-redis": "workspace:*",
-    "@repo/utils": "workspace:*",
     "effect": "catalog:"
   }
 }
