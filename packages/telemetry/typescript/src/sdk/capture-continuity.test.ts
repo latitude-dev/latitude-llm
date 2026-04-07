@@ -166,7 +166,7 @@ describe("capture trace continuity", () => {
   describe("smart filter", () => {
     it("should allow spans with latitude.capture.root through filter", () => {
       const mockReadableSpan = {
-        instrumentationLibrary: { name: "so.latitude.instrumentation.capture" },
+        instrumentationScope: { name: "so.latitude.instrumentation.capture" },
         attributes: { "latitude.capture.root": true },
       } as unknown as ReadableSpan
 
@@ -175,7 +175,7 @@ describe("capture trace continuity", () => {
 
     it("should allow spans with latitude.* attributes through filter", () => {
       const mockReadableSpan = {
-        instrumentationLibrary: { name: "some.other.tracer" },
+        instrumentationScope: { name: "some.other.tracer" },
         attributes: {
           "latitude.tags": '["test"]',
           "latitude.metadata": '{"key": "value"}',
@@ -187,7 +187,7 @@ describe("capture trace continuity", () => {
 
     it("should allow latitude scope spans through filter", () => {
       const mockReadableSpan = {
-        instrumentationLibrary: { name: "so.latitude.instrumentation.something" },
+        instrumentationScope: { name: "so.latitude.instrumentation.something" },
         attributes: {},
       } as unknown as ReadableSpan
 
