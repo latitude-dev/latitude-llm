@@ -1,7 +1,21 @@
-import { Button, cn, Icon, Text } from "@repo/ui"
-import { Link } from "@tanstack/react-router"
+import { Button, cn, Icon, Text, Tooltip, useToggleWithDefault } from "@repo/ui"
+import { extractLeadingEmoji } from "@repo/utils"
+import { useHotkeys } from "@tanstack/react-hotkeys"
+import { Link, useMatches } from "@tanstack/react-router"
 import { ChevronDown, ChevronRight, ChevronsUp, PanelLeft, PanelLeftClose } from "lucide-react"
 import { type ReactNode, useState } from "react"
+import { HotkeyBadge } from "../../components/hotkey-badge.tsx"
+
+function ProjectEmoji({ name }: { name: string }) {
+  const [emoji] = extractLeadingEmoji(name)
+  if (!emoji) return null
+
+  return (
+    <div className="w-6 h-6 rounded-lg bg-white border border-border flex items-center justify-center shrink-0">
+      <span className="text-sm leading-none">{emoji}</span>
+    </div>
+  )
+}
 
 export function NavItem({
   icon,
@@ -93,19 +107,22 @@ export function NavItem({
   )
 }
 
+function useShouldCollapseSidebar() {
+  const matches = useMatches()
+  return matches.some((m) => (m.staticData as { collapseSidebar?: boolean } | undefined)?.collapseSidebar === true)
+}
 export function AppSidebar({
   title,
   subtitle,
-  collapsed,
-  onToggleCollapse,
   children,
 }: {
-  title: ReactNode
+  title: string
   subtitle?: ReactNode
-  collapsed: boolean
-  onToggleCollapse: () => void
-  children: ReactNode
+  children: (props: { collapsed: boolean }) => ReactNode
 }) {
+  const autoCollapse = useShouldCollapseSidebar()
+  const [collapsed, toggleCollapsed] = useToggleWithDefault(autoCollapse)
+  useHotkeys([{ hotkey: "Mod+B", callback: toggleCollapsed }])
   return (
     <aside
       className={cn("flex h-full shrink-0 flex-col border-r border-border transition-all duration-200", {
@@ -124,16 +141,27 @@ export function AppSidebar({
               "w-full justify-between": !collapsed,
             })}
           >
-            {!collapsed && <div className="min-w-0 flex-1">{title}</div>}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onToggleCollapse}
-              className="h-8 w-8 shrink-0"
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ProjectEmoji name={title} />
+                  <Text.H5M ellipsis className="flex-1 min-w-0">
+                    {extractLeadingEmoji(title)[1]}
+                  </Text.H5M>
+                </div>
+              </div>
+            )}
+            <Tooltip
+              asChild
+              side="right"
+              trigger={
+                <Button variant="outline" size="icon" onClick={toggleCollapsed} className="h-8 w-8 shrink-0">
+                  <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
+                </Button>
+              }
             >
-              <Icon icon={collapsed ? PanelLeft : PanelLeftClose} size="sm" color="foregroundMuted" />
-            </Button>
+              {collapsed ? "Expand" : "Collapse"} <HotkeyBadge hotkey="Mod+B" />
+            </Tooltip>
           </div>
           {!collapsed && subtitle ? <div className="min-w-0">{subtitle}</div> : null}
         </div>
@@ -143,7 +171,7 @@ export function AppSidebar({
             "items-center": collapsed,
           })}
         >
-          {children}
+          {children({ collapsed })}
         </nav>
       </div>
     </aside>

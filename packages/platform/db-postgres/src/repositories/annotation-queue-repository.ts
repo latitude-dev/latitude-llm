@@ -150,19 +150,24 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
           )
         }
 
-        const whereBase = and(eq(annotationQueues.projectId, projectId), isNull(annotationQueues.deletedAt))
-        const where = cursorClause ? and(whereBase, cursorClause) : whereBase
         const [o1, o2] = orderClause(sortBy, sortDirection)
 
         return sqlClient
-          .query((db) =>
-            db
+          .query((db, organizationId) => {
+            const whereBase = and(
+              eq(annotationQueues.organizationId, organizationId),
+              eq(annotationQueues.projectId, projectId),
+              isNull(annotationQueues.deletedAt),
+            )
+            const where = cursorClause ? and(whereBase, cursorClause) : whereBase
+
+            return db
               .select()
               .from(annotationQueues)
               .where(where)
               .orderBy(o1, o2)
-              .limit(limit + 1),
-          )
+              .limit(limit + 1)
+          })
           .pipe(
             Effect.map((rows) => {
               const hasMore = rows.length > limit
@@ -185,12 +190,13 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
 
       findByIdInProject: ({ projectId, queueId }) =>
         sqlClient
-          .query((db) =>
+          .query((db, organizationId) =>
             db
               .select()
               .from(annotationQueues)
               .where(
                 and(
+                  eq(annotationQueues.organizationId, organizationId),
                   eq(annotationQueues.projectId, projectId),
                   eq(annotationQueues.id, queueId),
                   isNull(annotationQueues.deletedAt),

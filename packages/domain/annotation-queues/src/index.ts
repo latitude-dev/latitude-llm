@@ -33,6 +33,7 @@ export {
   type AnnotationQueueItemListSortBy,
   AnnotationQueueItemRepository,
   type AnnotationQueueItemRepositoryShape,
+  type FindAnnotationQueueItemInput,
   type ListAnnotationQueueItemsInput,
 } from "./ports/annotation-queue-item-repository.ts"
 export {

@@ -1,7 +1,6 @@
 import { eq } from "@tanstack/react-db"
-import { useQuery } from "@tanstack/react-query"
 import { useParams, useRouterState } from "@tanstack/react-router"
-import { getAnnotationQueueByProject } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
+import { useAnnotationQueue } from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
 import { BreadcrumbLink, BreadcrumbSeparator, BreadcrumbText } from "../../../../-components/breadcrumb-ui.tsx"
 
@@ -21,10 +20,9 @@ export function QueueBranchBreadcrumb() {
 
   const projectId = project?.id ?? ""
 
-  const { data: queue } = useQuery({
-    queryKey: ["annotation-queue", projectId, queueId],
-    queryFn: () => getAnnotationQueueByProject({ data: { projectId, queueId: queueId ?? "" } }),
-    enabled: projectId.length > 0 && (queueId?.length ?? 0) > 0,
+  const { data: queue } = useAnnotationQueue({
+    projectId,
+    queueId: queueId ?? "",
   })
 
   if (!projectSlug || !queueId) return null

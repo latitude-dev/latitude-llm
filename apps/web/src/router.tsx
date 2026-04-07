@@ -32,5 +32,7 @@ declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
     /** Optional header breadcrumb segment for this route (see `BreadcrumbTrail`). */
     readonly breadcrumb?: import("react").ComponentType
+    /** When true, the project sidebar auto-collapses for this route. */
+    readonly collapseSidebar?: boolean
   }
 }

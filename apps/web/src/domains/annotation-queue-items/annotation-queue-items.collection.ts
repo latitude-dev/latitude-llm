@@ -1,7 +1,11 @@
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { type AnnotationQueueItemRecord, listAnnotationQueueItemsByQueue } from "./annotation-queue-items.functions.ts"
+import {
+  type AnnotationQueueItemRecord,
+  getAnnotationQueueItemDetail,
+  listAnnotationQueueItemsByQueue,
+} from "./annotation-queue-items.functions.ts"
 
 const BATCH_SIZE = 50
 
@@ -65,4 +69,22 @@ export function useAnnotationQueueItemsInfiniteScroll({
   )
 
   return { data, isLoading, infiniteScroll }
+}
+
+export function useAnnotationQueueItem({
+  projectId,
+  queueId,
+  itemId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly queueId: string
+  readonly itemId: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: ["annotation-queue-item", projectId, queueId, itemId],
+    queryFn: () => getAnnotationQueueItemDetail({ data: { projectId, queueId, itemId } }),
+    enabled: enabled && projectId.length > 0 && queueId.length > 0 && itemId.length > 0,
+  })
 }

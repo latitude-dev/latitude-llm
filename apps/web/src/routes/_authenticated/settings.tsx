@@ -1,7 +1,5 @@
-import { Text } from "@repo/ui"
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router"
 import { Building2, Key, ShieldAlert, UserRound, Users } from "lucide-react"
-import { useState } from "react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
 
 export const Route = createFileRoute("/_authenticated/settings")({
@@ -19,25 +17,23 @@ const navItems = [
 function SettingsLayout() {
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
-  const [collapsed, setCollapsed] = useState(false)
-
   return (
     <div className="flex h-full">
-      <AppSidebar
-        title={<Text.H5M>Settings</Text.H5M>}
-        collapsed={collapsed}
-        onToggleCollapse={() => setCollapsed((v) => !v)}
-      >
-        {navItems.map(({ label, to, icon }) => (
-          <NavItem
-            key={to}
-            icon={icon}
-            label={label}
-            to={to}
-            active={pathname === to || pathname.startsWith(`${to}/`)}
-            collapsed={collapsed}
-          />
-        ))}
+      <AppSidebar title="Settings">
+        {({ collapsed }) => (
+          <>
+            {navItems.map(({ label, to, icon }) => (
+              <NavItem
+                key={to}
+                icon={icon}
+                label={label}
+                to={to}
+                active={pathname === to || pathname.startsWith(`${to}/`)}
+                collapsed={collapsed}
+              />
+            ))}
+          </>
+        )}
       </AppSidebar>
       <main className="flex-1 min-w-0 overflow-y-auto">
         <Outlet />

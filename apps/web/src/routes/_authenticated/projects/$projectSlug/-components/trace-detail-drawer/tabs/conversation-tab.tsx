@@ -8,7 +8,6 @@ import {
   type TextSelectionAnchor,
 } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import {
@@ -21,7 +20,7 @@ import {
   type AnnotationRecord,
   isDraftAnnotation,
 } from "../../../../../../../domains/annotations/annotations.functions.ts"
-import { mapConversationToSpans } from "../../../../../../../domains/spans/spans.functions.ts"
+import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import { AnnotationPopover } from "../-components/annotation-popover.tsx"
 import { MessageAnnotationRow } from "./conversation-tab/message-annotation-row.tsx"
@@ -41,7 +40,7 @@ function ConversationContent({
   isActive,
 }: {
   readonly traceDetail: TraceDetailRecord
-  readonly navigateToSpan: (spanId: string) => void
+  readonly navigateToSpan?: ((spanId: string) => void) | undefined
   readonly projectId: string
   readonly isActive: boolean
 }) {
@@ -49,12 +48,9 @@ function ConversationContent({
   const navigatorRef = useRef<ScrollNavigatorHandle>(null)
   const navItemRefs = useRef<(HTMLDivElement | null)[]>([])
 
-  const { data: spanMaps } = useQuery({
-    queryKey: ["conversationSpanMaps", projectId, traceDetail.traceId],
-    queryFn: () =>
-      mapConversationToSpans({
-        data: { projectId, traceId: traceDetail.traceId },
-      }),
+  const { data: spanMaps } = useConversationSpanMaps({
+    projectId,
+    traceId: traceDetail.traceId,
   })
 
   useHotkeys([
@@ -233,14 +229,14 @@ function ConversationContent({
   }
 
   const messageActions =
-    spanMaps && Object.keys(spanMaps.messageSpanMap).length > 0
+    navigateToSpan && spanMaps && Object.keys(spanMaps.messageSpanMap).length > 0
       ? new Map(
           Object.entries(spanMaps.messageSpanMap).map(([idx, spanId]) => [Number(idx), () => navigateToSpan(spanId)]),
         )
       : undefined
 
   const toolCallActions =
-    spanMaps && Object.keys(spanMaps.toolCallSpanMap).length > 0
+    navigateToSpan && spanMaps && Object.keys(spanMaps.toolCallSpanMap).length > 0
       ? new Map(
           Object.entries(spanMaps.toolCallSpanMap).map(([toolCallId, spanId]) => [
             toolCallId,
@@ -327,7 +323,8 @@ export function ConversationTab({
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
-  readonly navigateToSpan: (spanId: string) => void
+  /** Optional callback to navigate to a span. If not provided, message/tool call actions are hidden. */
+  readonly navigateToSpan?: ((spanId: string) => void) | undefined
   readonly projectId: string
   readonly isActive: boolean
 }) {

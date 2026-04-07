@@ -1,6 +1,7 @@
 import { Label, Switch, Text } from "@repo/ui"
+import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
-import { updateProjectMutation } from "../../../../domains/projects/projects.collection.ts"
+import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings")({
@@ -8,10 +9,18 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 })
 
 function ProjectSettingsPage() {
-  const { project } = Route.useRouteContext()
+  const { projectSlug } = Route.useParams()
+  const { project: routeProject } = Route.useRouteContext()
+
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
+    [projectSlug],
+  )
+
+  const currentProject = project ?? routeProject
 
   const handleKeepMonitoringChange = (checked: boolean) => {
-    updateProjectMutation(project.id, { settings: { keepMonitoring: checked } })
+    updateProjectMutation(currentProject.id, { settings: { keepMonitoring: checked } })
   }
 
   return (
@@ -36,7 +45,7 @@ function ProjectSettingsPage() {
               </div>
               <Switch
                 id="keep-monitoring"
-                checked={project.settings.keepMonitoring ?? true}
+                checked={currentProject.settings.keepMonitoring ?? true}
                 onCheckedChange={handleKeepMonitoringChange}
               />
             </div>

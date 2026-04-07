@@ -6,11 +6,7 @@ interface PickedOrgUser {
   readonly imageSrc: string | null
 }
 
-const UNKNOWN_USER: PickedOrgUser = {
-  id: "unknown",
-  name: "Unknown",
-  imageSrc: null,
-}
+const UNKNOWN_USER_NAME = "Unknown"
 
 function displayNameForMember(m: Pick<MemberRecord, "name" | "email">): string {
   const n = m.name?.trim()
@@ -33,7 +29,9 @@ export function pickUsersFromMembersMap(
 ): readonly PickedOrgUser[] {
   return userIds.map((id) => {
     const m = byUserId.get(id)
-    return m ? { id, name: displayNameForMember(m), imageSrc: m.image } : UNKNOWN_USER
+    return m
+      ? { id, name: displayNameForMember(m), imageSrc: m.image }
+      : { id, name: UNKNOWN_USER_NAME, imageSrc: null }
   })
 }
 
@@ -43,5 +41,7 @@ export function pickUserFromMembersMap(
 ): PickedOrgUser | null {
   if (!userId) return null
   const m = byUserId.get(userId)
-  return m ? { id: userId, name: displayNameForMember(m), imageSrc: m.image } : UNKNOWN_USER
+  return m
+    ? { id: userId, name: displayNameForMember(m), imageSrc: m.image }
+    : { id: userId, name: UNKNOWN_USER_NAME, imageSrc: null }
 }

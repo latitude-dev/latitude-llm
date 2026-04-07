@@ -34,8 +34,15 @@ export interface ListAnnotationQueueItemsInput {
   readonly options: AnnotationQueueItemListOptions
 }
 
+export interface FindAnnotationQueueItemInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly itemId: string
+}
+
 export interface AnnotationQueueItemRepositoryShape {
   listByQueue(input: ListAnnotationQueueItemsInput): Effect.Effect<AnnotationQueueItemListPage, RepositoryError>
+  findById(input: FindAnnotationQueueItemInput): Effect.Effect<AnnotationQueueItem | null, RepositoryError>
 }
 
 export class AnnotationQueueItemRepository extends ServiceMap.Service<
