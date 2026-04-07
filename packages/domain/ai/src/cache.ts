@@ -1,19 +1,30 @@
 import type { CacheStoreShape } from "@domain/shared"
-import { hash } from "@repo/utils"
+import { type CryptoError, hash } from "@repo/utils"
 import { Effect, Schema } from "effect"
-import {
-  type AICredentialError,
-  AIError,
-  type EmbedInput,
-  type EmbedResult,
-  type GenerateInput,
-  type GenerateResult,
-  type RerankInput,
-  type RerankResult,
+import { AIError } from "./errors.ts"
+import type {
+  AICredentialError,
+  EmbedInput,
+  EmbedResult,
+  GenerateInput,
+  GenerateResult,
+  RerankInput,
+  RerankResult,
 } from "./index.ts"
 
-const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, never> =>
-  Effect.map(hash(input), (hashValue) => `ai:${namespace}:${hashValue}`).pipe(Effect.orDie)
+const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, AIError> =>
+  hash(input).pipe(
+    Effect.map((hashValue) => `ai:${namespace}:${hashValue}`),
+    Effect.mapError(
+      (cryptoError: CryptoError) =>
+        new AIError({
+          message: `AI cache key failed (${cryptoError.operation}): ${
+            cryptoError.cause instanceof Error ? cryptoError.cause.message : String(cryptoError.cause)
+          }`,
+          cause: cryptoError,
+        }),
+    ),
+  )
 const DEFAULT_AI_CACHE_TTL_SECONDS = 24 * 60 * 60
 const generateResultSchema = Schema.Struct({
   object: Schema.Unknown,
