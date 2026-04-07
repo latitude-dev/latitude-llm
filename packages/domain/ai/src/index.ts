@@ -1,15 +1,13 @@
 import { type Effect, ServiceMap } from "effect"
 import type { z } from "zod"
+import type { AICredentialError, AIError } from "./errors.ts"
 
+export { AICredentialError, AIError } from "./errors.ts"
 export {
   formatGenAIConversation,
   formatGenAIMessage,
   formatGenAIPart,
 } from "./formatAi.ts"
-
-import type { AICredentialError, AIError } from "./errors.ts"
-
-export { AICredentialError, AIError } from "./errors.ts"
 
 // ---------------------------------------------------------------------------
 // Generate (structured object generation via LLM)

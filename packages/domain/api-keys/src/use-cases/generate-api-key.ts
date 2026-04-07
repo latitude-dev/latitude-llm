@@ -1,22 +1,13 @@
 import { type ApiKeyId, type RepositoryError, SqlClient, type ValidationError } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
 import { createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
+import { InvalidApiKeyNameError } from "../errors.ts"
 import { ApiKeyRepository } from "../ports/api-key-repository.ts"
 
 export interface GenerateApiKeyInput {
   readonly id?: ApiKeyId
   readonly name: string
-}
-
-export class InvalidApiKeyNameError extends Data.TaggedError("InvalidApiKeyNameError")<{
-  readonly name: string
-  readonly reason: string
-}> {
-  readonly httpStatus = 400
-  get httpMessage() {
-    return this.reason
-  }
 }
 
 export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError | CryptoError

@@ -1,5 +1,8 @@
-import { Data, Effect, ServiceMap } from "effect"
+import { Effect, ServiceMap } from "effect"
+import { StorageError } from "./errors.ts"
 import type { DatasetId, OrganizationId, ProjectId } from "./id.ts"
+
+export { StorageError }
 
 export interface StorageDiskPort {
   put(key: string, contents: string | Uint8Array): Promise<void>
@@ -9,14 +12,6 @@ export interface StorageDiskPort {
   getStream(key: string): Promise<ReadableStream<Uint8Array>>
   delete(key: string): Promise<void>
   getSignedUrl(key: string, options?: { expiresIn?: number }): Promise<string>
-}
-
-export class StorageError extends Data.TaggedError("StorageError")<{
-  readonly cause: unknown
-  readonly operation: string
-}> {
-  readonly httpStatus = 500
-  readonly httpMessage = "Storage operation failed"
 }
 
 export class StorageDisk extends ServiceMap.Service<StorageDisk, StorageDiskPort>()("@domain/shared/StorageDisk") {}

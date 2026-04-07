@@ -7,19 +7,17 @@ export {
   revoke,
   touch,
 } from "./entities/api-key.ts"
+export { ApiKeyAlreadyRevokedError, ApiKeyNotFoundError, InvalidApiKeyNameError } from "./errors.ts"
 export { ApiKeyRepository } from "./ports/api-key-repository.ts"
 
 export {
   type GenerateApiKeyError,
   type GenerateApiKeyInput,
   generateApiKeyUseCase,
-  InvalidApiKeyNameError,
 } from "./use-cases/generate-api-key.ts"
 
 export {
-  ApiKeyAlreadyRevokedError,
   ApiKeyCacheInvalidator,
-  ApiKeyNotFoundError,
   type RevokeApiKeyError,
   type RevokeApiKeyInput,
   revokeApiKeyUseCase,

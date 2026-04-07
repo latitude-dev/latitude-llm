@@ -1,7 +1,13 @@
-import type { OrganizationId, RepositoryError, UserId } from "@domain/shared"
-import { Data, Effect } from "effect"
+import type { OrganizationId, UserId } from "@domain/shared"
+import { Effect } from "effect"
 import type { Membership, MembershipRole } from "../entities/membership.ts"
-import { MembershipRepository } from "../index.ts"
+import {
+  CannotChangeOwnerRoleError,
+  CannotChangeOwnRoleError,
+  NotAdminError,
+  TargetMembershipNotFoundError,
+} from "../errors.ts"
+import { MembershipRepository } from "../ports/membership-repository.ts"
 
 export interface UpdateMemberRoleInput {
   readonly organizationId: OrganizationId
@@ -9,41 +15,6 @@ export interface UpdateMemberRoleInput {
   readonly targetUserId: UserId
   readonly newRole: MembershipRole
 }
-
-export class NotAdminError extends Data.TaggedError("NotAdminError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 403
-  readonly httpMessage = "Only admins can change member roles"
-}
-
-export class CannotChangeOwnerRoleError extends Data.TaggedError("CannotChangeOwnerRoleError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 400
-  readonly httpMessage = "Cannot change the owner's role. Use ownership transfer instead."
-}
-
-export class CannotChangeOwnRoleError extends Data.TaggedError("CannotChangeOwnRoleError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 400
-  readonly httpMessage = "You cannot change your own role"
-}
-
-class TargetMembershipNotFoundError extends Data.TaggedError("TargetMembershipNotFoundError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Target member not found"
-}
-
-export type UpdateMemberRoleError =
-  | RepositoryError
-  | NotAdminError
-  | CannotChangeOwnerRoleError
-  | CannotChangeOwnRoleError
-  | TargetMembershipNotFoundError
 
 export const updateMemberRoleUseCase = (input: UpdateMemberRoleInput) =>
   Effect.gen(function* () {

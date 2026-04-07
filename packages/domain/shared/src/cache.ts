@@ -1,14 +1,7 @@
-import { Data, type Effect, ServiceMap } from "effect"
+import { type Effect, ServiceMap } from "effect"
+import type { CacheError } from "./errors.ts"
 
-export class CacheError extends Data.TaggedError("CacheError")<{
-  readonly message: string
-  readonly cause?: unknown
-}> {
-  readonly httpStatus = 500
-  get httpMessage() {
-    return this.message
-  }
-}
+export { CacheError } from "./errors.ts"
 
 export interface CacheSetOptions {
   readonly ttlSeconds?: number

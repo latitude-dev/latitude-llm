@@ -8,7 +8,7 @@ import {
   SqlClient,
   toRepositoryError,
 } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
 import { z } from "zod"
 import {
   annotationScoreSchema,
@@ -18,6 +18,7 @@ import {
   type Score,
   scoreSchema,
 } from "../entities/score.ts"
+import { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "../errors.ts"
 import { shouldDiscoverIssue } from "../helpers.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
 
@@ -74,23 +75,6 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
         message: error instanceof z.ZodError ? formatValidationError(error) : message,
       }),
   })
-
-export class ScoreDraftClosedError extends Data.TaggedError("ScoreDraftClosedError")<{
-  readonly scoreId: string
-}> {
-  readonly httpStatus = 409
-  readonly httpMessage = "Scores can only be edited while they remain drafts"
-}
-
-export class ScoreDraftUpdateConflictError extends Data.TaggedError("ScoreDraftUpdateConflictError")<{
-  readonly scoreId: string
-  readonly field: "projectId" | "source" | "sourceId"
-}> {
-  readonly httpStatus = 409
-  get httpMessage() {
-    return `Draft score ${this.scoreId} cannot change ${this.field}`
-  }
-}
 
 export type WriteScoreError = RepositoryError | BadRequestError | ScoreDraftClosedError | ScoreDraftUpdateConflictError
 

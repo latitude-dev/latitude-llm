@@ -34,6 +34,7 @@ export {
   scoreSourceSchema,
   scoreValueSchema,
 } from "./entities/score.ts"
+export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
 export { isImmutableScore, shouldDiscoverIssue } from "./helpers.ts"
 export {
   type IssueOccurrenceAggregate,
@@ -73,8 +74,6 @@ export {
 export {
   type BaseWriteScoreInput,
   baseWriteScoreInputSchema,
-  ScoreDraftClosedError,
-  ScoreDraftUpdateConflictError,
   type WriteScoreError,
   type WriteScoreInput,
   writeScoreInputSchema,
