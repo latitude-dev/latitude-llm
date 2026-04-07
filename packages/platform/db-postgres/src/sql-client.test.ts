@@ -1,6 +1,18 @@
 import { ConcurrentSqlTransactionError, OrganizationId, SqlClient } from "@domain/shared"
 import { Data, Effect } from "effect"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+const { sqlClientLogErrorMock } = vi.hoisted(() => ({
+  sqlClientLogErrorMock: vi.fn(),
+}))
+
+vi.mock("@repo/observability", () => ({
+  createLogger: () => ({
+    error: sqlClientLogErrorMock,
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
+}))
 
 class TestError extends Data.TaggedError("TestError")<{ message: string }> {}
 
@@ -18,7 +30,10 @@ interface MockClientState {
   txInstances: Operator[]
 }
 
-function createMockPostgresClient(state: MockClientState): PostgresClient {
+function createMockPostgresClient(
+  state: MockClientState,
+  options?: { simulateDistinctTransactionCompletionError?: boolean },
+): PostgresClient {
   const mockTx: MockTx = {
     id: Symbol("tx"),
     execute: async (stmt: unknown) => {
@@ -34,7 +49,14 @@ function createMockPostgresClient(state: MockClientState): PostgresClient {
     transaction: async (fn) => {
       state.transactionCallCount += 1
       state.txInstances.push(txAsOperator)
-      return fn(txAsOperator as Parameters<Parameters<PostgresClient["transaction"]>[0]>[0])
+      try {
+        return await fn(txAsOperator as Parameters<Parameters<PostgresClient["transaction"]>[0]>[0])
+      } catch (e) {
+        if (options?.simulateDistinctTransactionCompletionError) {
+          throw new Error("simulated rollback/commit failure after effect error")
+        }
+        throw e
+      }
     },
   }
   return client
@@ -75,6 +97,7 @@ describe("SqlClientLive", () => {
       executedStatements: [],
       txInstances: [],
     }
+    sqlClientLogErrorMock.mockClear()
   })
 
   afterEach(() => {
@@ -343,6 +366,19 @@ describe("SqlClientLive", () => {
 
       expect(result).toBe("after-fail")
       expect(state.transactionCallCount).toBe(1)
+    })
+
+    it("logs when the driver reports a distinct error after effect failure", async () => {
+      const client = createMockPostgresClient(state, { simulateDistinctTransactionCompletionError: true })
+      const orgId = OrganizationId("org-distinct-db-error")
+
+      const failOnce = runWithSqlClient(client, orgId, (sql) =>
+        sql.transaction(Effect.fail(new TestError({ message: "business rule" }))),
+      )
+      await expect(failOnce).rejects.toThrow("business rule")
+
+      expect(sqlClientLogErrorMock).toHaveBeenCalledTimes(1)
+      expect(sqlClientLogErrorMock.mock.calls[0]?.[0]).toContain("completing transaction after effect failure")
     })
   })
 })
