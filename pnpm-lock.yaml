@@ -935,8 +935,8 @@ importers:
   packages/platform/ai-vercel:
     dependencies:
       '@ai-sdk/anthropic':
-        specifier: 4.0.0-beta.12
-        version: 4.0.0-beta.12(zod@4.3.6)
+        specifier: 4.0.0-beta.19
+        version: 4.0.0-beta.19(zod@4.3.6)
       '@ai-sdk/openai':
         specifier: 4.0.0-beta.12
         version: 4.0.0-beta.12(zod@4.3.6)
@@ -1566,8 +1566,8 @@ importers:
 
 packages:
 
-  '@ai-sdk/anthropic@4.0.0-beta.12':
-    resolution: {integrity: sha512-96AV7/aaYQfWN+wmcj7uuhBDGn6FnN2ATFfQpUF0TXBThVGLRRf2nJ5CJdlefwPSWXAsXY0CjAHnpOqpEumP3A==}
+  '@ai-sdk/anthropic@4.0.0-beta.19':
+    resolution: {integrity: sha512-rJ2f8AXqxOOQafx7C9nLhNMWS/KbKvzSRoJNs/Ohk1OnPx33EUdqr2lvqp/fcMkfyN8sVNwt1AkmvuEoAM8SPA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -1580,6 +1580,12 @@ packages:
 
   '@ai-sdk/openai@4.0.0-beta.12':
     resolution: {integrity: sha512-iwMzSTWaIkSyzM7DZQNGnnKmTXujbAq+n/aal06hPm5oOaGW/0AABYHui0nJc1rXyEo6nJyyz4oxINddYi8Z6g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  '@ai-sdk/provider-utils@5.0.0-beta.12':
+    resolution: {integrity: sha512-vAVnJoU6K5EnPAWSj11BGbRa94EokALSpUYdpEx6r+ekVbZZDf3G5QJ0cXDL6DUWxFHljhOMenUks6OZIyUCpA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
@@ -11631,10 +11637,10 @@ packages:
 
 snapshots:
 
-  '@ai-sdk/anthropic@4.0.0-beta.12(zod@4.3.6)':
+  '@ai-sdk/anthropic@4.0.0-beta.19(zod@4.3.6)':
     dependencies:
       '@ai-sdk/provider': 4.0.0-beta.5
-      '@ai-sdk/provider-utils': 5.0.0-beta.7(zod@4.3.6)
+      '@ai-sdk/provider-utils': 5.0.0-beta.12(zod@4.3.6)
       zod: 4.3.6
 
   '@ai-sdk/gateway@4.0.0-beta.25(zod@4.3.6)':
@@ -11648,6 +11654,13 @@ snapshots:
     dependencies:
       '@ai-sdk/provider': 4.0.0-beta.5
       '@ai-sdk/provider-utils': 5.0.0-beta.5(zod@4.3.6)
+      zod: 4.3.6
+
+  '@ai-sdk/provider-utils@5.0.0-beta.12(zod@4.3.6)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.0-beta.5
+      '@standard-schema/spec': 1.1.0
+      eventsource-parser: 3.0.6
       zod: 4.3.6
 
   '@ai-sdk/provider-utils@5.0.0-beta.5(zod@4.3.6)':
