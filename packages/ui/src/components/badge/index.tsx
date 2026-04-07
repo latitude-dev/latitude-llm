@@ -1,6 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority"
+import type { ComponentPropsWithRef } from "react"
+
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
+import { DotIndicator, type DotIndicatorProps } from "../dot-indicator/dot-indicator.tsx"
 import { Icon, type IconProps } from "../icons/icons.tsx"
 
 const badgeVariants = cva(
@@ -42,7 +45,7 @@ const badgeVariants = cva(
       size: {
         large: "text-[0.8rem] font-medium py-3.5 px-2.5 rounded-lg",
         normal: "text-xs py-2 px-1.5 max-h-5",
-        small: `${font.size.h7} max-h-4 min-w-4 px-1`,
+        small: `${font.size.h7} min-h-5 max-h-5 min-w-4 px-1`,
       },
     },
     defaultVariants: {
@@ -53,18 +56,23 @@ const badgeVariants = cva(
   },
 )
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {
+export interface BadgeProps extends ComponentPropsWithRef<"div">, VariantProps<typeof badgeVariants> {
   ellipsis?: boolean
   noWrap?: boolean
   centered?: boolean
+  /** Uppercase label text (tracking slightly widened for readability). */
+  uppercase?: boolean
   iconProps?: Omit<IconProps, "size"> & {
     placement: "start" | "end"
   }
+  /** Renders a leading status dot inside the badge (before icons and label). */
+  indicatorProps?: DotIndicatorProps
   userSelect?: boolean
   disabled?: boolean
 }
 
 function Badge({
+  ref,
   className,
   variant,
   shape,
@@ -72,23 +80,28 @@ function Badge({
   ellipsis = false,
   noWrap = false,
   centered = false,
+  uppercase = false,
   disabled = false,
   userSelect = false,
   children,
   iconProps,
+  indicatorProps,
   ...props
 }: BadgeProps) {
   return (
     <div
+      ref={ref}
       className={cn(badgeVariants({ variant, shape, size }), className, {
         "opacity-50": disabled,
-        "flex-row max-h-none gap-x-1 py-px": !!iconProps,
+        "flex-row max-h-none gap-x-1 py-px": !!iconProps || !!indicatorProps,
         "justify-center": centered,
         "select-none": !userSelect,
         "min-w-0": ellipsis || noWrap,
+        "uppercase tracking-wide": uppercase,
       })}
       {...props}
     >
+      {indicatorProps ? <DotIndicator {...indicatorProps} /> : null}
       {iconProps && iconProps.placement === "start" ? <Icon {...iconProps} size="xs" /> : null}
       <span
         className={cn({

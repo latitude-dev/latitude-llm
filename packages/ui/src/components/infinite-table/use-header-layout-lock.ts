@@ -23,6 +23,7 @@ export function useHeaderLayoutLock<T>({
           col.key,
           col.align ?? "",
           col.minWidth ?? "",
+          col.width ?? "",
           col.resizable ?? "",
           col.sortKey ?? "",
           col.renderSubheader ? "1" : "0",

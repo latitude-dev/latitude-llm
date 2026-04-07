@@ -25,6 +25,7 @@ export function HeaderCell({
   align = "start",
   resizable = true,
   minWidth = 60,
+  width: preferredWidth,
   className,
   sortable,
   sortDirection,
@@ -36,6 +37,8 @@ export function HeaderCell({
   align?: "start" | "end"
   resizable?: boolean
   minWidth?: number
+  /** Preferred column width (px); sets `th` width / minWidth for initial table layout. */
+  width?: number
   className?: string
   sortable?: boolean
   sortDirection?: SortDirection | null
@@ -66,6 +69,13 @@ export function HeaderCell({
       children
     )
 
+  const thStyle =
+    preferredWidth !== undefined
+      ? ({ width: preferredWidth, minWidth: Math.max(minWidth, preferredWidth) } as const)
+      : minWidth > 60
+        ? ({ minWidth } as const)
+        : undefined
+
   return (
     <th
       ref={thRef}
@@ -74,6 +84,7 @@ export function HeaderCell({
         showSubheaderSlot ? "py-1.5 align-top" : "h-12 align-middle",
         className,
       )}
+      style={thStyle}
       aria-sort={sortable ? ariaSort(sortDirection) : undefined}
     >
       <div className="flex min-h-0 w-full min-w-0 flex-col gap-0">

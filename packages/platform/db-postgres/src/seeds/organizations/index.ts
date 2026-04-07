@@ -3,6 +3,21 @@ import {
   SEED_ADMIN_EMAIL,
   SEED_ADMIN_MEMBERSHIP_ID,
   SEED_ADMIN_USER_ID,
+  SEED_MEMBER_1_EMAIL,
+  SEED_MEMBER_1_MEMBERSHIP_ID,
+  SEED_MEMBER_1_USER_ID,
+  SEED_MEMBER_2_EMAIL,
+  SEED_MEMBER_2_MEMBERSHIP_ID,
+  SEED_MEMBER_2_USER_ID,
+  SEED_MEMBER_3_EMAIL,
+  SEED_MEMBER_3_MEMBERSHIP_ID,
+  SEED_MEMBER_3_USER_ID,
+  SEED_MEMBER_4_EMAIL,
+  SEED_MEMBER_4_MEMBERSHIP_ID,
+  SEED_MEMBER_4_USER_ID,
+  SEED_MEMBER_5_EMAIL,
+  SEED_MEMBER_5_MEMBERSHIP_ID,
+  SEED_MEMBER_5_USER_ID,
   SEED_ORG_ID,
   SEED_ORG_NAME,
   SEED_ORG_SLUG,
@@ -31,6 +46,41 @@ const seedUsers: Seeder = {
             id: SEED_ADMIN_USER_ID,
             email: SEED_ADMIN_EMAIL,
             name: "Admin User",
+            emailVerified: true,
+            role: "user" as const,
+          },
+          {
+            id: SEED_MEMBER_1_USER_ID,
+            email: SEED_MEMBER_1_EMAIL,
+            name: "Alex Rivera",
+            emailVerified: true,
+            role: "user" as const,
+          },
+          {
+            id: SEED_MEMBER_2_USER_ID,
+            email: SEED_MEMBER_2_EMAIL,
+            name: "Blake Chen",
+            emailVerified: true,
+            role: "user" as const,
+          },
+          {
+            id: SEED_MEMBER_3_USER_ID,
+            email: SEED_MEMBER_3_EMAIL,
+            name: "Casey Diaz",
+            emailVerified: true,
+            role: "user" as const,
+          },
+          {
+            id: SEED_MEMBER_4_USER_ID,
+            email: SEED_MEMBER_4_EMAIL,
+            name: "Dana Evans",
+            emailVerified: true,
+            role: "user" as const,
+          },
+          {
+            id: SEED_MEMBER_5_USER_ID,
+            email: SEED_MEMBER_5_EMAIL,
+            name: "Eli Foster",
             emailVerified: true,
             role: "user" as const,
           },
@@ -90,7 +140,24 @@ const seedMemberships: Seeder = {
       })
       yield* ctx.repositories.membership.save(adminMembership)
 
-      console.log("  -> memberships: owner@acme.com (owner), admin@acme.com (admin)")
+      const memberSeeds = [
+        { id: SEED_MEMBER_1_MEMBERSHIP_ID, userId: SEED_MEMBER_1_USER_ID },
+        { id: SEED_MEMBER_2_MEMBERSHIP_ID, userId: SEED_MEMBER_2_USER_ID },
+        { id: SEED_MEMBER_3_MEMBERSHIP_ID, userId: SEED_MEMBER_3_USER_ID },
+        { id: SEED_MEMBER_4_MEMBERSHIP_ID, userId: SEED_MEMBER_4_USER_ID },
+        { id: SEED_MEMBER_5_MEMBERSHIP_ID, userId: SEED_MEMBER_5_USER_ID },
+      ] as const
+      for (const m of memberSeeds) {
+        const membership = createMembership({
+          id: m.id,
+          organizationId: SEED_ORG_ID,
+          userId: m.userId,
+          role: "member",
+        })
+        yield* ctx.repositories.membership.save(membership)
+      }
+
+      console.log("  -> memberships: owner + admin + 5 members (alex, blake, casey, dana, eli @ acme.com)")
     }),
 }
 

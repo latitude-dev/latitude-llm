@@ -37,6 +37,10 @@ export const annotationQueueItems = latitudeSchema.table(
     queueId: cuid("queue_id").notNull(),
     traceId: varchar("trace_id", { length: 32 }).notNull(), // ClickHouse trace id of the queued trace
     completedAt: tzTimestamp("completed_at"), // set when a reviewer marks the queue item as fully annotated
+    /** User who marked the item complete (nullable until completed). */
+    completedBy: cuid("completed_by"),
+    /** First time the reviewer opened the focused queue item (nullable until opened). */
+    reviewStartedAt: tzTimestamp("review_started_at"),
     ...timestamps(),
   },
   (t) => [

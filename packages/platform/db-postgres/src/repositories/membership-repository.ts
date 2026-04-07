@@ -43,6 +43,7 @@ export const MembershipRepositoryLive = Layer.effect(
               createdAt: members.createdAt,
               name: users.name,
               email: users.email,
+              image: users.image,
             })
             .from(members)
             .innerJoin(users, eq(members.userId, users.id))

@@ -1,0 +1,150 @@
+import {
+  type AnnotationQueueItemListCursor,
+  type AnnotationQueueItemListOptions,
+  type AnnotationQueueItemListSortBy,
+  AnnotationQueueItemRepository,
+} from "@domain/annotation-queues"
+import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { TraceRepository } from "@domain/spans"
+import { ChSqlClientLive, TraceRepositoryLive } from "@platform/db-clickhouse"
+import { AnnotationQueueItemRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { createServerFn } from "@tanstack/react-start"
+import { Effect, Layer } from "effect"
+import { z } from "zod"
+import { requireSession } from "../../server/auth.ts"
+import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+
+const itemListCursorSchema = z.object({
+  sortValue: z.string(),
+  id: z.string(),
+  statusRank: z.number().int().min(0).max(2).optional(),
+})
+
+const itemListSortBySchema = z.enum(["createdAt", "status"])
+
+interface AnnotationQueueItemListResult {
+  readonly items: readonly AnnotationQueueItemRecord[]
+  readonly hasMore: boolean
+  readonly nextCursor?: AnnotationQueueItemListCursor
+}
+
+const toItemRecord = (row: {
+  id: string
+  organizationId: string
+  projectId: string
+  queueId: string
+  traceId: string
+  completedAt: Date | null
+  completedBy: string | null
+  reviewStartedAt: Date | null
+  createdAt: Date
+  updatedAt: Date
+}) => ({
+  id: row.id,
+  organizationId: row.organizationId,
+  projectId: row.projectId,
+  queueId: row.queueId,
+  traceId: row.traceId,
+  completedAt: row.completedAt ? row.completedAt.toISOString() : null,
+  completedBy: row.completedBy,
+  reviewStartedAt: row.reviewStartedAt ? row.reviewStartedAt.toISOString() : null,
+  createdAt: row.createdAt.toISOString(),
+  updatedAt: row.updatedAt.toISOString(),
+})
+
+export type AnnotationQueueItemRecord = ReturnType<typeof toItemRecord> & {
+  traceDisplayName: string
+}
+
+export const listAnnotationQueueItemsByQueue = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      limit: z.number().optional(),
+      cursor: itemListCursorSchema.optional(),
+      sortBy: itemListSortBySchema.optional(),
+      sortDirection: z.enum(["asc", "desc"]).optional(),
+    }),
+  )
+  .handler(async ({ data }): Promise<AnnotationQueueItemListResult> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+    const ch = getClickhouseClient()
+
+    const sortBy: AnnotationQueueItemListSortBy | undefined = data.sortBy
+    const sortDirection = data.sortDirection
+
+    const itemsLayer = Layer.mergeAll(AnnotationQueueItemRepositoryLive, TraceRepositoryLive).pipe(
+      Layer.provideMerge(SqlClientLive(pg, orgId)),
+      Layer.provideMerge(ChSqlClientLive(ch, orgId)),
+    )
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const itemRepo = yield* AnnotationQueueItemRepository
+        const traceRepo = yield* TraceRepository
+
+        const c = data.cursor
+        const listOptions: AnnotationQueueItemListOptions = {
+          limit: data.limit ?? 50,
+          ...(sortBy !== undefined ? { sortBy } : {}),
+          ...(sortDirection !== undefined ? { sortDirection } : {}),
+          ...(c
+            ? c.statusRank !== undefined
+              ? { cursor: { sortValue: c.sortValue, id: c.id, statusRank: c.statusRank } }
+              : { cursor: { sortValue: c.sortValue, id: c.id } }
+            : {}),
+        }
+
+        const listPage = yield* itemRepo.listByQueue({
+          projectId,
+          queueId: data.queueId,
+          options: listOptions,
+        })
+
+        const uniqueIds = [...new Set(listPage.items.map((i) => i.traceId as string))]
+        const traceIds = uniqueIds.map((id) => TraceId(id))
+
+        const traces =
+          traceIds.length === 0
+            ? []
+            : yield* traceRepo.listByTraceIds({
+                organizationId: orgId,
+                projectId,
+                traceIds,
+              })
+
+        const nameByTrace = new Map<string, string>(
+          traces.map((t) => {
+            const id = t.traceId as string
+            const short = id.slice(0, 8)
+            const label = t.rootSpanName?.trim() ? t.rootSpanName : short
+            return [id, label] as const
+          }),
+        )
+
+        const items: AnnotationQueueItemRecord[] = listPage.items.map((item) => {
+          const base = toItemRecord(item)
+          const tid = item.traceId as string
+          return {
+            ...base,
+            traceDisplayName: nameByTrace.get(tid) ?? tid.slice(0, 8),
+          }
+        })
+
+        if (!listPage.nextCursor) {
+          return { items, hasMore: listPage.hasMore }
+        }
+        return {
+          items,
+          hasMore: listPage.hasMore,
+          nextCursor: listPage.nextCursor,
+        }
+      }).pipe(Effect.provide(itemsLayer)),
+    )
+
+    return page
+  })
