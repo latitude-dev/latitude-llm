@@ -19,6 +19,8 @@
     "nodemailer": "^8.0.4"
   },
   "devDependencies": {
-    "@types/nodemailer": "^6.4.0"
+    "@repo/vitest-config": "workspace:*",
+    "@types/nodemailer": "^6.4.0",
+    "vitest": "catalog:"
   }
 }
