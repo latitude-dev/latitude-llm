@@ -36,7 +36,7 @@
     "@tanstack/query-db-collection": "1.0.30",
     "@tanstack/react-db": "0.1.77",
     "@tanstack/react-form": "^1.28.4",
-    "@tanstack/react-hotkeys": "^0.8.1",
+    "@tanstack/react-hotkeys": "^0.9.1",
     "@tanstack/react-query": "5.90.21",
     "@tanstack/react-router": "1.168.10",
     "@tanstack/react-start": "1.167.16",
