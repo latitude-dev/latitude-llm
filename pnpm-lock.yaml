@@ -110,7 +110,7 @@ catalogs:
       version: 4.3.6
 
 overrides:
-  '@ai-sdk/provider': 4.0.0-beta.5
+  '@ai-sdk/provider': 4.0.0-beta.7
   drizzle-orm: 1.0.0-beta.15-859cf75
   tslib: 2.8.1
 
@@ -1611,8 +1611,8 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
-  '@ai-sdk/provider@4.0.0-beta.5':
-    resolution: {integrity: sha512-+07aGNCVXEKgGXtAXjjROPcpHMudWfvsm5UvlZ4LtTfjX9cT61x7h3W0pSSpWY/H7doymdm8PmuX6Z8AvP03WQ==}
+  '@ai-sdk/provider@4.0.0-beta.7':
+    resolution: {integrity: sha512-q3mORIV5vzhMQ2ge1zw1hpnLm+21CxTimB1YPiPQEuBiKjUZ5Ds1SBaIukeapNT04JH+ddmdxzcj3cyIYxKWDQ==}
     engines: {node: '>=18'}
 
   '@alloc/quick-lru@5.2.0':
@@ -11642,45 +11642,45 @@ snapshots:
 
   '@ai-sdk/anthropic@4.0.0-beta.19(zod@4.3.6)':
     dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.5
+      '@ai-sdk/provider': 4.0.0-beta.7
       '@ai-sdk/provider-utils': 5.0.0-beta.12(zod@4.3.6)
       zod: 4.3.6
 
   '@ai-sdk/gateway@4.0.0-beta.25(zod@4.3.6)':
     dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.5
+      '@ai-sdk/provider': 4.0.0-beta.7
       '@ai-sdk/provider-utils': 5.0.0-beta.7(zod@4.3.6)
       '@vercel/oidc': 3.2.0
       zod: 4.3.6
 
   '@ai-sdk/openai@4.0.0-beta.12(zod@4.3.6)':
     dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.5
+      '@ai-sdk/provider': 4.0.0-beta.7
       '@ai-sdk/provider-utils': 5.0.0-beta.5(zod@4.3.6)
       zod: 4.3.6
 
   '@ai-sdk/provider-utils@5.0.0-beta.12(zod@4.3.6)':
     dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.5
+      '@ai-sdk/provider': 4.0.0-beta.7
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.3.6
 
   '@ai-sdk/provider-utils@5.0.0-beta.5(zod@4.3.6)':
     dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.5
+      '@ai-sdk/provider': 4.0.0-beta.7
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.3.6
 
   '@ai-sdk/provider-utils@5.0.0-beta.7(zod@4.3.6)':
     dependencies:
-      '@ai-sdk/provider': 4.0.0-beta.5
+      '@ai-sdk/provider': 4.0.0-beta.7
       '@standard-schema/spec': 1.1.0
       eventsource-parser: 3.0.6
       zod: 4.3.6
 
-  '@ai-sdk/provider@4.0.0-beta.5':
+  '@ai-sdk/provider@4.0.0-beta.7':
     dependencies:
       json-schema: 0.4.0
 
@@ -18642,7 +18642,7 @@ snapshots:
   ai@7.0.0-beta.45(zod@4.3.6):
     dependencies:
       '@ai-sdk/gateway': 4.0.0-beta.25(zod@4.3.6)
-      '@ai-sdk/provider': 4.0.0-beta.5
+      '@ai-sdk/provider': 4.0.0-beta.7
       '@ai-sdk/provider-utils': 5.0.0-beta.7(zod@4.3.6)
       '@opentelemetry/api': 1.9.0
       zod: 4.3.6
