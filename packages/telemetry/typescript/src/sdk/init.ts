@@ -38,9 +38,14 @@ export function initLatitude(options: InitLatitudeOptions): {
   context.setGlobalContextManager(contextManager)
   propagation.setGlobalPropagator(propagator)
 
+  const resourceServiceName =
+    typeof processorOptions.serviceName === "string" && processorOptions.serviceName.trim() !== ""
+      ? processorOptions.serviceName.trim()
+      : SERVICE_NAME
+
   const provider = new NodeTracerProvider({
     resource: resourceFromAttributes({
-      [ATTR_SERVICE_NAME]: SERVICE_NAME,
+      [ATTR_SERVICE_NAME]: resourceServiceName,
     }),
     spanProcessors: [new LatitudeSpanProcessor(apiKey, projectSlug, processorOptions)],
   })
