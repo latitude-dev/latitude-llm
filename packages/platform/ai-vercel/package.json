@@ -20,6 +20,7 @@
     "@platform/ai-credentials": "workspace:*",
     "ai": "7.0.0-beta.45",
     "effect": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@latitude-data/telemetry": "workspace:*"
   }
 }

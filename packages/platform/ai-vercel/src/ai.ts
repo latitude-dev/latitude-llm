@@ -2,6 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { AI, AICredentials, AIError, type GenerateInput, withAICache } from "@domain/ai"
 import { CacheStore } from "@domain/shared"
+import { capture } from "@latitude-data/telemetry"
 import { isLatitudeAiProvider, LATITUDE_AI_PROVIDERS } from "@platform/ai-credentials"
 import { generateText, Output } from "ai"
 import { Effect, Layer, Option } from "effect"
@@ -64,7 +65,7 @@ export const AIGenerateLive = Layer.effect(
                 providerOptions: input.providerOptions as ProviderOptions,
               }
 
-              const result = await generateText(call)
+              const result = await capture("ai.generate", () => generateText(call))
 
               const durationNs = Math.round((performance.now() - startTime) * 1_000_000)
 

@@ -916,6 +916,9 @@ importers:
 
   packages/observability:
     dependencies:
+      '@latitude-data/telemetry':
+        specifier: workspace:*
+        version: link:../telemetry/typescript
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -928,6 +931,12 @@ importers:
       '@opentelemetry/sdk-node':
         specifier: ^0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.0)
+      '@platform/env':
+        specifier: workspace:*
+        version: link:../platform/env
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.1
 
   packages/platform/ai-credentials:
     dependencies:
@@ -955,6 +964,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
+      '@latitude-data/telemetry':
+        specifier: workspace:*
+        version: link:../../telemetry/typescript
       '@platform/ai-credentials':
         specifier: workspace:*
         version: link:../ai-credentials
