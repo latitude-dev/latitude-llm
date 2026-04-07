@@ -1,9 +1,9 @@
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
-import { AI, AICredentials, AIError, type GenerateInput, withAICache } from "@domain/ai"
+import { AI, AICredentialError, AICredentials, AIError, type GenerateInput, withAICache } from "@domain/ai"
 import { CacheStore } from "@domain/shared"
 import { isLatitudeAiProvider, LATITUDE_AI_PROVIDERS } from "@platform/ai-credentials"
-import { generateText, Output } from "ai"
+import { generateText, type LanguageModel, Output } from "ai"
 import { Effect, Layer, Option } from "effect"
 
 type GenerateTextCall = Parameters<typeof generateText>[0]
@@ -13,16 +13,27 @@ const DEFAULT_MAX_OUTPUT_TOKENS = 8192
 
 /**
  * Creates a Vercel AI SDK language model for supported providers.
+ * Failures are returned on the Effect error channel (no synchronous throw for expected cases).
  */
-const createProviderModel = (provider: string, model: string, apiKey: string) => {
+export const createProviderModel = (
+  provider: string,
+  model: string,
+  apiKey: string,
+): Effect.Effect<LanguageModel, AICredentialError> => {
   if (!isLatitudeAiProvider(provider)) {
-    throw new Error(`Unsupported AI provider: ${provider}`)
+    return Effect.fail(
+      new AICredentialError({
+        provider,
+        message: `Unsupported AI provider "${provider}" for Latitude-managed credentials. Use a supported provider or configure credentials for this provider.`,
+        statusCode: 400,
+      }),
+    )
   }
   switch (provider) {
     case LATITUDE_AI_PROVIDERS.anthropic:
-      return createAnthropic({ apiKey })(model)
+      return Effect.succeed(createAnthropic({ apiKey })(model))
     case LATITUDE_AI_PROVIDERS.openai:
-      return createOpenAI({ apiKey })(model)
+      return Effect.succeed(createOpenAI({ apiKey })(model))
   }
 }
 
@@ -42,13 +53,14 @@ export const AIGenerateLive = Layer.effect(
       generate: <T>(input: GenerateInput<T>) =>
         Effect.gen(function* () {
           const apiKey = yield* credentials.getApiKey(input.provider)
+          const model = yield* createProviderModel(input.provider, input.model, apiKey)
 
           return yield* Effect.tryPromise({
             try: async () => {
               const startTime = performance.now()
 
               const call: GenerateTextCall = {
-                model: createProviderModel(input.provider, input.model, apiKey),
+                model,
                 system: input.system,
                 prompt: input.prompt,
                 output: Output.object({ schema: input.schema }),
