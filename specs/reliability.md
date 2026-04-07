@@ -1078,12 +1078,125 @@ Queue population flows:
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
 - among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors`, `Resource Outliers`, `Output Schema Validation`, and `Empty Response`
-- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue
+- for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages, plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean flag per queue **plus a failure-mode label** identifying the specific problem when flagged
 - a trace may match none of the system-created queues, or it may match several of them
-- for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair
-- `system-annotation-queues:annotate` uses a larger validator/drafter LLM with the full conversation context to validate the flag and create the draft annotation in the same call
-- only if the validation/annotation task confirms the match does the system create the draft annotation and add the trace to that queue
+- for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair; the message payload includes the flagger's failure-mode label, but it is stored for later cross-check — it is **not** forwarded to the annotator prompt
+
+Blind cross-check (double confirmation):
+
+- `system-annotation-queues:annotate` uses a larger validator/drafter LLM to independently determine whether the trace belongs in the queue and, if so, what failure mode it exhibits
+- the annotator does **not** receive the flagger's failure-mode label or reasoning, so its judgment is unbiased
+- the annotator receives a structured payload derived from the trace's span tree; this payload is a deliberate superset of the flagger's limited context so the annotator can make a better-informed judgment:
+
+```typescript
+type AnnotatorPayload = {
+  queue: {
+    name: string;
+    description: string;
+    instructions: string;
+  };
+
+  system_prompt: string; // full system instructions from the trace's root GenAI span
+
+  conversation: Array<{ role: string; content: string }>; // complete conversation messages in chronological order (not truncated to last N like the flagger)
+
+  tool_definitions: Array<{
+    name: string;
+    description: string;
+    parameters_schema: string; // JSON schema string, truncated to SYSTEM_QUEUE_ANNOTATOR_TOOL_SCHEMA_CHARS
+  }>; // tools declared in the trace context
+
+  tool_calls: Array<{
+    tool_name: string;
+    call_index: number; // zero-based position in the full trace tool call order
+    input: string; // truncated to SYSTEM_QUEUE_ANNOTATOR_TOOL_CALL_TRUNCATION_CHARS unless the call errored
+    output: string; // truncated to SYSTEM_QUEUE_ANNOTATOR_TOOL_CALL_TRUNCATION_CHARS unless the call errored
+    errored: boolean; // true when the tool span has statusCode = "error" or the output indicates failure
+  }>; // all tool calls in the trace; errored calls include full untruncated input/output
+
+  trace_metadata: {
+    turn_count: number; // total conversation turns
+    span_count: number; // total spans in the trace
+    models_used: string[]; // deduplicated model names across GenAI spans
+    total_tokens: number; // sum of tokens_total across all GenAI spans
+    total_cost_microcents: number; // sum of cost_total_microcents across all GenAI spans
+    total_duration_ms: number; // trace wall-clock duration in milliseconds
+    finish_reasons: string[]; // deduplicated finish_reasons across all GenAI spans
+    error_spans: Array<{
+      span_name: string;
+      error_type: string;
+      status_message: string;
+    }>; // spans with statusCode = "error"
+  };
+};
+```
+
+- the annotator returns a structured response:
+
+```typescript
+type AnnotatorOutput = {
+  confirmed: boolean; // whether the annotator independently agrees the trace belongs in this queue
+  failure_mode: string; // freeform failure-mode label describing the identified problem (see failure-mode labels below)
+  feedback: string; // draft annotation text — clusterable, human/LLM-readable feedback for the score's canonical `feedback` field
+};
+```
+
+- the system then cross-checks the flagger's failure-mode label against the annotator's failure-mode label; the draft annotation and queue item are **always created** regardless of the outcome:
+  - **match**: both the flagger and annotator independently identified the same failure mode — the draft annotation is tagged as **confident**
+  - **no match**: the annotator identified a different failure mode or did not confirm the flag — the draft annotation is still created using the annotator's label and feedback (the annotator had more context) with no additional tag; the disagreement is recorded in metadata for internal alignment tracking
 - draft-annotation creation and queue-item creation should happen together so the queue always has a matching pending annotation artifact
+- the flagger's original failure-mode label, the annotator's failure-mode label, the `confident` boolean, and whether the annotator confirmed are all persisted in the annotation score metadata; the `AnnotationScoreMetadata` type is extended for system-created drafts:
+
+```typescript
+type SystemAnnotationScoreMetadata = AnnotationScoreMetadata & {
+  confident: boolean; // true when flagger and annotator failure-mode labels match
+  flaggerLabel: string; // failure-mode label from the flagger
+  annotatorLabel: string; // failure-mode label from the annotator
+  annotatorConfirmed: boolean; // whether the annotator independently confirmed the flag
+};
+```
+
+Failure-mode labels:
+
+- failure-mode labels are **freeform strings**, not a fixed enum — each queue's problem space is too varied for a closed set, and new failure patterns should be discoverable rather than constrained to a predefined list
+- both the flagger and annotator are instructed to produce a short, descriptive label (e.g., `"prompt injection via role override"`, `"user repeated same request three times"`, `"empty response after tool failure"`) that describes the specific problem observed
+- cross-check comparison normalizes labels to lowercase and trims whitespace before comparing; an exact match after normalization is required for the `confident` tag — fuzzy/semantic matching is deferred to a later iteration
+- for deterministic queues, the deterministic checker produces the failure-mode label directly from the check that triggered (e.g., `"tool span error"`, `"schema violation"`, `"truncation"`, `"empty output"`, `"degenerate repetition"`); these labels follow the same freeform convention
+
+Deterministic queues and the cross-check:
+
+- deterministic queues (`Tool Call Errors`, `Resource Outliers`, `Output Schema Validation`, `Empty Response`) still go through the `system-annotation-queues:annotate` step and the blind cross-check
+- the deterministic checker acts as the "flagger" and produces a failure-mode label derived from the specific check that fired (e.g., `"parse failure"` for Output Schema Validation, `"missing output"` for Empty Response)
+- the annotator receives the same `AnnotatorPayload` and independently determines the failure mode — this catches cases where the deterministic signal is correct but the root cause is different from what the check name implies (e.g., an empty response that is actually a content-filter issue the exclusion missed, or a schema violation caused by a truncated response)
+- the `confident` tag and metadata recording work identically for deterministic and LLM-classified queues
+
+Flagger output schema:
+
+- the flagger evaluates all sampled-in LLM-classified queues in a single call and returns a structured response per queue:
+
+```typescript
+type FlaggerOutput = {
+  decisions: Array<{
+    queue_name: string; // matches the system queue's canonical name
+    flagged: boolean; // true if the flagger believes this trace belongs in the queue
+    failure_mode: string; // freeform failure-mode label; only meaningful when flagged = true
+  }>;
+};
+```
+
+Named constants and initial defaults:
+
+- all tunables live as named constants in `packages/domain/annotation-queues/src/constants.ts`
+- `SYSTEM_QUEUE_FLAGGER_LAST_N_MESSAGES`: number of trailing conversation messages sent to the flagger; initial default `20`
+- `SYSTEM_QUEUE_ANNOTATOR_TOOL_CALL_TRUNCATION_CHARS`: character budget for tool call `input` and `output` in the annotator payload when the call did not error; initial default `500`
+- `SYSTEM_QUEUE_ANNOTATOR_TOOL_SCHEMA_CHARS`: character budget for `parameters_schema` in the annotator payload; initial default `1000`
+
+Model selection:
+
+- the flagger and annotator model selections must live in named constants inside `packages/domain/annotation-queues/src/constants.ts` rather than as inline magic strings
+- the flagger uses a low-cost, fast model optimized for classification; initial default: `gpt-4.1-mini`
+- the annotator uses a larger, more capable model for nuanced judgment and draft writing; initial default: `gpt-4.1`
+- both constants are overridable per deployment environment but not per project or per queue in the initial implementation
 - live queues are incremental: whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `live-annotation-queues` message with task `curate` for that trace; `live-annotation-queues:curate` lists all non-deleted live queues in that project, applies `settings.filter` using the shared trace filter semantics first, applies `settings.sampling` second, and batch inserts the matching `annotation_queue_items` rows with `completedAt = null`
 - `system-annotation-queues:flag`, `system-annotation-queues:annotate`, and `live-annotation-queues:curate` are all separate from `live-evaluations:enqueue`
 - when a live queue is created with `settings.filter` and no explicit sampling, initialize `settings.sampling` from a named constant in `packages/domain/annotation-queues`; the starting default for that constant is `10`
