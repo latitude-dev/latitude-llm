@@ -37,7 +37,7 @@ export const initializeObservability = async ({ serviceName }: InitializeObserva
       return
     }
 
-    const tracesConfig = getTracesConfig(resolvedEnvironment)
+    const tracesConfig = getTracesConfig()
     if (!tracesConfig) {
       emitLog(state, "warn", "observability", [
         "LAT_OBSERVABILITY_ENABLED=true but LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT is not configured.",

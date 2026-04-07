@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@domain/shared": "workspace:*",
-    "@latitude-data/telemetry": "workspace:*",
+    "@latitude-data/telemetry": "3.0.0-alpha.2",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "rosetta-ai": "catalog:",
