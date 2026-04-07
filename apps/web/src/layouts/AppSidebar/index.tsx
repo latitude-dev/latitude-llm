@@ -93,24 +93,6 @@ export function NavItem({
   )
 }
 
-export function NavChild({ label, to }: { label: string; to?: string }) {
-  const content = (
-    <div className="px-2 py-2 rounded-lg text-muted-foreground hover:bg-muted cursor-pointer transition-colors">
-      <Text.H5M color="foregroundMuted" ellipsis>
-        {label}
-      </Text.H5M>
-    </div>
-  )
-
-  return to ? (
-    <Link to={to} className="block">
-      {content}
-    </Link>
-  ) : (
-    content
-  )
-}
-
 export function AppSidebar({
   title,
   subtitle,
