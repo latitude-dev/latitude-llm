@@ -18,9 +18,9 @@
     "@domain/ai": "workspace:*",
     "@domain/shared": "workspace:*",
     "@platform/ai-credentials": "workspace:*",
+    "@platform/ai-latitude": "workspace:*",
     "ai": "7.0.0-beta.45",
     "effect": "catalog:",
-    "zod": "catalog:",
-    "@latitude-data/telemetry": "workspace:*"
+    "zod": "catalog:"
   }
 }

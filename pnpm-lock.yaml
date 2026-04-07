@@ -610,6 +610,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@latitude-data/telemetry':
+        specifier: workspace:*
+        version: link:../../telemetry/typescript
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -950,6 +953,15 @@ importers:
         specifier: 'catalog:'
         version: 4.0.0-beta.1
 
+  packages/platform/ai-latitude:
+    dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../../domain/ai
+      '@latitude-data/telemetry':
+        specifier: workspace:*
+        version: link:../../telemetry/typescript
+
   packages/platform/ai-vercel:
     dependencies:
       '@ai-sdk/anthropic':
@@ -964,12 +976,12 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
-      '@latitude-data/telemetry':
-        specifier: workspace:*
-        version: link:../../telemetry/typescript
       '@platform/ai-credentials':
         specifier: workspace:*
         version: link:../ai-credentials
+      '@platform/ai-latitude':
+        specifier: workspace:*
+        version: link:../ai-latitude
       ai:
         specifier: 7.0.0-beta.45
         version: 7.0.0-beta.45(zod@4.3.6)
@@ -988,6 +1000,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
+      '@platform/ai-latitude':
+        specifier: workspace:*
+        version: link:../ai-latitude
       '@platform/env':
         specifier: workspace:*
         version: link:../env

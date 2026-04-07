@@ -2,8 +2,8 @@ import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { AI, AICredentials, AIError, type GenerateInput, withAICache } from "@domain/ai"
 import { CacheStore } from "@domain/shared"
-import { capture } from "@latitude-data/telemetry"
 import { isLatitudeAiProvider, LATITUDE_AI_PROVIDERS } from "@platform/ai-credentials"
+import { runWithAiTelemetry } from "@platform/ai-latitude"
 import { generateText, Output } from "ai"
 import { Effect, Layer, Option } from "effect"
 
@@ -46,34 +46,38 @@ export const AIGenerateLive = Layer.effect(
 
           return yield* Effect.tryPromise({
             try: async () => {
-              const startTime = performance.now()
+              const execute = async () => {
+                const startTime = performance.now()
 
-              const call: GenerateTextCall = {
-                model: createProviderModel(input.provider, input.model, apiKey),
-                system: input.system,
-                prompt: input.prompt,
-                output: Output.object({ schema: input.schema }),
-                reasoning: input.reasoning ?? "provider-default",
-                maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
-                ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
-                ...(input.topP !== undefined ? { topP: input.topP } : {}),
-                ...(input.topK !== undefined ? { topK: input.topK } : {}),
-                ...(input.presencePenalty !== undefined ? { presencePenalty: input.presencePenalty } : {}),
-                ...(input.frequencyPenalty !== undefined ? { frequencyPenalty: input.frequencyPenalty } : {}),
-                ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
-                ...(input.seed !== undefined ? { seed: input.seed } : {}),
-                providerOptions: input.providerOptions as ProviderOptions,
+                const call: GenerateTextCall = {
+                  model: createProviderModel(input.provider, input.model, apiKey),
+                  system: input.system,
+                  prompt: input.prompt,
+                  output: Output.object({ schema: input.schema }),
+                  reasoning: input.reasoning ?? "provider-default",
+                  maxOutputTokens: input.maxTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+                  ...(input.temperature !== undefined ? { temperature: input.temperature } : {}),
+                  ...(input.topP !== undefined ? { topP: input.topP } : {}),
+                  ...(input.topK !== undefined ? { topK: input.topK } : {}),
+                  ...(input.presencePenalty !== undefined ? { presencePenalty: input.presencePenalty } : {}),
+                  ...(input.frequencyPenalty !== undefined ? { frequencyPenalty: input.frequencyPenalty } : {}),
+                  ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
+                  ...(input.seed !== undefined ? { seed: input.seed } : {}),
+                  providerOptions: input.providerOptions as ProviderOptions,
+                }
+
+                const result = await generateText(call)
+
+                const durationNs = Math.round((performance.now() - startTime) * 1_000_000)
+
+                return {
+                  object: result.output,
+                  tokens: result.usage?.totalTokens ?? 0,
+                  duration: durationNs,
+                }
               }
 
-              const result = await capture("ai.generate", () => generateText(call))
-
-              const durationNs = Math.round((performance.now() - startTime) * 1_000_000)
-
-              return {
-                object: result.output,
-                tokens: result.usage?.totalTokens ?? 0,
-                duration: durationNs,
-              }
+              return await runWithAiTelemetry(input.telemetry, execute)
             },
             catch: (error) =>
               new AIError({
