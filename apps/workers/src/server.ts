@@ -11,10 +11,10 @@ import { createLogger, initializeObservability, shutdownObservability } from "@r
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
-import { createAnalyticScoresWorker } from "./workers/analytic-scores.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
 import { createDatasetExportWorker } from "./workers/dataset-export.ts"
+import { createInvitationEmailWorker } from "./workers/domain-events/invitation-email.ts"
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
@@ -27,13 +27,15 @@ import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-
 
 loadDevelopmentEnvironments(import.meta.url)
 
+const log = createLogger("workers")
+
 const bootstrap = async () => {
   await initializeObservability({
     serviceName: "workers",
   })
 
   const pgClient = getPostgresClient(10)
-  const logger = createLogger("workers")
+  const logger = log
   let ready = false
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
@@ -68,7 +70,22 @@ const bootstrap = async () => {
       ),
     )
 
-    const queueConsumer = await Effect.runPromise(createBullMqQueueConsumer({ redis: bullMqConfig }))
+    const queueConsumer = await Effect.runPromise(
+      createBullMqQueueConsumer({
+        redis: bullMqConfig,
+        onWorkerIncident: (incident) => {
+          if (incident.kind === "worker_error") {
+            logger.error("BullMQ worker infrastructure error", incident.queue, incident.error)
+            return
+          }
+          if (incident.kind === "job_failed") {
+            logger.error("BullMQ job failed", incident.queue, incident.job, incident.error)
+            return
+          }
+          logger.warn("BullMQ job stalled", incident.queue, incident.jobId)
+        },
+      }),
+    )
     const workflowStarter = await getWorkflowStarter()
 
     const ctx = {
@@ -80,13 +97,13 @@ const bootstrap = async () => {
 
     createDomainEventsWorker(ctx)
     createMagicLinkEmailWorker(ctx)
+    createInvitationEmailWorker(ctx)
     createUserDeletionWorker(ctx)
     createApiKeysWorker(ctx)
     createSpanIngestionWorker(ctx)
     createDatasetExportWorker(ctx)
     createLiveTracesWorker(ctx)
     createIssuesWorker(ctx)
-    createAnalyticScoresWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createLiveAnnotationQueuesWorker(ctx)
@@ -136,6 +153,6 @@ const bootstrap = async () => {
 }
 
 void bootstrap().catch((error) => {
-  console.error(error)
+  log.error("Failed to bootstrap workers", error)
   process.exit(1)
 })

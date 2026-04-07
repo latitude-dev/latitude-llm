@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@domain/shared": "workspace:*",
-    "effect": "catalog:"
+    "effect": "catalog:",
+    "zod": "catalog:"
   }
 }

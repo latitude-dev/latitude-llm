@@ -1,4 +1,4 @@
-import { SEED_API_KEY_ID, SEED_ORG_ID, SEED_PROJECT_ID, TraceId } from "@domain/shared"
+import { SEED_API_KEY_ID, SEED_ORG_ID, SEED_PROJECT_ID, SEED_SIMULATION_ID, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { SeedContext, Seeder } from "../types.ts"
@@ -48,9 +48,30 @@ export const runSpansSeed = (
     return traceIds
   })
 
+const SIMULATION_TRACE_COUNT = 20
+
 const seedSpans: Seeder = {
   name: "spans",
   run: (ctx) => runSpansSeed(ctx),
 }
 
-export const spanSeeders: Seeder[] = [seedSpans]
+const seedSimulationSpans: Seeder = {
+  name: "spans/simulation-linked",
+  run: (ctx) =>
+    runSpansSeed(ctx, {
+      traceCount: SIMULATION_TRACE_COUNT,
+      simulationId: SEED_SIMULATION_ID,
+      quiet: true,
+    }).pipe(
+      Effect.tap((traceIds) =>
+        Effect.sync(() =>
+          console.log(
+            `  -> spans/simulation-linked: ${SIMULATION_TRACE_COUNT} traces linked to seed simulation (${traceIds.length} trace ids)`,
+          ),
+        ),
+      ),
+      Effect.asVoid,
+    ),
+}
+
+export const spanSeeders: Seeder[] = [seedSpans, seedSimulationSpans]

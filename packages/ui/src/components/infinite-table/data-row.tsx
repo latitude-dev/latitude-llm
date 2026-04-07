@@ -17,6 +17,8 @@ interface DataRowProps<T> {
   isExpandable?: boolean
   isExpanded?: boolean
   onClick?: (row: T) => void
+  rowInteractionRole?: "button" | "link"
+  rowAriaLabel?: string
   dataIndex: number
   isSubRow?: boolean
 }
@@ -33,6 +35,8 @@ function DataRowInner<T>({
   isExpandable,
   isExpanded,
   onClick,
+  rowInteractionRole = "button",
+  rowAriaLabel,
   dataIndex,
   isSubRow,
 }: DataRowProps<T>) {
@@ -46,16 +50,26 @@ function DataRowInner<T>({
     [onClick, row],
   )
 
+  const isClickable = Boolean(onClick)
+  const interactiveRole = isClickable ? rowInteractionRole : undefined
+  const isExpandToggleRow = Boolean(isClickable && isExpandable && !isSubRow)
+  const ariaExpanded = isExpandToggleRow ? Boolean(isExpanded) : undefined
+  const ariaPressed = isClickable && interactiveRole === "button" && !isExpandToggleRow ? Boolean(isActive) : undefined
+
   return (
     <tr
       data-index={dataIndex}
-      className={cn("transition-colors", {
+      role={interactiveRole}
+      {...(isClickable && rowAriaLabel ? { "aria-label": rowAriaLabel } : {})}
+      {...(ariaExpanded !== undefined ? { "aria-expanded": ariaExpanded } : {})}
+      {...(ariaPressed !== undefined ? { "aria-pressed": ariaPressed } : {})}
+      className={cn({
         "bg-secondary": !isSubRow && !isExpanded,
         "bg-muted": isExpanded && !isActive,
         "bg-accent": isActive,
         "hover:bg-muted cursor-pointer": onClick && !isExpanded && !isActive,
         "hover:bg-accent cursor-pointer": onClick && (isExpanded || isActive),
-        "focus-visible:outline-none": onClick,
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset": isClickable,
       })}
       onClick={onClick ? () => onClick(row) : undefined}
       onMouseDown={onClick ? (e) => e.preventDefault() : undefined}

@@ -185,6 +185,7 @@ Use the closest existing doc when possible:
 - `docs/users.md`: user identity and user lifecycle
 - `docs/settings.md`: configuration and settings behavior
 - `docs/spans.md`: span ingestion, storage, and query semantics
+- `docs/repositories.md`: repository port naming, standard verbs, audit of domain ports
 
 If a change spans multiple domains, update multiple docs.
 

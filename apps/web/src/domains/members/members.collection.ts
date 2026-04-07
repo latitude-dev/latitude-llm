@@ -2,7 +2,14 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, createOptimisticAction, useLiveQuery } from "@tanstack/react-db"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
 import type { MemberRecord } from "./members.functions.ts"
-import { cancelInvite, invite, listMembers, removeMember } from "./members.functions.ts"
+import {
+  cancelInvite,
+  invite,
+  listMembers,
+  removeMember,
+  transferOwnership,
+  updateMemberRole,
+} from "./members.functions.ts"
 
 const queryClient = getQueryClient()
 
@@ -39,6 +46,20 @@ export async function inviteMemberMutation(email: string): Promise<void> {
 
 export function removeMemberMutation(membershipId: string) {
   return membersCollection.delete(membershipId)
+}
+
+export async function updateMemberRoleMutation(targetUserId: string, newRole: "admin" | "member"): Promise<void> {
+  await updateMemberRole({
+    data: { targetUserId, newRole },
+  })
+  await queryClient.invalidateQueries({ queryKey: ["members"] })
+}
+
+export async function transferOwnershipMutation(newOwnerUserId: string): Promise<void> {
+  await transferOwnership({
+    data: { newOwnerUserId },
+  })
+  await queryClient.invalidateQueries({ queryKey: ["members"] })
 }
 
 const cancelInviteAction = createOptimisticAction<{ inviteId: string }>({

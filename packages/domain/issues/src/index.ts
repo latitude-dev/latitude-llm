@@ -5,16 +5,14 @@ export {
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
   ESCALATION_THRESHOLD_FACTOR,
-  HYBRID_SEARCH_ALPHA,
+  ISSUE_DETAILS_GENERATION_MODEL,
+  ISSUE_DETAILS_MAX_OCCURRENCES,
   ISSUE_DISCOVERY_MAX_CANDIDATES,
   ISSUE_DISCOVERY_MIN_KEYWORDS,
   ISSUE_DISCOVERY_MIN_SIMILARITY,
   ISSUE_DISCOVERY_SEARCH_RATIO,
   ISSUE_REFRESH_DEBOUNCE_MS,
   ISSUE_STATES,
-  MAX_INITIAL_CANDIDATES,
-  MIN_BM25_KEYWORD_MATCHES,
-  MIN_HYBRID_SIMILARITY,
   MIN_OCCURRENCES_FOR_VISIBILITY,
   MIN_RERANK_RELEVANCE,
   NEW_ISSUE_AGE_DAYS,
@@ -30,7 +28,27 @@ export {
   issueSchema,
   issueStateSchema,
 } from "./entities/issue.ts"
-export { emptyIssueCentroid } from "./helpers.ts"
+export {
+  type CheckEligibilityError,
+  DraftScoreNotEligibleForDiscoveryError,
+  ErroredScoreNotEligibleForDiscoveryError,
+  IssueNotFoundForAssignmentError,
+  IssueNotFoundForDetailsGenerationError,
+  MissingIssueOccurrencesForDetailsGenerationError,
+  MissingScoreFeedbackForDiscoveryError,
+  PassedScoreNotEligibleForDiscoveryError,
+  ScoreAlreadyOwnedByIssueError,
+  ScoreDiscoveryOrganizationMismatchError,
+  ScoreDiscoveryProjectMismatchError,
+  ScoreNotFoundForDiscoveryError,
+} from "./errors.ts"
+export {
+  createIssueCentroid,
+  normalizeEmbedding,
+  normalizeIssueCentroid,
+  type UpdateIssueCentroidInput,
+  updateIssueCentroid,
+} from "./helpers.ts"
 export {
   type DeleteIssueProjectionInput,
   type HybridSearchInput,
@@ -39,13 +57,50 @@ export {
   type IssuesCollectionProperties,
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
+export { IssueRepository } from "./ports/issue-repository.ts"
 export {
-  type AssignmentResult,
-  createOrAssignIssueUseCase,
-  type DiscoverIssueInput,
-  type EligibilityResult,
+  type AssignScoreToIssueError,
+  type AssignScoreToIssueInput,
+  type AssignScoreToIssueResult,
+  assignScoreToIssueUseCase,
+} from "./use-cases/assign-score-to-issue.ts"
+export { type CheckEligibilityInput, checkEligibilityUseCase } from "./use-cases/check-eligibility.ts"
+export {
+  type CreateIssueFromScoreError,
+  type CreateIssueFromScoreInput,
+  type CreateIssueFromScoreResult,
+  createIssueFromScoreUseCase,
+} from "./use-cases/create-issue-from-score.ts"
+export {
+  type EmbeddedScoreFeedback,
+  type EmbedScoreFeedbackInput,
+  embedScoreFeedbackUseCase,
+} from "./use-cases/embed-score-feedback.ts"
+export {
+  type GeneratedIssueDetails,
+  type GenerateIssueDetailsError,
+  type GenerateIssueDetailsInput,
+  generateIssueDetailsUseCase,
+  type IssueOccurrenceInput,
+} from "./use-cases/generate-issue-details.ts"
+export {
+  type HybridSearchIssuesInput,
+  type HybridSearchIssuesResult,
+  hybridSearchIssuesUseCase,
+} from "./use-cases/hybrid-search-issues.ts"
+export {
+  type ListIssuesError,
+  type ListIssuesInput,
+  listIssuesUseCase,
+} from "./use-cases/list-issues.ts"
+export {
+  type RerankIssueCandidatesInput,
   type RetrievalResult,
-  recheckEligibilityUseCase,
-  retrieveAndRerankUseCase,
-  syncProjectionsUseCase,
-} from "./use-cases/discover-issue.ts"
+  rerankIssueCandidatesUseCase,
+} from "./use-cases/rerank-issue-candidates.ts"
+export {
+  type ResolvedIssueMatch,
+  type ResolveMatchedIssueInput,
+  resolveMatchedIssueUseCase,
+} from "./use-cases/resolve-matched-issue.ts"
+export { type SyncIssueProjectionsInput, syncIssueProjectionsUseCase } from "./use-cases/sync-projections.ts"

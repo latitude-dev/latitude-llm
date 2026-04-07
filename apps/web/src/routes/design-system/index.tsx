@@ -1,5 +1,6 @@
 import type { CheckedState } from "@repo/ui"
 import {
+  BarChart,
   Button,
   Card,
   CardContent,
@@ -7,12 +8,15 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  ChartSkeleton,
   Checkbox,
   CopyButton,
   FormField,
   GitHubIcon,
   GoogleIcon,
   Icon,
+  InfiniteTable,
+  type InfiniteTableColumn,
   Input,
   Label,
   LatitudeLogo,
@@ -223,6 +227,42 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         </div>
       </ShowcaseSection>
 
+      <ShowcaseSection
+        theme={theme}
+        title="Charts"
+        description="ECharts bar chart with CSS-variable theming; skeleton for loading states."
+      >
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">BarChart</Text.H6>
+            <BarChart
+              colorScheme={theme}
+              height={200}
+              ariaLabel="Sample requests per day"
+              data={[
+                { category: "Mon", value: 120 },
+                { category: "Tue", value: 84 },
+                { category: "Wed", value: 162 },
+                { category: "Thu", value: 95 },
+                { category: "Fri", value: 140 },
+              ]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">ChartSkeleton</Text.H6>
+            <ChartSkeleton minHeight={160} />
+          </div>
+        </div>
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Infinite Table"
+        description="Virtualized list with sortable headers and an optional second row via renderSubheader."
+      >
+        <InfiniteTableSubheaderDemo />
+      </ShowcaseSection>
+
       <Card className={`relative overflow-hidden border-border/70 shadow-xl ${surfaceClass}`}>
         <CardHeader className="relative">
           <CardTitle>
@@ -252,6 +292,54 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           </Text.H6>
         </CardFooter>
       </Card>
+    </div>
+  )
+}
+
+type DemoRow = { id: string; name: string; amount: number }
+
+const demoTableColumns: InfiniteTableColumn<DemoRow>[] = [
+  {
+    key: "name",
+    header: "Name",
+    render: (r) => r.name,
+    renderSubheader: () => (
+      <Text.H6 color="foregroundMuted" className="truncate">
+        —
+      </Text.H6>
+    ),
+  },
+  {
+    key: "amount",
+    header: "Amount",
+    align: "end",
+    sortKey: "amount",
+    render: (r) => r.amount,
+    renderSubheader: () => (
+      <Text.H6 color="foregroundMuted" className="truncate">
+        subtotal
+      </Text.H6>
+    ),
+  },
+]
+
+function InfiniteTableSubheaderDemo() {
+  const data: DemoRow[] = [
+    { id: "a", name: "Northwind", amount: 120 },
+    { id: "b", name: "Contoso", amount: 84 },
+    { id: "c", name: "Fabrikam", amount: 210 },
+  ]
+
+  return (
+    <div className="h-[200px] min-h-0 flex flex-col rounded-lg border border-border/60">
+      <InfiniteTable
+        data={data}
+        columns={demoTableColumns}
+        getRowKey={(r) => r.id}
+        sorting={{ column: "amount", direction: "desc" }}
+        defaultSorting={{ column: "amount", direction: "desc" }}
+        onSortChange={() => {}}
+      />
     </div>
   )
 }

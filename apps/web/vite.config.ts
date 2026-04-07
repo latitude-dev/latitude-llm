@@ -34,8 +34,49 @@ function stripUseDirectives() {
 }
 
 export default defineConfig({
-  plugins: [stripUseDirectives(), tanstackStart({ start: { entry: "./src/start.ts" } }), nitro(), tailwindcss(), react()],
+  plugins: [stripUseDirectives(), tanstackStart(), nitro(), tailwindcss(), react()],
+  resolve: {
+    alias: {
+      // tslib's CJS UMD sets __esModule: true without providing a default
+      // export, which breaks Vite 8 / Rolldown's consistent CJS interop.
+      // Alias to the native ESM build to avoid the interop entirely.
+      tslib: "tslib/tslib.es6.mjs",
+    },
+  },
   build: {
+    sourcemap: true,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              test: /node_modules\/codemirror/,
+              name: "codemirror",
+            },
+            {
+              test: /node_modules\/echarts-for-react\//,
+              name: "echarts-react",
+            },
+            {
+              test: /node_modules\/echarts\//,
+              name: "echarts",
+            },
+            {
+              test: /node_modules\/react/,
+              name: "react",
+            },
+            {
+              test: /node_modules\/react-dom/,
+              name: "react-dom",
+            },
+            {
+              test: /node_modules\/zod/,
+              name: "zod",
+            },
+          ],
+        },
+      },
+    },
     rollupOptions: {
       plugins: bundleAnalyze
         ? [
@@ -49,39 +90,6 @@ export default defineConfig({
             }),
           ]
         : [],
-      output: {
-        manualChunks(id) {
-          if (id.includes("icons/custom-icons/providers/")) {
-            return "vendor-provider-icons"
-          }
-
-          if (!id.includes("node_modules")) {
-            return undefined
-          }
-
-          if (id.includes("@codemirror") || id.includes("codemirror")) {
-            return "vendor-codemirror"
-          }
-
-          if (id.includes("@tanstack")) {
-            return "vendor-tanstack"
-          }
-
-          if (id.includes("zod")) {
-            return "vendor-zod"
-          }
-
-          if (id.includes("papaparse")) {
-            return "vendor-papaparse"
-          }
-
-          if (id.includes("react-dom") || id.includes("/react/")) {
-            return "vendor-react"
-          }
-
-          return undefined
-        },
-      },
     },
   },
   server:

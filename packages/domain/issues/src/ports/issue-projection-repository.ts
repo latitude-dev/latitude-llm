@@ -8,25 +8,25 @@ export interface IssueProjectionCandidate {
   readonly score: number
 }
 
-export interface UpsertIssueProjectionInput {
+interface IssueProjectionScopeInput {
+  readonly organizationId: string
+  readonly projectId: string
+}
+
+export interface UpsertIssueProjectionInput extends IssueProjectionScopeInput {
   readonly uuid: string
   readonly title: string
   readonly description: string
   readonly vector: number[]
-  readonly tenantName: string
 }
 
-export interface DeleteIssueProjectionInput {
+export interface DeleteIssueProjectionInput extends IssueProjectionScopeInput {
   readonly uuid: string
-  readonly tenantName: string
 }
 
-export interface HybridSearchInput {
+export interface HybridSearchInput extends IssueProjectionScopeInput {
   readonly query: string
   readonly vector: number[]
-  readonly tenantName: string
-  readonly alpha: number
-  readonly limit: number
 }
 
 export type IssuesCollectionProperties = {

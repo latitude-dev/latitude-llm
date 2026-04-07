@@ -35,5 +35,6 @@ export const startTracing = async ({
   })
 
   await sdk.start()
+
   return () => sdk.shutdown()
 }

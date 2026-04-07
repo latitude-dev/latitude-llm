@@ -15,6 +15,7 @@ import {
   RepositoryError,
   SEED_API_KEY_ID,
   SessionId,
+  SimulationId,
   SpanId,
   TraceId,
 } from "@domain/shared"
@@ -41,7 +42,7 @@ const ch = setupTestClickHouse()
 
 function makeFakeTraceRepository(traces: TraceDetail[]) {
   return createFakeTraceRepository({
-    findByTraceIds: () => Effect.succeed(traces),
+    listByTraceIds: () => Effect.succeed(traces),
   }).repository
 }
 
@@ -187,6 +188,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         costTotalMicrocents: 0,
         sessionId: SessionId(""),
         userId: ExternalUserId(""),
+        simulationId: SimulationId(""),
         tags: [],
         metadata: {},
         models: [],

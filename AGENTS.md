@@ -61,17 +61,23 @@ details when the documentation isn't enough.
 
 ## Domain Schema And Module Conventions
 
+- Domain **entities** are **Zod-first**: `entitySchema` + `z.infer<typeof entitySchema>` in `src/entities/<entity>.ts`. See [`docs/domain-entities.md`](docs/domain-entities.md) and [`docs/adr/0001-domain-entity-schema-style.md`](docs/adr/0001-domain-entity-schema-style.md).
 - Treat canonical domain entity schemas as the source of truth. Schemas and types elsewhere in the same domain, plus app/platform boundary schemas, should derive from or reuse the entity shapes whenever practical instead of re-declaring the same fields.
 - When a boundary schema must differ materially from the entity shape, still reuse the relevant domain constants, field schemas, and literal unions rather than hardcoding duplicated lengths or sentinel values again.
 - Domain entity schemas and their inferred entity types belong in `src/entities/<entity>.ts`.
 - Domain package constants belong in `src/constants.ts`.
 - Domain package errors belong in `src/errors.ts`.
+- For **how** to structure those errors (tagged classes, HTTP fields, unions per flow, naming), treat `packages/domain/issues` as the reference: see `packages/domain/issues/src/errors.ts` and the section *Domain errors (`@domain/issues` reference pattern)* in `docs/issues.md`.
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `src/helpers.ts`.
 - Schemas and types that exist only as inputs to one domain use-case should be defined in that use-case file. Only promote them into shared modules when several use-cases truly share the same contract.
+
+## Repository method naming
+
+- Standard verbs for domain repository ports: `findById`, `findByXxx` (unique lookup), `listByXxx` or `list` (collections), `save` (create/update), explicit `delete` vs `softDelete`, and specialized names for analytics (`aggregateBy*`, `countBy*`, etc.). Full rules, examples, and a port-by-port audit live in [docs/repositories.md](docs/repositories.md).
 
 ## Async Contract Scoping Convention
 
 - Reliability domain-event payloads, queue topic/task payloads, and workflow inputs should include both `organizationId` and `projectId` by default so async execution remains project-scoped end-to-end.
-- Explicit exceptions: the `domain-events` topic payload, the `magic-link-email` topic payload, the `MagicLinkEmailRequested` domain event, the `UserDeletionRequested` domain event, and the `user-deletion` topic payload do not require `projectId`.
+- Explicit exceptions: the `domain-events` topic payload, the `magic-link-email` topic payload, the `invitation-email` topic payload, the `MagicLinkEmailRequested` domain event, the `InvitationEmailRequested` domain event, the `UserDeletionRequested` domain event, and the `user-deletion` topic payload do not require `projectId`.
 
 <!-- domain-schema-and-module-conventions:end -->

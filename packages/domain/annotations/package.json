@@ -13,6 +13,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/scores": "workspace:*"
+    "@domain/ai": "workspace:*",
+    "@domain/queue": "workspace:*",
+    "@domain/scores": "workspace:*",
+    "@domain/shared": "workspace:*",
+    "@domain/spans": "workspace:*",
+    "effect": "catalog:",
+    "rosetta-ai": "catalog:",
+    "zod": "catalog:"
   }
 }

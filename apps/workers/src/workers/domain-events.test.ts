@@ -1,5 +1,5 @@
 import type { EventEnvelope } from "@domain/events"
-import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
+import type { QueueConsumer, QueueName, TaskHandlers, WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
@@ -44,12 +44,29 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
   occurredAt: envelope.occurredAt.toISOString(),
 })
 
+const setupDispatcher = () => {
+  const consumer = new TestQueueConsumer()
+  const { publisher, published } = createFakeQueuePublisher()
+  const startedWorkflows: Array<{
+    readonly workflow: string
+    readonly input: unknown
+    readonly options: { readonly workflowId: string }
+  }> = []
+  const workflowStarter: WorkflowStarterShape = {
+    start: (workflow, input, options) =>
+      Effect.sync(() => {
+        startedWorkflows.push({ workflow, input, options })
+      }),
+  }
+
+  createDomainEventsWorker({ consumer, publisher, workflowStarter })
+
+  return { consumer, published, startedWorkflows }
+}
+
 describe("domain-events dispatcher", () => {
   it("routes MagicLinkEmailRequested to magic-link-email:send", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({ consumer, publisher })
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("MagicLinkEmailRequested", {
       email: "a@b.com",
@@ -70,10 +87,7 @@ describe("domain-events dispatcher", () => {
   })
 
   it("routes OrganizationCreated to api-keys:create with default key name", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({ consumer, publisher })
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope(
       "OrganizationCreated",
@@ -93,13 +107,7 @@ describe("domain-events dispatcher", () => {
   })
 
   it("routes UserDeletionRequested to user-deletion:delete", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("UserDeletionRequested", {
       organizationId: "org-1",
@@ -118,13 +126,7 @@ describe("domain-events dispatcher", () => {
   })
 
   it("routes SpanIngested to live-traces:end with dedupeKey and debounceMs", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
       projectId: "proj-1",
@@ -145,13 +147,7 @@ describe("domain-events dispatcher", () => {
   })
 
   it("routes TraceEnded to 3 targets", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("TraceEnded", {
       organizationId: "org-1",
@@ -170,13 +166,7 @@ describe("domain-events dispatcher", () => {
   })
 
   it("fails on unhandled events", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher } = createFakeQueuePublisher()
-
-    createDomainEventsWorker({
-      consumer,
-      publisher,
-    })
+    const { consumer } = setupDispatcher()
 
     const envelope = makeEnvelope("UnknownEvent", { foo: "bar" })
     const effect = consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope))
@@ -200,57 +190,53 @@ describe("domain-events dispatcher", () => {
     }
   })
 
-  it("routes ScoreImmutable to analytic-scores:save and issue refresh when issue ownership exists", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
+  it("routes IssueRefreshRequested to issues:refresh with dedupe and debounce", async () => {
+    const { consumer, published } = setupDispatcher()
 
-    createDomainEventsWorker({ consumer, publisher })
-
-    const envelope = makeEnvelope("ScoreImmutable", {
+    const envelope = makeEnvelope("IssueRefreshRequested", {
       organizationId: "org-1",
       projectId: "proj-1",
-      scoreId: "score-1",
       issueId: "issue-42",
     })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(2)
-    expect(published[0]?.queue).toBe("analytic-scores")
-    expect(published[0]?.task).toBe("save")
+    expect(published).toHaveLength(1)
+    expect(published[0]?.queue).toBe("issues")
+    expect(published[0]?.task).toBe("refresh")
     expect(published[0]?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
-      scoreId: "score-1",
+      issueId: "issue-42",
     })
-    expect(published[1]?.queue).toBe("issues")
-    expect(published[1]?.task).toBe("refresh")
-    expect(published[1]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
-    expect(published[1]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
+    expect(published[0]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
+    expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
-  it("routes ScoreImmutable to analytic-scores:save without issue refresh when no issue is attached", async () => {
-    const consumer = new TestQueueConsumer()
-    const { publisher, published } = createFakeQueuePublisher()
+  it("starts issueDiscoveryWorkflow for IssueDiscoveryRequested", async () => {
+    const { consumer, published, startedWorkflows } = setupDispatcher()
 
-    createDomainEventsWorker({ consumer, publisher })
-
-    const envelope = makeEnvelope("ScoreImmutable", {
+    const envelope = makeEnvelope("IssueDiscoveryRequested", {
       organizationId: "org-1",
       projectId: "proj-1",
-      scoreId: "score-2",
-      issueId: null,
+      scoreId: "score-3",
     })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("analytic-scores")
-    expect(published[0]?.task).toBe("save")
-    expect(published[0]?.payload).toEqual({
-      organizationId: "org-1",
-      projectId: "proj-1",
-      scoreId: "score-2",
-    })
+    expect(published).toHaveLength(0)
+    expect(startedWorkflows).toEqual([
+      {
+        workflow: "issueDiscoveryWorkflow",
+        input: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+        },
+        options: {
+          workflowId: "issue-discovery:org-1:proj-1:score-3",
+        },
+      },
+    ])
   })
 })

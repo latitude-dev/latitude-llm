@@ -1,53 +1,50 @@
-import type { ClickHouseClient } from "@clickhouse/client"
 import { OpenAPIHono } from "@hono/zod-openapi"
-import type { RedisClient } from "@platform/cache-redis"
-import type { PostgresClient } from "@platform/db-postgres"
 import { createAuthMiddleware } from "../middleware/auth.ts"
 import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
 import { createAuthRateLimiter } from "../middleware/rate-limiter.ts"
-import type { ProtectedEnv } from "../types.ts"
+import { validationErrorMiddleware } from "../middleware/validation.ts"
+import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
+import { createAnnotationsRoutes } from "./annotations.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
 import { createProjectsRoutes } from "./projects.ts"
 import { createScoresRoutes } from "./scores.ts"
 
-interface RoutesContext {
-  app: OpenAPIHono
-  database: PostgresClient
-  clickhouse: ClickHouseClient
-  redis: RedisClient
-}
-
 /**
  * Register all API routes with versioning.
  */
-export const registerRoutes = (context: RoutesContext) => {
-  const { app } = context
-
-  const v1 = new OpenAPIHono()
-  const protectedRoutes = new OpenAPIHono<ProtectedEnv>()
+export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) => {
+  const v1 = new OpenAPIHono<AppEnv>()
+  const routes = new OpenAPIHono<ProtectedEnv>()
 
   registerHealthRoute({ app })
 
-  // Make shared dependencies available via request context.
   v1.use("*", async (c, next) => {
-    c.set("db", context.database.db)
-    c.set("postgresClient", context.database)
-    c.set("redis", context.redis)
-    c.set("clickhouse", context.clickhouse)
-
+    c.set("db", options.database.db)
+    c.set("postgresClient", options.database)
+    c.set("redis", options.redis)
+    c.set("clickhouse", options.clickhouse)
+    c.set("queuePublisher", options.queuePublisher)
     await next()
-  }) // available via c.var.*
+  })
 
-  protectedRoutes.use("*", createAuthRateLimiter()) // Rate limiting before auth prevents brute force attacks
-  protectedRoutes.use("*", createAuthMiddleware())
-  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
+  routes.use("*", validationErrorMiddleware)
+  routes.use("*", createAuthRateLimiter()) // Rate limiting before auth prevents brute force attacks
+  routes.use(
+    "*",
+    createAuthMiddleware({
+      adminClient: options.adminDatabase,
+      logTouchBuffer: options.logTouchBuffer,
+    }),
+  )
+  routes.use("/:organizationId/*", createOrganizationContextMiddleware())
 
-  protectedRoutes.route("/:organizationId/projects", createProjectsRoutes())
-  protectedRoutes.route("/:organizationId/projects/:projectId/scores", createScoresRoutes())
-  protectedRoutes.route("/:organizationId/api-keys", createApiKeysRoutes())
+  routes.route("/:organizationId/projects", createProjectsRoutes())
+  routes.route("/:organizationId/projects/:projectId/scores", createScoresRoutes())
+  routes.route("/:organizationId/projects/:projectId/annotations", createAnnotationsRoutes(options.annotationRoutes))
+  routes.route("/:organizationId/api-keys", createApiKeysRoutes())
 
-  v1.route("/organizations", protectedRoutes)
+  v1.route("/organizations", routes)
 
   app.route("/v1", v1)
 }

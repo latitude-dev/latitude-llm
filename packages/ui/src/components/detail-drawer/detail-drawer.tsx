@@ -4,6 +4,7 @@ import { useLocalStorage } from "../../hooks/use-local-storage.ts"
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
 import { Button } from "../button/button.tsx"
+import { Tooltip } from "../tooltip/tooltip.tsx"
 
 const DEFAULT_MIN_WIDTH = 360
 const DEFAULT_DEFAULT_WIDTH = 520
@@ -61,6 +62,7 @@ function useDrawerWidth({
 
 export function DetailDrawer({
   onClose,
+  closeLabel,
   header,
   actions,
   rightActions,
@@ -70,6 +72,8 @@ export function DetailDrawer({
   defaultWidth = DEFAULT_DEFAULT_WIDTH,
 }: {
   onClose: () => void
+  /** Tooltip content for the close button (e.g. "Close" + HotkeyBadge). Defaults to "Close". */
+  closeLabel?: ReactNode
   header?: ReactNode
   actions?: ReactNode
   rightActions?: ReactNode
@@ -179,9 +183,17 @@ export function DetailDrawer({
         <div className="flex flex-row items-center justify-between px-6 py-4 border-b shrink-0">
           <div className="w-full flex flex-row items-center justify-between gap-1">
             <div className="flex flex-row items-center gap-x-1">
-              <Button variant="outline" className="w-8 h-8 p-0" onClick={onClose}>
-                <PanelRightCloseIcon className="w-4 h-4 text-muted-foreground" />
-              </Button>
+              <Tooltip
+                side="bottom"
+                asChild
+                trigger={
+                  <Button variant="outline" className="w-8 h-8 p-0" onClick={onClose}>
+                    <PanelRightCloseIcon className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                }
+              >
+                {closeLabel ?? "Close"}
+              </Tooltip>
               {actions}
             </div>
             {rightActions ? <div className="flex flex-row items-center gap-x-1">{rightActions}</div> : null}

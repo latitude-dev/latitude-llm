@@ -221,7 +221,11 @@ RUN prune-workspace
 USER latitude
 EXPOSE 8080
 
-CMD ["node", "apps/web/.output/server/index.mjs"]
+# --no-experimental-webstorage: Node.js 22+ exposes a global `localStorage` (Web Storage API).
+# The `debug` package (bundled in the SSR output) tries to access it and triggers:
+#   "Warning: `--localstorage-file` was provided without a valid path"
+# Disabling it is correct for a server environment — localStorage is a browser-only API.
+CMD ["node", "--no-experimental-webstorage", "apps/web/.output/server/index.mjs"]
 
 # ---------------------------------------------------------------------------
 # Target: migrations — minimal image with migration tools

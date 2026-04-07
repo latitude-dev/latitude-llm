@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."outbox_events" ADD COLUMN "aggregate_type" text DEFAULT '' NOT NULL;--> statement-breakpoint
+CREATE INDEX "outbox_events_aggregate_type_idx" ON "latitude"."outbox_events" ("aggregate_type");

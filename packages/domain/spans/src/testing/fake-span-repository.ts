@@ -1,3 +1,4 @@
+import { NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
 import type { SpanRepositoryShape } from "../ports/span-repository.ts"
@@ -10,9 +11,10 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
       inserted.push([...spans])
       return Effect.void
     },
-    findByTraceId: () => Effect.succeed([]),
-    findByProjectId: () => Effect.succeed([]),
-    findBySpanId: () => Effect.succeed(null),
+    listByTraceId: () => Effect.succeed([]),
+    listByProjectId: () => Effect.succeed([]),
+    findBySpanId: () => Effect.fail(new NotFoundError({ entity: "Span", id: "" })),
+    findMessagesForTrace: () => Effect.succeed([]),
     ...overrides,
   }
 

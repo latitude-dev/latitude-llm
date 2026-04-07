@@ -29,6 +29,7 @@ export function base64Decode(str: string): Uint8Array {
   return Uint8Array.fromBase64(str)
 }
 
+/** Node 25+ provides `Uint8Array.fromHex` / `Uint8Array.prototype.toHex` (repo `mise.toml`). */
 export function hexEncode(buffer: Uint8Array): string {
   return buffer.toHex()
 }

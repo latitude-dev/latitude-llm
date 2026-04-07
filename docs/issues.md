@@ -4,6 +4,23 @@ Issues are the main observability entities of the reliability system.
 
 They group similar failed, non-errored, non-draft scores into actionable failure patterns.
 
+## Domain errors (`@domain/issues` reference pattern)
+
+The `packages/domain/issues` package is the **reference implementation** for how domain-specific errors should be organized in this repository. When adding a new `packages/domain/*` package or growing error surfaces in an existing one, mirror this layout before inventing a different structure.
+
+**Where to look**
+
+- `packages/domain/issues/src/errors.ts` — all package-level `Data.TaggedError` classes for this domain
+- Use-cases import those classes from `../errors.ts` and fail with `yield* new SomeSpecificError({ ... })` inside `Effect.gen`
+
+**Conventions**
+
+- **One file per package** at `src/errors.ts` for errors that are shared across multiple use-cases in that package. Errors that truly belong to a single use-case can stay in that use-case file until a second consumer appears (see `AGENTS.md` domain conventions).
+- **Specific class names** for business rules (`ScoreNotFoundForDiscoveryError`, `DraftScoreNotEligibleForDiscoveryError`), not generic `NotFoundError` / `BadRequestError` from `@domain/shared` when the failure is part of the domain vocabulary.
+- **HTTP metadata on every class**: each error implements `HttpError` with `httpStatus` and `httpMessage` (static `readonly` fields or a getter when the message depends on fields). See `.agents/skills/effect-and-errors/SKILL.md`.
+- **Union types per flow**: export a union (for example `CheckEligibilityError`) that lists exactly the errors a use-case or small group of use-cases can return, so callers and tests stay typed end-to-end.
+- **Shared infrastructure errors** stay in `@domain/shared` (`RepositoryError`, `ValidationError`, generic `NotFoundError`, etc.); **domain semantics** live in the domain package’s `errors.ts`.
+
 ## Storage Split
 
 - Postgres stores the issue row and lifecycle state.
@@ -22,7 +39,7 @@ The main contracts are:
 
 Rules:
 
-- eligible non-draft failed non-errored scores start `issue-discovery` after commit instead of running embedding/search inline in request or annotation-edit paths
+- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher starts `issue-discovery` from that event
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
 - debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
@@ -74,11 +91,11 @@ Important state timestamps:
 Issue creation eligibility:
 
 - annotations are the primary signal
-- annotation flows can also link to an existing issue or create a new issue inline; those explicit human choices bypass discovery for that score
+- annotation flows can also link to an existing issue explicitly; that human choice bypasses discovery for that score
 - failed scores from evaluations that are not already linked to an issue may also create new issues
 - failed custom scores may also create new issues
 
-## Manual Creation From Annotations
+## Manual Linking From Annotations
 
 Issue discovery is not the only entrypoint.
 
@@ -86,9 +103,10 @@ When annotating in managed UI, the annotator may:
 
 - leave issue assignment automatic
 - link the annotation to an existing issue
-- create a new issue inline
 
-For explicit link/create actions:
+Inline manual issue creation from the annotation flow is intentionally deferred for now to keep the managed annotation UX and ownership rules simpler.
+
+For explicit link actions:
 
 - skip similarity-based discovery for that annotation score
 - write canonical ownership directly through `scores.issue_id`
@@ -108,16 +126,27 @@ Issue discovery should follow the original proposal closely:
 8. filter out candidates that do not pass the minimum similarity threshold across the hybrid search stage
 9. rerank candidates with `rerank-2.5`
 10. filter out candidates that do not pass the minimum rerank relevance threshold
-11. match an existing issue or create a new issue
-12. write `scores.issue_id` in Postgres
-13. project the now-immutable score row into ClickHouse
-14. refresh issue name/description asynchronously on debounce
+11. verify the final selected candidate still exists in Postgres for the same organization/project; if missing, treat it as stale projection data and continue as no-match
+12. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
+13. match an existing issue or create a new issue
+14. if the final selected candidate is stale, delete its projection object asynchronously
+15. write `scores.issue_id` in Postgres
+16. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
+17. after the create or assign transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
+18. after the same transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
+19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`
 
 Execution rules:
 
 - `issue-discovery` runs after an eligible non-draft failed non-errored score exists and still has no `issue_id`
 - `issues:refresh` runs after the configured debounce window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
+- in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
+- the brand-new issue path must generate its first name/description before the issue row is first persisted, and that synchronous generation step must reuse the same shared issue-details generation use case that later debounced refreshes call
+- after rerank selects a candidate, resolve that matched issue against canonical Postgres state before choosing between the create-from-score and assign-to-issue paths
+- both the create-from-score step and the assign-to-issue step must use a conditional `scores.issue_id` claim so only one concurrent owner wins while the canonical issue row and centroid stay transactionally consistent
+- the assign-to-issue path must lock the canonical issue row before recomputing and saving the centroid so parallel score assignments into the same issue do not lose centroid contributions
+- resolved and ignored issues are still valid discovery match candidates; this preserves regression detection and keeps future matching scores linked to intentionally ignored issues
 
 Concrete v1 mechanics worth carrying forward:
 
@@ -213,6 +242,7 @@ The system may also support a stronger buffered/provisional workflow on top of t
 - persist newly created issue candidates immediately
 - keep provisional issues hidden until they pass promotion rules
 - promote them when enough evidence accumulates, when annotation evidence lands, or when a user explicitly promotes them
+- let the stronger provisional workflow absorb duplicate or noisy concurrent no-match issue candidates before they become visible in the main Issues UI
 - keep the core issue entity shape unchanged
 
 ## Naming
@@ -222,7 +252,7 @@ Issue names and descriptions are summaries, not the cluster identity itself.
 The actual cluster identity is driven by:
 
 - centroid state
-- incoming evidence stream
+- incoming occurrence stream
 - assignment history
 
 Required Postgres indexes on the issue row:
@@ -232,7 +262,7 @@ Required Postgres indexes on the issue row:
 - do not add Postgres text-search indexes on `name` or `description`; issue search lives in Weaviate
 - do not add JSONB indexes on `centroid` in the issues foundation phase; centroid search is served by the Weaviate projection and centroid updates are driven by explicit ownership events
 
-Names/descriptions are generated from evidence and refreshed on debounce.
+Names/descriptions are generated from occurrences and refreshed on debounce.
 
 They may use:
 

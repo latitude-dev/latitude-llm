@@ -1,4 +1,9 @@
 import type { FilterSet } from "@domain/shared"
+import {
+  pickTraceHistogramBucketSeconds,
+  resolveTraceHistogramRangeIso,
+  type TraceTimeHistogramBucket,
+} from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -6,6 +11,8 @@ import {
   countTracesByProject,
   getTraceDetail,
   getTraceDistinctValues,
+  getTraceMetricsByProject,
+  getTraceTimeHistogramByProject,
   listTracesByProject,
   type TraceDetailRecord,
   type TraceRecord,
@@ -72,6 +79,67 @@ export function useTracesCount({ projectId, filters }: { readonly projectId: str
   })
 
   return { totalCount, isLoading }
+}
+
+export function useTraceMetrics({ projectId, filters }: { readonly projectId: string; readonly filters?: FilterSet }) {
+  return useQuery({
+    queryKey: ["traces-metrics", projectId, filters],
+    queryFn: () =>
+      getTraceMetricsByProject({
+        data: {
+          projectId,
+          ...(filters ? { filters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+  })
+}
+
+export function useTraceTimeHistogram({
+  projectId,
+  filters,
+}: {
+  readonly projectId: string
+  readonly filters: FilterSet
+}) {
+  const { rangeStartIso, rangeEndIso, bucketSeconds, queryKey } = useMemo(() => {
+    const nowMs = Date.now()
+    const { rangeStartIso: rs, rangeEndIso: re } = resolveTraceHistogramRangeIso(filters, nowMs)
+    const startMs = Date.parse(rs)
+    const endMs = Date.parse(re)
+    const bs =
+      Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
+        ? pickTraceHistogramBucketSeconds(startMs, endMs)
+        : 60
+    return {
+      rangeStartIso: rs,
+      rangeEndIso: re,
+      bucketSeconds: bs,
+      queryKey: ["traces-histogram", projectId, filters, rs, re, bs] as const,
+    }
+  }, [projectId, filters])
+
+  const query = useQuery({
+    queryKey,
+    queryFn: (): Promise<readonly TraceTimeHistogramBucket[]> =>
+      getTraceTimeHistogramByProject({
+        data: {
+          projectId,
+          rangeStartIso,
+          rangeEndIso,
+          bucketSeconds,
+          ...(Object.keys(filters).length > 0 ? { filters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+  })
+
+  return {
+    ...query,
+    rangeStartIso,
+    rangeEndIso,
+    bucketSeconds,
+  }
 }
 
 export function useTraceDistinctValues({

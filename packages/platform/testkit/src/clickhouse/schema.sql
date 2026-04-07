@@ -82,6 +82,7 @@ CREATE TABLE sessions
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
+    `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
     INDEX idx_start_time min_start_time TYPE minmax GRANULARITY 1
 )
 ENGINE = AggregatingMergeTree
@@ -115,7 +116,8 @@ CREATE MATERIALIZED VIEW sessions_mv TO sessions
     `metadata` Map(String, String),
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8),
-    `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8)
+    `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8),
+    `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8)
 )
 AS SELECT
     s.organization_id,
@@ -141,7 +143,8 @@ AS SELECT
     maxMap(s.metadata) AS metadata,
     groupUniqArrayIfState(s.model, s.model != '') AS models,
     groupUniqArrayIfState(s.provider, s.provider != '') AS providers,
-    groupUniqArrayIfState(s.service_name, s.service_name != '') AS service_names
+    groupUniqArrayIfState(s.service_name, s.service_name != '') AS service_names,
+    argMaxIfState(s.simulation_id, s.start_time, s.simulation_id != '') AS simulation_id
 FROM spans AS s
 WHERE s.session_id != ''
 GROUP BY
@@ -159,6 +162,7 @@ CREATE TABLE spans
     `span_id` FixedString(16) CODEC(ZSTD(1)),
     `parent_span_id` String DEFAULT '' CODEC(ZSTD(1)),
     `api_key_id` LowCardinality(String) DEFAULT '' CODEC(ZSTD(1)),
+    `simulation_id` FixedString(24) DEFAULT '' CODEC(ZSTD(1)),
     `start_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
     `end_time` DateTime64(9, 'UTC') CODEC(Delta(8), ZSTD(1)),
     `duration_ns` Int64 ALIAS reinterpretAsInt64(end_time) - reinterpretAsInt64(start_time),
@@ -219,7 +223,8 @@ CREATE TABLE spans
     INDEX idx_error_type error_type TYPE bloom_filter(0.01) GRANULARITY 2,
     INDEX idx_service service_name TYPE bloom_filter(0.01) GRANULARITY 4,
     INDEX idx_tags tags TYPE bloom_filter(0.01) GRANULARITY 2,
-    INDEX idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 2
+    INDEX idx_user_id user_id TYPE bloom_filter(0.01) GRANULARITY 2,
+    INDEX idx_simulation_id simulation_id TYPE bloom_filter(0.01) GRANULARITY 2
 )
 ENGINE = ReplacingMergeTree(ingested_at)
 PARTITION BY toYYYYMM(start_time)
@@ -252,6 +257,7 @@ CREATE TABLE traces
     `user_id` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
     `tags` SimpleAggregateFunction(groupUniqArrayArray, Array(String)) CODEC(ZSTD(1)),
     `metadata` SimpleAggregateFunction(maxMap, Map(String, String)) CODEC(ZSTD(1)),
+    `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8) CODEC(ZSTD(1)),
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8) CODEC(ZSTD(1)),
@@ -292,6 +298,7 @@ CREATE MATERIALIZED VIEW traces_mv TO traces
     `user_id` AggregateFunction(argMaxIf, String, DateTime64(9, 'UTC'), UInt8),
     `tags` Array(String),
     `metadata` Map(String, String),
+    `simulation_id` AggregateFunction(argMaxIf, FixedString(24), DateTime64(9, 'UTC'), UInt8),
     `models` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `providers` AggregateFunction(groupUniqArrayIf, String, UInt8),
     `service_names` AggregateFunction(groupUniqArrayIf, String, UInt8),
@@ -324,6 +331,7 @@ AS SELECT
     argMaxIfState(user_id, start_time, user_id != '') AS user_id,
     groupUniqArrayArray(tags) AS tags,
     maxMap(metadata) AS metadata,
+    argMaxIfState(simulation_id, start_time, simulation_id != '') AS simulation_id,
     groupUniqArrayIfState(model, model != '') AS models,
     groupUniqArrayIfState(provider, provider != '') AS providers,
     groupUniqArrayIfState(service_name, service_name != '') AS service_names,

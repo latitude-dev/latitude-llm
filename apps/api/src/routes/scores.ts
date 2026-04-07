@@ -5,13 +5,16 @@ import {
   customScoreSchema,
   type EvaluationScore,
   evaluationScoreSchema,
+  isImmutableScore,
+  syncScoreAnalyticsUseCase,
   writeScoreUseCase,
 } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
+import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
-import { ErrorSchema, OrgAndProjectParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
 const ApiScoreBodyCommonSchema = z.object({
@@ -41,17 +44,15 @@ const CreateEvaluationScoreBodySchema = z
   })
   .openapi("CreateEvaluationScoreBody", { description: "Internal, don't use" })
 
-const CreateScoreBodySchema = z
-  .union([CreateCustomScoreBodySchema, CreateEvaluationScoreBodySchema])
-  .openapi("CreateScoreBody")
+const RequestSchema = z.union([CreateCustomScoreBodySchema, CreateEvaluationScoreBodySchema]).openapi("CreateScoreBody")
 
 const apiScoreResponseOverrides = {
   id: cuidSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
-  draftedAt: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  draftedAt: z.iso.datetime().nullable(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 } as const
 
 const CustomScoreResponseSchema = z
@@ -68,11 +69,11 @@ const EvaluationScoreResponseSchema = z
   })
   .openapi("EvaluationScoreResponse")
 
-const ScoreResponseSchema = z.union([CustomScoreResponseSchema, EvaluationScoreResponseSchema]).openapi("ScoreResponse")
+const ResponseSchema = z.union([CustomScoreResponseSchema, EvaluationScoreResponseSchema]).openapi("ScoreResponse")
 
 type ApiScore = CustomScore | EvaluationScore
 
-const createScoreRoute = createRoute({
+const route = createRoute({
   method: "post",
   path: "/",
   tags: ["Scores"],
@@ -81,32 +82,16 @@ const createScoreRoute = createRoute({
   security: PROTECTED_SECURITY,
   request: {
     params: OrgAndProjectParamsSchema,
-    body: {
-      content: { "application/json": { schema: CreateScoreBodySchema } },
-      required: true,
-    },
+    body: jsonBody(RequestSchema),
   },
-  responses: {
-    201: {
-      content: { "application/json": { schema: ScoreResponseSchema } },
-      description: "Score created successfully",
-    },
-    400: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Validation error",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Project not found",
-    },
-  },
+  responses: openApiResponses({
+    status: 201,
+    schema: ResponseSchema,
+    description: "Score created successfully",
+  }),
 })
 
-const toScoreResponse = (score: ApiScore) => {
+const toResponse = (score: ApiScore) => {
   const baseResponse = {
     id: score.id as string,
     organizationId: score.organizationId,
@@ -147,16 +132,9 @@ const toScoreResponse = (score: ApiScore) => {
 }
 
 export const createScoresRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>({
-    defaultHook(result, c) {
-      if (!result.success) {
-        const error = result.error.issues.map((issue) => issue.message).join(", ")
-        return c.json({ error }, 400)
-      }
-    },
-  })
+  const app = new OpenAPIHono<OrganizationScopedEnv>()
 
-  app.openapi(createScoreRoute, async (c) => {
+  app.openapi(route, async (c) => {
     const body = c.req.valid("json")
     const { projectId: projectIdParam } = c.req.valid("param")
     const projectId = ProjectId(projectIdParam)
@@ -168,8 +146,9 @@ export const createScoresRoutes = () => {
         const projectRepository = yield* ProjectRepository
         yield* projectRepository.findById(projectId)
 
+        let score: ApiScore
         if (body._evaluation === true) {
-          return yield* writeScoreUseCase({
+          const evaluationScore = yield* writeScoreUseCase({
             projectId,
             source: "evaluation",
             sourceId: body.sourceId,
@@ -186,33 +165,40 @@ export const createScoresRoutes = () => {
             tokens: body.tokens,
             cost: body.cost,
           })
+          score = evaluationScore as EvaluationScore
+        } else {
+          const customScore = yield* writeScoreUseCase({
+            projectId,
+            source: "custom",
+            sourceId: body.sourceId,
+            sessionId: body.sessionId,
+            traceId: body.traceId,
+            spanId: body.spanId,
+            simulationId: body.simulationId,
+            value: body.value,
+            passed: body.passed,
+            feedback: body.feedback,
+            metadata: body.metadata,
+            error: body.error,
+            duration: body.duration,
+            tokens: body.tokens,
+            cost: body.cost,
+          })
+          score = customScore as CustomScore
         }
 
-        return yield* writeScoreUseCase({
-          projectId,
-          source: "custom",
-          sourceId: body.sourceId,
-          sessionId: body.sessionId,
-          traceId: body.traceId,
-          spanId: body.spanId,
-          simulationId: body.simulationId,
-          value: body.value,
-          passed: body.passed,
-          feedback: body.feedback,
-          metadata: body.metadata,
-          error: body.error,
-          duration: body.duration,
-          tokens: body.tokens,
-          cost: body.cost,
-        })
-      }).pipe(withPostgres(repositoriesLayer, c.var.postgresClient, c.var.organization.id)),
+        if (isImmutableScore(score)) {
+          yield* syncScoreAnalyticsUseCase({ scoreId: score.id })
+        }
+
+        return score
+      }).pipe(
+        withPostgres(repositoriesLayer, c.var.postgresClient, c.var.organization.id),
+        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, c.var.organization.id),
+      ),
     )
 
-    if (score.source === "annotation") {
-      throw new Error("Unexpected annotation score returned from score API writer")
-    }
-
-    return c.json(toScoreResponse(score), 201)
+    return c.json(toResponse(score), 201)
   })
 
   return app

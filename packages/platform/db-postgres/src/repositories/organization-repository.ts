@@ -49,6 +49,17 @@ export const OrganizationRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
+    const listByUserId = (userId: UserIdType) =>
+      sqlClient
+        .query((db) =>
+          db
+            .select({ organization: organizations })
+            .from(organizations)
+            .innerJoin(members, eq(members.organizationId, organizations.id))
+            .where(eq(members.userId, userId)),
+        )
+        .pipe(Effect.map((results) => results.map(({ organization: org }) => toDomainOrganization(org))))
+
     return {
       findById: (id: OrganizationIdType) =>
         sqlClient
@@ -63,16 +74,7 @@ export const OrganizationRepositoryLive = Layer.effect(
             }),
           ),
 
-      findByUserId: (userId: UserIdType) =>
-        sqlClient
-          .query((db) =>
-            db
-              .select({ organization: organizations })
-              .from(organizations)
-              .innerJoin(members, eq(members.organizationId, organizations.id))
-              .where(eq(members.userId, userId)),
-          )
-          .pipe(Effect.map((results) => results.map(({ organization: org }) => toDomainOrganization(org)))),
+      listByUserId,
 
       save: (org: {
         id: string

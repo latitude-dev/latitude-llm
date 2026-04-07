@@ -1,10 +1,15 @@
+---
+name: toolchain-commands
+description: Installing dependencies, running dev/build/test/lint, filtering packages, single-test runs, git hooks, preparing a clone (.env.development / .env.test), or Docker-backed local services and dev servers.
+---
+
 # Toolchain, commands, and CI
 
 **When to use:** Installing dependencies, running dev/build/test/lint, filtering packages, single-test runs, git hooks, preparing a clone (`.env.development` / `.env.test`), or **Docker-backed local services and dev servers**.
 
 ## Stack (summary)
 
-- **Runtime**: Node.js `>=25` (see root `package.json`). Check if mise is installed and use mise to switch to the repo’s Node version; if mise is not found, ignore.
+- **Runtime**: Node.js `25` via **`mise.toml`** (also `engines` in root `package.json`). Use `mise install` / `mise exec` so Vitest and `Uint8Array.fromHex` / `toHex` match production; Node 22 lacks those APIs and will fail tests that touch `@repo/utils` crypto helpers.
 - **Package manager**: `package.json` `packageManager` field (e.g. pnpm). Install deps: `pnpm install`
 - **Task runner**: `turbo` via root scripts
 - **Lint/format**: Biome (`@biomejs/biome` 1.9.x)

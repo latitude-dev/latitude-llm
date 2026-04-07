@@ -2,11 +2,17 @@ import {
   Button,
   CloseTrigger,
   Container,
+  CopyableText,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
   FormWrapper,
   Icon,
   Input,
   Label,
   Modal,
+  Select,
   Switch,
   Table,
   TableBody,
@@ -24,19 +30,22 @@ import { relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, useRouteContext, useRouter } from "@tanstack/react-router"
-import { Clipboard, Pencil, Trash2 } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import { ChevronDown, Pencil, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   deleteApiKeyMutation,
+  insertApiKeyMutation,
   updateApiKeyMutation,
   useApiKeysCollection,
 } from "../../domains/api-keys/api-keys.collection.ts"
-import { type ApiKeyRecord, createApiKey } from "../../domains/api-keys/api-keys.functions.ts"
+import type { ApiKeyRecord } from "../../domains/api-keys/api-keys.functions.ts"
 import { setActiveOrganization } from "../../domains/auth/auth.functions.ts"
 import {
   cancelMemberInviteMutation,
   inviteMemberMutation,
   removeMemberMutation,
+  transferOwnershipMutation,
+  updateMemberRoleMutation,
   useMembersCollection,
 } from "../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../domains/members/members.functions.ts"
@@ -61,14 +70,24 @@ function OrganizationSection() {
   )
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
 
-  const saveField = useCallback(
-    (patch: { name?: string; settings?: { keepMonitoring: boolean } }) => {
+  const saveName = useCallback(
+    (name: string) => {
       if (!org) return
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
-        updateOrganizationMutation(org.id, patch)
-        toast({ description: patch.name ? "Organization name updated" : "Monitoring preference updated" })
+        updateOrganizationMutation(org.id, { name })
+        toast({ description: "Organization name updated" })
       }, 600)
+    },
+    [org, toast],
+  )
+
+  const handleMonitoringChange = useCallback(
+    (checked: boolean) => {
+      if (!org) return
+      // Update collection immediately - it's optimistic
+      updateOrganizationMutation(org.id, { settings: { keepMonitoring: checked } })
+      toast({ description: "Monitoring preference updated" })
     },
     [org, toast],
   )
@@ -83,7 +102,7 @@ function OrganizationSection() {
         type="text"
         label="Organization Name"
         defaultValue={org.name}
-        onChange={(e) => saveField({ name: e.target.value })}
+        onChange={(e) => saveName(e.target.value)}
         placeholder="Organization name"
       />
       <div className="flex flex-row items-center justify-between">
@@ -96,7 +115,7 @@ function OrganizationSection() {
         <Switch
           id="keep-monitoring"
           checked={org.settings?.keepMonitoring ?? true}
-          onCheckedChange={(checked) => saveField({ settings: { keepMonitoring: checked } })}
+          onCheckedChange={handleMonitoringChange}
         />
       </div>
     </div>
@@ -161,95 +180,367 @@ function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: b
   )
 }
 
-function MembersTable({ members }: { members: MemberRecord[] }) {
+function TransferOwnershipModal({
+  open,
+  setOpen,
+  members,
+  currentUserId,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+  members: MemberRecord[]
+  currentUserId: string
+}) {
   const { toast } = useToast()
+  const eligibleMembers = members.filter(
+    (m) => m.status === "active" && m.userId !== currentUserId && m.userId !== null,
+  )
+
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
+
+  const handleTransfer = async () => {
+    if (!selectedMemberId) return
+
+    try {
+      await transferOwnershipMutation(selectedMemberId)
+      setOpen(false)
+      toast({ description: "Ownership transferred successfully. You are now an admin." })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    }
+  }
+
+  const memberOptions = eligibleMembers.map((member) => ({
+    label: `${member.name ?? member.email} (${member.email})`,
+    value: member.userId ?? "",
+  }))
+
+  return (
+    <Modal.Root open={open} onOpenChange={setOpen}>
+      <Modal.Content dismissible>
+        <Modal.Header
+          title="Transfer Ownership"
+          description="Transfer ownership of this organization to another member. You will become an admin after the transfer."
+        />
+        <Modal.Body>
+          <FormWrapper>
+            {eligibleMembers.length === 0 ? (
+              <Text.H5 color="foregroundMuted">
+                No eligible members to transfer ownership to. Add more members first.
+              </Text.H5>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <Label>Select new owner</Label>
+                <Select
+                  name="newOwner"
+                  options={memberOptions}
+                  value={selectedMemberId ?? undefined}
+                  onChange={(value) => setSelectedMemberId(value)}
+                  placeholder="Select a member..."
+                  searchable
+                  searchPlaceholder="Search members..."
+                  searchableEmptyMessage="No members found"
+                />
+              </div>
+            )}
+          </FormWrapper>
+        </Modal.Body>
+        <Modal.Footer>
+          <CloseTrigger />
+          <Button
+            type="button"
+            disabled={eligibleMembers.length === 0 || !selectedMemberId}
+            onClick={() => void handleTransfer()}
+          >
+            Transfer Ownership
+          </Button>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal.Root>
+  )
+}
+
+function ChangeRoleModal({
+  open,
+  setOpen,
+  member,
+  onRoleChange,
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+  member: MemberRecord | null
+  onRoleChange: (targetUserId: string, newRole: "admin" | "member") => Promise<void>
+}) {
+  const { toast } = useToast()
+  const [selectedRole, setSelectedRole] = useState<"admin" | "member" | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Pre-select current role when modal opens
+  useEffect(() => {
+    if (open && member?.role === "admin") {
+      setSelectedRole("admin")
+    } else if (open && member?.role === "member") {
+      setSelectedRole("member")
+    } else if (!open) {
+      setSelectedRole(null)
+    }
+  }, [open, member])
+
+  const handleSubmit = async () => {
+    if (!member?.userId || !selectedRole) return
+
+    setIsSubmitting(true)
+    try {
+      await onRoleChange(member.userId, selectedRole)
+      setOpen(false)
+      toast({ description: `Role updated to ${selectedRole}` })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  if (!member) return null
+
+  return (
+    <Modal.Root open={open} onOpenChange={setOpen}>
+      <Modal.Content dismissible>
+        <Modal.Header title="Change Member Role" description={`Update the role for ${member.name ?? member.email}`} />
+        <Modal.Body>
+          <FormWrapper>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Select new role</Label>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2 p-3 rounded border hover:bg-muted cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="admin"
+                      checked={selectedRole === "admin"}
+                      onChange={(e) => setSelectedRole(e.target.value as "admin")}
+                      className="h-4 w-4"
+                    />
+                    <div className="flex flex-col">
+                      <Text.H5>Admin</Text.H5>
+                      <Text.H6 color="foregroundMuted">Can manage members and organization settings</Text.H6>
+                    </div>
+                  </label>
+                  <label className="flex items-center gap-2 p-3 rounded border hover:bg-muted cursor-pointer">
+                    <input
+                      type="radio"
+                      name="role"
+                      value="member"
+                      checked={selectedRole === "member"}
+                      onChange={(e) => setSelectedRole(e.target.value as "member")}
+                      className="h-4 w-4"
+                    />
+                    <div className="flex flex-col">
+                      <Text.H5>Member</Text.H5>
+                      <Text.H6 color="foregroundMuted">Standard member with limited permissions</Text.H6>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </FormWrapper>
+        </Modal.Body>
+        <Modal.Footer>
+          <CloseTrigger />
+          <Button type="button" disabled={!selectedRole || isSubmitting} onClick={() => void handleSubmit()}>
+            {isSubmitting ? "Updating..." : "Update Role"}
+          </Button>
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal.Root>
+  )
+}
+
+function MembersTable({
+  members,
+  currentUserId,
+  isOwner,
+  isAdmin,
+}: {
+  members: MemberRecord[]
+  currentUserId: string
+  isOwner: boolean
+  isAdmin: boolean
+}) {
+  const { toast } = useToast()
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [changeRoleOpen, setChangeRoleOpen] = useState(false)
+  const [selectedMember, setSelectedMember] = useState<MemberRecord | null>(null)
 
   const isExpired = (expiresAt: string | null | undefined) => {
     if (!expiresAt) return false
     return new Date(expiresAt) < new Date()
   }
 
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow verticalPadding>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Role</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Invitation</TableHead>
-          <TableHead />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {members.map((member) => (
-          <TableRow key={member.id} verticalPadding hoverable={false}>
-            <TableCell>
-              <Text.H5>{member.name ?? "-"}</Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 color="foregroundMuted">{member.email}</Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 color={member.status === "invited" ? "warningMutedForeground" : "foregroundMuted"}>
-                {member.status === "invited" ? "Pending" : "Active"}
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              {member.status === "invited" ? (
-                member.expiresAt && isExpired(member.expiresAt) ? (
-                  <Text.H5 color="destructive">Expired</Text.H5>
-                ) : member.expiresAt ? (
-                  <Text.H5 color="foregroundMuted">{relativeTime(member.expiresAt)}</Text.H5>
-                ) : (
-                  <Text.H5 color="foregroundMuted">No expiration</Text.H5>
-                )
-              ) : (
-                <Text.H5 color="foregroundMuted">-</Text.H5>
-              )}
-            </TableCell>
-            <TableCell align="right">
-              {(member.status === "active" || member.status === "invited") && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    const transaction =
-                      member.status === "invited"
-                        ? cancelMemberInviteMutation(member.id)
-                        : removeMemberMutation(member.id)
+  const handleRoleChange = async (targetUserId: string, newRole: "admin" | "member") => {
+    try {
+      await updateMemberRoleMutation(targetUserId, newRole)
+      toast({ description: `Role updated to ${newRole}` })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        description: toUserMessage(error),
+      })
+    }
+  }
 
-                    void transaction.isPersisted.promise
-                      .then(() => {
-                        toast({
-                          description: member.status === "invited" ? "Invitation canceled" : "Member removed",
-                        })
-                      })
-                      .catch((e) =>
-                        toast({
-                          variant: "destructive",
-                          description: toUserMessage(e),
-                        }),
-                      )
-                  }}
-                >
-                  <Icon icon={Trash2} size="sm" />
-                </Button>
-              )}
-            </TableCell>
+  const canChangeRole = (member: MemberRecord) => {
+    // Only admins can change roles
+    if (!isAdmin) return false
+    // Cannot change own role
+    if (member.userId === currentUserId) return false
+    // Cannot change owner's role
+    if (member.role === "owner") return false
+    // Can only change active members
+    if (member.status !== "active") return false
+    return true
+  }
+
+  const openChangeRoleModal = (member: MemberRecord) => {
+    setSelectedMember(member)
+    setChangeRoleOpen(true)
+  }
+
+  return (
+    <>
+      <TransferOwnershipModal
+        open={transferOpen}
+        setOpen={setTransferOpen}
+        members={members}
+        currentUserId={currentUserId}
+      />
+      <ChangeRoleModal
+        open={changeRoleOpen}
+        setOpen={setChangeRoleOpen}
+        member={selectedMember}
+        onRoleChange={handleRoleChange}
+      />
+      <Table>
+        <TableHeader>
+          <TableRow verticalPadding>
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Invitation</TableHead>
+            {isAdmin && <TableHead />}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {members.map((member) => (
+            <TableRow key={member.id} verticalPadding hoverable={false}>
+              <TableCell>
+                <Text.H5>{member.name ?? "-"}</Text.H5>
+              </TableCell>
+              <TableCell>
+                <Text.H5 color="foregroundMuted">{member.email}</Text.H5>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  {(member.role === "owner" && isOwner) || canChangeRole(member) ? (
+                    <DropdownMenuRoot>
+                      <DropdownMenuTrigger asChild>
+                        <div className="flex items-center gap-2 cursor-pointer hover:bg-muted px-2 py-1 rounded transition-colors">
+                          <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+                          <Icon icon={ChevronDown} size="sm" className="text-muted-foreground" />
+                        </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="border-0">
+                        {member.role === "owner" && isOwner && (
+                          <DropdownMenuItem onSelect={() => setTransferOpen(true)}>Transfer ownership</DropdownMenuItem>
+                        )}
+                        {canChangeRole(member) && (
+                          <DropdownMenuItem onSelect={() => openChangeRoleModal(member)}>Change role</DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenuRoot>
+                  ) : (
+                    <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Text.H5 color={member.status === "invited" ? "warningMutedForeground" : "foregroundMuted"}>
+                  {member.status === "invited" ? "Pending" : "Active"}
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                {member.status === "invited" ? (
+                  member.expiresAt && isExpired(member.expiresAt) ? (
+                    <Text.H5 color="destructive">Expired</Text.H5>
+                  ) : member.expiresAt ? (
+                    <Text.H5 color="foregroundMuted">{relativeTime(member.expiresAt)}</Text.H5>
+                  ) : (
+                    <Text.H5 color="foregroundMuted">No expiration</Text.H5>
+                  )
+                ) : (
+                  <Text.H5 color="foregroundMuted">-</Text.H5>
+                )}
+              </TableCell>
+              <TableCell align="right">
+                {isAdmin && (member.status === "active" || member.status === "invited") && (
+                  <Tooltip
+                    asChild
+                    trigger={
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          const transaction =
+                            member.status === "invited"
+                              ? cancelMemberInviteMutation(member.id)
+                              : removeMemberMutation(member.id)
+
+                          void transaction.isPersisted.promise
+                            .then(() => {
+                              toast({
+                                description: member.status === "invited" ? "Invitation canceled" : "Member removed",
+                              })
+                            })
+                            .catch((e) =>
+                              toast({
+                                variant: "destructive",
+                                description: toUserMessage(e),
+                              }),
+                            )
+                        }}
+                      >
+                        <Icon icon={Trash2} size="sm" />
+                      </Button>
+                    }
+                  >
+                    {member.status === "invited" ? "Cancel invitation" : "Remove member"}
+                  </Tooltip>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </>
   )
 }
 
 function MembershipsSection() {
+  const { user } = Route.useRouteContext()
   const [inviteOpen, setInviteOpen] = useState(false)
   const { data, isLoading } = useMembersCollection()
   const members = data ?? []
+
+  const currentUserMembership = members.find((m) => m.userId === user.id)
+  const isOwner = currentUserMembership?.role === "owner"
+  const isAdmin = isOwner || currentUserMembership?.role === "admin"
 
   return (
     <div className="flex flex-col gap-4">
@@ -258,13 +549,17 @@ function MembershipsSection() {
         <div className="flex flex-row items-center gap-2">
           <Text.H4 weight="bold">Organization Members</Text.H4>
         </div>
-        <Button variant="outline" onClick={() => setInviteOpen(true)}>
-          Add Member
-        </Button>
+        {isAdmin && (
+          <Button variant="outline" onClick={() => setInviteOpen(true)}>
+            Add Member
+          </Button>
+        )}
       </div>
       <div className="flex flex-col gap-2">
         {isLoading && <TableSkeleton cols={4} rows={3} />}
-        {!isLoading && members.length > 0 && <MembersTable members={members} />}
+        {!isLoading && members.length > 0 && (
+          <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
+        )}
       </div>
     </div>
   )
@@ -280,8 +575,12 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
     },
     onSubmit: async ({ value }) => {
       try {
-        await createApiKey({ data: { name: value.name } })
+        await insertApiKeyMutation(value.name)
         setOpen(false)
+        toast({
+          title: "Success",
+          description: "API key created successfully.",
+        })
       } catch (error) {
         toast({
           variant: "destructive",
@@ -410,31 +709,15 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                 <Text.H5>{apiKey.name || "Latitude API Key"}</Text.H5>
               </TableCell>
               <TableCell>
-                <Tooltip
-                  asChild
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        navigator.clipboard.writeText(apiKey.token)
-                        toast({
-                          title: "Copied to clipboard",
-                        })
-                      }}
-                    >
-                      <div className="flex flex-row items-center gap-2">
-                        <Text.H5 color="foregroundMuted">
-                          {apiKey.token.length > 7
-                            ? `${apiKey.token.slice(0, 3)}********${apiKey.token.slice(-4)}`
-                            : "********"}
-                        </Text.H5>
-                        <Icon icon={Clipboard} size="sm" color="foregroundMuted" />
-                      </div>
-                    </Button>
+                <CopyableText
+                  value={apiKey.token}
+                  displayValue={
+                    apiKey.token.length > 7
+                      ? `${apiKey.token.slice(0, 3)}********${apiKey.token.slice(-4)}`
+                      : "********"
                   }
-                >
-                  Click to copy
-                </Tooltip>
+                  tooltip="Copy API key"
+                />
               </TableCell>
               <TableCell align="right">
                 <div className="flex flex-row items-center gap-1">
@@ -455,7 +738,9 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                         disabled={apiKeys.length === 1}
                         variant="ghost"
                         onClick={() => {
-                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise
+                          void deleteApiKeyMutation(apiKey.id).isPersisted.promise.then(() => {
+                            toast({ description: "API key deleted" })
+                          })
                         }}
                       >
                         <Icon icon={Trash2} size="sm" />

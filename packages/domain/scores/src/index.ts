@@ -34,7 +34,7 @@ export {
   scoreSourceSchema,
   scoreValueSchema,
 } from "./entities/score.ts"
-export { isImmutableScore } from "./helpers.ts"
+export { isImmutableScore, shouldDiscoverIssue } from "./helpers.ts"
 export {
   type IssueOccurrenceAggregate,
   type IssueOccurrenceBucket,
@@ -65,10 +65,10 @@ export {
   listSourceScoresUseCase,
 } from "./use-cases/list-scores.ts"
 export {
-  type SaveScoreAnalyticsError,
-  type SaveScoreAnalyticsInput,
-  saveScoreAnalyticsInputSchema,
-  saveScoreAnalyticsUseCase,
+  type SyncScoreAnalyticsError,
+  type SyncScoreAnalyticsInput,
+  syncScoreAnalyticsInputSchema,
+  syncScoreAnalyticsUseCase,
 } from "./use-cases/save-score-analytics.ts"
 export {
   type BaseWriteScoreInput,

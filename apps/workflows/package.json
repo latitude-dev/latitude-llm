@@ -13,7 +13,17 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/ai": "workspace:*",
+    "@domain/shared": "workspace:*",
     "@domain/issues": "workspace:*",
+    "@domain/scores": "workspace:*",
+    "@platform/ai-credentials": "workspace:*",
+    "@platform/ai-vercel": "workspace:*",
+    "@platform/ai-voyage": "workspace:*",
+    "@platform/cache-redis": "workspace:*",
+    "@platform/db-clickhouse": "workspace:*",
+    "@platform/db-postgres": "workspace:*",
+    "@platform/db-weaviate": "workspace:*",
     "@platform/env": "workspace:*",
     "@platform/workflows-temporal": "workspace:*",
     "@repo/observability": "workspace:*",

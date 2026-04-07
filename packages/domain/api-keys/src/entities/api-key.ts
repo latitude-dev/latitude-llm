@@ -1,4 +1,5 @@
-import { ApiKeyId, generateId, type OrganizationId } from "@domain/shared"
+import { type ApiKeyId, apiKeyIdSchema, generateId, type OrganizationId, organizationIdSchema } from "@domain/shared"
+import { z } from "zod"
 
 /**
  * API Key entity - authenticates organization-bound requests.
@@ -8,20 +9,22 @@ import { ApiKeyId, generateId, type OrganizationId } from "@domain/shared"
  * using crypto.randomUUID().
  *
  * The token is encrypted at the application level (AES-256-GCM)
- * and a SHA-256 hash (tokenHash) is stored for indexed lookups
- * without decryption.
+ * and a SHA-256 hex hash of the UTF-8 token bytes (tokenHash) is stored for indexed
+ * lookups without decryption.
  */
-export interface ApiKey {
-  readonly id: ApiKeyId
-  readonly organizationId: OrganizationId
-  readonly token: string
-  readonly tokenHash: string
-  readonly name: string
-  readonly lastUsedAt: Date | null
-  readonly deletedAt: Date | null
-  readonly createdAt: Date
-  readonly updatedAt: Date
-}
+export const apiKeySchema = z.object({
+  id: apiKeyIdSchema,
+  organizationId: organizationIdSchema,
+  token: z.string().min(1),
+  tokenHash: z.string().min(1),
+  name: z.string().min(1),
+  lastUsedAt: z.date().nullable(),
+  deletedAt: z.date().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export type ApiKey = z.infer<typeof apiKeySchema>
 
 /**
  * Factory function to create a new API Key.
@@ -38,8 +41,8 @@ export const createApiKey = (params: {
   updatedAt?: Date
 }): ApiKey => {
   const now = new Date()
-  return {
-    id: params.id ?? ApiKeyId(generateId()),
+  return apiKeySchema.parse({
+    id: params.id ?? generateId<"ApiKeyId">(),
     organizationId: params.organizationId,
     token: params.token,
     tokenHash: params.tokenHash,
@@ -48,7 +51,7 @@ export const createApiKey = (params: {
     deletedAt: params.deletedAt ?? null,
     createdAt: params.createdAt ?? now,
     updatedAt: params.updatedAt ?? now,
-  }
+  })
 }
 
 /**
@@ -69,20 +72,22 @@ export const isActive = (apiKey: ApiKey): boolean => {
  * Touch the API key to update its lastUsedAt timestamp.
  */
 export const touch = (apiKey: ApiKey): ApiKey => {
-  return {
+  const now = new Date()
+  return apiKeySchema.parse({
     ...apiKey,
-    lastUsedAt: new Date(),
-    updatedAt: new Date(),
-  }
+    lastUsedAt: now,
+    updatedAt: now,
+  })
 }
 
 /**
  * Revoke (soft delete) an API key.
  */
 export const revoke = (apiKey: ApiKey): ApiKey => {
-  return {
+  const now = new Date()
+  return apiKeySchema.parse({
     ...apiKey,
-    deletedAt: new Date(),
-    updatedAt: new Date(),
-  }
+    deletedAt: now,
+    updatedAt: now,
+  })
 }

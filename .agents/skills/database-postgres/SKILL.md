@@ -1,3 +1,8 @@
+---
+name: database-postgres
+description: Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migrations, psql / reset, or platform mappers (toDomain* / toInsertRow).
+---
+
 # Postgres, SqlClient, schema, migrations, mappers
 
 **When to use:** Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migrations, `psql` / reset, or platform mappers (`toDomain*` / `toInsertRow`).
@@ -184,6 +189,10 @@ pnpm --filter @platform/db-postgres pg:migrate
 - Never manually create SQL files in the drizzle folder
 - Use `IF NOT EXISTS` in custom SQL for idempotency
 - Migrations are tracked in `drizzle.__drizzle_migrations` table
+
+## Repository port naming
+
+Domain repository ports and method naming conventions (including Effect result shapes and when to use `listBy*` vs `findBy*`) live in [docs/repositories.md](../../../docs/repositories.md). Prefer that vocabulary for new Postgres-backed ports and when renaming existing methods.
 
 ## Mapper conventions
 

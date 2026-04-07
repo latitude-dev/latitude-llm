@@ -1,0 +1,26 @@
+export const SCOPE_LATITUDE = "so.latitude.instrumentation"
+
+export enum InstrumentationScope {
+  Manual = "manual",
+  OpenAI = "openai",
+  Anthropic = "anthropic",
+  AzureOpenAI = "azure",
+  VercelAI = "vercelai",
+  VertexAI = "vertexai",
+  AIPlatform = "aiplatform",
+  MistralAI = "mistralai",
+  Bedrock = "bedrock",
+  Sagemaker = "sagemaker",
+  TogetherAI = "togetherai",
+  Replicate = "replicate",
+  Groq = "groq",
+  Cohere = "cohere",
+  LiteLLM = "litellm",
+  Langchain = "langchain",
+  LlamaIndex = "llamaindex",
+  DSPy = "dspy",
+  Haystack = "haystack",
+  Ollama = "ollama",
+  Transformers = "transformers",
+  AlephAlpha = "alephalpha",
+}

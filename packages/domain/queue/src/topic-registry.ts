@@ -23,9 +23,16 @@ const _registry = {
       readonly magicLinkUrl: string
       readonly emailFlow: string | null
       readonly organizationId: string
+    }
+  }>(),
+
+  "invitation-email": payloads<{
+    send: {
+      readonly email: string
+      readonly invitationUrl: string
+      readonly organizationId: string
       readonly organizationName: string
-      readonly inviterName: string | null
-      readonly invitationId: string | null
+      readonly inviterName: string
     }
   }>(),
 
@@ -70,14 +77,6 @@ const _registry = {
       readonly organizationId: string
       readonly projectId: string
       readonly issueId: string
-    }
-  }>(),
-
-  "analytic-scores": payloads<{
-    save: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly scoreId: string
     }
   }>(),
 

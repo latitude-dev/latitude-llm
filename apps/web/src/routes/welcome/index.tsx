@@ -1,4 +1,4 @@
-import { Button, Icon, LatitudeLogo, Text } from "@repo/ui"
+import { Button, cn, Icon, LatitudeLogo, Text, useHashColor } from "@repo/ui"
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { AlertCircle, ArrowRight } from "lucide-react"
 import { useState } from "react"
@@ -7,8 +7,19 @@ import { createOrganization, listOrganizations } from "../../domains/organizatio
 import { getSession } from "../../domains/sessions/session.functions.ts"
 import { updateUser } from "../../domains/users/user.functions.ts"
 import { authClient } from "../../lib/auth-client.ts"
-import { getAvatarBackgroundColor, getAvatarTextColor } from "../../lib/avatar.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+
+function OrgAvatar({ name }: { name: string }) {
+  const { style, className } = useHashColor(name)
+  return (
+    <div
+      className={cn("flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold", className)}
+      style={style}
+    >
+      {name.charAt(0).toUpperCase()}
+    </div>
+  )
+}
 
 interface Organization {
   id: string
@@ -101,8 +112,6 @@ function WelcomePage() {
 
           <div className="flex flex-col rounded-xl overflow-hidden shadow-none border border-border">
             {organizations.map((org: Organization, index: number) => {
-              const initial = org.name.charAt(0).toUpperCase()
-
               return (
                 <button
                   key={org.id}
@@ -113,15 +122,7 @@ function WelcomePage() {
                     index > 0 ? "border-t border-border" : ""
                   }`}
                 >
-                  <div
-                    className="flex items-center justify-center w-9 h-9 rounded-lg text-sm font-semibold"
-                    style={{
-                      backgroundColor: getAvatarBackgroundColor(initial),
-                      color: getAvatarTextColor(initial),
-                    }}
-                  >
-                    {initial}
-                  </div>
+                  <OrgAvatar name={org.name} />
                   <Text.H5 weight="medium" className="flex-1 text-left">
                     {org.name}
                   </Text.H5>

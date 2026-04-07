@@ -2,7 +2,13 @@ import type { FilterSet } from "@domain/shared"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
-import { getSessionDistinctValues, listSessionsByProject, type SessionRecord } from "./sessions.functions.ts"
+import {
+  getSessionBySessionId,
+  getSessionDistinctValues,
+  getSessionMetricsByProject,
+  listSessionsByProject,
+  type SessionRecord,
+} from "./sessions.functions.ts"
 
 const BATCH_SIZE = 50
 
@@ -55,6 +61,38 @@ export function useSessionsInfiniteScroll({
   )
 
   return { data, isLoading, infiniteScroll }
+}
+
+export function useSessionDetail({ projectId, sessionId }: { readonly projectId: string; readonly sessionId: string }) {
+  return useQuery({
+    queryKey: ["session-detail", projectId, sessionId],
+    queryFn: async () => {
+      const result = await getSessionBySessionId({ data: { projectId, sessionId } })
+      return result ?? null
+    },
+    enabled: sessionId.length > 0,
+    staleTime: 30_000,
+  })
+}
+
+export function useSessionMetrics({
+  projectId,
+  filters,
+}: {
+  readonly projectId: string
+  readonly filters?: FilterSet
+}) {
+  return useQuery({
+    queryKey: ["sessions-metrics", projectId, filters],
+    queryFn: () =>
+      getSessionMetricsByProject({
+        data: {
+          projectId,
+          ...(filters ? { filters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+  })
 }
 
 export function useSessionDistinctValues({

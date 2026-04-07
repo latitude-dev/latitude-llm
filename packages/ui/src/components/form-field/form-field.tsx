@@ -28,17 +28,17 @@ function FormField({ children, label, description, info, inline = false, errors,
             <Label htmlFor={id}>{label}</Label>
             {info && <Text.H6 className="text-muted-foreground">{info}</Text.H6>}
           </div>
-          {description && !inline && (
-            <Text.H6 id={descriptionId} className="text-muted-foreground">
-              {description}
-            </Text.H6>
-          )}
         </div>
       )}
-      <div className="flex-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         {children}
+        {description && !inline && (
+          <Text.H6 id={descriptionId} className="text-muted-foreground">
+            {description}
+          </Text.H6>
+        )}
         {hasError && (
-          <div id={errorId} role="alert" className="mt-1 flex flex-col gap-1">
+          <div id={errorId} role="alert" className="flex flex-col gap-1">
             {errors.map((error) => (
               <Text.H6 key={error} color="destructive">
                 {error}

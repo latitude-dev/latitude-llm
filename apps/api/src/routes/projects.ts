@@ -9,10 +9,19 @@ import { ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect } from "effect"
-import { ErrorSchema, OrgAndIdParamsSchema, OrgParamsSchema, PROTECTED_SECURITY } from "../openapi/schemas.ts"
+import {
+  errorResponse,
+  jsonBody,
+  jsonResponse,
+  OrgAndIdParamsSchema,
+  OrgParamsSchema,
+  openApiNoContentResponses,
+  openApiResponses,
+  PROTECTED_SECURITY,
+} from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
-const ProjectSchema = z
+const ResponseSchema = z
   .object({
     id: z.string(),
     organizationId: z.string(),
@@ -24,19 +33,21 @@ const ProjectSchema = z
   })
   .openapi("Project")
 
-const CreateProjectBodySchema = z
+const ListResponseSchema = z.object({ projects: z.array(ResponseSchema) }).openapi("ProjectList")
+
+const CreateRequestSchema = z
   .object({
     name: z.string().min(1).openapi({ description: "Project name" }),
   })
   .openapi("CreateProjectBody")
 
-const UpdateProjectBodySchema = z
+const UpdateRequestSchema = z
   .object({
     name: z.string().min(1).optional().openapi({ description: "New project name" }),
   })
   .openapi("UpdateProjectBody")
 
-const toProjectResponse = (project: Project) => ({
+const toResponse = (project: Project) => ({
   id: project.id as string,
   organizationId: project.organizationId as string,
   name: project.name,
@@ -55,25 +66,9 @@ const createProjectRoute = createRoute({
   security: PROTECTED_SECURITY,
   request: {
     params: OrgParamsSchema,
-    body: {
-      content: { "application/json": { schema: CreateProjectBodySchema } },
-      required: true,
-    },
+    body: jsonBody(CreateRequestSchema),
   },
-  responses: {
-    201: {
-      content: { "application/json": { schema: ProjectSchema } },
-      description: "Project created successfully",
-    },
-    400: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Validation error",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-  },
+  responses: openApiResponses({ status: 201, schema: ResponseSchema, description: "Project created successfully" }),
 })
 
 const listProjectsRoute = createRoute({
@@ -83,22 +78,10 @@ const listProjectsRoute = createRoute({
   summary: "List projects",
   description: "Returns all projects in the organization.",
   security: PROTECTED_SECURITY,
-  request: {
-    params: OrgParamsSchema,
-  },
+  request: { params: OrgParamsSchema },
   responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({ projects: z.array(ProjectSchema) }).openapi("ProjectList"),
-        },
-      },
-      description: "List of projects",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
+    200: jsonResponse(ListResponseSchema, "List of projects"),
+    401: errorResponse("Unauthorized"),
   },
 })
 
@@ -109,22 +92,11 @@ const getProjectRoute = createRoute({
   summary: "Get project",
   description: "Returns a single project by ID.",
   security: PROTECTED_SECURITY,
-  request: {
-    params: OrgAndIdParamsSchema,
-  },
+  request: { params: OrgAndIdParamsSchema },
   responses: {
-    200: {
-      content: { "application/json": { schema: ProjectSchema } },
-      description: "Project details",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Project not found",
-    },
+    200: jsonResponse(ResponseSchema, "Project details"),
+    401: errorResponse("Unauthorized"),
+    404: errorResponse("Project not found"),
   },
 })
 
@@ -137,29 +109,9 @@ const updateProjectRoute = createRoute({
   security: PROTECTED_SECURITY,
   request: {
     params: OrgAndIdParamsSchema,
-    body: {
-      content: { "application/json": { schema: UpdateProjectBodySchema } },
-      required: true,
-    },
+    body: jsonBody(UpdateRequestSchema),
   },
-  responses: {
-    200: {
-      content: { "application/json": { schema: ProjectSchema } },
-      description: "Updated project",
-    },
-    400: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Validation error",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Project not found",
-    },
-  },
+  responses: openApiResponses({ status: 200, schema: ResponseSchema, description: "Updated project" }),
 })
 
 const deleteProjectRoute = createRoute({
@@ -169,33 +121,12 @@ const deleteProjectRoute = createRoute({
   summary: "Delete project",
   description: "Soft-deletes a project by ID.",
   security: PROTECTED_SECURITY,
-  request: {
-    params: OrgAndIdParamsSchema,
-  },
-  responses: {
-    204: {
-      description: "Project deleted successfully",
-    },
-    401: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Unauthorized",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorSchema } },
-      description: "Project not found",
-    },
-  },
+  request: { params: OrgAndIdParamsSchema },
+  responses: openApiNoContentResponses({ description: "Project deleted successfully" }),
 })
 
 export const createProjectsRoutes = () => {
-  const app = new OpenAPIHono<OrganizationScopedEnv>({
-    defaultHook(result, c) {
-      if (!result.success) {
-        const error = result.error.issues.map((i) => i.message).join(", ")
-        return c.json({ error }, 400)
-      }
-    },
-  })
+  const app = new OpenAPIHono<OrganizationScopedEnv>()
 
   app.openapi(createProjectRoute, async (c) => {
     const body = c.req.valid("json")
@@ -209,18 +140,18 @@ export const createProjectsRoutes = () => {
         withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id),
       ),
     )
-    return c.json(toProjectResponse(project), 201)
+    return c.json(toResponse(project), 201)
   })
 
   app.openapi(listProjectsRoute, async (c) => {
     const projects = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
-        return yield* repo.findAll()
+        return yield* repo.list()
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
 
-    return c.json({ projects: projects.map(toProjectResponse) }, 200)
+    return c.json({ projects: projects.map(toResponse) }, 200)
   })
 
   app.openapi(getProjectRoute, async (c) => {
@@ -234,7 +165,7 @@ export const createProjectsRoutes = () => {
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
 
-    return c.json(toProjectResponse(project), 200)
+    return c.json(toResponse(project), 200)
   })
 
   app.openapi(updateProjectRoute, async (c) => {
@@ -249,7 +180,7 @@ export const createProjectsRoutes = () => {
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
 
-    return c.json(toProjectResponse(updatedProject), 200)
+    return c.json(toResponse(updatedProject), 200)
   })
 
   app.openapi(deleteProjectRoute, async (c) => {

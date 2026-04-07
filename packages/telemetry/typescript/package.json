@@ -1,0 +1,83 @@
+{
+  "name": "@latitude-data/telemetry",
+  "version": "3.0.0-alpha.1",
+  "description": "Latitude Telemetry for TypeScript",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "license": "MIT",
+  "keywords": [
+    "AI",
+    "Telemetry",
+    "sdk",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/typescript"
+  },
+  "homepage": "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/typescript#readme",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "check": "biome check src",
+    "format": "biome format --write src && biome check --fix src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --pool=forks --passWithNoTests"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "catalog:",
+    "@opentelemetry/context-async-hooks": "^1.30.0",
+    "@opentelemetry/core": "^1.30.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.57.0",
+    "@opentelemetry/instrumentation": "^0.57.0",
+    "@traceloop/instrumentation-openai": "^0.22.0",
+    "@opentelemetry/resources": "^1.30.0",
+    "@opentelemetry/sdk-trace-node": "^1.30.0",
+    "@opentelemetry/semantic-conventions": "^1.34.0",
+    "@traceloop/instrumentation-anthropic": "^0.22.0",
+    "@traceloop/instrumentation-bedrock": "^0.22.0",
+    "@traceloop/instrumentation-cohere": "^0.22.0",
+    "@traceloop/instrumentation-langchain": "^0.22.0",
+    "@traceloop/instrumentation-llamaindex": "^0.22.0",
+    "@traceloop/instrumentation-together": "^0.22.0",
+    "@traceloop/instrumentation-vertexai": "^0.22.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@types/node": "catalog:",
+    "tsup": "^8.0.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "typescript": "^5.5.4"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "^0.82.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1021.0",
+    "@google-cloud/vertexai": "^1.10.4",
+    "@langchain/core": "^1.1.38",
+    "@langchain/openai": "^1.4.1",
+    "cohere-ai": "^7.21.0",
+    "langchain": "^1.2.39",
+    "llamaindex": "^0.12.1",
+    "openai": "^6.33.0"
+  }
+}

@@ -1,23 +1,13 @@
+import { queryClickhouse } from "@platform/db-clickhouse"
 import { eq } from "@platform/db-postgres"
 import { outboxEvents } from "@platform/db-postgres/schema/outbox-events"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
-import {
-  closeInMemoryPostgres,
-  createApiKeyAuthHeaders,
-  createInMemoryPostgres,
-  type InMemoryPostgres,
-} from "@platform/testkit"
-import type { Hono } from "hono"
-import { afterAll, beforeAll, beforeEach, describe, expect, it, type TestContext } from "vitest"
-import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
-import { createProtectedApp, createTenantSetup, TEST_ENCRYPTION_KEY_HEX } from "../test-utils/create-test-app.ts"
-import { createScoresRoutes } from "./scores.ts"
-
-interface ScoresRoutesTestContext extends TestContext {
-  app: Hono
-  database: InMemoryPostgres
-}
+import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
+import { Effect } from "effect"
+import { describe, expect, it } from "vitest"
+import { API_TEST_ANCHOR_TRACE_ID } from "../test-utils/api-test-trace-repository.ts"
+import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
 
 const createProjectRecord = async (database: InMemoryPostgres, organizationId: string, projectId: string) => {
   await database.db.insert(projects).values({
@@ -28,33 +18,30 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
   })
 }
 
+const queryAnalyticsScores = (clickhouse: ApiTestContext["clickhouse"], organizationId: string, scoreId: string) =>
+  Effect.runPromise(
+    queryClickhouse<{ id: string; source_id: string }>(
+      clickhouse,
+      `SELECT id, source_id
+       FROM scores
+       WHERE organization_id = {organizationId:String}
+         AND id = {scoreId:FixedString(24)}`,
+      { organizationId, scoreId },
+    ),
+  ).then((rows) =>
+    rows.map((row) => ({
+      ...row,
+      source_id: row.source_id.replace(/\0+$/u, ""),
+    })),
+  )
+
 describe("Scores Routes Integration", () => {
-  let app: Hono
-  let database: InMemoryPostgres
+  setupTestApi()
 
-  beforeAll(async () => {
-    process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
-    database = await createInMemoryPostgres()
-
-    const { app: root, protectedRoutes } = createProtectedApp(database)
-    protectedRoutes.route("/:organizationId/projects/:projectId/scores", createScoresRoutes())
-    root.route("/v1/organizations", protectedRoutes)
-    app = root
-  })
-
-  beforeEach<ScoresRoutesTestContext>((context) => {
-    context.app = app
-    context.database = database
-  })
-
-  afterAll(async () => {
-    await destroyTouchBuffer()
-    await closeInMemoryPostgres(database)
-  })
-
-  it<ScoresRoutesTestContext>("creates an instrumented custom score and queues publication when the score is immutable", async ({
+  it<ApiTestContext>("creates an instrumented custom score and syncs analytics immediately when the score is immutable", async ({
     app,
     database,
+    clickhouse,
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "cccccccccccccccccccccccc"
@@ -109,13 +96,17 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreImmutable")
+    expect(publicationRequests).toHaveLength(0)
+
+    const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
+    expect(analyticsRows).toHaveLength(1)
+    expect(analyticsRows[0]?.source_id).toBe("api-source")
   })
 
-  it<ScoresRoutesTestContext>("creates an evaluation score through the shared scores endpoint when `_evaluation` is true", async ({
+  it<ApiTestContext>("creates an evaluation score through the shared scores endpoint and syncs analytics when `_evaluation` is true", async ({
     app,
     database,
+    clickhouse,
   }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
@@ -133,7 +124,7 @@ describe("Scores Routes Integration", () => {
           _evaluation: true,
           sourceId: evaluationId,
           sessionId: "session-456",
-          traceId: "22222222222222222222222222222222",
+          traceId: API_TEST_ANCHOR_TRACE_ID,
           spanId: "bbbbbbbbbbbbbbbb",
           value: 0.93,
           passed: true,
@@ -171,11 +162,14 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("ScoreImmutable")
+    expect(publicationRequests).toHaveLength(0)
+
+    const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
+    expect(analyticsRows).toHaveLength(1)
+    expect(analyticsRows[0]?.source_id).toBe(evaluationId)
   })
 
-  it<ScoresRoutesTestContext>("creates an uninstrumented custom score without queueing publication for failed non-errored results", async ({
+  it<ApiTestContext>("creates an uninstrumented custom score and requests issue discovery for failed non-errored results", async ({
     app,
     database,
   }) => {
@@ -223,10 +217,11 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(0)
+    expect(publicationRequests).toHaveLength(1)
+    expect(publicationRequests[0]?.eventName).toBe("IssueDiscoveryRequested")
   })
 
-  it<ScoresRoutesTestContext>("rejects invalid score lifecycle payloads", async ({ app, database }) => {
+  it<ApiTestContext>("rejects invalid score lifecycle payloads", async ({ app, database }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "dddddddddddddddddddddddd"
     await createProjectRecord(database, tenant.organizationId, projectId)
@@ -249,6 +244,9 @@ describe("Scores Routes Integration", () => {
     )
 
     expect(response.status).toBe(400)
+    const body = await response.json()
+    expect(body).toHaveProperty("error")
+    expect(typeof body.error).toBe("string")
 
     const persistedScores = await database.db
       .select()

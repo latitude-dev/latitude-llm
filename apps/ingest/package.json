@@ -12,12 +12,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/api-keys": "workspace:^",
+    "@domain/api-keys": "workspace:*",
     "@domain/projects": "workspace:^",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@hono/node-server": "catalog:",
+    "@hono/otel": "^1.1.1",
+    "@platform/api-key-auth": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-postgres": "workspace:*",
     "@platform/env": "workspace:*",

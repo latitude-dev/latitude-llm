@@ -1,4 +1,13 @@
-import type { IssueId, ProjectId, RepositoryError, ScoreId, SessionId, SpanId, TraceId } from "@domain/shared"
+import type {
+  IssueId,
+  NotFoundError,
+  ProjectId,
+  RepositoryError,
+  ScoreId,
+  SessionId,
+  SpanId,
+  TraceId,
+} from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
@@ -20,21 +29,29 @@ export interface ScoreListPage {
 }
 
 export interface ScoreRepositoryShape {
-  findById(id: ScoreId): Effect.Effect<Score | null, RepositoryError>
+  findById(id: ScoreId): Effect.Effect<Score, NotFoundError | RepositoryError>
   save(score: Score): Effect.Effect<void, RepositoryError>
+  assignIssueIfUnowned(input: {
+    readonly scoreId: ScoreId
+    readonly issueId: IssueId
+    readonly updatedAt: Date
+  }): Effect.Effect<boolean, RepositoryError>
+  delete(id: ScoreId): Effect.Effect<void, RepositoryError>
   listByProjectId(input: {
     readonly projectId: ProjectId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
+  /** When `sourceId` is omitted, lists all scores for the project with the given `source` (e.g. every annotation). */
   listBySourceId(input: {
     readonly projectId: ProjectId
     readonly source: ScoreSource
-    readonly sourceId: string
+    readonly sourceId?: string
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
   listByTraceId(input: {
     readonly projectId: ProjectId
     readonly traceId: TraceId
+    readonly source?: ScoreSource
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
   listBySessionId(input: {

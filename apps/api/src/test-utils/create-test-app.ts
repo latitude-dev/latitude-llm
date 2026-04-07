@@ -1,42 +1,113 @@
+import type { ClickHouseClient } from "@clickhouse/client"
+import type { QueuePublisherShape } from "@domain/queue"
 import { generateId } from "@domain/shared"
+import { OpenAPIHono } from "@hono/zod-openapi"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
-import { createRlsMiddleware, type InMemoryPostgres } from "@platform/testkit"
-import { encrypt, hashToken, hexDecode } from "@repo/utils"
+import {
+  closeInMemoryPostgres,
+  createInMemoryPostgres,
+  type InMemoryPostgres,
+  setupTestClickHouse,
+} from "@platform/testkit"
+import { encrypt, hash, hexDecode } from "@repo/utils"
 import { Effect } from "effect"
-import { Hono } from "hono"
-import { getRedisClient } from "../clients.ts"
-import { createAuthMiddleware } from "../middleware/auth.ts"
+import type { TestContext } from "vitest"
+import { afterAll, beforeAll, beforeEach } from "vitest"
 import { honoErrorHandler } from "../middleware/error-handler.ts"
-import { createOrganizationContextMiddleware } from "../middleware/organization-context.ts"
-import type { OrganizationScopedEnv } from "../types.ts"
+import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
+import { registerRoutes } from "../routes/index.ts"
+import type { AppEnv } from "../types.ts"
+import { apiTestSpanRepositoryLayer } from "./api-test-span-repository.ts"
+import { apiTestTraceRepositoryLayer } from "./api-test-trace-repository.ts"
+import { createFakeRedis } from "./create-fake-redis.ts"
 
-export const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
+const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
 export const TEST_ENCRYPTION_KEY = hexDecode(TEST_ENCRYPTION_KEY_HEX)
 
+export interface ApiTestContext extends TestContext {
+  app: OpenAPIHono<AppEnv>
+  database: InMemoryPostgres
+  clickhouse: ClickHouseClient
+}
+
 /**
- * Create a protected Hono sub-app wired with the in-memory PGlite database,
- * auth middleware (using the same db as admin), and RLS enforcement.
- * Callers mount their own route handlers on the returned sub-app.
+ * Registers vitest `beforeAll`, `beforeEach`, and `afterAll` hooks that
+ * create the full API test app with in-memory Postgres, fake Redis,
+ * real route registration, and proper lifecycle management.
+ *
+ * Call at module scope inside a `describe` block:
+ *
+ * ```ts
+ * describe("My Routes", () => {
+ *   setupTestApi()
+ *
+ *   it<ApiTestContext>("works", async ({ app, database }) => { ... })
+ * })
+ * ```
  */
-export const createProtectedApp = (database: InMemoryPostgres) => {
-  const app = new Hono()
-  app.onError(honoErrorHandler)
+// Shared singleton so all test files reuse one PGlite instance
+let sharedDb: InMemoryPostgres | undefined
+let sharedDbRefCount = 0
 
-  const protectedRoutes = new Hono<OrganizationScopedEnv>()
+const acquireDatabase = async (): Promise<InMemoryPostgres> => {
+  if (!sharedDb) {
+    sharedDb = await createInMemoryPostgres()
+  }
+  sharedDbRefCount++
+  return sharedDb
+}
 
-  protectedRoutes.use("*", async (c, next) => {
-    c.set("db", database.postgresDb)
-    c.set("postgresClient", database.adminPostgresClient)
-    c.set("redis", getRedisClient())
-    await next()
+const releaseDatabase = async () => {
+  sharedDbRefCount--
+  if (sharedDbRefCount <= 0 && sharedDb) {
+    await closeInMemoryPostgres(sharedDb)
+    sharedDb = undefined
+    sharedDbRefCount = 0
+  }
+}
+
+export const setupTestApi = () => {
+  let database: InMemoryPostgres
+  let app: OpenAPIHono<AppEnv>
+  const clickhouse = setupTestClickHouse()
+
+  beforeAll(async () => {
+    process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
+    database = await acquireDatabase()
+
+    app = new OpenAPIHono<AppEnv>()
+    app.onError(honoErrorHandler)
+
+    const fakePublisher: QueuePublisherShape = {
+      publish: () => Effect.void,
+      close: () => Effect.void,
+    }
+
+    registerRoutes(app, {
+      database: database.appPostgresClient,
+      adminDatabase: database.adminPostgresClient,
+      clickhouse: clickhouse.client,
+      redis: createFakeRedis(),
+      queuePublisher: fakePublisher,
+      logTouchBuffer: false,
+      annotationRoutes: {
+        traceRepositoryLayer: apiTestTraceRepositoryLayer,
+        spanRepositoryLayer: apiTestSpanRepositoryLayer,
+      },
+    })
   })
 
-  protectedRoutes.use("*", createAuthMiddleware({ adminClient: database.adminPostgresClient }))
-  protectedRoutes.use("*", createRlsMiddleware(database.client))
-  protectedRoutes.use("/:organizationId/*", createOrganizationContextMiddleware())
+  beforeEach<ApiTestContext>((context) => {
+    context.app = app
+    context.database = database
+    context.clickhouse = clickhouse.client
+  })
 
-  return { app, protectedRoutes }
+  afterAll(async () => {
+    await destroyTouchBuffer()
+    await releaseDatabase()
+  })
 }
 
 interface TenantSetup {
@@ -74,7 +145,7 @@ export const createTenantSetup = async (database: InMemoryPostgres): Promise<Ten
   })
 
   const encryptedToken = await Effect.runPromise(encrypt(apiKeyToken, TEST_ENCRYPTION_KEY))
-  const tokenHash = await Effect.runPromise(hashToken(apiKeyToken))
+  const tokenHash = await Effect.runPromise(hash(apiKeyToken))
 
   await database.db.insert(apiKeys).values({
     id: authApiKeyId,

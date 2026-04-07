@@ -16,14 +16,14 @@
     "clean": "node ./scripts/clean-repo.mjs",
     "catchup": "pnpm install && pnpm --filter \"@platform/db-postgres\" pg:migrate && pnpm --filter \"@platform/db-clickhouse\" ch:up && pnpm --filter \"@platform/db-weaviate\" wv:migrate && pnpm build",
     "db:reset": "pnpm --filter \"@platform/db-postgres\" pg:reset && pnpm --filter \"@platform/db-clickhouse\" ch:reset",
-    "seed": "pnpm --filter \"@platform/db-postgres\" pg:seed && pnpm --filter \"@platform/db-clickhouse\" ch:seed",
+    "seed": "pnpm --filter \"@platform/db-postgres\" pg:seed && pnpm --filter \"@platform/db-clickhouse\" ch:seed && pnpm --filter \"@platform/db-weaviate\" wv:seed",
     "prepare": "pnpm hooks && effect-language-service patch"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
-    "@effect/language-service": "^0.77.0",
+    "@effect/language-service": "^0.84.2",
     "@types/node": "catalog:",
-    "knip": "^5.85.0",
+    "knip": "^6.1.0",
     "turbo": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
@@ -35,7 +35,9 @@
   "version": "0.0.1",
   "pnpm": {
     "overrides": {
-      "drizzle-orm": "1.0.0-beta.15-859cf75"
+      "@ai-sdk/provider": "4.0.0-beta.5",
+      "drizzle-orm": "1.0.0-beta.15-859cf75",
+      "tslib": "2.8.1"
     }
   }
 }

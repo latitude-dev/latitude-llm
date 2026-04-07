@@ -1,4 +1,5 @@
 import { Data, Effect } from "effect"
+import stringify from "fast-json-stable-stringify"
 import { hexDecode, hexEncode } from "./base64.ts"
 
 export class CryptoError extends Data.TaggedError("CryptoError")<{
@@ -6,23 +7,30 @@ export class CryptoError extends Data.TaggedError("CryptoError")<{
   readonly cause: unknown
 }> {}
 
-const ALGORITHM = "AES-GCM"
-const IV_LENGTH = 12
-const AUTH_TAG_LENGTH = 16
-
 /**
- * Hash a plaintext string using SHA-256.
- * Returns a hex-encoded hash suitable for indexed lookups.
+ * Produce a deterministic SHA-256 hex digest for any JSON-compatible value.
+ *
+ * Uses the Web Crypto API (`crypto.subtle`) so this module stays safe to load
+ * in browser bundles (no `node:crypto`).
+ *
+ * **Strings** are hashed as raw UTF-8 (no JSON wrapping), so token-style
+ * secrets match a plain SHA-256 of the bytes. **Non-strings** use
+ * `fast-json-stable-stringify` so objects get sorted keys and stable hashing.
  */
-export const hashToken = (plaintext: string): Effect.Effect<string, CryptoError> =>
+export const hash = (value: unknown): Effect.Effect<string, CryptoError> =>
   Effect.tryPromise({
     try: async () => {
-      const data = new TextEncoder().encode(plaintext)
+      const payload = typeof value === "string" ? value : stringify(value)
+      const data = new TextEncoder().encode(payload)
       const hashBuffer = await crypto.subtle.digest("SHA-256", data)
       return hexEncode(new Uint8Array(hashBuffer))
     },
-    catch: (cause) => new CryptoError({ operation: "hashToken", cause }),
+    catch: (cause) => new CryptoError({ operation: "hash", cause }),
   })
+
+const ALGORITHM = "AES-GCM"
+const IV_LENGTH = 12
+const AUTH_TAG_LENGTH = 16
 
 /**
  * Import a raw key buffer for AES-GCM operations.

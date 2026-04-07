@@ -3,6 +3,7 @@ export {
   isProjectDeleted,
   markProjectDeleted,
   type Project,
+  projectSchema,
   restoreProject,
 } from "./entities/project.ts"
 export { ProjectRepository } from "./ports/project-repository.ts"
@@ -11,7 +12,6 @@ export {
   type CreateProjectInput,
   createProjectUseCase,
   InvalidProjectNameError,
-  ProjectAlreadyExistsError,
 } from "./use-cases/create-project.ts"
 
 export {

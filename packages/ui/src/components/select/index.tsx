@@ -50,6 +50,7 @@ export type SelectProps<V = unknown> = Omit<FormFieldProps, "children"> &
     value?: V | undefined
     trigger?: ReactNode
     placeholder?: string
+    placeholderIcon?: ReactNode
     loading?: boolean
     disabled?: boolean
     required?: boolean
@@ -71,44 +72,50 @@ export type SelectProps<V = unknown> = Omit<FormFieldProps, "children"> &
     }
   }
 
-export function Select<V = unknown>({
-  name,
-  label,
-  description,
-  errors,
-  trigger,
-  placeholder,
-  options,
-  defaultValue,
-  value,
-  info,
-  onChange,
-  width = "full",
-  size = "default",
-  align = "start",
-  alignOffset,
-  side = "top",
-  sideOffset,
-  loading = false,
-  disabled = false,
-  required = false,
-  removable = false,
-  searchable = false,
-  searchableEmptyMessage,
-  searchLoading = false,
-  onSearch,
-  searchPlaceholder,
-  open: controlledOpen,
-  onOpenChange: controlledOnOpenChange,
-  footerAction,
-}: SelectProps<V>) {
-  const isControlled = value !== undefined
+export function Select<V = unknown>(selectProps: SelectProps<V>) {
+  // `value !== undefined` is wrong when callers use `value={x ?? undefined}` for "empty":
+  // that flips to uncontrolled after clear and triggers React / Radix warnings.
+  const isControlled = Object.hasOwn(selectProps, "value")
+  const {
+    name,
+    label,
+    description,
+    errors,
+    trigger,
+    placeholder,
+    placeholderIcon,
+    options,
+    defaultValue,
+    value,
+    info,
+    onChange,
+    width = "full",
+    size = "default",
+    align = "start",
+    alignOffset,
+    side = "top",
+    sideOffset,
+    loading = false,
+    disabled = false,
+    required = false,
+    removable = false,
+    searchable = false,
+    searchableEmptyMessage,
+    searchLoading = false,
+    onSearch,
+    searchPlaceholder,
+    open: controlledOpen,
+    onOpenChange: controlledOnOpenChange,
+    footerAction,
+  } = selectProps
   const [internalSelected, setInternalSelected] = useState<V | undefined>(defaultValue)
   const [internalIsOpen, setInternalIsOpen] = useState(false)
 
   const selectedValue = isControlled ? value : internalSelected
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalIsOpen
   const setIsOpen = controlledOnOpenChange ?? setInternalIsOpen
+
+  const hasSelection = selectedValue !== undefined && selectedValue !== null && String(selectedValue) !== ""
 
   const _onChange = (newValue: string) => {
     if (!isControlled) {
@@ -148,7 +155,14 @@ export function Select<V = unknown>({
             required={required}
             disabled={disabled || loading}
             name={name}
-            {...(selectedValue !== undefined ? { value: String(selectedValue) } : {})}
+            {...(isControlled
+              ? {
+                  value:
+                    selectedValue === undefined || selectedValue === null || selectedValue === ("" as V)
+                      ? ""
+                      : String(selectedValue),
+                }
+              : {})}
             {...(searchable ? {} : { onValueChange: _onChange })}
             onOpenChange={setIsOpen}
           >
@@ -158,13 +172,14 @@ export function Select<V = unknown>({
               <SelectTrigger
                 size={size}
                 className={cn({ "border-red-500 focus:ring-red-500": errors })}
-                removable={removable && !!selectedValue && !disabled && !loading}
+                removable={removable && hasSelection && !disabled && !loading}
                 onRemove={_onRemove}
               >
                 <SelectValue
                   selected={selectedValue}
                   options={options}
                   placeholder={placeholder ?? "Select an option"}
+                  placeholderIcon={placeholderIcon}
                 />
               </SelectTrigger>
             )}
@@ -173,6 +188,13 @@ export function Select<V = unknown>({
               side={side}
               {...(sideOffset !== undefined ? { sideOffset } : {})}
               {...(alignOffset !== undefined ? { alignOffset } : {})}
+              {...(searchable
+                ? {
+                    onOpenAutoFocus: (event: Event) => {
+                      event.preventDefault()
+                    },
+                  }
+                : {})}
               className={cn(zIndex.dropdown, "p-0")}
             >
               {searchable ? (
@@ -183,7 +205,7 @@ export function Select<V = unknown>({
                   {...(onSearch ? { onSearchChange: onSearch } : {})}
                   {...(searchPlaceholder ? { searchPlaceholder } : {})}
                   {...(searchableEmptyMessage ? { searchableEmptyMessage } : {})}
-                  {...(selectedValue !== undefined ? { selectedValue } : {})}
+                  {...(hasSelection ? { selectedValue } : {})}
                 />
               ) : (
                 <SelectGroup>

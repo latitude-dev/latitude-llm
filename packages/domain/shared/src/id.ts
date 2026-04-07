@@ -12,42 +12,49 @@ import { z } from "zod"
 // Base branded type helper
 type Branded<T, B> = T & { readonly __brand: B }
 
+/**
+ * Branded string ID keyed by a compile-time-only brand (e.g. `"ProjectId"`).
+ * Prefer existing named aliases (`ProjectId`, `UserId`, …) at boundaries; this
+ * type is the shared shape and works with `generateId<"ProjectId">()`.
+ */
+export type Id<Brand extends string> = Branded<string, Brand>
+
 export const CUID_LENGTH = 24
 
 export const cuidSchema = z.string().length(CUID_LENGTH)
 
 // User-related IDs
-export type UserId = Branded<string, "UserId">
+export type UserId = Id<"UserId">
 
 // Organization/Workspace-related IDs (workspace is now organization)
-export type OrganizationId = Branded<string, "OrganizationId">
-export type MembershipId = Branded<string, "MembershipId">
+export type OrganizationId = Id<"OrganizationId">
+export type MembershipId = Id<"MembershipId">
 
 // Project-related IDs
-export type ProjectId = Branded<string, "ProjectId">
+export type ProjectId = Id<"ProjectId">
 
 // API Key IDs
-export type ApiKeyId = Branded<string, "ApiKeyId">
+export type ApiKeyId = Id<"ApiKeyId">
 
 // Dataset-related IDs
-export type DatasetId = Branded<string, "DatasetId">
-export type DatasetRowId = Branded<string, "DatasetRowId">
-export type DatasetVersionId = Branded<string, "DatasetVersionId">
+export type DatasetId = Id<"DatasetId">
+export type DatasetRowId = Id<"DatasetRowId">
+export type DatasetVersionId = Id<"DatasetVersionId">
 
 // Reliability-related IDs
-export type ScoreId = Branded<string, "ScoreId">
-export type IssueId = Branded<string, "IssueId">
-export type EvaluationId = Branded<string, "EvaluationId">
-export type SimulationId = Branded<string, "SimulationId">
-export type AnnotationQueueId = Branded<string, "AnnotationQueueId">
-export type AnnotationQueueItemId = Branded<string, "AnnotationQueueItemId">
+export type ScoreId = Id<"ScoreId">
+export type IssueId = Id<"IssueId">
+export type EvaluationId = Id<"EvaluationId">
+export type SimulationId = Id<"SimulationId">
+export type AnnotationQueueId = Id<"AnnotationQueueId">
+export type AnnotationQueueItemId = Id<"AnnotationQueueItemId">
 
 // Telemetry-related IDs
-export type TraceId = Branded<string, "TraceId">
-export type SpanId = Branded<string, "SpanId">
-export type SessionId = Branded<string, "SessionId">
+export type TraceId = Id<"TraceId">
+export type SpanId = Id<"SpanId">
+export type SessionId = Id<"SessionId">
 /** User identifier from external telemetry instrumentation, not the platform User entity. */
-export type ExternalUserId = Branded<string, "ExternalUserId">
+export type ExternalUserId = Id<"ExternalUserId">
 
 // Factory functions to create branded IDs
 // Use these when creating IDs from strings (e.g., from database rows)
@@ -70,11 +77,36 @@ export const DatasetRowId = (value: string): DatasetRowId => value as DatasetRow
 export const DatasetVersionId = (value: string): DatasetVersionId => value as DatasetVersionId
 export const ExternalUserId = (value: string): ExternalUserId => value as ExternalUserId
 
+/** Zod schemas that parse strings into branded domain IDs (CUID2, length {@link CUID_LENGTH}). */
+export const userIdSchema = cuidSchema.transform(UserId)
+export const organizationIdSchema = cuidSchema.transform(OrganizationId)
+export const membershipIdSchema = cuidSchema.transform(MembershipId)
+export const projectIdSchema = cuidSchema.transform(ProjectId)
+export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
+export const datasetIdSchema = cuidSchema.transform(DatasetId)
+export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)
+export const datasetVersionIdSchema = cuidSchema.transform(DatasetVersionId)
+export const traceIdSchema = cuidSchema.transform(TraceId)
+export const spanIdSchema = cuidSchema.transform(SpanId)
+export const sessionIdSchema = cuidSchema.transform(SessionId)
+export const simulationIdSchema = cuidSchema.transform(SimulationId)
+/** Telemetry uses an empty string when no simulation is linked (not a CUID). */
+export const simulationIdOrEmptySchema = z.union([z.literal(""), cuidSchema]).transform(SimulationId)
+export const externalUserIdSchema = cuidSchema.transform(ExternalUserId)
+
 /**
  * Generate a unique ID using CUID2.
  * CUID2 provides 24-25 character URL-safe unique identifiers.
+ *
+ * Call without type args for an ordinary `string` (e.g. slugs, opaque tokens).
+ * Use `generateId<"ProjectId">()` (or another brand literal matching a named ID type)
+ * for a compile-time branded ID without an extra `ProjectId(...)` wrapper.
  */
-export const generateId = (): string => createId()
+export function generateId(): string
+export function generateId<const B extends string>(): Id<B>
+export function generateId(): string {
+  return createId()
+}
 
 /**
  * Validate if a string is a valid CUID2.

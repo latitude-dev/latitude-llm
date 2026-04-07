@@ -1,13 +1,10 @@
 import type { ScoreSource } from "@domain/scores"
 
+export const ISSUE_NAME_MAX_LENGTH = 128
+
 export const ISSUE_STATES = ["new", "escalating", "resolved", "regressed", "ignored"] as const
 
 export const NEW_ISSUE_AGE_DAYS = 7
-
-export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75 // 75% vector search, 25% keyword search
-export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8 // 80% similarity (broader score)
-export const ISSUE_DISCOVERY_MIN_KEYWORDS = 1 // At least 1 keyword match
-export const ISSUE_DISCOVERY_MAX_CANDIDATES = 1000 // Large pool to allow filtering merged issues
 
 /**
  * An issue is "escalating" when last-day occurrences exceed the 7-day
@@ -21,6 +18,17 @@ export const AUTO_RESOLVE_INACTIVITY_DAYS = 14
 // ---------------------------------------------------------------------------
 // Centroid configuration
 // ---------------------------------------------------------------------------
+
+/**
+ * Critical issue-discovery configuration.
+ *
+ * These values define the persisted `IssueCentroid` space and the query vectors
+ * matched against it during issue discovery. Do not change them directly in
+ * place: changing model, dimensions, decay semantics, or source weights
+ * requires explicit support for old and new embedding spaces plus a centroid
+ * rebuild/migration strategy, otherwise historical and new contributions become
+ * incompatible.
+ */
 
 /** Half-life for exponential decay of centroid contributions, in seconds (14 days). */
 export const CENTROID_HALF_LIFE_SECONDS = 14 * 24 * 60 * 60
@@ -39,20 +47,24 @@ export const CENTROID_SOURCE_WEIGHTS: Readonly<Record<ScoreSource, number>> = {
 } as const
 
 // ---------------------------------------------------------------------------
-// Discovery thresholds (hybrid search + rerank)
+// Discovery thresholds (hybrid search)
 // ---------------------------------------------------------------------------
 
-/** Alpha for Weaviate hybrid search: weight given to vector vs BM25 (0 = pure BM25, 1 = pure vector). */
-export const HYBRID_SEARCH_ALPHA = 0.75
+/** Alpha for Weaviate hybrid search: 75% vector search, 25% keyword search */
+export const ISSUE_DISCOVERY_SEARCH_RATIO = 0.75
 
-/** Minimum hybrid similarity score to consider a candidate. */
-export const MIN_HYBRID_SIMILARITY = 0.8
+/** Minimum hybrid similarity score to consider a candidate: 80% similarity */
+export const ISSUE_DISCOVERY_MIN_SIMILARITY = 0.8
 
-/** Minimum BM25 keyword matches required (OR mode). */
-export const MIN_BM25_KEYWORD_MATCHES = 1
+/** Minimum BM25 keyword matches required (OR mode): At least 1 keyword match */
+export const ISSUE_DISCOVERY_MIN_KEYWORDS = 1
 
-/** Maximum initial candidates returned from the hybrid search stage. */
-export const MAX_INITIAL_CANDIDATES = 1000
+/** Maximum initial candidates returned from the hybrid search stage: Large pool */
+export const ISSUE_DISCOVERY_MAX_CANDIDATES = 1000
+
+// ---------------------------------------------------------------------------
+// Discovery thresholds (rerank)
+// ---------------------------------------------------------------------------
 
 /** Maximum candidates sent to the reranker after hybrid search filtering. */
 export const RERANK_LIMIT = 100
@@ -62,6 +74,20 @@ export const MIN_RERANK_RELEVANCE = 0.3
 
 /** Rerank model identifier. */
 export const RERANK_MODEL = "rerank-2.5"
+
+// ---------------------------------------------------------------------------
+// Issue details generation
+// ---------------------------------------------------------------------------
+
+/** Language model used to generate stable issue names/descriptions. */
+export const ISSUE_DETAILS_GENERATION_MODEL = {
+  provider: "openai",
+  model: "gpt-5.4",
+  reasoning: "medium",
+} as const
+
+/** Maximum recent assigned issue occurrences used when regenerating existing issue details. */
+export const ISSUE_DETAILS_MAX_OCCURRENCES = 25
 
 // ---------------------------------------------------------------------------
 // Issue refresh debounce

@@ -43,6 +43,14 @@ export const ProjectRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
+    const list = () =>
+      sqlClient
+        .query((db) => db.select().from(projects).where(isNull(projects.deletedAt)))
+        .pipe(Effect.map((results) => results.map(toDomainProject)))
+
+    const listIncludingDeleted = () =>
+      sqlClient.query((db) => db.select().from(projects)).pipe(Effect.map((results) => results.map(toDomainProject)))
+
     return {
       findById: (id: ProjectIdType) =>
         sqlClient
@@ -63,13 +71,28 @@ export const ProjectRepositoryLive = Layer.effect(
             }),
           ),
 
-      findAll: () =>
+      findBySlug: (slug: string) =>
         sqlClient
-          .query((db) => db.select().from(projects).where(isNull(projects.deletedAt)))
-          .pipe(Effect.map((results) => results.map(toDomainProject))),
+          .query((db) =>
+            db
+              .select()
+              .from(projects)
+              .where(and(eq(projects.slug, slug), isNull(projects.deletedAt)))
+              .limit(1),
+          )
+          .pipe(
+            Effect.flatMap((results) => {
+              const [result] = results
+              if (!result) {
+                return Effect.fail(new NotFoundError({ entity: "Project", id: slug }))
+              }
+              return Effect.succeed(toDomainProject(result))
+            }),
+          ),
 
-      findAllIncludingDeleted: () =>
-        sqlClient.query((db) => db.select().from(projects)).pipe(Effect.map((results) => results.map(toDomainProject))),
+      list,
+
+      listIncludingDeleted,
 
       save: (project: Project) =>
         Effect.gen(function* () {

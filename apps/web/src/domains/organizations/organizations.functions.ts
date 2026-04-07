@@ -11,24 +11,20 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession, requireUserSession } from "../../server/auth.ts"
 import { getAdminPostgresClient, getBetterAuth, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
-export const listOrganizations = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
-  .handler(async () => {
-    const userId = await requireUserSession()
-    const client = getAdminPostgresClient()
-    const repoLayer = Layer.merge(OrganizationRepositoryLive, MembershipRepositoryLive)
-    return await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* OrganizationRepository
-        return yield* repo.findByUserId(UserId(userId))
-      }).pipe(withPostgres(repoLayer, client)),
-    )
-  })
+export const listOrganizations = createServerFn({ method: "GET" }).handler(async () => {
+  const userId = await requireUserSession()
+  const client = getAdminPostgresClient()
+  const repoLayer = Layer.merge(OrganizationRepositoryLive, MembershipRepositoryLive)
+  return await Effect.runPromise(
+    Effect.gen(function* () {
+      const repo = yield* OrganizationRepository
+      return yield* repo.listByUserId(UserId(userId))
+    }).pipe(withPostgres(repoLayer, client)),
+  )
+})
 
 export const createOrganization = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ name: z.string().min(1).max(256) }))
   .handler(async ({ data }) => {
     const userId = await requireUserSession()
@@ -50,16 +46,19 @@ export const createOrganization = createServerFn({ method: "POST" })
     })
 
     const outboxWriter = getOutboxWriter()
-    await outboxWriter.write({
-      eventName: "OrganizationCreated",
-      aggregateId: organization.id,
-      organizationId: OrganizationId(organization.id),
-      payload: {
-        organizationId: organization.id,
-        name: data.name,
-        slug,
-      },
-    })
+    await Effect.runPromise(
+      outboxWriter.write({
+        eventName: "OrganizationCreated",
+        aggregateType: "organization",
+        aggregateId: organization.id,
+        organizationId: OrganizationId(organization.id),
+        payload: {
+          organizationId: organization.id,
+          name: data.name,
+          slug,
+        },
+      }),
+    )
 
     return organization
   })
@@ -69,7 +68,6 @@ const organizationSettingsSchema = z.object({
 })
 
 export const updateOrganization = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       name: z.string().min(1).max(256).optional(),

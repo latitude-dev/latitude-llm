@@ -8,7 +8,7 @@ export class ApiKeyRepository extends ServiceMap.Service<
   ApiKeyRepository,
   {
     findById: (id: ApiKeyIdType) => Effect.Effect<ApiKey, NotFoundError | RepositoryError>
-    findAll: () => Effect.Effect<readonly ApiKey[], RepositoryError>
+    list: () => Effect.Effect<readonly ApiKey[], RepositoryError>
     save: (apiKey: ApiKey) => Effect.Effect<void, RepositoryError>
     delete: (id: ApiKeyIdType) => Effect.Effect<void, RepositoryError>
     touch: (id: ApiKeyIdType) => Effect.Effect<void, RepositoryError>

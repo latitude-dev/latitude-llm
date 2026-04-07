@@ -1,3 +1,4 @@
+import { NotFoundError, type ScoreId } from "@domain/shared"
 import { Effect } from "effect"
 import type { Score } from "../entities/score.ts"
 import type { ScoreRepositoryShape } from "../ports/score-repository.ts"
@@ -8,9 +9,30 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
   const scores = new Map<string, Score>()
 
   const repository: ScoreRepositoryShape = {
-    findById: (id) => Effect.succeed(scores.get(id) ?? null),
+    findById: (id) => {
+      const score = scores.get(id)
+      if (!score) return Effect.fail(new NotFoundError({ entity: "Score", id }))
+      return Effect.succeed(score)
+    },
     save: (score) => {
       scores.set(score.id, score)
+      return Effect.void
+    },
+    assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) => {
+      const score = scores.get(scoreId)
+      if (!score || score.issueId !== null) {
+        return Effect.succeed(false)
+      }
+
+      scores.set(scoreId, {
+        ...score,
+        issueId,
+        updatedAt,
+      })
+      return Effect.succeed(true)
+    },
+    delete: (id: ScoreId) => {
+      scores.delete(id)
       return Effect.void
     },
     listByProjectId: () => Effect.succeed(EMPTY_PAGE),

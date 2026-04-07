@@ -547,19 +547,22 @@ describe("TravelPlanner trace — GenAI v1.37+ (current)", () => {
   describe("token usage", () => {
     it("LLM call 1: input=800, output=50, cacheRead=600", () => {
       const s = findSpan("llmCall1")
-      expect(s.tokensInput).toBe(800)
+      // Inclusive OTLP input is split: non-cached input + cache (resolveUsage is additive).
+      expect(s.tokensInput).toBe(200)
       expect(s.tokensOutput).toBe(50)
       expect(s.tokensCacheRead).toBe(600)
       expect(s.tokensCacheCreate).toBe(0)
       expect(s.tokensReasoning).toBe(0)
+      expect(s.tokensInput + s.tokensCacheRead + s.tokensCacheCreate).toBe(800)
     })
 
     it("LLM call 2: input=1200, output=120, reasoning=40", () => {
       const s = findSpan("llmCall2")
       expect(s.tokensInput).toBe(1200)
-      expect(s.tokensOutput).toBe(120)
+      expect(s.tokensOutput).toBe(80)
       expect(s.tokensReasoning).toBe(40)
       expect(s.tokensCacheRead).toBe(0)
+      expect(s.tokensOutput + s.tokensReasoning).toBe(120)
     })
 
     it("LLM call 3: input=1500, output=300", () => {

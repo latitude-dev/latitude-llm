@@ -40,7 +40,6 @@ import { z } from "zod"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher, getStorageDisk } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 import { applyMapping } from "./column-mapping.ts"
 
 const rowSelectionSchema = z.discriminatedUnion("mode", [
@@ -127,7 +126,6 @@ interface DatasetListResult {
 }
 
 export const listDatasetsByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z
       .object({
@@ -177,7 +175,6 @@ export const listDatasetsByProject = createServerFn({ method: "GET" })
   })
 
 export const getDatasetQuery = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ datasetId: z.string() }))
   .handler(async ({ data }): Promise<DatasetRecord | null> => {
     const { organizationId } = await requireSession()
@@ -203,7 +200,6 @@ const listRowsCursorSchema = z.object({
 const DATASET_ROW_SORT_COLUMNS = ["createdAt"] as const
 
 export const listRowsQuery = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z.string(),
@@ -261,7 +257,6 @@ export const listRowsQuery = createServerFn({ method: "GET" })
   )
 
 export const getRowQuery = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z.string(),
@@ -288,7 +283,6 @@ export const getRowQuery = createServerFn({ method: "GET" })
   })
 
 export const updateDataset = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z.string(),
@@ -312,7 +306,6 @@ export const updateDataset = createServerFn({ method: "POST" })
   })
 
 export const deleteDatasetFunction = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(z.object({ datasetId: z.string() }))
   .handler(async ({ data }): Promise<void> => {
     const { organizationId } = await requireSession()
@@ -328,7 +321,6 @@ export const deleteDatasetFunction = createServerFn({ method: "POST" })
 type DatasetDownloadResult = { type: "direct"; csv: string; filename: string } | { type: "enqueued" }
 
 export const getDatasetDownload = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z.string(),
@@ -403,7 +395,6 @@ export const getDatasetDownload = createServerFn({ method: "GET" })
   })
 
 export const createDatasetFunction = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       id: z
@@ -435,7 +426,6 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
   })
 
 export const saveDatasetCsv = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator((input: unknown): { file: File; data: SaveDatasetCsvData } => {
     if (!(input instanceof FormData)) throw new Error("Expected FormData")
     const file = input.get("file")
@@ -493,7 +483,6 @@ export const saveDatasetCsv = createServerFn({ method: "POST" })
   })
 
 export const insertDatasetRow = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z.string(),
@@ -538,7 +527,6 @@ export const insertDatasetRow = createServerFn({ method: "POST" })
   )
 
 export const updateDatasetRow = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z.string(),
@@ -569,7 +557,6 @@ export const updateDatasetRow = createServerFn({ method: "POST" })
   })
 
 export const deleteDatasetRows = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z.string(),
@@ -607,7 +594,6 @@ function toTraceSelection(sel: z.infer<typeof rowSelectionSchema>): TraceSelecti
 }
 
 export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -642,7 +628,6 @@ export const addTracesToDatasetFunction = createServerFn({ method: "POST" })
 export const createDatasetFromTracesFunction = createServerFn({
   method: "POST",
 })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       datasetId: z

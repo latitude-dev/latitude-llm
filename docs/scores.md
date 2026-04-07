@@ -202,11 +202,13 @@ Publication rules:
 - drafts are never saved to ClickHouse
 - non-draft passed or errored scores are saved to ClickHouse analytics immediately because they are already immutable
 - non-draft failed non-errored scores stay only in Postgres until `issue_id` is assigned
+- non-draft failed non-errored scores with no `issue_id` request discovery through the transactional `IssueDiscoveryRequested` outbox event
 - when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - ClickHouse analytics save must be retry-safe and preserve at-most-one row per score id
-- the canonical Postgres write transaction requests analytics save through a transactional `ScoreImmutable` domain event written to the outbox only when the current score row is already immutable
-- the `domain-events` dispatcher forwards that event to the `analytic-scores:save` task, which re-fetches the canonical score from Postgres and inserts into ClickHouse analytics only if the row is still immutable and not already present in analytics
-- this differs from direct-publication reliability events such as `SpanIngested` and `TraceEnded`: immutable score analytics save uses outbox specifically to keep score-row persistence and save intent atomic.
+- the canonical Postgres write transaction must never talk to ClickHouse directly; after commit, the caller runs `syncScoreAnalyticsUseCase`, which re-fetches the canonical score row and inserts into ClickHouse analytics only if the row is still immutable and not already present in analytics
+- for discovery-owned failures, the `issue-discovery` workflow runs `syncScoreAnalyticsUseCase` as a dedicated post-transaction activity after either `createIssueFromScoreUseCase` or `assignScoreToIssueUseCase`
+- when an immutable score lands on an existing issue, the same Postgres transaction writes `IssueRefreshRequested` to the outbox so debounced issue-details regeneration still remains atomic with the canonical ownership change
+- this differs from direct-publication reliability events such as `SpanIngested` and `TraceEnded`: immutable score analytics save stays synchronous-after-commit for freshness, while only the slower debounced issue-details refresh remains event-driven
 
 Draft-specific rules:
 

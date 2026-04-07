@@ -1,3 +1,8 @@
+---
+name: authentication
+description: Sessions, sign-in/sign-up flows, OAuth, magic links, or organization context on the session.
+---
+
 # Authentication (Better Auth)
 
 **When to use:** Sessions, sign-in/sign-up flows, OAuth, magic links, or organization context on the session.

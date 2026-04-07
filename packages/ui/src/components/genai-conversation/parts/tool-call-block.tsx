@@ -1,6 +1,7 @@
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon, WrenchIcon, XIcon } from "lucide-react"
-import { useState } from "react"
+import { CheckIcon, ChevronDownIcon, ChevronRightIcon, ScanSearchIcon, WrenchIcon, XIcon } from "lucide-react"
+import { useId, useState } from "react"
 import { cn } from "../../../utils/cn.ts"
+import { Button } from "../../button/button.tsx"
 import { CopyButton } from "../../copy-button/index.tsx"
 import { Text } from "../../text/text.tsx"
 import { Tooltip } from "../../tooltip/tooltip.tsx"
@@ -27,12 +28,17 @@ function ToolCallStatusIcon({ result }: { readonly result: ToolCallResult | unde
 export function ToolCallBlock({
   call,
   result,
+  onNavigateToSpan,
 }: {
   readonly call: ToolCallPart
-  readonly result: ToolCallResult | undefined
+  readonly result?: ToolCallResult | undefined
+  readonly onNavigateToSpan?: () => void
 }) {
   const [open, setOpen] = useState(false)
+  const panelId = useId()
   const isError = result?.isError === true
+
+  const toggleOpen = () => setOpen((prev) => !prev)
 
   return (
     <div
@@ -41,41 +47,65 @@ export function ToolCallBlock({
         "border-destructive": isError,
       })}
     >
-      <button
-        type="button"
-        className="flex flex-row items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50"
-        onClick={() => setOpen((prev) => !prev)}
-      >
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: row is a pointer-only hit target; chevron Button handles keyboard disclosure */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: same — toggle is available via the chevron control */}
+      <div className="flex flex-row items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50" onClick={toggleOpen}>
         <WrenchIcon className="w-3.5 h-3.5 text-muted-foreground" />
         <span className="flex-1 text-left">
           <Text.Mono size="h6">{call.name}</Text.Mono>
         </span>
         <ToolCallStatusIcon result={result} />
         {call.id && <CopyButton value={call.id} tooltip={call.id} />}
-        {open ? (
-          <ChevronDownIcon className="w-3.5 h-3.5 text-muted-foreground" />
-        ) : (
-          <ChevronRightIcon className="w-3.5 h-3.5 text-muted-foreground" />
-        )}
-      </button>
-
-      {open && (
-        <div className="flex flex-col">
-          <pre className="overflow-auto border-y border-border bg-muted p-3 text-xs">{formatJson(call.arguments)}</pre>
-          {result && (
-            <div className="flex flex-col p-3">
-              <pre
-                className={cn("overflow-auto rounded-lg p-3 text-xs", {
-                  "bg-muted": !isError,
-                  "bg-destructive-muted": isError,
-                })}
+        {onNavigateToSpan && (
+          <Tooltip
+            trigger={
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onNavigateToSpan()
+                }}
+                className="flex items-center text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                {formatJson(result.response)}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
+                <ScanSearchIcon className="w-4 h-4" />
+              </button>
+            }
+          >
+            <Text.H6>View execution span</Text.H6>
+          </Tooltip>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={(e) => {
+            e.stopPropagation()
+            toggleOpen()
+          }}
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={open ? "Hide tool call details" : "Show tool call details"}
+        >
+          {open ? <ChevronDownIcon className="w-3.5 h-3.5" /> : <ChevronRightIcon className="w-3.5 h-3.5" />}
+        </Button>
+      </div>
+
+      <div id={panelId} className={cn("flex flex-col", !open && "hidden")}>
+        <pre className="overflow-auto border-y border-border bg-muted p-3 text-xs">{formatJson(call.arguments)}</pre>
+        {result && (
+          <div className="flex flex-col p-3">
+            <pre
+              className={cn("overflow-auto rounded-lg p-3 text-xs", {
+                "bg-muted": !isError,
+                "bg-destructive-muted": isError,
+              })}
+            >
+              {formatJson(result.response)}
+            </pre>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

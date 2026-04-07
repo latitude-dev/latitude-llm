@@ -1,6 +1,19 @@
-import type { OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
+import type { NotFoundError, OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
-import type { Span, SpanDetail } from "../entities/span.ts"
+import type { GenAIMessage } from "rosetta-ai"
+import type { Operation, Span, SpanDetail } from "../entities/span.ts"
+
+/**
+ * Minimal span shape with message content — used for conversation-to-span attribution.
+ * Only returned by findMessagesForTrace; avoids fetching full SpanDetail for every span.
+ */
+export interface SpanMessagesData {
+  readonly spanId: SpanId
+  readonly operation: Operation
+  readonly toolCallId: string
+  readonly inputMessages: readonly GenAIMessage[]
+  readonly outputMessages: readonly GenAIMessage[]
+}
 
 /**
  * Repository port for spans (ClickHouse).
@@ -8,12 +21,12 @@ import type { Span, SpanDetail } from "../entities/span.ts"
 export interface SpanRepositoryShape {
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError>
 
-  findByTraceId(input: {
+  listByTraceId(input: {
     readonly organizationId: OrganizationId
     readonly traceId: TraceId
   }): Effect.Effect<readonly Span[], RepositoryError>
 
-  findByProjectId(input: {
+  listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly options: SpanListOptions
@@ -23,7 +36,12 @@ export interface SpanRepositoryShape {
     readonly organizationId: OrganizationId
     readonly traceId: TraceId
     readonly spanId: SpanId
-  }): Effect.Effect<SpanDetail | null, RepositoryError>
+  }): Effect.Effect<SpanDetail, NotFoundError | RepositoryError>
+
+  findMessagesForTrace(input: {
+    readonly organizationId: OrganizationId
+    readonly traceId: TraceId
+  }): Effect.Effect<readonly SpanMessagesData[], RepositoryError>
 }
 
 export interface SpanListOptions {

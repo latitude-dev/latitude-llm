@@ -1,13 +1,23 @@
 const COUNT_UNITS = ["", "K", "M", "B", "T"]
 
+const countFractionFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 2,
+  minimumFractionDigits: 0,
+  useGrouping: false,
+})
+
 /**
  * Format a large number into a compact human-readable string.
  *
  * Examples: `128000` -> `"128K"`, `1500000` -> `"1.5M"`, `42` -> `"42"`
+ * Fractional values under 1000 use at most two decimal places (e.g. averages).
  */
 export function formatCount(count: number): string {
   if (count < 0) return `-${formatCount(-count)}`
-  if (count < 1000) return String(count)
+  if (count < 1000) {
+    if (Number.isInteger(count)) return String(count)
+    return countFractionFormatter.format(count)
+  }
 
   let unitIndex = 0
   let value = count
@@ -23,12 +33,17 @@ export function formatCount(count: number): string {
 /**
  * Format a dollar amount for display.
  *
- * Examples: `0` -> `"$0"`, `2.5` -> `"$2.50"`, `0.003` -> `"$0.003"`
+ * Examples: `0` -> `"$0"`, `2.5` -> `"$2.50"`, `0.003` -> `"$0.003"`, `0.0000075` -> `"$0.0000075"`
+ *
+ * Uses enough decimal places to always show a non-zero digit for positive values.
  */
 export function formatPrice(price: number): string {
   if (price === 0) return "$0"
-  if (price < 0.01) return `$${price.toFixed(3)}`
-  return `$${price.toFixed(2)}`
+  if (price >= 0.01) return `$${price.toFixed(2)}`
+  // Find the first non-zero decimal digit and show one more
+  const digits = Math.max(3, -Math.floor(Math.log10(price)) + 1)
+  const s = price.toFixed(digits).replace(/0+$/, "").replace(/\.$/, "")
+  return `$${s}`
 }
 
 /**
@@ -64,6 +79,25 @@ export function safeParseJson(
  */
 export function parseCHDate(value: string): Date {
   return new Date(`${value} UTC`)
+}
+
+const ZWSP_AND_BOM = /[\u200B-\u200D\uFEFF]/g
+
+/**
+ * Normalizes scalar strings read from CH (ClickHouse) JSON responses.
+ *
+ * `FixedString` columns are often NUL-padded to their width; the client returns those bytes in the
+ * string. Optional id columns also use empty `FixedString` / defaulted strings the same way.
+ * Strip NULs, zero-width/BOM characters, then trim so `"absent"` consistently maps to `""`.
+ */
+export function normalizeCHString(value: string | null | undefined): string {
+  if (value == null) return ""
+  return value.replace(/\0/g, "").replace(ZWSP_AND_BOM, "").trim()
+}
+
+/** True when {@link normalizeCHString} yields an empty string. */
+export function isBlankCHString(value: string | null | undefined): boolean {
+  return normalizeCHString(value) === ""
 }
 
 export function safeStringifyJson(value: unknown, fallback = ""): string {

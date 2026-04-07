@@ -1,3 +1,8 @@
+---
+name: architecture-boundaries
+description: Layering and boundaries, web vs public API, app layout (clients, routes, logging), ports/adapters, runtime-portable domain/shared/utils code, multi-tenancy, DDD layout, or anti-patterns.
+---
+
 # Architecture and layer boundaries
 
 **When to use:** Layering and boundaries, web vs public API, **app layout** (clients, routes, logging), ports/adapters, **runtime-portable domain/shared/utils code**, multi-tenancy, DDD layout, or anti-patterns.
@@ -57,6 +62,21 @@ Business logic lives here. Domain packages expose:
 
 Infrastructure details live here only. Platform packages implement adapters for domain ports.
 
+### Platform adapters: Effect-based clients
+
+**Reference implementation:** `packages/platform/db-weaviate/src/client.ts` — `createWeaviateClientEffect` (and the thin `createWeaviateClient` wrapper used by scripts).
+
+Use this pattern when a platform package owns an external SDK client so composition roots can stay in Effect and errors stay typed.
+
+1. **Primary constructor is an Effect** — Export `createXClientEffect(...): Effect.Effect<Client, E, never>` (or with requirements `R` if unavoidable). Scripts and one-off CLIs may export `async function createXClient()` as `Effect.runPromise(createXClientEffect(...))` only at the boundary that needs promises.
+2. **Typed errors** — Model connection, validation, and bootstrap failures with `Data.TaggedError` (or shared env errors from `@platform/env`). Union them into a single `CreateXClientError` (or similar) exported next to the constructor.
+3. **Configuration** — Resolve settings with `parseEnv` / `parseEnvOptional` from `@platform/env` inside the Effect pipeline, not ad hoc `process.env` reads scattered outside the client module.
+4. **Interop** — Wrap promise-based SDK calls in `Effect.tryPromise` and map failures to tagged errors. Compose steps with `Effect.pipe`, `Effect.flatMap`, and `Effect.map`.
+5. **Bootstrap in the pipeline** — If the client must apply schema/migrations/health checks before use, run those as Effects in the same pipeline (see Weaviate: `migrateWeaviateCollectionsEffect` after connect) so callers get a ready client or a single error channel.
+6. **Live layers** — Expose `PortLive(client) => Layer.succeed(Port, implementation)` (or `Layer.effect` when the adapter holds fiber-scoped state). The composition root acquires the client with `createXClientEffect` and maps to the layer, for example `createWeaviateClientEffect().pipe(Effect.map((c) => IssueProjectionRepositoryLive(c)))` in `apps/workflows/src/clients.ts`.
+
+Not every legacy adapter has been migrated; prefer this shape for new work and when touching client construction.
+
 ## Shared utilities (`packages/utils`)
 
 General-purpose utility functions that can be shared across any package (domain, platform, or app) live in `@repo/utils`. This package should contain pure, stateless helper functions with no domain or infrastructure dependencies.
@@ -79,6 +99,7 @@ When writing a utility function that is not specific to a single domain or packa
 - Platform packages implement adapters
 - Composition roots in apps provide live layers
 - Domain must never import concrete DB/cache/queue/object storage clients
+- **Repository method names:** Use the standard verbs in [docs/repositories.md](../../../docs/repositories.md) (`findById`, `findByXxx` for unique keys, `listByXxx` / `list` for collections, `save`, `delete` vs `softDelete`, etc.).
 - Reliability async contracts should stay project-scoped as well as organization-scoped: include both `organizationId` and `projectId` in event/task/workflow payloads by default (except `MagicLinkEmailRequested`, `UserDeletionRequested`, `domain-events`, `magic-link-email`, and `user-deletion` payloads).
 
 ## Web standards first (domain, utils, shared)

@@ -1,5 +1,5 @@
 import { type ApiKeyId, type RepositoryError, SqlClient, type ValidationError } from "@domain/shared"
-import { type CryptoError, hashToken } from "@repo/utils"
+import { type CryptoError, hash } from "@repo/utils"
 import { Data, Effect } from "effect"
 import { createApiKey, generateApiKeyToken } from "../entities/api-key.ts"
 import { ApiKeyRepository } from "../ports/api-key-repository.ts"
@@ -34,7 +34,7 @@ export const generateApiKeyUseCase = (input: GenerateApiKeyInput) =>
     }
 
     const token = generateApiKeyToken()
-    const tokenHash = yield* hashToken(token)
+    const tokenHash = yield* hash(token)
     const apiKey = createApiKey({
       id: input.id,
       organizationId,

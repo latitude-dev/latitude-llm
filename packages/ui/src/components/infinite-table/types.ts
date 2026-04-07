@@ -11,6 +11,8 @@ export interface InfiniteTableColumn<T> {
   resizable?: boolean
   minWidth?: number
   sortKey?: string
+  /** Optional second header row cell; use for summaries. Keep controls `stopPropagation` if the column is sortable. */
+  renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode
 }
 
 export interface InfiniteTableSelection {
@@ -37,12 +39,11 @@ export interface ExpandedRows<T> {
   isLoading?: boolean
 }
 
-export interface InfiniteTableProps<T> {
+export interface InfiniteTableSharedProps<T> {
   data: readonly T[]
   isLoading?: boolean
   columns: InfiniteTableColumn<T>[]
   getRowKey: (row: T) => string
-  onRowClick?: (row: T) => void
   activeRowKey?: string
   activeRowAutoScroll?: boolean
   selection?: InfiniteTableSelection
@@ -55,3 +56,16 @@ export interface InfiniteTableProps<T> {
   expandedRowKeys?: ReadonlySet<string>
   getExpandedRows?: (row: T) => ExpandedRows<T>
 }
+
+export type InfiniteTableProps<T> =
+  | (InfiniteTableSharedProps<T> & {
+      onRowClick: (row: T) => void
+      getRowAriaLabel: (row: T) => string
+      /** Semantic role for clickable rows (`link` when the action navigates). Defaults to `button`. */
+      rowInteractionRole?: "button" | "link"
+    })
+  | (InfiniteTableSharedProps<T> & {
+      onRowClick?: undefined
+      getRowAriaLabel?: undefined
+      rowInteractionRole?: undefined
+    })

@@ -1,5 +1,5 @@
 import { filterSetSchema, OrganizationId, ProjectId } from "@domain/shared"
-import type { Session, SessionDistinctColumn } from "@domain/spans"
+import type { Session, SessionDistinctColumn, SessionMetrics } from "@domain/spans"
 import { SessionRepository } from "@domain/spans"
 import { SessionRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
@@ -7,7 +7,6 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient } from "../../server/clients.ts"
-import { errorHandler } from "../../server/middlewares.ts"
 
 const serializeSession = (session: Session) => ({
   organizationId: session.organizationId,
@@ -30,6 +29,7 @@ const serializeSession = (session: Session) => ({
   costOutputMicrocents: session.costOutputMicrocents,
   costTotalMicrocents: session.costTotalMicrocents,
   userId: session.userId,
+  simulationId: session.simulationId,
   tags: session.tags,
   metadata: session.metadata,
   models: session.models,
@@ -51,7 +51,6 @@ interface SessionListResult {
 }
 
 export const listSessionsByProject = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),
@@ -69,7 +68,7 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
     const page = await Effect.runPromise(
       Effect.gen(function* () {
         const repo = yield* SessionRepository
-        return yield* repo.findByProjectId({
+        return yield* repo.listByProjectId({
           organizationId: orgId,
           projectId: ProjectId(data.projectId),
           options: {
@@ -93,10 +92,51 @@ export const listSessionsByProject = createServerFn({ method: "GET" })
     }
   })
 
+export const getSessionMetricsByProject = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .handler(async ({ data }): Promise<SessionMetrics | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SessionRepository
+        return yield* repo.aggregateMetricsByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          ...(data.filters ? { filters: data.filters } : {}),
+        })
+      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
 
+export const getSessionBySessionId = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string() }))
+  .handler(async ({ data }): Promise<SessionRecord | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const page = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repo = yield* SessionRepository
+        return yield* repo.listByProjectId({
+          organizationId: orgId,
+          projectId: ProjectId(data.projectId),
+          options: {
+            limit: 1,
+            filters: { sessionId: [{ op: "eq", value: data.sessionId }] },
+          },
+        })
+      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId)),
+    )
+
+    const first = page.items[0]
+    return first ? serializeSession(first) : null
+  })
+
 export const getSessionDistinctValues = createServerFn({ method: "GET" })
-  .middleware([errorHandler])
   .inputValidator(
     z.object({
       projectId: z.string(),

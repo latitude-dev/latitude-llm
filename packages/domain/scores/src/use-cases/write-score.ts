@@ -5,7 +5,6 @@ import {
   OutboxEventWriter,
   ProjectId,
   type RepositoryError,
-  ScoreId,
   SqlClient,
   toRepositoryError,
 } from "@domain/shared"
@@ -19,7 +18,7 @@ import {
   type Score,
   scoreSchema,
 } from "../entities/score.ts"
-import { isImmutableScore } from "../helpers.ts"
+import { shouldDiscoverIssue } from "../helpers.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
 
 const baseWritableScoreSchema = baseScoreSchema.omit({
@@ -125,7 +124,7 @@ const buildScore = ({
   return parseOrBadRequest(
     scoreSchema,
     {
-      id: input.id ?? ScoreId(generateId()),
+      id: input.id ?? generateId<"ScoreId">(),
       organizationId,
       projectId: input.projectId,
       sessionId: input.sessionId,
@@ -162,7 +161,11 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
         const scoreRepository = yield* ScoreRepository
         const outboxEventWriter = yield* OutboxEventWriter
 
-        const existingScore = parsedInput.id ? yield* scoreRepository.findById(parsedInput.id) : null
+        const existingScore = parsedInput.id
+          ? yield* scoreRepository
+              .findById(parsedInput.id)
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+          : null
 
         if (existingScore && existingScore.draftedAt === null) {
           return yield* new ScoreDraftClosedError({ scoreId: existingScore.id })
@@ -183,16 +186,30 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
 
         yield* scoreRepository.save(score)
 
-        if (isImmutableScore(score)) {
+        if (shouldDiscoverIssue(score)) {
           yield* outboxEventWriter
             .write({
-              eventName: "ScoreImmutable",
+              eventName: "IssueDiscoveryRequested",
+              aggregateType: "score",
               aggregateId: score.id,
               organizationId: score.organizationId,
               payload: {
                 organizationId: score.organizationId,
                 projectId: score.projectId,
                 scoreId: score.id,
+              },
+            })
+            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
+        } else if (score.issueId !== null) {
+          yield* outboxEventWriter
+            .write({
+              eventName: "IssueRefreshRequested",
+              aggregateType: "score",
+              aggregateId: score.id,
+              organizationId: score.organizationId,
+              payload: {
+                organizationId: score.organizationId,
+                projectId: score.projectId,
                 issueId: score.issueId,
               },
             })

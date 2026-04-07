@@ -465,9 +465,11 @@ describe("TravelPlanner trace — GenAI deprecated / OpenLLMetry", () => {
   describe("token usage", () => {
     it("LLM call 1: input=800, output=50, cacheRead=600", () => {
       const s = findSpan("llmCall1")
-      expect(s.tokensInput).toBe(800)
+      // OpenLLMetry passthrough on OpenAI: inclusive input → non-cached + cache rows.
+      expect(s.tokensInput).toBe(200)
       expect(s.tokensOutput).toBe(50)
       expect(s.tokensCacheRead).toBe(600)
+      expect(s.tokensInput + s.tokensCacheRead).toBe(800)
     })
 
     it("LLM call 2: input=1200, output=120", () => {

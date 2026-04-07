@@ -2,6 +2,7 @@ import type { Score, ScoreListOptions, ScoreSource } from "@domain/scores"
 import { ScoreRepository, scoreSchema } from "@domain/scores"
 import {
   type IssueId,
+  NotFoundError,
   type ProjectId,
   type ScoreId,
   type SessionId,
@@ -118,7 +119,13 @@ export const ScoreRepositoryLive = Layer.effect(
       findById: (id: ScoreId) =>
         sqlClient
           .query((db) => db.select().from(scores).where(eq(scores.id, id)).limit(1))
-          .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null))),
+          .pipe(
+            Effect.flatMap((rows) => {
+              const row = rows[0]
+              if (!row) return Effect.fail(new NotFoundError({ entity: "Score", id }))
+              return Effect.succeed(toDomainScore(row))
+            }),
+          ),
 
       save: (score: Score) =>
         Effect.gen(function* () {
@@ -152,6 +159,22 @@ export const ScoreRepositoryLive = Layer.effect(
           )
         }),
 
+      assignIssueIfUnowned: ({ scoreId, issueId, updatedAt }) =>
+        sqlClient
+          .query((db) =>
+            db
+              .update(scores)
+              .set({
+                issueId,
+                updatedAt,
+              })
+              .where(and(eq(scores.id, scoreId), isNull(scores.issueId)))
+              .returning({ id: scores.id }),
+          )
+          .pipe(Effect.map((rows) => rows.length > 0)),
+
+      delete: (id: ScoreId) => sqlClient.query((db) => db.delete(scores).where(eq(scores.id, id))),
+
       listByProjectId: ({
         projectId,
         options,
@@ -172,31 +195,39 @@ export const ScoreRepositoryLive = Layer.effect(
       }: {
         readonly projectId: ProjectId
         readonly source: ScoreSource
-        readonly sourceId: string
+        readonly sourceId?: string
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId)) ??
-            eq(scores.projectId, projectId),
+      }) => {
+        const combined =
+          sourceId !== undefined
+            ? and(eq(scores.projectId, projectId), eq(scores.source, source), eq(scores.sourceId, sourceId))
+            : and(eq(scores.projectId, projectId), eq(scores.source, source))
+        return list({
+          baseWhere: combined ?? eq(scores.projectId, projectId),
           options,
-        }),
+        })
+      },
 
       listByTraceId: ({
         projectId,
         traceId,
+        source,
         options,
       }: {
         readonly projectId: ProjectId
         readonly traceId: TraceId
+        readonly source?: ScoreSource
         readonly options?: ScoreListOptions
-      }) =>
-        list({
-          baseWhere:
-            and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string)) ??
-            eq(scores.projectId, projectId),
+      }) => {
+        const combined =
+          source !== undefined
+            ? and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string), eq(scores.source, source))
+            : and(eq(scores.projectId, projectId), eq(scores.traceId, traceId as string))
+        return list({
+          baseWhere: combined ?? eq(scores.projectId, projectId),
           options,
-        }),
+        })
+      },
 
       listBySessionId: ({
         projectId,

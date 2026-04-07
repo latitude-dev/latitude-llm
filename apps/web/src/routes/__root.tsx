@@ -1,8 +1,10 @@
 import { Toaster, useMountEffect } from "@repo/ui"
 import "@repo/ui/styles/globals.css"
+import { HotkeysProvider } from "@tanstack/react-hotkeys"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
+import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
@@ -15,6 +17,9 @@ const AgentationToolbar = import.meta.env.DEV
   : null
 
 export const Route = createRootRoute({
+  errorComponent: ({ error, info, reset }) => (
+    <ErrorFallback error={error} componentStack={info?.componentStack ?? null} reset={reset} />
+  ),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -54,7 +59,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <body>
         <HostThemeSync />
         <AppQueryProvider>
-          {children}
+          <HotkeysProvider>{children}</HotkeysProvider>
           <Toaster />
           {AgentationToolbar !== null ? (
             <Suspense fallback={null}>

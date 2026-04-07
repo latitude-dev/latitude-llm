@@ -17,24 +17,26 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
       }),
   })
 
-export type SaveScoreAnalyticsError = RepositoryError | BadRequestError
+export type SyncScoreAnalyticsError = RepositoryError | BadRequestError
 
-export const saveScoreAnalyticsInputSchema = z.object({
+export const syncScoreAnalyticsInputSchema = z.object({
   scoreId: scoreIdSchema,
 })
-export type SaveScoreAnalyticsInput = z.input<typeof saveScoreAnalyticsInputSchema>
+export type SyncScoreAnalyticsInput = z.input<typeof syncScoreAnalyticsInputSchema>
 
-export const saveScoreAnalyticsUseCase = (input: SaveScoreAnalyticsInput) =>
+export const syncScoreAnalyticsUseCase = (input: SyncScoreAnalyticsInput) =>
   Effect.gen(function* () {
     const parsedInput = yield* parseOrBadRequest(
-      saveScoreAnalyticsInputSchema,
+      syncScoreAnalyticsInputSchema,
       input,
       "Invalid score analytics save request",
     )
     const scoreRepository = yield* ScoreRepository
     const analyticsRepository = yield* ScoreAnalyticsRepository
 
-    const score = yield* scoreRepository.findById(parsedInput.scoreId)
+    const score = yield* scoreRepository
+      .findById(parsedInput.scoreId)
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
     if (!score || !isImmutableScore(score)) {
       return
     }

@@ -1,12 +1,13 @@
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useLayoutEffect, useMemo, useRef } from "react"
 import { cn } from "../../utils/cn.ts"
 import type { SortDirection } from "../../utils/filtersHelpers.ts"
 import { Checkbox } from "../checkbox/checkbox.tsx"
 import { Text } from "../text/text.tsx"
 import { DataRow } from "./data-row.tsx"
-import { HeaderCell } from "./header-cell.tsx"
+import { HeaderCell } from "./headers/header-cell.tsx"
 import type { InfiniteTableProps } from "./types.ts"
+import { useHeaderLayoutLock } from "./use-header-layout-lock.ts"
 
 const ROW_HEIGHT = 40
 const SKELETON_ROW_COUNT = 8
@@ -24,6 +25,8 @@ export function InfiniteTable<T>({
   columns,
   getRowKey,
   onRowClick,
+  rowInteractionRole = "button",
+  getRowAriaLabel,
   activeRowKey,
   activeRowAutoScroll = false,
   selection,
@@ -38,6 +41,7 @@ export function InfiniteTable<T>({
 }: InfiniteTableProps<T>) {
   const hasExpansion = !!expandedRowKeys && !!getExpandedRows
   const colCount = columns.length + (selection ? 1 : 0) + (hasExpansion ? 1 : 0)
+  const hasSubheaderRow = useMemo(() => columns.some((col) => col.renderSubheader != null), [columns])
   const hasMore = infiniteScroll?.hasMore ?? false
   const totalVirtualRows = data.length + (hasMore || (isLoading && data.length === 0) ? SKELETON_ROW_COUNT : 0)
 
@@ -93,23 +97,12 @@ export function InfiniteTable<T>({
     return data.findIndex((row) => getRowKey(row) === activeRowKey)
   }, [activeRowKey, data, getRowKey])
 
-  const tableRef = useRef<HTMLTableElement>(null)
-  const [layoutFixed, setLayoutFixed] = useState(false)
-
-  useLayoutEffect(() => {
-    if (layoutFixed || data.length === 0) return
-    const table = tableRef.current
-    if (!table) return
-
-    const headerRow = table.querySelector("thead tr")
-    if (!headerRow) return
-
-    for (const th of Array.from(headerRow.children) as HTMLTableCellElement[]) {
-      th.style.width = `${th.offsetWidth}px`
-    }
-    table.style.width = `${table.offsetWidth}px`
-    setLayoutFixed(true)
-  }, [layoutFixed, data.length])
+  const { tableRef, layoutFixed } = useHeaderLayoutLock({
+    columns,
+    hasSelection: !!selection,
+    hasExpansion,
+    hasSubheaderRow,
+  })
 
   useLayoutEffect(() => {
     if (!activeRowAutoScroll || activeRowIndex < 0) return
@@ -157,11 +150,11 @@ export function InfiniteTable<T>({
             ref={tableRef}
             className={cn("min-w-full border-separate border-spacing-y-1", { "table-fixed": layoutFixed })}
           >
-            <thead className="sticky top-0 z-10 bg-background">
+            <thead className="sticky top-0 z-10 border-b border-border bg-background">
               <tr>
-                {hasExpansion && <HeaderCell resizable={false} className="w-8" />}
+                {hasExpansion && <HeaderCell resizable={false} className="w-8" showSubheaderSlot={hasSubheaderRow} />}
                 {selection && (
-                  <HeaderCell resizable={false} className="w-10">
+                  <HeaderCell resizable={false} className="w-10" showSubheaderSlot={hasSubheaderRow}>
                     <Checkbox checked={selection.headerState} onCheckedChange={() => selection.toggleAll()} />
                   </HeaderCell>
                 )}
@@ -174,6 +167,8 @@ export function InfiniteTable<T>({
                       {...(col.align ? { align: col.align } : {})}
                       resizable={col.resizable !== false && i < columns.length - 1}
                       {...(col.minWidth !== undefined ? { minWidth: col.minWidth } : {})}
+                      showSubheaderSlot={hasSubheaderRow}
+                      {...(hasSubheaderRow ? { subheader: col.renderSubheader?.(col, i) } : {})}
                       {...(isSortable && col.sortKey
                         ? {
                             sortable: true,
@@ -237,7 +232,13 @@ export function InfiniteTable<T>({
                           onToggleRow: selection.toggleRow,
                         }
                       : {})}
-                    {...(onRowClick ? { onClick: onRowClick } : {})}
+                    {...(onRowClick
+                      ? {
+                          onClick: onRowClick,
+                          rowInteractionRole,
+                          ...(getRowAriaLabel ? { rowAriaLabel: getRowAriaLabel(row) } : {}),
+                        }
+                      : {})}
                     dataIndex={virtualRow.index}
                   />
                   {expanded?.isLoading &&
@@ -265,7 +266,13 @@ export function InfiniteTable<T>({
                                 onToggleRow: selection.toggleRow,
                               }
                             : {})}
-                          {...(onRowClick ? { onClick: onRowClick } : {})}
+                          {...(onRowClick
+                            ? {
+                                onClick: onRowClick,
+                                rowInteractionRole,
+                                ...(getRowAriaLabel ? { rowAriaLabel: getRowAriaLabel(subRow) } : {}),
+                              }
+                            : {})}
                           dataIndex={virtualRow.index}
                           isSubRow
                         />

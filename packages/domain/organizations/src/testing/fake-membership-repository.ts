@@ -1,4 +1,4 @@
-import { NotFoundError } from "@domain/shared"
+import { type MembershipId, NotFoundError } from "@domain/shared"
 import { Effect } from "effect"
 import type { Membership } from "../entities/membership.ts"
 import type { MembershipRepository } from "../ports/membership-repository.ts"
@@ -6,7 +6,7 @@ import type { MembershipRepository } from "../ports/membership-repository.ts"
 type MembershipRepositoryShape = (typeof MembershipRepository)["Service"]
 
 export const createFakeMembershipRepository = (overrides?: Partial<MembershipRepositoryShape>) => {
-  const memberships = new Map<string, Membership>()
+  const memberships = new Map<MembershipId, Membership>()
 
   const repository: MembershipRepositoryShape = {
     findById: (id) => {
@@ -15,10 +15,10 @@ export const createFakeMembershipRepository = (overrides?: Partial<MembershipRep
       return Effect.succeed(m)
     },
 
-    findByOrganizationId: (organizationId) =>
+    listByOrganizationId: (organizationId) =>
       Effect.succeed([...memberships.values()].filter((m) => m.organizationId === organizationId)),
 
-    findByUserId: (userId) => Effect.succeed([...memberships.values()].filter((m) => m.userId === userId)),
+    listByUserId: (userId) => Effect.succeed([...memberships.values()].filter((m) => m.userId === userId)),
 
     findByOrganizationAndUser: (organizationId, userId) => {
       const m = [...memberships.values()].find((m) => m.organizationId === organizationId && m.userId === userId)
@@ -26,7 +26,7 @@ export const createFakeMembershipRepository = (overrides?: Partial<MembershipRep
       return Effect.succeed(m)
     },
 
-    findMembersWithUser: () => Effect.succeed([]),
+    listMembersWithUser: () => Effect.succeed([]),
 
     isMember: (organizationId, userId) =>
       Effect.succeed([...memberships.values()].some((m) => m.organizationId === organizationId && m.userId === userId)),

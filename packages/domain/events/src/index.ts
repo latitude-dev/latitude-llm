@@ -1,3 +1,4 @@
+import type { RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
 
 export interface EventPayloads {
@@ -6,9 +7,13 @@ export interface EventPayloads {
     readonly magicLinkUrl: string
     readonly emailFlow: string | null
     readonly organizationId: string
+  }
+  InvitationEmailRequested: {
+    readonly email: string
+    readonly invitationUrl: string
+    readonly organizationId: string
     readonly organizationName: string
-    readonly inviterName: string | null
-    readonly invitationId: string | null
+    readonly inviterName: string
   }
   UserDeletionRequested: {
     readonly organizationId: string
@@ -24,11 +29,15 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
   }
-  ScoreImmutable: {
+  IssueDiscoveryRequested: {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
-    readonly issueId: string | null
+  }
+  IssueRefreshRequested: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly issueId: string
   }
   OrganizationCreated: {
     readonly organizationId: string
@@ -65,9 +74,10 @@ export type OutboxWriter = {
   write<TEventName extends keyof EventPayloads>(event: {
     readonly id?: string
     readonly eventName: TEventName
+    readonly aggregateType: string
     readonly aggregateId: string
     readonly organizationId: string
     readonly payload: EventPayloads[TEventName]
     readonly occurredAt?: Date
-  }): Promise<void>
+  }): Effect.Effect<void, RepositoryError>
 }
