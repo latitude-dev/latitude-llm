@@ -112,30 +112,6 @@ export const getSessionMetricsByProject = createServerFn({ method: "GET" })
 
 const DISTINCT_COLUMNS = ["tags", "models", "providers", "serviceNames"] as const
 
-export const getSessionBySessionId = createServerFn({ method: "GET" })
-  .inputValidator(z.object({ projectId: z.string(), sessionId: z.string() }))
-  .handler(async ({ data }): Promise<SessionRecord | null> => {
-    const { organizationId } = await requireSession()
-    const orgId = OrganizationId(organizationId)
-
-    const page = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repo = yield* SessionRepository
-        return yield* repo.listByProjectId({
-          organizationId: orgId,
-          projectId: ProjectId(data.projectId),
-          options: {
-            limit: 1,
-            filters: { sessionId: [{ op: "eq", value: data.sessionId }] },
-          },
-        })
-      }).pipe(withClickHouse(SessionRepositoryLive, getClickhouseClient(), orgId)),
-    )
-
-    const first = page.items[0]
-    return first ? serializeSession(first) : null
-  })
-
 export const getSessionDistinctValues = createServerFn({ method: "GET" })
   .inputValidator(
     z.object({

@@ -26,12 +26,15 @@ export function TraceTab({
   traceDetail,
   isRecordLoading,
   isDetailLoading,
+  defaultSectionsOpen = true,
 }: {
   readonly traceId: string
   readonly traceRecord: TraceRecord | undefined
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isRecordLoading: boolean
   readonly isDetailLoading: boolean
+  /** Whether detail sections (Metadata, System Instructions, Input, Output) are open by default. Defaults to true. */
+  readonly defaultSectionsOpen?: boolean
 }) {
   const hasProviders = traceRecord && traceRecord.providers.length > 0
   const hasModels = traceRecord && traceRecord.models.length > 0
@@ -106,7 +109,7 @@ export function TraceTab({
       </div>
 
       {/* ── Metadata ── */}
-      <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata">
+      <DetailSection icon={<TextIcon className="w-4 h-4" />} label="Metadata" defaultOpen={defaultSectionsOpen}>
         {() =>
           isRecordLoading ? (
             <Skeleton className="h-16 w-full" />
@@ -121,7 +124,11 @@ export function TraceTab({
       </DetailSection>
 
       {/* ── LLM content ── */}
-      <DetailSection icon={<BrainIcon className="w-4 h-4" />} label="System Instructions">
+      <DetailSection
+        icon={<BrainIcon className="w-4 h-4" />}
+        label="System Instructions"
+        defaultOpen={defaultSectionsOpen}
+      >
         {() =>
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
@@ -137,7 +144,7 @@ export function TraceTab({
         }
       </DetailSection>
 
-      <DetailSection icon={<ArrowDownRightIcon className="w-4 h-4" />} label="Input">
+      <DetailSection icon={<ArrowDownRightIcon className="w-4 h-4" />} label="Input" defaultOpen={defaultSectionsOpen}>
         {() =>
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
@@ -153,7 +160,7 @@ export function TraceTab({
         }
       </DetailSection>
 
-      <DetailSection icon={<ArrowUpRightIcon className="w-4 h-4" />} label="Output">
+      <DetailSection icon={<ArrowUpRightIcon className="w-4 h-4" />} label="Output" defaultOpen={defaultSectionsOpen}>
         {() =>
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />

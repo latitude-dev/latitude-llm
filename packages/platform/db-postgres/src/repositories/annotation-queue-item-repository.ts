@@ -135,6 +135,27 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
 
     return {
+      findById: ({ projectId, queueId, itemId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(annotationQueueItems)
+              .where(
+                and(
+                  eq(annotationQueueItems.organizationId, organizationId),
+                  eq(annotationQueueItems.projectId, projectId),
+                  eq(annotationQueueItems.queueId, queueId),
+                  eq(annotationQueueItems.id, itemId),
+                ),
+              )
+              .limit(1),
+          )
+          .pipe(
+            Effect.map((rows) => (rows[0] ? toDomainItem(rows[0]) : null)),
+            Effect.mapError((cause) => new RepositoryError({ operation: "findById", cause })),
+          ),
+
       listByQueue: ({ projectId, queueId, options }) => {
         const limit = options.limit ?? DEFAULT_LIMIT
         const { sortBy, sortDirection } = resolveSort(options.sortBy, options.sortDirection)
@@ -145,19 +166,24 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
           )
         }
 
-        const whereBase = and(eq(annotationQueueItems.projectId, projectId), eq(annotationQueueItems.queueId, queueId))
-        const where = cursorClause ? and(whereBase, cursorClause) : whereBase
         const orders = orderClause(sortBy, sortDirection)
 
         return sqlClient
-          .query((db) =>
-            db
+          .query((db, organizationId) => {
+            const whereBase = and(
+              eq(annotationQueueItems.organizationId, organizationId),
+              eq(annotationQueueItems.projectId, projectId),
+              eq(annotationQueueItems.queueId, queueId),
+            )
+            const where = cursorClause ? and(whereBase, cursorClause) : whereBase
+
+            return db
               .select()
               .from(annotationQueueItems)
               .where(where)
               .orderBy(...orders)
-              .limit(limit + 1),
-          )
+              .limit(limit + 1)
+          })
           .pipe(
             Effect.map((rows) => {
               const hasMore = rows.length > limit

@@ -1,15 +1,14 @@
 import { Avatar, InfiniteTable, type InfiniteTableColumn, type InfiniteTableSorting, Text, Tooltip } from "@repo/ui"
 import { mapByEntityId, relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useMemo, useState } from "react"
 import {
   ANNOTATION_QUEUE_ITEMS_DEFAULT_SORTING,
   useAnnotationQueueItemsInfiniteScroll,
 } from "../../../../../../domains/annotation-queue-items/annotation-queue-items.collection.ts"
 import type { AnnotationQueueItemRecord } from "../../../../../../domains/annotation-queue-items/annotation-queue-items.functions.ts"
-import { getAnnotationQueueByProject } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
+import { useAnnotationQueue } from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { useProjectsCollection } from "../../../../../../domains/projects/projects.collection.ts"
@@ -31,14 +30,9 @@ function AnnotationQueueItemsPage() {
 
   const projectId = project?.id ?? ""
 
-  const {
-    data: queue,
-    isLoading: queueLoading,
-    isSuccess: queueFetchSuccess,
-  } = useQuery({
-    queryKey: ["annotation-queue", projectId, queueId],
-    queryFn: () => getAnnotationQueueByProject({ data: { projectId, queueId } }),
-    enabled: projectId.length > 0 && queueId.length > 0,
+  const { data: queue, isLoading: queueLoading } = useAnnotationQueue({
+    projectId,
+    queueId,
   })
 
   const [sorting, setSorting] = useState<InfiniteTableSorting>(ANNOTATION_QUEUE_ITEMS_DEFAULT_SORTING)
@@ -126,28 +120,6 @@ function AnnotationQueueItemsPage() {
   }
 
   const getRowAriaLabel = (row: AnnotationQueueItemRecord) => `Open queue item for trace ${row.traceDisplayName}`
-
-  if (projectId.length > 0 && queueFetchSuccess && queue === null) {
-    return (
-      <Layout>
-        <Layout.Header
-          title="Queue not found"
-          description="This queue may have been removed or you may not have access."
-        />
-        <Layout.Body>
-          <Layout.List>
-            <Link
-              to="/projects/$projectSlug/annotation-queues"
-              params={{ projectSlug }}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              ← All queues
-            </Link>
-          </Layout.List>
-        </Layout.Body>
-      </Layout>
-    )
-  }
 
   return (
     <Layout>

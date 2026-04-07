@@ -2,7 +2,13 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
 import { useQuery } from "@tanstack/react-query"
 import { getQueryClient } from "../../lib/data/query-client.tsx"
-import { getSpanDetail, listSpansByTrace, type SpanDetailRecord, type SpanRecord } from "./spans.functions.ts"
+import {
+  getSpanDetail,
+  listSpansByTrace,
+  mapConversationToSpans,
+  type SpanDetailRecord,
+  type SpanRecord,
+} from "./spans.functions.ts"
 
 const queryClient = getQueryClient()
 
@@ -36,5 +42,21 @@ export const useSpanDetail = ({ traceId, spanId }: { traceId: string; spanId: st
     queryKey: ["spanDetail", traceId, spanId],
     queryFn: () => getSpanDetail({ data: { traceId, spanId } }),
     staleTime: Infinity, // Span data is immutable once ingested
+  })
+}
+
+export function useConversationSpanMaps({
+  projectId,
+  traceId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly enabled?: boolean
+}) {
+  return useQuery({
+    queryKey: ["conversationSpanMaps", projectId, traceId],
+    queryFn: () => mapConversationToSpans({ data: { projectId, traceId } }),
+    enabled: enabled && projectId.length > 0 && traceId.length > 0,
   })
 }

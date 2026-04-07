@@ -265,4 +265,53 @@ describe("AnnotationQueueItemRepositoryLive", () => {
       expect(err.operation).toBe("listByQueue")
     })
   })
+
+  describe("findById", () => {
+    it("returns the item when found", async () => {
+      const item = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.findById({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            itemId: makeId("it_done"),
+          })
+        }),
+      )
+
+      expect(item).not.toBeNull()
+      expect(item?.id).toBe(makeId("it_done"))
+      expect(item?.traceId).toEqual(TraceId(makeTrace("done")))
+    })
+
+    it("returns null when item does not exist", async () => {
+      const item = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.findById({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            itemId: makeId("nonexistent"),
+          })
+        }),
+      )
+
+      expect(item).toBeNull()
+    })
+
+    it("returns null when item exists in different queue", async () => {
+      const item = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.findById({
+            projectId: PROJECT_ID,
+            queueId: OTHER_QUEUE_ID,
+            itemId: makeId("it_done"),
+          })
+        }),
+      )
+
+      expect(item).toBeNull()
+    })
+  })
 })

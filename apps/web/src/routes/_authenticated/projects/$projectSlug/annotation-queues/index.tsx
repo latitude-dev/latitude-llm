@@ -148,15 +148,16 @@ function AnnotationQueuesPage() {
 
   return (
     <Layout>
-      <Layout.Header
-        title="Annotation queues"
-        description="Review traces organized by queue"
-        actions={
-          <Button type="button" size="sm">
-            New queue
-          </Button>
-        }
-      />
+      <Layout.Actions>
+        <Layout.ActionsRow>
+          <Layout.ActionRowItem />
+          <Layout.ActionRowItem>
+            <Button type="button" size="sm">
+              New queue
+            </Button>
+          </Layout.ActionRowItem>
+        </Layout.ActionsRow>
+      </Layout.Actions>
       <Layout.Body>
         <Layout.List>
           <InfiniteTable

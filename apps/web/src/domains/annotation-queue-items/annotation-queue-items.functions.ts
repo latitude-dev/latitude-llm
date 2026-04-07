@@ -148,3 +148,54 @@ export const listAnnotationQueueItemsByQueue = createServerFn({ method: "GET" })
 
     return page
   })
+
+export const getAnnotationQueueItemDetail = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      itemId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<AnnotationQueueItemRecord | null> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+    const ch = getClickhouseClient()
+
+    const layer = Layer.mergeAll(AnnotationQueueItemRepositoryLive, TraceRepositoryLive).pipe(
+      Layer.provideMerge(SqlClientLive(pg, orgId)),
+      Layer.provideMerge(ChSqlClientLive(ch, orgId)),
+    )
+
+    return await Effect.runPromise(
+      Effect.gen(function* () {
+        const itemRepo = yield* AnnotationQueueItemRepository
+        const traceRepo = yield* TraceRepository
+
+        const item = yield* itemRepo.findById({
+          projectId,
+          queueId: data.queueId,
+          itemId: data.itemId,
+        })
+
+        if (!item) return null
+
+        const traces = yield* traceRepo.listByTraceIds({
+          organizationId: orgId,
+          projectId,
+          traceIds: [TraceId(item.traceId as string)],
+        })
+
+        const trace = traces[0]
+        const tid = item.traceId as string
+        const traceDisplayName = trace?.rootSpanName?.trim() ? trace.rootSpanName : tid.slice(0, 8)
+
+        return {
+          ...toItemRecord(item),
+          traceDisplayName,
+        }
+      }).pipe(Effect.provide(layer)),
+    )
+  })
