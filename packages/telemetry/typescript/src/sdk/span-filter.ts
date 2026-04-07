@@ -79,7 +79,7 @@ function attributeKeys(span: ReadableSpan): string[] {
 }
 
 function instrumentationScopeName(span: ReadableSpan): string {
-  return span.instrumentationLibrary?.name ?? ""
+  return span.instrumentationScope?.name ?? ""
 }
 
 /** True if the span uses OpenTelemetry GenAI semantic conventions or common LLM attribute namespaces. */
