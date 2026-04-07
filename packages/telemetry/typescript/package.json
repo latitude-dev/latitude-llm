@@ -70,7 +70,7 @@
     "typescript": "^5.5.4"
   },
   "optionalDependencies": {
-    "@anthropic-ai/sdk": "^0.81.0",
+    "@anthropic-ai/sdk": "^0.82.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1021.0",
     "@google-cloud/vertexai": "^1.10.4",
     "@langchain/core": "^1.1.38",
