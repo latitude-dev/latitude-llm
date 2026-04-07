@@ -4,17 +4,38 @@ import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
-import { createLogger } from "@repo/observability"
+import { createLogger, serializeError } from "@repo/observability"
 import { hash } from "@repo/utils"
-import { Data, Effect } from "effect"
+import { Data, Effect, Result, Schedule } from "effect"
 
 class UnhandledEventError extends Data.TaggedError("UnhandledEventError")<{
   readonly name: string
   readonly eventId: string
 }> {}
 
+class TraceEndedFanOutError extends Data.TaggedError("TraceEndedFanOutError")<{
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly failedLegs: ReadonlyArray<{ readonly leg: string; readonly error: unknown }>
+}> {}
+
 const logger = createLogger("domain-events")
 
+/** Retries after the first failure: `recurs(n)` -> n retries (n+1 attempts total). */
+const traceEndedFanoutRetrySchedule = Schedule.exponential("50 millis").pipe(Schedule.compose(Schedule.recurs(4)))
+
+const traceEndedPublishLeg = (
+  pub: QueuePublisherShape,
+  queue: "live-evaluations" | "live-annotation-queues" | "system-annotation-queues",
+  task: string,
+  payload: { readonly organizationId: string; readonly projectId: string; readonly traceId: string },
+  dedupeKey: string,
+) =>
+  Effect.suspend(() => pub.publish(queue, task as never, payload as never, { dedupeKey })).pipe(
+    Effect.retry(traceEndedFanoutRetrySchedule),
+    Effect.result,
+  )
 type EventHandlerMap = {
   [E in keyof EventPayloads]: (event: DomainEvent<E, EventPayloads[E]>) => Effect.Effect<void, unknown>
 }
@@ -63,18 +84,62 @@ export const createDomainEventsWorker = ({
     TraceEnded: (event) =>
       Effect.all(
         [
-          pub.publish("live-evaluations", "enqueue", event.payload, {
-            dedupeKey: `evaluations:live:enqueue:${event.payload.traceId}`,
-          }),
-          pub.publish("live-annotation-queues", "curate", event.payload, {
-            dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
-          }),
-          pub.publish("system-annotation-queues", "flag", event.payload, {
-            dedupeKey: `annotation-queues:system:flag:${event.payload.traceId}`,
-          }),
+          traceEndedPublishLeg(
+            pub,
+            "live-evaluations",
+            "enqueue",
+            event.payload,
+            `trace-ended:live-evaluations:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
+          ),
+          traceEndedPublishLeg(
+            pub,
+            "live-annotation-queues",
+            "curate",
+            event.payload,
+            `trace-ended:live-annotation-queues:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
+          ),
+          traceEndedPublishLeg(
+            pub,
+            "system-annotation-queues",
+            "flag",
+            event.payload,
+            `trace-ended:system-annotation-queues:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
+          ),
         ],
-        { concurrency: "unbounded" },
-      ).pipe(Effect.asVoid),
+        { concurrency: "unbounded", mode: "result" },
+      ).pipe(
+        Effect.flatMap((results) => {
+          const legs = ["live-evaluations:enqueue", "live-annotation-queues:curate", "system-annotation-queues:flag"]
+          const succeeded = results.filter((outer) => Result.isSuccess(outer) && Result.isSuccess(outer.success)).length
+          const failedLegs = results.flatMap((outer, i) => {
+            if (!Result.isSuccess(outer)) {
+              return []
+            }
+            const inner = outer.success
+            return Result.isFailure(inner)
+              ? [{ leg: legs[i] ?? `index-${i}`, error: serializeError(inner.failure) }]
+              : []
+          })
+          if (failedLegs.length === 0) {
+            return Effect.void
+          }
+          logger.error("TraceEnded fan-out: one or more legs failed after retries", {
+            organizationId: event.payload.organizationId,
+            projectId: event.payload.projectId,
+            traceId: event.payload.traceId,
+            succeededLegs: succeeded,
+            failedLegs,
+          })
+          return Effect.fail(
+            new TraceEndedFanOutError({
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              traceId: event.payload.traceId,
+              failedLegs,
+            }),
+          )
+        }),
+      ),
 
     IssueDiscoveryRequested: (event) =>
       workflowStarter.start("issueDiscoveryWorkflow", event.payload, {

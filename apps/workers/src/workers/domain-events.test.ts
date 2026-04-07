@@ -1,7 +1,16 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
-import type { QueueConsumer, QueueName, TaskHandlers, WorkflowStarterShape } from "@domain/queue"
+import type {
+  PublishOptions,
+  QueueConsumer,
+  QueueName,
+  TaskHandlers,
+  TaskName,
+  TaskPayload,
+  WorkflowStarterShape,
+} from "@domain/queue"
+import { QueuePublishError, WorkflowStartError } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { hash } from "@repo/utils"
@@ -173,6 +182,105 @@ describe("domain-events dispatcher", () => {
       "live-evaluations:enqueue",
       "system-annotation-queues:flag",
     ])
+    expect(published.find((p) => p.queue === "live-evaluations")?.options?.dedupeKey).toBe(
+      "trace-ended:live-evaluations:org-1:proj-1:trace-abc",
+    )
+    expect(published.find((p) => p.queue === "live-annotation-queues")?.options?.dedupeKey).toBe(
+      "trace-ended:live-annotation-queues:org-1:proj-1:trace-abc",
+    )
+    expect(published.find((p) => p.queue === "system-annotation-queues")?.options?.dedupeKey).toBe(
+      "trace-ended:system-annotation-queues:org-1:proj-1:trace-abc",
+    )
+  })
+
+  it("TraceEnded completes other legs when one leg fails transiently then succeeds", async () => {
+    const consumer = new TestQueueConsumer()
+    let liveEvalAttempts = 0
+    const { publisher: basePublisher, published } = createFakeQueuePublisher()
+    const publisher = {
+      ...basePublisher,
+      publish: <T extends QueueName, K extends TaskName<T>>(
+        queue: T,
+        task: K,
+        payload: TaskPayload<T, K>,
+        options?: PublishOptions,
+      ) => {
+        if (queue === "live-evaluations") {
+          liveEvalAttempts++
+          if (liveEvalAttempts < 3) {
+            return Effect.fail(
+              new QueuePublishError({
+                cause: new Error("redis hiccup"),
+                queue: "live-evaluations",
+              }),
+            )
+          }
+        }
+        return basePublisher.publish(queue, task, payload, options)
+      },
+    }
+    const workflowStarter: WorkflowStarterShape = {
+      start: () => Effect.void,
+    }
+    createDomainEventsWorker({ consumer, publisher, workflowStarter })
+
+    const envelope = makeEnvelope("TraceEnded", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
+
+    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(3)
+    expect(liveEvalAttempts).toBe(3)
+  })
+
+  it("TraceEnded fails after retries but still publishes successful legs", async () => {
+    const consumer = new TestQueueConsumer()
+    const { publisher: basePublisher, published } = createFakeQueuePublisher()
+    const publisher = {
+      ...basePublisher,
+      publish: <T extends QueueName, K extends TaskName<T>>(
+        queue: T,
+        task: K,
+        payload: TaskPayload<T, K>,
+        options?: PublishOptions,
+      ) => {
+        if (queue === "live-evaluations") {
+          return Effect.fail(
+            new QueuePublishError({
+              cause: new Error("persistent failure"),
+              queue: "live-evaluations",
+            }),
+          )
+        }
+        return basePublisher.publish(queue, task, payload, options)
+      },
+    }
+    const workflowStarter: WorkflowStarterShape = {
+      start: () => Effect.void,
+    }
+    createDomainEventsWorker({ consumer, publisher, workflowStarter })
+
+    const envelope = makeEnvelope("TraceEnded", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
+
+    const effect = consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope))
+    const result = await Effect.runPromise(
+      effect.pipe(
+        Effect.match({
+          onFailure: (error) => ({ ok: false as const, error }),
+          onSuccess: () => ({ ok: true as const, error: null }),
+        }),
+      ),
+    )
+
+    expect(result.ok).toBe(false)
+    expect(published.map((p) => p.queue).sort()).toEqual(["live-annotation-queues", "system-annotation-queues"])
   })
 
   it("fails on unhandled events", async () => {
@@ -221,6 +329,43 @@ describe("domain-events dispatcher", () => {
     })
     expect(published[0]?.options?.dedupeKey).toBe("issues:refresh:issue-42")
     expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
+  })
+
+  it("propagates WorkflowStartError from workflow starter", async () => {
+    const consumer = new TestQueueConsumer()
+    const { publisher } = createFakeQueuePublisher()
+    const workflowStarter: WorkflowStarterShape = {
+      start: () =>
+        Effect.fail(
+          new WorkflowStartError({
+            workflow: "issueDiscoveryWorkflow",
+            workflowId: "issue-discovery:org-1:proj-1:score-3",
+            cause: new Error("temporal down"),
+          }),
+        ),
+    }
+    createDomainEventsWorker({ consumer, publisher, workflowStarter })
+
+    const envelope = makeEnvelope("IssueDiscoveryRequested", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      scoreId: "score-3",
+    })
+
+    const effect = consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope))
+    const result = await Effect.runPromise(
+      effect.pipe(
+        Effect.match({
+          onFailure: (error) => ({ ok: false as const, error }),
+          onSuccess: () => ({ ok: true as const, error: null }),
+        }),
+      ),
+    )
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(WorkflowStartError)
+    }
   })
 
   it("starts issueDiscoveryWorkflow for IssueDiscoveryRequested", async () => {
