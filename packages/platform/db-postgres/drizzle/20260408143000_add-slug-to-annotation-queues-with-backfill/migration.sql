@@ -23,10 +23,10 @@ WHERE "slug" IS NULL;--> statement-breakpoint
 -- Step 3: Make slug non-nullable
 ALTER TABLE "latitude"."annotation_queues" ALTER COLUMN "slug" SET NOT NULL;--> statement-breakpoint
 
--- Step 4: Add unique constraint for slug per project
+-- Step 4: Add soft-delete-aware unique constraint for slug per project (matches name constraint pattern)
 ALTER TABLE "latitude"."annotation_queues"
 ADD CONSTRAINT "annotation_queues_unique_slug_per_project_idx"
-UNIQUE("organization_id","project_id","slug");--> statement-breakpoint
+UNIQUE("organization_id","project_id","slug","deleted_at");--> statement-breakpoint
 
 -- Step 5: Create index for system queue lookups by slug
 CREATE INDEX IF NOT EXISTS "annotation_queues_project_system_slug_idx" 

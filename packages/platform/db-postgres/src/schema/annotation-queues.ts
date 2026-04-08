@@ -26,7 +26,9 @@ export const annotationQueues = latitudeSchema.table(
     unique("annotation_queues_unique_name_per_project_idx")
       .on(t.organizationId, t.projectId, t.name, t.deletedAt)
       .nullsNotDistinct(),
-    unique("annotation_queues_unique_slug_per_project_idx").on(t.organizationId, t.projectId, t.slug),
+    unique("annotation_queues_unique_slug_per_project_idx")
+      .on(t.organizationId, t.projectId, t.slug, t.deletedAt)
+      .nullsNotDistinct(),
     index("annotation_queues_project_system_slug_idx").on(t.organizationId, t.projectId, t.system, t.slug),
   ],
 )
