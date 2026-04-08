@@ -171,7 +171,7 @@ describe("domain-events dispatcher", () => {
     expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
       "live-annotation-queues:curate",
       "live-evaluations:enqueue",
-      "system-annotation-queues:flag",
+      "system-annotation-queues:fanOut",
     ])
   })
 
