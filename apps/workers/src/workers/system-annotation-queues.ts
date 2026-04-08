@@ -97,35 +97,37 @@ const handleGate = (deps: SystemAnnotationQueuesDeps) => {
     readonly queueSlug: string
     readonly sampling: number
   }) => {
+    const { organizationId, projectId, traceId, queueSlug, sampling } = payload
+
     const isSampled = await deterministicSampling({
-      organizationId: payload.organizationId,
-      projectId: payload.projectId,
-      traceId: payload.traceId,
-      queueSlug: payload.queueSlug,
-      sampling: payload.sampling,
+      organizationId,
+      projectId,
+      traceId,
+      queueSlug,
+      sampling,
     })
 
     if (!isSampled) {
       logger.info("Trace sampled out for system queue", {
-        organizationId: payload.organizationId,
-        projectId: payload.projectId,
-        traceId: payload.traceId,
-        queueSlug: payload.queueSlug,
-        sampling: payload.sampling,
+        organizationId,
+        projectId,
+        traceId,
+        queueSlug,
+        sampling,
       })
       return
     }
 
-    const workflowId = `system-queue-flagger:${payload.traceId}:${payload.queueSlug}`
+    const workflowId = `system-queue-flagger:${traceId}:${queueSlug}`
 
     await Effect.runPromise(
       workflowStarter.start(
         "systemQueueFlaggerWorkflow",
         {
-          organizationId: payload.organizationId,
-          projectId: payload.projectId,
-          traceId: payload.traceId,
-          queueSlug: payload.queueSlug,
+          organizationId,
+          projectId,
+          traceId,
+          queueSlug,
         },
         {
           workflowId,
@@ -134,10 +136,10 @@ const handleGate = (deps: SystemAnnotationQueuesDeps) => {
     )
 
     logger.info("Started system queue flagger workflow", {
-      organizationId: payload.organizationId,
-      projectId: payload.projectId,
-      traceId: payload.traceId,
-      queueSlug: payload.queueSlug,
+      organizationId,
+      projectId,
+      traceId,
+      queueSlug,
       workflowId,
     })
   }
