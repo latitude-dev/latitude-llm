@@ -78,7 +78,7 @@ hash(traceId) % 100 < sampling
 
 ### System Queue Flagger Workflow
 
-The Temporal workflow orchestrates LLM-based classification:
+The Temporal workflow orchestrates trace classification for both deterministic and LLM-based queues:
 
 **Workflow**: `systemQueueFlaggerWorkflow`
 - Input: `(projectId, traceId, queueSlug, traceContext)`
@@ -87,8 +87,9 @@ The Temporal workflow orchestrates LLM-based classification:
 **Activities**:
 
 1. **`fetchTraceContext`**: Loads limited context (last N messages) from the trace
-2. **`evaluateQueueMatch` (placeholder)**: 
-   - Sends queue name, description, and instructions to a low-cost flagger LLM
+2. **`evaluateQueueMatch`**: 
+   - For deterministic-rule queues (`Tool Call Errors`, `Resource Outliers`): evaluates rules without LLM
+   - For LLM-classified queues: sends queue context to a low-cost flagger LLM
    - Returns boolean decision
    - Currently stubbed for future implementation
 
