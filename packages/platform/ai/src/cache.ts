@@ -1,6 +1,7 @@
 import {
   type AICredentialError,
   AIError,
+  type AIShape,
   type EmbedInput,
   type EmbedResult,
   type GenerateInput,
@@ -9,6 +10,7 @@ import {
   type RerankResult,
 } from "@domain/ai"
 import type { CacheStoreShape } from "@platform/cache-redis"
+import { type CryptoError, hash } from "@repo/utils"
 import { Effect, Schema } from "effect"
 
 const DEFAULT_AI_CACHE_TTL_SECONDS = 24 * 60 * 60
@@ -39,24 +41,19 @@ const toAIError =
       cause,
     })
 
-const stableStringify = (value: unknown): string =>
-  JSON.stringify(value, (_key, currentValue) => {
-    if (currentValue === null || typeof currentValue !== "object" || Array.isArray(currentValue)) {
-      return currentValue
-    }
-
-    return Object.fromEntries(
-      Object.entries(currentValue)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nestedValue]) => [key, nestedValue]),
-    )
-  })
-
-const cacheKey = (operation: string, input: unknown): Effect.Effect<string, AIError> =>
-  Effect.try({
-    try: () => `ai:${operation}:${stableStringify(input)}`,
-    catch: toAIError("key"),
-  })
+const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, AIError> =>
+  hash({ namespace, input }).pipe(
+    Effect.map((hashValue) => `ai:${namespace}:${hashValue}`),
+    Effect.mapError(
+      (cause: CryptoError) =>
+        new AIError({
+          message: `AI cache key failed (${cause.operation}): ${
+            cause.cause instanceof Error ? cause.cause.message : String(cause.cause)
+          }`,
+          cause,
+        }),
+    ),
+  )
 
 /**
  * Applies cache-aside behavior to an existing `AI` implementation.
@@ -72,14 +69,7 @@ const cacheKey = (operation: string, input: unknown): Effect.Effect<string, AIEr
  * will share a cache entry — callers that need schema-level isolation should add a discriminator
  * via `providerOptions`.
  */
-export const withAICache = (
-  ai: {
-    generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
-    embed(input: EmbedInput): Effect.Effect<EmbedResult, AIError>
-    rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
-  },
-  cache: CacheStoreShape,
-) => ({
+export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
   generate: <T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError> =>
     Effect.gen(function* () {
       const { schema: _, telemetry: _telemetry, ...hashable } = input
