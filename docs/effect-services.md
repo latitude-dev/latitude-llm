@@ -2,6 +2,8 @@
 
 The `docs/` tree is **internal** contributor documentation only. Do not connect it to public doc hosts (for example Mintlify) or treat it as a customer-facing docs site.
 
+If a minimal `docs.json` exists at the **repository root**, it is only there to satisfy Mintlify’s GitHub check until maintainers **disconnect this repo** in Mintlify; it does not publish `docs/` and is not product documentation.
+
 This document describes how domain and platform **service tags** are defined, and how that maps to upstream Effect naming when the catalog `effect` version moves.
 
 ## Current pattern: `EffectService` (`@repo/effect-service`)
