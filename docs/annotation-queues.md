@@ -111,12 +111,12 @@ system-annotation-queues:fanOut (list queues, apply sampling)
     ↓
 system-annotation-queues:gate (deterministic rules or LLM)
     ↓
-systemQueueFlaggerWorkflow (Temporal - LLM classification)
+systemQueueFlaggerWorkflow (Temporal - queue classification)
     ↓
 flagger activity (placeholder)
     ↓
 If flagged:
-    system-annotation-queues:annotate (validate + draft annotation)
+    annotation activity (validate + draft annotation)
     ↓
 Create annotation_queue_items row (trace added to queue)
 ```
@@ -209,15 +209,14 @@ Every project starts with these system-created manual queues:
 ### System-Created Manual Queues
 
 - system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by live filter materialization
-- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:flag` for that trace
-- `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
-- `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if sampling does not pass for a queue, that queue is skipped entirely for the current trace
-- among the sampled-in system queues, `system-annotation-queues:flag` first evaluates deterministic rules for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
-- for the remaining sampled-in system queues, the flagger uses limited conversation context, such as the last `N` messages, and receives the queue names, descriptions, and instructions for the LLM-classified system queues
-- the flagger returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
-- for every flagged queue, `system-annotation-queues:flag` publishes a separate `system-annotation-queues:annotate` task for that `(queue_id, trace_id)` pair
-- `system-annotation-queues:annotate` uses a larger validator/drafter LLM with the full conversation context to validate the match and create the draft annotation in the same call
-- only if that validation/annotation task confirms the match does the system both create the draft annotation and add the trace to the queue
+- whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:fanOut` for that trace
+- `system-annotation-queues:fanOut` lists all non-deleted `system = true` queues in that project and publishes one `system-annotation-queues:gate` task per queue
+- `system-annotation-queues:gate` applies each queue's `settings.sampling`; queues with deterministic rules are provisioned at `100%`, while LLM-classified queues default to `5%`
+- when sampling passes, `systemQueueFlaggerWorkflow` evaluates the queue for the trace
+- the workflow handles both deterministic queue rules, including `Tool Call Errors` and `Resource Outliers`, and LLM-based classification for the remaining system queues
+- the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
+- for every flagged queue, the workflow runs a separate annotation activity to validate the match and create the draft annotation
+- only if that annotation activity confirms the match does the system both create the draft annotation and add the trace to the queue
 - system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user
 
 ### Live Queues
@@ -295,7 +294,7 @@ Creation rules:
 
 - manual queue insertion creates the row from the trace dashboard bulk action
 - manual session insertion creates the row from the sessions dashboard bulk action after resolving the session to its newest trace
-- system-created queue insertion creates the row only after the asynchronous validation/annotation task confirms the match and creates the draft annotation
+- system-created queue insertion creates the row only after the workflow's annotation activity confirms the match and creates the draft annotation
 - live queue insertion creates the row when a new trace passes the queue filter and then the queue sampling check
 - all paths create queue items with `completedAt = null`
 
