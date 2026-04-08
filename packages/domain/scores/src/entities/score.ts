@@ -1,12 +1,7 @@
 import { cuidSchema, ScoreId } from "@domain/shared"
 import { sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/spans"
 import { z } from "zod"
-import {
-  ANNOTATION_SCORE_PARTIAL_SOURCE_IDS,
-  SCORE_PUBLICATION_DEBOUNCE,
-  SCORE_SOURCE_ID_MAX_LENGTH,
-  SCORE_SOURCES,
-} from "../constants.ts"
+import { ANNOTATION_SCORE_PARTIAL_SOURCE_IDS, SCORE_SOURCE_ID_MAX_LENGTH, SCORE_SOURCES } from "../constants.ts"
 
 const scoreSourceIdSchema = z.string().min(1).max(SCORE_SOURCE_ID_MAX_LENGTH)
 export const scoreIdSchema = cuidSchema.transform(ScoreId)
@@ -184,6 +179,3 @@ export const scoreSchema = z
 export type Score = z.infer<typeof scoreSchema>
 
 export type ScoreMetadata = Score["metadata"]
-
-/** @knipignore - TODO: unignore once used */
-export { SCORE_PUBLICATION_DEBOUNCE }
