@@ -1,6 +1,6 @@
 # Effect services in this repository
 
-Mintlify preview (PR checks) needs a `docs.json` where the dashboard **documentation root** points: either the **repository root** (`/docs.json` + root `index.mdx`) or this **`docs/` folder** (`docs/docs.json` + `docs/index.mdx`). This page is listed under **Platform & tooling** in both layouts.
+The `docs/` tree is **internal** contributor documentation only. Do not connect it to public doc hosts (for example Mintlify) or treat it as a customer-facing docs site.
 
 This document describes how domain and platform **service tags** are defined, and how that maps to upstream Effect naming when the catalog `effect` version moves.
 
