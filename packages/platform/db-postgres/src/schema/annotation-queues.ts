@@ -6,30 +6,27 @@ export const annotationQueues = latitudeSchema.table(
   "annotation_queues",
   {
     id: cuid("id").primaryKey(),
-    organizationId: cuid("organization_id").notNull(), // owning organization
-    projectId: cuid("project_id").notNull(), // owning project
-    system: boolean("system").notNull().default(false), // true when the queue definition is provisioned by the system
-    name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project (soft-deleted excluded)
-    slug: varchar("slug", { length: 140 }).notNull(), // immutable URL-friendly identifier, unique within project (including soft-deleted)
+    organizationId: cuid("organization_id").notNull(),
+    projectId: cuid("project_id").notNull(),
+    system: boolean("system").notNull().default(false),
+    name: varchar("name", { length: 128 }).notNull(),
+    slug: varchar("slug", { length: 140 }).notNull(),
     description: text("description").notNull(),
-    instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
-    settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
-    assignees: varchar("assignees", { length: 24 }).array().notNull(), // assigned user ids; empty array when unassigned
-    totalItems: integer("total_items").notNull().default(0), // denormalized count of queue items; maintained by item insert/delete
-    completedItems: integer("completed_items").notNull().default(0), // denormalized count of completed items; maintained by item complete/uncomplete/delete
-    deletedAt: tzTimestamp("deleted_at"), // soft deletion timestamp
+    instructions: text("instructions").notNull(),
+    settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(),
+    assignees: varchar("assignees", { length: 24 }).array().notNull(),
+    totalItems: integer("total_items").notNull().default(0),
+    completedItems: integer("completed_items").notNull().default(0),
+    deletedAt: tzTimestamp("deleted_at"),
     ...timestamps(),
   },
   (t) => [
     organizationRLSPolicy("annotation_queues"),
     index("annotation_queues_project_list_idx").on(t.organizationId, t.projectId, t.deletedAt, t.createdAt),
-    // Name unique per project excluding soft-deleted rows (for UI/display purposes)
     unique("annotation_queues_unique_name_per_project_idx")
       .on(t.organizationId, t.projectId, t.name, t.deletedAt)
       .nullsNotDistinct(),
-    // Slug unique per project across all rows including soft-deleted (stable identity)
     unique("annotation_queues_unique_slug_per_project_idx").on(t.organizationId, t.projectId, t.slug),
-    // Index for system queue lookups by slug
     index("annotation_queues_project_system_slug_idx").on(t.organizationId, t.projectId, t.system, t.slug),
   ],
 )
@@ -38,11 +35,11 @@ export const annotationQueueItems = latitudeSchema.table(
   "annotation_queue_items",
   {
     id: cuid("id").primaryKey(),
-    organizationId: cuid("organization_id").notNull(), // owning organization
-    projectId: cuid("project_id").notNull(), // owning project
+    organizationId: cuid("organization_id").notNull(),
+    projectId: cuid("project_id").notNull(),
     queueId: cuid("queue_id").notNull(),
-    traceId: varchar("trace_id", { length: 32 }).notNull(), // ClickHouse trace id of the queued trace
-    completedAt: tzTimestamp("completed_at"), // set when a reviewer marks the queue item as fully annotated
+    traceId: varchar("trace_id", { length: 32 }).notNull(),
+    completedAt: tzTimestamp("completed_at"),
     /** User who marked the item complete (nullable until completed). */
     completedBy: cuid("completed_by"),
     /** First time the reviewer opened the focused queue item (nullable until opened). */

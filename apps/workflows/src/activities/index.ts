@@ -111,5 +111,4 @@ export const syncIssueProjections = async (input: SyncIssueProjectionsInput) =>
     ),
   )
 
-// Flagger activities
 export { runFlagger } from "./flagger.ts"

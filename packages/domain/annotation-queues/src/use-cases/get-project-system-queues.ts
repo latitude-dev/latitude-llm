@@ -62,7 +62,6 @@ export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput
     const cache = yield* CacheStore
     const cacheKey = buildCacheKey(input.organizationId, input.projectId)
 
-    // Try cache first
     const cached = yield* cache.get(cacheKey)
 
     if (cached !== null) {
@@ -70,17 +69,12 @@ export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput
       if (parsed !== null) {
         return parsed
       }
-      // Invalid cache entry - treat as miss and continue to hydrate
     }
 
-    // Cache miss - hydrate from DB
     const repo = yield* AnnotationQueueRepository
     const queues = yield* repo.listSystemQueuesByProject({ projectId: input.projectId })
-
-    // Convert to minimal cache entries
     const entries = queues.map(toCacheEntry)
 
-    // Write to cache with TTL
     yield* cache.set(cacheKey, JSON.stringify(entries), { ttlSeconds: CACHE_TTL_SECONDS })
 
     return entries

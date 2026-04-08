@@ -26,13 +26,5 @@ export const runFlagger = async (input: {
     queueSlug: input.queueSlug,
   })
 
-  // TODO: Implement actual flagger logic.
-  // This is a scaffolding placeholder that returns not matched.
-  // Real implementation will:
-  // 1. Fetch trace data from ClickHouse
-  // 2. Run queue-specific flagger logic (LLM or deterministic)
-  // 3. Return { matched: boolean } with optional additional data
-
-  // Placeholder: return not matched
   return { matched: false }
 }

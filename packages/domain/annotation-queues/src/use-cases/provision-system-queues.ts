@@ -28,10 +28,7 @@ const createSystemQueue = (
     slug,
     description: definition.description,
     instructions: definition.instructions,
-    // System queues have no filter (not live queues) but have sampling for flagger
-    settings: {
-      sampling: SYSTEM_QUEUE_DEFAULT_SAMPLING,
-    },
+    settings: { sampling: SYSTEM_QUEUE_DEFAULT_SAMPLING },
     assignees: [],
     totalItems: 0,
     completedItems: 0,
@@ -62,8 +59,6 @@ export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) 
         for (const definition of SYSTEM_QUEUE_DEFINITIONS) {
           const slug = toSlug(definition.name)
 
-          // Check if a system queue with this slug already exists (including soft-deleted)
-          // We use findSystemQueueBySlugInProject which includes soft-deleted rows
           const existing = yield* queueRepository.findSystemQueueBySlugInProject({
             projectId,
             queueSlug: slug,
@@ -71,16 +66,13 @@ export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) 
 
           if (existing) {
             if (existing.deletedAt !== null) {
-              // Soft-deleted: respect the deletion, don't recreate
               results.push({ queueSlug: slug, action: "skipped" })
             } else {
-              // Active: already exists
               results.push({ queueSlug: slug, action: "exists" })
             }
             continue
           }
 
-          // Create new system queue
           const queue = createSystemQueue(projectId, organizationId, definition)
           yield* queueRepository.save(queue)
           results.push({ queueSlug: slug, action: "created" })

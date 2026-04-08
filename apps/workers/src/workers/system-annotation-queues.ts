@@ -35,8 +35,6 @@ const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
     const postgresClient = getPostgresClient()
     const redisClient = getRedisClient()
 
-    // Read project system queues from cache (or hydrate from DB)
-    // Provide both Postgres and Redis layers
     const queues = await Effect.runPromise(
       getProjectSystemQueuesUseCase({
         organizationId: payload.organizationId,
@@ -47,10 +45,8 @@ const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
       ),
     )
 
-    // Filter out queues with sampling = 0 and publish gate tasks
     const candidateQueues = queues.filter((queue: SystemQueueCacheEntry) => queue.sampling > 0)
 
-    // Publish gate tasks for candidate queues
     await Effect.runPromise(
       Effect.all(
         candidateQueues.map((queue: SystemQueueCacheEntry) =>
@@ -105,7 +101,6 @@ const handleGate = (deps: SystemAnnotationQueuesDeps) => {
     readonly queueSlug: string
     readonly sampling: number
   }) => {
-    // Deterministic sampling decision (async, uses Web Crypto API)
     const isSampled = await deterministicSampling({
       organizationId: payload.organizationId,
       projectId: payload.projectId,
@@ -125,7 +120,6 @@ const handleGate = (deps: SystemAnnotationQueuesDeps) => {
       return
     }
 
-    // Start flagger workflow for this (traceId, queueSlug) pair
     const workflowId = `system-queue-flagger:${payload.traceId}:${payload.queueSlug}`
 
     await Effect.runPromise(

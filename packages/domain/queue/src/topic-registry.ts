@@ -1,9 +1,8 @@
-// Phantom type helper: returns an empty object at runtime but carries type T
-// at compile time. This lets us define the registry as a single const object
-
-import type { DomainEvent } from "@domain/events"
-
-// from which both TopicRegistry (the type) and TOPIC_NAMES (runtime) are derived.
+/**
+ * Phantom type helper: returns an empty object at runtime but carries type T
+ * at compile time. This lets us define the registry as a single const object
+ * from which both TopicRegistry (the type) and TOPIC_NAMES (runtime) are derived.
+ */
 function payloads<T extends Record<string, unknown>>(): T {
   return {} as T
 }
@@ -111,13 +110,11 @@ const _registry = {
   }>(),
 
   "system-annotation-queues": payloads<{
-    // Fan-out task: reads cached project state and fans out to per-queue gate tasks
     fanOut: {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
     }
-    // Per-queue gate task: performs sampling check and starts flagger workflow if sampled in
     gate: {
       readonly organizationId: string
       readonly projectId: string
