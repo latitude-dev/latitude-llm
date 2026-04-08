@@ -1,5 +1,5 @@
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { CacheError } from "./errors.ts"
 
 export { CacheError } from "./errors.ts"

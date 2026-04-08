@@ -1,6 +1,6 @@
 import type { MembershipId, NotFoundError, OrganizationId, RepositoryError } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { Membership } from "../entities/membership.ts"
 
 export interface MemberWithUser {

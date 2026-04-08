@@ -1,6 +1,6 @@
 import type { NotFoundError, RepositoryError } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { PublicInvitationPreview } from "../entities/public-invitation-preview.ts"
 
 export class InvitationRepository extends EffectService<

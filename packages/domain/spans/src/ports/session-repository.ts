@@ -1,6 +1,6 @@
 import type { FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { Session } from "../entities/session.ts"
 import type { NumericRollup } from "./trace-repository.ts"
 

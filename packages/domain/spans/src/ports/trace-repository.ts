@@ -1,6 +1,6 @@
 import type { FilterSet, NotFoundError, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 
 /**

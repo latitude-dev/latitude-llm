@@ -1,6 +1,6 @@
 import type { NotFoundError, OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
 

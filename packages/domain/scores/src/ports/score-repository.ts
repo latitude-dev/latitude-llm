@@ -8,8 +8,8 @@ import type {
   SpanId,
   TraceId,
 } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
 

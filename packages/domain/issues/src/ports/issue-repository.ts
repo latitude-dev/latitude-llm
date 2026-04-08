@@ -1,6 +1,6 @@
 import type { IssueId, NotFoundError, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { Issue } from "../entities/issue.ts"
 
 export interface IssueListPage {

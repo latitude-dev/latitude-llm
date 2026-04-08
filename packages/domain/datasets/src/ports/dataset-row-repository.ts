@@ -1,6 +1,6 @@
 import type { DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { DatasetRow, InsertRowFieldValue, RowFieldValue } from "../entities/dataset-row.ts"
 import type { RowNotFoundError } from "../errors.ts"
 

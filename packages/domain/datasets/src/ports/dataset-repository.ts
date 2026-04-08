@@ -1,6 +1,6 @@
 import type { DatasetId, DatasetVersionId, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect } from "effect"
 import { EffectService } from "@repo/effect-service"
+import type { Effect } from "effect"
 import type { Dataset, DatasetVersion } from "../entities/dataset.ts"
 import type { DatasetNotFoundError } from "../errors.ts"
 
