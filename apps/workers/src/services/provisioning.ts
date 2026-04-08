@@ -1,9 +1,10 @@
 import { provisionSystemQueuesUseCase } from "@domain/annotation-queues"
 import { OrganizationId, ProjectId } from "@domain/shared"
+import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
-import { getPostgresClient } from "../clients.ts"
+import { getPostgresClient, getRedisClient } from "../clients.ts"
 
 const logger = createLogger("project-provisioning")
 
@@ -23,7 +24,10 @@ export const provisionSystemQueues = async (input: { readonly organizationId: st
     provisionSystemQueuesUseCase({
       organizationId: input.organizationId,
       projectId: ProjectId(input.projectId),
-    }).pipe(withPostgres(AnnotationQueueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId))),
+    }).pipe(
+      withPostgres(AnnotationQueueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      Effect.provide(RedisCacheStoreLive(getRedisClient())),
+    ),
   )
 
   const duration = Date.now() - startTime

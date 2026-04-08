@@ -1,5 +1,5 @@
 import { CacheStore, type ProjectId } from "@domain/shared"
-import { Effect } from "effect"
+import { Effect, Option } from "effect"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
 
 export interface SystemQueueCacheEntry {
@@ -9,7 +9,7 @@ export interface SystemQueueCacheEntry {
 
 export const CACHE_TTL_SECONDS = 300
 
-const buildCacheKey = (organizationId: string, projectId: string): string =>
+export const buildProjectSystemQueuesCacheKey = (organizationId: string, projectId: string): string =>
   `org:${organizationId}:projects:${projectId}:system-queues`
 
 const toCacheEntry = (queue: { slug: string; settings: { sampling?: number | undefined } }): SystemQueueCacheEntry => ({
@@ -33,7 +33,7 @@ export interface GetProjectSystemQueuesInput {
 export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput) =>
   Effect.gen(function* () {
     const cache = yield* CacheStore
-    const cacheKey = buildCacheKey(input.organizationId, input.projectId)
+    const cacheKey = buildProjectSystemQueuesCacheKey(input.organizationId, input.projectId)
 
     const cachedResult = yield* cache.get(cacheKey).pipe(Effect.catchTag("CacheError", () => Effect.succeed(null)))
 
@@ -61,9 +61,14 @@ export interface EvictProjectSystemQueuesInput {
 }
 
 export const evictProjectSystemQueuesUseCase = (input: EvictProjectSystemQueuesInput) =>
-  Effect.gen(function* () {
-    const cache = yield* CacheStore
-    const cacheKey = buildCacheKey(input.organizationId, input.projectId)
-
-    yield* cache.delete(cacheKey).pipe(Effect.catchTag("CacheError", () => Effect.void))
-  })
+  Effect.serviceOption(CacheStore).pipe(
+    Effect.flatMap(
+      Option.match({
+        onNone: () => Effect.void,
+        onSome: (cache) => {
+          const cacheKey = buildProjectSystemQueuesCacheKey(input.organizationId, input.projectId)
+          return cache.delete(cacheKey).pipe(Effect.catchTag("CacheError", () => Effect.void))
+        },
+      }),
+    ),
+  )

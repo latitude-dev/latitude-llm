@@ -50,6 +50,7 @@ export {
   type ListSystemQueuesInput,
 } from "./ports/annotation-queue-repository.ts"
 export {
+  buildProjectSystemQueuesCacheKey,
   CACHE_TTL_SECONDS,
   type EvictProjectSystemQueuesInput,
   evictProjectSystemQueuesUseCase,

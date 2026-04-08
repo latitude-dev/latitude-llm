@@ -4,8 +4,9 @@ import {
   AnnotationQueueRepository,
   type AnnotationQueueRepositoryShape,
   annotationQueueSchema,
+  evictProjectSystemQueuesUseCase,
 } from "@domain/annotation-queues"
-import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
+import { ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, asc, desc, eq, gt, isNull, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -134,6 +135,12 @@ const tailToCursor = (sortBy: AnnotationQueueListSortBy, tail: typeof annotation
   }
   return { sortValue: String(Math.max(0, tail.totalItems - tail.completedItems)), id: tail.id } as const
 }
+
+const evictSystemQueueCache = (queue: Pick<AnnotationQueue, "organizationId" | "projectId">) =>
+  evictProjectSystemQueuesUseCase({
+    organizationId: queue.organizationId,
+    projectId: ProjectId(queue.projectId),
+  })
 
 export const AnnotationQueueRepositoryLive = Layer.effect(
   AnnotationQueueRepository,
@@ -320,7 +327,10 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
                 },
               }),
           )
-          .pipe(Effect.mapError((cause) => new RepositoryError({ operation: "save", cause }))),
+          .pipe(
+            Effect.mapError((cause) => new RepositoryError({ operation: "save", cause })),
+            Effect.tap(() => evictSystemQueueCache(queue)),
+          ),
 
       insertIfNotExists: (queue) =>
         sqlClient
@@ -357,6 +367,7 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
           .pipe(
             Effect.map((result) => result.length > 0),
             Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
+            Effect.tap((wasInserted) => (wasInserted ? evictSystemQueueCache(queue) : Effect.void)),
           ),
     } satisfies AnnotationQueueRepositoryShape
   }),
