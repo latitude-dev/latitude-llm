@@ -1,7 +1,7 @@
 import { Button, CloseTrigger, Container, FormWrapper, Input, Modal, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import { useCallback, useRef, useState } from "react"
 import { setActiveOrganization } from "../../../domains/auth/auth.functions.ts"
 import {
@@ -11,14 +11,19 @@ import {
 import { createOrganization } from "../../../domains/organizations/organizations.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
-import { useAuthenticatedOrganizationId } from "../-route-data.ts"
+
+const authRoute = getRouteApi("/_authenticated")
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
-  component: OrganizationSettingsPage,
+  component: OrganizationSettingsRoutePage,
 })
 
+function OrganizationSettingsRoutePage() {
+  return <OrganizationSettingsPanel />
+}
+
 function OrganizationNameSection() {
-  const organizationId = useAuthenticatedOrganizationId()
+  const { organizationId } = authRoute.useRouteContext()
   const { toast } = useToast()
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
@@ -130,7 +135,7 @@ function CreateOrganizationSection() {
   )
 }
 
-function OrganizationSettingsPage() {
+export function OrganizationSettingsPanel() {
   return (
     <Container className="flex flex-col gap-8 p-6">
       <SettingsPageHeader title="Organization" description="Manage your organization details." />

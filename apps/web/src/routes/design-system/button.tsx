@@ -262,7 +262,7 @@ function ButtonPage() {
                   disabled={state === "disabled"}
                   aria-label={size === "icon" ? label || "Icon button" : undefined}
                 >
-                  {previewIcon ? <Icon icon={previewIcon} size="sm" /> : null}
+                  {previewIcon ? <Icon icon={previewIcon} size={size === "sm" ? "2xs" : "sm"} /> : null}
                   {showLabel && buttonLabel}
                 </Button>
               </div>

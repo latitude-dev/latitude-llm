@@ -26,7 +26,7 @@ import {
   useToast,
 } from "@repo/ui"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import { ChevronDown, Trash2 } from "lucide-react"
 import { useState } from "react"
 import {
@@ -40,11 +40,16 @@ import {
 import type { MemberRecord } from "../../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
-import { useAuthenticatedUser } from "../-route-data.ts"
+
+const authRoute = getRouteApi("/_authenticated")
 
 export const Route = createFileRoute("/_authenticated/settings/members")({
-  component: MembersSettingsPage,
+  component: MembersSettingsRoutePage,
 })
+
+function MembersSettingsRoutePage() {
+  return <MembersSettingsPanel />
+}
 
 function InviteMemberModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
@@ -356,8 +361,8 @@ function MembersTable({
   )
 }
 
-function MembersSettingsPage() {
-  const user = useAuthenticatedUser()
+export function MembersSettingsPanel() {
+  const { user } = authRoute.useRouteContext()
   const [inviteOpen, setInviteOpen] = useState(false)
   const { data, isLoading } = useMembersCollection()
   const members = data ?? []

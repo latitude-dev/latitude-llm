@@ -46,7 +46,7 @@ const buttonVariantsConfig = cva(
           "border border-input bg-background shadow-none group-hover:bg-secondary group-hover:text-secondary-foreground/80 group-hover:shadow-none",
         secondary: "border-0 bg-transparent text-secondary-foreground [&_svg]:text-muted-foreground",
         ghost:
-          "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none",
+          "border-0 border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-muted hover:shadow-none",
         link: "border-0 bg-transparent text-accent-foreground shadow-none underline-offset-4 group-hover:underline group-hover:shadow-none",
         "default-soft":
           "border-0 bg-primary-muted text-primary shadow-none group-hover:bg-primary-muted-hover group-hover:shadow-none group-active:bg-primary-muted group-hover:group-active:bg-primary-muted [&_svg]:text-primary/70",

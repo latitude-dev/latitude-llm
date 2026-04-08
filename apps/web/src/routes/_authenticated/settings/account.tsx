@@ -1,15 +1,20 @@
 import { Button, Container, FormWrapper, Input, Modal, Text, useToast } from "@repo/ui"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { deleteCurrentUser, updateUserName } from "../../../domains/sessions/session.functions.ts"
 import { authClient } from "../../../lib/auth-client.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
-import { useAuthenticatedUser } from "../-route-data.ts"
+
+const authRoute = getRouteApi("/_authenticated")
 
 export const Route = createFileRoute("/_authenticated/settings/account")({
-  component: AccountSettingsPage,
+  component: AccountSettingsRoutePage,
 })
+
+function AccountSettingsRoutePage() {
+  return <AccountSettingsPanel />
+}
 
 function DeleteAccountConfirmModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
@@ -47,7 +52,12 @@ function DeleteAccountConfirmModal({ open, setOpen }: { open: boolean; setOpen: 
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button variant="destructive" disabled={!isConfirmed || isDeleting} onClick={() => void handleDelete()}>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={!isConfirmed || isDeleting}
+            onClick={() => void handleDelete()}
+          >
             {isDeleting ? "Deleting..." : "Delete Account"}
           </Button>
         </>
@@ -66,8 +76,8 @@ function DeleteAccountConfirmModal({ open, setOpen }: { open: boolean; setOpen: 
   )
 }
 
-function AccountSettingsPage() {
-  const user = useAuthenticatedUser()
+export function AccountSettingsPanel() {
+  const { user } = authRoute.useRouteContext()
   const { toast } = useToast()
   const router = useRouter()
   const [name, setName] = useState(user.name ?? "")
@@ -100,7 +110,7 @@ function AccountSettingsPage() {
   return (
     <Container className="flex flex-col gap-8 p-6">
       <SettingsPageHeader title="Account" description="Manage your profile and how you sign in." />
-      <div className="flex max-w-lg flex-col gap-8">
+      <div className="flex max-w-lg flex-col gap-[24px]">
         <FormWrapper>
           <Input
             required
@@ -130,7 +140,7 @@ function AccountSettingsPage() {
         </div>
         <div>
           <DeleteAccountConfirmModal open={deleteOpen} setOpen={setDeleteOpen} />
-          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+          <Button type="button" variant="destructive" onClick={() => setDeleteOpen(true)}>
             Delete Account
           </Button>
         </div>

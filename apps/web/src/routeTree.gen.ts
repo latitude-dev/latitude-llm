@@ -32,7 +32,7 @@ import { Route as AuthenticatedSettingsApiKeysRouteImport } from './routes/_auth
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
-import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
+import { Route as AuthenticatedProjectsProjectSlugSettingsRouteRouteImport } from './routes/_authenticated/projects/$projectSlug/settings/route'
 import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
 import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/index'
@@ -165,8 +165,8 @@ const AuthenticatedProjectsProjectSlugIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
-const AuthenticatedProjectsProjectSlugSettingsRoute =
-  AuthenticatedProjectsProjectSlugSettingsRouteImport.update({
+const AuthenticatedProjectsProjectSlugSettingsRouteRoute =
+  AuthenticatedProjectsProjectSlugSettingsRouteRouteImport.update({
     id: '/settings',
     path: '/settings',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
@@ -242,7 +242,7 @@ export interface FileRoutesByFullPath {
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
-  '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
+  '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -271,7 +271,7 @@ export interface FileRoutesByTo {
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test': typeof ApiObservabilityTestIndexRoute
-  '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
+  '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
   '/projects/$projectSlug/annotation-queues': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
@@ -304,7 +304,7 @@ export interface FileRoutesById {
   '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
-  '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
+  '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRouteRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/_authenticated/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -590,7 +590,7 @@ declare module '@tanstack/react-router' {
       id: '/_authenticated/projects/$projectSlug/settings'
       path: '/settings'
       fullPath: '/projects/$projectSlug/settings'
-      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteImport
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
     '/_authenticated/projects/$projectSlug/issues/': {
@@ -703,7 +703,7 @@ const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren =
   )
 
 interface AuthenticatedProjectsProjectSlugRouteChildren {
-  AuthenticatedProjectsProjectSlugSettingsRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
+  AuthenticatedProjectsProjectSlugSettingsRouteRoute: typeof AuthenticatedProjectsProjectSlugSettingsRouteRoute
   AuthenticatedProjectsProjectSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugIndexRoute
   AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -714,8 +714,8 @@ interface AuthenticatedProjectsProjectSlugRouteChildren {
 
 const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjectSlugRouteChildren =
   {
-    AuthenticatedProjectsProjectSlugSettingsRoute:
-      AuthenticatedProjectsProjectSlugSettingsRoute,
+    AuthenticatedProjectsProjectSlugSettingsRouteRoute:
+      AuthenticatedProjectsProjectSlugSettingsRouteRoute,
     AuthenticatedProjectsProjectSlugIndexRoute:
       AuthenticatedProjectsProjectSlugIndexRoute,
     AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute:
