@@ -1,4 +1,4 @@
-import { generateId, OrganizationId, ProjectId } from "@domain/shared"
+import { ProjectId } from "@domain/shared"
 import { queryCollectionOptions } from "@tanstack/query-db-collection"
 import type { Context, QueryBuilder, SchemaFromSource } from "@tanstack/react-db"
 import { createCollection, useLiveQuery } from "@tanstack/react-db"
@@ -54,21 +54,6 @@ const projectsCollection = createCollection(
     },
   }),
 )
-
-export function createProjectMutation(name: string) {
-  const now = new Date().toISOString()
-
-  return projectsCollection.insert({
-    id: generateId<"ProjectId">(),
-    organizationId: OrganizationId(""),
-    name,
-    slug: "",
-    settings: { keepMonitoring: undefined },
-    deletedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  })
-}
 
 export function renameProjectMutation(id: string, name: string) {
   return projectsCollection.update(ProjectId(id), (draft) => {

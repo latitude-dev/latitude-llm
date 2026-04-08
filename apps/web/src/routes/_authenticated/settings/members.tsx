@@ -1,4 +1,5 @@
 import {
+  Avatar,
   Button,
   CloseTrigger,
   Container,
@@ -12,6 +13,7 @@ import {
   Label,
   Modal,
   Select,
+  Status,
   Table,
   TableBody,
   TableCell,
@@ -23,7 +25,6 @@ import {
   Tooltip,
   useToast,
 } from "@repo/ui"
-import { relativeTime } from "@repo/utils"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute } from "@tanstack/react-router"
 import { ChevronDown, Trash2 } from "lucide-react"
@@ -38,6 +39,7 @@ import {
 } from "../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 
 export const Route = createFileRoute("/_authenticated/settings/members")({
   component: MembersSettingsPage,
@@ -175,105 +177,6 @@ function TransferOwnershipModal({
   )
 }
 
-function ChangeRoleModal({
-  open,
-  setOpen,
-  member,
-  onRoleChange,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-  member: MemberRecord | null
-  onRoleChange: (targetUserId: string, newRole: "admin" | "member") => Promise<void>
-}) {
-  const { toast } = useToast()
-  const [selectedRole, setSelectedRole] = useState<"admin" | "member" | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      if (member?.role === "admin") {
-        setSelectedRole("admin")
-      } else if (member?.role === "member") {
-        setSelectedRole("member")
-      }
-    } else {
-      setSelectedRole(null)
-    }
-    setOpen(nextOpen)
-  }
-
-  const handleSubmit = async () => {
-    if (!member?.userId || !selectedRole) return
-
-    setIsSubmitting(true)
-    try {
-      await onRoleChange(member.userId, selectedRole)
-      setOpen(false)
-      toast({ description: `Role updated to ${selectedRole}` })
-    } catch (error) {
-      toast({ variant: "destructive", description: toUserMessage(error) })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  if (!member) return null
-
-  return (
-    <Modal.Root open={open} onOpenChange={handleOpenChange}>
-      <Modal.Content dismissible>
-        <Modal.Header title="Change Member Role" description={`Update the role for ${member.name ?? member.email}`} />
-        <Modal.Body>
-          <FormWrapper>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Select new role</Label>
-                <div className="flex flex-col gap-2">
-                  <label className="flex cursor-pointer items-center gap-2 rounded border p-3 hover:bg-muted">
-                    <input
-                      type="radio"
-                      name="role"
-                      value="admin"
-                      checked={selectedRole === "admin"}
-                      onChange={(e) => setSelectedRole(e.target.value as "admin")}
-                      className="h-4 w-4"
-                    />
-                    <div className="flex flex-col">
-                      <Text.H5>Admin</Text.H5>
-                      <Text.H6 color="foregroundMuted">Can manage members and organization settings</Text.H6>
-                    </div>
-                  </label>
-                  <label className="flex cursor-pointer items-center gap-2 rounded border p-3 hover:bg-muted">
-                    <input
-                      type="radio"
-                      name="role"
-                      value="member"
-                      checked={selectedRole === "member"}
-                      onChange={(e) => setSelectedRole(e.target.value as "member")}
-                      className="h-4 w-4"
-                    />
-                    <div className="flex flex-col">
-                      <Text.H5>Member</Text.H5>
-                      <Text.H6 color="foregroundMuted">Standard member with limited permissions</Text.H6>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </FormWrapper>
-        </Modal.Body>
-        <Modal.Footer>
-          <CloseTrigger />
-          <Button type="button" disabled={!selectedRole || isSubmitting} onClick={() => void handleSubmit()}>
-            {isSubmitting ? "Updating..." : "Update Role"}
-          </Button>
-        </Modal.Footer>
-      </Modal.Content>
-    </Modal.Root>
-  )
-}
-
 function MembersTable({
   members,
   currentUserId,
@@ -287,21 +190,30 @@ function MembersTable({
 }) {
   const { toast } = useToast()
   const [transferOpen, setTransferOpen] = useState(false)
-  const [changeRoleOpen, setChangeRoleOpen] = useState(false)
-  const [selectedMember, setSelectedMember] = useState<MemberRecord | null>(null)
 
   const isExpired = (expiresAt: string | null | undefined) => {
     if (!expiresAt) return false
     return new Date(expiresAt) < new Date()
   }
 
-  const handleRoleChange = async (targetUserId: string, newRole: "admin" | "member") => {
+  const handleRoleSelect = async (member: MemberRecord, newRole: "admin" | "member") => {
+    if (!member.userId || member.role === newRole) return
     try {
-      await updateMemberRoleMutation(targetUserId, newRole)
+      await updateMemberRoleMutation(member.userId, newRole)
+      toast({ description: `Role updated to ${newRole}` })
     } catch (error) {
       toast({ variant: "destructive", description: toUserMessage(error) })
-      throw error
     }
+  }
+
+  const invitationStatus = (member: MemberRecord) => {
+    if (member.status === "invited") {
+      if (member.expiresAt && isExpired(member.expiresAt)) {
+        return { variant: "expired" as const, label: "Expired" }
+      }
+      return { variant: "pending" as const, label: "Pending" }
+    }
+    return { variant: "accepted" as const, label: "Accepted" }
   }
 
   const canChangeRole = (member: MemberRecord) => {
@@ -312,6 +224,9 @@ function MembersTable({
     return true
   }
 
+  /** Owner can open menu to transfer; admins can change others' admin/member roles. */
+  const canOpenRoleMenu = (member: MemberRecord) => (member.role === "owner" && isOwner) || canChangeRole(member)
+
   return (
     <>
       <TransferOwnershipModal
@@ -320,115 +235,120 @@ function MembersTable({
         members={members}
         currentUserId={currentUserId}
       />
-      <ChangeRoleModal
-        open={changeRoleOpen}
-        setOpen={setChangeRoleOpen}
-        member={selectedMember}
-        onRoleChange={handleRoleChange}
-      />
-      <Table>
+      <Table variant="listing">
         <TableHeader>
-          <TableRow verticalPadding>
+          <TableRow hoverable={false}>
             <TableHead>Name</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Invitation</TableHead>
-            {isAdmin && <TableHead />}
+            <TableHead>Invitation status</TableHead>
+            {isAdmin ? <TableHead align="right" className="w-14 min-w-14" /> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {members.map((member) => (
-            <TableRow key={member.id} verticalPadding hoverable={false}>
-              <TableCell>
-                <Text.H5>{member.name ?? "-"}</Text.H5>
-              </TableCell>
-              <TableCell>
-                <Text.H5 color="foregroundMuted">{member.email}</Text.H5>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  {(member.role === "owner" && isOwner) || canChangeRole(member) ? (
-                    <DropdownMenuRoot>
-                      <DropdownMenuTrigger asChild>
-                        <div className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 transition-colors hover:bg-muted">
-                          <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
-                          <Icon icon={ChevronDown} size="sm" className="text-muted-foreground" />
-                        </div>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="border-0">
+          {members.map((member) => {
+            const inv = invitationStatus(member)
+            return (
+              <TableRow key={member.id} hoverable={false}>
+                <TableCell>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Avatar
+                      name={member.name?.trim() ? member.name : member.email}
+                      size="sm"
+                      {...(member.image ? { imageSrc: member.image } : {})}
+                    />
+                    <Text.H5 ellipsis noWrap className="min-w-0">
+                      {member.name ?? "—"}
+                    </Text.H5>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Text.H5 color="foregroundMuted" className="truncate" noWrap ellipsis>
+                    {member.email}
+                  </Text.H5>
+                </TableCell>
+                <TableCell>
+                  <DropdownMenuRoot>
+                    <DropdownMenuTrigger asChild disabled={!canOpenRoleMenu(member)}>
+                      <button
+                        type="button"
+                        disabled={!canOpenRoleMenu(member)}
+                        className="flex min-w-0 max-w-full items-center gap-1 rounded-md px-2 py-1 text-left transition-colors hover:bg-muted disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+                      >
+                        <Text.H5
+                          className="min-w-0 capitalize"
+                          color={canOpenRoleMenu(member) ? "foreground" : "foregroundMuted"}
+                        >
+                          {member.role}
+                        </Text.H5>
+                        <Icon icon={ChevronDown} size="sm" className="shrink-0 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    {canOpenRoleMenu(member) ? (
+                      <DropdownMenuContent align="start" className="w-48">
                         {member.role === "owner" && isOwner ? (
                           <DropdownMenuItem onSelect={() => setTransferOpen(true)}>Transfer ownership</DropdownMenuItem>
                         ) : null}
                         {canChangeRole(member) ? (
-                          <DropdownMenuItem
-                            onSelect={() => {
-                              setSelectedMember(member)
-                              setChangeRoleOpen(true)
-                            }}
-                          >
-                            Change role
-                          </DropdownMenuItem>
+                          <>
+                            <DropdownMenuItem
+                              disabled={member.role === "admin"}
+                              onSelect={() => void handleRoleSelect(member, "admin")}
+                            >
+                              Admin
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={member.role === "member"}
+                              onSelect={() => void handleRoleSelect(member, "member")}
+                            >
+                              Member
+                            </DropdownMenuItem>
+                          </>
                         ) : null}
                       </DropdownMenuContent>
-                    </DropdownMenuRoot>
-                  ) : (
-                    <Text.H5 color="foregroundMuted">{member.role}</Text.H5>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                <Text.H5 color={member.status === "invited" ? "warningMutedForeground" : "foregroundMuted"}>
-                  {member.status === "invited" ? "Pending" : "Active"}
-                </Text.H5>
-              </TableCell>
-              <TableCell>
-                {member.status === "invited" ? (
-                  member.expiresAt && isExpired(member.expiresAt) ? (
-                    <Text.H5 color="destructive">Expired</Text.H5>
-                  ) : member.expiresAt ? (
-                    <Text.H5 color="foregroundMuted">{relativeTime(member.expiresAt)}</Text.H5>
-                  ) : (
-                    <Text.H5 color="foregroundMuted">No expiration</Text.H5>
-                  )
-                ) : (
-                  <Text.H5 color="foregroundMuted">-</Text.H5>
-                )}
-              </TableCell>
-              <TableCell align="right">
-                {isAdmin && (member.status === "active" || member.status === "invited") ? (
-                  <Tooltip
-                    asChild
-                    trigger={
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          const transaction =
-                            member.status === "invited"
-                              ? cancelMemberInviteMutation(member.id)
-                              : removeMemberMutation(member.id)
+                    ) : null}
+                  </DropdownMenuRoot>
+                </TableCell>
+                <TableCell>
+                  <Status variant={inv.variant} label={inv.label} />
+                </TableCell>
+                {isAdmin ? (
+                  <TableCell align="right" className="w-14 max-w-none min-w-14 shrink-0">
+                    {member.status === "active" || member.status === "invited" ? (
+                      <Tooltip
+                        asChild
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              const transaction =
+                                member.status === "invited"
+                                  ? cancelMemberInviteMutation(member.id)
+                                  : removeMemberMutation(member.id)
 
-                          void transaction.isPersisted.promise
-                            .then(() => {
-                              toast({
-                                description: member.status === "invited" ? "Invitation canceled" : "Member removed",
-                              })
-                            })
-                            .catch((error) => {
-                              toast({ variant: "destructive", description: toUserMessage(error) })
-                            })
-                        }}
+                              void transaction.isPersisted.promise
+                                .then(() => {
+                                  toast({
+                                    description: member.status === "invited" ? "Invitation canceled" : "Member removed",
+                                  })
+                                })
+                                .catch((error) => {
+                                  toast({ variant: "destructive", description: toUserMessage(error) })
+                                })
+                            }}
+                          >
+                            <Icon icon={Trash2} size="sm" />
+                          </Button>
+                        }
                       >
-                        <Icon icon={Trash2} size="sm" />
-                      </Button>
-                    }
-                  >
-                    {member.status === "invited" ? "Cancel invitation" : "Remove member"}
-                  </Tooltip>
+                        {member.status === "invited" ? "Cancel invitation" : "Remove member"}
+                      </Tooltip>
+                    ) : null}
+                  </TableCell>
                 ) : null}
-              </TableCell>
-            </TableRow>
-          ))}
+              </TableRow>
+            )
+          })}
         </TableBody>
       </Table>
     </>
@@ -445,18 +365,22 @@ function MembersSettingsPage() {
   const isAdmin = isOwner || currentUserMembership?.role === "admin"
 
   return (
-    <Container className="flex flex-col gap-8 pt-14">
+    <Container className="flex flex-col gap-8 p-6">
       <InviteMemberModal open={inviteOpen} setOpen={setInviteOpen} />
-      <div className="flex flex-row items-center justify-between">
-        <Text.H4 weight="bold">Members</Text.H4>
+      <div className="flex flex-row items-start justify-between gap-4">
+        <SettingsPageHeader
+          className="min-w-0 flex-1"
+          title="Members"
+          description="Invite teammates and manage roles in your organization."
+        />
         {isAdmin ? (
-          <Button variant="outline" onClick={() => setInviteOpen(true)}>
+          <Button variant="outline" className="shrink-0" onClick={() => setInviteOpen(true)}>
             Add Member
           </Button>
         ) : null}
       </div>
       <div className="flex flex-col gap-2">
-        {isLoading ? <TableSkeleton cols={6} rows={3} /> : null}
+        {isLoading ? <TableSkeleton cols={5} rows={3} variant="listing" /> : null}
         {!isLoading && members.length > 0 ? (
           <MembersTable members={members} currentUserId={user.id} isOwner={isOwner} isAdmin={isAdmin} />
         ) : null}

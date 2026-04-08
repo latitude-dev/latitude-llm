@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 
 import { Skeleton } from "../skeleton/skeleton.tsx"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../table/table.tsx"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, type TableVariant } from "../table/table.tsx"
 
 function TableSkeleton({
   rows,
@@ -9,12 +9,14 @@ function TableSkeleton({
   maxHeight,
   verticalPadding = false,
   animate = true,
+  variant = "default",
 }: {
   rows: number
   cols: string[] | number
   maxHeight?: number
   verticalPadding?: boolean
   animate?: boolean
+  variant?: TableVariant
 }) {
   const { data, headers } = useMemo(() => {
     const headers = typeof cols === "number" ? Array.from(Array(cols).keys()) : cols
@@ -23,12 +25,12 @@ function TableSkeleton({
   }, [rows, cols])
 
   return (
-    <Table {...(maxHeight !== undefined ? { maxHeight } : {})} overflow="overflow-hidden">
+    <Table variant={variant} {...(maxHeight !== undefined ? { maxHeight } : {})} overflow="overflow-hidden">
       <TableHeader>
         <TableRow hoverable={false}>
           {headers.map((header) => (
             <TableHead key={header}>
-              {typeof header === "string" ? header : <Skeleton className="w-20 h-4" />}
+              {typeof header === "string" ? header : <Skeleton className="h-4 w-20" />}
             </TableHead>
           ))}
         </TableRow>
@@ -37,8 +39,8 @@ function TableSkeleton({
         {data.map((row) => (
           <TableRow key={row.id} verticalPadding={verticalPadding} hoverable={false}>
             {row.cells.map((cell) => (
-              <TableCell key={cell} className="py-2">
-                <Skeleton className="w-full h-4" animate={animate} />
+              <TableCell key={cell} {...(variant === "default" ? { className: "py-2" } : {})}>
+                <Skeleton className="h-4 w-full" animate={animate} />
               </TableCell>
             ))}
           </TableRow>

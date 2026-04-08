@@ -25,7 +25,6 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../../domains/organizations/organizations.collection.ts"
 import {
-  createProjectMutation,
   deleteProjectMutation,
   renameProjectMutation,
   useProjectsCollection,
@@ -33,6 +32,7 @@ import {
 } from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+import { CreateProjectModal } from "./-components/create-project-modal.tsx"
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
@@ -256,73 +256,6 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
   )
 }
 
-function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { toast } = useToast()
-  const form = useForm({
-    defaultValues: {
-      name: "",
-    },
-    onSubmit: async ({ value }) => {
-      try {
-        const transaction = createProjectMutation(value.name)
-        await transaction.isPersisted.promise
-        onClose()
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error creating project",
-          description: toUserMessage(error),
-        })
-      }
-    },
-  })
-
-  return (
-    <Modal
-      open={open}
-      dismissible
-      onOpenChange={onClose}
-      title="Create Project"
-      description="Create a new project to start adding your prompts."
-      footer={
-        <>
-          <CloseTrigger />
-          <Button
-            type="submit"
-            onClick={() => {
-              void form.handleSubmit()
-            }}
-          >
-            Create Project
-          </Button>
-        </>
-      }
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          void form.handleSubmit()
-        }}
-      >
-        <FormWrapper>
-          <form.Field name="name">
-            {(field) => (
-              <Input
-                required
-                type="text"
-                label="Name"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="My awesome project"
-              />
-            )}
-          </form.Field>
-        </FormWrapper>
-      </form>
-    </Modal>
-  )
-}
-
 function DashboardPageContent() {
   const [createOpen, setCreateOpen] = useState(false)
   const { organizationId } = Route.useRouteContext()
@@ -336,7 +269,7 @@ function DashboardPageContent() {
 
   return (
     <>
-      <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateProjectModal open={createOpen} onOpenChange={setCreateOpen} />
       <TableWithHeader
         title={
           <span>
