@@ -187,7 +187,7 @@ describe("createSpanIngestionWorker", () => {
       )
 
       expect(Number(count?.total ?? 0)).toBe(0)
-      expect(warnSpy).toHaveBeenCalled()
+      expect(warnSpy).toHaveBeenCalledTimes(1)
     } finally {
       warnSpy.mockRestore()
     }
