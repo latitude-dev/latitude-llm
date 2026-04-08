@@ -18,6 +18,8 @@ description: Drizzle schema, repositories, RLS, SqlClient wiring, Postgres migra
 
 All Postgres access flows through `SqlClient`—a domain-level service that abstracts database operations and enforces organization scoping via RLS.
 
+For Effect version upgrades and the `ServiceMap.Service` → upstream service-tag API story, see [docs/effect-services.md](../../../docs/effect-services.md).
+
 **Architecture:**
 
 - **Domain Layer** (`@domain/shared`): `SqlClient` interface with `transaction()` and `query()` methods
