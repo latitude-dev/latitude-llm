@@ -5,7 +5,6 @@ export const LATITUDE_CONTEXT_KEY = createContextKey("latitude-internal-context"
 const CAPTURE_TRACER_NAME = "so.latitude.instrumentation.capture"
 
 type LatitudeContextData = {
-  name: string | undefined
   tags: string[] | undefined
   metadata: Record<string, unknown> | undefined
   sessionId: string | undefined
@@ -28,7 +27,6 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
   const existingData = getLatitudeContext(currentContext)
 
   const mergedData: LatitudeContextData = {
-    name: options.name ?? name,
     tags: mergeArrays(existingData?.tags, options.tags),
     metadata: { ...existingData?.metadata, ...options.metadata },
     sessionId: options.sessionId ?? existingData?.sessionId,

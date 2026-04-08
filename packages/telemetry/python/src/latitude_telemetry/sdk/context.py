@@ -38,13 +38,11 @@ def _merge_arrays(a: list[str] | None, b: list[str] | None) -> list[str] | None:
 class _LatitudeContextData:
     def __init__(
         self,
-        name: str | None = None,
         tags: list[str] | None = None,
         metadata: dict[str, object] | None = None,
         session_id: str | None = None,
         user_id: str | None = None,
     ):
-        self.name = name
         self.tags = tags
         self.metadata = metadata
         self.session_id = session_id
@@ -65,7 +63,6 @@ def _set_capture_context(name: str, options: ContextOptions | None = None) -> Co
     existing_data = get_latitude_context(current_context)
 
     # Merge logic matching TypeScript SDK:
-    # - name: options.name takes precedence over capture name
     # - tags: merge and deduplicate
     # - metadata: shallow merge (child overrides parent for same keys)
     # - session_id/user_id: last-write-wins (child overrides parent)
@@ -74,7 +71,6 @@ def _set_capture_context(name: str, options: ContextOptions | None = None) -> Co
     merged_metadata: dict[str, object] = {**parent_metadata, **child_metadata}
 
     merged_data = _LatitudeContextData(
-        name=opts.get("name") or name,
         tags=_merge_arrays(existing_data.tags if existing_data else None, opts.get("tags")),
         metadata=merged_metadata,
         session_id=opts.get("session_id") or (existing_data.session_id if existing_data else None),

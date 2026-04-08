@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.4] - 2026-04-08
+
+### Changed
+
+- Removed `name` field from span context (`LatitudeContextData`). The capture name is only used for the span name, not stored in the context.
+
 ## [3.0.0-alpha.3] - 2026-04-07
 
 ### Added
