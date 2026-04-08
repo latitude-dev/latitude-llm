@@ -42,9 +42,9 @@ function collectAllTraceIds(args: { readonly organizationId: OrganizationId; rea
     const repo = yield* TraceRepository
     const ids: TraceId[] = []
     let cursor: TraceListCursor | undefined
+    let fetchNext = true
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    while (fetchNext) {
       const page = yield* repo.listByProjectId({
         organizationId: args.organizationId,
         projectId: args.projectId,
@@ -53,7 +53,7 @@ function collectAllTraceIds(args: { readonly organizationId: OrganizationId; rea
       for (const trace of page.items) {
         ids.push(trace.traceId)
       }
-      if (!page.hasMore || !page.nextCursor) break
+      fetchNext = page.hasMore && page.nextCursor != null
       cursor = page.nextCursor
     }
 

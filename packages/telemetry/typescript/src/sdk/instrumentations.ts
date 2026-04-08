@@ -104,7 +104,7 @@ async function createLatitudeInstrumentations(options: CreateInstrumentationsOpt
 
 async function tryRequire(moduleName: string): Promise<unknown | undefined> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS require first so optional peer deps resolve in Node; dynamic import handles ESM-only packages.
     return require(moduleName)
   } catch {
     // Fallback to dynamic import for ESM environments
