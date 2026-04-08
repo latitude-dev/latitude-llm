@@ -49,16 +49,16 @@ When a trace ends, the system uses a fan-out/gate pattern to route it to system 
 
 1. Triggered by `TraceEnded` domain event
 2. Reads all active system queues for the project (cached or from DB)
-3. Filters out queues with `settings.sampling = 0` (explicitly disabled)
-4. Publishes a `system-annotation-queues:gate` task per remaining queue
+3. Publishes a `system-annotation-queues:gate` task per queue
 
 **Gate (`system-annotation-queues:gate`)**:
 
 1. Receives `(projectId, traceId, queueSlug)`
-2. Applies deterministic rules first (no LLM needed):
+2. Filters out queues with `settings.sampling = 0` (explicitly disabled)
+3. Applies deterministic rules first (no LLM needed):
    - `Tool Call Errors`: Checks for tool span errors in the trace
    - `Resource Outliers`: Validates against project median thresholds
-3. For queues needing LLM classification:
+4. For queues needing LLM classification:
    - Uses deterministic sampling (default 5%) to limit LLM spend
    - Starts `systemQueueFlaggerWorkflow` via Temporal for the sampled traces
 
@@ -69,9 +69,9 @@ When a trace ends, the system uses a fan-out/gate pattern to route it to system 
 hash(traceId) % 100 < 5
 ```
 
-- **Fan-out filter**: Queues with `sampling = 0%` are excluded entirely
-- **Gate sampling**: 5% sampling applies before LLM work to control costs
-- Non-sampled traces skip the Temporal workflow and are not flagged
+- **Gate filter**: Queues with `sampling = 0%` are excluded before any processing
+- **LLM sampling**: 5% sampling applies before Temporal workflow to control costs
+- Non-sampled traces skip the flagger workflow and are not flagged
 
 ### System Queue Flagger Workflow
 
