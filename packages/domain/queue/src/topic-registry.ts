@@ -111,16 +111,28 @@ const _registry = {
   }>(),
 
   "system-annotation-queues": payloads<{
-    flag: {
+    // Fan-out task: reads cached project state and fans out to per-queue gate tasks
+    fanOut: {
       readonly organizationId: string
       readonly projectId: string
       readonly traceId: string
     }
-    annotate: {
+    // Per-queue gate task: performs sampling check and starts flagger workflow if sampled in
+    gate: {
       readonly organizationId: string
       readonly projectId: string
-      readonly queueId: string
       readonly traceId: string
+      readonly queueSlug: string
+      readonly sampling: number
+    }
+  }>(),
+
+  "project-provisioning": payloads<{
+    provision: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly name: string
+      readonly slug: string
     }
   }>(),
 
