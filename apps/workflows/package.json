@@ -13,6 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/annotation-queues": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/issues": "workspace:*",
     "@domain/scores": "workspace:*",

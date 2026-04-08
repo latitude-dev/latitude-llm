@@ -1,17 +1,40 @@
+import {
+  getSystemQueueFlaggerBySlug,
+  RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG,
+  runSystemQueueFlaggerUseCase,
+  TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG,
+} from "@domain/annotation-queues"
+import { OrganizationId } from "@domain/shared"
+import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createLogger } from "@repo/observability"
+import { Effect } from "effect"
+import { getClickhouseClient } from "../clients.ts"
 
 const logger = createLogger("workflows-flagger")
 
+const runSystemQueueFlagger = async (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly queueSlug: string
+}) =>
+  Effect.runPromise(
+    runSystemQueueFlaggerUseCase(input).pipe(
+      withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+    ),
+  )
+
 /**
- * Black-box async flagger interface.
+ * System queue flagger interface.
  *
- * For this phase, all system queues use the same flagger contract.
- * The result is { matched: boolean }.
+ * The actual queue-specific flagging logic lives in
+ * `@domain/annotation-queues/runSystemQueueFlaggerUseCase`, where queue slugs
+ * map to concrete flagger methods.
  *
  * Future work can:
  * - Add richer flagger payloads (confidence, explanation, evidence)
- * - Swap in queue-specific flagger implementations
- * - Add deterministic routing paths for specific queues
+ * - Add the Resource Outliers matcher once project median baselines exist
+ * - Replace the remaining stubbed queues with low-cost LLM classification
  */
 export const runFlagger = async (input: {
   readonly organizationId: string
@@ -26,5 +49,43 @@ export const runFlagger = async (input: {
     queueSlug: input.queueSlug,
   })
 
-  return { matched: false }
+  const flagger = getSystemQueueFlaggerBySlug(input.queueSlug)
+
+  if (!flagger) {
+    logger.info("System queue still uses placeholder flagger", {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+    })
+
+    return { matched: false }
+  }
+
+  const result = await runSystemQueueFlagger(input)
+
+  if (input.queueSlug === TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG) {
+    logger.info("Finished deterministic Tool Call Errors flagger", {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+      matched: result.matched,
+    })
+
+    return result
+  }
+
+  if (input.queueSlug === RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG) {
+    logger.info("Resource Outliers flagger is not implemented yet", {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+    })
+
+    return { matched: false }
+  }
+
+  return result
 }

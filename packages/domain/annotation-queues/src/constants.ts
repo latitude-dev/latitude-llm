@@ -8,6 +8,12 @@ export const LIVE_QUEUE_DEFAULT_SAMPLING = 10
 /** Default sampling percentage for system-created queues when provisioned. */
 export const SYSTEM_QUEUE_DEFAULT_SAMPLING = 10
 
+/** Canonical slug for the Tool Call Errors system queue. */
+export const TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG = "tool-call-errors"
+
+/** Canonical slug for the Resource Outliers system queue. */
+export const RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG = "resource-outliers"
+
 // ---------------------------------------------------------------------------
 // Context-window limits for the system-queue flagger LLM
 // ---------------------------------------------------------------------------
