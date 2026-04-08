@@ -533,9 +533,6 @@ importers:
 
   apps/workflows:
     dependencies:
-      '@domain/annotation-queues':
-        specifier: workspace:*
-        version: link:../../packages/domain/annotation-queues
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
