@@ -144,16 +144,16 @@ class TestSpanNaming:
                     "has_root_attr": current_span.attributes.get("latitude.capture.root")
                     if current_span.attributes
                     else False,
-                    "context_name": ctx.name if ctx else None,
+                    "has_context": ctx is not None,
                 }
             )
             return "done"
 
         capture("my-capture-name", my_function)
 
-        # The context should have the capture name
+        # The context should be present
         assert len(span_info) == 1
-        assert span_info[0]["context_name"] == "my-capture-name"
+        assert span_info[0]["has_context"] is True
 
     def test_child_spans_keep_original_names(self):
         """Test that child spans keep their original names."""
@@ -206,20 +206,6 @@ class TestSpanNaming:
         assert "child-operation" in span_names
         assert "grandchild-operation" in span_names
 
-    def test_options_name_used_for_root(self):
-        """Test that options.name is used for root span context if provided."""
-        context_names = []
-
-        def my_function():
-            ctx = get_latitude_context(otel_context.get_current())
-            context_names.append(ctx.name if ctx else None)
-            return "done"
-
-        capture("capture-name", my_function, {"name": "options-name", "tags": ["test"]})
-
-        # Should use options.name in context
-        assert context_names[0] == "options-name"
-
 
 class TestSmartFilterCompatibility:
     """Tests for smart filter - latitude.* attributes pass filter."""
@@ -242,7 +228,6 @@ class TestSmartFilterCompatibility:
             ctx = get_latitude_context(otel_context.get_current())
             context_data.append(
                 {
-                    "name": ctx.name if ctx else None,
                     "tags": ctx.tags if ctx else None,
                     "has_latitude_data": ctx is not None,
                 }
@@ -254,7 +239,6 @@ class TestSmartFilterCompatibility:
         # Verify context was available
         assert len(context_data) == 1
         assert context_data[0]["has_latitude_data"] is True
-        assert context_data[0]["name"] == "filter-test"
         assert "test" in context_data[0]["tags"]
 
 

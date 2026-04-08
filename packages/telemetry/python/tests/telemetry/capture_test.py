@@ -16,7 +16,6 @@ class TestCaptureFunction:
             # Verify context is set inside the function
             ctx = get_latitude_context(otel_context.get_current())
             assert ctx is not None
-            assert ctx.name == "test-capture"
             assert ctx.tags == ["test"]
             assert ctx.user_id == "user-1"
             return "result"
@@ -31,7 +30,6 @@ class TestCaptureFunction:
         async def my_async_function():
             ctx = get_latitude_context(otel_context.get_current())
             assert ctx is not None
-            assert ctx.name == "async-capture"
             assert ctx.session_id == "sess-1"
             return "async result"
 
@@ -63,7 +61,6 @@ class TestCaptureContextPropagation:
         capture("ctx-test", my_function, {"tags": ["a", "b"], "metadata": {"key": "value"}})
 
         assert captured_ctx is not None
-        assert captured_ctx.name == "ctx-test"
         assert captured_ctx.tags == ["a", "b"]
         assert captured_ctx.metadata == {"key": "value"}
 
@@ -93,20 +90,6 @@ class TestCaptureContextPropagation:
 
 class TestCaptureMerging:
     """Tests for capture() context merging behavior."""
-
-    def test_name_override_in_options(self):
-        """Test that options.name takes precedence over capture name."""
-        captured_ctx = None
-
-        def my_function():
-            nonlocal captured_ctx
-            captured_ctx = get_latitude_context(otel_context.get_current())
-            return "done"
-
-        capture("capture-name", my_function, {"name": "options-name"})
-
-        assert captured_ctx is not None
-        assert captured_ctx.name == "options-name"
 
     def test_tags_merge_and_deduplicate(self):
         """Test that tags are merged and deduplicated."""
@@ -207,7 +190,6 @@ class TestCaptureOptions:
         )
 
         assert captured_ctx is not None
-        assert captured_ctx.name == "full-options"
         assert captured_ctx.tags == ["prod", "v2"]
         assert captured_ctx.metadata == {"env": "production"}
         assert captured_ctx.session_id == "sess-abc"
@@ -225,7 +207,6 @@ class TestCaptureOptions:
         capture("no-options", my_function)
 
         assert captured_ctx is not None
-        assert captured_ctx.name == "no-options"
         assert captured_ctx.tags is None
         assert captured_ctx.metadata == {}
         assert captured_ctx.session_id is None
