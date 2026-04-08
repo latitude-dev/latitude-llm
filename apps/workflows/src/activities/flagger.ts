@@ -1,9 +1,4 @@
-import {
-  getSystemQueueFlaggerBySlug,
-  RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG,
-  runSystemQueueFlaggerUseCase,
-  TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG,
-} from "@domain/annotation-queues"
+import { runSystemQueueFlaggerUseCase } from "@domain/annotation-queues"
 import { OrganizationId } from "@domain/shared"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createLogger } from "@repo/observability"
@@ -49,43 +44,5 @@ export const runFlagger = async (input: {
     queueSlug: input.queueSlug,
   })
 
-  const flagger = getSystemQueueFlaggerBySlug(input.queueSlug)
-
-  if (!flagger) {
-    logger.info("System queue still uses placeholder flagger", {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      traceId: input.traceId,
-      queueSlug: input.queueSlug,
-    })
-
-    return { matched: false }
-  }
-
-  const result = await runSystemQueueFlagger(input)
-
-  if (input.queueSlug === TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG) {
-    logger.info("Finished deterministic Tool Call Errors flagger", {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      traceId: input.traceId,
-      queueSlug: input.queueSlug,
-      matched: result.matched,
-    })
-
-    return result
-  }
-
-  if (input.queueSlug === RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG) {
-    logger.info("Resource Outliers flagger is not implemented yet", {
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      traceId: input.traceId,
-      queueSlug: input.queueSlug,
-    })
-
-    return { matched: false }
-  }
-
-  return result
+  return await runSystemQueueFlagger(input)
 }
