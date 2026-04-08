@@ -61,7 +61,7 @@ export {
   type DateRangePickerPreset,
 } from "./components/date-range-picker/date-range-picker.tsx"
 export { DetailDrawer } from "./components/detail-drawer/detail-drawer.tsx"
-export { DetailSection } from "./components/detail-drawer/detail-section.tsx"
+export { DetailDrawerSectionHeading, DetailSection } from "./components/detail-drawer/detail-section.tsx"
 export { DetailSummary, type DetailSummaryItem } from "./components/detail-drawer/detail-summary.tsx"
 export { DotIndicator, type DotIndicatorProps } from "./components/dot-indicator/dot-indicator.tsx"
 export { DropdownMenu, type MenuOption, type TriggerButtonProps } from "./components/dropdown-menu/dropdown-menu.tsx"

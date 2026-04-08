@@ -45,16 +45,14 @@ function ProjectTitle({ name, projectSlug }: { name: string; projectSlug: string
   const [emoji, title] = extractLeadingEmoji(name)
 
   return (
-    <div className="flex items-center gap-2">
-      {emoji && (
-        <div className="min-w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-          <Text.H3>{emoji}</Text.H3>
-        </div>
-      )}
-      <Link to="/projects/$projectSlug" params={{ projectSlug }}>
-        <Text.H5 weight="medium">{title}</Text.H5>
-      </Link>
-    </div>
+    <Link
+      to="/projects/$projectSlug"
+      params={{ projectSlug }}
+      className="flex min-w-0 items-center gap-1.5 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+    >
+      {emoji ? <span className="shrink-0 text-sm">{emoji}</span> : null}
+      <Text.H5 className="truncate">{title}</Text.H5>
+    </Link>
   )
 }
 
@@ -117,9 +115,9 @@ function ProjectsTable({
 
   return (
     <>
-      <Table>
+      <Table variant="listing">
         <TableHeader>
-          <TableRow verticalPadding>
+          <TableRow hoverable={false}>
             <TableHead>Name</TableHead>
             <TableHead className="w-44">
               <div className="flex items-center gap-1.5">
@@ -136,10 +134,10 @@ function ProjectsTable({
             <TableHead className="w-44">
               <div className="flex items-center gap-1.5">
                 <Icon icon={TextAlignStartIcon} size="sm" color="foregroundMuted" />
-                <span>Traces</span>
+                <span>Traces (7D)</span>
               </div>
             </TableHead>
-            <TableHead />
+            <TableHead align="right" className="w-12 min-w-12" />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -148,7 +146,6 @@ function ProjectsTable({
             return (
               <TableRow
                 key={project.id}
-                verticalPadding
                 className="cursor-pointer"
                 onClick={() =>
                   void router.navigate({ to: "/projects/$projectSlug", params: { projectSlug: project.slug } })
@@ -178,7 +175,7 @@ function ProjectsTable({
                     <Text.H5 color="foregroundMuted">{formatCount(stats?.traceCount ?? 0)}</Text.H5>
                   )}
                 </TableCell>
-                <TableCell preventDefault>
+                <TableCell preventDefault align="right" className="w-12 min-w-12" innerClassName="w-full">
                   <DropdownMenu
                     options={[
                       {
@@ -198,7 +195,10 @@ function ProjectsTable({
                     side="bottom"
                     align="end"
                     triggerButtonProps={{
-                      className: "border-none justify-end cursor-pointer",
+                      variant: "ghost",
+                      size: "icon",
+                      className:
+                        "shrink-0 border-0 bg-transparent shadow-none hover:bg-transparent hover:shadow-none focus-visible:bg-transparent data-[state=open]:bg-transparent",
                     }}
                   />
                 </TableCell>
@@ -305,13 +305,13 @@ function DashboardPageContent() {
         }
         actions={
           <TableWithHeader.Button onClick={() => setCreateOpen(true)}>
-            <Icon icon={PlusIcon} size="sm" />
-            Project
+            <Icon icon={PlusIcon} size="sm" color="foregroundMuted" />
+            New project
           </TableWithHeader.Button>
         }
         table={
           isLoadingProjects ? (
-            <TableSkeleton cols={5} rows={3} />
+            <TableSkeleton cols={5} rows={3} variant="listing" />
           ) : projects.length > 0 ? (
             <ProjectsTable projects={projects} statsByProjectId={statsByProjectId} isLoadingStats={isLoadingStats} />
           ) : (
