@@ -9,7 +9,8 @@ export const annotationQueues = latitudeSchema.table(
     organizationId: cuid("organization_id").notNull(), // owning organization
     projectId: cuid("project_id").notNull(), // owning project
     system: boolean("system").notNull().default(false), // true when the queue definition is provisioned by the system
-    name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project
+    name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project (soft-deleted excluded)
+    slug: varchar("slug", { length: 140 }).notNull(), // immutable URL-friendly identifier, unique within project (including soft-deleted)
     description: text("description").notNull(),
     instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
     settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
@@ -22,9 +23,14 @@ export const annotationQueues = latitudeSchema.table(
   (t) => [
     organizationRLSPolicy("annotation_queues"),
     index("annotation_queues_project_list_idx").on(t.organizationId, t.projectId, t.deletedAt, t.createdAt),
+    // Name unique per project excluding soft-deleted rows (for UI/display purposes)
     unique("annotation_queues_unique_name_per_project_idx")
       .on(t.organizationId, t.projectId, t.name, t.deletedAt)
       .nullsNotDistinct(),
+    // Slug unique per project across all rows including soft-deleted (stable identity)
+    unique("annotation_queues_unique_slug_per_project_idx").on(t.organizationId, t.projectId, t.slug),
+    // Index for system queue lookups by slug
+    index("annotation_queues_project_system_slug_idx").on(t.organizationId, t.projectId, t.system, t.slug),
   ],
 )
 

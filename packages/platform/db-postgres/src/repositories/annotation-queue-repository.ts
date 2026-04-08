@@ -22,6 +22,7 @@ const toDomainQueue = (row: typeof annotationQueues.$inferSelect): AnnotationQue
     projectId: row.projectId,
     system: row.system,
     name: row.name,
+    slug: row.slug,
     description: row.description,
     instructions: row.instructions,
     settings: row.settings,
@@ -211,6 +212,115 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             }),
             Effect.mapError((cause) => new RepositoryError({ operation: "findByIdInProject", cause })),
           ),
+
+      findBySlugInProject: ({ projectId, queueSlug }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(annotationQueues)
+              .where(
+                and(
+                  eq(annotationQueues.organizationId, organizationId),
+                  eq(annotationQueues.projectId, projectId),
+                  eq(annotationQueues.slug, queueSlug),
+                  isNull(annotationQueues.deletedAt),
+                ),
+              )
+              .limit(1),
+          )
+          .pipe(
+            Effect.map((rows) => {
+              const row = rows[0]
+              return row !== undefined ? toDomainQueue(row) : null
+            }),
+            Effect.mapError((cause) => new RepositoryError({ operation: "findBySlugInProject", cause })),
+          ),
+
+      listSystemQueuesByProject: ({ projectId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(annotationQueues)
+              .where(
+                and(
+                  eq(annotationQueues.organizationId, organizationId),
+                  eq(annotationQueues.projectId, projectId),
+                  eq(annotationQueues.system, true),
+                  isNull(annotationQueues.deletedAt),
+                ),
+              )
+              .orderBy(annotationQueues.createdAt),
+          )
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainQueue)),
+            Effect.mapError((cause) => new RepositoryError({ operation: "listSystemQueuesByProject", cause })),
+          ),
+
+      findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(annotationQueues)
+              .where(
+                and(
+                  eq(annotationQueues.organizationId, organizationId),
+                  eq(annotationQueues.projectId, projectId),
+                  eq(annotationQueues.system, true),
+                  eq(annotationQueues.slug, queueSlug),
+                ),
+              )
+              .limit(1),
+          )
+          .pipe(
+            Effect.map((rows) => {
+              const row = rows[0]
+              return row !== undefined ? toDomainQueue(row) : null
+            }),
+            Effect.mapError((cause) => new RepositoryError({ operation: "findSystemQueueBySlugInProject", cause })),
+          ),
+
+      save: (queue) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .insert(annotationQueues)
+              .values({
+                id: queue.id,
+                organizationId,
+                projectId: queue.projectId,
+                system: queue.system,
+                name: queue.name,
+                slug: queue.slug,
+                description: queue.description,
+                instructions: queue.instructions,
+                settings: queue.settings,
+                assignees: queue.assignees,
+                totalItems: queue.totalItems,
+                completedItems: queue.completedItems,
+                deletedAt: queue.deletedAt,
+                createdAt: queue.createdAt,
+                updatedAt: queue.updatedAt,
+              })
+              .onConflictDoUpdate({
+                target: annotationQueues.id,
+                set: {
+                  name: queue.name,
+                  slug: queue.slug,
+                  description: queue.description,
+                  instructions: queue.instructions,
+                  settings: queue.settings,
+                  assignees: queue.assignees,
+                  totalItems: queue.totalItems,
+                  completedItems: queue.completedItems,
+                  deletedAt: queue.deletedAt,
+                  updatedAt: queue.updatedAt,
+                },
+              }),
+          )
+          .pipe(Effect.mapError((cause) => new RepositoryError({ operation: "save", cause }))),
     } satisfies AnnotationQueueRepositoryShape
   }),
 )
