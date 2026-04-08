@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "latitude-llm",
+  "description": "Stub only — disconnect this repo in Mintlify Git settings.",
+  "colors": {
+    "primary": "#64748b"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Notice",
+        "pages": ["mintlify-disconnect-notice"]
+      }
+    ]
+  }
+}

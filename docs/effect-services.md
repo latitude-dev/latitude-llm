@@ -2,7 +2,7 @@
 
 The `docs/` tree is **internal** contributor documentation only. Do not connect it to public doc hosts (for example Mintlify) or treat it as a customer-facing docs site.
 
-If a minimal `docs.json` exists at the **repository root**, it is only there to satisfy Mintlify’s GitHub check until maintainers **disconnect this repo** in Mintlify; it does not publish `docs/` and is not product documentation.
+If minimal **`docs.json`** files exist at the **repository root** and/or under **`docs/`**, they are only there to satisfy Mintlify’s GitHub check (depending on whether the dashboard documentation root is the repo root or `docs/`). They do not make `docs/` a public product docs site. **Disconnect Mintlify** from this repo when possible, then remove those stubs.
 
 This document describes how domain and platform **service tags** are defined, and how that maps to upstream Effect naming when the catalog `effect` version moves.
 
