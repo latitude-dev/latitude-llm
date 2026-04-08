@@ -41,9 +41,10 @@ const createSystemQueue = (
 /**
  * Idempotently provisions default system annotation queues for a project.
  *
- * - Creates queues that don't exist yet
+ * - Creates queues that don't exist yet (using insertIfNotExists for true idempotency)
  * - Skips queues that have been soft-deleted (respects user deletion)
  * - All system queues use the same slug generation from their canonical name
+ * - Safe for concurrent calls: insertIfNotExists handles race conditions gracefully
  */
 export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) =>
   Effect.gen(function* () {
@@ -74,8 +75,8 @@ export const provisionSystemQueuesUseCase = (input: ProvisionSystemQueuesInput) 
           }
 
           const queue = createSystemQueue(projectId, organizationId, definition)
-          yield* queueRepository.save(queue)
-          results.push({ queueSlug: slug, action: "created" })
+          const wasInserted = yield* queueRepository.insertIfNotExists(queue)
+          results.push({ queueSlug: slug, action: wasInserted ? "created" : "exists" })
         }
 
         return results
