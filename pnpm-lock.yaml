@@ -61,8 +61,8 @@ catalogs:
       specifier: 1.0.0-beta.15-859cf75
       version: 1.0.0-beta.15-859cf75
     effect:
-      specifier: 4.0.0-beta.3
-      version: 4.0.0-beta.3
+      specifier: 4.0.0-beta.4
+      version: 4.0.0-beta.4
     fast-json-stable-stringify:
       specifier: 2.1.0
       version: 2.1.0
@@ -210,7 +210,7 @@ importers:
         version: link:../../packages/utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       hono:
         specifier: 'catalog:'
         version: 4.12.12
@@ -283,7 +283,7 @@ importers:
         version: link:../../packages/utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       hono:
         specifier: 'catalog:'
         version: 4.12.12
@@ -380,7 +380,7 @@ importers:
         version: 1.5.6(d6d8d64f837b6d449cb32590d88f9b85)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       lucide-react:
         specifier: ^0.481.0
         version: 0.481.0(react@19.2.4)
@@ -525,7 +525,7 @@ importers:
         version: 1.15.0(esbuild@0.27.3)(tslib@2.8.1)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -589,7 +589,7 @@ importers:
         version: 1.15.0
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
@@ -630,7 +630,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
@@ -648,7 +648,7 @@ importers:
         version: link:../spans
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -672,7 +672,7 @@ importers:
         version: link:../spans
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
@@ -690,7 +690,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -705,7 +705,7 @@ importers:
         version: link:../spans
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       papaparse:
         specifier: ^5.5.3
         version: 5.5.3
@@ -724,7 +724,7 @@ importers:
         version: 1.0.9(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       react:
         specifier: 'catalog:'
         version: 19.2.4
@@ -755,7 +755,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -767,7 +767,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
 
   packages/domain/issues:
     dependencies:
@@ -788,7 +788,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -820,7 +820,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -832,7 +832,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -844,7 +844,7 @@ importers:
         version: link:../events
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -863,7 +863,7 @@ importers:
         version: link:../spans
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -875,7 +875,7 @@ importers:
         version: 3.3.0
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -912,7 +912,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       protobufjs:
         specifier: 'catalog:'
         version: 7.5.4
@@ -933,7 +933,7 @@ importers:
         version: link:../shared
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -960,7 +960,7 @@ importers:
         version: link:../platform/env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
 
   packages/platform/ai:
     dependencies:
@@ -975,7 +975,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
 
   packages/platform/ai-latitude:
     dependencies:
@@ -1005,7 +1005,7 @@ importers:
         version: 7.0.0-beta.45(zod@4.3.6)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
 
   packages/platform/ai-voyage:
     dependencies:
@@ -1017,7 +1017,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       voyageai:
         specifier: 'catalog:'
         version: 0.2.1
@@ -1038,7 +1038,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
     devDependencies:
       '@platform/testkit':
         specifier: workspace:*
@@ -1060,7 +1060,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       ioredis:
         specifier: 'catalog:'
         version: 5.8.2
@@ -1090,7 +1090,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       rosetta-ai:
         specifier: 'catalog:'
         version: 2.0.0
@@ -1172,7 +1172,7 @@ importers:
         version: 1.0.0-beta.15-859cf75(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0(prisma@7.4.2(@types/react@19.2.14)(better-sqlite3@12.8.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3)))(@types/mssql@9.1.9(@azure/core-client@1.10.1))(@types/pg@8.16.0)(better-sqlite3@12.8.0)(mssql@11.0.1(@azure/core-client@1.10.1))(mysql2@3.15.3)(pg@8.16.0)(postgres@3.4.7)(prisma@7.4.2(@types/react@19.2.14)(better-sqlite3@12.8.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.8.3))(valibot@1.2.0(typescript@5.8.3))(zod@4.3.6)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       pg:
         specifier: 'catalog:'
         version: 8.16.0
@@ -1215,7 +1215,7 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       weaviate-client:
         specifier: 'catalog:'
         version: 3.11.0
@@ -1234,10 +1234,10 @@ importers:
         version: link:../env
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       nodemailer:
-        specifier: ^8.0.4
-        version: 8.0.4
+        specifier: ^8.0.5
+        version: 8.0.5
     devDependencies:
       '@repo/vitest-config':
         specifier: workspace:*
@@ -1253,7 +1253,7 @@ importers:
     dependencies:
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
 
   packages/platform/queue-bullmq:
     dependencies:
@@ -1280,7 +1280,7 @@ importers:
         version: 5.28.2
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       ioredis:
         specifier: 'catalog:'
         version: 5.8.2
@@ -1311,7 +1311,7 @@ importers:
         version: link:../../utils
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       flydrive:
         specifier: ^1.2.0
         version: 1.3.0(@aws-sdk/client-s3@3.1000.0)(@aws-sdk/s3-request-presigner@3.1000.0)
@@ -1342,7 +1342,7 @@ importers:
         version: 1.6.0
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       hono:
         specifier: 'catalog:'
         version: 4.12.12
@@ -1369,7 +1369,7 @@ importers:
         version: 1.15.0(esbuild@0.27.3)(tslib@2.8.1)
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
     devDependencies:
       vitest:
         specifier: 'catalog:'
@@ -1505,7 +1505,7 @@ importers:
         version: 17.3.1
       effect:
         specifier: 'catalog:'
-        version: 4.0.0-beta.3
+        version: 4.0.0-beta.4
       fast-json-stable-stringify:
         specifier: 'catalog:'
         version: 2.1.0
@@ -7792,8 +7792,8 @@ packages:
   defu@6.1.4:
     resolution: {integrity: sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==}
 
-  defu@6.1.6:
-    resolution: {integrity: sha512-f8mefEW4WIVg4LckePx3mALjQSPQgFlg9U8yaPdlsbdYcHQyj9n2zL2LJEA52smeYxOvmd/nB7TpMtHGMTHcug==}
+  defu@6.1.7:
+    resolution: {integrity: sha512-7z22QmUWiQ/2d0KkdYmANbRUVABpZ9SNYyH5vx6PZ+nE5bcC0l7uFvEfHlyld/HcGBFTL536ClDt3DEcSlEJAQ==}
 
   delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
@@ -8003,8 +8003,8 @@ packages:
   effect@3.18.4:
     resolution: {integrity: sha512-b1LXQJLe9D11wfnOKAk3PKxuqYshQ0Heez+y5pnkd3jLj1yx9QhM72zZ9uUrOQyNvrs2GZZd/3maL0ZV18YuDA==}
 
-  effect@4.0.0-beta.3:
-    resolution: {integrity: sha512-hSc3GKzm7qK6c7MDrX/+rtSlds3+TJXvOJ6JmraQqEMeNHdu2tsrPbfAHt0ppfJAWzd6EipcXlTgEEMHw8V0fA==}
+  effect@4.0.0-beta.4:
+    resolution: {integrity: sha512-oS7yB+gWK1JQDD15JlWh+rF9lfV04TDCN+ui2YOShMjyFPIWsuStaUYWGRmqjheP128NDr3mvMtU9+leEksqhw==}
 
   electron-to-chromium@1.5.283:
     resolution: {integrity: sha512-3vifjt1HgrGW/h76UEeny+adYApveS9dH2h3p57JYzBSXJIKUJAvtmIytDKjcSCt9xHfrNCFJ7gts6vkhuq++w==}
@@ -9690,8 +9690,8 @@ packages:
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
 
-  nodemailer@8.0.4:
-    resolution: {integrity: sha512-k+jf6N8PfQJ0Fe8ZhJlgqU5qJU44Lpvp2yvidH3vp1lPnVQMgi4yEEMPXg5eJS1gFIJTVq1NHBk7Ia9ARdSBdQ==}
+  nodemailer@8.0.5:
+    resolution: {integrity: sha512-0PF8Yb1yZuQfQbq+5/pZJrtF6WQcjTd5/S4JOHs9PGFxuTqoB/icwuB44pOdURHJbRKX1PPoJZtY7R4VUoCC8w==}
     engines: {node: '>=6.0.0'}
 
   nopt@9.0.0:
@@ -18967,7 +18967,7 @@ snapshots:
     dependencies:
       chokidar: 4.0.3
       confbox: 0.2.4
-      defu: 6.1.6
+      defu: 6.1.7
       dotenv: 16.6.1
       exsolve: 1.0.8
       giget: 2.0.0
@@ -19358,7 +19358,7 @@ snapshots:
 
   defu@6.1.4: {}
 
-  defu@6.1.6:
+  defu@6.1.7:
     optional: true
 
   delayed-stream@1.0.0: {}
@@ -19512,7 +19512,7 @@ snapshots:
       fast-check: 3.23.2
     optional: true
 
-  effect@4.0.0-beta.3:
+  effect@4.0.0-beta.4:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.5.3
@@ -21609,7 +21609,7 @@ snapshots:
 
   node-releases@2.0.27: {}
 
-  nodemailer@8.0.4: {}
+  nodemailer@8.0.5: {}
 
   nopt@9.0.0:
     dependencies:
