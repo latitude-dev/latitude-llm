@@ -96,10 +96,8 @@ export function UploadBlankSlate({
           </Layout.Actions>
           <Layout.List>
             <div className="flex flex-col gap-4 flex-1 min-h-0">
-              {/* biome-ignore lint/a11y/useSemanticElements: drop zone requires div for drag events */}
-              <div
-                role="button"
-                tabIndex={0}
+              <section
+                aria-label="CSV file drop zone"
                 className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-16 transition-colors ${
                   isDragOver ? "border-primary bg-primary/5" : "border-border"
                 }`}
@@ -109,9 +107,6 @@ export function UploadBlankSlate({
                 }}
                 onDragLeave={() => setIsDragOver(false)}
                 onDrop={handleDrop}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click()
-                }}
               >
                 {parsing ? (
                   <>
@@ -149,7 +144,7 @@ export function UploadBlankSlate({
                     />
                   </>
                 )}
-              </div>
+              </section>
             </div>
           </Layout.List>
         </Layout.Content>

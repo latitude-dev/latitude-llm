@@ -32,14 +32,14 @@ export function useWaterfallCursor({
   treeWidth,
   timeRange,
 }: {
-  containerRef: React.RefObject<HTMLDivElement | null>
+  containerRef: React.RefObject<HTMLElement | null>
   treeWidth: number
   timeRange: TraceTimeRange
 }) {
   const [cursorX, setCursorX] = useState<number | null>(null)
 
   const onMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (e: React.MouseEvent<HTMLElement>) => {
       if (!containerRef.current) return
       const rect = containerRef.current.getBoundingClientRect()
       const x = e.clientX - rect.left

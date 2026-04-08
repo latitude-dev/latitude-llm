@@ -8,7 +8,7 @@ import {
   MIN_WATERFALL_WIDTH,
 } from "./helpers.ts"
 
-export function useResizablePanel({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
+export function useResizablePanel({ containerRef }: { containerRef: React.RefObject<HTMLElement | null> }) {
   const [treeWidth, setTreeWidth] = useState<number | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const startX = useRef(0)

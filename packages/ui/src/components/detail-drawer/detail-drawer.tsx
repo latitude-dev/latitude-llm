@@ -177,9 +177,7 @@ export function DetailDrawer({
   )
 
   const resizeHandle = (
-    // biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events
-    <div
-      role="separator"
+    <hr
       aria-orientation="vertical"
       aria-label="Resize panel"
       aria-valuenow={width}
@@ -188,7 +186,7 @@ export function DetailDrawer({
       aria-valuetext={`Panel width: ${width} pixels`}
       tabIndex={0}
       className={cn(
-        "relative cursor-col-resize shrink-0 transition-colors",
+        "relative w-px h-auto border-0 m-0 cursor-col-resize shrink-0 transition-colors",
         "before:absolute before:inset-y-0 before:-left-1.5 before:-right-1.5 before:content-['']",
         resizeFrom === "left" ? "border-l" : "border-r",
         isDragging ? "border-primary" : "hover:border-primary",

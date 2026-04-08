@@ -55,10 +55,10 @@ export const TreeRow = memo(function TreeRow({
   const durationMs = new Date(node.span.endTime).getTime() - new Date(node.span.startTime).getTime()
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: div with role="button" avoids invalid nested <button> elements
     <div
-      role="button"
+      role="treeitem"
       tabIndex={0}
+      aria-selected={isSelected}
       data-span-id={node.span.spanId}
       className={cn(
         "flex flex-row items-center shrink-0 cursor-pointer transition-colors",

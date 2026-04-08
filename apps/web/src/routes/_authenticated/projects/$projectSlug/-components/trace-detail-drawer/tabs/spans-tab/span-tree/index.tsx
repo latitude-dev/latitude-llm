@@ -25,7 +25,7 @@ export function SpanTree({
   readonly onToggleMinimized: () => void
   readonly isActive: boolean
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const containerRef = useRef<HTMLElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const { treeWidth, isDragging, onPointerDown, onKeyDown } = useResizablePanel({ containerRef })
@@ -101,9 +101,9 @@ export function SpanTree({
   ])
 
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: passive mouse tracking for waterfall cursor
-    <div
+    <section
       ref={containerRef}
+      aria-label="Span tree and waterfall"
       className={cn("relative flex flex-col overflow-hidden", isMinimized ? "shrink-0" : "flex-1")}
       style={isMinimized ? { maxHeight: MINIMIZED_MAX_HEIGHT } : undefined}
       onMouseMove={onMouseMove}
@@ -180,10 +180,8 @@ export function SpanTree({
       {/* Waterfall time cursor */}
       <WaterfallCursorOverlay treeWidth={resolvedTreeWidth} cursorX={cursorX} cursorTimeLabel={cursorTimeLabel} />
 
-      {/* Resize handle */}
-      {/* biome-ignore lint/a11y/useSemanticElements: resize handle requires div for drag events */}
-      <div
-        role="separator"
+      {/* Resize handle — native <hr> satisfies useSemanticElements for role="separator" */}
+      <hr
         aria-orientation="vertical"
         aria-label="Resize span tree panel"
         aria-valuenow={resolvedTreeWidth}
@@ -191,7 +189,7 @@ export function SpanTree({
         aria-valuemax={containerRef.current ? containerRef.current.offsetWidth - MIN_WATERFALL_WIDTH : 9999}
         tabIndex={0}
         className={cn(
-          "absolute top-0 bottom-0 w-px cursor-col-resize z-10 touch-none",
+          "absolute top-0 bottom-0 w-px h-auto border-0 m-0 cursor-col-resize z-10 touch-none",
           "hover:bg-primary transition-colors",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1",
           "before:absolute before:inset-y-0 before:-left-1.5 before:-right-1.5 before:content-['']",
@@ -201,7 +199,7 @@ export function SpanTree({
         onPointerDown={onPointerDown}
         onKeyDown={onKeyDown}
       />
-    </div>
+    </section>
   )
 }
 
