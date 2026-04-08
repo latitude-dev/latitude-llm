@@ -1,3 +1,5 @@
+import type { DomainEvent } from "@domain/events"
+
 /**
  * Phantom type helper: returns an empty object at runtime but carries type T
  * at compile time. This lets us define the registry as a single const object
