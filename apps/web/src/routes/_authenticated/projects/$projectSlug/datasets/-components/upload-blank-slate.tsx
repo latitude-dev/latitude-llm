@@ -1,7 +1,13 @@
 import { parseDatasetCsv } from "@domain/datasets"
 import { Button, Icon, Modal, Text, toast } from "@repo/ui"
 import { CirclePlus, FileUp, ImportIcon, Loader2, Save } from "lucide-react"
-import { useCallback, useRef, useState } from "react"
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  useCallback,
+  useRef,
+  useState,
+} from "react"
 import type { DatasetRecord } from "../../../../../../domains/datasets/datasets.functions.ts"
 import { ListingLayout as Layout } from "../../../../../../layouts/ListingLayout/index.tsx"
 import type { ParsedCsv } from "./csv-import-view.tsx"
@@ -83,6 +89,26 @@ export function UploadBlankSlate({
     [handleFile],
   )
 
+  const onDropZoneClick = useCallback(
+    (e: ReactMouseEvent<HTMLElement>) => {
+      if (parsing) return
+      if ((e.target as HTMLElement).closest("button")) return
+      fileInputRef.current?.click()
+    },
+    [parsing],
+  )
+
+  const onDropZoneKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLElement>) => {
+      if (parsing) return
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        fileInputRef.current?.click()
+      }
+    },
+    [parsing],
+  )
+
   return (
     <>
       <Layout>
@@ -100,7 +126,9 @@ export function UploadBlankSlate({
                 aria-label="CSV file drop zone"
                 className={`flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed p-16 transition-colors ${
                   isDragOver ? "border-primary bg-primary/5" : "border-border"
-                }`}
+                } ${parsing ? "" : "cursor-pointer"}`}
+                onClick={onDropZoneClick}
+                onKeyDown={onDropZoneKeyDown}
                 onDragOver={(e) => {
                   e.preventDefault()
                   setIsDragOver(true)
