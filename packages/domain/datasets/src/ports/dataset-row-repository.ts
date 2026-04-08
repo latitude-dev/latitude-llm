@@ -1,5 +1,6 @@
 import type { DatasetId, DatasetRowId, RepositoryError, SortDirection, TraceId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { DatasetRow, InsertRowFieldValue, RowFieldValue } from "../entities/dataset-row.ts"
 import type { RowNotFoundError } from "../errors.ts"
 
@@ -87,6 +88,6 @@ export interface DatasetRowRepositoryShape {
   }): Effect.Effect<number, RepositoryError>
 }
 
-export class DatasetRowRepository extends ServiceMap.Service<DatasetRowRepository, DatasetRowRepositoryShape>()(
+export class DatasetRowRepository extends EffectService<DatasetRowRepository, DatasetRowRepositoryShape>()(
   "@domain/datasets/DatasetRowRepository",
 ) {}

@@ -1,9 +1,9 @@
 export { CacheStore, type CacheStoreShape } from "@domain/shared"
 export { RedisCacheStoreLive } from "./ai-cache.ts"
 
-import { ServiceMap } from "effect"
+import { EffectService } from "@repo/effect-service"
 
-export class RedisCacheAdapterTag extends ServiceMap.Service<
+export class RedisCacheAdapterTag extends EffectService<
   RedisCacheAdapterTag,
   {
     readonly type: "redis"

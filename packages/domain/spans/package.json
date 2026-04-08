@@ -23,6 +23,7 @@
     "@domain/models": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
+    "@repo/effect-service": "workspace:*",
     "effect": "catalog:",
     "protobufjs": "catalog:",
     "rosetta-ai": "catalog:",

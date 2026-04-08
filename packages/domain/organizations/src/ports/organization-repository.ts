@@ -1,8 +1,9 @@
 import type { NotFoundError, OrganizationId, RepositoryError, UserId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { Organization } from "../entities/organization.ts"
 
-export class OrganizationRepository extends ServiceMap.Service<
+export class OrganizationRepository extends EffectService<
   OrganizationRepository,
   {
     findById: (id: OrganizationId) => Effect.Effect<Organization, NotFoundError | RepositoryError>

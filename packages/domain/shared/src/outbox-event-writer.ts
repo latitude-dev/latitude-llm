@@ -1,6 +1,7 @@
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 
-export class OutboxEventWriter extends ServiceMap.Service<
+export class OutboxEventWriter extends EffectService<
   OutboxEventWriter,
   {
     write(event: {

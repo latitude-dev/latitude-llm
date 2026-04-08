@@ -1,5 +1,5 @@
+import { EffectService } from "@repo/effect-service"
 import type { Effect } from "effect"
-import { ServiceMap } from "effect"
 import type { RepositoryError } from "./errors.ts"
 import type { OrganizationId } from "./id.ts"
 
@@ -18,4 +18,4 @@ export interface ChSqlClientShape<X = unknown> {
   ) => Effect.Effect<T, RepositoryError>
 }
 
-export class ChSqlClient extends ServiceMap.Service<ChSqlClient, ChSqlClientShape>()("@domain/shared/ChSqlClient") {}
+export class ChSqlClient extends EffectService<ChSqlClient, ChSqlClientShape>()("@domain/shared/ChSqlClient") {}

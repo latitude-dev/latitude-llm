@@ -1,5 +1,6 @@
 import type { IssueId, OrganizationId, ProjectId, RepositoryError, ScoreId, SessionId, TraceId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { Score, ScoreSource } from "../entities/score.ts"
 
 // ---------------------------------------------------------------------------
@@ -148,7 +149,7 @@ export interface ScoreAnalyticsRepositoryShape {
   }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError>
 }
 
-export class ScoreAnalyticsRepository extends ServiceMap.Service<
+export class ScoreAnalyticsRepository extends EffectService<
   ScoreAnalyticsRepository,
   ScoreAnalyticsRepositoryShape
 >()("@domain/scores/ScoreAnalyticsRepository") {}

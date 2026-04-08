@@ -1,5 +1,6 @@
 import type { IssueId, NotFoundError, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { Issue } from "../entities/issue.ts"
 
 export interface IssueListPage {
@@ -26,6 +27,6 @@ export interface IssueRepositoryShape {
   list(input: ListIssuesRepositoryInput): Effect.Effect<IssueListPage, RepositoryError>
 }
 
-export class IssueRepository extends ServiceMap.Service<IssueRepository, IssueRepositoryShape>()(
+export class IssueRepository extends EffectService<IssueRepository, IssueRepositoryShape>()(
   "@domain/issues/IssueRepository",
 ) {}

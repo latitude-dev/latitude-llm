@@ -8,7 +8,8 @@ import type {
   SpanId,
   TraceId,
 } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import { z } from "zod"
 import type { Score, ScoreSource } from "../entities/score.ts"
 
@@ -71,6 +72,6 @@ export interface ScoreRepositoryShape {
   }): Effect.Effect<ScoreListPage, RepositoryError>
 }
 
-export class ScoreRepository extends ServiceMap.Service<ScoreRepository, ScoreRepositoryShape>()(
+export class ScoreRepository extends EffectService<ScoreRepository, ScoreRepositoryShape>()(
   "@domain/scores/ScoreRepository",
 ) {}

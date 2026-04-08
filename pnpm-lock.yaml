@@ -616,6 +616,9 @@ importers:
       '@latitude-data/telemetry':
         specifier: 'catalog:'
         version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.6.0(@opentelemetry/api@1.9.0))(bufferutil@4.0.9)(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.8.3)(utf-8-validate@6.0.5)(web-tree-sitter@0.24.7)(ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5))(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -637,6 +640,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -676,6 +682,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -694,6 +703,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -768,6 +780,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -800,6 +815,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -812,6 +830,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -824,6 +845,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../events
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -843,6 +867,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -855,6 +882,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: 'catalog:'
         version: 3.3.0
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -889,6 +919,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -913,12 +946,28 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
       zod:
         specifier: 'catalog:'
         version: 4.3.6
+
+  packages/effect-service:
+    dependencies:
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.3
+    devDependencies:
+      '@biomejs/biome':
+        specifier: 'catalog:'
+        version: 2.4.6
+      typescript:
+        specifier: 'catalog:'
+        version: 5.8.3
 
   packages/observability:
     dependencies:
@@ -1040,6 +1089,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../env
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3
@@ -1195,6 +1247,9 @@ importers:
       '@platform/env':
         specifier: workspace:*
         version: link:../env
+      '@repo/effect-service':
+        specifier: workspace:*
+        version: link:../../effect-service
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3

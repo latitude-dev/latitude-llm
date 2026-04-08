@@ -1,4 +1,5 @@
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { QueuePublishError, QueueSubscribeError } from "./errors.ts"
 import type { TopicRegistry as TR } from "./topic-registry.ts"
 import type { WorkflowRegistry as WR } from "./workflow-registry.ts"
@@ -40,7 +41,7 @@ export interface QueuePublisherShape {
   readonly close: () => Effect.Effect<void>
 }
 
-export class QueuePublisher extends ServiceMap.Service<QueuePublisher, QueuePublisherShape>()(
+export class QueuePublisher extends EffectService<QueuePublisher, QueuePublisherShape>()(
   "@domain/queue/QueuePublisher",
 ) {}
 

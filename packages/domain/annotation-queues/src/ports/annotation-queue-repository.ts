@@ -1,5 +1,6 @@
 import type { ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
 
 /**
@@ -44,7 +45,7 @@ export interface AnnotationQueueRepositoryShape {
   }): Effect.Effect<AnnotationQueue | null, RepositoryError>
 }
 
-export class AnnotationQueueRepository extends ServiceMap.Service<
+export class AnnotationQueueRepository extends EffectService<
   AnnotationQueueRepository,
   AnnotationQueueRepositoryShape
 >()("@domain/annotation-queues/AnnotationQueueRepository") {}

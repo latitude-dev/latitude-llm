@@ -1,5 +1,6 @@
 import type { NotFoundError, OrganizationId, ProjectId, RepositoryError, SpanId, TraceId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { GenAIMessage } from "rosetta-ai"
 import type { Operation, Span, SpanDetail } from "../entities/span.ts"
 
@@ -51,6 +52,6 @@ export interface SpanListOptions {
   readonly offset?: number
 }
 
-export class SpanRepository extends ServiceMap.Service<SpanRepository, SpanRepositoryShape>()(
+export class SpanRepository extends EffectService<SpanRepository, SpanRepositoryShape>()(
   "@domain/spans/SpanRepository",
 ) {}

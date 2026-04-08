@@ -1,8 +1,9 @@
 import type { NotFoundError, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { PublicInvitationPreview } from "../entities/public-invitation-preview.ts"
 
-export class InvitationRepository extends ServiceMap.Service<
+export class InvitationRepository extends EffectService<
   InvitationRepository,
   {
     /**

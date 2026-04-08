@@ -1,5 +1,6 @@
 import type { FilterSet, NotFoundError, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
 
 /**
@@ -111,6 +112,6 @@ export interface TraceTimeHistogramBucket {
   readonly traceCount: number
 }
 
-export class TraceRepository extends ServiceMap.Service<TraceRepository, TraceRepositoryShape>()(
+export class TraceRepository extends EffectService<TraceRepository, TraceRepositoryShape>()(
   "@domain/spans/TraceRepository",
 ) {}

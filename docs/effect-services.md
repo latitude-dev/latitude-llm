@@ -2,61 +2,55 @@
 
 Mintlify preview (PR checks) expects a root `docs.json`; this file is included in navigation under **Platform & tooling** below.
 
-This document describes how domain and platform **service tags** are defined today, and how that maps to upstream Effect naming so we can migrate deliberately when the catalog Effect version moves.
+This document describes how domain and platform **service tags** are defined, and how that maps to upstream Effect naming when the catalog `effect` version moves.
 
-## Current stack (Effect 4.0 beta in the monorepo)
+## Current pattern: `EffectService` (`@repo/effect-service`)
 
-The workspace pins **Effect 4** (see `pnpm-workspace.yaml` catalog entry for `effect`). In that line, the public API for typed service identifiers is **`ServiceMap.Service`**, not `Effect.Service`.
+The Effect 4 line still implements class-style tags as `ServiceMap.Service` on the `effect` package. To align call sites with [effect-smol migration docs](https://github.com/Effect-TS/effect-smol/blob/main/migration/services.md) (`Context.Service`), the monorepo uses a single alias:
 
-- **Class-style tags** (the pattern used for `SqlClient`, repository ports, and most domain services):
+- **Package:** `packages/effect-service` → import `EffectService` from `@repo/effect-service`.
+- **Implementation:** `EffectService` is `ServiceMap.Service` today; if upstream exposes `Context.Service`, update **only** `packages/effect-service/src/index.ts`.
 
-  ```ts
-  import { ServiceMap } from "effect"
+**Class-style tags** (ports such as `SqlClient`, repository tags):
 
-  export class SqlClient extends ServiceMap.Service<SqlClient, SqlClientShape>()("@domain/shared/SqlClient") {}
-  ```
+```ts
+import { EffectService } from "@repo/effect-service"
 
-- **Providing implementations** uses `Layer.succeed(Tag, impl)` or `Layer.effect(Tag, …)` as in `@platform/db-postgres` (`SqlClientLive`).
+export class SqlClient extends EffectService<SqlClient, SqlClientShape>()("@domain/shared/SqlClient") {}
+```
 
-- **Consuming** uses `yield* SqlClient` inside `Effect.gen`, or `Effect.service(SqlClient)` where appropriate.
+**Providing** uses `Layer.succeed(Tag, impl)` or `Layer.effect(Tag, …)` (e.g. `SqlClientLive` in `@platform/db-postgres`).
 
-So the Linear/GitHub wording “`Effect.Service`” refers to the **concept** of a typed Effect service (tag + shape + `Layer` wiring). The **concrete constructor** in our pinned Effect package is `ServiceMap.Service`.
+**Consuming** uses `yield* SqlClient` in `Effect.gen`, or `Effect.service(SqlClient)` where appropriate.
 
 ## Upstream rename (effect-smol migration)
 
-The [effect-smol services migration guide](https://github.com/Effect-TS/effect-smol/blob/main/migration/services.md) describes the next naming:
-
-| Historical / informal | v4 (effect-smol docs) | This repo today |
+| Historical / informal | v4 (effect-smol docs) | This repo |
 | --- | --- | --- |
-| `Context.Tag` / `Effect.Tag` class | `Context.Service<…>()(id)` | `ServiceMap.Service<…>()(id)` |
-| `Effect.Service` with `effect` + `dependencies` | `Context.Service` with `make` + explicit `Layer` | N/A (we use `Layer.effect` at the platform boundary) |
+| `Context.Tag` / `Effect.Tag` class | `Context.Service<…>()(id)` | `extends EffectService<…>()(id)` |
+| `Effect.Service` with `effect` + `dependencies` | `Context.Service` with `make` + explicit `Layer` | N/A (platform uses `Layer.effect`) |
 
-When the catalog `effect` version is upgraded, expect the **module path and name** of the service constructor to follow that migration (e.g. `Context` vs `ServiceMap`). The **mechanical code changes** are then:
+When bumping catalog `effect`, first adjust **`@repo/effect-service`** if the symbol moves (e.g. `Context.Service`); call sites should stay on `EffectService`.
 
-1. Replace the import and base class for each `extends ServiceMap.Service<…>()("…")` tag.
-2. Keep the same **string id** (e.g. `"@domain/shared/SqlClient"`) unless upstream requires otherwise, so `Layer` wiring stays aligned.
-3. Run the full typecheck and tests; behavior should be unchanged if only the tag API moved.
+## Inventory: class-style service tags
 
-## Inventory: `ServiceMap.Service` class extensions
+Grep for `extends EffectService` under `packages/` (and update this list when adding ports):
 
-The following files define services with `extends ServiceMap.Service` (grep the repo for that substring when updating this list):
-
+- **@repo/effect-service**: alias definition only
 - **@domain/shared**: `sql-client.ts`, `ch-sql-client.ts`, `cache.ts`, `storage.ts`, `settings.ts`, `outbox-event-writer.ts`
-- **@domain/projects**: `project-repository.ts` (ports)
-- **@domain/organizations**: `membership-repository.ts`, `organization-repository.ts`, `invitation-repository.ts` (ports)
-- **@domain/users**: `user-repository.ts` (ports)
-- **@domain/api-keys**: `api-key-repository.ts`, `revoke-api-key.ts`
-- **@domain/annotation-queues**: `annotation-queue-repository.ts`, `annotation-queue-item-repository.ts` (ports)
-- **@domain/datasets**: `dataset-repository.ts`, `dataset-row-repository.ts` (ports)
-- **@domain/issues**: `issue-repository.ts`, `issue-projection-repository.ts` (ports)
-- **@domain/scores**: `score-repository.ts`, `score-analytics-repository.ts` (ports)
-- **@domain/spans**: `span-repository.ts`, `trace-repository.ts`, `session-repository.ts` (ports)
-- **@domain/ai**: `index.ts` (several tags)
-- **@domain/queue**: `index.ts`
+- **@domain/projects**: `project-repository.ts`
+- **@domain/organizations**: `membership-repository.ts`, `organization-repository.ts`, `invitation-repository.ts`
+- **@domain/users**: `user-repository.ts`
+- **@domain/api-keys**: `api-key-repository.ts`, `revoke-api-key.ts` (`ApiKeyCacheInvalidator`)
+- **@domain/annotation-queues**: `annotation-queue-repository.ts`, `annotation-queue-item-repository.ts`
+- **@domain/datasets**: `dataset-repository.ts`, `dataset-row-repository.ts`
+- **@domain/issues**: `issue-repository.ts`, `issue-projection-repository.ts`
+- **@domain/scores**: `score-repository.ts`, `score-analytics-repository.ts`
+- **@domain/spans**: `span-repository.ts`, `trace-repository.ts`, `session-repository.ts`
+- **@domain/ai**: `index.ts` (AI / embed / rerank / generate tags)
+- **@domain/queue**: `index.ts` (`QueuePublisher`)
 - **@platform/db-weaviate**: `wv-query-client.ts`
-- **@platform/cache-redis**: `index.ts`
-
-**Migration plan:** When bumping the catalog `effect` version, treat “rename `ServiceMap.Service` → upstream `Context.Service` (or equivalent)” as **one coordinated PR** across these files (or a small sequence of PRs by package), plus a full `pnpm typecheck` and targeted tests for `SqlClient` / repository layers.
+- **@platform/cache-redis**: `index.ts` (`RedisCacheAdapterTag`)
 
 ## SqlClient-specific notes
 

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@latitude-data/telemetry": "catalog:",
+    "@repo/effect-service": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "rosetta-ai": "catalog:",

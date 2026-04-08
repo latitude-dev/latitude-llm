@@ -1,5 +1,6 @@
 import type { ContextOptions } from "@latitude-data/telemetry"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { z } from "zod"
 import type { AICredentialError, AIError } from "./errors.ts"
 
@@ -118,14 +119,14 @@ export interface AIRerankShape {
 
 export type AIShape = AIGenerateShape & AIEmbedShape & AIRerankShape
 
-export class AIGenerate extends ServiceMap.Service<AIGenerate, AIGenerateShape>()("@domain/ai/AIGenerate") {}
+export class AIGenerate extends EffectService<AIGenerate, AIGenerateShape>()("@domain/ai/AIGenerate") {}
 
-export class AIEmbed extends ServiceMap.Service<AIEmbed, AIEmbedShape>()("@domain/ai/AIEmbed") {}
+export class AIEmbed extends EffectService<AIEmbed, AIEmbedShape>()("@domain/ai/AIEmbed") {}
 
-export class AIRerank extends ServiceMap.Service<AIRerank, AIRerankShape>()("@domain/ai/AIRerank") {}
+export class AIRerank extends EffectService<AIRerank, AIRerankShape>()("@domain/ai/AIRerank") {}
 
 // ---------------------------------------------------------------------------
 // Unified AI service
 // ---------------------------------------------------------------------------
 
-export class AI extends ServiceMap.Service<AI, AIShape>()("@domain/ai/AI") {}
+export class AI extends EffectService<AI, AIShape>()("@domain/ai/AI") {}

@@ -1,5 +1,6 @@
 import type { FilterSet, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
-import { type Effect, ServiceMap } from "effect"
+import { type Effect } from "effect"
+import { EffectService } from "@repo/effect-service"
 import type { Session } from "../entities/session.ts"
 import type { NumericRollup } from "./trace-repository.ts"
 
@@ -73,6 +74,6 @@ export const emptySessionMetrics = (): SessionMetrics => ({
   spanCount: zeroRollup(),
 })
 
-export class SessionRepository extends ServiceMap.Service<SessionRepository, SessionRepositoryShape>()(
+export class SessionRepository extends EffectService<SessionRepository, SessionRepositoryShape>()(
   "@domain/spans/SessionRepository",
 ) {}

@@ -1,10 +1,10 @@
 import type { NotFoundError, RepositoryError } from "@domain/shared"
+import { EffectService } from "@repo/effect-service"
 import type { Effect } from "effect"
-import { ServiceMap } from "effect"
 import type { User } from "../entities/user.ts"
 
 // UserRepository Service with all methods needed by use cases
-export class UserRepository extends ServiceMap.Service<
+export class UserRepository extends EffectService<
   UserRepository,
   {
     findByEmail: (email: string) => Effect.Effect<User, NotFoundError | RepositoryError>

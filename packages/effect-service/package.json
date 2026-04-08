@@ -1,21 +1,24 @@
 {
-  "name": "@domain/projects",
-  "version": "0.1.0",
+  "name": "@repo/effect-service",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@domain/shared": "workspace:*",
-    "@repo/effect-service": "workspace:*",
-    "effect": "catalog:",
-    "zod": "catalog:"
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "typescript": "catalog:"
   }
 }

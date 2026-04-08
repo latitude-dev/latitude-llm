@@ -1,5 +1,5 @@
+import { EffectService } from "@repo/effect-service"
 import type { Effect } from "effect"
-import { ServiceMap } from "effect"
 import { z } from "zod"
 import type { ConcurrentSqlTransactionError, RepositoryError } from "./errors.ts"
 import type { OrganizationId } from "./id.ts"
@@ -42,4 +42,4 @@ export interface SqlClientShape<X = unknown> {
  * SqlClient service - provides database access and transaction management.
  * Defaults to unknown for the transaction type, which platforms will narrow.
  */
-export class SqlClient extends ServiceMap.Service<SqlClient, SqlClientShape>()("@domain/shared/SqlClient") {}
+export class SqlClient extends EffectService<SqlClient, SqlClientShape>()("@domain/shared/SqlClient") {}
