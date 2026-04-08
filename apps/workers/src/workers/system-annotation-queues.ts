@@ -1,5 +1,5 @@
 import { getProjectSystemQueuesUseCase, type SystemQueueCacheEntry } from "@domain/annotation-queues"
-import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueueConsumer, WorkflowStarterShape } from "@domain/queue"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -9,27 +9,60 @@ import { getPostgresClient, getRedisClient } from "../clients.ts"
 import { deterministicSampling } from "../services/deterministic-sampling.ts"
 
 const logger = createLogger("system-annotation-queues")
+const FAN_OUT_PROGRESS_TTL_SECONDS = 24 * 60 * 60
 
 interface SystemAnnotationQueuesDeps {
   consumer: QueueConsumer
-  publisher: QueuePublisherShape
   workflowStarter: WorkflowStarterShape
 }
 
-/**
- * Handles the fan-out task for system annotation queues.
- *
- * Reads the project's active system queues from the cache (hydrating from DB on miss),
- * filters out queues with sampling=0, and publishes one gate task per candidate queue.
- *
- * The fan-out pattern isolates queue routing decisions from per-queue processing,
- * allowing each queue to be sampled and processed independently.
- *
- * @param deps - Dependencies including the queue publisher
- * @returns Async function that processes fan-out for a trace
- */
+const isDefined = <T>(value: T | null): value is T => value !== null
+
+const buildFanOutProgressKey = (organizationId: string, projectId: string, traceId: string) =>
+  `org:${organizationId}:projects:${projectId}:traces:${traceId}:system-queue-workflows-started`
+
+const startWorkflowOnce = async ({
+  redisClient,
+  workflowStarter,
+  organizationId,
+  projectId,
+  traceId,
+  queueSlug,
+}: {
+  redisClient: ReturnType<typeof getRedisClient>
+  workflowStarter: WorkflowStarterShape
+  organizationId: string
+  projectId: string
+  traceId: string
+  queueSlug: string
+}) => {
+  const workflowId = `system-queue-flagger:${traceId}:${queueSlug}`
+  const progressKey = buildFanOutProgressKey(organizationId, projectId, traceId)
+
+  const alreadyStarted = await redisClient.sismember(progressKey, workflowId)
+  if (alreadyStarted === 1) return false
+
+  await Effect.runPromise(
+    workflowStarter.start(
+      "systemQueueFlaggerWorkflow",
+      {
+        organizationId,
+        projectId,
+        traceId,
+        queueSlug,
+      },
+      {
+        workflowId,
+      },
+    ),
+  )
+
+  await redisClient.multi().sadd(progressKey, workflowId).expire(progressKey, FAN_OUT_PROGRESS_TTL_SECONDS).exec()
+  return true
+}
+
 const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
-  const { publisher } = deps
+  const { workflowStarter } = deps
 
   return async (payload: { readonly organizationId: string; readonly projectId: string; readonly traceId: string }) => {
     const postgresClient = getPostgresClient()
@@ -45,102 +78,47 @@ const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
       ),
     )
 
-    await Effect.runPromise(
-      Effect.all(
-        queues.map((queue: SystemQueueCacheEntry) =>
-          publisher.publish(
-            "system-annotation-queues",
-            "gate",
-            {
+    const sampledQueues = await Effect.runPromise(
+      Effect.forEach(
+        queues,
+        (queue: SystemQueueCacheEntry) =>
+          Effect.promise(async () => {
+            if (queue.sampling <= 0) return null
+
+            const isSampled = await deterministicSampling({
               organizationId: payload.organizationId,
               projectId: payload.projectId,
               traceId: payload.traceId,
               queueSlug: queue.queueSlug,
               sampling: queue.sampling,
-            },
-            {
-              dedupeKey: `annotation-queues:system:gate:${payload.traceId}:${queue.queueSlug}`,
-            },
-          ),
-        ),
+            })
+
+            return isSampled ? queue : null
+          }),
         { concurrency: "unbounded" },
-      ),
+      ).pipe(Effect.map((entries) => entries.filter(isDefined))),
     )
+
+    let startedWorkflows = 0
+    for (const queue of sampledQueues) {
+      const started = await startWorkflowOnce({
+        redisClient,
+        workflowStarter,
+        organizationId: payload.organizationId,
+        projectId: payload.projectId,
+        traceId: payload.traceId,
+        queueSlug: queue.queueSlug,
+      })
+
+      if (started) startedWorkflows += 1
+    }
 
     logger.info("System queue fan-out completed", {
       organizationId: payload.organizationId,
       projectId: payload.projectId,
       traceId: payload.traceId,
       totalQueues: queues.length,
-    })
-  }
-}
-
-/**
- * Handles the gate task for a single system annotation queue.
- *
- * Performs a deterministic sampling check using (organizationId, projectId, traceId, queueSlug)
- * as the hash input. If sampled in, starts a Temporal workflow for flagger processing.
- *
- * Duplicate workflow-start attempts are treated as success/no-op by the Temporal client.
- *
- * @param deps - Dependencies including the workflow starter
- * @returns Async function that processes the gate check for a queue
- */
-const handleGate = (deps: SystemAnnotationQueuesDeps) => {
-  const { workflowStarter } = deps
-
-  return async (payload: {
-    readonly organizationId: string
-    readonly projectId: string
-    readonly traceId: string
-    readonly queueSlug: string
-    readonly sampling: number
-  }) => {
-    const { organizationId, projectId, traceId, queueSlug, sampling } = payload
-
-    const isSampled = await deterministicSampling({
-      organizationId,
-      projectId,
-      traceId,
-      queueSlug,
-      sampling,
-    })
-
-    if (!isSampled) {
-      logger.info("Trace sampled out for system queue", {
-        organizationId,
-        projectId,
-        traceId,
-        queueSlug,
-        sampling,
-      })
-      return
-    }
-
-    const workflowId = `system-queue-flagger:${traceId}:${queueSlug}`
-
-    await Effect.runPromise(
-      workflowStarter.start(
-        "systemQueueFlaggerWorkflow",
-        {
-          organizationId,
-          projectId,
-          traceId,
-          queueSlug,
-        },
-        {
-          workflowId,
-        },
-      ),
-    )
-
-    logger.info("Started system queue flagger workflow", {
-      organizationId,
-      projectId,
-      traceId,
-      queueSlug,
-      workflowId,
+      startedWorkflows,
     })
   }
 }
@@ -150,6 +128,5 @@ export const createSystemAnnotationQueuesWorker = (deps: SystemAnnotationQueuesD
 
   consumer.subscribe("system-annotation-queues", {
     fanOut: (payload) => Effect.promise(async () => handleFanOut(deps)(payload)),
-    gate: (payload) => Effect.promise(async () => handleGate(deps)(payload)),
   })
 }

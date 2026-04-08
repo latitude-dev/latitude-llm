@@ -6,17 +6,8 @@ import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getPostgresClient, getRedisClient } from "../clients.ts"
 
-const logger = createLogger("project-provisioning")
+const logger = createLogger("projects")
 
-/**
- * Provisions default system annotation queues for a project.
- *
- * This is idempotent - queues that already exist are skipped, and
- * soft-deleted queues are respected (not recreated).
- *
- * @param input - Organization and project identifiers
- * @returns Array of provisioning results with queue slugs and actions
- */
 export const provisionSystemQueues = async (input: { readonly organizationId: string; readonly projectId: string }) => {
   const startTime = Date.now()
 

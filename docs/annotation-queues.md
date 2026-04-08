@@ -22,8 +22,8 @@ System annotation queues are provisioned automatically for every project. This s
 When a project is created:
 
 1. **Domain Event**: `createProjectUseCase` emits a `ProjectCreated` domain event to the Outbox table
-2. **Event Routing**: The `domain-events` worker observes the event and enqueues a `project-provisioning:provision-system-queues` task
-3. **Queue-Based Provisioning**: The `project-provisioning` worker handles idempotent queue creation via BullMQ (not Temporal—provisioning must complete before traces arrive)
+2. **Event Routing**: The `domain-events` worker observes the event and enqueues a `projects:provision` task
+3. **Queue-Based Provisioning**: The `projects` worker handles idempotent queue creation via BullMQ (not Temporal—provisioning must complete before traces arrive)
 4. **Idempotency**: Uses `ON CONFLICT (organization_id, project_id, slug) DO NOTHING` to handle replays safely
 5. **Soft-Delete Aware**: Excludes trashed queues (`deleted_at IS NULL`) when checking existence
 6. **Cache Eviction**: After provisioning, evicts the Redis cache entry for the project's system queues
@@ -41,26 +41,18 @@ Project system queue state is cached in Redis with a read-through pattern:
 
 The cache stores the full list of system queues for a project, making fan-out operations fast and reducing database load.
 
-### Trace Routing: Fan-Out/Gate Pattern
+### Trace Routing: Fan-Out Pattern
 
-When a trace ends, the system uses a fan-out/gate pattern to route it to system queues:
+When a trace ends, the system uses a fan-out pattern to route it to system queues:
 
 **Fan-Out (`system-annotation-queues:fanOut`)**:
 
 1. Triggered by `TraceEnded` domain event
 2. Reads all active system queues for the project (cached or from DB)
-3. Publishes a `system-annotation-queues:gate` task per queue
+3. Applies deterministic sampling for each queue
+4. Starts one `systemQueueFlaggerWorkflow` per sampled queue
 
-**Gate (`system-annotation-queues:gate`)**:
-
-1. Receives `(projectId, traceId, queueSlug)`
-2. Applies deterministic sampling check (queues with `sampling = 0%` are filtered out)
-3. For queues with deterministic rules (`Tool Call Errors`, `Resource Outliers`):
-   - Sampling is set to 100% during provisioning, ensuring they always pass to the workflow
-   - Rules are evaluated without LLM; if matched, workflow creates the annotation directly
-4. For queues needing LLM classification:
-   - Uses deterministic sampling (default 5%) to limit LLM spend
-   - Starts `systemQueueFlaggerWorkflow` via Temporal for the sampled traces
+The fan-out job stores which workflow IDs it has already started for a trace, so a retry can resume safely without re-enqueueing workflows that were already launched.
 
 **Deterministic Sampling**:
 
@@ -109,8 +101,6 @@ domain-events worker
     ↓
 system-annotation-queues:fanOut (list queues, apply sampling)
     ↓
-system-annotation-queues:gate (deterministic rules or LLM)
-    ↓
 systemQueueFlaggerWorkflow (Temporal - queue classification)
     ↓
 flagger activity (placeholder)
@@ -129,8 +119,8 @@ Create annotation_queue_items row (trace added to queue)
   - `evict-project-system-queues.ts` - Cache invalidation
 
 - **Workers**: `apps/workers/src/workers/`
-  - `project-provisioning.ts` - BullMQ-based provisioning
-  - `system-annotation-queues.ts` - Fan-out/gate routing
+  - `projects.ts` - BullMQ-based provisioning
+  - `system-annotation-queues.ts` - Fan-out routing
   - `domain-events.ts` - Event dispatch
 
 - **Workflows**: `apps/workflows/src/workflows/`
@@ -146,7 +136,7 @@ Create annotation_queue_items row (trace added to queue)
 All routing uses slugs rather than IDs:
 
 - Provisioning creates queues with fixed canonical slugs
-- Fan-out/gate uses `queueSlug` in task payloads
+- Fan-out and workflow start use `queueSlug` in routing identities
 - Repository methods support `findBySlugInProject` for lookups
 - This enables durable routing even if queue rows are replaced
 
@@ -210,9 +200,10 @@ Every project starts with these system-created manual queues:
 
 - system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by live filter materialization
 - whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:fanOut` for that trace
-- `system-annotation-queues:fanOut` lists all non-deleted `system = true` queues in that project and publishes one `system-annotation-queues:gate` task per queue
-- `system-annotation-queues:gate` applies each queue's `settings.sampling`; queues with deterministic rules are provisioned at `100%`, while LLM-classified queues default to `5%`
-- when sampling passes, `systemQueueFlaggerWorkflow` evaluates the queue for the trace
+- `system-annotation-queues:fanOut` lists all non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one workflow per sampled queue
+- queues with deterministic rules are provisioned at `100%`, while LLM-classified queues default to `5%`
+- the fan-out job records each started workflow ID so BullMQ retries can resume without duplicating earlier workflow starts
+- when sampling passes, `systemQueueFlaggerWorkflow` evaluates that queue for the trace
 - the workflow handles both deterministic queue rules, including `Tool Call Errors` and `Resource Outliers`, and LLM-based classification for the remaining system queues
 - the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
 - for every flagged queue, the workflow runs a separate annotation activity to validate the match and create the draft annotation

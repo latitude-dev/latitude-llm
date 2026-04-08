@@ -1,5 +1,5 @@
 import { CacheStore, type ProjectId } from "@domain/shared"
-import { Effect, Option } from "effect"
+import { Effect, Option, Schema } from "effect"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
 
 export interface SystemQueueCacheEntry {
@@ -12,6 +12,12 @@ export const CACHE_TTL_SECONDS = 300
 export const buildProjectSystemQueuesCacheKey = (organizationId: string, projectId: string): string =>
   `org:${organizationId}:projects:${projectId}:system-queues`
 
+const systemQueueCacheEntrySchema = Schema.Struct({
+  queueSlug: Schema.String,
+  sampling: Schema.Number,
+})
+const systemQueueCacheEntriesFromJsonStringSchema = Schema.fromJsonString(Schema.Array(systemQueueCacheEntrySchema))
+
 const toCacheEntry = (queue: { slug: string; settings: { sampling?: number | undefined } }): SystemQueueCacheEntry => ({
   queueSlug: queue.slug,
   sampling: queue.settings.sampling ?? 0,
@@ -19,11 +25,14 @@ const toCacheEntry = (queue: { slug: string; settings: { sampling?: number | und
 
 const parseCacheEntries = (json: string): SystemQueueCacheEntry[] | null => {
   try {
-    return JSON.parse(json) as SystemQueueCacheEntry[]
+    return [...Schema.decodeUnknownSync(systemQueueCacheEntriesFromJsonStringSchema)(json)]
   } catch {
     return null
   }
 }
+
+const encodeCacheEntries = (entries: readonly SystemQueueCacheEntry[]) =>
+  Schema.encodeSync(systemQueueCacheEntriesFromJsonStringSchema)(entries)
 
 export interface GetProjectSystemQueuesInput {
   readonly organizationId: string
@@ -49,18 +58,16 @@ export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput
     const entries = queues.map(toCacheEntry)
 
     yield* cache
-      .set(cacheKey, JSON.stringify(entries), { ttlSeconds: CACHE_TTL_SECONDS })
+      .set(cacheKey, encodeCacheEntries(entries), { ttlSeconds: CACHE_TTL_SECONDS })
       .pipe(Effect.catchTag("CacheError", () => Effect.void))
 
     return entries
   })
 
-export interface EvictProjectSystemQueuesInput {
+export const evictProjectSystemQueuesUseCase = (input: {
   readonly organizationId: string
   readonly projectId: ProjectId
-}
-
-export const evictProjectSystemQueuesUseCase = (input: EvictProjectSystemQueuesInput) =>
+}) =>
   Effect.serviceOption(CacheStore).pipe(
     Effect.flatMap(
       Option.match({

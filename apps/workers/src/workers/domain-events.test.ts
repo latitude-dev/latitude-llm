@@ -175,6 +175,29 @@ describe("domain-events dispatcher", () => {
     ])
   })
 
+  it("routes ProjectCreated to projects:provision", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope(
+      "ProjectCreated",
+      { organizationId: "org-1", projectId: "proj-1", name: "Project", slug: "project" },
+      "org-1",
+    )
+
+    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published).toHaveLength(1)
+    expect(published[0]?.queue).toBe("projects")
+    expect(published[0]?.task).toBe("provision")
+    expect(published[0]?.payload).toEqual({
+      organizationId: "org-1",
+      projectId: "proj-1",
+      name: "Project",
+      slug: "project",
+    })
+    expect(published[0]?.options?.dedupeKey).toBe("projects:provisioning:proj-1")
+  })
+
   it("fails on unhandled events", async () => {
     const { consumer } = setupDispatcher()
 

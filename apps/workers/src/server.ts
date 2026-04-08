@@ -22,7 +22,7 @@ import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createLiveTracesWorker } from "./workers/live-traces.ts"
-import { createProjectProvisioningWorker } from "./workers/project-provisioning.ts"
+import { createProjectsWorker } from "./workers/projects.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
 
@@ -109,7 +109,7 @@ const bootstrap = async () => {
     createLiveEvaluationsWorker(ctx)
     createLiveAnnotationQueuesWorker(ctx)
     createSystemAnnotationQueuesWorker(ctx)
-    createProjectProvisioningWorker({ consumer: queueConsumer })
+    createProjectsWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start())
     await Effect.runPromise(queueConsumer.start())

@@ -3,20 +3,14 @@ import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { provisionSystemQueues } from "../services/provisioning.ts"
 
-const logger = createLogger("project-provisioning")
+const logger = createLogger("projects")
 
-interface ProjectProvisioningDeps {
+interface ProjectsDeps {
   consumer: QueueConsumer
 }
 
-/**
- * Handles project provisioning by creating default system annotation queues.
- *
- * This worker listens for ProjectCreated events and idempotently provisions
- * the default set of system annotation queues for the new project.
- */
-export const createProjectProvisioningWorker = ({ consumer }: ProjectProvisioningDeps) => {
-  consumer.subscribe("project-provisioning", {
+export const createProjectsWorker = ({ consumer }: ProjectsDeps) => {
+  consumer.subscribe("projects", {
     provision: (payload) =>
       Effect.gen(function* () {
         const startTime = Date.now()

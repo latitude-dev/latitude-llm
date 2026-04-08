@@ -101,7 +101,7 @@ export const createDomainEventsWorker = ({
       ),
 
     ProjectCreated: (event) =>
-      pub.publish("project-provisioning", "provision", event.payload, {
+      pub.publish("projects", "provision", event.payload, {
         dedupeKey: `projects:provisioning:${event.payload.projectId}`,
       }),
   }

@@ -117,16 +117,9 @@ const _registry = {
       readonly projectId: string
       readonly traceId: string
     }
-    gate: {
-      readonly organizationId: string
-      readonly projectId: string
-      readonly traceId: string
-      readonly queueSlug: string
-      readonly sampling: number
-    }
   }>(),
 
-  "project-provisioning": payloads<{
+  projects: payloads<{
     provision: {
       readonly organizationId: string
       readonly projectId: string
