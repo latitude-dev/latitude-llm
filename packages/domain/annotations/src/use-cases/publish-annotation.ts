@@ -139,6 +139,7 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
 
     const annotationScore = score as AnnotationScore
     const metadata = annotationScore.metadata as AnnotationScoreMetadata
+    const preselectedIssueId = annotationScore.issueId
 
     let fullConversationText: string | undefined
     let highlightedExcerpt: string | undefined
@@ -199,6 +200,7 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
 
     const publishedScore = {
       ...annotationScore,
+      issueId: null, // we separate the preselected issue if any
       sessionId: resolvedSessionId,
       spanId: resolvedSpanId,
       feedback: enrichedFeedback,
@@ -221,20 +223,7 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
                 organizationId: publishedScore.organizationId,
                 projectId: publishedScore.projectId,
                 scoreId: publishedScore.id,
-              },
-            })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
-        } else if (publishedScore.issueId !== null) {
-          yield* outboxEventWriter
-            .write({
-              eventName: "IssueRefreshRequested",
-              aggregateId: publishedScore.id,
-              aggregateType: "score",
-              organizationId: publishedScore.organizationId,
-              payload: {
-                organizationId: publishedScore.organizationId,
-                projectId: publishedScore.projectId,
-                issueId: publishedScore.issueId,
+                issueId: preselectedIssueId,
               },
             })
             .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))

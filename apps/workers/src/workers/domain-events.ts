@@ -1,7 +1,7 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
-import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
@@ -24,11 +24,9 @@ type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
 export const createDomainEventsWorker = ({
   consumer,
   publisher: pub,
-  workflowStarter,
 }: {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
-  workflowStarter: WorkflowStarterShape
 }) => {
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) =>
@@ -77,8 +75,8 @@ export const createDomainEventsWorker = ({
       ).pipe(Effect.asVoid),
 
     IssueDiscoveryRequested: (event) =>
-      workflowStarter.start("issueDiscoveryWorkflow", event.payload, {
-        workflowId: `issues:discovery:${event.payload.scoreId}`,
+      pub.publish("issues", "discovery", event.payload, {
+        dedupeKey: `issues:discovery:${event.payload.scoreId}`,
       }),
 
     IssueRefreshRequested: (event) =>

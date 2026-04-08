@@ -84,7 +84,7 @@ export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
     ),
   )
 
-export const assignScoreToIssue = (input: AssignScoreToIssueInput) =>
+export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
   Effect.runPromise(
     assignScoreToIssueUseCase(input).pipe(
       withPostgres(
@@ -95,7 +95,7 @@ export const assignScoreToIssue = (input: AssignScoreToIssueInput) =>
     ),
   )
 
-export const syncScoreAnalytics = (input: SyncScoreAnalyticsInput) =>
+export const syncScoreAnalytics = async (input: SyncScoreAnalyticsInput) =>
   Effect.runPromise(
     syncScoreAnalyticsUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),

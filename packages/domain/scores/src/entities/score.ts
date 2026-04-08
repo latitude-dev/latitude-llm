@@ -86,7 +86,7 @@ export type EvaluationScoreMetadata = z.infer<typeof evaluationScoreMetadataSche
 
 export const annotationScoreMetadataSchema = baseScoreMetadataSchema
   .extend({
-    rawFeedback: z.string(), // original feedback text before enrichment; human-authored for human drafts/final annotations, model-authored for system-created drafts
+    rawFeedback: z.string(), // original feedback text before enrichment; human-authored for human drafts/published annotations, model-authored for system-created drafts
     ...annotationAnchorFields,
   })
   .superRefine(validateAnnotationAnchor)

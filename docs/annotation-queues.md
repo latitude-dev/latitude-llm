@@ -307,7 +307,7 @@ Queues do not replace the annotation model:
 - annotations are still canonical scores
 - queue provenance is carried through `source_id = <annotation-queue-cuid>` when the annotation came from a queue
 - annotations created directly in managed UI or public API still use `source_id = "UI" | "API"`
-- system-created queue hits create draft annotation scores with `draftedAt` set, so they remain excluded from issue discovery until a human reviews or finalizes them
+- system-created queue hits create draft annotation scores with `draftedAt` set, so they remain excluded from issue discovery until a human reviews or publishes them
 - queue completion is tracked on `annotation_queue_items.completedAt`, not on the annotation score row
 
 ## Still Pending Precise Definition

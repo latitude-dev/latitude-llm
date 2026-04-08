@@ -24,6 +24,7 @@
     "@domain/users": "workspace:*",
     "@platform/ai": "workspace:*",
     "@platform/ai-vercel": "workspace:*",
+    "@platform/ai-voyage": "workspace:*",
     "@platform/cache-redis": "workspace:*",
     "@platform/db-clickhouse": "workspace:*",
     "@platform/db-postgres": "workspace:*",

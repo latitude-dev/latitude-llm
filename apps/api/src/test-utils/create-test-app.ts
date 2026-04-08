@@ -18,8 +18,6 @@ import { honoErrorHandler } from "../middleware/error-handler.ts"
 import { destroyTouchBuffer } from "../middleware/touch-buffer.ts"
 import { registerRoutes } from "../routes/index.ts"
 import type { AppEnv } from "../types.ts"
-import { apiTestSpanRepositoryLayer } from "./api-test-span-repository.ts"
-import { apiTestTraceRepositoryLayer } from "./api-test-trace-repository.ts"
 import { createFakeRedis } from "./create-fake-redis.ts"
 
 const TEST_ENCRYPTION_KEY_HEX = "75d697b90c1e46c13bd7f7343ab2b9a9e430cdcda05d47f055e1523d54d5409b"
@@ -91,10 +89,6 @@ export const setupTestApi = () => {
       redis: createFakeRedis(),
       queuePublisher: fakePublisher,
       logTouchBuffer: false,
-      annotationRoutes: {
-        traceRepositoryLayer: apiTestTraceRepositoryLayer,
-        spanRepositoryLayer: apiTestSpanRepositoryLayer,
-      },
     })
   })
 

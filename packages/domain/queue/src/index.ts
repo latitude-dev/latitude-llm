@@ -25,6 +25,10 @@ export interface WorkflowStarterShape {
   ) => Effect.Effect<void>
 }
 
+export class WorkflowStarter extends ServiceMap.Service<WorkflowStarter, WorkflowStarterShape>()(
+  "@domain/queue/WorkflowStarter",
+) {}
+
 export interface PublishOptions {
   readonly dedupeKey?: string
   readonly debounceMs?: number

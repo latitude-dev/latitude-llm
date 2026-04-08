@@ -61,15 +61,16 @@ Its text format is intentionally part of the reliability design:
 State semantics:
 
 - draft: `draftedAt != null`
-- passed final: `draftedAt = null`, `passed = true`, `errored = false`
+- passed published: `draftedAt = null`, `passed = true`, `errored = false`
 - failed awaiting issue assignment: `draftedAt = null`, `passed = false`, `errored = false`, `issueId = null`
-- failed final: `draftedAt = null`, `passed = false`, `errored = false`, `issueId != null`
-- errored final: `draftedAt = null`, `errored = true`
+- failed published: `draftedAt = null`, `passed = false`, `errored = false`, `issueId != null`
+- errored published: `draftedAt = null`, `errored = true`
 
 Rules:
 
 - drafts are excluded from default score listings, analytics, issue discovery, and evaluation alignment
 - draft-aware surfaces such as queue review and in-progress annotation editing explicitly read drafts from Postgres
+- draft annotations may carry a preselected `issue_id`, but that value is editable intent only until publication clears `draftedAt`
 - writers must never emit a passed score with a non-empty `error`
 - errored scores are observability-relevant, but they should not participate in issue discovery or evaluation alignment
 - once a score is no longer a draft, it may later be deleted, but it should not be edited again; failed non-errored scores may still receive later `issue_id` assignment before they become fully immutable
@@ -98,8 +99,10 @@ Relationship fields:
 
 `issue_id` remains part of the canonical logical model:
 
-- issue-linked monitor scores can write it immediately
-- discovered failed scores can fill it later
+- public `/scores` ingestion does not accept caller-supplied `issueId`; canonical ownership comes from internal evaluation lookup, annotation publication, or discovery
+- issue-linked evaluation failures still write an unowned score row first, then let the centralized `issues:discovery` task resolve the linked issue and claim canonical ownership
+- draft annotations may carry it as editable issue intent while `draftedAt != null`
+- discovered failed scores can fill it later once they match or create an issue
 - helper materializations are allowed for performance, but the logical `score.issue_id` contract must remain
 
 ## Write Contracts
@@ -109,11 +112,13 @@ All score producers reuse one canonical Postgres-first write path:
 - public machine-facing score ingestion uses `POST /v1/organizations/:organizationId/projects/:projectId/scores`
 - default `/scores` uploads create `source = "custom"` rows and support arbitrary custom metadata
 - clients that upload locally executed Latitude evaluation results reuse the same `/scores` route with `_evaluation: true`, evaluation-score metadata, and the evaluation CUID as `source_id`
+- custom scores written through `/scores` always stay unowned at write time and use issue discovery when they are eligible
+- evaluation scores written through `/scores` always stay unowned at write time; later centralized issue handling may resolve an already linked evaluation issue before similarity search starts
 - annotation ingestion stays on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though annotations still persist canonical score rows
 - internal evaluation and simulation writers reuse the same score-validation and persistence path rather than maintaining a second storage model
 - source-specific metadata is validated exactly before persistence, so evaluation, annotation, and custom writers cannot drift into incompatible payload shapes
 - instrumented and uninstrumented writes both use the same canonical row shape, with `session_id`, `trace_id`, and `span_id` remaining optional
-- draft updates rewrite the same canonical Postgres row in place while `draftedAt` is still set; once a score is finalized, later writes must fail instead of mutating the immutable row
+- draft updates rewrite the same canonical Postgres row in place while `draftedAt` is still set; once a score is published, later writes must fail instead of mutating the immutable row
 
 ## Metadata
 
@@ -136,13 +141,13 @@ Because most operational score reads now live in Postgres, score indexing is par
 - partial btree on `(organization_id, project_id, session_id, created_at, id)` where `session_id IS NOT NULL` for session drilldowns
 - partial btree on `(organization_id, project_id, span_id, created_at, id)` where `span_id IS NOT NULL` for span-scoped score hydration
 - partial btree on `(organization_id, project_id, created_at, id)` where `drafted_at IS NULL AND errored = false AND passed = false AND issue_id IS NULL` for issue-discovery work selection
-- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-finalization scans and other draft-aware annotation maintenance
+- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-publication scans and other draft-aware annotation maintenance
 - do not add GIN/JSONB indexes on `metadata`, and do not add text-search indexes on `feedback` or `error` in the scores foundation phase
 
 These draft-aware indexes are the minimal annotation foundations:
 
 - trace-scoped annotation reads keep reusing canonical `scores` rows from Postgres rather than introducing a standalone annotation table
-- queue review, in-product annotation editing, and draft finalization continue to read/write the same canonical score row
+- queue review, in-product annotation editing, and draft publication continue to read/write the same canonical score row
 
 ## ClickHouse Analytics
 
@@ -193,7 +198,7 @@ Rules:
 - analytics must remain correct without `FINAL` or app-level deduplication
 - failed non-errored scores are not inserted into ClickHouse until `issue_id` is assigned and the score becomes immutable
 
-## Drafts And Finalization
+## Drafts And Publication
 
 All score writes happen in Postgres first.
 
@@ -202,22 +207,22 @@ Publication rules:
 - drafts are never saved to ClickHouse
 - non-draft passed or errored scores are saved to ClickHouse analytics immediately because they are already immutable
 - non-draft failed non-errored scores stay only in Postgres until `issue_id` is assigned
-- non-draft failed non-errored scores with no `issue_id` request discovery through the transactional `IssueDiscoveryRequested` outbox event
+- non-draft failed non-errored scores request centralized issue handling through the transactional `IssueDiscoveryRequested` outbox event, optionally carrying a selected `issueId` for published annotations
 - when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - ClickHouse analytics save must be retry-safe and preserve at-most-one row per score id
 - the canonical Postgres write transaction must never talk to ClickHouse directly; after commit, the caller runs `syncScoreAnalyticsUseCase`, which re-fetches the canonical score row and inserts into ClickHouse analytics only if the row is still immutable and not already present in analytics
-- for discovery-owned failures, the `issue-discovery` workflow runs `syncScoreAnalyticsUseCase` as a dedicated post-transaction activity after either `createIssueFromScoreUseCase` or `assignScoreToIssueUseCase`
+- for failed non-errored scores, the centralized `issues:discovery` task runs `syncScoreAnalyticsUseCase` after direct known-issue assignment, and the Temporal `issue-discovery` workflow runs the same sync after create-or-match assignment when similarity search was needed
 - when an immutable score lands on an existing issue, the same Postgres transaction writes `IssueRefreshRequested` to the outbox so debounced issue-details regeneration still remains atomic with the canonical ownership change
 - this differs from direct-publication reliability events such as `SpanIngested` and `TraceEnded`: immutable score analytics save stays synchronous-after-commit for freshness, while only the slower debounced issue-details refresh remains event-driven
 
 Draft-specific rules:
 
 - human-created UI annotations are written as drafts in Postgres immediately, so refresh-safe reads do not depend on local memory or Redis
-- draft finalization uses a debounced timeout after the last edit; the initial default is `5 minutes`
-- human-editable draft finalization is driven by the debounced `annotation-scores:publish` topic task keyed by the canonical score id rather than browser-local timers or persisted due-work scans
+- draft publication uses a debounced timeout after the last edit; the initial default is `5 minutes`
+- human-editable draft publication is driven by the debounced `annotation-scores:publish` topic task keyed by the canonical score id rather than browser-local timers or persisted due-work scans
 - system-created queue annotations are also drafts, but they use `draftedAt` rather than an error sentinel
-- system-created queue drafts do not use the automatic finalization path; they stay draft until explicit human review
-- once a draft is finalized, it may be deleted later but should not be edited again
+- system-created queue drafts do not use the automatic publication path; they stay draft until explicit human review
+- once a draft is published, it may be deleted later but should not be edited again
 
 Delete behavior:
 

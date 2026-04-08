@@ -36,12 +36,13 @@ Issue discovery uses the existing Temporal-backed workflow abstraction in `apps/
 
 The main contracts are:
 
-- `issue-discovery` as a multi-activity workflow for one eligible non-draft failed non-errored score that still needs issue assignment
+- `issue-discovery` as a multi-activity workflow for one eligible non-draft failed non-errored score that still needs similarity retrieval after the centralized `issues:discovery` gate runs
+- `issues:discovery` as a deduped single-step task that rechecks canonical score eligibility and chooses between selected/linked issue assignment or the fallback Temporal workflow
 - `issues:refresh` as a debounced single-step task for one issue whose name/description debounce window has elapsed
 
 Rules:
 
-- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher starts `issue-discovery` from that event
+- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher publishes `issues:discovery` from that event
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
 - debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
 - `IssueRefreshRequested` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour debounce window
@@ -94,7 +95,7 @@ Important state timestamps:
 Issue creation eligibility:
 
 - annotations are the primary signal
-- annotation flows can also link to an existing issue explicitly; that human choice bypasses discovery for that score
+- annotation flows can also link to an existing issue explicitly; that human choice is carried as selected issue intent once the draft is published and then resolved by the centralized `issues:discovery` task
 - failed scores from evaluations that are not already linked to an issue may also create new issues
 - failed custom scores may also create new issues
 
@@ -111,17 +112,18 @@ Inline manual issue creation from the annotation flow is intentionally deferred 
 
 For explicit link actions:
 
-- skip similarity-based discovery for that annotation score
-- write canonical ownership directly through `scores.issue_id`
-- treat the issue as annotation-backed evidence immediately
+- while the annotation is still drafted, keep the selected issue only as editable draft intent
+- skip similarity-based candidate selection for that annotation score once the draft is published
+- publication writes `IssueDiscoveryRequested` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write, and projection/analytics sync
+- treat the issue as annotation-backed evidence immediately after publication
 
 ## Discovery Pipeline
 
 Issue discovery should follow the original proposal closely:
 
 1. observe a non-draft failed, non-errored canonical score in Postgres
-2. if the score comes from an issue-linked evaluation, assign directly and stop
-3. validate eligibility for issue discovery
+2. publish `IssueDiscoveryRequested` after the canonical Postgres write commits
+3. let the deduped `issues:discovery` task recheck canonical eligibility and decide whether a selected issue or issue-linked evaluation should be assigned directly before any similarity search runs
 4. enrich annotation-originated feedback first when needed
 5. embed canonical feedback with `voyage-4-large` at `2048` dimensions
 6. run hybrid search in Weaviate using vector similarity plus BM25
@@ -131,7 +133,7 @@ Issue discovery should follow the original proposal closely:
 10. filter out candidates that do not pass the minimum rerank relevance threshold
 11. verify the final selected candidate still exists in Postgres for the same organization/project; if missing, treat it as stale projection data and continue as no-match
 12. when the final path is a brand-new issue, generate the first issue name/description synchronously from the initial issue occurrence inside the dedicated create-from-score workflow activity before starting the create transaction
-13. match an existing issue or create a new issue
+13. match an existing issue or create a new issue when the centralized gate did not already route to a known issue
 14. if the final selected candidate is stale, delete its projection object asynchronously
 15. write `scores.issue_id` in Postgres
 16. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
@@ -141,7 +143,8 @@ Issue discovery should follow the original proposal closely:
 
 Execution rules:
 
-- `issue-discovery` runs after an eligible non-draft failed non-errored score exists and still has no `issue_id`
+- `issues:discovery` runs first after an eligible non-draft failed non-errored score write commits
+- `issue-discovery` runs only when that centralized gate still needs retrieval/rerank work
 - `issues:refresh` runs after the configured debounce window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
 - in workflow orchestration, keep retrieval split into granular activities: feedback embedding (with normalization), hybrid Weaviate search, then reranking
@@ -159,7 +162,7 @@ Concrete v1 mechanics worth carrying forward:
 - hybrid search used the same canonical feedback as both the keyword query and the embedding source
 - the proven v1 defaults were `alpha = 0.75`, minimum similarity `0.8`, minimum BM25 matches `1`, initial candidate limit `1000`, rerank limit `20`, and minimum rerank relevance `0.3`
 - even a single candidate still went through reranking so the threshold could reject it
-- once an evaluation was linked to an issue, later failures from that evaluation bypassed discovery and assigned directly
+- once an evaluation is linked to an issue, later failures from that evaluation still flow through `issues:discovery`, but that centralized gate resolves the linked issue directly before similarity search starts
 
 Current v2 starting defaults layered on top of those v1 learnings:
 
@@ -295,7 +298,7 @@ Issue-linked evaluation creation is explicit:
 Once an issue-linked evaluation exists:
 
 - failed, non-errored monitor scores do not re-enter discovery
-- they assign `scores.issue_id` directly
+- they flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts and then claims `scores.issue_id`
 - they can move a resolved issue into `regressed`
 
 ## Weaviate Projection
