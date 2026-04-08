@@ -40,10 +40,10 @@ export function ProjectBreadcrumbSegment() {
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer max-w-[min(280px,45vw)] min-w-0"
+            className="flex min-w-0 max-w-[min(260px,42vw)] cursor-pointer items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-muted"
           >
-            {emoji ? <span className="text-sm shrink-0">{emoji}</span> : null}
-            <Text.H5M color="foregroundMuted" className="truncate min-w-0">
+            {emoji ? <span className="shrink-0 text-sm">{emoji}</span> : null}
+            <Text.H5M color="foregroundMuted" className="min-w-0 truncate">
               {title}
             </Text.H5M>
             <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -67,8 +67,8 @@ export function ProjectBreadcrumbSegment() {
               </DropdownMenuItem>
             )
           })}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setCreateOpen(true)} className="gap-2">
+          <DropdownMenuSeparator className="my-0" />
+          <DropdownMenuItem className="gap-2" onSelect={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Text.H5>New project</Text.H5>
           </DropdownMenuItem>

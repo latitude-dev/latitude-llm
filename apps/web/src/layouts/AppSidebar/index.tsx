@@ -52,7 +52,7 @@ export function NavItem({
       className={cn("flex cursor-pointer items-center gap-2 rounded-lg transition-colors", {
         "h-10 w-10 justify-center": collapsed,
         "px-2 py-2": !collapsed,
-        "bg-accent/10": active,
+        "bg-accent": active,
         "hover:bg-muted": !active,
       })}
       title={collapsed ? label : undefined}

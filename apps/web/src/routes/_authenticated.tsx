@@ -10,7 +10,7 @@ import {
   Text,
 } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
-import { ChevronsUpDown, Moon, Sun } from "lucide-react"
+import { ChevronsUpDown, Moon, Plus, Sun } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
@@ -94,13 +94,13 @@ function NavHeader() {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer max-w-[min(240px,40vw)] min-w-0"
+                className="flex min-w-0 max-w-[min(260px,42vw)] cursor-pointer items-center gap-1.5 rounded px-2 py-1 transition-colors hover:bg-muted"
               >
-                <span className="text-sm font-medium text-foreground truncate">{org.name}</span>
+                <Text.H5M className="min-w-0 truncate">{org.name}</Text.H5M>
                 <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="bottom" className="w-52">
+            <DropdownMenuContent align="start" side="bottom" className="flex w-52 flex-col gap-1">
               {(allOrgs ?? []).map((o) => (
                 <DropdownMenuItem
                   key={o.id}
@@ -109,12 +109,15 @@ function NavHeader() {
                     void handleOrgSwitch(o.id)
                   }}
                 >
-                  <Text.H5 className="truncate">{o.name}</Text.H5>
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <Text.H5 className="truncate">{o.name}</Text.H5>
+                  </span>
                 </DropdownMenuItem>
               ))}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setCreateOrgOpen(true)}>
-                <Text.H5>Create new organization</Text.H5>
+              <DropdownMenuSeparator className="my-0" />
+              <DropdownMenuItem className="gap-2" onSelect={() => setCreateOrgOpen(true)}>
+                <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Text.H5>New organization</Text.H5>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenuRoot>
