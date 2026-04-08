@@ -21,7 +21,7 @@ const isDefined = <T>(value: T | null): value is T => value !== null
 const buildFanOutProgressKey = (organizationId: string, projectId: string, traceId: string) =>
   `org:${organizationId}:projects:${projectId}:traces:${traceId}:system-queue-workflows-started`
 
-const startWorkflowOnce = async ({
+const startWorkflowOnce = ({
   redisClient,
   workflowStarter,
   organizationId,
@@ -39,11 +39,11 @@ const startWorkflowOnce = async ({
   const workflowId = `system-queue-flagger:${traceId}:${queueSlug}`
   const progressKey = buildFanOutProgressKey(organizationId, projectId, traceId)
 
-  const alreadyStarted = await redisClient.sismember(progressKey, workflowId)
-  if (alreadyStarted === 1) return false
+  return Effect.gen(function* () {
+    const alreadyStarted = yield* Effect.promise(() => redisClient.sismember(progressKey, workflowId))
+    if (alreadyStarted === 1) return false
 
-  await Effect.runPromise(
-    workflowStarter.start(
+    yield* workflowStarter.start(
       "systemQueueFlaggerWorkflow",
       {
         organizationId,
@@ -54,71 +54,76 @@ const startWorkflowOnce = async ({
       {
         workflowId,
       },
-    ),
-  )
+    )
 
-  await redisClient.multi().sadd(progressKey, workflowId).expire(progressKey, FAN_OUT_PROGRESS_TTL_SECONDS).exec()
-  return true
+    yield* Effect.promise(() =>
+      redisClient.multi().sadd(progressKey, workflowId).expire(progressKey, FAN_OUT_PROGRESS_TTL_SECONDS).exec(),
+    )
+
+    return true
+  })
 }
 
 const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
   const { workflowStarter } = deps
 
-  return async (payload: { readonly organizationId: string; readonly projectId: string; readonly traceId: string }) => {
+  return (payload: { readonly organizationId: string; readonly projectId: string; readonly traceId: string }) => {
     const postgresClient = getPostgresClient()
     const redisClient = getRedisClient()
 
-    const queues = await Effect.runPromise(
-      getProjectSystemQueuesUseCase({
+    return Effect.gen(function* () {
+      const queues = yield* getProjectSystemQueuesUseCase({
         organizationId: payload.organizationId,
         projectId: ProjectId(payload.projectId),
       }).pipe(
         withPostgres(AnnotationQueueRepositoryLive, postgresClient, OrganizationId(payload.organizationId)),
         Effect.provide(RedisCacheStoreLive(redisClient)),
-      ),
-    )
+      )
 
-    const sampledQueues = await Effect.runPromise(
-      Effect.forEach(
+      const sampledQueues = yield* Effect.forEach(
         queues,
         (queue: SystemQueueCacheEntry) =>
-          Effect.promise(async () => {
+          Effect.gen(function* () {
             if (queue.sampling <= 0) return null
 
-            const isSampled = await deterministicSampling({
-              organizationId: payload.organizationId,
-              projectId: payload.projectId,
-              traceId: payload.traceId,
-              queueSlug: queue.queueSlug,
-              sampling: queue.sampling,
-            })
+            const isSampled = yield* Effect.promise(() =>
+              deterministicSampling({
+                organizationId: payload.organizationId,
+                projectId: payload.projectId,
+                traceId: payload.traceId,
+                queueSlug: queue.queueSlug,
+                sampling: queue.sampling,
+              }),
+            )
 
             return isSampled ? queue : null
           }),
         { concurrency: "unbounded" },
-      ).pipe(Effect.map((entries) => entries.filter(isDefined))),
-    )
+      ).pipe(Effect.map((entries) => entries.filter(isDefined)))
 
-    let startedWorkflows = 0
-    for (const queue of sampledQueues) {
-      const started = await startWorkflowOnce({
-        redisClient,
-        workflowStarter,
-        organizationId: payload.organizationId,
-        projectId: payload.projectId,
-        traceId: payload.traceId,
-        queueSlug: queue.queueSlug,
-      })
+      const startedWorkflows = yield* Effect.forEach(
+        sampledQueues,
+        (queue) =>
+          startWorkflowOnce({
+            redisClient,
+            workflowStarter,
+            organizationId: payload.organizationId,
+            projectId: payload.projectId,
+            traceId: payload.traceId,
+            queueSlug: queue.queueSlug,
+          }),
+        { concurrency: 1 },
+      ).pipe(Effect.map((started) => started.filter(Boolean).length))
 
-      if (started) startedWorkflows += 1
-    }
-
-    logger.info("System queue fan-out completed", {
-      organizationId: payload.organizationId,
-      projectId: payload.projectId,
-      traceId: payload.traceId,
-      totalQueues: queues.length,
-      startedWorkflows,
+      yield* Effect.sync(() =>
+        logger.info("System queue fan-out completed", {
+          organizationId: payload.organizationId,
+          projectId: payload.projectId,
+          traceId: payload.traceId,
+          totalQueues: queues.length,
+          startedWorkflows,
+        }),
+      )
     })
   }
 }
@@ -127,6 +132,6 @@ export const createSystemAnnotationQueuesWorker = (deps: SystemAnnotationQueuesD
   const { consumer } = deps
 
   consumer.subscribe("system-annotation-queues", {
-    fanOut: (payload) => Effect.promise(async () => handleFanOut(deps)(payload)),
+    fanOut: handleFanOut(deps),
   })
 }
