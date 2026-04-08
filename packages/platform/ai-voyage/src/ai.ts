@@ -1,3 +1,11 @@
+/**
+ * Voyage client loading uses `createRequire` because the `voyageai` package fails under native ESM
+ * import in this repo (upstream: https://github.com/voyage-ai/typescript-sdk/issues/26).
+ * We keep a separate `import type` for typings only. When that issue is fixed in a release we publish to
+ * our catalog, switch to `import { VoyageAIClient } from "voyageai"` and delete this bridge.
+ *
+ * Re-check on every `voyageai` catalog bump, or by 2026-10-08 if unchanged. See package README.
+ */
 import { createRequire } from "node:module"
 import {
   AIEmbed,
@@ -27,8 +35,7 @@ const createVoyageClient = (): Effect.Effect<VoyageAIClient, AIError> =>
     Effect.flatMap((apiKey) =>
       Effect.try({
         try: () => {
-          // Note: this is needed because the VoyageAI SDK has a bug with ESM imports
-          // https://github.com/voyage-ai/typescript-sdk/issues/26
+          // Runtime load via CJS resolution; see file-level comment and README.
           const { VoyageAIClient } = require("voyageai") as {
             VoyageAIClient: new (config: { apiKey: string }) => VoyageAIClient
           }
