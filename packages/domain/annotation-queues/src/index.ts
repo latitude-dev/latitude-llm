@@ -1,5 +1,6 @@
 export {
   ANNOTATION_QUEUE_NAME_MAX_LENGTH,
+  ANNOTATION_QUEUE_SLUG_MAX_LENGTH,
   DETERMINISTIC_SYSTEM_QUEUE_NAMES,
   LIVE_QUEUE_DEFAULT_SAMPLING,
   QUEUE_REVIEW_HOTKEYS,
@@ -43,5 +44,21 @@ export {
   type AnnotationQueueListSortBy,
   AnnotationQueueRepository,
   type AnnotationQueueRepositoryShape,
+  type FindBySlugInput,
+  type FindSystemQueueBySlugInput,
   type ListAnnotationQueuesInput,
+  type ListSystemQueuesInput,
 } from "./ports/annotation-queue-repository.ts"
+export {
+  CACHE_TTL_SECONDS,
+  type EvictProjectSystemQueuesInput,
+  evictProjectSystemQueuesUseCase,
+  type GetProjectSystemQueuesInput,
+  getProjectSystemQueuesUseCase,
+  type SystemQueueCacheEntry,
+} from "./use-cases/get-project-system-queues.ts"
+export {
+  type ProvisionSystemQueuesError,
+  type ProvisionSystemQueuesInput,
+  provisionSystemQueuesUseCase,
+} from "./use-cases/provision-system-queues.ts"

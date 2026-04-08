@@ -1,8 +1,10 @@
 import {
   type ConflictError,
+  OutboxEventWriter,
   type ProjectId,
   type RepositoryError,
   SqlClient,
+  toRepositoryError,
   toSlug,
   type ValidationError,
 } from "@domain/shared"
@@ -56,6 +58,7 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
         const repo = yield* ProjectRepository
+        const outboxEventWriter = yield* OutboxEventWriter
 
         // Generate unique slug by appending numbers if needed
         let uniqueSlug = trimmedSlug
@@ -84,6 +87,22 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
         })
 
         yield* repo.save(project)
+
+        // Publish ProjectCreated event for downstream provisioning
+        yield* outboxEventWriter
+          .write({
+            eventName: "ProjectCreated",
+            aggregateType: "project",
+            aggregateId: project.id,
+            organizationId: project.organizationId,
+            payload: {
+              organizationId: project.organizationId,
+              projectId: project.id,
+              name: project.name,
+              slug: project.slug,
+            },
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
 
         return project
       }),
