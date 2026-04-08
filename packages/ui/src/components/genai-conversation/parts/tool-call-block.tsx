@@ -48,10 +48,25 @@ export function ToolCallBlock({
       })}
     >
       <div className="flex flex-row items-center gap-2 px-3 py-2">
-        <WrenchIcon className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="flex-1 text-left">
-          <Text.Mono size="h6">{call.name}</Text.Mono>
-        </span>
+        <button
+          type="button"
+          className={cn(
+            "flex min-w-0 flex-1 flex-row items-center gap-2 rounded-md py-0.5 -my-0.5 -ml-1 pl-1 pr-2 text-left cursor-pointer transition-colors",
+            "hover:bg-muted/50",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+          )}
+          onClick={toggleOpen}
+          aria-expanded={open}
+          aria-controls={panelId}
+          aria-label={open ? `Hide details for tool call ${call.name}` : `Show details for tool call ${call.name}`}
+        >
+          <WrenchIcon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 text-left">
+            <Text.Mono size="h6" ellipsis display="block">
+              {call.name}
+            </Text.Mono>
+          </span>
+        </button>
         <ToolCallStatusIcon result={result} />
         {call.id && <CopyButton value={call.id} tooltip={call.id} />}
         {onNavigateToSpan && (
@@ -59,10 +74,7 @@ export function ToolCallBlock({
             trigger={
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onNavigateToSpan()
-                }}
+                onClick={onNavigateToSpan}
                 className="flex items-center text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 <ScanSearchIcon className="w-4 h-4" />
@@ -77,10 +89,7 @@ export function ToolCallBlock({
           variant="ghost"
           size="icon"
           className="shrink-0 text-muted-foreground hover:text-foreground"
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleOpen()
-          }}
+          onClick={toggleOpen}
           aria-expanded={open}
           aria-controls={panelId}
           aria-label={open ? "Hide tool call details" : "Show tool call details"}
