@@ -1,5 +1,7 @@
 # Effect services in this repository
 
+Mintlify preview (PR checks) expects a root `docs.json`; this file is included in navigation under **Platform & tooling** below.
+
 This document describes how domain and platform **service tags** are defined today, and how that maps to upstream Effect naming so we can migrate deliberately when the catalog Effect version moves.
 
 ## Current stack (Effect 4.0 beta in the monorepo)
