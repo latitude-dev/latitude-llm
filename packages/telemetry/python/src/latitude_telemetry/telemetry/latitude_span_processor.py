@@ -98,12 +98,6 @@ class LatitudeSpanProcessor(SpanProcessor):
             latitude_data = get_latitude_context(otel_context.get_current())
 
         if latitude_data:
-            if latitude_data.name:
-                span.set_attribute(ATTRIBUTES.name, latitude_data.name)
-                # Only update span name for the capture root span (has latitude.capture.root attr)
-                # Child spans keep their original names (database.query, business.validate, etc.)
-                if span.attributes and span.attributes.get("latitude.capture.root"):
-                    span.update_name(latitude_data.name)
             if latitude_data.tags:
                 span.set_attribute(ATTRIBUTES.tags, json.dumps(latitude_data.tags))
             if latitude_data.metadata:
