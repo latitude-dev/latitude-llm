@@ -30,6 +30,7 @@ import {
 } from "../../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../../domains/api-keys/api-keys.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 
 export const Route = createFileRoute("/_authenticated/settings/api-keys")({
   component: ApiKeysSettingsPage,
@@ -154,19 +155,21 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
 
   return (
     <>
-      <Table>
+      <Table variant="listing">
         <TableHeader>
-          <TableRow>
+          <TableRow hoverable={false}>
             <TableHead>Name</TableHead>
             <TableHead>API Key</TableHead>
-            <TableHead />
+            <TableHead align="right" className="w-24 min-w-24" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {apiKeys.map((apiKey) => (
-            <TableRow key={apiKey.id} verticalPadding hoverable={false}>
+            <TableRow key={apiKey.id} hoverable={false}>
               <TableCell>
-                <Text.H5>{apiKey.name || "Latitude API Key"}</Text.H5>
+                <Text.H5 ellipsis noWrap className="min-w-0">
+                  {apiKey.name || "Latitude API Key"}
+                </Text.H5>
               </TableCell>
               <TableCell>
                 <CopyableText
@@ -179,8 +182,8 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
                   tooltip="Copy API key"
                 />
               </TableCell>
-              <TableCell align="right">
-                <div className="flex flex-row items-center gap-1">
+              <TableCell align="right" className="w-24 max-w-none min-w-24 shrink-0">
+                <div className="flex flex-row items-center justify-end gap-1">
                   <Tooltip
                     asChild
                     trigger={
@@ -227,16 +230,20 @@ function ApiKeysSettingsPage() {
   const apiKeys = data ?? []
 
   return (
-    <Container className="flex flex-col gap-8 pt-14">
+    <Container className="flex flex-col gap-8 p-6">
       <CreateApiKeyModal open={createOpen} setOpen={setCreateOpen} />
-      <div className="flex flex-row items-center justify-between">
-        <Text.H4 weight="bold">API Keys</Text.H4>
-        <Button variant="outline" onClick={() => setCreateOpen(true)}>
+      <div className="flex flex-row items-start justify-between gap-4">
+        <SettingsPageHeader
+          className="min-w-0 flex-1"
+          title="API Keys"
+          description="Create and manage API keys for programmatic access to the Latitude API."
+        />
+        <Button variant="outline" className="shrink-0" onClick={() => setCreateOpen(true)}>
           Create API Key
         </Button>
       </div>
       <div className="flex flex-col gap-2">
-        {isLoading ? <TableSkeleton cols={3} rows={3} /> : <ApiKeysTable apiKeys={apiKeys} />}
+        {isLoading ? <TableSkeleton cols={3} rows={3} variant="listing" /> : <ApiKeysTable apiKeys={apiKeys} />}
       </div>
     </Container>
   )

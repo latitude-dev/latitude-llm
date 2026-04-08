@@ -1,6 +1,19 @@
-import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
+import {
+  Avatar,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Icon,
+  LatitudeLogo,
+  Text,
+} from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
+import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
@@ -8,6 +21,7 @@ import { resetPostHog } from "../lib/posthog/posthog-client.ts"
 import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
+import { CreateOrganizationModal } from "./_authenticated/-components/create-organization-modal.tsx"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated")({
@@ -66,8 +80,8 @@ function NavHeader() {
   const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
-  const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
   const router = useRouter()
+  const [createOrgOpen, setCreateOrgOpen] = useState(false)
 
   if (!org) return null
 
@@ -80,76 +94,88 @@ function NavHeader() {
   }
 
   return (
-    <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0">
-      <div className="flex items-center gap-2 flex-1">
-        <Link to="/">
-          <LatitudeLogo className="h-5 w-5" />
-        </Link>
-        <span className="text-muted-foreground text-sm select-none">/</span>
-        {hasMultipleOrgs ? (
-          <DropdownMenu
-            side="bottom"
-            align="start"
-            options={
-              allOrgs?.map((o) => ({
-                label: o.name,
-                onClick: () => void handleOrgSwitch(o.id),
-              })) ?? []
-            }
-            trigger={() => (
+    <>
+      <CreateOrganizationModal open={createOrgOpen} onOpenChange={setCreateOrgOpen} />
+      <header className="w-full bg-background border-b border-border h-12 flex items-center px-4 shrink-0">
+        <div className="flex items-center gap-2 flex-1">
+          <Link to="/">
+            <LatitudeLogo className="h-5 w-5" />
+          </Link>
+          <span className="text-muted-foreground text-sm select-none">/</span>
+          <DropdownMenuRoot>
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer max-w-[min(240px,40vw)] min-w-0"
               >
-                <span className="text-sm font-medium text-foreground">{org.name}</span>
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground truncate">{org.name}</span>
+                <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="bottom" className="w-52">
+              {(allOrgs ?? []).map((o) => (
+                <DropdownMenuItem
+                  key={o.id}
+                  className={o.id === organizationId ? "bg-muted" : undefined}
+                  onSelect={() => {
+                    void handleOrgSwitch(o.id)
+                  }}
+                >
+                  <Text.H5 className="truncate">{o.name}</Text.H5>
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setCreateOrgOpen(true)}>
+                <Text.H5>Create new organization</Text.H5>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenuRoot>
+          <BreadcrumbTrail />
+        </div>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <a
+            href="https://docs.latitude.so"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-foreground hover:text-muted-foreground transition-colors"
+          >
+            Docs
+          </a>
+          <Link to="/settings" className="text-sm text-foreground hover:text-muted-foreground transition-colors">
+            Settings
+          </Link>
+          <DropdownMenu
+            side="bottom"
+            align="end"
+            options={[
+              {
+                label: "Log out",
+                type: "destructive",
+                onClick: () => {
+                  void authClient.signOut().then(async () => {
+                    // Reset PostHog AFTER sign-out so events captured during the
+                    // logout flow stay attributed. The next user starts anonymous
+                    // until PostHogIdentity remounts with a new key.
+                    await resetPostHog()
+                    void router.navigate({ to: "/login" })
+                  })
+                },
+              },
+            ]}
+            trigger={() => (
+              <button type="button" className="cursor-pointer">
+                <Avatar
+                  name={user.name?.trim() ? user.name : user.email}
+                  size="sm"
+                  imageSrc={user.image ?? undefined}
+                />
               </button>
             )}
           />
-        ) : (
-          <span className="text-sm font-medium text-foreground px-2 py-1">{org.name}</span>
-        )}
-        <BreadcrumbTrail />
-      </div>
-      <div className="flex items-center gap-4">
-        <ThemeToggle />
-        <a
-          href="https://docs.latitude.so"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-foreground hover:text-muted-foreground transition-colors"
-        >
-          Docs
-        </a>
-        <Link to="/settings" className="text-sm text-foreground hover:text-muted-foreground transition-colors">
-          Settings
-        </Link>
-        <DropdownMenu
-          side="bottom"
-          align="end"
-          options={[
-            {
-              label: "Log out",
-              type: "destructive",
-              onClick: () => {
-                void authClient.signOut().then(async () => {
-                  // Reset PostHog AFTER sign-out so events captured during the
-                  // logout flow stay attributed. The next user starts anonymous
-                  // until PostHogIdentity remounts with a new key.
-                  await resetPostHog()
-                  void router.navigate({ to: "/login" })
-                })
-              },
-            },
-          ]}
-          trigger={() => (
-            <button type="button" className="cursor-pointer">
-              <Avatar name={user.name?.trim() ? user.name : user.email} size="sm" imageSrc={user.image ?? undefined} />
-            </button>
-          )}
-        />
-      </div>
-    </header>
+        </div>
+      </header>
+    </>
   )
 }
 

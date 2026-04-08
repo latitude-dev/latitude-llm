@@ -6,6 +6,7 @@ import {
   updateOrganizationMutation,
   useOrganizationsCollection,
 } from "../../../domains/organizations/organizations.collection.ts"
+import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/issues")({
@@ -35,8 +36,11 @@ function IssuesSettingsPage() {
   if (!org) return null
 
   return (
-    <Container className="flex flex-col gap-8 pt-14">
-      <Text.H4 weight="bold">Issues</Text.H4>
+    <Container className="flex flex-col gap-8 p-6">
+      <SettingsPageHeader
+        title="Issues"
+        description="Configure monitoring preferences for resolved issues in your organization."
+      />
       <div className="flex flex-col gap-4 rounded-lg border boder-secondary bg-secondary p-6">
         <div className="flex w-full flex-row items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
