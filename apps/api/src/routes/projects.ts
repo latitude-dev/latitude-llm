@@ -7,8 +7,8 @@ import {
 } from "@domain/projects"
 import { ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { Effect } from "effect"
+import { OutboxEventWriterLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { Effect, Layer } from "effect"
 import {
   errorResponse,
   jsonBody,
@@ -137,7 +137,11 @@ export const createProjectsRoutes = () => {
 
     const project = await Effect.runPromise(
       createProjectUseCase(input).pipe(
-        withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id),
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          c.var.organization.id,
+        ),
       ),
     )
     return c.json(toResponse(project), 201)
