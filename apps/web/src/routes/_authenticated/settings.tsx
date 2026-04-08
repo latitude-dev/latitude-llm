@@ -22,7 +22,7 @@ function SettingsLayout() {
   const routerState = useRouterState()
   const pathname = routerState.location.pathname
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-h-0">
       <AppSidebar title="Settings">
         {({ collapsed }) =>
           collapsed ? (
@@ -68,7 +68,7 @@ function SettingsLayout() {
           )
         }
       </AppSidebar>
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
         <Outlet />
       </main>
     </div>

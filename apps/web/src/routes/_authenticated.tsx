@@ -1,16 +1,18 @@
 import {
   Avatar,
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRoot,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  Icon,
   LatitudeLogo,
   Text,
 } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
-import { ChevronsUpDown, Moon, Plus, Sun } from "lucide-react"
+import { BookOpen, ChevronsUpDown, Moon, Plus, Settings as SettingsIcon, Sun } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
@@ -123,19 +125,27 @@ function NavHeader() {
           </DropdownMenuRoot>
           <BreadcrumbTrail />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <ThemeToggle />
-          <a
-            href="https://docs.latitude.so"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-foreground hover:text-muted-foreground transition-colors"
-          >
-            Docs
-          </a>
-          <Link to="/settings" className="text-sm text-foreground hover:text-muted-foreground transition-colors">
-            Settings
-          </Link>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" asChild>
+              <a
+                href="https://docs.latitude.so"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5"
+              >
+                <Icon icon={BookOpen} size="2xs" color="foregroundMuted" />
+                Docs
+              </a>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/settings" className="inline-flex items-center gap-1.5">
+                <Icon icon={SettingsIcon} size="2xs" color="foregroundMuted" />
+                Settings
+              </Link>
+            </Button>
+          </div>
           <DropdownMenu
             side="bottom"
             align="end"

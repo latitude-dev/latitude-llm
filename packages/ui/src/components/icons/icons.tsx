@@ -6,6 +6,8 @@ import { cn } from "../../utils/cn.ts"
 
 const sizeMap = {
   xs: "h-3 w-3",
+  /** 14×14 — pairs with `Button` `size="sm"` icon+label rows */
+  "2xs": "h-3.5 w-3.5",
   sm: "h-4 w-4",
   default: "h-5 w-5",
   md: "h-6 w-6",

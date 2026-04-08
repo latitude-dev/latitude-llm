@@ -1,6 +1,6 @@
 import { Button, Container, FormWrapper, Input, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute, useRouter } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import {
   updateOrganizationMutation,
@@ -8,12 +8,18 @@ import {
 } from "../../../domains/organizations/organizations.collection.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 
+const authRoute = getRouteApi("/_authenticated")
+
 export const Route = createFileRoute("/_authenticated/settings/organization")({
-  component: OrganizationSettingsPage,
+  component: OrganizationSettingsRoutePage,
 })
 
-function OrganizationSettingsPage() {
-  const { organizationId } = Route.useRouteContext()
+function OrganizationSettingsRoutePage() {
+  return <OrganizationSettingsPanel />
+}
+
+export function OrganizationSettingsPanel() {
+  const { organizationId } = authRoute.useRouteContext()
   const { toast } = useToast()
   const router = useRouter()
   const { data: org } = useOrganizationsCollection((orgs) =>
@@ -41,7 +47,7 @@ function OrganizationSettingsPage() {
   return (
     <Container className="flex flex-col gap-8 p-6">
       <SettingsPageHeader title="Organization" description="Manage your organization details." />
-      <div className="flex max-w-lg flex-col gap-8">
+      <div className="flex max-w-lg flex-col gap-[24px]">
         <FormWrapper>
           <Input
             required

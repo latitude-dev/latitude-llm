@@ -33,8 +33,12 @@ import { toUserMessage } from "../../../lib/errors.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 
 export const Route = createFileRoute("/_authenticated/settings/api-keys")({
-  component: ApiKeysSettingsPage,
+  component: ApiKeysSettingsRoutePage,
 })
+
+function ApiKeysSettingsRoutePage() {
+  return <ApiKeysSettingsPanel />
+}
 
 function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const { toast } = useToast()
@@ -224,7 +228,7 @@ function ApiKeysTable({ apiKeys }: { apiKeys: ApiKeyRecord[] }) {
   )
 }
 
-function ApiKeysSettingsPage() {
+export function ApiKeysSettingsPanel() {
   const [createOpen, setCreateOpen] = useState(false)
   const { data, isLoading } = useApiKeysCollection()
   const apiKeys = data ?? []

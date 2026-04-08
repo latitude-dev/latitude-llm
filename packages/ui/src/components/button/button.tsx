@@ -55,12 +55,12 @@ const buttonVariantsConfig = cva(
           insetFaceHighlight,
         ),
         ghost:
-          "border-0 border-transparent bg-transparent text-muted-foreground shadow-none group-hover:bg-muted group-hover:shadow-none",
+          "border-0 border-transparent bg-transparent text-muted-foreground shadow-none hover:bg-muted hover:shadow-none",
         link: "border-0 bg-transparent text-accent-foreground shadow-none underline-offset-4 group-hover:underline group-hover:shadow-none",
       },
       size: {
         default: "min-h-8 px-3 py-buttonDefaultVertical",
-        sm: "h-8 rounded-lg px-3 text-xs",
+        sm: "h-7 rounded-lg px-2 text-xs",
         lg: "h-10 rounded-lg px-8",
         icon: "h-8 w-8 p-0",
         full: "min-h-8 w-full px-3 py-buttonDefaultVertical",
@@ -125,7 +125,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
           <div className="flex max-w-full flex-row items-center gap-x-1.5">
             {isLoading && (
-              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <span
+                className={cn(
+                  "shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent",
+                  size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4",
+                )}
+              />
             )}
             {children}
           </div>

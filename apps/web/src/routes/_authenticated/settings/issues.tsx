@@ -1,6 +1,6 @@
 import { Container, Label, Switch, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, getRouteApi } from "@tanstack/react-router"
 import { useCallback, useRef } from "react"
 import {
   updateOrganizationMutation,
@@ -8,12 +8,18 @@ import {
 } from "../../../domains/organizations/organizations.collection.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 
+const authRoute = getRouteApi("/_authenticated")
+
 export const Route = createFileRoute("/_authenticated/settings/issues")({
-  component: IssuesSettingsPage,
+  component: IssuesSettingsRoutePage,
 })
 
-function IssuesSettingsPage() {
-  const { organizationId } = Route.useRouteContext()
+function IssuesSettingsRoutePage() {
+  return <IssuesSettingsPanel />
+}
+
+export function IssuesSettingsPanel() {
+  const { organizationId } = authRoute.useRouteContext()
   const { toast } = useToast()
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
