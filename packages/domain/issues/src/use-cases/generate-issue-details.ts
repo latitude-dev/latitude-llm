@@ -162,6 +162,15 @@ export const generateIssueDetailsUseCase = (input: GenerateIssueDetailsInput) =>
 
     const result = yield* ai.generate({
       ...ISSUE_DETAILS_GENERATION_MODEL,
+      telemetry: {
+        spanName: "issue-details-generation",
+        tags: ["issues", "llm"],
+        metadata: {
+          projectId: input.projectId,
+          ...(input.issueId ? { issueId: input.issueId } : {}),
+          occurrenceCount: occurrences.length,
+        },
+      },
       system: ISSUE_DETAILS_SYSTEM_PROMPT,
       prompt: buildPrompt({
         previousName,

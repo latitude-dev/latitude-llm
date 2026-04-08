@@ -35,6 +35,15 @@ export const embedScoreFeedbackUseCase = (input: EmbedScoreFeedbackInput) =>
       text: score.feedback,
       model: CENTROID_EMBEDDING_MODEL,
       dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+      telemetry: {
+        spanName: "embed-score-feedback",
+        tags: ["issues", "embedding"],
+        metadata: {
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          scoreId: input.scoreId,
+        },
+      },
     })
 
     return {

@@ -1,5 +1,5 @@
 {
-  "name": "@platform/ai-vercel",
+  "name": "@platform/ai-latitude",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,12 +13,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.0-beta.19",
-    "@ai-sdk/openai": "4.0.0-beta.12",
     "@domain/ai": "workspace:*",
-    "@platform/ai-latitude": "workspace:*",
-    "ai": "7.0.0-beta.45",
-    "effect": "catalog:",
-    "zod": "catalog:"
+    "@latitude-data/telemetry": "catalog:"
   }
 }

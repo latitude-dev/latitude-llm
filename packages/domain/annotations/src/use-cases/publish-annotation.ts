@@ -179,6 +179,17 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
 
     const result = yield* ai.generate({
       ...ANNOTATION_ENRICHMENT_MODEL,
+      telemetry: {
+        spanName: "annotation-publication-enrichment",
+        tags: ["annotation", "publish-enrichment"],
+        metadata: {
+          scoreId: input.scoreId,
+          organizationId: score.organizationId,
+          projectId: score.projectId,
+          ...(score.traceId !== null ? { traceId: score.traceId } : {}),
+        },
+        ...(resolvedSessionId !== null ? { sessionId: resolvedSessionId } : {}),
+      },
       system: ENRICHMENT_SYSTEM_PROMPT,
       prompt: buildEnrichmentPrompt(metadata, { fullConversationText, highlightedExcerpt }),
       schema: annotationPublicationEnrichmentSchema,

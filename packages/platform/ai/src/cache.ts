@@ -55,10 +55,24 @@ const cacheKey = (namespace: string, input: unknown): Effect.Effect<string, AIEr
     ),
   )
 
-export const withAiCache = (ai: AIShape, cache: CacheStoreShape): AIShape => ({
+/**
+ * Applies cache-aside behavior to an existing `AI` implementation.
+ *
+ * Given the same inputs to `generate`, `embed`, or `rerank`, this wrapper
+ * checks the cache first. On a miss it delegates to the underlying AI
+ * implementation, serializes the result, and stores it before returning.
+ *
+ * `generate`, `embed`, and `rerank` exclude `telemetry` from cache keys (observability only).
+ *
+ * `generate` is also keyed on every field except `schema` (Zod objects are not serializable).
+ * Two `generate` calls that differ only in schema shape but share the same prompt/model/settings
+ * will share a cache entry — callers that need schema-level isolation should add a discriminator
+ * via `providerOptions`.
+ */
+export const withAICache = (ai: AIShape, cache: CacheStoreShape) => ({
   generate: <T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError> =>
     Effect.gen(function* () {
-      const { schema: _, ...hashable } = input
+      const { schema: _, telemetry: _telemetry, ...hashable } = input
       const key = yield* cacheKey("generate", hashable)
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
@@ -82,7 +96,8 @@ export const withAiCache = (ai: AIShape, cache: CacheStoreShape): AIShape => ({
 
   embed: (input: EmbedInput): Effect.Effect<EmbedResult, AIError> =>
     Effect.gen(function* () {
-      const key = yield* cacheKey("embed", input)
+      const { telemetry: _telemetry, ...hashableEmbed } = input
+      const key = yield* cacheKey("embed", hashableEmbed)
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {
@@ -106,7 +121,8 @@ export const withAiCache = (ai: AIShape, cache: CacheStoreShape): AIShape => ({
 
   rerank: (input: RerankInput): Effect.Effect<readonly RerankResult[], AIError> =>
     Effect.gen(function* () {
-      const key = yield* cacheKey("rerank", input)
+      const { telemetry: _telemetry, ...hashableRerank } = input
+      const key = yield* cacheKey("rerank", hashableRerank)
 
       const cached = yield* cache.get(key).pipe(Effect.mapError(toAIError("read")))
       if (cached !== null) {

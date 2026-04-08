@@ -54,7 +54,7 @@ describe("embedScoreFeedbackUseCase", () => {
     )
 
     expect(aiCalls.embed).toHaveLength(1)
-    expect(aiCalls.embed[0]).toEqual({
+    expect(aiCalls.embed[0]).toMatchObject({
       text: score.feedback,
       model: CENTROID_EMBEDDING_MODEL,
       dimensions: CENTROID_EMBEDDING_DIMENSIONS,
