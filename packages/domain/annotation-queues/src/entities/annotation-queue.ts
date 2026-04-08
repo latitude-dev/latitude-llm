@@ -1,7 +1,7 @@
 import { cuidSchema, type FilterSet, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
-import { ANNOTATION_QUEUE_NAME_MAX_LENGTH } from "../constants.ts"
+import { ANNOTATION_QUEUE_NAME_MAX_LENGTH, ANNOTATION_QUEUE_SLUG_MAX_LENGTH } from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -60,6 +60,7 @@ export const annotationQueueSchema = z.object({
   projectId: cuidSchema,
   system: z.boolean(),
   name: z.string().min(1).max(ANNOTATION_QUEUE_NAME_MAX_LENGTH),
+  slug: z.string().min(1).max(ANNOTATION_QUEUE_SLUG_MAX_LENGTH),
   description: z.string(),
   instructions: z.string(),
   settings: annotationQueueSettingsSchema,

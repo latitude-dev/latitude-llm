@@ -36,12 +36,32 @@ export interface ListAnnotationQueuesInput {
   readonly options: AnnotationQueueListOptions
 }
 
+export interface FindBySlugInput {
+  readonly projectId: ProjectId
+  readonly queueSlug: string
+}
+
+export interface FindSystemQueueBySlugInput {
+  readonly projectId: ProjectId
+  readonly queueSlug: string
+}
+
+export interface ListSystemQueuesInput {
+  readonly projectId: ProjectId
+}
+
 export interface AnnotationQueueRepositoryShape {
   listByProject(input: ListAnnotationQueuesInput): Effect.Effect<AnnotationQueueListPage, RepositoryError>
   findByIdInProject(input: {
     projectId: ProjectId
     queueId: string
   }): Effect.Effect<AnnotationQueue | null, RepositoryError>
+  findBySlugInProject(input: FindBySlugInput): Effect.Effect<AnnotationQueue | null, RepositoryError>
+  listSystemQueuesByProject(input: ListSystemQueuesInput): Effect.Effect<readonly AnnotationQueue[], RepositoryError>
+  findSystemQueueBySlugInProject(
+    input: FindSystemQueueBySlugInput,
+  ): Effect.Effect<AnnotationQueue | null, RepositoryError>
+  save(queue: AnnotationQueue): Effect.Effect<void, RepositoryError>
 }
 
 export class AnnotationQueueRepository extends ServiceMap.Service<

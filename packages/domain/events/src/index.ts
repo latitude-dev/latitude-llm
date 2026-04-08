@@ -44,6 +44,12 @@ export interface EventPayloads {
     readonly name: string
     readonly slug: string
   }
+  ProjectCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly name: string
+    readonly slug: string
+  }
 }
 
 export interface DomainEvent<
