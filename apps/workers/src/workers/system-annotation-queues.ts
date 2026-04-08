@@ -7,6 +7,7 @@ import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getPostgresClient, getRedisClient } from "../clients.ts"
 import { deterministicSampling } from "../services/deterministic-sampling.ts"
+import { createIterationProgress } from "../services/iteration-progress.ts"
 
 const logger = createLogger("system-annotation-queues")
 const FAN_OUT_PROGRESS_TTL_SECONDS = 24 * 60 * 60
@@ -17,9 +18,6 @@ interface SystemAnnotationQueuesDeps {
 }
 
 const isDefined = <T>(value: T | null): value is T => value !== null
-
-const buildFanOutProgressKey = (organizationId: string, projectId: string, traceId: string) =>
-  `org:${organizationId}:projects:${projectId}:traces:${traceId}:system-queue-workflows-started`
 
 const startWorkflowOnce = ({
   redisClient,
@@ -37,11 +35,17 @@ const startWorkflowOnce = ({
   queueSlug: string
 }) => {
   const workflowId = `system-queue-flagger:${traceId}:${queueSlug}`
-  const progressKey = buildFanOutProgressKey(organizationId, projectId, traceId)
+  const jobId = `org:${organizationId}:projects:${projectId}:traces:${traceId}:system-queue-workflows-started`
+
+  const progress = createIterationProgress({
+    redisClient,
+    jobId,
+    ttlSeconds: FAN_OUT_PROGRESS_TTL_SECONDS,
+  })
 
   return Effect.gen(function* () {
-    const alreadyStarted = yield* Effect.promise(() => redisClient.sismember(progressKey, workflowId))
-    if (alreadyStarted === 1) return false
+    const alreadyStarted = yield* progress.isComplete(workflowId)
+    if (alreadyStarted) return false
 
     yield* workflowStarter.start(
       "systemQueueFlaggerWorkflow",
@@ -56,9 +60,7 @@ const startWorkflowOnce = ({
       },
     )
 
-    yield* Effect.promise(() =>
-      redisClient.multi().sadd(progressKey, workflowId).expire(progressKey, FAN_OUT_PROGRESS_TTL_SECONDS).exec(),
-    )
+    yield* progress.markComplete(workflowId)
 
     return true
   })

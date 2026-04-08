@@ -1,4 +1,5 @@
 import { CacheStore, type ProjectId } from "@domain/shared"
+import { safeParseJson } from "@repo/utils"
 import { Effect, Option, Schema } from "effect"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
 
@@ -16,7 +17,8 @@ const systemQueueCacheEntrySchema = Schema.Struct({
   queueSlug: Schema.String,
   sampling: Schema.Number,
 })
-const systemQueueCacheEntriesFromJsonStringSchema = Schema.fromJsonString(Schema.Array(systemQueueCacheEntrySchema))
+const systemQueueCacheEntriesSchema = Schema.Array(systemQueueCacheEntrySchema)
+const systemQueueCacheEntriesFromJsonStringSchema = Schema.fromJsonString(systemQueueCacheEntriesSchema)
 
 const toCacheEntry = (queue: { slug: string; settings: { sampling?: number | undefined } }): SystemQueueCacheEntry => ({
   queueSlug: queue.slug,
@@ -25,7 +27,7 @@ const toCacheEntry = (queue: { slug: string; settings: { sampling?: number | und
 
 const parseCacheEntries = (json: string): SystemQueueCacheEntry[] | null => {
   try {
-    return [...Schema.decodeUnknownSync(systemQueueCacheEntriesFromJsonStringSchema)(json)]
+    return [...Schema.decodeUnknownSync(systemQueueCacheEntriesSchema)(safeParseJson(json))]
   } catch {
     return null
   }

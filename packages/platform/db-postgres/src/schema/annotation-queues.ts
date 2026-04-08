@@ -12,7 +12,7 @@ export const annotationQueues = latitudeSchema.table(
     name: varchar("name", { length: 128 }).notNull(),
     slug: varchar("slug", { length: 140 }).notNull(),
     description: text("description").notNull(),
-    instructions: text("instructions").notNull(),
+    instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
     settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(),
     assignees: varchar("assignees", { length: 24 }).array().notNull(),
     totalItems: integer("total_items").notNull().default(0),

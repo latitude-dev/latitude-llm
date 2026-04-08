@@ -640,6 +640,9 @@ importers:
       '@domain/spans':
         specifier: workspace:*
         version: link:../spans
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.3

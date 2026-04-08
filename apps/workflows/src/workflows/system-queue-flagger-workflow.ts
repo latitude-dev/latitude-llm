@@ -1,7 +1,10 @@
+import { createLogger } from "@repo/observability"
 import { proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 
 const { runFlagger } = proxyActivities<typeof activities>({ startToCloseTimeout: "30 seconds" })
+
+const logger = createLogger("workflows-system-queue-flagger")
 
 /**
  * System queue flagger workflow.
@@ -26,6 +29,16 @@ export const systemQueueFlaggerWorkflow = async (input: {
     traceId: input.traceId,
     queueSlug: input.queueSlug,
   })
+
+  if (result.matched) {
+    // TODO: annotate
+    logger.info("System queue flagger matched", {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+    })
+  }
 
   return {
     action: result.matched ? "matched" : ("not_matched" as const),
