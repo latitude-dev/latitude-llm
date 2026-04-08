@@ -1168,21 +1168,13 @@ type AnnotatorPayload = {
 
   system_prompt: string; // full system instructions from the trace's root GenAI span
 
-  conversation: Array<{ role: string; content: string }>; // complete conversation messages in chronological order (not truncated to last N like the flagger); content is produced by formatGenAIMessage so non-string parts (images, tool calls, blobs, reasoning) are always represented as readable text
+  conversation: Array<{ role: string; content: string }>; // complete conversation messages in chronological order (not truncated to last N like the flagger); content is produced by formatGenAIMessage so non-string parts (images, tool calls, tool results, blobs, reasoning) are always represented as readable text — tool call inputs/outputs are already inline
 
   tool_definitions: Array<{
     name: string;
     description: string;
     parameters_schema: string; // JSON schema string, truncated to SYSTEM_QUEUE_ANNOTATOR_TOOL_SCHEMA_CHARS
-  }>; // tools declared in the trace context
-
-  tool_calls: Array<{
-    tool_name: string;
-    call_index: number; // zero-based position in the full trace tool call order
-    input: string; // truncated to SYSTEM_QUEUE_ANNOTATOR_TOOL_CALL_TRUNCATION_CHARS unless the call errored
-    output: string; // truncated to SYSTEM_QUEUE_ANNOTATOR_TOOL_CALL_TRUNCATION_CHARS unless the call errored
-    errored: boolean; // true when the tool span has statusCode = "error" or the output indicates failure
-  }>; // all tool calls in the trace; errored calls include full untruncated input/output
+  }>; // tools declared in the trace context; not part of conversation messages
 
   trace_metadata: {
     turn_count: number; // total conversation turns
@@ -1321,7 +1313,6 @@ Named constants and initial defaults:
 
 - all tunables live as named constants in `packages/domain/annotation-queues/src/constants.ts`
 - `SYSTEM_QUEUE_FLAGGER_LAST_N_MESSAGES`: number of trailing conversation messages sent to the flagger; initial default `20`
-- `SYSTEM_QUEUE_ANNOTATOR_TOOL_CALL_TRUNCATION_CHARS`: character budget for tool call `input` and `output` in the annotator payload when the call did not error; initial default `500`
 - `SYSTEM_QUEUE_ANNOTATOR_TOOL_SCHEMA_CHARS`: character budget for `parameters_schema` in the annotator payload; initial default `1000`
 - `RESOURCE_OUTLIER_MULTIPLIER`: threshold multiplier applied to each project median; initial default `3` (already exists)
 - `RESOURCE_OUTLIER_WINDOW_DAYS`: rolling window for baseline median computation; initial default `7`
