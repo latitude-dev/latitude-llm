@@ -79,11 +79,9 @@ export const createIterationProgress = ({
    * Safe to call multiple times (idempotent).
    */
   const markComplete = (itemId: string | number): Effect.Effect<void, never, never> =>
-    Effect.gen(function* () {
-      yield* Effect.promise(() =>
-        redisClient.multi().sadd(progressKey, String(itemId)).expire(progressKey, ttlSeconds).exec(),
-      )
-    })
+    Effect.promise(() =>
+      redisClient.multi().sadd(progressKey, String(itemId)).expire(progressKey, ttlSeconds).exec(),
+    ).pipe(Effect.asVoid)
 
   /**
    * Mark multiple items as complete in a single atomic operation.
@@ -137,9 +135,7 @@ export const createIterationProgress = ({
    * Call after successful job completion to clean up Redis.
    */
   const clear = (): Effect.Effect<void, never, never> =>
-    Effect.gen(function* () {
-      yield* Effect.promise(() => redisClient.del(progressKey))
-    })
+    Effect.promise(() => redisClient.del(progressKey)).pipe(Effect.asVoid)
 
   return {
     isComplete,

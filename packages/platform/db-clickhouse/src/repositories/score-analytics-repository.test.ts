@@ -229,10 +229,16 @@ describe("ScoreAnalyticsRepository", () => {
 
   describe("trendByProject", () => {
     beforeEach(async () => {
+      const now = new Date()
+      const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+      const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+      const formatDate = (d: Date) =>
+        `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`
+
       await insertScores([
-        makeScoreRow({ created_at: "2026-03-10 10:00:00.000" }),
-        makeScoreRow({ created_at: "2026-03-10 14:00:00.000" }),
-        makeScoreRow({ created_at: "2026-03-11 08:00:00.000" }),
+        makeScoreRow({ created_at: `${formatDate(threeDaysAgo)} 10:00:00.000` }),
+        makeScoreRow({ created_at: `${formatDate(threeDaysAgo)} 14:00:00.000` }),
+        makeScoreRow({ created_at: `${formatDate(twoDaysAgo)} 08:00:00.000` }),
       ])
     })
 

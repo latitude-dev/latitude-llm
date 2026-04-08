@@ -32,6 +32,8 @@ export const scores = latitudeSchema.table(
     cost: bigint("cost", { mode: "number" }).notNull().default(0), // total LLM cost in microcents
 
     draftedAt: tzTimestamp("drafted_at"), // set while the score is still editable or awaiting human confirmation
+    /** User who created this score (nullable for system-generated scores). */
+    annotatorId: cuid("annotator_id"),
     ...timestamps(),
   },
   (t) => [

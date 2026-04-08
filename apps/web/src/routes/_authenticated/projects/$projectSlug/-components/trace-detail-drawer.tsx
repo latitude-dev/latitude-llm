@@ -20,12 +20,14 @@ import {
   MessageSquareIcon,
   MessagesSquareIcon,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../../components/hotkey-badge.tsx"
+import type { AnnotationRecord } from "../../../../../domains/annotations/annotations.functions.ts"
 import { useTraceDetail } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
-import { AnnotationsTab } from "./trace-detail-drawer/tabs/annotations-tab.tsx"
+import { isGlobalAnnotation, useAnnotationNavigation } from "./annotations/hooks/use-annotation-navigation.ts"
+import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
 import { TraceTab } from "./trace-detail-drawer/tabs/trace-tab.tsx"
@@ -84,6 +86,13 @@ export function TraceDetailDrawer({
   const [activeTab, setActiveTab] = useState<TabId>("trace")
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  const { scrollToAnnotation, executePendingScroll } = useAnnotationNavigation({
+    scrollContainerRef,
+    onSwitchToConversation: () => handleSetActiveTab("conversation"),
+    isConversationActive: activeTab === "conversation",
+  })
 
   useMountEffect(() => {
     onTabChange?.("trace")
@@ -94,6 +103,17 @@ export function TraceDetailDrawer({
     setVisitedTabs((prev) => new Set([...prev, tab]))
     onTabChange?.(tab)
   }
+
+  function handleAnnotationClick(annotation: AnnotationRecord) {
+    if (isGlobalAnnotation(annotation)) return
+    scrollToAnnotation(annotation)
+  }
+
+  useEffect(() => {
+    if (activeTab === "conversation" && visitedTabs.has("conversation")) {
+      executePendingScroll()
+    }
+  }, [activeTab, visitedTabs, executePendingScroll])
 
   function navigateToSpan(spanId: string | null) {
     handleSetActiveTab("spans")
@@ -234,6 +254,7 @@ export function TraceDetailDrawer({
             navigateToSpan={navigateToSpan}
             projectId={projectId}
             isActive={activeTab === "conversation"}
+            scrollContainerRef={scrollContainerRef}
           />
         )}
       </div>
@@ -248,7 +269,9 @@ export function TraceDetailDrawer({
         )}
       </div>
       <div className={cn("flex flex-col flex-1 overflow-hidden", { hidden: activeTab !== "annotations" })}>
-        {visitedTabs.has("annotations") && <AnnotationsTab projectId={projectId} traceId={traceId} />}
+        {visitedTabs.has("annotations") && (
+          <TraceAnnotationsList projectId={projectId} traceId={traceId} onAnnotationClick={handleAnnotationClick} />
+        )}
       </div>
     </DetailDrawer>
   )
