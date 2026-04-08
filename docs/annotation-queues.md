@@ -57,7 +57,6 @@ When a trace ends, the system uses a fan-out/gate pattern to route it to system 
 2. Applies deterministic sampling check (queues with `sampling = 0%` are filtered out)
 3. For queues with implemented deterministic rules:
    - `Tool Call Errors` is matched without LLM by inspecting the trace conversation history for failed or malformed tool interactions
-   - `Resource Outliers` remains reserved for a later deterministic matcher once project baseline work lands
 4. For queues needing LLM classification:
    - Uses deterministic sampling (default 5%) to limit LLM spend
    - Starts `systemQueueFlaggerWorkflow` via Temporal for the sampled traces
@@ -89,7 +88,6 @@ The Temporal workflow orchestrates trace classification for both deterministic a
 1. **`fetchTraceContext`**: Loads limited context (last N messages) from the trace
 2. **`evaluateQueueMatch`**:
    - For `Tool Call Errors`: inspects conversation history for failed tool results or malformed tool-call exchanges without any LLM call
-   - `Resource Outliers` remains deferred until project-median baseline work exists
    - For LLM-classified queues: sends queue context to a low-cost flagger LLM
    - Returns boolean decision per queue
 
@@ -213,7 +211,7 @@ Every project starts with these system-created manual queues:
 - `system-annotation-queues:fanOut` lists all non-deleted `system = true` queues in that project and publishes one `system-annotation-queues:gate` task per queue
 - `system-annotation-queues:gate` applies each queue's `settings.sampling` before any later deterministic or LLM classification work
 - when sampling passes, `systemQueueFlaggerWorkflow` evaluates the queue for the trace
-- the workflow currently handles `Tool Call Errors` through deterministic conversation-history inspection, keeps `Resource Outliers` reserved for later baseline-driven work, and uses LLM-based classification for the remaining system queues
+- the workflow currently handles `Tool Call Errors` through deterministic conversation-history inspection and uses LLM-based classification for the remaining system queues
 - the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
 - for every flagged queue, the workflow runs a separate annotation activity to validate the match and create the draft annotation
 - only if that annotation activity confirms the match does the system both create the draft annotation and add the trace to the queue
