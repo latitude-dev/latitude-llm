@@ -1,5 +1,5 @@
 {
-  "name": "@platform/ai-credentials",
+  "name": "@platform/ai",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
-    "@platform/env": "workspace:*",
+    "@platform/cache-redis": "workspace:*",
+    "@repo/utils": "workspace:*",
     "effect": "catalog:"
   }
 }

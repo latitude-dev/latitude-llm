@@ -16,8 +16,7 @@
     "@ai-sdk/anthropic": "4.0.0-beta.19",
     "@ai-sdk/openai": "4.0.0-beta.12",
     "@domain/ai": "workspace:*",
-    "@domain/shared": "workspace:*",
-    "@platform/ai-credentials": "workspace:*",
+    "@platform/env": "workspace:*",
     "ai": "7.0.0-beta.45",
     "effect": "catalog:",
     "zod": "catalog:"

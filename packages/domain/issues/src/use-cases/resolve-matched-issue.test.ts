@@ -33,6 +33,7 @@ describe("resolveMatchedIssueUseCase", () => {
 
     const result = await Effect.runPromise(
       resolveMatchedIssueUseCase({
+        organizationId,
         projectId,
         matchedIssueUuid: null,
       }).pipe(Effect.provideService(IssueRepository, issueRepository)),
@@ -55,6 +56,7 @@ describe("resolveMatchedIssueUseCase", () => {
 
     const result = await Effect.runPromise(
       resolveMatchedIssueUseCase({
+        organizationId,
         projectId,
         matchedIssueUuid: issue.uuid,
       }).pipe(Effect.provideService(IssueRepository, issueRepository)),
@@ -76,6 +78,7 @@ describe("resolveMatchedIssueUseCase", () => {
 
     const result = await Effect.runPromise(
       resolveMatchedIssueUseCase({
+        organizationId,
         projectId,
         matchedIssueUuid: "11111111-1111-4111-8111-111111111111",
       }).pipe(Effect.provideService(IssueRepository, issueRepository)),

@@ -454,6 +454,9 @@ importers:
       '@domain/events':
         specifier: workspace:*
         version: link:../../packages/domain/events
+      '@domain/issues':
+        specifier: workspace:*
+        version: link:../../packages/domain/issues
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
@@ -466,9 +469,9 @@ importers:
       '@domain/users':
         specifier: workspace:*
         version: link:../../packages/domain/users
-      '@platform/ai-credentials':
+      '@platform/ai':
         specifier: workspace:*
-        version: link:../../packages/platform/ai-credentials
+        version: link:../../packages/platform/ai
       '@platform/ai-vercel':
         specifier: workspace:*
         version: link:../../packages/platform/ai-vercel
@@ -481,6 +484,9 @@ importers:
       '@platform/db-postgres':
         specifier: workspace:*
         version: link:../../packages/platform/db-postgres
+      '@platform/db-weaviate':
+        specifier: workspace:*
+        version: link:../../packages/platform/db-weaviate
       '@platform/email-transport':
         specifier: workspace:*
         version: link:../../packages/platform/email-transport
@@ -521,9 +527,6 @@ importers:
 
   apps/workflows:
     dependencies:
-      '@domain/ai':
-        specifier: workspace:*
-        version: link:../../packages/domain/ai
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
@@ -533,9 +536,9 @@ importers:
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
-      '@platform/ai-credentials':
+      '@platform/ai':
         specifier: workspace:*
-        version: link:../../packages/platform/ai-credentials
+        version: link:../../packages/platform/ai
       '@platform/ai-vercel':
         specifier: workspace:*
         version: link:../../packages/platform/ai-vercel
@@ -607,9 +610,6 @@ importers:
 
   packages/domain/ai:
     dependencies:
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../shared
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -929,14 +929,17 @@ importers:
         specifier: ^0.213.0
         version: 0.213.0(@opentelemetry/api@1.9.0)
 
-  packages/platform/ai-credentials:
+  packages/platform/ai:
     dependencies:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
-      '@platform/env':
+      '@platform/cache-redis':
         specifier: workspace:*
-        version: link:../env
+        version: link:../cache-redis
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.1
@@ -952,12 +955,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
-      '@domain/shared':
+      '@platform/env':
         specifier: workspace:*
-        version: link:../../domain/shared
-      '@platform/ai-credentials':
-        specifier: workspace:*
-        version: link:../ai-credentials
+        version: link:../env
       ai:
         specifier: 7.0.0-beta.45
         version: 7.0.0-beta.45(zod@4.3.6)
@@ -973,9 +973,6 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../../domain/shared
       '@platform/env':
         specifier: workspace:*
         version: link:../env

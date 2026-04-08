@@ -234,7 +234,7 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
     )
 
     if (isImmutableScore(persistedScore)) {
-      yield* syncScoreAnalyticsUseCase({ scoreId: persistedScore.id })
+      yield* syncScoreAnalyticsUseCase({ organizationId: persistedScore.organizationId, scoreId: persistedScore.id })
     }
 
     return persistedScore

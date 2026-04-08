@@ -8,11 +8,10 @@ describe("hybridSearchIssuesUseCase", () => {
   it("queries Weaviate issue projection repository for project tenant", async () => {
     const organizationId = "org-1"
     const projectId = "proj-1"
-    const { service } = createFakeIssueProjectionRepository()
+    const { service } = createFakeIssueProjectionRepository({ organizationId })
 
     await Effect.runPromise(
       service.upsert({
-        organizationId,
         projectId,
         uuid: "issue-1",
         title: "Token leakage",

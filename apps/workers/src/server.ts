@@ -103,7 +103,7 @@ const bootstrap = async () => {
     createSpanIngestionWorker(ctx)
     createDatasetExportWorker(ctx)
     createLiveTracesWorker(ctx)
-    createIssuesWorker(ctx)
+    await createIssuesWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createLiveAnnotationQueuesWorker(ctx)

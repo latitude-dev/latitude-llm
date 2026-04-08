@@ -56,7 +56,7 @@ describe("syncIssueProjectionsUseCase", () => {
       clusteredAt: new Date("2026-03-30T10:00:00.000Z"),
     })
     const { repository: issueRepository } = createFakeIssueRepository([withEvidence])
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository()
+    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
 
     await Effect.runPromise(
       syncIssueProjectionsUseCase({
@@ -80,7 +80,7 @@ describe("syncIssueProjectionsUseCase", () => {
   it("deletes an existing projection when the issue centroid is empty", async () => {
     const issue = makeIssue()
     const { repository: issueRepository } = createFakeIssueRepository([issue])
-    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository()
+    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
 
     store.set(`${organizationId}_${projectId}::${issue.uuid}`, {
       uuid: issue.uuid,

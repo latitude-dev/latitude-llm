@@ -78,7 +78,7 @@ Use this pattern when a platform package owns an external SDK client so composit
 3. **Configuration** — Resolve settings with `parseEnv` / `parseEnvOptional` from `@platform/env` inside the Effect pipeline, not ad hoc `process.env` reads scattered outside the client module.
 4. **Interop** — Wrap promise-based SDK calls in `Effect.tryPromise` and map failures to tagged errors. Compose steps with `Effect.pipe`, `Effect.flatMap`, and `Effect.map`.
 5. **Bootstrap in the pipeline** — If the client must apply schema/migrations/health checks before use, run those as Effects in the same pipeline (see Weaviate: `migrateWeaviateCollectionsEffect` after connect) so callers get a ready client or a single error channel.
-6. **Live layers** — Expose `PortLive(client) => Layer.succeed(Port, implementation)` (or `Layer.effect` when the adapter holds fiber-scoped state). The composition root acquires the client with `createXClientEffect` and maps to the layer, for example `createWeaviateClientEffect().pipe(Effect.map((c) => IssueProjectionRepositoryLive(c)))` in `apps/workflows/src/clients.ts`.
+6. **Live layers** — Expose a thin `XClientLive(client, scope...)` layer for the external SDK client and keep repository adapters as `Layer.effect` or `Layer.succeed` values that depend on that client service as needed. The composition root acquires the client with `createXClientEffect` and provides it via a small helper when useful, for example `withWeaviate(IssueProjectionRepositoryLive, client, organizationId)`.
 
 Not every legacy adapter has been migrated; prefer this shape for new work and when touching client construction.
 

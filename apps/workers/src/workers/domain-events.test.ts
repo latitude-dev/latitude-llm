@@ -1,9 +1,13 @@
+import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
+import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import type { QueueConsumer, QueueName, TaskHandlers, WorkflowStarterShape } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
+import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { createDomainEventsWorker, ISSUE_REFRESH_DEBOUNCE_MS, TRACE_END_DEBOUNCE_MS } from "./domain-events.ts"
+import { createDomainEventsWorker } from "./domain-events.ts"
 
 type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
 
@@ -67,11 +71,13 @@ const setupDispatcher = () => {
 describe("domain-events dispatcher", () => {
   it("routes MagicLinkEmailRequested to magic-link-email:send", async () => {
     const { consumer, published } = setupDispatcher()
+    const magicLinkHash = await Effect.runPromise(hash("https://x"))
 
     const envelope = makeEnvelope("MagicLinkEmailRequested", {
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      authIntentId: null,
+      emailFlow: null,
+      organizationId: "org-1",
     })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
@@ -82,8 +88,10 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.payload).toEqual({
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      authIntentId: null,
+      emailFlow: null,
+      organizationId: "org-1",
     })
+    expect(published[0]?.options?.dedupeKey).toBe(`emails:magic-link:${magicLinkHash}`)
   })
 
   it("routes OrganizationCreated to api-keys:create with default key name", async () => {
@@ -102,8 +110,9 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.task).toBe("create")
     expect(published[0]?.payload).toEqual({
       organizationId: "org-new",
-      name: "Default API Key",
+      name: DEFAULT_API_KEY_NAME,
     })
+    expect(published[0]?.options?.dedupeKey).toBe("api-keys:create:org-new")
   })
 
   it("routes UserDeletionRequested to user-deletion:delete", async () => {
@@ -123,6 +132,7 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       userId: "u-1",
     })
+    expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
   it("routes SpanIngested to live-traces:end with dedupeKey and debounceMs", async () => {
@@ -142,7 +152,7 @@ describe("domain-events dispatcher", () => {
       projectId: "proj-1",
       traceId: "trace-abc",
     })
-    expect(published[0]?.options?.dedupeKey).toBe("live-traces:end:org-1:proj-1:trace-abc")
+    expect(published[0]?.options?.dedupeKey).toBe("traces:live:end:trace-abc")
     expect(published[0]?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
   })
 
@@ -234,7 +244,7 @@ describe("domain-events dispatcher", () => {
           scoreId: "score-3",
         },
         options: {
-          workflowId: "issue-discovery:org-1:proj-1:score-3",
+          workflowId: "issues:discovery:score-3",
         },
       },
     ])

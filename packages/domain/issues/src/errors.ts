@@ -85,12 +85,19 @@ export class IssueNotFoundForAssignmentError extends Data.TaggedError("IssueNotF
   readonly httpMessage = "Issue not found for assignment"
 }
 
-export type CheckEligibilityError =
-  | ScoreNotFoundForDiscoveryError
-  | ScoreDiscoveryOrganizationMismatchError
-  | ScoreDiscoveryProjectMismatchError
-  | DraftScoreNotEligibleForDiscoveryError
-  | ErroredScoreNotEligibleForDiscoveryError
-  | ScoreAlreadyOwnedByIssueError
-  | MissingScoreFeedbackForDiscoveryError
-  | PassedScoreNotEligibleForDiscoveryError
+const eligibilityErrors = [
+  ScoreNotFoundForDiscoveryError,
+  ScoreDiscoveryOrganizationMismatchError,
+  ScoreDiscoveryProjectMismatchError,
+  DraftScoreNotEligibleForDiscoveryError,
+  ErroredScoreNotEligibleForDiscoveryError,
+  ScoreAlreadyOwnedByIssueError,
+  MissingScoreFeedbackForDiscoveryError,
+  PassedScoreNotEligibleForDiscoveryError,
+] as const
+
+export type CheckEligibilityError = InstanceType<(typeof eligibilityErrors)[number]>
+
+export const isEligibilityError = (error: unknown): error is CheckEligibilityError => {
+  return eligibilityErrors.some((err) => error instanceof err)
+}

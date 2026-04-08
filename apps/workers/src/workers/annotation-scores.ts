@@ -1,9 +1,10 @@
 import { publishAnnotationUseCase } from "@domain/annotations"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId, type ScoreId } from "@domain/shared"
-import { AICredentialsLive } from "@platform/ai-credentials"
+import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
-import { RedisCacheStoreLive } from "@platform/cache-redis"
+import type { RedisClient } from "@platform/cache-redis"
+import type { ClickHouseClient } from "@platform/db-clickhouse"
 import {
   ScoreAnalyticsRepositoryLive,
   SpanRepositoryLive,
@@ -21,27 +22,34 @@ const logger = createLogger("annotation-scores")
 interface AnnotationScoresDeps {
   consumer: QueueConsumer
   postgresClient?: PostgresClient
+  clickhouseClient?: ClickHouseClient
+  redisClient?: RedisClient
 }
 
-export const createAnnotationScoresWorker = ({ consumer, postgresClient }: AnnotationScoresDeps) => {
+export const createAnnotationScoresWorker = ({
+  consumer,
+  postgresClient,
+  clickhouseClient,
+  redisClient,
+}: AnnotationScoresDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
-  const annotationAiLayer = AIGenerateLive.pipe(
-    Layer.provideMerge(AICredentialsLive),
-    Layer.provideMerge(RedisCacheStoreLive(getRedisClient())),
-  )
-
-  const postgresLayers = Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive)
+  const chClient = clickhouseClient ?? getClickhouseClient()
+  const rdClient = redisClient ?? getRedisClient()
 
   consumer.subscribe("annotation-scores", {
     publish: (payload) =>
       publishAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
-        withPostgres(postgresLayers, pgClient, OrganizationId(payload.organizationId)),
-        withClickHouse(
-          Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
-          getClickhouseClient(),
+        withPostgres(
+          Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
+          pgClient,
           OrganizationId(payload.organizationId),
         ),
-        Effect.provide(annotationAiLayer),
+        withClickHouse(
+          Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
+          chClient,
+          OrganizationId(payload.organizationId),
+        ),
+        withAi(AIGenerateLive, rdClient),
         Effect.tap(() =>
           Effect.sync(() => logger.info(`Published annotation score ${payload.projectId}/${payload.scoreId}`)),
         ),
