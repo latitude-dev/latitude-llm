@@ -2535,6 +2535,7 @@ Row click opens a detailed view with:
 - [x] Implement annotation read/query surfaces needed by issue discovery, issue visibility, evaluation alignment, draft-aware editing, and queue review, with default exclusion of drafts outside draft-aware surfaces.
 - [x] Ensure UI-created and API-created annotations converge on the exact same score contract and behavior, including the canonical `source_id` provenance rules for `"UI"`, `"API"`, and annotation queues plus shared `draftedAt` semantics.
 - [x] Add integration tests covering UI/API annotation parity, raw/enriched feedback preservation, refresh-safe draft visibility, debounce-based publication through `annotation-scores:publish`, deletion after publication, and reliable reopening of message-level and text-range anchors. Not done out of scope, tested manually that annotations UI worked.
+
 **Exit gate**: annotations are a reliable human ground-truth source across UI and API; enriched feedback is available for clustering without losing original human wording; explicit annotation-side issue linking preserves human ownership without relying on similarity discovery.
 
 ### (LAT-468) Phase 11 - Issues Discovery And Cluster Maintenance
@@ -2562,9 +2563,9 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
   - [x] Lock the canonical issue row during existing-issue assignment so concurrent discovery workflows updating the same issue serialize centroid mutations instead of losing one occurrence.
   - [x] Generate the first issue name/description synchronously inside `issue-discovery` from the initial score before the new issue row is first persisted; this must happen in its own retryable workflow activity outside and before the final create/assign transaction, and that transaction must persist the new issue already carrying those generated details. It must reuse the same shared issue-details generation use case that later async refreshes also call.
 - [x] Implement asynchronous subsequent issue name/description generation and eight-hour refresh debounce through a debounced BullMQ task on the `issues:refresh` topic with dedupe/debounce options, reusing the same shared issue-details generation use case as the synchronous new-issue path, generating from the last `25` assigned occurrences plus previous issue details as baseline, and upserting the Weaviate issue projection again after any persisted name/description change.
-- [ ] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
+- [x] Implement the baseline denoising visibility rule for low-evidence, non-annotation issues, with the visibility threshold kept configurable.
 - [x] Implement immutable-score save into ClickHouse after issue assignment through the shared direct `syncScoreAnalyticsUseCase` path, without breaking the canonical `score.issue_id` contract or creating duplicate analytics rows.
-- [ ] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue and ignored-issue rematching, stale Weaviate-candidate fallback after final Postgres existence check, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
+- [x] Add concurrency and ownership regression tests covering single-owner `scores.issue_id`, resolved-issue and ignored-issue rematching, stale Weaviate-candidate fallback after final Postgres existence check, one-time immutable ClickHouse save, and explicit human annotation assignment bypasses.
 
 **Exit gate**: new failed scores can match existing issues or create new ones; issue centroids move correctly over time; canonical score ownership cannot race into multiple active issues; issue visibility is denoised without reintroducing the v1 merge system.
 
