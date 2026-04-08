@@ -1,4 +1,4 @@
-import { cuidSchema, type FilterSet, filterSetSchema } from "@domain/shared"
+import { cuidSchema, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
 import { DEFAULT_EVALUATION_SAMPLING, EVALUATION_NAME_MAX_LENGTH, EVALUATION_TURNS } from "../constants.ts"
@@ -25,7 +25,7 @@ export type EvaluationTrigger = z.infer<typeof evaluationTriggerSchema>
  */
 export function defaultEvaluationTrigger(): EvaluationTrigger {
   return {
-    filter: {} as FilterSet, // empty filter matches all traces
+    filter: filterSetSchema.parse({}),
     turn: "every",
     debounce: 0,
     sampling: DEFAULT_EVALUATION_SAMPLING,
