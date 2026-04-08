@@ -453,4 +453,53 @@ describe("discoverIssueUseCase", () => {
     expect(store.size).toBe(0)
     expect(startedWorkflows).toHaveLength(0)
   })
+
+  it("does not write immutable analytics twice when retrying an already-synced assignment", async () => {
+    const existingIssue = makeIssue()
+    const assignedScore = makeScore({
+      issueId: existingIssue.id,
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository } = createFakeIssueRepository([existingIssue])
+    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository({
+      existsById: () => Effect.succeed(true),
+      insert: () => Effect.die("analytics insert should be skipped when the score is already synced"),
+    })
+    const { service: issueProjectionRepository, store } = createFakeIssueProjectionRepository({ organizationId })
+    const fakeAi = createFakeAI({
+      embed: () => Effect.succeed({ embedding: makeEmbedding() }),
+    })
+    const { workflowStarter, startedWorkflows } = createWorkflowStarter()
+    scores.set(assignedScore.id, assignedScore)
+
+    const result = await Effect.runPromise(
+      discoverIssueUseCase({
+        organizationId,
+        projectId,
+        scoreId: assignedScore.id,
+        issueId: existingIssue.id,
+      }).pipe(
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+        Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
+        Effect.provideService(EvaluationRepository, {
+          findById: () => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" })),
+        }),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provide(fakeAi.layer),
+        Effect.provideService(WorkflowStarter, workflowStarter),
+        Effect.provide(createPassthroughSqlClient(organizationId)),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "already-assigned",
+      issueId: existingIssue.id,
+    })
+    expect(fakeAi.calls.embed).toHaveLength(0)
+    expect(inserted).toHaveLength(0)
+    expect(store.size).toBe(0)
+    expect(startedWorkflows).toHaveLength(0)
+  })
 })

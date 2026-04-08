@@ -1,7 +1,8 @@
-import { createIssueCentroid, type Issue, IssueRepository } from "@domain/issues"
+import { createIssueCentroid, type Issue, IssueRepository, MIN_OCCURRENCES_FOR_VISIBILITY } from "@domain/issues"
 import { IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { IssueRepositoryLive } from "./issue-repository.ts"
@@ -26,6 +27,68 @@ const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
   createdAt: new Date("2026-03-30T10:00:00.000Z"),
   updatedAt: new Date("2026-03-30T10:00:00.000Z"),
   ...overrides,
+})
+
+const makeCustomScoreRow = (input: {
+  readonly id: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly createdAt: Date
+}): typeof scoresTable.$inferInsert => ({
+  id: input.id,
+  organizationId,
+  projectId: input.projectId,
+  sessionId: null,
+  traceId: null,
+  spanId: null,
+  source: "custom",
+  sourceId: `source-${input.id}`,
+  simulationId: null,
+  issueId: input.issueId,
+  value: 0.1,
+  passed: false,
+  feedback: `Feedback for ${input.id}`,
+  metadata: { channel: "api" },
+  error: null,
+  errored: false,
+  duration: 0,
+  tokens: 0,
+  cost: 0,
+  draftedAt: null,
+  createdAt: input.createdAt,
+  updatedAt: input.createdAt,
+})
+
+const makeAnnotationScoreRow = (input: {
+  readonly id: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly createdAt: Date
+}): typeof scoresTable.$inferInsert => ({
+  id: input.id,
+  organizationId,
+  projectId: input.projectId,
+  sessionId: null,
+  traceId: null,
+  spanId: null,
+  source: "annotation",
+  sourceId: "UI",
+  simulationId: null,
+  issueId: input.issueId,
+  value: 0.1,
+  passed: false,
+  feedback: `Feedback for ${input.id}`,
+  metadata: {
+    rawFeedback: `Feedback for ${input.id}`,
+  },
+  error: null,
+  errored: false,
+  duration: 0,
+  tokens: 0,
+  cost: 0,
+  draftedAt: null,
+  createdAt: input.createdAt,
+  updatedAt: input.createdAt,
 })
 
 describe("IssueRepositoryLive", () => {
@@ -70,7 +133,7 @@ describe("IssueRepositoryLive", () => {
     expect(loadedByUuid).toEqual(issue)
   })
 
-  it("lists issues scoped to project, newest-first, and paginates with hasMore", async () => {
+  it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {
     const older = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
       uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -98,14 +161,23 @@ describe("IssueRepositoryLive", () => {
       updatedAt: new Date("2026-03-30T11:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T11:00:00.000Z"),
     })
-    const wrongProject = makeIssue({
+    const hiddenLowEvidence = makeIssue({
       id: IssueId("dddddddddddddddddddddddd"),
       uuid: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
-      projectId: otherProjectId,
-      name: "Wrong project issue",
+      projectId: listTestProjectId,
+      name: "Single weak occurrence",
       createdAt: new Date("2026-03-30T12:00:00.000Z"),
       updatedAt: new Date("2026-03-30T12:00:00.000Z"),
       clusteredAt: new Date("2026-03-30T12:00:00.000Z"),
+    })
+    const wrongProject = makeIssue({
+      id: IssueId("eeeeeeeeeeeeeeeeeeeeeeee"),
+      uuid: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      projectId: otherProjectId,
+      name: "Wrong project issue",
+      createdAt: new Date("2026-03-30T13:00:00.000Z"),
+      updatedAt: new Date("2026-03-30T13:00:00.000Z"),
+      clusteredAt: new Date("2026-03-30T13:00:00.000Z"),
     })
 
     await Effect.runPromise(
@@ -114,8 +186,50 @@ describe("IssueRepositoryLive", () => {
         yield* repository.save(older)
         yield* repository.save(mid)
         yield* repository.save(newest)
+        yield* repository.save(hiddenLowEvidence)
         yield* repository.save(wrongProject)
       }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    await database.db.insert(scoresTable).values([
+      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
+        makeCustomScoreRow({
+          id: `oldcustomscore000000000${index + 1}`,
+          projectId: listTestProjectId,
+          issueId: older.id,
+          createdAt: new Date("2026-03-30T08:30:00.000Z"),
+        }),
+      ),
+      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
+        makeCustomScoreRow({
+          id: `newcustomscore000000000${index + 1}`,
+          projectId: listTestProjectId,
+          issueId: newest.id,
+          createdAt: new Date("2026-03-30T11:30:00.000Z"),
+        }),
+      ),
+      makeCustomScoreRow({
+        id: "hiddenlowevidencecustom1",
+        projectId: listTestProjectId,
+        issueId: hiddenLowEvidence.id,
+        createdAt: new Date("2026-03-30T12:30:00.000Z"),
+      }),
+      ...Array.from({ length: MIN_OCCURRENCES_FOR_VISIBILITY }, (_, index) =>
+        makeCustomScoreRow({
+          id: `wrongprojectscore000000${index + 1}`,
+          projectId: otherProjectId,
+          issueId: wrongProject.id,
+          createdAt: new Date("2026-03-30T13:30:00.000Z"),
+        }),
+      ),
+    ])
+    await database.db.insert(scoresTable).values(
+      makeAnnotationScoreRow({
+        id: "midannotationevidence001",
+        projectId: listTestProjectId,
+        issueId: mid.id,
+        createdAt: new Date("2026-03-30T09:30:00.000Z"),
+      }),
     )
 
     const layer = withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))
@@ -132,6 +246,7 @@ describe("IssueRepositoryLive", () => {
     )
 
     expect(page1.items.map((issue) => issue.id)).toEqual([newest.id, mid.id])
+    expect(page1.items.map((issue) => issue.id)).not.toContain(hiddenLowEvidence.id)
     expect(page1.hasMore).toBe(true)
     expect(page1.limit).toBe(2)
     expect(page1.offset).toBe(0)
