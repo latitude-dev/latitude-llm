@@ -54,10 +54,10 @@ When a trace ends, the system uses a fan-out/gate pattern to route it to system 
 **Gate (`system-annotation-queues:gate`)**:
 
 1. Receives `(projectId, traceId, queueSlug)`
-2. Filters out queues with `settings.sampling = 0` (explicitly disabled)
-3. Applies deterministic rules first (no LLM needed):
-   - `Tool Call Errors`: Checks for tool span errors in the trace
-   - `Resource Outliers`: Validates against project median thresholds
+2. Applies deterministic sampling check (queues with `sampling = 0%` are filtered out)
+3. For queues with deterministic rules (`Tool Call Errors`, `Resource Outliers`):
+   - Sampling is set to 100% during provisioning, ensuring they always pass to the workflow
+   - Rules are evaluated without LLM; if matched, workflow creates the annotation directly
 4. For queues needing LLM classification:
    - Uses deterministic sampling (default 5%) to limit LLM spend
    - Starts `systemQueueFlaggerWorkflow` via Temporal for the sampled traces
@@ -65,12 +65,15 @@ When a trace ends, the system uses a fan-out/gate pattern to route it to system 
 **Deterministic Sampling**:
 
 ```typescript
-// Gate sampling: 5% using trace ID hash for LLM classification
-hash(traceId) % 100 < 5
+// Sampling check applied to all queues
+// - Deterministic-rule queues: sampling = 100% (always pass)
+// - LLM-classified queues: sampling = 5% (default, controls LLM spend)
+hash(traceId) % 100 < sampling
 ```
 
-- **Gate filter**: Queues with `sampling = 0%` are excluded before any processing
-- **LLM sampling**: 5% sampling applies before Temporal workflow to control costs
+- **Queues with `sampling = 0%`**: Excluded entirely (disabled)
+- **Queues with deterministic rules**: Provisioned with `sampling = 100%` to ensure all traces are evaluated
+- **LLM-classified queues**: Default `sampling = 5%` to control costs
 - Non-sampled traces skip the flagger workflow and are not flagged
 
 ### System Queue Flagger Workflow
