@@ -45,11 +45,9 @@ const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
       ),
     )
 
-    const candidateQueues = queues.filter((queue: SystemQueueCacheEntry) => queue.sampling > 0)
-
     await Effect.runPromise(
       Effect.all(
-        candidateQueues.map((queue: SystemQueueCacheEntry) =>
+        queues.map((queue: SystemQueueCacheEntry) =>
           publisher.publish(
             "system-annotation-queues",
             "gate",
@@ -74,8 +72,6 @@ const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
       projectId: payload.projectId,
       traceId: payload.traceId,
       totalQueues: queues.length,
-      candidateQueues: candidateQueues.length,
-      skippedQueues: queues.length - candidateQueues.length,
     })
   }
 }
