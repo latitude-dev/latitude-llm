@@ -2,10 +2,8 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type { Organization } from "@domain/organizations"
 import type { QueuePublisherShape } from "@domain/queue"
 import type { OrganizationId, UserId } from "@domain/shared"
-import type { SpanRepository, TraceRepository } from "@domain/spans"
 import type { RedisClient } from "@platform/cache-redis"
 import type { PostgresClient, PostgresDb } from "@platform/db-postgres"
-import type { Layer } from "effect"
 
 /**
  * Authentication context set by the auth middleware.
@@ -70,21 +68,6 @@ export type OrganizationScopedEnv = {
 }
 
 /**
- * Hooks for `createAnnotationsRoutes`.
- *
- * Project, score, and outbox repositories always use their Live layers with the request’s
- * `postgresClient`. API integration tests run real Postgres (PGlite) so those adapters work unchanged.
- *
- * Trace lookup is backed by ClickHouse; the same test harness does not run ClickHouse, so tests may
- * supply substitute `TraceRepository` / `SpanRepository` layers here. Production leaves these unset
- * and uses the default ClickHouse implementations.
- */
-export interface AnnotationRoutesOptions {
-  readonly traceRepositoryLayer?: Layer.Layer<TraceRepository>
-  readonly spanRepositoryLayer?: Layer.Layer<SpanRepository>
-}
-
-/**
  * Dependencies needed to wire up the API app.
  * Both the real server and the test harness provide these.
  */
@@ -96,6 +79,4 @@ export interface ApiOptions {
   logTouchBuffer: boolean
   /** Override for tests that provide an in-memory admin Postgres client for auth lookups */
   adminDatabase?: PostgresClient
-  /** Passed only to annotation routes; keeps feature wiring out of global request context. */
-  annotationRoutes?: AnnotationRoutesOptions
 }

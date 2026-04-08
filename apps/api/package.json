@@ -39,6 +39,8 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@domain/evaluations": "workspace:*",
+    "@domain/issues": "workspace:*",
     "@platform/testkit": "workspace:*",
     "tsup": "^8.0.0"
   }

@@ -33,6 +33,7 @@ export interface EventPayloads {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
+    readonly issueId: string | null
   }
   IssueRefreshRequested: {
     readonly organizationId: string

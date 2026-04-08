@@ -27,8 +27,9 @@ export { createOutboxWriter, OutboxEventWriterLive } from "./outbox-writer.ts"
 export { AnnotationQueueItemRepositoryLive } from "./repositories/annotation-queue-item-repository.ts"
 export { AnnotationQueueRepositoryLive } from "./repositories/annotation-queue-repository.ts"
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
-// Repository implementations
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
+// Repository implementations
+export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
 export { IssueRepositoryLive } from "./repositories/issue-repository.ts"
 export { MembershipRepositoryLive } from "./repositories/membership-repository.ts"

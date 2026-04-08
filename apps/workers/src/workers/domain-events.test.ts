@@ -1,7 +1,7 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
-import type { QueueConsumer, QueueName, TaskHandlers, WorkflowStarterShape } from "@domain/queue"
+import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { hash } from "@repo/utils"
@@ -51,21 +51,9 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
 const setupDispatcher = () => {
   const consumer = new TestQueueConsumer()
   const { publisher, published } = createFakeQueuePublisher()
-  const startedWorkflows: Array<{
-    readonly workflow: string
-    readonly input: unknown
-    readonly options: { readonly workflowId: string }
-  }> = []
-  const workflowStarter: WorkflowStarterShape = {
-    start: (workflow, input, options) =>
-      Effect.sync(() => {
-        startedWorkflows.push({ workflow, input, options })
-      }),
-  }
+  createDomainEventsWorker({ consumer, publisher })
 
-  createDomainEventsWorker({ consumer, publisher, workflowStarter })
-
-  return { consumer, published, startedWorkflows }
+  return { consumer, published }
 }
 
 describe("domain-events dispatcher", () => {
@@ -223,28 +211,30 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
-  it("starts issueDiscoveryWorkflow for IssueDiscoveryRequested", async () => {
-    const { consumer, published, startedWorkflows } = setupDispatcher()
+  it("routes IssueDiscoveryRequested to issues:discovery with dedupe", async () => {
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("IssueDiscoveryRequested", {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
+      issueId: null,
     })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(0)
-    expect(startedWorkflows).toEqual([
+    expect(published).toEqual([
       {
-        workflow: "issueDiscoveryWorkflow",
-        input: {
+        queue: "issues",
+        task: "discovery",
+        payload: {
           organizationId: "org-1",
           projectId: "proj-1",
           scoreId: "score-3",
+          issueId: null,
         },
         options: {
-          workflowId: "issues:discovery:score-3",
+          dedupeKey: "issues:discovery:score-3",
         },
       },
     ])

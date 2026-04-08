@@ -73,6 +73,12 @@ export {
   createIssueFromScoreUseCase,
 } from "./use-cases/create-issue-from-score.ts"
 export {
+  type DiscoverIssueError,
+  type DiscoverIssueInput,
+  type DiscoverIssueResult,
+  discoverIssueUseCase,
+} from "./use-cases/discover-issue.ts"
+export {
   type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,

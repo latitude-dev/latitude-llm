@@ -355,6 +355,7 @@ describe("publishAnnotationUseCase", () => {
           organizationId: cuid,
           projectId: projectCuid,
           scoreId: scoreCuid,
+          issueId: null,
         }),
       }),
     ])
@@ -374,25 +375,28 @@ describe("publishAnnotationUseCase", () => {
     expect(insertedAnalytics).toEqual([scoreCuid])
   })
 
-  it("publishes IssueRefreshRequested and syncs analytics for immutable annotations already linked to an issue", async () => {
+  it("hands linked annotation intent to centralized discovery when publishing", async () => {
     const draft = {
       ...buildDraftAnnotationScore(),
       issueId: "i".repeat(24),
     } as Score
-    const { events, insertedAnalytics, layer } = createTestLayers(draft)
+    const { events, insertedAnalytics, store, layer } = createTestLayers(draft)
 
     await Effect.runPromise(publishAnnotationUseCase({ scoreId: scoreCuid }).pipe(Effect.provide(layer)))
 
     expect(events).toEqual([
       expect.objectContaining({
-        eventName: "IssueRefreshRequested",
+        eventName: "IssueDiscoveryRequested",
         payload: expect.objectContaining({
+          organizationId: cuid,
           projectId: projectCuid,
+          scoreId: scoreCuid,
           issueId: "i".repeat(24),
         }),
       }),
     ])
-    expect(insertedAnalytics).toEqual([scoreCuid])
+    expect(insertedAnalytics).toEqual([])
+    expect(store.get(scoreCuid)?.issueId).toBeNull()
   })
 
   it("returns BadRequestError for non-existent score", async () => {

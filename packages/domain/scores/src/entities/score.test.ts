@@ -208,7 +208,7 @@ describe("customScoreSchema", () => {
 })
 
 describe("score constants", () => {
-  it("keeps the draft finalization debounce at five minutes", () => {
+  it("keeps the draft publish debounce at five minutes", () => {
     expect(SCORE_PUBLICATION_DEBOUNCE).toBe(300_000)
   })
 })

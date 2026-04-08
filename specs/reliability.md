@@ -217,19 +217,20 @@ Initial reliability domain-event contracts:
 
 - `SpanIngested`: published directly into `domain-events` by the span-ingestion process through `createEventsPublisher(queuePublisher)` after a span write succeeds; consumed by the `domain-events` dispatcher to publish `live-traces:end`
 - `TraceEnded`: published directly into `domain-events` by `live-traces:end` through `createEventsPublisher(queuePublisher)` after its debounce window elapses; consumed by the `domain-events` dispatcher to publish `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:flag`
-- `IssueDiscoveryRequested`: written transactionally after a canonical failed non-errored score becomes eligible for similarity discovery; consumed by the `domain-events` dispatcher to start the `issue-discovery` workflow
+- `IssueDiscoveryRequested`: written transactionally after a canonical failed non-errored score becomes eligible for centralized issue handling; the payload carries the canonical `scoreId` plus an optional selected `issueId`, and the `domain-events` dispatcher consumes it by publishing the deduped `issues:discovery` task
 - `IssueRefreshRequested`: written transactionally when an immutable score is added to an existing issue and later async issue-detail regeneration should be debounced; consumed by the `domain-events` dispatcher to publish `issues:refresh`
 
 Rationale for the mixed publication rails:
 
 - `SpanIngested` and `TraceEnded` stay on direct `createEventsPublisher(queuePublisher)` publication because they are high-volume append-only flows whose upstream writes are already durable before publication.
-- `IssueDiscoveryRequested` and `IssueRefreshRequested` intentionally use the transactional outbox rail so canonical Postgres writes stay atomic with the downstream workflow-start or debounced refresh request.
+- `IssueDiscoveryRequested` and `IssueRefreshRequested` intentionally use the transactional outbox rail so canonical Postgres writes stay atomic with the downstream `issues:discovery` enqueue or debounced refresh request.
 - ClickHouse analytics sync and Weaviate projection sync are intentionally not routed through an extra domain-event hop; they run directly after the owning Postgres transaction succeeds so the non-Postgres projections do not stay stale longer than necessary.
 
 Initial reliability topic/task contracts:
 
 - `live-traces` / `end`: debounced end-of-trace detection keyed by `(organizationId, projectId, traceId)`; each new `SpanIngested` event for the same trace replaces/reschedules the pending task using BullMQ-backed dedupe/debounce, with the debounce window defined by a named constant whose initial default is `5 minutes`
-- `annotation-scores` / `publish`: debounced finalization of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
+- `annotation-scores` / `publish`: debounced publication of one human-editable draft annotation score after its inactivity window elapses; it is distinct from immutable-score analytics save
+- `issues` / `discovery`: deduped single-step issue handling for one canonical failed non-errored score; it rechecks eligibility, handles explicit/manual issue routing, resolves issue-linked evaluation routing, and only then starts the multi-step `issue-discovery` workflow when similarity search is still required
 - `issues` / `refresh`: debounced asynchronous issue-details regeneration for an existing issue after new immutable evidence lands on that issue
 - `live-evaluations` / `enqueue`: lists active evaluations for one ended trace and publishes `execute` tasks for matches
 - `live-evaluations` / `execute`: executes one evaluation against one trace/session input after live trigger selection
@@ -239,10 +240,10 @@ Initial reliability topic/task contracts:
 
 Initial reliability workflows:
 
-- `issue-discovery`: multi-activity workflow for create-or-match issue discovery, a separate retryable synchronous first issue name/description generation activity for brand-new issues, assignment, projection sync, and post-immutability publication
+- `issue-discovery`: multi-activity workflow for create-or-match similarity discovery after the centralized `issues:discovery` gate decides the score still needs retrieval/rerank work, plus a separate retryable synchronous first issue name/description generation activity for brand-new issues, assignment, projection sync, and post-immutability publication
 - `evaluation-alignment`: multi-activity workflow for evaluation generation or realignment; for now the GEPA optimization pass stays a single activity, while example collection and post-alignment regeneration are separate activities
 
-Issue name/description regeneration (`issues:refresh`) is a single-step debounced task for subsequent refreshes of existing issues, not a multi-step orchestration. The initial name/description for a brand-new issue must be generated synchronously inside `issue-discovery` before the first issue row is persisted, but both the synchronous first-generation path and the later asynchronous refresh path must call the same shared issue-details generation use case underneath. `issues:refresh` uses a BullMQ delayed job via the `@domain/queue` topic/task abstraction with dedupe/debounce options, not a Temporal workflow.
+Issue handling now has two queue-backed steps before/after the workflow boundary: `issues:discovery` is a single-step gate for centralized direct-routing decisions, while `issues:refresh` is a single-step debounced task for subsequent detail regeneration of existing issues. The initial name/description for a brand-new issue must still be generated synchronously inside `issue-discovery` before the first issue row is persisted, but both the synchronous first-generation path and the later asynchronous refresh path must call the same shared issue-details generation use case underneath. Only the branch that still needs similarity retrieval starts the Temporal `issue-discovery` workflow.
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
@@ -513,7 +514,7 @@ After explicit creation, automatic dynamic realignment remains unchanged for eac
 To generate or realign an evaluation for an issue, annotation-derived truth follows these minimum rules:
 
 - drafts and errored scores must never be used as alignment examples
-- alignment reads only finalized, non-errored canonical Postgres scores
+- alignment reads only published, non-errored canonical Postgres scores
 
 1. positive examples where human annotations indicate the issue being aligned is present, meaning failed, non-errored, non-draft annotation scores linked to that specific issue; the minimum required positive-example count is `1`
 2. negative examples where the issue is absent, using this priority order among non-draft, non-errored scores when they exist:
@@ -886,7 +887,7 @@ Annotations are not a standalone canonical fact table. They are scores with:
 
 ### Draft Annotations
 
-Annotations may exist as drafts before they become final scores.
+Annotations may exist as drafts before they become published scores.
 
 Rules:
 
@@ -894,8 +895,9 @@ Rules:
 - draft state is represented by `draftedAt`, not by fake error strings
 - human-created UI annotations are written as drafts in Postgres immediately so they remain visible on refresh while the user is still editing
 - system-created annotation queues may also create draft annotations before a human has reviewed the trace
-- draft annotations do not enter issue discovery or alignment until `draftedAt` is cleared
-- a human-reviewed annotation can later confirm, edit, or replace a draft while it is still drafted; once finalized, it should only support deletion
+- draft annotations do not enter issue discovery, issue-centroid mutation, Weaviate projection sync, ClickHouse analytics, or evaluation alignment until `draftedAt` is cleared
+- if a draft annotation carries `issueId`, treat that value as editable draft intent only until publication clears `draftedAt`
+- a human-reviewed annotation can later confirm, edit, or replace a draft while it is still drafted; once published, it should only support deletion
 
 ### Annotation Issue Intent
 
@@ -908,9 +910,10 @@ Inline manual issue creation from the annotation flow is intentionally cancelled
 
 Rules:
 
-- explicit link choices are human overrides and bypass similarity-based issue discovery for that annotation score
-- linking an existing issue writes the canonical `score.issue_id` directly
-- explicitly linked annotation issues are immediately visible in the product
+- explicit link choices are human overrides and bypass similarity-based candidate selection for that annotation score once the draft is published
+- while the annotation is still drafted, a selected existing issue is stored only as editable draft intent on the canonical score row
+- publication of that linked draft writes `IssueDiscoveryRequested` with the selected `issueId`, and the centralized `issues:discovery` task then performs the canonical ownership claim, centroid update, `IssueRefreshRequested` write, and Weaviate/ClickHouse sync after the Postgres transaction commits
+- explicitly linked annotation issues are immediately visible in the product only after publication
 
 ### Annotation Enrichment
 
@@ -927,7 +930,7 @@ Concrete v1 carry-forward notes:
 
 - v1 persisted the generalized/enriched reason so later discovery and reassignment work could reuse it instead of re-running enrichment every time
 - the enrichment step assembled surrounding trace/message context and asked an LLM to generalize the raw human annotation into clusterable language
-- v1 delayed discovery by `60` seconds for editable human results with no linked issue so the annotation could still be revised first; v2 keeps the same general idea through draft rows in Postgres, with the final debounce defined as a named constant
+- v1 delayed discovery by `60` seconds for editable human results with no linked issue so the annotation could still be revised first; v2 keeps the same general idea through draft rows in Postgres, with the publish debounce defined as a named constant
 
 ### Annotation Score Metadata
 
@@ -1287,10 +1290,10 @@ Its text format is intentionally part of the reliability design:
 Score lifecycle states:
 
 - draft: `draftedAt != null`
-- passed final: `draftedAt = null`, `passed = true`, `errored = false`
+- passed published: `draftedAt = null`, `passed = true`, `errored = false`
 - failed awaiting issue assignment: `draftedAt = null`, `passed = false`, `errored = false`, `issueId = null`
-- failed final: `draftedAt = null`, `passed = false`, `errored = false`, `issueId != null`
-- errored final: `draftedAt = null`, `errored = true`
+- failed published: `draftedAt = null`, `passed = false`, `errored = false`, `issueId != null`
+- errored published: `draftedAt = null`, `errored = true`
 
 Rules:
 
@@ -1363,7 +1366,7 @@ type EvaluationScoreMetadata = BaseScoreMetadata & {
 };
 
 type AnnotationScoreMetadata = BaseScoreMetadata & {
-  rawFeedback: string; // original feedback text before enrichment; human-authored for human drafts/final annotations, model-authored for system-created drafts
+  rawFeedback: string; // original feedback text before enrichment; human-authored for human drafts/published annotations, model-authored for system-created drafts
   messageIndex?: number; // optional index in the canonical `TraceDetail.allMessages` conversation; omit for conversation-level annotations
   partIndex?: number; // optional raw GenAI `parts[]` index inside the target message
   startOffset?: number; // optional start offset for substring annotations within a textual part
@@ -1398,7 +1401,7 @@ export const scores = latitudeSchema.table(
     sourceId: varchar("source_id", { length: 128 }).notNull(), // evaluation cuid, annotation queue cuid or sentinel `"UI"` / `"API"` values, or custom source tag
 
     simulationId: cuid("simulation_id"), // optional simulation CUID link
-    issueId: cuid("issue_id"), // optional issue CUID assignment
+    issueId: cuid("issue_id"), // optional issue CUID assignment; draft annotations may carry editable issue intent here before publication
 
     value: doublePrecision("value").notNull(), // normalized [0, 1] score value
     passed: boolean("passed").notNull(), // true if passed, false if failed or errored
@@ -1439,7 +1442,7 @@ export const scores = latitudeSchema.table(
     index("scores_issue_discovery_work_idx")
       .on(t.organizationId, t.projectId, t.createdAt, t.id)
       .where(sql`${t.draftedAt} IS NULL AND ${t.errored} = false AND ${t.passed} = false AND ${t.issueId} IS NULL`),
-    index("scores_draft_finalization_idx")
+    index("scores_draft_publish_idx")
       .on(t.updatedAt, t.id)
       .where(sql`${t.draftedAt} IS NOT NULL`),
   ],
@@ -1451,6 +1454,7 @@ Postgres-specific rules:
 - `simulation_id` and `issue_id` are nullable in Postgres; do not use empty-string sentinels there
 - `errored` is maintained in application/domain code on every create or update
 - drafts update the same canonical Postgres row in place instead of deleting and recreating scores
+- `issue_id` on a draft annotation may represent user-editable issue intent; canonical issue ownership, centroid mutation, and downstream visibility happen only after `draftedAt = null`
 - once a score is no longer a draft, it may later be deleted, but it should not be edited again; failed non-errored scores may still receive later `issue_id` assignment before they become fully immutable
 - new Postgres `scores` rows must use repository conventions: `latitudeSchema`, `cuid("id")`, `tzTimestamp(...)`, `...timestamps()`, `organizationRLSPolicy("scores")`, and no foreign keys
 
@@ -1463,7 +1467,7 @@ Required Postgres indexes:
 - btree on `(organization_id, project_id, session_id, created_at, id)` with a partial predicate `session_id IS NOT NULL` for session drilldowns
 - btree on `(organization_id, project_id, span_id, created_at, id)` with a partial predicate `span_id IS NOT NULL` for span-scoped score hydration
 - partial btree on `(organization_id, project_id, created_at, id)` where `drafted_at IS NULL AND errored = false AND passed = false AND issue_id IS NULL` for issue-discovery work selection
-- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-finalization scans and other draft-aware annotation maintenance
+- partial btree on `(updated_at, id)` where `drafted_at IS NOT NULL` for draft-publication scans and other draft-aware annotation maintenance
 - do not add GIN/JSONB indexes on `metadata`, and do not add Postgres text-search indexes on `feedback` or `error` in the scores foundation phase
 
 These draft-aware score indexes are the minimal annotation-editing and queue-review foundation; keep reusing canonical `scores` rows rather than introducing a standalone annotation table.
@@ -1539,7 +1543,7 @@ ClickHouse-specific rules:
 - do not allow duplicate rows for the same score id; analytics must remain correct without `FINAL`
 - failed non-errored scores are not inserted into ClickHouse until `issue_id` is assigned and the score becomes immutable
 
-Phase 10 integration tests for “delete after finalize” should assert the chosen behavior end-to-end.
+Phase 10 integration tests for “delete after publish” should assert the chosen behavior end-to-end.
 
 ClickHouse deployments in this repository have both `unclustered/` and `clustered/` migration variants. The `scores` analytics table must follow the same pattern:
 
@@ -1555,7 +1559,7 @@ ClickHouse fixed-width identifier rule:
 - use `FixedString(128)` for bounded non-CUID identifiers such as `session_id` and `source_id`
 - use `FixedString(32)` for trace ids and `FixedString(16)` for span ids
 
-### Score Finalization And Projection
+### Score Publication And Projection
 
 All score writes happen in Postgres first.
 
@@ -1564,7 +1568,7 @@ Publication rules:
 - if a score is a draft (`draftedAt != null`), do not write it to ClickHouse analytics
 - if a score is non-draft and either passed or errored, write it to ClickHouse analytics immediately because it is already immutable
 - if a score is non-draft, failed, and non-errored, keep it only in Postgres until issue discovery or direct issue assignment sets `issue_id`
-- when a draft becomes non-draft and still has `issue_id = null`, it may now participate in issue discovery
+- when a draft is published and still has `issue_id = null`, it may now participate in issue discovery
 - when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - publishing to ClickHouse analytics must be retry-safe and preserve at-most-one row per score id
 - the canonical Postgres write transaction must not talk to ClickHouse directly; after that transaction commits, the caller must run the shared `syncScoreAnalyticsUseCase`, which re-fetches the canonical score row and inserts into ClickHouse only if it is still immutable and not already present in analytics so retries remain safe and stale sync attempts become no-ops
@@ -1572,11 +1576,11 @@ Publication rules:
 Draft-specific rules:
 
 - human-created UI annotations are written as drafts in Postgres immediately so refresh-safe reads do not depend on local memory or Redis
-- draft finalization uses a debounced timeout after the last edit; the initial default is `5 minutes`
-- human-editable draft finalization should be driven by a debounced `annotation-scores` topic task `publish` keyed by the canonical score id rather than by browser-local timers or persisted due-work scans
+- draft publication uses a debounced timeout after the last edit; the initial default is `5 minutes`
+- human-editable draft publication should be driven by a debounced `annotation-scores` topic task `publish` keyed by the canonical score id rather than by browser-local timers or persisted due-work scans
 - system-created queue annotations are also drafts, but they use `draftedAt` instead of faking an error state
-- system-created queue drafts do not use the automatic finalization path; they stay draft until explicit human review resolves them
-- once a draft is finalized, it may be deleted later but should no longer be edited
+- system-created queue drafts do not use the automatic publication path; they stay draft until explicit human review resolves them
+- once a draft is published, it may be deleted later but should no longer be edited
 
 Delete behavior:
 
@@ -1672,9 +1676,10 @@ When annotating a conversation in managed UI, the annotator may:
 
 For that explicit human action:
 
-- do not run similarity search for that annotation score
-- assign canonical ownership directly through `scores.issue_id`
-- treat the issue as annotation-backed evidence for visibility and follow-up monitoring
+- do not run similarity search for that annotation score once the draft is published
+- keep any selected issue as editable draft intent while the annotation is still drafted
+- publication assigns canonical ownership through `scores.issue_id`, updates the issue centroid, and then requests debounced issue-detail refresh plus direct projection/analytics sync
+- treat the issue as annotation-backed evidence for visibility and follow-up monitoring only after publication
 
 ### Issue Clusterization
 
@@ -1698,7 +1703,8 @@ All similarity, rerank, visibility, and debounce thresholds must be configurable
 
 Discovery/refresh execution rules:
 
-- eligible non-draft failed non-errored scores should start the `issue-discovery` workflow after commit rather than running embeddings/search inline in request or annotation-edit paths
+- eligible non-draft failed non-errored scores should write `IssueDiscoveryRequested` after commit rather than running issue-routing, embeddings, or search inline in request or annotation-edit paths
+- the `domain-events` dispatcher should publish a deduped `issues:discovery` task from `IssueDiscoveryRequested`; that task rechecks eligibility and either assigns a selected/linked issue directly or starts the `issue-discovery` workflow only when similarity search is still required
 - the very first name/description for a brand-new issue must be generated synchronously inside `issue-discovery` before the issue row is first persisted
 - the synchronous first-generation step must happen in its own workflow activity, outside and before the final create/assign transaction, so LLM generation retries do not hold the ownership-write transaction open and the first persisted issue row already carries the generated name/description
 - subsequent issue name/description regeneration should run through a debounced BullMQ task on the `issues:refresh` topic once the refresh window elapses
@@ -1828,7 +1834,7 @@ Post-MVP, the system may adopt a stronger buffered/provisional creation workflow
 
 - newly created issue candidates are persisted immediately
 - provisional issues stay hidden from the main UI until they reach a promotion threshold, receive annotation evidence, or are explicitly promoted
-- annotation-linked issues remain immediately visible
+- published annotation-linked issues remain immediately visible
 - the stronger workflow may also absorb duplicate/noisy concurrent no-match issue candidates before they become visible in the main Issues UI
 - this stronger workflow is a post-MVP discovery policy, not a change to the canonical issue entity shape
 
@@ -2489,7 +2495,7 @@ Row click opens a detailed view with:
 
 **Parallelization notes**: Phase 9 can start once Phase 8 exposes base reads.
 
-- [x] Implement the canonical score write path into Postgres with source-aware validation, plus retry-safe append-only ClickHouse save for finalized immutable scores only.
+- [x] Implement the canonical score write path into Postgres with source-aware validation, plus retry-safe append-only ClickHouse save for published immutable scores only.
 - [x] Implement the project-scoped public `/scores` API for score ingestion, defaulting to custom scores while reserving `_evaluation: true` for later locally executed Latitude evaluation uploads, including arbitrary custom metadata storage.
 - [x] Implement the internal score writer used by evaluation execution and simulations, with Postgres-first writes and immutable-score analytics save into ClickHouse only when save rules are satisfied.
 - [x] Enforce exact metadata validation for evaluation, annotation, and custom scores before persistence.
@@ -2524,11 +2530,11 @@ Row click opens a detailed view with:
 
 - [x] Implement the public API for annotation ingestion under `/:organizationId/projects/:projectId/annotations` with a minimal, agent-friendly contract on top of canonical scores, including the canonical annotation `source_id` semantics for `"UI"`, `"API"`, and annotation-queue provenance.
 - [x] Introduce the shared text-generation capability in the first phase that needs it, and define the concrete `annotation-scores:publish` topic-task payload/schema plus dedupe key semantics keyed by the canonical score id.
-- [x] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, debounced draft finalization through `annotation-scores:publish` keyed by the canonical score id, and post-finalization immutability after the debounce window closes.
+- [x] Implement in-product annotation creation on conversations/messages/spans/traces/sessions, including Postgres-backed draft score creation, annotation-side issue intent for automatic discovery, existing-issue linking, debounced draft publication through `annotation-scores:publish` keyed by the canonical score id, and post-publication immutability after the debounce window closes.
 - [x] Implement annotation feedback enrichment using surrounding context before issue discovery, persist the enriched canonical feedback, and preserve the original raw human text separately in metadata.
 - [x] Implement annotation read/query surfaces needed by issue discovery, issue visibility, evaluation alignment, draft-aware editing, and queue review, with default exclusion of drafts outside draft-aware surfaces.
 - [x] Ensure UI-created and API-created annotations converge on the exact same score contract and behavior, including the canonical `source_id` provenance rules for `"UI"`, `"API"`, and annotation queues plus shared `draftedAt` semantics.
-- [x] Add integration tests covering UI/API annotation parity, raw/enriched feedback preservation, refresh-safe draft visibility, debounce-based finalization through `annotation-scores:publish`, deletion after finalization, and reliable reopening of message-level and text-range anchors. Not done out of scope, tested manually that annotations UI worked.
+- [x] Add integration tests covering UI/API annotation parity, raw/enriched feedback preservation, refresh-safe draft visibility, debounce-based publication through `annotation-scores:publish`, deletion after publication, and reliable reopening of message-level and text-range anchors. Not done out of scope, tested manually that annotations UI worked.
 **Exit gate**: annotations are a reliable human ground-truth source across UI and API; enriched feedback is available for clustering without losing original human wording; explicit annotation-side issue linking preserves human ownership without relying on similarity discovery.
 
 ### (LAT-468) Phase 11 - Issues Discovery And Cluster Maintenance
@@ -2540,7 +2546,7 @@ Row click opens a detailed view with:
 Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core/src/voyage/index.ts`, `packages/core/src/services/issues/results/validate.ts`, `packages/core/src/services/issues/discover.ts`, `packages/core/src/services/issues/shared.ts`. Checkout branch `latitude-v1` in the old repository before using.
 
 - [x] Implement score eligibility validation for issue discovery, including the explicit exclusion of errored scores, drafted scores with `draftedAt != null`, missing canonical feedback, already-owned scores, and any source classes explicitly excluded from clustering.
-- [ ] Implement direct issue assignment on canonical Postgres score rows for scores generated by issue-linked evaluations and for annotation scores that were explicitly linked or created by a human.
+- [x] Centralize known-issue routing for failed non-errored non-draft scores behind `IssueDiscoveryRequested` plus a deduped `issues:discovery` task, so selected annotation issue intent and issue-linked evaluation routing are resolved in one place before either direct assignment or the Temporal `issue-discovery` workflow starts.
 - [x] Implement feedback embedding with `voyage-4-large` at `2048` dimensions and caching.
   - [x] Add Voyage embedding support to the shared AI service surface (`AI.embed`) via `@platform/ai-voyage`.
   - [x] Wire issue-discovery embedding calls to enforce `voyage-4-large` with `2048` dimensions.

@@ -1,10 +1,16 @@
+import { OrganizationId, ProjectId, SessionId, SpanId, TraceId } from "@domain/shared"
+import { type SpanDetail, SpanRepository } from "@domain/spans"
+import { stubListSpan } from "@domain/spans/testing"
+import { SpanRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { eq } from "@platform/db-postgres"
 import { projects } from "@platform/db-postgres/schema/projects"
 import { scores as scoresTable } from "@platform/db-postgres/schema/scores"
 import { createApiKeyAuthHeaders, type InMemoryPostgres } from "@platform/testkit"
+import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { API_TEST_ANCHOR_TRACE_ID } from "../test-utils/api-test-trace-repository.ts"
 import { type ApiTestContext, createTenantSetup, setupTestApi } from "../test-utils/create-test-app.ts"
+
+const API_TEST_ANCHOR_TRACE_ID = "22222222222222222222222222222222" as const
 
 const createProjectRecord = async (database: InMemoryPostgres, organizationId: string, projectId: string) => {
   await database.db.insert(projects).values({
@@ -15,13 +21,89 @@ const createProjectRecord = async (database: InMemoryPostgres, organizationId: s
   })
 }
 
+const textMessage = (role: "user" | "assistant", content: string): SpanDetail["inputMessages"][number] => ({
+  role,
+  parts: [{ type: "text", content }],
+})
+
+const buildAnnotationSpanDetail = ({
+  organizationId,
+  projectId,
+  traceId,
+  inputMessages,
+  outputMessages,
+}: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly inputMessages: SpanDetail["inputMessages"]
+  readonly outputMessages: SpanDetail["outputMessages"]
+}): SpanDetail => ({
+  ...stubListSpan({
+    organizationId: OrganizationId(organizationId),
+    projectId: ProjectId(projectId),
+    traceId: TraceId(traceId),
+    sessionId: SessionId("session"),
+    spanId: SpanId("cccccccccccccccc"),
+    operation: "chat",
+    startTime: new Date("2026-03-24T00:00:00.000Z"),
+    endTime: new Date("2026-03-24T00:01:00.000Z"),
+  }),
+  inputMessages,
+  outputMessages,
+  systemInstructions: [],
+  toolDefinitions: [],
+  toolCallId: "",
+  toolName: "",
+  toolInput: "",
+  toolOutput: "",
+})
+
+const seedAnnotationTrace = async ({
+  clickhouse,
+  organizationId,
+  projectId,
+  traceId,
+  inputMessages = [textMessage("user", "hello")],
+  outputMessages = [textMessage("assistant", "hello")],
+}: {
+  readonly clickhouse: ApiTestContext["clickhouse"]
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly inputMessages?: SpanDetail["inputMessages"]
+  readonly outputMessages?: SpanDetail["outputMessages"]
+}) => {
+  const span = buildAnnotationSpanDetail({
+    organizationId,
+    projectId,
+    traceId,
+    inputMessages,
+    outputMessages,
+  })
+
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const spanRepository = yield* SpanRepository
+      yield* spanRepository.insert([span])
+    }).pipe(withClickHouse(SpanRepositoryLive, clickhouse, OrganizationId(organizationId))),
+  )
+}
+
 describe("Annotations Routes Integration", () => {
   setupTestApi()
 
-  it<ApiTestContext>("creates an annotation via API with correct defaults", async ({ app, database }) => {
+  it<ApiTestContext>("creates an annotation via API with correct defaults", async ({ app, database, clickhouse }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "aaaaaaaaaaaaaaaaaaaaaaaa"
+    const traceId = "11111111111111111111111111111111"
     await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedAnnotationTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId,
+    })
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
@@ -34,7 +116,7 @@ describe("Annotations Routes Integration", () => {
           value: 0.2,
           passed: false,
           feedback: "The model hallucinated a date",
-          traceId: "11111111111111111111111111111111",
+          traceId,
         }),
       }),
     )
@@ -58,10 +140,21 @@ describe("Annotations Routes Integration", () => {
     expect(persistedScores[0]?.draftedAt).not.toBeNull()
   })
 
-  it<ApiTestContext>("does not allow overriding sourceId; public API is always API", async ({ app, database }) => {
+  it<ApiTestContext>("does not allow overriding sourceId; public API is always API", async ({
+    app,
+    database,
+    clickhouse,
+  }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "eeeeeeeeeeeeeeeeeeeeeeee"
+    const traceId = "33333333333333333333333333333333"
     await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedAnnotationTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId,
+    })
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {
@@ -74,7 +167,7 @@ describe("Annotations Routes Integration", () => {
           value: 0.5,
           passed: true,
           feedback: "Trying to pose as UI",
-          traceId: "33333333333333333333333333333333",
+          traceId,
           sourceId: "UI",
         }),
       }),
@@ -85,10 +178,18 @@ describe("Annotations Routes Integration", () => {
     expect(body.sourceId).toBe("API")
   })
 
-  it<ApiTestContext>("creates annotation with anchor metadata", async ({ app, database }) => {
+  it<ApiTestContext>("creates annotation with anchor metadata", async ({ app, database, clickhouse }) => {
     const tenant = await createTenantSetup(database)
     const projectId = "bbbbbbbbbbbbbbbbbbbbbbbb"
     await createProjectRecord(database, tenant.organizationId, projectId)
+    await seedAnnotationTrace({
+      clickhouse,
+      organizationId: tenant.organizationId,
+      projectId,
+      traceId: API_TEST_ANCHOR_TRACE_ID,
+      inputMessages: [textMessage("user", "hello"), textMessage("assistant", "mid")],
+      outputMessages: [textMessage("assistant", "01234567890123456789012345")],
+    })
 
     const response = await app.fetch(
       new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${projectId}/annotations`, {

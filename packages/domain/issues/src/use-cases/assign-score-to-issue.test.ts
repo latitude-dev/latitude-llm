@@ -7,16 +7,17 @@ import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
 import type { Issue } from "../entities/issue.ts"
 import { createIssueCentroid } from "../helpers.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { createFakeIssueRepository } from "../testing/fake-issue-repository.ts"
+import { createFakeIssueRepository } from "../testing/index.ts"
 import { assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
 
 const organizationId = "oooooooooooooooooooooooo"
 const projectId = "pppppppppppppppppppppppp"
+const otherProjectId = "qqqqqqqqqqqqqqqqqqqqqqqq"
 
 const makeEmbedding = (): number[] =>
   Array.from({ length: CENTROID_EMBEDDING_DIMENSIONS }, (_, index) => {
-    if (index === 0) return 3
-    if (index === 1) return 4
+    if (index === 0) return 0.6
+    if (index === 1) return 0.8
     return 0
   })
 
@@ -240,5 +241,40 @@ describe("assignScoreToIssueUseCase", () => {
     })
     expect(issues.get(existingIssue.id)?.centroid.mass).toBe(0)
     expect(writtenEvents).toHaveLength(0)
+  })
+
+  it("rejects assigning a score into an issue from another project", async () => {
+    const foreignIssue = makeIssue({
+      projectId: otherProjectId,
+    })
+    const { repository: scoreRepository, scores } = createFakeScoreRepository()
+    const { repository: issueRepository, issues } = createFakeIssueRepository([foreignIssue])
+    const score = makeScore()
+    scores.set(score.id, score)
+
+    const error = await Effect.runPromise(
+      assignScoreToIssueUseCase({
+        organizationId,
+        projectId,
+        scoreId: score.id,
+        issueId: foreignIssue.id,
+        normalizedEmbedding: makeEmbedding(),
+      }).pipe(
+        Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(IssueRepository, issueRepository),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
+        Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
+        Effect.match({
+          onFailure: (error) => error,
+          onSuccess: () => {
+            throw new Error("expected assignment to fail")
+          },
+        }),
+      ),
+    )
+
+    expect(error._tag).toBe("IssueNotFoundForAssignmentError")
+    expect(scores.get(score.id)?.issueId).toBeNull()
+    expect(issues.get(foreignIssue.id)?.centroid.mass).toBe(0)
   })
 })

@@ -21,7 +21,11 @@ export type AssignScoreToIssueResult = {
   readonly action: "assigned-existing" | "already-assigned"
 }
 
-export type AssignScoreToIssueError = CheckEligibilityError | IssueNotFoundForAssignmentError | RepositoryError
+export type AssignScoreToIssueError =
+  | CheckEligibilityError
+  | IssueNotFoundForAssignmentError
+  | RepositoryError
+  | ScoreAlreadyOwnedByIssueError
 
 type LoadedEligibleScoreResult =
   | {
@@ -96,21 +100,22 @@ const buildIssueWithAssignedScore = ({
 export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
   Effect.gen(function* () {
     const sqlClient = yield* SqlClient
+    const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
+
+    if (scoreResult.action === "already-assigned") {
+      return {
+        action: "already-assigned",
+        issueId: scoreResult.issueId,
+      } satisfies AssignScoreToIssueResult
+    }
+
+    const score = scoreResult.score
 
     return yield* sqlClient.transaction(
       Effect.gen(function* () {
         const issueRepository = yield* IssueRepository
         const outboxEventWriter = yield* OutboxEventWriter
         const scoreRepository = yield* ScoreRepository
-
-        const scoreResult = yield* loadEligibleScoreOrCurrentOwner(input)
-        if (scoreResult.action === "already-assigned") {
-          return {
-            action: "already-assigned",
-            issueId: scoreResult.issueId,
-          } satisfies AssignScoreToIssueResult
-        }
-
         const issue = yield* issueRepository
           .findByIdForUpdate(IssueId(input.issueId))
           .pipe(
@@ -119,7 +124,10 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
             ),
           )
 
-        const score = scoreResult.score
+        if (issue.projectId !== score.projectId) {
+          return yield* new IssueNotFoundForAssignmentError({ issueId: input.issueId })
+        }
+
         const assignedAt = new Date()
         const updatedIssue = buildIssueWithAssignedScore({
           issue,

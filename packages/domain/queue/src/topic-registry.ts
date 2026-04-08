@@ -73,6 +73,12 @@ const _registry = {
   }>(),
 
   issues: payloads<{
+    discovery: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
+      readonly issueId: string | null
+    }
     refresh: {
       readonly organizationId: string
       readonly projectId: string

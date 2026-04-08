@@ -19,8 +19,9 @@ import {
   scoreSchema,
 } from "../entities/score.ts"
 import { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "../errors.ts"
-import { shouldDiscoverIssue } from "../helpers.ts"
+import { isImmutableScore, shouldDiscoverIssue } from "../helpers.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
+import { syncScoreAnalyticsUseCase } from "./save-score-analytics.ts"
 
 const baseWritableScoreSchema = baseScoreSchema.omit({
   organizationId: true,
@@ -140,7 +141,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
     const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
     const sqlClient = yield* SqlClient
 
-    return yield* sqlClient.transaction(
+    const score = yield* sqlClient.transaction(
       Effect.gen(function* () {
         const scoreRepository = yield* ScoreRepository
         const outboxEventWriter = yield* OutboxEventWriter
@@ -181,19 +182,6 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
                 organizationId: score.organizationId,
                 projectId: score.projectId,
                 scoreId: score.id,
-              },
-            })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
-        } else if (score.issueId !== null) {
-          yield* outboxEventWriter
-            .write({
-              eventName: "IssueRefreshRequested",
-              aggregateType: "score",
-              aggregateId: score.id,
-              organizationId: score.organizationId,
-              payload: {
-                organizationId: score.organizationId,
-                projectId: score.projectId,
                 issueId: score.issueId,
               },
             })
@@ -203,4 +191,13 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
         return score
       }),
     )
+
+    if (isImmutableScore(score)) {
+      yield* syncScoreAnalyticsUseCase({
+        organizationId: score.organizationId,
+        scoreId: score.id,
+      })
+    }
+
+    return score
   })

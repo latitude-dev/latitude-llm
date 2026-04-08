@@ -137,7 +137,7 @@ Evaluations generated from issues (by user demand) are the mainline flow:
 - the issue list and issue details modal/page expose `Generate evaluation`
 - issues may have several linked evaluations, and each trigger starts the same initial generation/alignment flow described below as a background job
 - after creation, debounced automatic realignment still runs as new annotations arrive for each linked evaluation
-- alignment reads finalized, non-draft, non-errored canonical score rows from Postgres; aggregate dashboard metrics may still come from ClickHouse score analytics
+- alignment reads published, non-draft, non-errored canonical score rows from Postgres; aggregate dashboard metrics may still come from ClickHouse score analytics
 
 1. collect annotation-derived truth with at least `1` positive example and any available negatives
 2. create a baseline issue-monitor script
@@ -279,7 +279,7 @@ Live evaluation triggering is incremental:
 - if an issue is manually resolved, the confirmation-modal toggle defaulted from `keepMonitoring` decides whether linked evaluations remain active or archive
 - when project-level `keepMonitoring` is unset, the toggle default falls back to the organization-level `keepMonitoring`
 - deleted evaluations are soft-deleted from management UI but remain represented in historical analytics
-- issue-linked monitor failures bypass discovery and assign `scores.issue_id` directly
+- issue-linked monitor failures still flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts and then claims `scores.issue_id`
 
 ## Product Surface
 

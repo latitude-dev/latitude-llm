@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
+    "@domain/evaluations": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/scores": "workspace:*",
     "effect": "catalog:",
