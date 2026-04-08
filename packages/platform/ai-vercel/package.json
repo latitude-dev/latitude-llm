@@ -18,7 +18,6 @@
     "@domain/ai": "workspace:*",
     "@platform/ai-latitude": "workspace:*",
     "ai": "7.0.0-beta.45",
-    "effect": "catalog:",
-    "zod": "catalog:"
+    "effect": "catalog:"
   }
 }
