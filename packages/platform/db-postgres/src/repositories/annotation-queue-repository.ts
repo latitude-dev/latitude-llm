@@ -321,6 +321,43 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
               }),
           )
           .pipe(Effect.mapError((cause) => new RepositoryError({ operation: "save", cause }))),
+
+      insertIfNotExists: (queue) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .insert(annotationQueues)
+              .values({
+                id: queue.id,
+                organizationId,
+                projectId: queue.projectId,
+                system: queue.system,
+                name: queue.name,
+                slug: queue.slug,
+                description: queue.description,
+                instructions: queue.instructions,
+                settings: queue.settings,
+                assignees: queue.assignees,
+                totalItems: queue.totalItems,
+                completedItems: queue.completedItems,
+                deletedAt: queue.deletedAt,
+                createdAt: queue.createdAt,
+                updatedAt: queue.updatedAt,
+              })
+              .onConflictDoNothing({
+                target: [
+                  annotationQueues.organizationId,
+                  annotationQueues.projectId,
+                  annotationQueues.slug,
+                  annotationQueues.deletedAt,
+                ],
+              })
+              .returning({ id: annotationQueues.id }),
+          )
+          .pipe(
+            Effect.map((result) => result.length > 0),
+            Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
+          ),
     } satisfies AnnotationQueueRepositoryShape
   }),
 )

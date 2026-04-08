@@ -62,6 +62,12 @@ export interface AnnotationQueueRepositoryShape {
     input: FindSystemQueueBySlugInput,
   ): Effect.Effect<AnnotationQueue | null, RepositoryError>
   save(queue: AnnotationQueue): Effect.Effect<void, RepositoryError>
+  /**
+   * Insert a queue if no queue with the same (organizationId, projectId, slug, deletedAt)
+   * exists. Returns true if inserted, false if a conflict was encountered.
+   * This is idempotent and safe for concurrent use.
+   */
+  insertIfNotExists(queue: AnnotationQueue): Effect.Effect<boolean, RepositoryError>
 }
 
 export class AnnotationQueueRepository extends ServiceMap.Service<
