@@ -10,7 +10,7 @@ export interface SystemQueueCacheEntry {
 
 export const CACHE_TTL_SECONDS = 300
 
-export const buildProjectSystemQueuesCacheKey = (organizationId: string, projectId: string): string =>
+const buildProjectSystemQueuesCacheKey = (organizationId: string, projectId: string): string =>
   `org:${organizationId}:projects:${projectId}:system-queues`
 
 const systemQueueCacheEntrySchema = Schema.Struct({
@@ -41,6 +41,11 @@ export interface GetProjectSystemQueuesInput {
   readonly projectId: ProjectId
 }
 
+export interface EvictProjectSystemQueuesInput {
+  readonly organizationId: string
+  readonly projectId: ProjectId
+}
+
 export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput) =>
   Effect.gen(function* () {
     const cache = yield* CacheStore
@@ -66,10 +71,7 @@ export const getProjectSystemQueuesUseCase = (input: GetProjectSystemQueuesInput
     return entries
   })
 
-export const evictProjectSystemQueuesUseCase = (input: {
-  readonly organizationId: string
-  readonly projectId: ProjectId
-}) =>
+export const evictProjectSystemQueuesUseCase = (input: EvictProjectSystemQueuesInput) =>
   Effect.serviceOption(CacheStore).pipe(
     Effect.flatMap(
       Option.match({

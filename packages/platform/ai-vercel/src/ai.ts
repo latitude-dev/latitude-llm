@@ -1,3 +1,4 @@
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import {
@@ -9,6 +10,7 @@ import {
   type GenerateResult,
 } from "@domain/ai"
 import { runWithAiTelemetry } from "@platform/ai-latitude"
+import { parseEnv, parseEnvOptional } from "@platform/env"
 import { generateText, Output } from "ai"
 import { Effect, Layer } from "effect"
 
@@ -17,21 +19,90 @@ type ProviderOptions = NonNullable<GenerateTextCall["providerOptions"]>
 type ProviderModel = GenerateTextCall["model"]
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 8192
+const BEDROCK_PROVIDER = "amazon-bedrock"
 
-const getRequiredApiKey = (provider: string, envVar: string): Effect.Effect<string, AICredentialError> => {
-  const apiKey = process.env[envVar]
+const isSupportedBedrockProvider = (provider: string) => provider === BEDROCK_PROVIDER
 
-  if (apiKey && apiKey.length > 0) {
-    return Effect.succeed(apiKey)
+const normalizeProviderOptions = (
+  providerOptions: GenerateInput<unknown>["providerOptions"],
+): ProviderOptions | undefined => {
+  if (providerOptions === undefined) {
+    return undefined
   }
 
-  return Effect.fail(
-    new AICredentialError({
-      provider,
-      message: `${provider === "anthropic" ? "Anthropic" : "OpenAI"} is unavailable: set ${envVar}.`,
+  return providerOptions as ProviderOptions
+}
+
+const mapCredentialError = (message: string) =>
+  new AICredentialError({
+    provider: BEDROCK_PROVIDER,
+    message,
+  })
+
+const getRequiredApiKey = (
+  provider: "anthropic" | "openai",
+  envVar: string,
+): Effect.Effect<string, AICredentialError> =>
+  parseEnvOptional(envVar, "string").pipe(
+    Effect.mapError(
+      () =>
+        new AICredentialError({
+          provider,
+          message: `${provider === "anthropic" ? "Anthropic" : "OpenAI"} credentials are invalid: ${envVar} must be a string.`,
+        }),
+    ),
+    Effect.flatMap((apiKey) => {
+      if (apiKey !== undefined) {
+        return Effect.succeed(apiKey)
+      }
+
+      return Effect.fail(
+        new AICredentialError({
+          provider,
+          message: `${provider === "anthropic" ? "Anthropic" : "OpenAI"} is unavailable: set ${envVar}.`,
+        }),
+      )
     }),
   )
-}
+
+const createBedrockProvider = (): Effect.Effect<ReturnType<typeof createAmazonBedrock>, AICredentialError> =>
+  Effect.gen(function* () {
+    const region = yield* parseEnv("LAT_AWS_REGION", "string", "us-east-1").pipe(
+      Effect.mapError(() => mapCredentialError("Amazon Bedrock is unavailable: set LAT_AWS_REGION.")),
+    )
+    const accessKeyId = yield* parseEnvOptional("LAT_AWS_ACCESS_KEY_ID", "string").pipe(
+      Effect.mapError(() =>
+        mapCredentialError("Amazon Bedrock credentials are invalid: LAT_AWS_ACCESS_KEY_ID must be a string."),
+      ),
+    )
+    const secretAccessKey = yield* parseEnvOptional("LAT_AWS_SECRET_ACCESS_KEY", "string").pipe(
+      Effect.mapError(() =>
+        mapCredentialError("Amazon Bedrock credentials are invalid: LAT_AWS_SECRET_ACCESS_KEY must be a string."),
+      ),
+    )
+    const sessionToken = yield* parseEnvOptional("LAT_AWS_SESSION_TOKEN", "string").pipe(
+      Effect.mapError(() =>
+        mapCredentialError("Amazon Bedrock credentials are invalid: LAT_AWS_SESSION_TOKEN must be a string."),
+      ),
+    )
+    const apiKey = yield* parseEnvOptional("LAT_AWS_BEARER_TOKEN_BEDROCK", "string").pipe(
+      Effect.mapError(() =>
+        mapCredentialError("Amazon Bedrock credentials are invalid: LAT_AWS_BEARER_TOKEN_BEDROCK must be a string."),
+      ),
+    )
+
+    return createAmazonBedrock({
+      region,
+      ...(apiKey !== undefined ? { apiKey } : {}),
+      ...(accessKeyId !== undefined && secretAccessKey !== undefined
+        ? {
+            accessKeyId,
+            secretAccessKey,
+            ...(sessionToken !== undefined ? { sessionToken } : {}),
+          }
+        : {}),
+    })
+  })
 
 /**
  * Creates a Vercel AI SDK language model for supported providers.
@@ -51,6 +122,10 @@ export const createProviderModel = (
         Effect.map((apiKey) => createOpenAI({ apiKey })(model)),
       )
     default:
+      if (isSupportedBedrockProvider(provider)) {
+        return createBedrockProvider().pipe(Effect.map((bedrock) => bedrock(model)))
+      }
+
       return Effect.fail(
         new AICredentialError({
           provider,
@@ -73,6 +148,7 @@ export const AIGenerateLive = Layer.effect(
             try: async () => {
               const execute = async () => {
                 const startTime = performance.now()
+                const providerOptions = normalizeProviderOptions(input.providerOptions)
 
                 const call: GenerateTextCall = {
                   model: providerModel,
@@ -88,9 +164,7 @@ export const AIGenerateLive = Layer.effect(
                   ...(input.frequencyPenalty !== undefined ? { frequencyPenalty: input.frequencyPenalty } : {}),
                   ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
                   ...(input.seed !== undefined ? { seed: input.seed } : {}),
-                  ...(input.providerOptions !== undefined
-                    ? { providerOptions: input.providerOptions as ProviderOptions }
-                    : {}),
+                  ...(providerOptions !== undefined ? { providerOptions } : {}),
                 }
 
                 const result = await generateText(call)

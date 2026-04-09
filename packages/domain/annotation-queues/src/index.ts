@@ -1,7 +1,6 @@
 export {
   ANNOTATION_QUEUE_NAME_MAX_LENGTH,
   ANNOTATION_QUEUE_SLUG_MAX_LENGTH,
-  DETERMINISTIC_SYSTEM_QUEUE_NAMES,
   LIVE_QUEUE_DEFAULT_SAMPLING,
   QUEUE_REVIEW_HOTKEYS,
   RESOURCE_OUTLIER_MULTIPLIER,
@@ -26,7 +25,21 @@ export {
   type AnnotationQueueItemStatus,
   annotationQueueItemSchema,
 } from "./entities/annotation-queue-items.ts"
-export { annotationQueueItemStatus, annotationQueueItemStatusRankFromTimestamps } from "./helpers.ts"
+export {
+  annotationQueueItemStatus,
+  annotationQueueItemStatusRankFromTimestamps,
+  matchesEmptyResponseSystemQueue,
+  matchesForgettingSystemQueue,
+  matchesFrustrationSystemQueue,
+  matchesJailbreakingSystemQueue,
+  matchesLazinessSystemQueue,
+  matchesNsfwSystemQueue,
+  matchesOutputSchemaValidationSystemQueue,
+  matchesRefusalSystemQueue,
+  matchesResourceOutliersSystemQueue,
+  matchesToolCallErrorsSystemQueue,
+  matchesTrashingSystemQueue,
+} from "./helpers.ts"
 export {
   type AnnotationQueueItemListCursor,
   type AnnotationQueueItemListOptions,
@@ -50,8 +63,8 @@ export {
   type ListSystemQueuesInput,
 } from "./ports/annotation-queue-repository.ts"
 export {
-  buildProjectSystemQueuesCacheKey,
   CACHE_TTL_SECONDS,
+  type EvictProjectSystemQueuesInput,
   evictProjectSystemQueuesUseCase,
   type GetProjectSystemQueuesInput,
   getProjectSystemQueuesUseCase,
@@ -62,3 +75,10 @@ export {
   type ProvisionSystemQueuesInput,
   provisionSystemQueuesUseCase,
 } from "./use-cases/provision-system-queues.ts"
+export {
+  getSystemQueueMatcherBySlug,
+  type RunSystemQueueFlaggerError,
+  type RunSystemQueueFlaggerInput,
+  type RunSystemQueueFlaggerResult,
+  runSystemQueueFlaggerUseCase,
+} from "./use-cases/run-system-queue-flagger.ts"

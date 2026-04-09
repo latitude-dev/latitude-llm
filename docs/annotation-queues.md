@@ -22,73 +22,89 @@ System annotation queues are provisioned automatically for every project. This s
 When a project is created:
 
 1. **Domain Event**: `createProjectUseCase` emits a `ProjectCreated` domain event to the Outbox table
-2. **Event Routing**: The `domain-events` worker observes the event and enqueues a `projects:provision` task
-3. **Queue-Based Provisioning**: The `projects` worker handles idempotent queue creation via BullMQ (not Temporal—provisioning must complete before traces arrive)
+2. **Event Routing**: The `domain-events` worker observes the event and enqueues a `project-provisioning:provision-system-queues` task
+3. **Queue-Based Provisioning**: The `project-provisioning` worker handles idempotent queue creation via BullMQ (not Temporal—provisioning must complete before traces arrive)
 4. **Idempotency**: Uses `ON CONFLICT (organization_id, project_id, slug) DO NOTHING` to handle replays safely
 5. **Soft-Delete Aware**: Excludes trashed queues (`deleted_at IS NULL`) when checking existence
 6. **Cache Eviction**: After provisioning, evicts the Redis cache entry for the project's system queues
 
-The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `tool-call-errors`, `resource-outliers`) derived from their names, enabling slug-based routing throughout the pipeline.
+The system queues are created with fixed slugs (`jailbreaking`, `refusal`, `frustration`, `forgetting`, `laziness`, `nsfw`, `trashing`, `tool-call-errors`, `resource-outliers`, `output-schema-validation`, `empty-response`) derived from their names, enabling slug-based routing throughout the pipeline.
 
 ### Caching
 
 Project system queue state is cached in Redis with a read-through pattern:
 
-- **Key**: `project:{projectId}:system-queues`
+- **Key**: `org:{organizationId}:projects:{projectId}:system-queues`
 - **TTL**: 5 minutes
 - **Invalidation**: Triggered after provisioning, manual queue edits, or deletions
 - **Cache Miss**: Falls back to repository query and repopulates the cache
 
 The cache stores the full list of system queues for a project, making fan-out operations fast and reducing database load.
 
-### Trace Routing: Fan-Out Pattern
+### Trace Routing: Fan-Out + Per-Queue Workflow Start
 
-When a trace ends, the system uses a fan-out pattern to route it to system queues:
+When a trace ends, the system fans out across the project's provisioned system queues and starts one workflow per sampled queue:
 
 **Fan-Out (`system-annotation-queues:fanOut`)**:
 
 1. Triggered by `TraceEnded` domain event
 2. Reads all active system queues for the project (cached or from DB)
-3. Applies deterministic sampling for each queue
-4. Starts one `systemQueueFlaggerWorkflow` per sampled queue
+3. Applies deterministic sampling per queue and skips queues with `sampling <= 0`
+4. Starts `systemQueueFlaggerWorkflow` directly for each sampled queue
 
-The fan-out job stores which workflow IDs it has already started for a trace, so a retry can resume safely without re-enqueueing workflows that were already launched.
+**Workflow start dedupe**:
+
+1. The worker uses a Redis-backed iteration-progress key to avoid starting the same `(traceId, queueSlug)` workflow twice
+2. Workflow ids use `system-queue-flagger:{traceId}:{queueSlug}` so queue evaluation stays durable and slug-addressable
 
 **Deterministic Sampling**:
 
 ```typescript
-// Sampling check applied to all queues
-// - Deterministic-rule queues: sampling = 100% (always pass)
-// - LLM-classified queues: sampling = 5% (default, controls LLM spend)
+// Sampling check applied to every provisioned system queue
 hash(traceId) % 100 < sampling
 ```
 
 - **Queues with `sampling = 0%`**: Excluded entirely (disabled)
-- **Queues with deterministic rules**: Provisioned with `sampling = 100%` to ensure all traces are evaluated
-- **LLM-classified queues**: Default `sampling = 5%` to control costs
+- **Provisioned default**: system queues are currently provisioned with the shared `SYSTEM_QUEUE_DEFAULT_SAMPLING = 10`
+- **Editing**: users may later tune `settings.sampling` per system queue
 - Non-sampled traces skip the flagger workflow and are not flagged
 
 ### System Queue Flagger Workflow
 
-The Temporal workflow orchestrates trace classification for both deterministic and LLM-based queues:
+The Temporal workflow currently orchestrates queue evaluation through a single domain activity:
 
 **Workflow**: `systemQueueFlaggerWorkflow`
-- Input: `(projectId, traceId, queueSlug, traceContext)`
+- Input: `(organizationId, projectId, traceId, queueSlug)`
 - Output: Flag decision per queue
 
-**Activities**:
+**Activity**:
 
-1. **`fetchTraceContext`**: Loads limited context (last N messages) from the trace
-2. **`evaluateQueueMatch`**: 
-   - For deterministic-rule queues (`Tool Call Errors`, `Resource Outliers`): evaluates rules without LLM
-   - For LLM-classified queues: sends queue context to a low-cost flagger LLM
-   - Returns boolean decision
-   - Currently stubbed for future implementation
+1. **`runFlagger`**:
+   - delegates to `runSystemQueueFlaggerUseCase` in `@domain/annotation-queues`
+   - loads the trace detail from the trace repository
+   - resolves the queue slug through a domain matcher map
+   - returns `{ matched: boolean }`
+
+**Current matcher coverage**:
+
+- **Deterministic matchers implemented**:
+  - `tool-call-errors`: inspects conversation history for malformed or failed tool interactions
+  - `output-schema-validation`: inspects assistant output text for malformed or truncated structured-output JSON
+  - `empty-response`: detects empty, whitespace-only, or degenerate assistant responses while intentionally skipping tool-call-only delegations
+- **Matcher entrypoints present but currently noop**:
+  - `jailbreaking`
+  - `refusal`
+  - `frustration`
+  - `forgetting`
+  - `laziness`
+  - `nsfw`
+  - `trashing`
+  - `resource-outliers`
 
 **Retry Policy**:
 - Initial interval: 1s
 - Maximum attempts: 3
-- Non-retryable errors: Invalid queue slug, missing trace context
+- Non-retryable errors remain tied to workflow/activity configuration; unknown queue slugs currently return `matched: false` from the domain use case instead of throwing
 
 ### Trace Assignment Flow
 
@@ -101,14 +117,14 @@ domain-events worker
     ↓
 system-annotation-queues:fanOut (list queues, apply sampling)
     ↓
-systemQueueFlaggerWorkflow (Temporal - queue classification)
+systemQueueFlaggerWorkflow (one workflow per sampled queue)
     ↓
-flagger activity (placeholder)
+runFlagger activity
     ↓
 If flagged:
-    annotation activity (validate + draft annotation)
-    ↓
-Create annotation_queue_items row (trace added to queue)
+    workflow logs the match result
+
+Queue-item creation and draft-annotation writing remain a separate follow-up phase.
 ```
 
 ### Key Infrastructure Files
@@ -116,16 +132,16 @@ Create annotation_queue_items row (trace added to queue)
 - **Domain**: `packages/domain/annotation-queues/src/use-cases/`
   - `provision-system-queues.ts` - Idempotent queue creation
   - `get-project-system-queues.ts` - Cached queue listing
-  - `evict-project-system-queues.ts` - Cache invalidation
+  - `run-system-queue-flagger.ts` - Slug-to-matcher queue evaluation
 
 - **Workers**: `apps/workers/src/workers/`
-  - `projects.ts` - BullMQ-based provisioning
-  - `system-annotation-queues.ts` - Fan-out routing
+  - `project-provisioning.ts` - BullMQ-based provisioning
+  - `system-annotation-queues.ts` - Fan-out and per-queue workflow start
   - `domain-events.ts` - Event dispatch
 
 - **Workflows**: `apps/workflows/src/workflows/`
   - `system-queue-flagger-workflow.ts` - Temporal workflow
-  - `activities/flagger.ts` - Placeholder LLM activity
+  - `activities/index.ts` - `runFlagger` activity wired to the domain use case
 
 - **Repository**: `packages/platform/db-postgres/src/repositories/annotation-queue-repository.ts`
   - `findSystemQueueBySlugInProject` - Slug-based lookup
@@ -136,7 +152,7 @@ Create annotation_queue_items row (trace added to queue)
 All routing uses slugs rather than IDs:
 
 - Provisioning creates queues with fixed canonical slugs
-- Fan-out and workflow start use `queueSlug` in routing identities
+- Fan-out and workflow start use `queueSlug` in task/workflow payloads
 - Repository methods support `findBySlugInProject` for lookups
 - This enables durable routing even if queue rows are replaced
 
@@ -174,15 +190,30 @@ Every project starts with these system-created manual queues:
 - description: sexual or otherwise not-safe-for-work content appears
 - instructions: use this queue when the trace contains sexual content, explicit erotic material, or other clearly NSFW content that should be reviewed. Do not use it for benign anatomy or health discussion, mild romance, or safety-oriented policy discussion that is not itself NSFW.
 
+### Trashing
+
+- description: the agent cycles between tools without making progress
+- instructions: use this queue when the agent repeatedly invokes the same tools or tool sequences, oscillates between states, or accumulates tool calls without advancing toward the goal. Do not use this queue for legitimate retries after transient errors or for iterative refinement that is visibly converging.
+
 ### Tool Call Errors
 
 - description: a tool call failed or returned an error state
-- instructions: use this queue when a tool span errored, a tool execution failed, a malformed tool interaction occurred, or the conversation includes a tool-result message that clearly indicates failure. This queue is primarily matched through deterministic rules rather than the low-cost flagger model.
+- instructions: use this queue when the trace conversation history shows a failed tool result, a malformed tool interaction, or another clear tool-call failure signal. The deterministic matcher currently inspects conversation history directly instead of calling the low-cost flagger model.
 
 ### Resource Outliers
 
 - description: the trace has unusually high latency, cost, or usage
-- instructions: use this queue when latency, token usage, or cost materially exceeds project norms. This queue is primarily matched through deterministic outlier checks against project medians and configured thresholds rather than the low-cost flagger model.
+- instructions: use this queue when latency, token usage, or cost materially exceeds project norms. The queue definition and matcher entrypoint already exist, but the concrete outlier implementation is still pending.
+
+### Output Schema Validation
+
+- description: a structured-output response did not conform to the declared schema
+- instructions: use this queue when a GenAI span was configured to produce structured output and the actual assistant output either failed to parse as JSON or was visibly truncated before completion. The current deterministic matcher inspects assistant output text directly.
+
+### Empty Response
+
+- description: the assistant returned an empty or degenerate response
+- instructions: use this queue when a GenAI span produced no meaningful output — the response is empty, whitespace-only, a single repeated character, or otherwise degenerate when a substantive answer was expected. The current deterministic matcher intentionally skips tool-call-only delegations where the assistant hands control to tools without returning text.
 
 ## Population Flows
 
@@ -200,14 +231,12 @@ Every project starts with these system-created manual queues:
 
 - system-created queues are still manual queues: they have no `settings.filter`, they are marked with `system = true`, and their membership is inserted explicitly by the system rather than by live filter materialization
 - whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:fanOut` for that trace
-- `system-annotation-queues:fanOut` lists all non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one workflow per sampled queue
-- queues with deterministic rules are provisioned at `100%`, while LLM-classified queues default to `5%`
-- the fan-out job records each started workflow ID so BullMQ retries can resume without duplicating earlier workflow starts
-- when sampling passes, `systemQueueFlaggerWorkflow` evaluates that queue for the trace
-- the workflow handles both deterministic queue rules, including `Tool Call Errors` and `Resource Outliers`, and LLM-based classification for the remaining system queues
+- `system-annotation-queues:fanOut` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per sampled queue
+- queue evaluation is centralized in `runSystemQueueFlaggerUseCase`, which dispatches by `queueSlug` to the domain matcher map
+- the currently implemented deterministic matchers are `tool-call-errors`, `output-schema-validation`, and `empty-response`
+- the remaining system queues already have matcher entrypoints, but they currently return `false` until their concrete classifiers are implemented
 - the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
-- for every flagged queue, the workflow runs a separate annotation activity to validate the match and create the draft annotation
-- only if that annotation activity confirms the match does the system both create the draft annotation and add the trace to the queue
+- positive workflow matches are currently logged; queue-item creation and draft annotation writing remain a later phase
 - system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user
 
 ### Live Queues
@@ -285,7 +314,7 @@ Creation rules:
 
 - manual queue insertion creates the row from the trace dashboard bulk action
 - manual session insertion creates the row from the sessions dashboard bulk action after resolving the session to its newest trace
-- system-created queue insertion creates the row only after the workflow's annotation activity confirms the match and creates the draft annotation
+- system-created queue insertion will happen after the later queue-write / draft-annotation phase is implemented; current flagger workflows stop at the match decision
 - live queue insertion creates the row when a new trace passes the queue filter and then the queue sampling check
 - all paths create queue items with `completedAt = null`
 
@@ -314,7 +343,7 @@ Required Postgres indexes:
 - `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic
 - `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
 - manual queue insertion, system-created queue insertion, and live queue materialization all create queue items with `completedAt = null`
-- system-created queue insertion happens only after a separate full-context validation/annotation task confirms the match and writes the pending-review annotation
+- system-created queue insertion remains pending the later phase that will turn positive system-queue matches into queue items and draft annotations
 - live queue materialization is incremental on `TraceEnded` and evaluates `filter` before `sampling`
 - queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
 
@@ -406,7 +435,7 @@ Queues do not replace the annotation model:
 - annotations are still canonical scores
 - queue provenance is carried through `source_id = <annotation-queue-cuid>` when the annotation came from a queue
 - annotations created directly in managed UI or public API still use `source_id = "UI" | "API"`
-- system-created queue hits create draft annotation scores with `draftedAt` set, so they remain excluded from issue discovery until a human reviews or publishes them
+- system-created queue hits create draft annotation scores with `draftedAt` set, so they remain excluded from issue discovery until a human reviews or finalizes them
 - queue completion is tracked on `annotation_queue_items.completedAt`, not on the annotation score row
 
 ## Still Pending Precise Definition

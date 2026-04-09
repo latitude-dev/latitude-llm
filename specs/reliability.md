@@ -1016,7 +1016,7 @@ System-created default queues:
 #### Tool Call Errors
 
 - description: a tool call failed or returned an error state
-- instructions: review traces where a tool span errored, a tool execution failed, a malformed tool interaction occurred, or the conversation includes a tool-result message that clearly indicates failure. This queue is primarily detected through deterministic rules rather than the low-cost flagger model.
+- instructions: review traces where the conversation history shows failed tool results, malformed tool interactions, or another clear tool-call failure signal. In the initial deterministic implementation, `Tool Call Errors` inspects conversation history directly rather than relying on trace-level error counters or the low-cost flagger model.
 
 #### Resource Outliers
 
@@ -1061,7 +1061,7 @@ Queue population flows:
 - when a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes one `system-annotation-queues` message with task `flag` for that trace
 - `system-annotation-queues:flag` lists all non-deleted `system = true` queues in that project
 - `system-annotation-queues:flag` applies each queue's `settings.sampling` first; if the sampling check does not pass for a queue, that queue is skipped entirely for the current trace
-- among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM, including `Tool Call Errors` and `Resource Outliers`
+- among the sampled-in system queues, `system-annotation-queues:flag` runs deterministic checks for queues that do not need an LLM; the initial concrete matcher is `Tool Call Errors`, which inspects conversation history for failed or malformed tool interactions
 - for the remaining sampled-in system queues, the flagger LLM uses limited conversation context, such as the last `N` messages and the most recent `SYSTEM_QUEUE_FLAGGER_MAX_TOOL_CALLS` tool-call entries (tail), plus the name, description, and instructions of the LLM-classified system queues, and returns a boolean decision per queue; the aggregate tool-call summary (`total_calls`, `failed_calls`, `repeated_tool_calls`, etc.) always reflects the full trace even when the detailed sequence is truncated
 - a trace may match none of the system-created queues, or it may match several of them
 - for every queue flagged by either deterministic rules or the flagger model, `system-annotation-queues:flag` publishes a separate `system-annotation-queues` message with task `annotate` for that `(queueId, traceId)` pair

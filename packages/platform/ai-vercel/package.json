@@ -13,10 +13,12 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.0-beta.19",
+    "@ai-sdk/amazon-bedrock": "5.0.0-beta.27",
+    "@ai-sdk/anthropic": "4.0.0-beta.23",
     "@ai-sdk/openai": "4.0.0-beta.12",
     "@domain/ai": "workspace:*",
     "@platform/ai-latitude": "workspace:*",
+    "@platform/env": "workspace:*",
     "ai": "7.0.0-beta.45",
     "effect": "catalog:"
   }

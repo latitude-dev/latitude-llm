@@ -1,3 +1,4 @@
+import { runSystemQueueFlaggerUseCase } from "@domain/annotation-queues"
 import {
   type AssignScoreToIssueInput,
   assignScoreToIssueUseCase,
@@ -22,7 +23,7 @@ import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import { AIEmbedLive, AIRerankLive } from "@platform/ai-voyage"
-import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
 import { createLogger } from "@repo/observability"
@@ -84,7 +85,7 @@ export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
     ),
   )
 
-export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
+export const assignScoreToIssue = (input: AssignScoreToIssueInput) =>
   Effect.runPromise(
     assignScoreToIssueUseCase(input).pipe(
       withPostgres(
@@ -95,7 +96,7 @@ export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
     ),
   )
 
-export const syncScoreAnalytics = async (input: SyncScoreAnalyticsInput) =>
+export const syncScoreAnalytics = (input: SyncScoreAnalyticsInput) =>
   Effect.runPromise(
     syncScoreAnalyticsUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
@@ -111,4 +112,14 @@ export const syncIssueProjections = async (input: SyncIssueProjectionsInput) =>
     ),
   )
 
-export { runFlagger } from "./flagger.ts"
+export const runFlagger = async (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly queueSlug: string
+}) =>
+  Effect.runPromise(
+    runSystemQueueFlaggerUseCase(input).pipe(
+      withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+    ),
+  )
