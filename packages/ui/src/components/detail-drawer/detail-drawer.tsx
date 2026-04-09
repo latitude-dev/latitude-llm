@@ -177,6 +177,9 @@ export function DetailDrawer({
   )
 
   const resizeHandle = (
+    // Native <hr> fixes Biome useSemanticElements (implicit separator). UA styles default
+    // <hr> to full width + margins; in this flex row we need a 1px-wide vertical grip, so
+    // w-px / border-0 / m-0 / h-auto mirror the old div+single-border layout.
     <hr
       aria-orientation="vertical"
       aria-label="Resize panel"
