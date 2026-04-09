@@ -1,9 +1,10 @@
-import { type Issue, IssueRepository, issueSchema } from "@domain/issues"
+import { type Issue, IssueRepository, issueSchema, MIN_OCCURRENCES_FOR_VISIBILITY } from "@domain/issues"
 import { type IssueId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { issues } from "../schema/issues.ts"
+import { scores } from "../schema/scores.ts"
 
 const toDomainIssue = (row: typeof issues.$inferSelect): Issue =>
   issueSchema.parse({
@@ -46,15 +47,30 @@ export const IssueRepositoryLive = Layer.effect(
     return {
       list: ({ projectId, limit, offset }) =>
         sqlClient
-          .query((db) =>
-            db
+          .query((db) => {
+            const hasAnnotationEvidence = sql<boolean>`exists (
+              select 1
+              from ${scores}
+              where ${scores.issueId} = ${issues.id}
+                and ${scores.draftedAt} is null
+                and ${scores.source} = 'annotation'
+            )`
+
+            const meetsVisibilityThreshold = sql<boolean>`(
+              select count(*)
+              from ${scores}
+              where ${scores.issueId} = ${issues.id}
+                and ${scores.draftedAt} is null
+            ) >= ${MIN_OCCURRENCES_FOR_VISIBILITY}`
+
+            return db
               .select()
               .from(issues)
-              .where(eq(issues.projectId, projectId))
+              .where(and(eq(issues.projectId, projectId), or(hasAnnotationEvidence, meetsVisibilityThreshold)))
               .orderBy(desc(issues.createdAt))
               .limit(limit + 1)
-              .offset(offset),
-          )
+              .offset(offset)
+          })
           .pipe(
             Effect.map((rows) => ({
               items: rows.slice(0, limit).map(toDomainIssue),

@@ -3,12 +3,17 @@ import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, annotationScoreSchema } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
-import { SpanRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  ScoreAnalyticsRepositoryLive,
+  SpanRepositoryLive,
+  TraceRepositoryLive,
+  withClickHouse,
+} from "@platform/db-clickhouse"
 import { OutboxEventWriterLive, ProjectRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { Effect, Layer } from "effect"
 import { jsonBody, OrgAndProjectParamsSchema, openApiResponses, PROTECTED_SECURITY } from "../openapi/schemas.ts"
-import type { AnnotationRoutesOptions, OrganizationScopedEnv } from "../types.ts"
+import type { OrganizationScopedEnv } from "../types.ts"
 
 /**
  * POST body: use-case input without `projectId` (URL) or
@@ -69,19 +74,14 @@ const toResponse = (score: AnnotationScore) => ({
   updatedAt: score.updatedAt.toISOString(),
 })
 
-export const createAnnotationsRoutes = (routeOptions?: AnnotationRoutesOptions) => {
+export const createAnnotationsRoutes = () => {
   const app = new OpenAPIHono<OrganizationScopedEnv>()
 
   app.openapi(route, async (c) => {
     const body = c.req.valid("json")
     const { projectId: projectIdParam } = c.req.valid("param")
     const projectId = ProjectId(projectIdParam)
-
-    const postgresLayer = Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive)
-    const clickhouseReposLayer = Layer.merge(
-      routeOptions?.traceRepositoryLayer ?? TraceRepositoryLive,
-      routeOptions?.spanRepositoryLayer ?? SpanRepositoryLive,
-    )
+    const organizationId = c.var.organization.id
 
     const score = await Effect.runPromise(
       Effect.gen(function* () {
@@ -94,8 +94,16 @@ export const createAnnotationsRoutes = (routeOptions?: AnnotationRoutesOptions) 
           sourceId: "API",
         })
       }).pipe(
-        withPostgres(postgresLayer, c.var.postgresClient, c.var.organization.id),
-        withClickHouse(clickhouseReposLayer, c.var.clickhouse, c.var.organization.id),
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
+        withClickHouse(
+          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
+          c.var.clickhouse,
+          organizationId,
+        ),
         Effect.provide(QueuePublisherLive(c.var.queuePublisher)),
       ),
     )

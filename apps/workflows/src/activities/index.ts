@@ -1,75 +1,43 @@
 import {
   type AssignScoreToIssueInput,
-  type AssignScoreToIssueResult,
   assignScoreToIssueUseCase,
-  type CheckEligibilityError,
   type CheckEligibilityInput,
   type CreateIssueFromScoreInput,
-  type CreateIssueFromScoreResult,
   checkEligibilityUseCase,
   createIssueFromScoreUseCase,
-  DraftScoreNotEligibleForDiscoveryError,
-  type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
-  ErroredScoreNotEligibleForDiscoveryError,
   embedScoreFeedbackUseCase,
   type HybridSearchIssuesInput,
-  type HybridSearchIssuesResult,
   hybridSearchIssuesUseCase,
-  MissingScoreFeedbackForDiscoveryError,
-  PassedScoreNotEligibleForDiscoveryError,
+  isEligibilityError,
   type RerankIssueCandidatesInput,
-  type ResolvedIssueMatch,
-  type RetrievalResult,
+  type ResolveMatchedIssueInput,
   rerankIssueCandidatesUseCase,
   resolveMatchedIssueUseCase,
-  ScoreAlreadyOwnedByIssueError,
-  ScoreDiscoveryOrganizationMismatchError,
-  ScoreDiscoveryProjectMismatchError,
-  ScoreNotFoundForDiscoveryError,
   type SyncIssueProjectionsInput,
   syncIssueProjectionsUseCase,
 } from "@domain/issues"
-import { syncScoreAnalyticsUseCase } from "@domain/scores"
+import { type SyncScoreAnalyticsInput, syncScoreAnalyticsUseCase } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
+import { withAi } from "@platform/ai"
+import { AIGenerateLive } from "@platform/ai-vercel"
+import { AIEmbedLive, AIRerankLive } from "@platform/ai-voyage"
 import { ScoreAnalyticsRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { IssueProjectionRepositoryLive, withWeaviate } from "@platform/db-weaviate"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import {
-  getClickhouseClient,
-  getIssueDiscoveryAiLayerEffect,
-  getIssueProjectionRepositoryLayerEffect,
-  getPostgresClient,
-} from "../clients.ts"
+import { getClickhouseClient, getPostgresClient, getRedisClient, getWeaviateClient } from "../clients.ts"
 
 const logger = createLogger("workflows-issue-discovery")
 
-const eligibilityErrorConstructors = [
-  ScoreNotFoundForDiscoveryError,
-  ScoreDiscoveryOrganizationMismatchError,
-  ScoreDiscoveryProjectMismatchError,
-  DraftScoreNotEligibleForDiscoveryError,
-  ErroredScoreNotEligibleForDiscoveryError,
-  ScoreAlreadyOwnedByIssueError,
-  MissingScoreFeedbackForDiscoveryError,
-  PassedScoreNotEligibleForDiscoveryError,
-] as const
-
-const isEligibilityError = (error: unknown): error is CheckEligibilityError => {
-  return eligibilityErrorConstructors.some((Ctor) => error instanceof Ctor)
-}
-
-export const checkEligibility = (input: CheckEligibilityInput) =>
+export const checkEligibility = async (input: CheckEligibilityInput) =>
   Effect.runPromise(
     checkEligibilityUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       Effect.tapError((error) =>
         Effect.sync(() => {
-          if (isEligibilityError(error)) {
-            return
-          }
-
+          if (isEligibilityError(error)) return
           logger.error("Issue discovery eligibility check failed", {
             scoreId: input.scoreId,
             error,
@@ -79,67 +47,44 @@ export const checkEligibility = (input: CheckEligibilityInput) =>
     ),
   )
 
-export const embedScoreFeedback = (input: EmbedScoreFeedbackInput): Promise<EmbeddedScoreFeedback> =>
+export const embedScoreFeedback = async (input: EmbedScoreFeedbackInput) =>
   Effect.runPromise(
-    getIssueDiscoveryAiLayerEffect().pipe(
-      Effect.flatMap((issueDiscoveryAiLayer) =>
-        embedScoreFeedbackUseCase(input).pipe(
-          withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
-          Effect.provide(issueDiscoveryAiLayer),
-        ),
-      ),
+    embedScoreFeedbackUseCase(input).pipe(
+      withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withAi(AIEmbedLive, getRedisClient()),
     ),
   )
 
-export const hybridSearchIssues = (input: HybridSearchIssuesInput): Promise<HybridSearchIssuesResult> =>
+export const hybridSearchIssues = async (input: HybridSearchIssuesInput) =>
   Effect.runPromise(
-    getIssueProjectionRepositoryLayerEffect().pipe(
-      Effect.flatMap((issueProjectionRepositoryLayer) =>
-        hybridSearchIssuesUseCase(input).pipe(Effect.provide(issueProjectionRepositoryLayer)),
-      ),
+    hybridSearchIssuesUseCase(input).pipe(
+      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
     ),
   )
 
-export const rerankIssueCandidates = (input: RerankIssueCandidatesInput): Promise<RetrievalResult> =>
+export const rerankIssueCandidates = async (input: RerankIssueCandidatesInput) =>
+  Effect.runPromise(rerankIssueCandidatesUseCase(input).pipe(withAi(AIRerankLive, getRedisClient())))
+
+export const resolveMatchedIssue = async (input: ResolveMatchedIssueInput) =>
   Effect.runPromise(
-    getIssueDiscoveryAiLayerEffect().pipe(
-      Effect.flatMap((issueDiscoveryAiLayer) =>
-        rerankIssueCandidatesUseCase(input).pipe(Effect.provide(issueDiscoveryAiLayer)),
-      ),
+    resolveMatchedIssueUseCase(input).pipe(
+      withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
     ),
   )
 
-export interface ResolveMatchedIssueActivityInput {
-  readonly organizationId: string
-  readonly projectId: string
-  readonly matchedIssueUuid: string | null
-}
-
-export const resolveMatchedIssue = (input: ResolveMatchedIssueActivityInput): Promise<ResolvedIssueMatch> =>
+export const createIssueFromScore = async (input: CreateIssueFromScoreInput) =>
   Effect.runPromise(
-    resolveMatchedIssueUseCase({
-      projectId: input.projectId,
-      matchedIssueUuid: input.matchedIssueUuid,
-    }).pipe(withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId))),
-  )
-
-export const createIssueFromScore = (input: CreateIssueFromScoreInput): Promise<CreateIssueFromScoreResult> =>
-  Effect.runPromise(
-    getIssueDiscoveryAiLayerEffect().pipe(
-      Effect.flatMap((issueDiscoveryAiLayer) =>
-        createIssueFromScoreUseCase(input).pipe(
-          withPostgres(
-            Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive),
-            getPostgresClient(),
-            OrganizationId(input.organizationId),
-          ),
-          Effect.provide(issueDiscoveryAiLayer),
-        ),
+    createIssueFromScoreUseCase(input).pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, IssueRepositoryLive),
+        getPostgresClient(),
+        OrganizationId(input.organizationId),
       ),
+      withAi(AIGenerateLive, getRedisClient()),
     ),
   )
 
-export const assignScoreToIssue = (input: AssignScoreToIssueInput): Promise<AssignScoreToIssueResult> =>
+export const assignScoreToIssue = async (input: AssignScoreToIssueInput) =>
   Effect.runPromise(
     assignScoreToIssueUseCase(input).pipe(
       withPostgres(
@@ -150,27 +95,18 @@ export const assignScoreToIssue = (input: AssignScoreToIssueInput): Promise<Assi
     ),
   )
 
-export interface SyncScoreAnalyticsActivityInput {
-  readonly organizationId: string
-  readonly scoreId: string
-}
-
-export const syncScoreAnalytics = (input: SyncScoreAnalyticsActivityInput): Promise<void> =>
+export const syncScoreAnalytics = async (input: SyncScoreAnalyticsInput) =>
   Effect.runPromise(
-    syncScoreAnalyticsUseCase({ scoreId: input.scoreId }).pipe(
+    syncScoreAnalyticsUseCase(input).pipe(
       withPostgres(ScoreRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(ScoreAnalyticsRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
     ),
   )
 
-export const syncIssueProjections = (input: SyncIssueProjectionsInput): Promise<void> =>
+export const syncIssueProjections = async (input: SyncIssueProjectionsInput) =>
   Effect.runPromise(
-    getIssueProjectionRepositoryLayerEffect().pipe(
-      Effect.flatMap((issueProjectionRepositoryLayer) =>
-        syncIssueProjectionsUseCase(input).pipe(
-          withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
-          Effect.provide(issueProjectionRepositoryLayer),
-        ),
-      ),
+    syncIssueProjectionsUseCase(input).pipe(
+      withPostgres(IssueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
     ),
   )

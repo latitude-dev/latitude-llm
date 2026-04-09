@@ -1,8 +1,8 @@
 import type { ApiKeyId, RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import type { ApiKey } from "../entities/api-key.ts"
+import { ApiKeyNotFoundError } from "../errors.ts"
 import { ApiKeyRepository } from "../ports/api-key-repository.ts"
-import { ApiKeyNotFoundError } from "./revoke-api-key.ts"
 
 export interface UpdateApiKeyInput {
   readonly id: ApiKeyId

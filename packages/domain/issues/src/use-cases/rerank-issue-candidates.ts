@@ -27,6 +27,13 @@ export const rerankIssueCandidatesUseCase = (input: RerankIssueCandidatesInput) 
       query: input.query,
       documents: input.candidates.map((candidate) => candidate.description),
       model: RERANK_MODEL,
+      telemetry: {
+        spanName: "rerank-issue-candidates",
+        tags: ["issues", "rerank"],
+        metadata: {
+          candidateCount: input.candidates.length,
+        },
+      },
     })
 
     const best = reranked

@@ -34,6 +34,7 @@ export {
   ErroredScoreNotEligibleForDiscoveryError,
   IssueNotFoundForAssignmentError,
   IssueNotFoundForDetailsGenerationError,
+  isEligibilityError,
   MissingIssueOccurrencesForDetailsGenerationError,
   MissingScoreFeedbackForDiscoveryError,
   PassedScoreNotEligibleForDiscoveryError,
@@ -72,6 +73,12 @@ export {
   createIssueFromScoreUseCase,
 } from "./use-cases/create-issue-from-score.ts"
 export {
+  type DiscoverIssueError,
+  type DiscoverIssueInput,
+  type DiscoverIssueResult,
+  discoverIssueUseCase,
+} from "./use-cases/discover-issue.ts"
+export {
   type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
@@ -93,6 +100,12 @@ export {
   type ListIssuesInput,
   listIssuesUseCase,
 } from "./use-cases/list-issues.ts"
+export {
+  type RefreshIssueDetailsError,
+  type RefreshIssueDetailsInput,
+  type RefreshIssueDetailsResult,
+  refreshIssueDetailsUseCase,
+} from "./use-cases/refresh-issue-details.ts"
 export {
   type RerankIssueCandidatesInput,
   type RetrievalResult,

@@ -5,9 +5,12 @@ import {
   type SqlClientShape,
   toRepositoryError,
 } from "@domain/shared"
+import { createLogger } from "@repo/observability"
 import { sql } from "drizzle-orm"
-import { Effect, Exit, Layer } from "effect"
+import { Cause, Effect, Exit, Layer } from "effect"
 import type { Operator, PostgresClient } from "./client.ts"
+
+const sqlClientLogger = createLogger("db-postgres/sql-client")
 
 /**
  * Live layer for SqlClient with closure-scoped transaction tracking.
@@ -97,8 +100,21 @@ export const SqlClientLive = (client: PostgresClient, organizationId: Organizati
             }
 
             resolveEffectDone({ ok: false, error: exit.cause })
+            // Wait for Drizzle's transaction promise so the connection returns to
+            // the pool. The callback rethrows `exit.cause`, so this promise
+            // usually rejects with that same value — we still propagate the
+            // Effect failure via `exit` below. If the driver reports a distinct
+            // error (e.g. rollback/commit), log it so production is not blind.
             yield* Effect.tryPromise({
-              try: () => txPromise.catch(() => {}),
+              try: () =>
+                txPromise.catch((transactionCompletionError: unknown) => {
+                  if (transactionCompletionError !== exit.cause) {
+                    sqlClientLogger.error(
+                      "[SqlClient] Database error while completing transaction after effect failure",
+                      { effectFailure: Cause.squash(exit.cause), transactionCompletionError },
+                    )
+                  }
+                }),
               catch: (e) => toRepositoryError(e, "transaction"),
             })
             return yield* exit

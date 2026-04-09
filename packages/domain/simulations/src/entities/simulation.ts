@@ -82,6 +82,3 @@ export const simulationSchema = z
   })
 
 export type Simulation = z.infer<typeof simulationSchema>
-
-/** @knipignore - TODO: unignore once used */
-export { SIMULATION_DATASET_CUSTOM_SENTINEL }

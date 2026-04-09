@@ -1,7 +1,11 @@
+import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
-import type { QueueConsumer, QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
+import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
+import { hash } from "@repo/utils"
 import { Data, Effect } from "effect"
 
 class UnhandledEventError extends Data.TaggedError("UnhandledEventError")<{
@@ -10,9 +14,6 @@ class UnhandledEventError extends Data.TaggedError("UnhandledEventError")<{
 }> {}
 
 const logger = createLogger("domain-events")
-
-export const TRACE_END_DEBOUNCE_MS = 5 * 60 * 1000
-export const ISSUE_REFRESH_DEBOUNCE_MS = 8 * 60 * 60 * 1000
 
 type EventHandlerMap = {
   [E in keyof EventPayloads]: (event: DomainEvent<E, EventPayloads[E]>) => Effect.Effect<void, unknown>
@@ -23,47 +24,60 @@ type EventHandlerFn = (e: DomainEvent) => Effect.Effect<void, unknown>
 export const createDomainEventsWorker = ({
   consumer,
   publisher: pub,
-  workflowStarter,
 }: {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
-  workflowStarter: WorkflowStarterShape
 }) => {
   const handlers: EventHandlerMap = {
-    MagicLinkEmailRequested: (event) => pub.publish("magic-link-email", "send", event.payload),
+    MagicLinkEmailRequested: (event) =>
+      hash(event.payload.magicLinkUrl).pipe(
+        Effect.flatMap((magicLinkHash) =>
+          pub.publish("magic-link-email", "send", event.payload, {
+            dedupeKey: `emails:magic-link:${magicLinkHash}`,
+          }),
+        ),
+      ),
 
-    InvitationEmailRequested: (event) => pub.publish("invitation-email", "send", event.payload),
+    InvitationEmailRequested: (event) =>
+      hash(event.payload.invitationUrl).pipe(
+        Effect.flatMap((invitationHash) =>
+          pub.publish("invitation-email", "send", event.payload, {
+            dedupeKey: `emails:invitation:${invitationHash}`,
+          }),
+        ),
+      ),
 
-    UserDeletionRequested: (event) => pub.publish("user-deletion", "delete", event.payload),
+    UserDeletionRequested: (event) =>
+      pub.publish("user-deletion", "delete", event.payload, {
+        dedupeKey: `users:deletion:${event.payload.userId}`,
+      }),
 
     SpanIngested: (event) =>
       pub.publish("live-traces", "end", event.payload, {
-        dedupeKey: `live-traces:end:${event.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
+        dedupeKey: `traces:live:end:${event.payload.traceId}`,
         debounceMs: TRACE_END_DEBOUNCE_MS,
       }),
 
     TraceEnded: (event) =>
       Effect.all(
         [
-          pub.publish("live-evaluations", "enqueue", event.payload),
-          pub.publish("live-annotation-queues", "curate", event.payload),
-          pub.publish("system-annotation-queues", "flag", event.payload),
+          pub.publish("live-evaluations", "enqueue", event.payload, {
+            dedupeKey: `evaluations:live:enqueue:${event.payload.traceId}`,
+          }),
+          pub.publish("live-annotation-queues", "curate", event.payload, {
+            dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
+          }),
+          pub.publish("system-annotation-queues", "flag", event.payload, {
+            dedupeKey: `annotation-queues:system:flag:${event.payload.traceId}`,
+          }),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
     IssueDiscoveryRequested: (event) =>
-      workflowStarter.start(
-        "issueDiscoveryWorkflow",
-        {
-          organizationId: event.payload.organizationId,
-          projectId: event.payload.projectId,
-          scoreId: event.payload.scoreId,
-        },
-        {
-          workflowId: `issue-discovery:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.scoreId}`,
-        },
-      ),
+      pub.publish("issues", "discovery", event.payload, {
+        dedupeKey: `issues:discovery:${event.payload.scoreId}`,
+      }),
 
     IssueRefreshRequested: (event) =>
       pub.publish("issues", "refresh", event.payload, {
@@ -72,10 +86,17 @@ export const createDomainEventsWorker = ({
       }),
 
     OrganizationCreated: (event) =>
-      pub.publish("api-keys", "create", {
-        organizationId: event.payload.organizationId,
-        name: "Default API Key",
-      }),
+      pub.publish(
+        "api-keys",
+        "create",
+        {
+          organizationId: event.payload.organizationId,
+          name: DEFAULT_API_KEY_NAME,
+        },
+        {
+          dedupeKey: `api-keys:create:${event.payload.organizationId}`,
+        },
+      ),
   }
 
   consumer.subscribe("domain-events", {

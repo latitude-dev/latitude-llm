@@ -1,5 +1,5 @@
 import { type EmailMessage, EmailSendError, type EmailSender } from "@domain/email"
-import { parseEnv, parseEnvOptional } from "@platform/env"
+import { type InvalidEnvValueError, type MissingEnvValueError, parseEnv, parseEnvOptional } from "@platform/env"
 import { Effect } from "effect"
 import { createTransport } from "nodemailer"
 
@@ -40,11 +40,20 @@ interface ResolvedProvider {
   readonly from: string | undefined
 }
 
-const getMailgunApiConfigFromEnv = (): MailgunApiConfig => {
-  const apiKey = Effect.runSync(parseEnvOptional("LAT_MAILGUN_API_KEY", "string"))
-  const domain = Effect.runSync(parseEnvOptional("LAT_MAILGUN_DOMAIN", "string"))
-  const regionRaw = Effect.runSync(parseEnvOptional("LAT_MAILGUN_REGION", "string"))
-  const from = Effect.runSync(parseEnvOptional("LAT_MAILGUN_FROM", "string"))
+/** Env-derived email transport inputs (before optional caller overrides). */
+export interface EmailTransportEnvResolved {
+  readonly mailgun: MailgunApiConfig
+  readonly smtp: SmtpConfig
+  readonly mailpit: MailpitConfig
+}
+
+export type EmailTransportEnvError = MissingEnvValueError | InvalidEnvValueError
+
+const mailgunApiConfigFromEnv: Effect.Effect<MailgunApiConfig, EmailTransportEnvError> = Effect.gen(function* () {
+  const apiKey = yield* parseEnvOptional("LAT_MAILGUN_API_KEY", "string")
+  const domain = yield* parseEnvOptional("LAT_MAILGUN_DOMAIN", "string")
+  const regionRaw = yield* parseEnvOptional("LAT_MAILGUN_REGION", "string")
+  const from = yield* parseEnvOptional("LAT_MAILGUN_FROM", "string")
 
   return {
     apiKey,
@@ -52,25 +61,37 @@ const getMailgunApiConfigFromEnv = (): MailgunApiConfig => {
     region: regionRaw === "eu" ? "eu" : "us",
     from,
   }
-}
+})
 
-const getSmtpConfigFromEnv = (): SmtpConfig => {
-  const host = Effect.runSync(parseEnvOptional("LAT_SMTP_HOST", "string"))
-  const port = Effect.runSync(parseEnv("LAT_SMTP_PORT", "number", 587))
-  const user = Effect.runSync(parseEnvOptional("LAT_SMTP_USER", "string"))
-  const pass = Effect.runSync(parseEnvOptional("LAT_SMTP_PASS", "string"))
-  const from = Effect.runSync(parseEnvOptional("LAT_SMTP_FROM", "string"))
+const smtpConfigFromEnv: Effect.Effect<SmtpConfig, EmailTransportEnvError> = Effect.gen(function* () {
+  const host = yield* parseEnvOptional("LAT_SMTP_HOST", "string")
+  const port = yield* parseEnv("LAT_SMTP_PORT", "number", 587)
+  const user = yield* parseEnvOptional("LAT_SMTP_USER", "string")
+  const pass = yield* parseEnvOptional("LAT_SMTP_PASS", "string")
+  const from = yield* parseEnvOptional("LAT_SMTP_FROM", "string")
 
   return { host, port, user, pass, from }
-}
+})
 
-const getMailpitConfigFromEnv = (): MailpitConfig => {
-  const host = Effect.runSync(parseEnv("LAT_MAILPIT_HOST", "string", "localhost"))
-  const port = Effect.runSync(parseEnv("LAT_MAILPIT_PORT", "number", 1025))
-  const from = Effect.runSync(parseEnv("LAT_MAILPIT_FROM", "string", "noreply@latitude.local"))
+const mailpitConfigFromEnv: Effect.Effect<MailpitConfig, EmailTransportEnvError> = Effect.gen(function* () {
+  const host = yield* parseEnv("LAT_MAILPIT_HOST", "string", "localhost")
+  const port = yield* parseEnv("LAT_MAILPIT_PORT", "number", 1025)
+  const from = yield* parseEnv("LAT_MAILPIT_FROM", "string", "noreply@latitude.local")
 
   return { host, port, from }
-}
+})
+
+/**
+ * Reads all email-related env vars in one Effect pipeline (single interpreter run at the boundary).
+ */
+export const emailTransportEnvConfig: Effect.Effect<EmailTransportEnvResolved, EmailTransportEnvError> = Effect.gen(
+  function* () {
+    const mailgun = yield* mailgunApiConfigFromEnv
+    const smtp = yield* smtpConfigFromEnv
+    const mailpit = yield* mailpitConfigFromEnv
+    return { mailgun, smtp, mailpit }
+  },
+)
 
 const mergeMailgunConfig = (
   base: MailgunApiConfig,
@@ -190,10 +211,11 @@ const resolveProvider = ({
 }
 
 export const createEmailTransportSender = (config?: EmailTransportConfig): EmailSender => {
+  const env = Effect.runSync(emailTransportEnvConfig)
   const resolved = resolveProvider({
-    mailgun: mergeMailgunConfig(getMailgunApiConfigFromEnv(), config?.mailgun),
-    smtp: mergeSmtpConfig(getSmtpConfigFromEnv(), config?.smtp),
-    mailpit: mergeMailpitConfig(getMailpitConfigFromEnv(), config?.mailpit),
+    mailgun: mergeMailgunConfig(env.mailgun, config?.mailgun),
+    smtp: mergeSmtpConfig(env.smtp, config?.smtp),
+    mailpit: mergeMailpitConfig(env.mailpit, config?.mailpit),
   })
 
   return {

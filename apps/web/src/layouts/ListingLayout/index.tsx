@@ -1,4 +1,4 @@
-import { cn } from "@repo/ui"
+import { cn, Text } from "@repo/ui"
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react"
 
 interface ListingLayoutProps {
@@ -73,13 +73,46 @@ function ActionRowItem({ children, className }: ActionRowItemProps) {
   return <div className={cn("flex flex-row gap-2 items-center min-w-0 shrink-0", className)}>{children}</div>
 }
 
+interface HeaderProps {
+  readonly title: ReactNode
+  /** Shown inline after the title (e.g. queue type badge). */
+  readonly badge?: ReactNode
+  readonly description?: ReactNode
+  /** Right-aligned controls on the same row as the title (e.g. primary actions). */
+  readonly actions?: ReactNode
+  readonly className?: string
+}
+
+function Header({ title, badge, description, actions, className }: HeaderProps) {
+  return (
+    <div className={cn("flex flex-col gap-1 p-6 pb-0", className)}>
+      <div className="flex min-w-0 flex-row items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 flex-row flex-wrap items-center gap-x-2 gap-y-1">
+            {typeof title === "string" ? <Text.H4 className="min-w-0 shrink">{title}</Text.H4> : title}
+            {badge ? <span className="shrink-0 flex">{badge}</span> : null}
+          </div>
+          {description !== undefined && description !== null ? (
+            typeof description === "string" ? (
+              <Text.H5 color="foregroundMuted">{description}</Text.H5>
+            ) : (
+              description
+            )
+          ) : null}
+        </div>
+        {actions ? <div className="flex shrink-0 flex-row items-center gap-2 self-start">{actions}</div> : null}
+      </div>
+    </div>
+  )
+}
+
 interface ListProps {
   readonly children: ReactNode
   readonly className?: string
 }
 
 function List({ children, className }: ListProps) {
-  return <div className={cn("min-h-0 min-w-0 grow p-6 pt-0 pr-0 flex flex-col", className)}>{children}</div>
+  return <div className={cn("min-h-0 min-w-0 grow p-6 pt-0 flex flex-col", className)}>{children}</div>
 }
 
 function Body({ children, className }: { readonly children: ReactNode; readonly className?: string }) {
@@ -97,6 +130,7 @@ function Sidebar({ children, className }: { readonly children: ReactNode; readon
 ListingLayout.ActionRowItem = ActionRowItem
 ListingLayout.ActionsRow = ActionsRow
 ListingLayout.Actions = Actions
+ListingLayout.Header = Header
 ListingLayout.Body = Body
 ListingLayout.Sidebar = Sidebar
 ListingLayout.List = List

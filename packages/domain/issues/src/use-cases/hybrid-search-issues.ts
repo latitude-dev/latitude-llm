@@ -17,7 +17,6 @@ export const hybridSearchIssuesUseCase = (input: HybridSearchIssuesInput) =>
     const issueProjectionRepository = yield* IssueProjectionRepository
 
     const candidates = yield* issueProjectionRepository.hybridSearch({
-      organizationId: input.organizationId,
       projectId: input.projectId,
       query: input.query,
       vector: input.normalizedEmbedding,

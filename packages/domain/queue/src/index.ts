@@ -1,4 +1,5 @@
-import { Data, type Effect, ServiceMap } from "effect"
+import { type Effect, ServiceMap } from "effect"
+import type { QueuePublishError, QueueSubscribeError } from "./errors.ts"
 import type { TopicRegistry as TR } from "./topic-registry.ts"
 import type { WorkflowRegistry as WR } from "./workflow-registry.ts"
 
@@ -23,6 +24,10 @@ export interface WorkflowStarterShape {
     options: { readonly workflowId: string },
   ) => Effect.Effect<void>
 }
+
+export class WorkflowStarter extends ServiceMap.Service<WorkflowStarter, WorkflowStarterShape>()(
+  "@domain/queue/WorkflowStarter",
+) {}
 
 export interface PublishOptions {
   readonly dedupeKey?: string
@@ -53,26 +58,4 @@ export interface QueueConsumer {
   readonly subscribe: <T extends QueueName>(queue: T, handlers: TaskHandlers<T>, options?: SubscribeOptions) => void
 }
 
-export class QueuePublishError extends Data.TaggedError("QueuePublishError")<{
-  readonly cause: unknown
-  readonly queue: QueueName
-}> {
-  readonly httpStatus = 502
-  get httpMessage() {
-    return `Failed to publish message to queue "${this.queue}"`
-  }
-}
-
-export class QueueSubscribeError extends Data.TaggedError("QueueSubscribeError")<{
-  readonly cause: unknown
-}> {
-  readonly httpStatus = 503
-  readonly httpMessage = "Queue consumer unavailable"
-}
-
-export class QueueClientError extends Data.TaggedError("QueueClientError")<{
-  readonly cause: unknown
-}> {
-  readonly httpStatus = 503
-  readonly httpMessage = "Queue client not connectable"
-}
+export { QueueClientError, QueuePublishError, QueueSubscribeError } from "./errors.ts"

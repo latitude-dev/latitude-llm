@@ -1,7 +1,7 @@
 import { context, propagation } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import { CompositePropagator, W3CBaggagePropagator, W3CTraceContextPropagator } from "@opentelemetry/core"
-import { Resource } from "@opentelemetry/resources"
+import { resourceFromAttributes } from "@opentelemetry/resources"
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import { registerLatitudeInstrumentations } from "./instrumentations.ts"
@@ -38,9 +38,14 @@ export function initLatitude(options: InitLatitudeOptions): {
   context.setGlobalContextManager(contextManager)
   propagation.setGlobalPropagator(propagator)
 
+  const resourceServiceName =
+    typeof processorOptions.serviceName === "string" && processorOptions.serviceName.trim() !== ""
+      ? processorOptions.serviceName.trim()
+      : SERVICE_NAME
+
   const provider = new NodeTracerProvider({
-    resource: new Resource({
-      [ATTR_SERVICE_NAME]: SERVICE_NAME,
+    resource: resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: resourceServiceName,
     }),
     spanProcessors: [new LatitudeSpanProcessor(apiKey, projectSlug, processorOptions)],
   })

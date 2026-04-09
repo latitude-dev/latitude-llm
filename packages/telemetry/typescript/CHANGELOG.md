@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.3] - 2026-04-07
+
+### Added
+
+- **`serviceName` on `LatitudeSpanProcessor` and `initLatitude()`** — optional `LatitudeSpanProcessorOptions.serviceName` / `InitLatitudeOptions.serviceName` sets OpenTelemetry **`service.name`** on each span so Latitude ingest can attribute telemetry to your service. When using `initLatitude()`, the value is also applied to the `NodeTracerProvider` resource (falling back to `npm_package_name` or `"unknown"` when omitted).
+
+## [3.0.0-alpha.2] - 2026-04-07
+
+### Changed
+
+- OpenTelemetry peer stack upgraded to align with **@opentelemetry/sdk-trace-node 2.6** and **@opentelemetry/exporter-trace-otlp-http / instrumentation 0.213** (previously 1.x / 0.57), so `LatitudeSpanProcessor` and related types match apps using **@opentelemetry/sdk-node** 0.213+.
+
+### Fixed
+
+- `initLatitude()` and examples now use `resourceFromAttributes()` instead of `new Resource()` (OpenTelemetry JS 2.x API).
+- Span filtering reads `ReadableSpan.instrumentationScope` instead of the removed `instrumentationLibrary` field.
+
 ## [3.0.0-alpha.1] - 2026-04-01
 
 ### Breaking Changes

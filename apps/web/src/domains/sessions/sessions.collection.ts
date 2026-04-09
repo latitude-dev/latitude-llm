@@ -3,7 +3,6 @@ import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
-  getSessionBySessionId,
   getSessionDistinctValues,
   getSessionMetricsByProject,
   listSessionsByProject,
@@ -61,18 +60,6 @@ export function useSessionsInfiniteScroll({
   )
 
   return { data, isLoading, infiniteScroll }
-}
-
-export function useSessionDetail({ projectId, sessionId }: { readonly projectId: string; readonly sessionId: string }) {
-  return useQuery({
-    queryKey: ["session-detail", projectId, sessionId],
-    queryFn: async () => {
-      const result = await getSessionBySessionId({ data: { projectId, sessionId } })
-      return result ?? null
-    },
-    enabled: sessionId.length > 0,
-    staleTime: 30_000,
-  })
 }
 
 export function useSessionMetrics({

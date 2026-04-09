@@ -5,10 +5,12 @@ import {
   ISSUE_DISCOVERY_SEARCH_RATIO,
   IssueProjectionRepository,
 } from "@domain/issues"
+import { OrganizationId } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { Bm25Operator, type WeaviateClient } from "weaviate-client"
 import { issuesCollectionTenantName } from "../collections.ts"
+import { withWeaviate } from "../with-weaviate.ts"
 import { IssueProjectionRepositoryLive } from "./issue-projection-repository.ts"
 
 type HybridObject = {
@@ -104,7 +106,7 @@ const runWithRepository = <A>(
     Effect.gen(function* () {
       const repository = yield* IssueProjectionRepository
       return yield* effectFactory(repository)
-    }).pipe(Effect.provide(IssueProjectionRepositoryLive(client))),
+    }).pipe(withWeaviate(IssueProjectionRepositoryLive, client, OrganizationId("org-1"))),
   )
 
 describe("IssueProjectionRepositoryLive", () => {
@@ -122,7 +124,6 @@ describe("IssueProjectionRepositoryLive", () => {
 
     await runWithRepository(state.client, (repository) =>
       repository.upsert({
-        organizationId: "org-1",
         projectId: "proj-1",
         uuid: "issue-1",
         title: "Token leakage",
@@ -141,7 +142,6 @@ describe("IssueProjectionRepositoryLive", () => {
 
     const results = await runWithRepository(state.client, (repository) =>
       repository.hybridSearch({
-        organizationId: "org-1",
         projectId: "proj-1",
         query: "token leakage",
         vector: [1, 0],
@@ -173,7 +173,6 @@ describe("IssueProjectionRepositoryLive", () => {
 
     const results = await runWithRepository(state.client, (repository) =>
       repository.hybridSearch({
-        organizationId: "org-1",
         projectId: "proj-1",
         query: "token leakage",
         vector: [1, 0],

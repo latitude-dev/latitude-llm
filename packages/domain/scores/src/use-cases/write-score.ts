@@ -8,7 +8,7 @@ import {
   SqlClient,
   toRepositoryError,
 } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
 import { z } from "zod"
 import {
   annotationScoreSchema,
@@ -18,8 +18,10 @@ import {
   type Score,
   scoreSchema,
 } from "../entities/score.ts"
-import { shouldDiscoverIssue } from "../helpers.ts"
+import { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "../errors.ts"
+import { isImmutableScore, shouldDiscoverIssue } from "../helpers.ts"
 import { ScoreRepository } from "../ports/score-repository.ts"
+import { syncScoreAnalyticsUseCase } from "./save-score-analytics.ts"
 
 const baseWritableScoreSchema = baseScoreSchema.omit({
   organizationId: true,
@@ -74,23 +76,6 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
         message: error instanceof z.ZodError ? formatValidationError(error) : message,
       }),
   })
-
-export class ScoreDraftClosedError extends Data.TaggedError("ScoreDraftClosedError")<{
-  readonly scoreId: string
-}> {
-  readonly httpStatus = 409
-  readonly httpMessage = "Scores can only be edited while they remain drafts"
-}
-
-export class ScoreDraftUpdateConflictError extends Data.TaggedError("ScoreDraftUpdateConflictError")<{
-  readonly scoreId: string
-  readonly field: "projectId" | "source" | "sourceId"
-}> {
-  readonly httpStatus = 409
-  get httpMessage() {
-    return `Draft score ${this.scoreId} cannot change ${this.field}`
-  }
-}
 
 export type WriteScoreError = RepositoryError | BadRequestError | ScoreDraftClosedError | ScoreDraftUpdateConflictError
 
@@ -156,7 +141,7 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
     const parsedInput = yield* parseOrBadRequest(writeScoreInputSchema, input, "Invalid score write input")
     const sqlClient = yield* SqlClient
 
-    return yield* sqlClient.transaction(
+    const score = yield* sqlClient.transaction(
       Effect.gen(function* () {
         const scoreRepository = yield* ScoreRepository
         const outboxEventWriter = yield* OutboxEventWriter
@@ -197,19 +182,6 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
                 organizationId: score.organizationId,
                 projectId: score.projectId,
                 scoreId: score.id,
-              },
-            })
-            .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
-        } else if (score.issueId !== null) {
-          yield* outboxEventWriter
-            .write({
-              eventName: "IssueRefreshRequested",
-              aggregateType: "score",
-              aggregateId: score.id,
-              organizationId: score.organizationId,
-              payload: {
-                organizationId: score.organizationId,
-                projectId: score.projectId,
                 issueId: score.issueId,
               },
             })
@@ -219,4 +191,13 @@ export const writeScoreUseCase = (input: WriteScoreInput) =>
         return score
       }),
     )
+
+    if (isImmutableScore(score)) {
+      yield* syncScoreAnalyticsUseCase({
+        organizationId: score.organizationId,
+        scoreId: score.id,
+      })
+    }
+
+    return score
   })

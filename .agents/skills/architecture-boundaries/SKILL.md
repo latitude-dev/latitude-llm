@@ -51,9 +51,14 @@ Business logic lives here. Domain packages expose:
 
 ## Domain package layout
 
+Domain **entities** are **Zod-first**: `entitySchema` + `z.infer<typeof entitySchema>` in `src/entities/<entity>.ts`. See [`docs/domain-entities.md`](../../../docs/domain-entities.md) and [`docs/adr/0001-domain-entity-schema-style.md`](../../../docs/adr/0001-domain-entity-schema-style.md).
+
+- Treat canonical domain entity schemas as the source of truth. Schemas and types elsewhere in the same domain, plus app/platform boundary schemas, should derive from or reuse the entity shapes whenever practical instead of re-declaring the same fields.
+- When a boundary schema must differ materially from the entity shape, still reuse the relevant domain constants, field schemas, and literal unions rather than hardcoding duplicated lengths or sentinel values again.
 - Canonical entity schemas and their inferred entity types belong in `packages/domain/*/src/entities/<entity>.ts`.
 - Domain package constants belong in `packages/domain/*/src/constants.ts`.
-- Domain package errors belong in `packages/domain/*/src/errors.ts`.
+- Domain package errors belong in `packages/domain/*/src/errors.ts`. A full package-by-package inventory and import rules live in [`docs/domain-errors.md`](../../../docs/domain-errors.md).
+- For **how** to structure those errors (tagged classes, HTTP fields, unions per flow, naming), treat `packages/domain/issues` as the reference: see `packages/domain/issues/src/errors.ts` and the section *Domain errors (`@domain/issues` reference pattern)* in `docs/issues.md`.
 - Small domain-scoped shared helpers such as predicates or lifecycle helpers belong in `packages/domain/*/src/helpers.ts`.
 - Types and schemas that exist only as inputs to one domain use-case belong in that use-case file rather than a generic side module, unless several use-cases truly share the exact same contract.
 - App and platform layers should build boundary-specific schemas by reusing or deriving from domain entity/use-case schemas whenever practical rather than redefining the same contract from scratch.
@@ -73,7 +78,7 @@ Use this pattern when a platform package owns an external SDK client so composit
 3. **Configuration** — Resolve settings with `parseEnv` / `parseEnvOptional` from `@platform/env` inside the Effect pipeline, not ad hoc `process.env` reads scattered outside the client module.
 4. **Interop** — Wrap promise-based SDK calls in `Effect.tryPromise` and map failures to tagged errors. Compose steps with `Effect.pipe`, `Effect.flatMap`, and `Effect.map`.
 5. **Bootstrap in the pipeline** — If the client must apply schema/migrations/health checks before use, run those as Effects in the same pipeline (see Weaviate: `migrateWeaviateCollectionsEffect` after connect) so callers get a ready client or a single error channel.
-6. **Live layers** — Expose `PortLive(client) => Layer.succeed(Port, implementation)` (or `Layer.effect` when the adapter holds fiber-scoped state). The composition root acquires the client with `createXClientEffect` and maps to the layer, for example `createWeaviateClientEffect().pipe(Effect.map((c) => IssueProjectionRepositoryLive(c)))` in `apps/workflows/src/clients.ts`.
+6. **Live layers** — Expose a thin `XClientLive(client, scope...)` layer for the external SDK client and keep repository adapters as `Layer.effect` or `Layer.succeed` values that depend on that client service as needed. The composition root acquires the client with `createXClientEffect` and provides it via a small helper when useful, for example `withWeaviate(IssueProjectionRepositoryLive, client, organizationId)`.
 
 Not every legacy adapter has been migrated; prefer this shape for new work and when touching client construction.
 

@@ -12,4 +12,5 @@ export {
   safeStringifyJson,
 } from "./format.ts"
 export * from "./http-errors.ts"
+export { mapByEntityId } from "./map-by-entity-id.ts"
 export { relativeTime } from "./relativeTime.ts"

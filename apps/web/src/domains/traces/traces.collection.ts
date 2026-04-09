@@ -158,7 +158,15 @@ export function useTraceDistinctValues({
   })
 }
 
-export function useTraceDetail({ projectId, traceId }: { readonly projectId: string; readonly traceId: string }) {
+export function useTraceDetail({
+  projectId,
+  traceId,
+  enabled = true,
+}: {
+  readonly projectId: string
+  readonly traceId: string
+  readonly enabled?: boolean
+}) {
   return useQuery({
     queryKey: ["traceDetail", projectId, traceId],
     // getTraceDetail returns `never` at the type level to satisfy TanStack Start's
@@ -167,5 +175,6 @@ export function useTraceDetail({ projectId, traceId }: { readonly projectId: str
       const result = await getTraceDetail({ data: { projectId, traceId } })
       return result as TraceDetailRecord | null
     },
+    enabled: enabled && projectId.length > 0 && traceId.length > 0,
   })
 }

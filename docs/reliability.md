@@ -165,14 +165,14 @@ Rules:
 Initial reliability async contracts:
 
 - domain events: `SpanIngested`, `TraceEnded`, `IssueDiscoveryRequested`, `IssueRefreshRequested`
-- topic tasks: `live-traces:end`, `annotation-scores:publish`, `issues:refresh`, `live-evaluations:enqueue`, `live-evaluations:execute`, `live-annotation-queues:curate`, `system-annotation-queues:flag`, `system-annotation-queues:annotate`
+- topic tasks: `live-traces:end`, `annotation-scores:publish`, `issues:discovery`, `issues:refresh`, `live-evaluations:enqueue`, `live-evaluations:execute`, `live-annotation-queues:curate`, `system-annotation-queues:flag`, `system-annotation-queues:annotate`
 - workflows: `issue-discovery`, `evaluation-alignment`
 
 These workflow names map to concrete Temporal workflows registered in the existing `apps/workflows` service.
 
 For the initial reliability events, `SpanIngested` and `TraceEnded` publish directly through `createEventsPublisher(queuePublisher)` because they come from high-volume append-only flows whose upstream writes are already durable before publication.
 
-`IssueDiscoveryRequested` and `IssueRefreshRequested` are intentionally different from the direct-publication telemetry events: they are recorded through the transactional outbox rail so score-row persistence stays atomic with downstream workflow-start or debounced refresh intent.
+`IssueDiscoveryRequested` and `IssueRefreshRequested` are intentionally different from the direct-publication telemetry events: they are recorded through the transactional outbox rail so score-row persistence stays atomic with downstream `issues:discovery` enqueue or debounced refresh intent.
 
 ## Spec Governance
 
@@ -194,7 +194,7 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - annotation ingestion remains on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though it still writes canonical `source = "annotation"` score rows
 - all score writes land in Postgres first
 - ClickHouse only receives immutable score analytics rows after the score lifecycle is ready for analytics save
-- eligible non-draft failed non-errored scores request issue discovery transactionally through `IssueDiscoveryRequested`, and the `domain-events` dispatcher starts `issue-discovery` with a stable per-score workflow id
+- eligible non-draft failed non-errored scores request centralized issue handling transactionally through `IssueDiscoveryRequested`, and the `domain-events` dispatcher publishes a deduped `issues:discovery` task keyed by score id
 - immutable-score analytics sync runs directly after the owning Postgres transaction commits through the shared `syncScoreAnalyticsUseCase`, which re-checks current Postgres immutability and dedupes by score id
 - annotation-originated feedback can be enriched before issue discovery
 - draft annotations use the same annotation score model, but stay drafts through `draftedAt` instead of a fake error value
@@ -216,20 +216,20 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 
 - failed non-errored scores are embedded and searched against issue centroids/text
 - drafted scores stay out of discovery until `draftedAt` is cleared
-- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher starts the `issue-discovery` workflow from that event instead of running embedding/search inline in request paths
-- managed annotation flows can bypass similarity discovery by linking to an existing issue explicitly; that human path writes canonical issue ownership directly
-- issue-linked evaluation scores bypass discovery and assign directly
+- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher publishes `issues:discovery` from that event instead of running issue-routing inline in request paths
+- the `issues:discovery` task rechecks canonical eligibility and centralizes three branches: selected annotation issue intent, issue-linked evaluation routing, or the fallback Temporal `issue-discovery` workflow when similarity search is still needed
 - annotations are primary, but unlinked failed evaluation scores and failed custom scores may also create new issues
 - when discovery creates a brand-new issue, the workflow goes through a dedicated create-from-score step that generates issue details from the initial occurrence before the first issue row is persisted
-- issue name/description regeneration runs through the debounced `issues:refresh` task
+- issue name/description regeneration for existing issues runs through the debounced `issues:refresh` task keyed by the canonical issue id
 - new issues are named from occurrences; users can later generate evaluations from those issues when they want active monitoring
 - ignoring an issue archives its linked evaluations immediately, while resolution still uses `keepMonitoring`
 - the proven v1 search shape is hybrid Weaviate search with `RelativeScore` fusion, then Voyage reranking
 - v2 keeps the v1 storage split of Postgres state plus Weaviate projection, but upgrades tenancy and product search behavior intentionally
 - in the `issue-discovery` workflow, keep retrieval as explicit sequential activities: feedback embedding/normalization, hybrid Weaviate search, then reranking
-- the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues
+- the shared issue-details generation use case serves both paths: synchronous first-details generation before a new issue is persisted, and later debounced refresh generation for existing issues from the last `25` assigned occurrences plus the current details as the stabilization baseline
 - after rerank picks a candidate, the workflow resolves that matched issue against canonical Postgres state before deciding between the separate create-from-score and assign-to-issue activities
 - the create-from-score and assign-to-issue activities re-check canonical Postgres state, conditionally claim `scores.issue_id`, persist the canonical issue row and centroid update, then the workflow runs direct `syncIssueProjectionsUseCase` and `syncScoreAnalyticsUseCase` activities after commit; only assignments into an existing issue write `IssueRefreshRequested` transactionally for later debounced issue-details regeneration
+- the `issues:refresh` worker must re-lock and re-read the canonical issue row before saving generated details so it cannot overwrite a newer centroid or lifecycle update, and it reruns `syncIssueProjectionsUseCase` only when the persisted name/description actually changed
 - existing-issue assignment must lock the canonical issue row before recomputing and saving centroid state so concurrent discovery workflows targeting the same issue serialize their centroid updates instead of losing one occurrence
 - resolved and ignored issues remain valid match targets in discovery; lifecycle semantics are handled after assignment (including regression and ignored ownership behavior), not by pre-filtering them out of retrieval
 - after rerank selects a best candidate, verify the selected issue row still exists in Postgres for the same organization/project before assignment; if missing, treat as no-match and create a new issue

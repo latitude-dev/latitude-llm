@@ -10,7 +10,7 @@ windows:
         - 'if command -v nvim >/dev/null 2>&1; then nvim; else clear; fi'
   - infra:
       panes:
-        - cp -f .env.example .env.development && docker compose up --menu=false
+        - docker compose up --menu=false
   - db:
       panes:
         - pnpm --filter @platform/db-postgres pg:studio

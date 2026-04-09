@@ -1,5 +1,6 @@
-import { Container, TableBlankSlate, TableWithHeader } from "@repo/ui"
+import { InfiniteTable } from "@repo/ui"
 import { createFileRoute } from "@tanstack/react-router"
+import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
   component: IssuesPage,
@@ -7,11 +8,17 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issu
 
 function IssuesPage() {
   return (
-    <Container className="pt-14">
-      <TableWithHeader
-        title="Issues"
-        table={<TableBlankSlate description="Issues will appear here once your agents start reporting them." />}
-      />
-    </Container>
+    <Layout>
+      <Layout.Content>
+        <Layout.Actions>
+          <Layout.ActionsRow>
+            <Layout.ActionRowItem />
+          </Layout.ActionsRow>
+        </Layout.Actions>
+        <Layout.List>
+          <InfiniteTable data={[]} columns={[]} getRowKey={() => ""} blankSlate="There are no issues yet." />
+        </Layout.List>
+      </Layout.Content>
+    </Layout>
   )
 }

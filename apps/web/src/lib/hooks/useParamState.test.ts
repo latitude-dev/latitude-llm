@@ -3,6 +3,18 @@ import { act, renderHook } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 import { useParamState } from "./useParamState.ts"
 
+/**
+ * `useParamState` notifies subscribers in a microtask after URL writes. Plain
+ * `act(() => setX())` can finish before that microtask runs, which produces
+ * React "not wrapped in act(...)" noise. Flush microtasks inside `act`.
+ */
+async function actWithParamFlush(fn: () => void) {
+  await act(async () => {
+    fn()
+    await Promise.resolve()
+  })
+}
+
 function setUrl(search: string) {
   window.history.replaceState(null, "", search || window.location.pathname)
 }
@@ -28,7 +40,7 @@ describe("useParamState", () => {
 
     it("updates value and URL on set", async () => {
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("sessions"))
+      await actWithParamFlush(() => result.current[1]("sessions"))
       expect(result.current[0]).toBe("sessions")
       expect(window.location.search).toBe("?tab=sessions")
     })
@@ -36,7 +48,7 @@ describe("useParamState", () => {
     it("removes param from URL when set to defaultValue", async () => {
       setUrl("?tab=sessions")
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("traces"))
+      await actWithParamFlush(() => result.current[1]("traces"))
       expect(result.current[0]).toBe("traces")
       expect(window.location.search).toBe("")
     })
@@ -44,7 +56,7 @@ describe("useParamState", () => {
     it("supports functional updater", async () => {
       setUrl("?count=hello")
       const { result } = setup("greeting", "hi")
-      await act(() => result.current[1]((prev) => `${prev}!`))
+      await actWithParamFlush(() => result.current[1]((prev) => `${prev}!`))
       expect(result.current[0]).toBe("hi!")
     })
   })
@@ -82,7 +94,7 @@ describe("useParamState", () => {
     it("removes param when set to defaultValue", async () => {
       setUrl("?open=true")
       const { result } = setup("open", false)
-      await act(() => result.current[1](false))
+      await actWithParamFlush(() => result.current[1](false))
       expect(window.location.search).toBe("")
     })
   })
@@ -139,7 +151,7 @@ describe("useParamState", () => {
     it("preserves other params when removing one", async () => {
       setUrl("?tab=sessions&page=3")
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("traces"))
+      await actWithParamFlush(() => result.current[1]("traces"))
       expect(window.location.search).toContain("page=3")
       expect(window.location.search).not.toContain("tab=")
     })
@@ -170,14 +182,14 @@ describe("useParamState", () => {
     it("defaults to replace (no new history entry)", async () => {
       const initialLength = window.history.length
       const { result } = setup("tab", "traces")
-      await act(() => result.current[1]("sessions"))
+      await actWithParamFlush(() => result.current[1]("sessions"))
       expect(window.history.length).toBe(initialLength)
     })
 
     it("pushes a new history entry with history: 'push'", async () => {
       const initialLength = window.history.length
       const { result } = renderHook(() => useParamState("tab", "traces", { history: "push" }))
-      await act(() => result.current[1]("sessions"))
+      await actWithParamFlush(() => result.current[1]("sessions"))
       expect(window.history.length).toBe(initialLength + 1)
     })
   })
@@ -193,9 +205,10 @@ describe("useParamState", () => {
       })
 
       const countBefore = renderCount
-      await act(() => {
+      await act(async () => {
         result.current.setSortBy("date")
         result.current.setSortDir("desc")
+        await Promise.resolve()
       })
       const countAfter = renderCount
 
@@ -214,9 +227,10 @@ describe("useParamState", () => {
       const { result } = setup("tab", "traces")
       expect(result.current[0]).toBe("sessions")
 
-      await act(() => {
+      await act(async () => {
         setUrl("?tab=other")
         window.dispatchEvent(new PopStateEvent("popstate"))
+        await Promise.resolve()
       })
       expect(result.current[0]).toBe("other")
     })

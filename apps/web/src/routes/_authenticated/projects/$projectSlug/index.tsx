@@ -20,7 +20,6 @@ import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
 import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
-import { SessionDetailDrawer } from "./-components/session-detail-drawer.tsx"
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
@@ -89,7 +88,6 @@ function ProjectPage() {
   })
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
-  const [activeSessionId, setActiveSessionId] = useParamState("sessionId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
 
   // Tracks which drawer tab is active so J/K knows when to defer to span navigation
@@ -120,13 +118,11 @@ function ProjectPage() {
   }
 
   const onActiveTraceChange = (traceId: string | undefined) => {
-    setActiveSessionId("")
     setActiveTraceId(traceId ?? "")
   }
 
-  const onActiveSessionChange = (sessionId: string | undefined) => {
+  const onActiveSessionChange = (_sessionId: string | undefined) => {
     setActiveTraceId("")
-    setActiveSessionId(sessionId ?? "")
   }
 
   const clearSelections = () => setSelectionState(EMPTY_SELECTION)
@@ -249,7 +245,6 @@ function ProjectPage() {
               active={activeTab}
               onSelect={(id) => {
                 setActiveTab(id)
-                if (id === "traces") setActiveSessionId("")
               }}
             />
             <Input
@@ -293,14 +288,6 @@ function ProjectPage() {
             canNavigateNext={canNavigateNext}
             canNavigatePrev={canNavigatePrev}
             onTabChange={setActiveDrawerTab}
-          />
-        </Layout.Aside>
-      ) : activeSessionId && activeTab === "sessions" ? (
-        <Layout.Aside>
-          <SessionDetailDrawer
-            sessionId={activeSessionId}
-            projectId={project?.id ?? ""}
-            onClose={() => setActiveSessionId("")}
           />
         </Layout.Aside>
       ) : null}

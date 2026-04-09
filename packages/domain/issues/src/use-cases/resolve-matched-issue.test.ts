@@ -33,6 +33,7 @@ describe("resolveMatchedIssueUseCase", () => {
 
     const result = await Effect.runPromise(
       resolveMatchedIssueUseCase({
+        organizationId,
         projectId,
         matchedIssueUuid: null,
       }).pipe(Effect.provideService(IssueRepository, issueRepository)),
@@ -55,6 +56,7 @@ describe("resolveMatchedIssueUseCase", () => {
 
     const result = await Effect.runPromise(
       resolveMatchedIssueUseCase({
+        organizationId,
         projectId,
         matchedIssueUuid: issue.uuid,
       }).pipe(Effect.provideService(IssueRepository, issueRepository)),
@@ -71,11 +73,50 @@ describe("resolveMatchedIssueUseCase", () => {
     ])
   })
 
+  it("keeps resolved issues eligible for rematching", async () => {
+    const resolvedIssue = makeIssue({
+      resolvedAt: new Date("2026-03-30T12:00:00.000Z"),
+    })
+    const { repository: issueRepository } = createFakeIssueRepository([resolvedIssue])
+
+    const result = await Effect.runPromise(
+      resolveMatchedIssueUseCase({
+        organizationId,
+        projectId,
+        matchedIssueUuid: resolvedIssue.uuid,
+      }).pipe(Effect.provideService(IssueRepository, issueRepository)),
+    )
+
+    expect(result).toEqual({
+      issueId: resolvedIssue.id,
+    })
+  })
+
+  it("keeps ignored issues eligible for rematching", async () => {
+    const ignoredIssue = makeIssue({
+      ignoredAt: new Date("2026-03-30T12:00:00.000Z"),
+    })
+    const { repository: issueRepository } = createFakeIssueRepository([ignoredIssue])
+
+    const result = await Effect.runPromise(
+      resolveMatchedIssueUseCase({
+        organizationId,
+        projectId,
+        matchedIssueUuid: ignoredIssue.uuid,
+      }).pipe(Effect.provideService(IssueRepository, issueRepository)),
+    )
+
+    expect(result).toEqual({
+      issueId: ignoredIssue.id,
+    })
+  })
+
   it("returns null when the reranked match is stale in Postgres", async () => {
     const { repository: issueRepository } = createFakeIssueRepository()
 
     const result = await Effect.runPromise(
       resolveMatchedIssueUseCase({
+        organizationId,
         projectId,
         matchedIssueUuid: "11111111-1111-4111-8111-111111111111",
       }).pipe(Effect.provideService(IssueRepository, issueRepository)),

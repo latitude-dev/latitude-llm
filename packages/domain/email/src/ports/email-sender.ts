@@ -1,4 +1,5 @@
-import { Data, type Effect } from "effect"
+import type { Effect } from "effect"
+import type { EmailSendError } from "../errors.ts"
 
 export interface EmailMessage {
   readonly to: string
@@ -11,12 +12,4 @@ export interface EmailMessage {
 
 export interface EmailSender {
   readonly send: (message: EmailMessage) => Effect.Effect<void, EmailSendError>
-}
-
-export class EmailSendError extends Data.TaggedError("EmailSendError")<{
-  readonly message: string
-  readonly cause?: unknown
-}> {
-  readonly httpStatus = 500
-  readonly httpMessage = "Failed to send email"
 }

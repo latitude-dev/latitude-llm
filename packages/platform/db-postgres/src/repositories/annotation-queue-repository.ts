@@ -1,0 +1,216 @@
+import {
+  type AnnotationQueue,
+  type AnnotationQueueListSortBy,
+  AnnotationQueueRepository,
+  type AnnotationQueueRepositoryShape,
+  annotationQueueSchema,
+} from "@domain/annotation-queues"
+import { RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
+import { and, asc, desc, eq, gt, isNull, lt, or, sql } from "drizzle-orm"
+import { Effect, Layer } from "effect"
+import type { Operator } from "../client.ts"
+import { annotationQueues } from "../schema/annotation-queues.ts"
+
+const DEFAULT_LIMIT = 50
+
+const pendingItemsExpr = sql<number>`(${annotationQueues.totalItems} - ${annotationQueues.completedItems})`
+
+const toDomainQueue = (row: typeof annotationQueues.$inferSelect): AnnotationQueue =>
+  annotationQueueSchema.parse({
+    id: row.id,
+    organizationId: row.organizationId,
+    projectId: row.projectId,
+    system: row.system,
+    name: row.name,
+    description: row.description,
+    instructions: row.instructions,
+    settings: row.settings,
+    assignees: row.assignees,
+    totalItems: row.totalItems,
+    completedItems: row.completedItems,
+    deletedAt: row.deletedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  })
+
+const resolveSort = (
+  sortBy: AnnotationQueueListSortBy | undefined,
+  sortDirection: "asc" | "desc" | undefined,
+): { sortBy: AnnotationQueueListSortBy; sortDirection: "asc" | "desc" } => ({
+  sortBy: sortBy ?? "createdAt",
+  sortDirection: sortDirection ?? "desc",
+})
+
+const cursorWhere = (
+  sortBy: AnnotationQueueListSortBy,
+  sortDirection: "asc" | "desc",
+  cursor: { sortValue: string; id: string },
+) => {
+  if (sortBy === "createdAt") {
+    const createdAt = new Date(cursor.sortValue)
+    if (Number.isNaN(createdAt.getTime())) {
+      return null
+    }
+    if (sortDirection === "desc") {
+      return or(
+        lt(annotationQueues.createdAt, createdAt),
+        and(eq(annotationQueues.createdAt, createdAt), lt(annotationQueues.id, cursor.id)),
+      )
+    }
+    return or(
+      gt(annotationQueues.createdAt, createdAt),
+      and(eq(annotationQueues.createdAt, createdAt), gt(annotationQueues.id, cursor.id)),
+    )
+  }
+
+  if (sortBy === "name") {
+    if (sortDirection === "desc") {
+      return or(
+        lt(annotationQueues.name, cursor.sortValue),
+        and(eq(annotationQueues.name, cursor.sortValue), lt(annotationQueues.id, cursor.id)),
+      )
+    }
+    return or(
+      gt(annotationQueues.name, cursor.sortValue),
+      and(eq(annotationQueues.name, cursor.sortValue), gt(annotationQueues.id, cursor.id)),
+    )
+  }
+
+  const n = Number.parseInt(cursor.sortValue, 10)
+  if (!Number.isFinite(n)) {
+    return null
+  }
+
+  if (sortBy === "completedItems") {
+    if (sortDirection === "desc") {
+      return or(
+        lt(annotationQueues.completedItems, n),
+        and(eq(annotationQueues.completedItems, n), lt(annotationQueues.id, cursor.id)),
+      )
+    }
+    return or(
+      gt(annotationQueues.completedItems, n),
+      and(eq(annotationQueues.completedItems, n), gt(annotationQueues.id, cursor.id)),
+    )
+  }
+
+  if (sortDirection === "desc") {
+    return or(
+      sql`${pendingItemsExpr} < ${n}`,
+      sql`(${pendingItemsExpr} = ${n} AND ${annotationQueues.id} < ${cursor.id})`,
+    )
+  }
+  return or(
+    sql`${pendingItemsExpr} > ${n}`,
+    sql`(${pendingItemsExpr} = ${n} AND ${annotationQueues.id} > ${cursor.id})`,
+  )
+}
+
+const orderClause = (sortBy: AnnotationQueueListSortBy, sortDirection: "asc" | "desc") => {
+  const primary = sortDirection === "desc" ? desc : asc
+  const idOrd = sortDirection === "desc" ? desc(annotationQueues.id) : asc(annotationQueues.id)
+  if (sortBy === "createdAt") {
+    return [primary(annotationQueues.createdAt), idOrd] as const
+  }
+  if (sortBy === "name") {
+    return [primary(annotationQueues.name), idOrd] as const
+  }
+  if (sortBy === "completedItems") {
+    return [primary(annotationQueues.completedItems), idOrd] as const
+  }
+  return [primary(pendingItemsExpr), idOrd] as const
+}
+
+const tailToCursor = (sortBy: AnnotationQueueListSortBy, tail: typeof annotationQueues.$inferSelect) => {
+  if (sortBy === "createdAt") {
+    return { sortValue: tail.createdAt.toISOString(), id: tail.id } as const
+  }
+  if (sortBy === "name") {
+    return { sortValue: tail.name, id: tail.id } as const
+  }
+  if (sortBy === "completedItems") {
+    return { sortValue: String(tail.completedItems), id: tail.id } as const
+  }
+  return { sortValue: String(Math.max(0, tail.totalItems - tail.completedItems)), id: tail.id } as const
+}
+
+export const AnnotationQueueRepositoryLive = Layer.effect(
+  AnnotationQueueRepository,
+  Effect.gen(function* () {
+    const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
+
+    return {
+      listByProject: ({ projectId, options }) => {
+        const limit = options.limit ?? DEFAULT_LIMIT
+        const { sortBy, sortDirection } = resolveSort(options.sortBy, options.sortDirection)
+        const cursorClause = options.cursor ? cursorWhere(sortBy, sortDirection, options.cursor) : undefined
+        if (options.cursor && cursorClause === null) {
+          return Effect.fail(
+            new RepositoryError({ operation: "listByProject", cause: new Error("Invalid queue list cursor") }),
+          )
+        }
+
+        const [o1, o2] = orderClause(sortBy, sortDirection)
+
+        return sqlClient
+          .query((db, organizationId) => {
+            const whereBase = and(
+              eq(annotationQueues.organizationId, organizationId),
+              eq(annotationQueues.projectId, projectId),
+              isNull(annotationQueues.deletedAt),
+            )
+            const where = cursorClause ? and(whereBase, cursorClause) : whereBase
+
+            return db
+              .select()
+              .from(annotationQueues)
+              .where(where)
+              .orderBy(o1, o2)
+              .limit(limit + 1)
+          })
+          .pipe(
+            Effect.map((rows) => {
+              const hasMore = rows.length > limit
+              const pageRows = rows.slice(0, limit)
+              const items = pageRows.map(toDomainQueue)
+              const tail = pageRows[pageRows.length - 1]
+              const nextCursor =
+                hasMore && tail !== undefined
+                  ? (tailToCursor(sortBy, tail) as { sortValue: string; id: string })
+                  : undefined
+              return {
+                items,
+                hasMore,
+                ...(nextCursor !== undefined ? { nextCursor } : {}),
+              }
+            }),
+            Effect.mapError((cause) => new RepositoryError({ operation: "listByProject", cause })),
+          )
+      },
+
+      findByIdInProject: ({ projectId, queueId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(annotationQueues)
+              .where(
+                and(
+                  eq(annotationQueues.organizationId, organizationId),
+                  eq(annotationQueues.projectId, projectId),
+                  eq(annotationQueues.id, queueId),
+                  isNull(annotationQueues.deletedAt),
+                ),
+              )
+              .limit(1),
+          )
+          .pipe(
+            Effect.map((rows) => {
+              const row = rows[0]
+              return row !== undefined ? toDomainQueue(row) : null
+            }),
+            Effect.mapError((cause) => new RepositoryError({ operation: "findByIdInProject", cause })),
+          ),
+    } satisfies AnnotationQueueRepositoryShape
+  }),
+)

@@ -7,8 +7,9 @@ import {
   StorageDisk,
   type StorageError,
 } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
 import type { SpanDetail } from "../entities/span.ts"
+import { SpanDecodingError } from "../errors.ts"
 import { decodeOtlpProtobuf } from "../otlp/proto.ts"
 import { transformOtlpToSpans } from "../otlp/transform.ts"
 import type { OtlpExportTraceServiceRequest } from "../otlp/types.ts"
@@ -23,10 +24,6 @@ export interface ProcessIngestedSpansInput {
   readonly inlinePayload: string | null
   readonly fileKey: string | null
 }
-
-export class SpanDecodingError extends Data.TaggedError("SpanDecodingError")<{
-  readonly reason: string
-}> {}
 
 function decodeRequest(value: Uint8Array, contentType: string): OtlpExportTraceServiceRequest | null {
   try {

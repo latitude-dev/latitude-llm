@@ -1,27 +1,12 @@
-import type { MembershipId, RepositoryError } from "@domain/shared"
-import { Data, Effect } from "effect"
+import type { MembershipId } from "@domain/shared"
+import { Effect } from "effect"
+import { CannotRemoveSelfError, MembershipNotFoundError } from "../errors.ts"
 import { MembershipRepository } from "../ports/membership-repository.ts"
 
 export interface RemoveMemberInput {
   readonly membershipId: MembershipId
   readonly requestingUserId: string
 }
-
-export class MembershipNotFoundError extends Data.TaggedError("MembershipNotFoundError")<{
-  readonly membershipId: string
-}> {
-  readonly httpStatus = 404
-  readonly httpMessage = "Membership not found"
-}
-
-export class CannotRemoveSelfError extends Data.TaggedError("CannotRemoveSelfError")<{
-  readonly userId: string
-}> {
-  readonly httpStatus = 400
-  readonly httpMessage = "You cannot remove yourself from the workspace"
-}
-
-export type RemoveMemberError = RepositoryError | MembershipNotFoundError | CannotRemoveSelfError
 
 export const removeMemberUseCase = (input: RemoveMemberInput) =>
   Effect.gen(function* () {

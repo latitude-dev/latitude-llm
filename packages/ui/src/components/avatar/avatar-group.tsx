@@ -1,0 +1,73 @@
+import type { ReactNode } from "react"
+import { cn } from "../../utils/cn.ts"
+import { Tooltip } from "../tooltip/tooltip.tsx"
+import { Avatar, type AvatarSize } from "./avatar.tsx"
+
+const overflowChipClass: Record<AvatarSize, string> = {
+  sm: "h-6 min-w-6 text-xs",
+  md: "h-7 min-w-7 text-[10px]",
+  lg: "h-8 min-w-8 text-sm",
+}
+
+export interface AvatarGroupItem {
+  readonly id?: string
+  readonly name: string
+  readonly imageSrc?: string | null
+}
+
+export interface AvatarGroupProps {
+  readonly items: readonly AvatarGroupItem[]
+  /** Visible avatars before the `+N` overflow chip. @default 3 */
+  readonly maxVisible?: number
+  readonly size?: AvatarSize
+  readonly className?: string
+  /** Rendered when `items` is empty. */
+  readonly empty?: ReactNode
+}
+
+export function AvatarGroup({ items, maxVisible = 3, size = "md", className, empty = null }: AvatarGroupProps) {
+  if (items.length === 0) {
+    return empty
+  }
+
+  const visible = items.slice(0, maxVisible)
+  const extraCount = items.length - visible.length
+  const overflowItems = items.slice(maxVisible)
+  const overflowLabel = overflowItems.map((i) => i.name).join(", ")
+
+  return (
+    <div className={cn("flex items-center pl-1", className)}>
+      {visible.map((item, i) => (
+        <Tooltip
+          key={item.id ?? `${item.name}-${i}`}
+          asChild
+          trigger={
+            <span className={cn("relative inline-flex", i > 0 && "-ml-2")} style={{ zIndex: visible.length - i }}>
+              <Avatar name={item.name} imageSrc={item.imageSrc ?? null} size={size} stacked />
+            </span>
+          }
+        >
+          {item.name}
+        </Tooltip>
+      ))}
+      {extraCount > 0 ? (
+        <Tooltip
+          asChild
+          trigger={
+            <span
+              className={cn(
+                "-ml-2 inline-flex shrink-0 items-center justify-center rounded-full border-2 border-background bg-secondary px-1 font-medium text-muted-foreground",
+                overflowChipClass[size],
+              )}
+              style={{ zIndex: 0 }}
+            >
+              +{extraCount}
+            </span>
+          }
+        >
+          {overflowLabel}
+        </Tooltip>
+      ) : null}
+    </div>
+  )
+}

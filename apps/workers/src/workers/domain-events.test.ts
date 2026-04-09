@@ -1,9 +1,13 @@
+import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
-import type { QueueConsumer, QueueName, TaskHandlers, WorkflowStarterShape } from "@domain/queue"
+import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
+import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
+import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { createDomainEventsWorker, ISSUE_REFRESH_DEBOUNCE_MS, TRACE_END_DEBOUNCE_MS } from "./domain-events.ts"
+import { createDomainEventsWorker } from "./domain-events.ts"
 
 type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
 
@@ -47,31 +51,21 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
 const setupDispatcher = () => {
   const consumer = new TestQueueConsumer()
   const { publisher, published } = createFakeQueuePublisher()
-  const startedWorkflows: Array<{
-    readonly workflow: string
-    readonly input: unknown
-    readonly options: { readonly workflowId: string }
-  }> = []
-  const workflowStarter: WorkflowStarterShape = {
-    start: (workflow, input, options) =>
-      Effect.sync(() => {
-        startedWorkflows.push({ workflow, input, options })
-      }),
-  }
+  createDomainEventsWorker({ consumer, publisher })
 
-  createDomainEventsWorker({ consumer, publisher, workflowStarter })
-
-  return { consumer, published, startedWorkflows }
+  return { consumer, published }
 }
 
 describe("domain-events dispatcher", () => {
   it("routes MagicLinkEmailRequested to magic-link-email:send", async () => {
     const { consumer, published } = setupDispatcher()
+    const magicLinkHash = await Effect.runPromise(hash("https://x"))
 
     const envelope = makeEnvelope("MagicLinkEmailRequested", {
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      authIntentId: null,
+      emailFlow: null,
+      organizationId: "org-1",
     })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
@@ -82,8 +76,10 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.payload).toEqual({
       email: "a@b.com",
       magicLinkUrl: "https://x",
-      authIntentId: null,
+      emailFlow: null,
+      organizationId: "org-1",
     })
+    expect(published[0]?.options?.dedupeKey).toBe(`emails:magic-link:${magicLinkHash}`)
   })
 
   it("routes OrganizationCreated to api-keys:create with default key name", async () => {
@@ -102,8 +98,9 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.task).toBe("create")
     expect(published[0]?.payload).toEqual({
       organizationId: "org-new",
-      name: "Default API Key",
+      name: DEFAULT_API_KEY_NAME,
     })
+    expect(published[0]?.options?.dedupeKey).toBe("api-keys:create:org-new")
   })
 
   it("routes UserDeletionRequested to user-deletion:delete", async () => {
@@ -123,6 +120,7 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
       userId: "u-1",
     })
+    expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
   it("routes SpanIngested to live-traces:end with dedupeKey and debounceMs", async () => {
@@ -142,7 +140,7 @@ describe("domain-events dispatcher", () => {
       projectId: "proj-1",
       traceId: "trace-abc",
     })
-    expect(published[0]?.options?.dedupeKey).toBe("live-traces:end:org-1:proj-1:trace-abc")
+    expect(published[0]?.options?.dedupeKey).toBe("traces:live:end:trace-abc")
     expect(published[0]?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
   })
 
@@ -213,28 +211,30 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
-  it("starts issueDiscoveryWorkflow for IssueDiscoveryRequested", async () => {
-    const { consumer, published, startedWorkflows } = setupDispatcher()
+  it("routes IssueDiscoveryRequested to issues:discovery with dedupe", async () => {
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("IssueDiscoveryRequested", {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
+      issueId: null,
     })
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(0)
-    expect(startedWorkflows).toEqual([
+    expect(published).toEqual([
       {
-        workflow: "issueDiscoveryWorkflow",
-        input: {
+        queue: "issues",
+        task: "discovery",
+        payload: {
           organizationId: "org-1",
           projectId: "proj-1",
           scoreId: "score-3",
+          issueId: null,
         },
         options: {
-          workflowId: "issue-discovery:org-1:proj-1:score-3",
+          dedupeKey: "issues:discovery:score-3",
         },
       },
     ])

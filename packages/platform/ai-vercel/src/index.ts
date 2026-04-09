@@ -1,1 +1,1 @@
-export { AIGenerateLive } from "./ai.ts"
+export { AIGenerateLive, createProviderModel } from "./ai.ts"

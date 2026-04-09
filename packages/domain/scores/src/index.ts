@@ -34,6 +34,7 @@ export {
   scoreSourceSchema,
   scoreValueSchema,
 } from "./entities/score.ts"
+export { ScoreDraftClosedError, ScoreDraftUpdateConflictError } from "./errors.ts"
 export { isImmutableScore, shouldDiscoverIssue } from "./helpers.ts"
 export {
   type IssueOccurrenceAggregate,
@@ -65,16 +66,12 @@ export {
   listSourceScoresUseCase,
 } from "./use-cases/list-scores.ts"
 export {
-  type SyncScoreAnalyticsError,
   type SyncScoreAnalyticsInput,
-  syncScoreAnalyticsInputSchema,
   syncScoreAnalyticsUseCase,
 } from "./use-cases/save-score-analytics.ts"
 export {
   type BaseWriteScoreInput,
   baseWriteScoreInputSchema,
-  ScoreDraftClosedError,
-  ScoreDraftUpdateConflictError,
   type WriteScoreError,
   type WriteScoreInput,
   writeScoreInputSchema,

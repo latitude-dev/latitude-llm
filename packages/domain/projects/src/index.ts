@@ -6,12 +6,16 @@ export {
   projectSchema,
   restoreProject,
 } from "./entities/project.ts"
+export {
+  InvalidProjectNameError,
+  InvalidProjectNameError as UpdateInvalidProjectNameError,
+  ProjectNotFoundError,
+} from "./errors.ts"
 export { ProjectRepository } from "./ports/project-repository.ts"
 export {
   type CreateProjectError,
   type CreateProjectInput,
   createProjectUseCase,
-  InvalidProjectNameError,
 } from "./use-cases/create-project.ts"
 
 export {
@@ -19,8 +23,6 @@ export {
   listAllProjectsUseCase,
 } from "./use-cases/list-projects.ts"
 export {
-  InvalidProjectNameError as UpdateInvalidProjectNameError,
-  ProjectNotFoundError,
   type UpdateProjectError,
   type UpdateProjectInput,
   updateProjectUseCase,

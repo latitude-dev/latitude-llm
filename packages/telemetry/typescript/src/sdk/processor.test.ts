@@ -1,6 +1,7 @@
 import { context } from "@opentelemetry/api"
 import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks"
 import type { Span } from "@opentelemetry/sdk-trace-node"
+import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import { beforeAll, describe, expect, it, vi } from "vitest"
 import { ATTRIBUTES } from "../constants/index.ts"
 import { capture } from "./context.ts"
@@ -64,6 +65,16 @@ describe("LatitudeSpanProcessor", () => {
 
     expect(mockSpan.setAttribute).not.toHaveBeenCalled()
     expect(mockSpan.updateName).not.toHaveBeenCalled()
+  })
+
+  it("should stamp service.name when serviceName option is set", () => {
+    const processor = new LatitudeSpanProcessor(apiKey, projectSlug, { serviceName: "billing-api" })
+    const mockSpan = createMockSpan()
+    const ctx = context.active()
+
+    processor.onStart(mockSpan as unknown as Span, ctx)
+
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith(ATTR_SERVICE_NAME, "billing-api")
   })
 
   it("should not stamp empty tags", () => {

@@ -24,3 +24,4 @@ export {
   isActiveEvaluation,
   isPausedEvaluation,
 } from "./entities/evaluation.ts"
+export { EvaluationRepository } from "./ports/evaluation-repository.ts"

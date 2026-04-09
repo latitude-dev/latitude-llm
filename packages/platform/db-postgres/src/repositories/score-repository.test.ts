@@ -1,4 +1,11 @@
-import { listProjectScoresUseCase, listSourceScoresUseCase, ScoreRepository, writeScoreUseCase } from "@domain/scores"
+import {
+  listProjectScoresUseCase,
+  listSourceScoresUseCase,
+  ScoreAnalyticsRepository,
+  ScoreRepository,
+  writeScoreUseCase,
+} from "@domain/scores"
+import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
 import { IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
@@ -14,12 +21,19 @@ const evaluationSourceId = "eeeeeeeeeeeeeeeeeeeeeeee"
 const customProjectId = ProjectId("pppppppppppppppppppppppp")
 const annotationProjectId = ProjectId("aaaaaaaaaaaaaaaaaaaaaaaa")
 
-const createWriteProvider = (database: InMemoryPostgres, organizationId: string) =>
-  withPostgres(
-    Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
-    database.appPostgresClient,
-    OrganizationId(organizationId),
-  )
+const createWriteProvider = (database: InMemoryPostgres, organizationId: string) => {
+  const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
+
+  return <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+    effect.pipe(
+      withPostgres(
+        Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
+        database.appPostgresClient,
+        OrganizationId(organizationId),
+      ),
+      Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
+    )
+}
 
 describe("ScoreRepositoryLive + score use cases", () => {
   let database: InMemoryPostgres
@@ -57,7 +71,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(persistedRows).toHaveLength(0)
   })
 
-  it("updates drafted scores in place without writing issue events when no issue is attached", async () => {
+  it("updates drafted scores in place without writing issue events when the draft is published without issue assignment", async () => {
     const organizationId = "dddddddddddddddddddddddd"
     const scoreId = "ssssssssssssssssssssssss"
 
@@ -87,7 +101,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
 
     expect(draftOutboxRows).toHaveLength(0)
 
-    const finalizedScore = await Effect.runPromise(
+    const publishedScore = await Effect.runPromise(
       writeScoreUseCase({
         id: draftedScore.id,
         projectId: annotationProjectId,
@@ -95,9 +109,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
         sourceId: "UI",
         value: 0.95,
         passed: true,
-        feedback: "Final annotation feedback",
+        feedback: "Published annotation feedback",
         metadata: {
-          rawFeedback: "Final annotation feedback",
+          rawFeedback: "Published annotation feedback",
           messageIndex: 1,
         },
         draftedAt: null,
@@ -110,9 +124,9 @@ describe("ScoreRepositoryLive + score use cases", () => {
       .where(eq(scoresTable.id, draftedScore.id as string))
 
     expect(persistedRows).toHaveLength(1)
-    expect(finalizedScore.id).toBe(draftedScore.id)
-    expect(finalizedScore.createdAt.toISOString()).toBe(draftedScore.createdAt.toISOString())
-    expect(persistedRows[0]?.feedback).toBe("Final annotation feedback")
+    expect(publishedScore.id).toBe(draftedScore.id)
+    expect(publishedScore.createdAt.toISOString()).toBe(draftedScore.createdAt.toISOString())
+    expect(persistedRows[0]?.feedback).toBe("Published annotation feedback")
     expect(persistedRows[0]?.draftedAt).toBeNull()
 
     const publicationRequests = await database.db
@@ -151,10 +165,11 @@ describe("ScoreRepositoryLive + score use cases", () => {
       organizationId,
       projectId: customProjectId,
       scoreId: score.id,
+      issueId: null,
     })
   })
 
-  it("queues IssueRefreshRequested when an immutable score is already linked to an issue", async () => {
+  it("does not queue issue work just because a persisted score already carries issueId", async () => {
     const organizationId = "rrrrrrrrrrrrrrrrrrrrrrrr"
 
     const score = await Effect.runPromise(
@@ -175,13 +190,7 @@ describe("ScoreRepositoryLive + score use cases", () => {
       .from(outboxEvents)
       .where(and(eq(outboxEvents.organizationId, organizationId), eq(outboxEvents.aggregateId, score.id as string)))
 
-    expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("IssueRefreshRequested")
-    expect(publicationRequests[0]?.payload).toEqual({
-      organizationId,
-      projectId: customProjectId,
-      issueId: "iiiiiiiiiiiiiiiiiiiiiiii",
-    })
+    expect(publicationRequests).toHaveLength(0)
   })
 
   it("claims score issue ownership only once with assignIssueIfUnowned", async () => {

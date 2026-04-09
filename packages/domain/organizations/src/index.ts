@@ -15,6 +15,18 @@ export {
   type PublicInvitationPreview,
   publicInvitationPreviewSchema,
 } from "./entities/public-invitation-preview.ts"
+export {
+  CannotChangeOwnerRoleError,
+  CannotChangeOwnRoleError,
+  CannotRemoveSelfError,
+  CannotTransferToNonMemberError,
+  CannotTransferToSelfError,
+  MembershipNotFoundError,
+  NotAdminError,
+  NotOwnerError,
+  SlugGenerationError,
+  TargetMembershipNotFoundError,
+} from "./errors.ts"
 export { InvitationRepository } from "./ports/invitation-repository.ts"
 export {
   MembershipRepository,
@@ -28,31 +40,16 @@ export {
   cleanupUserMembershipsUseCase,
 } from "./use-cases/cleanup-user-memberships.ts"
 export { generateUniqueOrganizationSlugUseCase } from "./use-cases/generate-unique-organization-slug.ts"
+export { type RemoveMemberInput, removeMemberUseCase } from "./use-cases/remove-member.ts"
 export {
-  CannotRemoveSelfError,
-  MembershipNotFoundError,
-  type RemoveMemberError,
-  type RemoveMemberInput,
-  removeMemberUseCase,
-} from "./use-cases/remove-member.ts"
-export {
-  CannotTransferToNonMemberError,
-  CannotTransferToSelfError,
-  NotOwnerError,
-  type TransferOwnershipError,
   type TransferOwnershipInput,
   transferOwnershipUseCase,
 } from "./use-cases/transfer-ownership.ts"
 export {
-  CannotChangeOwnerRoleError,
-  CannotChangeOwnRoleError,
-  NotAdminError,
-  type UpdateMemberRoleError,
   type UpdateMemberRoleInput,
   updateMemberRoleUseCase,
 } from "./use-cases/update-member-role.ts"
 export {
-  type UpdateOrganizationError,
   type UpdateOrganizationInput,
   updateOrganizationUseCase,
 } from "./use-cases/update-organization.ts"

@@ -104,4 +104,4 @@ export const ISSUE_REFRESH_DEBOUNCE_MS = 8 * 60 * 60 * 1000
  * Minimum number of linked scores before a non-annotation-backed issue
  * becomes visible in the main Issues UI.
  */
-export const MIN_OCCURRENCES_FOR_VISIBILITY = 2
+export const MIN_OCCURRENCES_FOR_VISIBILITY = 3

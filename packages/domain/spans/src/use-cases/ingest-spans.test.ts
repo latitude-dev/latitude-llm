@@ -3,6 +3,7 @@ import { QueuePublishError, QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { OrganizationId, ProjectId, StorageDisk, type StorageDiskPort } from "@domain/shared"
 import { createFakeStorageDisk } from "@domain/shared/testing"
+import { base64Decode } from "@repo/utils"
 import { Effect, Layer, Result } from "effect"
 import { describe, expect, it } from "vitest"
 import { ingestSpansUseCase } from "./ingest-spans.ts"
@@ -39,7 +40,7 @@ describe("ingestSpansUseCase", () => {
     const payload = published[0]?.payload as { fileKey: string | null; inlinePayload: string | null }
     expect(payload.fileKey).toBeNull()
     expect(payload.inlinePayload).toBeDefined()
-    expect(Buffer.from(payload.inlinePayload ?? "", "base64").toString()).toBe('{"spans":[]}')
+    expect(new TextDecoder().decode(base64Decode(payload.inlinePayload ?? ""))).toBe('{"spans":[]}')
   })
 
   it("writes large payloads to disk and sends fileKey", async () => {

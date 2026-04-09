@@ -1,6 +1,15 @@
 // Tokens
 
 export { Alert } from "./components/alert/index.tsx"
+export {
+  Avatar,
+  AvatarGroup,
+  type AvatarGroupItem,
+  type AvatarGroupProps,
+  type AvatarProps,
+  type AvatarSize,
+  initialsFromDisplayName,
+} from "./components/avatar/index.tsx"
 export { Badge, type BadgeProps, badgeVariants } from "./components/badge/index.tsx"
 // Components
 export { type BrandIconProps, GitHubIcon, GoogleIcon, LatitudeLogo } from "./components/brand-icons/index.tsx"
@@ -28,6 +37,7 @@ export { CopyableText } from "./components/copyable-text/index.tsx"
 export { DetailDrawer } from "./components/detail-drawer/detail-drawer.tsx"
 export { DetailSection } from "./components/detail-drawer/detail-section.tsx"
 export { DetailSummary, type DetailSummaryItem } from "./components/detail-drawer/detail-summary.tsx"
+export { DotIndicator, type DotIndicatorProps } from "./components/dot-indicator/dot-indicator.tsx"
 export { DropdownMenu, type MenuOption, type TriggerButtonProps } from "./components/dropdown-menu/dropdown-menu.tsx"
 export {
   DropdownMenu as DropdownMenuRoot,
@@ -137,6 +147,7 @@ export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger }
 export { hashToHue, useHashColor } from "./hooks/use-hash-color.ts"
 export { useHover } from "./hooks/use-hover.ts"
 export { useMountEffect } from "./hooks/use-mount-effect.ts"
+export { useToggleWithDefault } from "./hooks/use-toggle-with-default.ts"
 // Lib
 export * from "./tokens/colors.ts"
 export * from "./tokens/font.ts"

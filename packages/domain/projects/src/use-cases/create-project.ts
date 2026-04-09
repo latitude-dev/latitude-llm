@@ -6,23 +6,14 @@ import {
   toSlug,
   type ValidationError,
 } from "@domain/shared"
-import { Data, Effect } from "effect"
+import { Effect } from "effect"
 import { createProject } from "../entities/project.ts"
+import { InvalidProjectNameError } from "../errors.ts"
 import { ProjectRepository } from "../ports/project-repository.ts"
 
 export interface CreateProjectInput {
   readonly id?: ProjectId
   readonly name: string
-}
-
-export class InvalidProjectNameError extends Data.TaggedError("InvalidProjectNameError")<{
-  readonly field: string
-  readonly message: string
-}> {
-  readonly httpStatus = 400
-  get httpMessage() {
-    return this.message
-  }
 }
 
 export type CreateProjectError = RepositoryError | ValidationError | ConflictError | InvalidProjectNameError

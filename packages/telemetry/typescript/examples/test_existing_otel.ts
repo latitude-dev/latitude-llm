@@ -14,7 +14,7 @@
  */
 
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
-import { Resource } from "@opentelemetry/resources"
+import { resourceFromAttributes } from "@opentelemetry/resources"
 import { BatchSpanProcessor, NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import OpenAI from "openai"
@@ -30,7 +30,7 @@ const existingExporter = new OTLPTraceExporter({
 
 // Configure both processors upfront (recommended approach)
 const provider = new NodeTracerProvider({
-  resource: new Resource({
+  resource: resourceFromAttributes({
     [ATTR_SERVICE_NAME]: "my-existing-app",
   }),
   spanProcessors: [

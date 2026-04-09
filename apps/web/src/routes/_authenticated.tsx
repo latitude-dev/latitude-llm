@@ -1,13 +1,11 @@
-import { cn, DropdownMenu, DropdownMenuTrigger, LatitudeLogo, useHashColor } from "@repo/ui"
-import { extractLeadingEmoji } from "@repo/utils"
-import { eq } from "@tanstack/react-db"
-import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
+import { Avatar, DropdownMenu, DropdownMenuTrigger, LatitudeLogo } from "@repo/ui"
+import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
-import { useProjectsCollection } from "../domains/projects/projects.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
+import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
@@ -31,87 +29,6 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: AuthenticatedLayout,
 })
-
-function UserAvatar({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
-  const trimmed = name.trim()
-  const initials =
-    trimmed.length === 0
-      ? "?"
-      : trimmed
-          .split(/\s+/)
-          .map((part) => part[0])
-          .filter(Boolean)
-          .slice(0, 2)
-          .join("")
-          .toUpperCase() || trimmed.slice(0, 2).toUpperCase()
-
-  const { style, className } = useHashColor(name)
-
-  if (imageUrl?.trim()) {
-    return (
-      <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 bg-muted">
-        <img src={imageUrl} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
-      </div>
-    )
-  }
-
-  return (
-    <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", className)} style={style}>
-      <span className="text-xs font-medium leading-none">{initials}</span>
-    </div>
-  )
-}
-
-function ProjectBreadcrumb({ projectSlug }: { projectSlug: string }) {
-  const { data: project } = useProjectsCollection(
-    (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
-    [projectSlug],
-  )
-
-  const { data: allProjects } = useProjectsCollection()
-  const hasMultipleProjects = (allProjects?.length ?? 0) > 1
-
-  if (!project) return null
-
-  const [emoji, title] = extractLeadingEmoji(project.name)
-
-  return (
-    <>
-      <span className="text-muted-foreground text-sm select-none">/</span>
-      {hasMultipleProjects ? (
-        <DropdownMenu
-          side="bottom"
-          align="start"
-          options={
-            allProjects?.map((p) => ({
-              label: p.name,
-              onClick: () => {
-                window.location.href = `/projects/${p.slug}`
-              },
-            })) ?? []
-          }
-          trigger={() => (
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
-              >
-                {emoji && <span className="text-sm">{emoji}</span>}
-                <span className="text-sm font-medium text-muted-foreground">{title}</span>
-                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </DropdownMenuTrigger>
-          )}
-        />
-      ) : (
-        <span className="text-sm font-medium text-muted-foreground px-2 py-1">
-          {emoji && `${emoji} `}
-          {title}
-        </span>
-      )}
-    </>
-  )
-}
 
 function ThemeToggle() {
   const [isDark, setIsDark] = useState(() =>
@@ -142,10 +59,6 @@ function NavHeader() {
   const org = allOrgs?.find((o) => o.id === organizationId)
   const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
   const router = useRouter()
-  const routerState = useRouterState()
-  const pathname = routerState.location.pathname
-  const projectMatch = pathname.match(/\/projects\/([^/]+)/)
-  const currentProjectSlug = projectMatch?.[1] ?? null
 
   if (!org) return null
 
@@ -189,7 +102,7 @@ function NavHeader() {
         ) : (
           <span className="text-sm font-medium text-foreground px-2 py-1">{org.name}</span>
         )}
-        {currentProjectSlug && <ProjectBreadcrumb projectSlug={currentProjectSlug} />}
+        <BreadcrumbTrail />
       </div>
       <div className="flex items-center gap-4">
         <ThemeToggle />
@@ -221,7 +134,11 @@ function NavHeader() {
           trigger={() => (
             <DropdownMenuTrigger asChild>
               <button type="button" className="cursor-pointer">
-                <UserAvatar name={user.name?.trim() ? user.name : user.email} imageUrl={user.image} />
+                <Avatar
+                  name={user.name?.trim() ? user.name : user.email}
+                  size="sm"
+                  imageSrc={user.image ?? undefined}
+                />
               </button>
             </DropdownMenuTrigger>
           )}

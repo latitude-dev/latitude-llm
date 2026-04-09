@@ -91,7 +91,11 @@ export const createAnnotation = createServerFn({ method: "POST" })
         anchor: data.anchor,
       }).pipe(
         withPostgres(repositoriesLayer, client, organizationId),
-        withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), chClient, organizationId),
+        withClickHouse(
+          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
+          chClient,
+          organizationId,
+        ),
       ),
     )
 
@@ -132,7 +136,11 @@ export const updateAnnotation = createServerFn({ method: "POST" })
         anchor: data.anchor,
       }).pipe(
         withPostgres(repositoriesLayer, client, organizationId),
-        withClickHouse(Layer.merge(TraceRepositoryLive, SpanRepositoryLive), chClient, organizationId),
+        withClickHouse(
+          Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive, SpanRepositoryLive),
+          chClient,
+          organizationId,
+        ),
       ),
     )
 

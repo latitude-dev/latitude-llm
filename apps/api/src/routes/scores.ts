@@ -5,8 +5,7 @@ import {
   customScoreSchema,
   type EvaluationScore,
   evaluationScoreSchema,
-  isImmutableScore,
-  syncScoreAnalyticsUseCase,
+  type WriteScoreInput,
   writeScoreUseCase,
 } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
@@ -138,63 +137,53 @@ export const createScoresRoutes = () => {
     const body = c.req.valid("json")
     const { projectId: projectIdParam } = c.req.valid("param")
     const projectId = ProjectId(projectIdParam)
-
-    const repositoriesLayer = Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive)
+    const organizationId = c.var.organization.id
 
     const score = await Effect.runPromise(
       Effect.gen(function* () {
         const projectRepository = yield* ProjectRepository
         yield* projectRepository.findById(projectId)
 
-        let score: ApiScore
-        if (body._evaluation === true) {
-          const evaluationScore = yield* writeScoreUseCase({
-            projectId,
-            source: "evaluation",
-            sourceId: body.sourceId,
-            sessionId: body.sessionId,
-            traceId: body.traceId,
-            spanId: body.spanId,
-            simulationId: body.simulationId,
-            value: body.value,
-            passed: body.passed,
-            feedback: body.feedback,
-            metadata: body.metadata,
-            error: body.error,
-            duration: body.duration,
-            tokens: body.tokens,
-            cost: body.cost,
-          })
-          score = evaluationScore as EvaluationScore
-        } else {
-          const customScore = yield* writeScoreUseCase({
-            projectId,
-            source: "custom",
-            sourceId: body.sourceId,
-            sessionId: body.sessionId,
-            traceId: body.traceId,
-            spanId: body.spanId,
-            simulationId: body.simulationId,
-            value: body.value,
-            passed: body.passed,
-            feedback: body.feedback,
-            metadata: body.metadata,
-            error: body.error,
-            duration: body.duration,
-            tokens: body.tokens,
-            cost: body.cost,
-          })
-          score = customScore as CustomScore
+        const sharedWriteInput = {
+          projectId,
+          sourceId: body.sourceId,
+          sessionId: body.sessionId,
+          traceId: body.traceId,
+          spanId: body.spanId,
+          simulationId: body.simulationId,
+          value: body.value,
+          passed: body.passed,
+          feedback: body.feedback,
+          metadata: body.metadata,
+          error: body.error,
+          duration: body.duration,
+          tokens: body.tokens,
+          cost: body.cost,
         }
 
-        if (isImmutableScore(score)) {
-          yield* syncScoreAnalyticsUseCase({ scoreId: score.id })
-        }
+        const writeInput: WriteScoreInput =
+          body._evaluation === true
+            ? {
+                ...sharedWriteInput,
+                source: "evaluation",
+                metadata: body.metadata,
+              }
+            : {
+                ...sharedWriteInput,
+                source: "custom",
+                metadata: body.metadata,
+              }
 
-        return score
+        const score = yield* writeScoreUseCase(writeInput)
+
+        return score as ApiScore
       }).pipe(
-        withPostgres(repositoriesLayer, c.var.postgresClient, c.var.organization.id),
-        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, c.var.organization.id),
+        withPostgres(
+          Layer.mergeAll(ProjectRepositoryLive, ScoreRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          organizationId,
+        ),
+        withClickHouse(ScoreAnalyticsRepositoryLive, c.var.clickhouse, organizationId),
       ),
     )
 

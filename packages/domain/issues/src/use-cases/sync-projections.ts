@@ -1,4 +1,4 @@
-import { IssueId, type RepositoryError } from "@domain/shared"
+import { IssueId } from "@domain/shared"
 import { Effect } from "effect"
 import { normalizeIssueCentroid } from "../helpers.ts"
 import { IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
@@ -24,7 +24,6 @@ export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
     const vector = normalizeIssueCentroid(issue.centroid)
     if (vector.length === 0) {
       yield* issueProjectionRepository.delete({
-        organizationId: issue.organizationId,
         projectId: issue.projectId,
         uuid: issue.uuid,
       })
@@ -32,11 +31,10 @@ export const syncIssueProjectionsUseCase = (input: SyncIssueProjectionsInput) =>
     }
 
     yield* issueProjectionRepository.upsert({
-      organizationId: issue.organizationId,
       projectId: issue.projectId,
       uuid: issue.uuid,
       title: issue.name,
       description: issue.description,
       vector,
     })
-  }) as Effect.Effect<void, RepositoryError>
+  })

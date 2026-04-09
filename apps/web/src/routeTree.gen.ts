@@ -21,13 +21,23 @@ import { Route as DesignSystemButtonRouteImport } from './routes/design-system/b
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings/organization'
+import { Route as AuthenticatedSettingsMembersRouteImport } from './routes/_authenticated/settings/members'
+import { Route as AuthenticatedSettingsIssuesRouteImport } from './routes/_authenticated/settings/issues'
+import { Route as AuthenticatedSettingsApiKeysRouteImport } from './routes/_authenticated/settings/api-keys'
+import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedProjectsProjectSlugRouteImport } from './routes/_authenticated/projects/$projectSlug'
 import { Route as AuthenticatedProjectsProjectSlugIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/index'
 import { Route as AuthenticatedProjectsProjectSlugSettingsRouteImport } from './routes/_authenticated/projects/$projectSlug/settings'
 import { Route as AuthenticatedProjectsProjectSlugIssuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/issues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/index'
+import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/index'
 import { Route as AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport } from './routes/_authenticated/projects/$projectSlug/datasets/$datasetId'
+import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/$queueId'
+import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/$queueId/index'
+import { Route as AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRouteImport } from './routes/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -88,11 +98,47 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSettingsIndexRoute =
+  AuthenticatedSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSettingsOrganizationRoute =
+  AuthenticatedSettingsOrganizationRouteImport.update({
+    id: '/organization',
+    path: '/organization',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsMembersRoute =
+  AuthenticatedSettingsMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsIssuesRoute =
+  AuthenticatedSettingsIssuesRouteImport.update({
+    id: '/issues',
+    path: '/issues',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsApiKeysRoute =
+  AuthenticatedSettingsApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const AuthenticatedSettingsAccountRoute =
+  AuthenticatedSettingsAccountRouteImport.update({
+    id: '/account',
+    path: '/account',
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugRoute =
   AuthenticatedProjectsProjectSlugRouteImport.update({
     id: '/projects/$projectSlug',
@@ -123,18 +169,48 @@ const AuthenticatedProjectsProjectSlugDatasetsIndexRoute =
     path: '/datasets/',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute =
+  AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRouteImport.update({
+    id: '/annotation-queues/',
+    path: '/annotation-queues/',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
 const AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute =
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport.update({
     id: '/datasets/$datasetId',
     path: '/datasets/$datasetId',
     getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
   } as any)
+const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute =
+  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteImport.update({
+    id: '/annotation-queues/$queueId',
+    path: '/annotation-queues/$queueId',
+    getParentRoute: () => AuthenticatedProjectsProjectSlugRoute,
+  } as any)
+const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute =
+  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRouteImport.update(
+    {
+      id: '/',
+      path: '/',
+      getParentRoute: () =>
+        AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute,
+    } as any,
+  )
+const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute =
+  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRouteImport.update(
+    {
+      id: '/items/$itemId',
+      path: '/items/$itemId',
+      getParentRoute: () =>
+        AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
-  '/settings': typeof AuthenticatedSettingsRoute
+  '/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -143,16 +219,25 @@ export interface FileRoutesByFullPath {
   '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
+  '/settings/account': typeof AuthenticatedSettingsAccountRoute
+  '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
+  '/settings/issues': typeof AuthenticatedSettingsIssuesRoute
+  '/settings/members': typeof AuthenticatedSettingsMembersRoute
+  '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/settings/': typeof AuthenticatedSettingsIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
+  '/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
+  '/projects/$projectSlug/annotation-queues/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   '/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
+  '/projects/$projectSlug/annotation-queues/$queueId/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
+  '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/settings': typeof AuthenticatedSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -161,19 +246,28 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/design-system': typeof DesignSystemIndexRoute
   '/welcome': typeof WelcomeIndexRoute
+  '/settings/account': typeof AuthenticatedSettingsAccountRoute
+  '/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
+  '/settings/issues': typeof AuthenticatedSettingsIssuesRoute
+  '/settings/members': typeof AuthenticatedSettingsMembersRoute
+  '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/settings': typeof AuthenticatedSettingsIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
+  '/projects/$projectSlug/annotation-queues': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   '/projects/$projectSlug/datasets': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/projects/$projectSlug/issues': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
+  '/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
+  '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/design-system': typeof DesignSystemRouteRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRouteWithChildren
   '/api/health': typeof ApiHealthRoute
   '/auth/invite': typeof AuthInviteRoute
   '/design-system/button': typeof DesignSystemButtonRoute
@@ -183,12 +277,22 @@ export interface FileRoutesById {
   '/design-system/': typeof DesignSystemIndexRoute
   '/welcome/': typeof WelcomeIndexRoute
   '/_authenticated/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugRouteWithChildren
+  '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountRoute
+  '/_authenticated/settings/api-keys': typeof AuthenticatedSettingsApiKeysRoute
+  '/_authenticated/settings/issues': typeof AuthenticatedSettingsIssuesRoute
+  '/_authenticated/settings/members': typeof AuthenticatedSettingsMembersRoute
+  '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
+  '/_authenticated/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   '/_authenticated/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
+  '/_authenticated/projects/$projectSlug/annotation-queues/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   '/_authenticated/projects/$projectSlug/datasets/': typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   '/_authenticated/projects/$projectSlug/issues/': typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
+  '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
+  '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -205,16 +309,25 @@ export interface FileRouteTypes {
     | '/design-system/'
     | '/welcome/'
     | '/projects/$projectSlug'
+    | '/settings/account'
+    | '/settings/api-keys'
+    | '/settings/issues'
+    | '/settings/members'
+    | '/settings/organization'
     | '/api/auth/$'
+    | '/settings/'
     | '/projects/$projectSlug/settings'
     | '/projects/$projectSlug/'
+    | '/projects/$projectSlug/annotation-queues/$queueId'
     | '/projects/$projectSlug/datasets/$datasetId'
+    | '/projects/$projectSlug/annotation-queues/'
     | '/projects/$projectSlug/datasets/'
     | '/projects/$projectSlug/issues/'
+    | '/projects/$projectSlug/annotation-queues/$queueId/'
+    | '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/settings'
     | '/api/health'
     | '/auth/invite'
     | '/design-system/button'
@@ -223,12 +336,21 @@ export interface FileRouteTypes {
     | '/'
     | '/design-system'
     | '/welcome'
+    | '/settings/account'
+    | '/settings/api-keys'
+    | '/settings/issues'
+    | '/settings/members'
+    | '/settings/organization'
     | '/api/auth/$'
+    | '/settings'
     | '/projects/$projectSlug/settings'
     | '/projects/$projectSlug'
     | '/projects/$projectSlug/datasets/$datasetId'
+    | '/projects/$projectSlug/annotation-queues'
     | '/projects/$projectSlug/datasets'
     | '/projects/$projectSlug/issues'
+    | '/projects/$projectSlug/annotation-queues/$queueId'
+    | '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
   id:
     | '__root__'
     | '/design-system'
@@ -244,12 +366,22 @@ export interface FileRouteTypes {
     | '/design-system/'
     | '/welcome/'
     | '/_authenticated/projects/$projectSlug'
+    | '/_authenticated/settings/account'
+    | '/_authenticated/settings/api-keys'
+    | '/_authenticated/settings/issues'
+    | '/_authenticated/settings/members'
+    | '/_authenticated/settings/organization'
     | '/api/auth/$'
+    | '/_authenticated/settings/'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/_authenticated/projects/$projectSlug/'
+    | '/_authenticated/projects/$projectSlug/annotation-queues/$queueId'
     | '/_authenticated/projects/$projectSlug/datasets/$datasetId'
+    | '/_authenticated/projects/$projectSlug/annotation-queues/'
     | '/_authenticated/projects/$projectSlug/datasets/'
     | '/_authenticated/projects/$projectSlug/issues/'
+    | '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/'
+    | '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -349,12 +481,54 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/settings/': {
+      id: '/_authenticated/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
       fullPath: '/api/auth/$'
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/settings/organization': {
+      id: '/_authenticated/settings/organization'
+      path: '/organization'
+      fullPath: '/settings/organization'
+      preLoaderRoute: typeof AuthenticatedSettingsOrganizationRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/members': {
+      id: '/_authenticated/settings/members'
+      path: '/members'
+      fullPath: '/settings/members'
+      preLoaderRoute: typeof AuthenticatedSettingsMembersRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/issues': {
+      id: '/_authenticated/settings/issues'
+      path: '/issues'
+      fullPath: '/settings/issues'
+      preLoaderRoute: typeof AuthenticatedSettingsIssuesRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/api-keys': {
+      id: '/_authenticated/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/settings/api-keys'
+      preLoaderRoute: typeof AuthenticatedSettingsApiKeysRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/_authenticated/settings/account': {
+      id: '/_authenticated/settings/account'
+      path: '/account'
+      fullPath: '/settings/account'
+      preLoaderRoute: typeof AuthenticatedSettingsAccountRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
     }
     '/_authenticated/projects/$projectSlug': {
       id: '/_authenticated/projects/$projectSlug'
@@ -391,12 +565,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
     }
+    '/_authenticated/projects/$projectSlug/annotation-queues/': {
+      id: '/_authenticated/projects/$projectSlug/annotation-queues/'
+      path: '/annotation-queues'
+      fullPath: '/projects/$projectSlug/annotation-queues/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
     '/_authenticated/projects/$projectSlug/datasets/$datasetId': {
       id: '/_authenticated/projects/$projectSlug/datasets/$datasetId'
       path: '/datasets/$datasetId'
       fullPath: '/projects/$projectSlug/datasets/$datasetId'
       preLoaderRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/annotation-queues/$queueId': {
+      id: '/_authenticated/projects/$projectSlug/annotation-queues/$queueId'
+      path: '/annotation-queues/$queueId'
+      fullPath: '/projects/$projectSlug/annotation-queues/$queueId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugRoute
+    }
+    '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/': {
+      id: '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/'
+      path: '/'
+      fullPath: '/projects/$projectSlug/annotation-queues/$queueId/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute
+    }
+    '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId': {
+      id: '/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
+      path: '/items/$itemId'
+      fullPath: '/projects/$projectSlug/annotation-queues/$queueId/items/$itemId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute
     }
   }
 }
@@ -416,10 +618,54 @@ const DesignSystemRouteRouteChildren: DesignSystemRouteRouteChildren = {
 const DesignSystemRouteRouteWithChildren =
   DesignSystemRouteRoute._addFileChildren(DesignSystemRouteRouteChildren)
 
+interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsAccountRoute: typeof AuthenticatedSettingsAccountRoute
+  AuthenticatedSettingsApiKeysRoute: typeof AuthenticatedSettingsApiKeysRoute
+  AuthenticatedSettingsIssuesRoute: typeof AuthenticatedSettingsIssuesRoute
+  AuthenticatedSettingsMembersRoute: typeof AuthenticatedSettingsMembersRoute
+  AuthenticatedSettingsOrganizationRoute: typeof AuthenticatedSettingsOrganizationRoute
+  AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
+}
+
+const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsAccountRoute: AuthenticatedSettingsAccountRoute,
+  AuthenticatedSettingsApiKeysRoute: AuthenticatedSettingsApiKeysRoute,
+  AuthenticatedSettingsIssuesRoute: AuthenticatedSettingsIssuesRoute,
+  AuthenticatedSettingsMembersRoute: AuthenticatedSettingsMembersRoute,
+  AuthenticatedSettingsOrganizationRoute:
+    AuthenticatedSettingsOrganizationRoute,
+  AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,
+}
+
+const AuthenticatedSettingsRouteWithChildren =
+  AuthenticatedSettingsRoute._addFileChildren(
+    AuthenticatedSettingsRouteChildren,
+  )
+
+interface AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren {
+  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute
+  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute
+}
+
+const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren: AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren =
+  {
+    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute:
+      AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdIndexRoute,
+    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute:
+      AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdItemsItemIdRoute,
+  }
+
+const AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren =
+  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute._addFileChildren(
+    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteChildren,
+  )
+
 interface AuthenticatedProjectsProjectSlugRouteChildren {
   AuthenticatedProjectsProjectSlugSettingsRoute: typeof AuthenticatedProjectsProjectSlugSettingsRoute
   AuthenticatedProjectsProjectSlugIndexRoute: typeof AuthenticatedProjectsProjectSlugIndexRoute
+  AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
   AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute: typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
+  AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute: typeof AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute
   AuthenticatedProjectsProjectSlugDatasetsIndexRoute: typeof AuthenticatedProjectsProjectSlugDatasetsIndexRoute
   AuthenticatedProjectsProjectSlugIssuesIndexRoute: typeof AuthenticatedProjectsProjectSlugIssuesIndexRoute
 }
@@ -430,8 +676,12 @@ const AuthenticatedProjectsProjectSlugRouteChildren: AuthenticatedProjectsProjec
       AuthenticatedProjectsProjectSlugSettingsRoute,
     AuthenticatedProjectsProjectSlugIndexRoute:
       AuthenticatedProjectsProjectSlugIndexRoute,
+    AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRoute:
+      AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren,
     AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute:
       AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute,
+    AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute:
+      AuthenticatedProjectsProjectSlugAnnotationQueuesIndexRoute,
     AuthenticatedProjectsProjectSlugDatasetsIndexRoute:
       AuthenticatedProjectsProjectSlugDatasetsIndexRoute,
     AuthenticatedProjectsProjectSlugIssuesIndexRoute:
@@ -444,13 +694,13 @@ const AuthenticatedProjectsProjectSlugRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedProjectsProjectSlugRoute: typeof AuthenticatedProjectsProjectSlugRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedProjectsProjectSlugRoute:
     AuthenticatedProjectsProjectSlugRouteWithChildren,

@@ -1,19 +1,29 @@
+import type { ContextOptions } from "@latitude-data/telemetry"
 import { type Effect, ServiceMap } from "effect"
 import type { z } from "zod"
+import type { AICredentialError, AIError } from "./errors.ts"
 
+export { AICredentialError, AIError } from "./errors.ts"
 export {
   formatGenAIConversation,
   formatGenAIMessage,
   formatGenAIPart,
 } from "./formatAi.ts"
 
-import type { AICredentialError, AIError } from "./errors.ts"
-
-export { AICredentialError, AIError } from "./errors.ts"
-
 // ---------------------------------------------------------------------------
 // Generate (structured object generation via LLM)
 // ---------------------------------------------------------------------------
+
+export type { ContextOptions } from "@latitude-data/telemetry"
+
+/**
+ * Latitude `capture` third-argument options (`ContextOptions` from `@latitude-data/telemetry`) plus the
+ * required root span name (first argument to `capture`). Optional `name` here is the merged-context
+ * override in `ContextOptions`, distinct from `spanName`.
+ */
+export type GenerateTelemetryCapture = ContextOptions & {
+  readonly spanName: string
+}
 
 /**
  * Structured generation with a Zod schema. The Vercel adapter uses the AI SDK's
@@ -38,6 +48,11 @@ export interface GenerateInput<T> {
   readonly stopSequences?: readonly string[]
   readonly seed?: number
   readonly providerOptions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>
+  /**
+   * When set, the Vercel adapter wraps the provider call in Latitude `capture` for tracing.
+   * Does not affect generation semantics; excluded from AI cache keys (see `withAICache`).
+   */
+  readonly telemetry?: GenerateTelemetryCapture
 }
 
 export interface GenerateResult<T> {
@@ -54,6 +69,11 @@ export interface EmbedInput {
   readonly text: string
   readonly model: string
   readonly dimensions: number
+  /**
+   * When set, the Voyage adapter wraps the provider call in Latitude `capture` for tracing.
+   * Excluded from AI cache keys (see `withAICache`).
+   */
+  readonly telemetry?: GenerateTelemetryCapture
 }
 
 export interface EmbedResult {
@@ -68,6 +88,11 @@ export interface RerankInput {
   readonly query: string
   readonly documents: readonly string[]
   readonly model: string
+  /**
+   * When set, the Voyage adapter wraps the provider call in Latitude `capture` for tracing.
+   * Excluded from AI cache keys (see `withAICache`).
+   */
+  readonly telemetry?: GenerateTelemetryCapture
 }
 
 export interface RerankResult {
@@ -76,23 +101,31 @@ export interface RerankResult {
 }
 
 // ---------------------------------------------------------------------------
+// AI capability services
+// ---------------------------------------------------------------------------
+
+export interface AIGenerateShape {
+  generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
+}
+
+export interface AIEmbedShape {
+  embed(input: EmbedInput): Effect.Effect<EmbedResult, AIError>
+}
+
+export interface AIRerankShape {
+  rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
+}
+
+export type AIShape = AIGenerateShape & AIEmbedShape & AIRerankShape
+
+export class AIGenerate extends ServiceMap.Service<AIGenerate, AIGenerateShape>()("@domain/ai/AIGenerate") {}
+
+export class AIEmbed extends ServiceMap.Service<AIEmbed, AIEmbedShape>()("@domain/ai/AIEmbed") {}
+
+export class AIRerank extends ServiceMap.Service<AIRerank, AIRerankShape>()("@domain/ai/AIRerank") {}
+
+// ---------------------------------------------------------------------------
 // Unified AI service
 // ---------------------------------------------------------------------------
 
-export class AI extends ServiceMap.Service<
-  AI,
-  {
-    generate<T>(input: GenerateInput<T>): Effect.Effect<GenerateResult<T>, AIError | AICredentialError>
-    embed(input: EmbedInput): Effect.Effect<EmbedResult, AIError>
-    rerank(input: RerankInput): Effect.Effect<readonly RerankResult[], AIError>
-  }
->()("@domain/ai/AI") {}
-
-export { withAICache } from "./cache.ts"
-
-export class AICredentials extends ServiceMap.Service<
-  AICredentials,
-  {
-    getApiKey(provider: string): Effect.Effect<string, AICredentialError>
-  }
->()("@domain/ai/AICredentials") {}
+export class AI extends ServiceMap.Service<AI, AIShape>()("@domain/ai/AI") {}

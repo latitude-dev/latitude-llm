@@ -11,7 +11,7 @@ import {
 function mockSpan(overrides: { scopeName?: string; attributes?: Record<string, unknown> }): ReadableSpan {
   const { scopeName = "", attributes = {} } = overrides
   return {
-    instrumentationLibrary: { name: scopeName },
+    instrumentationScope: { name: scopeName },
     attributes,
   } as unknown as ReadableSpan
 }
@@ -79,7 +79,7 @@ describe("buildShouldExportSpan", () => {
 
   it("composes with shouldExportSpan", () => {
     const pred = buildShouldExportSpan({
-      shouldExportSpan: (s) => s.instrumentationLibrary?.name === "my.custom.scope",
+      shouldExportSpan: (s) => s.instrumentationScope?.name === "my.custom.scope",
     })
     expect(pred(mockSpan({ scopeName: "my.custom.scope" }))).toBe(true)
     expect(pred(mockSpan({ scopeName: "express" }))).toBe(false)

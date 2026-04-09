@@ -1,7 +1,7 @@
 import { QueuePublisher } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { SCORE_PUBLICATION_DEBOUNCE, ScoreRepository } from "@domain/scores"
-import { createFakeScoreRepository } from "@domain/scores/testing"
+import { SCORE_PUBLICATION_DEBOUNCE, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
   NotFoundError,
@@ -83,6 +83,7 @@ function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansFor
   const events: unknown[] = []
   const { publisher, published } = createFakeQueuePublisher()
   const { repository: scoreRepository, scores: store } = createFakeScoreRepository()
+  const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
 
   const traceDetailForLookup =
     options === undefined || options.traceDetail === undefined ? makeTraceDetail([]) : options.traceDetail
@@ -102,6 +103,7 @@ function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansFor
   })
 
   const ScoreRepositoryTest = Layer.succeed(ScoreRepository, scoreRepository)
+  const ScoreAnalyticsRepositoryTest = Layer.succeed(ScoreAnalyticsRepository, scoreAnalyticsRepository)
 
   const OutboxEventWriterTest = Layer.succeed(OutboxEventWriter, {
     write: (event) =>
@@ -123,6 +125,7 @@ function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansFor
     published,
     layer: Layer.mergeAll(
       ScoreRepositoryTest,
+      ScoreAnalyticsRepositoryTest,
       OutboxEventWriterTest,
       QueuePublisherTest,
       SqlClientTest,
@@ -401,6 +404,48 @@ describe("writeAnnotationUseCase", () => {
 
     // Drafts are never immutable — draftedAt is always set
     expect(events.length).toBe(0)
+  })
+
+  it("persists a preselected issue on UI drafts as intent only", async () => {
+    const { events, store, layer } = createTestLayers()
+
+    const score = await Effect.runPromise(
+      writeAnnotationUseCase({
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        issueId: "i".repeat(24),
+        value: 0.1,
+        passed: false,
+        feedback: "Manual draft linked to an issue",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(score.issueId).toBe("i".repeat(24))
+    expect(score.draftedAt).not.toBeNull()
+    expect(store.get(score.id)?.issueId).toBe("i".repeat(24))
+    expect(events).toHaveLength(0)
+  })
+
+  it("persists a preselected issue on API drafts as intent only", async () => {
+    const { events, store, layer } = createTestLayers()
+
+    const score = await Effect.runPromise(
+      writeAnnotationUseCase({
+        projectId: projectCuid,
+        sourceId: "API",
+        traceId: traceIdRaw,
+        issueId: "j".repeat(24),
+        value: 0.1,
+        passed: false,
+        feedback: "API draft linked to an issue",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(score.issueId).toBe("j".repeat(24))
+    expect(score.draftedAt).not.toBeNull()
+    expect(store.get(score.id)?.issueId).toBe("j".repeat(24))
+    expect(events).toHaveLength(0)
   })
 
   it("publishes debounced annotation-scores:publish after write", async () => {

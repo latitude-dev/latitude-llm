@@ -1,3 +1,4 @@
+export { TRACE_END_DEBOUNCE_MS } from "./constants.ts"
 export type { Session } from "./entities/session.ts"
 export { sessionSchema } from "./entities/session.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
@@ -11,6 +12,7 @@ export {
 } from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
+export { SpanDecodingError } from "./errors.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
@@ -57,4 +59,4 @@ export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"
 export type { ProcessIngestedSpansDeps, ProcessIngestedSpansInput } from "./use-cases/process-ingested-spans.ts"
-export { processIngestedSpansUseCase, SpanDecodingError } from "./use-cases/process-ingested-spans.ts"
+export { processIngestedSpansUseCase } from "./use-cases/process-ingested-spans.ts"

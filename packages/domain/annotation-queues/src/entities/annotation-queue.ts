@@ -1,5 +1,4 @@
 import { cuidSchema, type FilterSet, filterSetSchema } from "@domain/shared"
-import { traceIdSchema } from "@domain/spans"
 import { z } from "zod"
 
 import { ANNOTATION_QUEUE_NAME_MAX_LENGTH } from "../constants.ts"
@@ -73,20 +72,3 @@ export const annotationQueueSchema = z.object({
 })
 
 export type AnnotationQueue = z.infer<typeof annotationQueueSchema>
-
-// ---------------------------------------------------------------------------
-// Annotation Queue Item entity
-// ---------------------------------------------------------------------------
-
-export const annotationQueueItemSchema = z.object({
-  id: cuidSchema,
-  organizationId: cuidSchema,
-  projectId: cuidSchema,
-  queueId: cuidSchema,
-  traceId: traceIdSchema,
-  completedAt: z.date().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-})
-
-export type AnnotationQueueItem = z.infer<typeof annotationQueueItemSchema>

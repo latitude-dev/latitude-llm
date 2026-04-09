@@ -28,6 +28,7 @@ export type Common = {
   display?: Display
   userSelect?: boolean
   noWrap?: boolean
+  /** Truncates to N lines via Tailwind `line-clamp-*`. Values ≥ 6 use `line-clamp-6`. */
   lineClamp?: number
   centered?: boolean
   underline?: boolean
@@ -84,7 +85,8 @@ const TextAtom = memo(
     const spacingClass = font.spacing[spacing]
     const alignClass = font.align[align]
     const wordBreakClass = wordBreakOptions[wordBreak]
-    const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
+    const clampActive = lineClamp !== undefined && lineClamp > 0
+    const whiteSpaceClass = clampActive ? whiteSpaceOptions.normal : whiteSpaceOptions[whiteSpace]
     const Comp = asChild ? Slot : "span"
     const isDisplay = DISPLAY_SIZES.has(size)
     return (
@@ -105,9 +107,9 @@ const TextAtom = memo(
           {
             capitalize: capitalize,
             uppercase: uppercase,
-            truncate: ellipsis,
+            truncate: ellipsis && !clampActive,
             "select-none": !userSelect,
-            "whitespace-nowrap": noWrap,
+            "whitespace-nowrap": noWrap && !clampActive,
             underline: underline,
             "line-through": lineThrough,
             italic: italic,
@@ -115,9 +117,14 @@ const TextAtom = memo(
             [font.family.sans]: !isDisplay,
             [font.family.display]: isDisplay,
             "text-center": centered,
-            "line-clamp-1": lineClamp === 1,
-            "line-clamp-3": lineClamp === 3,
             "leading-5": lineClamp && size === "h6",
+            "break-words": clampActive,
+            "line-clamp-1": lineClamp === 1,
+            "line-clamp-2": lineClamp === 2,
+            "line-clamp-3": lineClamp === 3,
+            "line-clamp-4": lineClamp === 4,
+            "line-clamp-5": lineClamp === 5,
+            "line-clamp-6": lineClamp !== undefined && lineClamp >= 6,
           },
         )}
       >

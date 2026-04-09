@@ -1,6 +1,7 @@
 import type { QueuePublishError } from "@domain/queue"
 import { QueuePublisher } from "@domain/queue"
 import { type OrganizationId, type ProjectId, putInDisk, StorageDisk, type StorageError } from "@domain/shared"
+import { base64Encode } from "@repo/utils"
 import { Effect } from "effect"
 
 const INLINE_PAYLOAD_MAX_BYTES = 50_000 // 50 KB
@@ -23,7 +24,7 @@ export const ingestSpansUseCase = (
     let inlinePayload: string | null = null
 
     if (input.payload.byteLength <= INLINE_PAYLOAD_MAX_BYTES) {
-      inlinePayload = Buffer.from(input.payload).toString("base64")
+      inlinePayload = base64Encode(input.payload)
     } else {
       const disk = yield* StorageDisk
       fileKey = yield* putInDisk(disk, {

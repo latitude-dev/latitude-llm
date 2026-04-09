@@ -1,5 +1,4 @@
 import { datasetIdSchema, datasetRowIdSchema } from "@domain/shared"
-import { Data } from "effect"
 import { z } from "zod"
 
 export const rowFieldValueSchema: z.ZodType<string | Record<string, unknown>> = z.union([
@@ -29,12 +28,3 @@ export const datasetRowSchema = z.object({
 })
 
 export type DatasetRow = z.infer<typeof datasetRowSchema>
-
-export class RowNotFoundError extends Data.TaggedError("RowNotFoundError")<{
-  readonly rowId: string
-}> {
-  readonly httpStatus = 404
-  get httpMessage() {
-    return `Row ${this.rowId} not found`
-  }
-}

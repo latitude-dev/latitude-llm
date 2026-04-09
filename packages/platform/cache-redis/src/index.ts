@@ -1,3 +1,4 @@
+export { CacheStore, type CacheStoreShape } from "@domain/shared"
 export { RedisCacheStoreLive } from "./ai-cache.ts"
 
 import { ServiceMap } from "effect"

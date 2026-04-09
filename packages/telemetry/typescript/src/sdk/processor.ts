@@ -7,6 +7,7 @@ import {
   type Span,
   type SpanProcessor,
 } from "@opentelemetry/sdk-trace-node"
+import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions"
 import { ATTRIBUTES } from "../constants/index.ts"
 import { env } from "../env/index.ts"
 import { getLatitudeContext } from "./context.ts"
@@ -20,6 +21,7 @@ import type { LatitudeSpanProcessorOptions } from "./types.ts"
 
 export class LatitudeSpanProcessor implements SpanProcessor {
   private readonly tail: SpanProcessor
+  private readonly serviceName: string | undefined
 
   constructor(apiKey: string, projectSlug: string, options?: LatitudeSpanProcessorOptions) {
     if (!apiKey || apiKey.trim() === "") {
@@ -57,9 +59,16 @@ export class LatitudeSpanProcessor implements SpanProcessor {
 
     const redactThenExport = new RedactThenExportSpanProcessor(redact, batchOrSimple)
     this.tail = new ExportFilterSpanProcessor(shouldExport, redactThenExport)
+
+    const rawServiceName = options?.serviceName?.trim()
+    this.serviceName = rawServiceName === "" ? undefined : rawServiceName
   }
 
   onStart(span: Span, parentContext: Context): void {
+    if (this.serviceName !== undefined) {
+      span.setAttribute(ATTR_SERVICE_NAME, this.serviceName)
+    }
+
     const latitudeData = getLatitudeContext(parentContext)
 
     if (latitudeData) {
