@@ -3,7 +3,6 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG, TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG } from "../constants.ts"
 import { runSystemQueueFlaggerUseCase } from "./run-system-queue-flagger.ts"
 
 const INPUT = {
@@ -12,7 +11,10 @@ const INPUT = {
   traceId: "c".repeat(32),
 } as const
 
-function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
+function makeTraceDetail(
+  allMessages: TraceDetail["allMessages"],
+  outputMessages?: TraceDetail["outputMessages"],
+): TraceDetail {
   return {
     organizationId: OrganizationId(INPUT.organizationId),
     projectId: ProjectId(INPUT.projectId),
@@ -44,7 +46,7 @@ function makeTraceDetail(allMessages: TraceDetail["allMessages"]): TraceDetail {
     rootSpanName: "root",
     systemInstructions: [],
     inputMessages: [],
-    outputMessages: [],
+    outputMessages: outputMessages ?? allMessages,
     allMessages,
   }
 }
@@ -68,7 +70,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG }).pipe(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "tool-call-errors" }).pipe(
         Effect.provide(Layer.succeed(TraceRepository, repository)),
       ),
     )
@@ -76,17 +78,244 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(result).toEqual({ matched: true })
   })
 
-  it("returns false for deferred resource-outliers without reading the trace", async () => {
+  it("returns false for resource-outliers via noop matcher", async () => {
     const { repository } = createFakeTraceRepository({
-      findByTraceId: () => Effect.die("resource-outliers should not read traces yet"),
+      findByTraceId: () => Effect.succeed(makeTraceDetail([])),
     })
 
     const result = await Effect.runPromise(
-      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG }).pipe(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "resource-outliers" }).pipe(
         Effect.provide(Layer.succeed(TraceRepository, repository)),
       ),
     )
 
     expect(result).toEqual({ matched: false })
+  })
+})
+
+describe("output-schema-validation flagger", () => {
+  it("matches truncated JSON object (content like '{name: John, age: ')", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: '{"name": "John", "age": ' }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "output-schema-validation" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true })
+  })
+
+  it("matches malformed JSON (content like '{name: John, invalid}')", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: '{"name": "John", invalid}' }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "output-schema-validation" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true })
+  })
+
+  it("does NOT match valid JSON", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: '{"name": "John", "age": 30}' }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "output-schema-validation" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("does NOT match non-JSON text responses", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "I'll help you with that!" }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "output-schema-validation" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("matches JSON ending with comma (truncation indicator)", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: '{"name": "John", "age": 30, "city": "NYC",}' }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "output-schema-validation" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true })
+  })
+})
+
+describe("empty-response flagger", () => {
+  it("matches empty text response ('')", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "" }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "empty-response" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true })
+  })
+
+  it("matches whitespace-only response ('   \\n\\t  ')", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "   \n\t  " }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "empty-response" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true })
+  })
+
+  it("matches repeated character pattern (degenerate like '......' or 'aaa')", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "......" }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "empty-response" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true })
+  })
+
+  it("does NOT match tool-call-only responses (assistant with only tool_call, no text)", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "tool_call", id: "call-1", name: "get_weather", arguments: { city: "BCN" } }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "empty-response" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("does NOT match meaningful text responses ('I'll help you with that!')", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "I'll help you with that!" }],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "empty-response" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: false })
+  })
+
+  it("matches when assistant has both tool calls AND empty text", async () => {
+    const outputMessages: TraceDetail["outputMessages"] = [
+      {
+        role: "assistant",
+        parts: [
+          { type: "text", content: "" },
+          { type: "tool_call", id: "call-1", name: "get_weather", arguments: { city: "BCN" } },
+        ],
+      },
+    ]
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail([], outputMessages)),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "empty-response" }).pipe(
+        Effect.provide(Layer.succeed(TraceRepository, repository)),
+      ),
+    )
+
+    expect(result).toEqual({ matched: true })
   })
 })

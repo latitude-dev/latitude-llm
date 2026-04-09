@@ -1,8 +1,20 @@
-import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import type { NotFoundError, RepositoryError } from "@domain/shared"
+import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
-import { RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG, TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG } from "../constants.ts"
-import { matchesToolCallErrorsSystemQueue } from "../helpers.ts"
+import {
+  matchesEmptyResponseSystemQueue,
+  matchesForgettingSystemQueue,
+  matchesFrustrationSystemQueue,
+  matchesJailbreakingSystemQueue,
+  matchesLazinessSystemQueue,
+  matchesNsfwSystemQueue,
+  matchesOutputSchemaValidationSystemQueue,
+  matchesRefusalSystemQueue,
+  matchesResourceOutliersSystemQueue,
+  matchesToolCallErrorsSystemQueue,
+  matchesTrashingSystemQueue,
+} from "../helpers.ts"
 
 export interface RunSystemQueueFlaggerInput {
   readonly organizationId: string
@@ -17,9 +29,7 @@ export interface RunSystemQueueFlaggerResult {
 
 export type RunSystemQueueFlaggerError = NotFoundError | RepositoryError
 
-type SystemQueueFlagger = (
-  input: RunSystemQueueFlaggerInput,
-) => Effect.Effect<RunSystemQueueFlaggerResult, RunSystemQueueFlaggerError, TraceRepository>
+type SystemQueueMatcher = typeof matchesEmptyResponseSystemQueue
 
 const loadTraceDetail = (input: RunSystemQueueFlaggerInput) =>
   Effect.gen(function* () {
@@ -32,33 +42,33 @@ const loadTraceDetail = (input: RunSystemQueueFlaggerInput) =>
     })
   })
 
-const matchToolCallErrorsFlagger: SystemQueueFlagger = (input) =>
+const SYSTEM_QUEUE_MATCHERS_BY_SLUG: Record<string, SystemQueueMatcher> = {
+  "empty-response": matchesEmptyResponseSystemQueue,
+  "output-schema-validation": matchesOutputSchemaValidationSystemQueue,
+  "tool-call-errors": matchesToolCallErrorsSystemQueue,
+  jailbreaking: matchesJailbreakingSystemQueue,
+  refusal: matchesRefusalSystemQueue,
+  frustration: matchesFrustrationSystemQueue,
+  forgetting: matchesForgettingSystemQueue,
+  laziness: matchesLazinessSystemQueue,
+  nsfw: matchesNsfwSystemQueue,
+  trashing: matchesTrashingSystemQueue,
+  "resource-outliers": matchesResourceOutliersSystemQueue,
+}
+
+export function getSystemQueueMatcherBySlug(queueSlug: string): SystemQueueMatcher | undefined {
+  return SYSTEM_QUEUE_MATCHERS_BY_SLUG[queueSlug]
+}
+
+export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) =>
   Effect.gen(function* () {
+    const matcher = getSystemQueueMatcherBySlug(input.queueSlug)
+
+    if (!matcher) return { matched: false }
+
     const trace = yield* loadTraceDetail(input)
 
     return {
-      matched: matchesToolCallErrorsSystemQueue(trace),
+      matched: matcher(trace),
     }
   })
-
-const matchResourceOutliersFlagger: SystemQueueFlagger = (_input) => Effect.succeed({ matched: false })
-
-const SYSTEM_QUEUE_FLAGGERS_BY_SLUG: Record<string, SystemQueueFlagger> = {
-  [TOOL_CALL_ERRORS_SYSTEM_QUEUE_SLUG]: matchToolCallErrorsFlagger,
-  [RESOURCE_OUTLIERS_SYSTEM_QUEUE_SLUG]: matchResourceOutliersFlagger,
-}
-
-export function getSystemQueueFlaggerBySlug(queueSlug: string): SystemQueueFlagger | undefined {
-  return SYSTEM_QUEUE_FLAGGERS_BY_SLUG[queueSlug]
-}
-
-/** Runs the configured system-queue flagger for one `(queueSlug, traceId)` pair. */
-export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) => {
-  const flagger = getSystemQueueFlaggerBySlug(input.queueSlug)
-
-  if (!flagger) {
-    return Effect.succeed({ matched: false })
-  }
-
-  return flagger(input)
-}

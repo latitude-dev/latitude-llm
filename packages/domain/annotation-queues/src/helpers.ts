@@ -11,7 +11,7 @@ function coalesceInstant(v: Date | string | null | undefined): Date | null {
 }
 
 /** Matches the Tool Call Errors system queue without any LLM classification. */
-export function matchesToolCallErrorsSystemQueue(trace: Pick<TraceDetail, "allMessages">): boolean {
+export function matchesToolCallErrorsSystemQueue(trace: TraceDetail): boolean {
   const seenToolCallIds = new Set<string>()
 
   for (const message of trace.allMessages) {
@@ -88,6 +88,145 @@ function responseIndicatesFailure(response: unknown): boolean {
 
   if (Array.isArray(response.errors) && response.errors.length > 0) {
     return true
+  }
+
+  return false
+}
+
+/** Matches the Output Schema Validation system queue without any LLM classification. */
+export function matchesOutputSchemaValidationSystemQueue(trace: TraceDetail): boolean {
+  for (const message of trace.outputMessages) {
+    if (message.role !== "assistant") continue
+
+    for (const part of message.parts) {
+      if (part.type !== "text") continue
+
+      const content = typeof part.content === "string" ? part.content.trim() : ""
+      if (!content) continue
+
+      // Only check content that looks like JSON (starts with { or [)
+      if (!content.startsWith("{") && !content.startsWith("[")) continue
+
+      // Attempt to parse as JSON
+      try {
+        JSON.parse(content)
+      } catch {
+        // JSON parsing failed - malformed or truncated JSON detected
+        return true
+      }
+
+      // Check for truncation patterns that might pass JSON.parse but are incomplete
+      // e.g., content ending with comma suggests more data expected
+      if (content.endsWith(",")) {
+        return true
+      }
+
+      // Check for unclosed strings (odd number of unescaped quotes)
+      let inString = false
+      let escaped = false
+      for (let i = 0; i < content.length; i++) {
+        const char = content[i]
+        if (escaped) {
+          escaped = false
+          continue
+        }
+        if (char === "\\") {
+          escaped = true
+          continue
+        }
+        if (char === '"') {
+          inString = !inString
+        }
+      }
+      if (inString) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+// ---------------------------------------------------------------------------
+// Noop matchers for LLM-based system queues (to be implemented)
+// ---------------------------------------------------------------------------
+
+/** Noop matcher for the Jailbreaking system queue. */
+export function matchesJailbreakingSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Noop matcher for the Refusal system queue. */
+export function matchesRefusalSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Noop matcher for the Frustration system queue. */
+export function matchesFrustrationSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Noop matcher for the Forgetting system queue. */
+export function matchesForgettingSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Noop matcher for the Laziness system queue. */
+export function matchesLazinessSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Noop matcher for the NSFW system queue. */
+export function matchesNsfwSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Noop matcher for the Trashing system queue. */
+export function matchesTrashingSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Noop matcher for the Resource Outliers system queue. */
+export function matchesResourceOutliersSystemQueue(_trace: TraceDetail): boolean {
+  return false
+}
+
+/** Matches the Empty Response system queue without any LLM classification. */
+export function matchesEmptyResponseSystemQueue(trace: TraceDetail): boolean {
+  for (const message of trace.outputMessages) {
+    if (message.role !== "assistant") continue
+
+    let hasToolCall = false
+    let hasText = false
+    const textParts: string[] = []
+
+    for (const part of message.parts) {
+      if (part.type === "tool_call") {
+        hasToolCall = true
+        continue
+      }
+
+      if (part.type === "text") {
+        hasText = true
+        const content = (part as { content?: unknown }).content
+        if (typeof content === "string") {
+          textParts.push(content)
+        }
+      }
+    }
+
+    // Skip tool-call-only responses (intentional delegation - don't flag)
+    if (hasToolCall && !hasText) continue
+
+    // Check accumulated text content
+    const accumulatedText = textParts.join("").trim()
+
+    // Empty or whitespace-only
+    if (accumulatedText === "") return true
+
+    // Degenerate pattern: single character repeated 3+ times
+    // Matches patterns like "...", "aaa", "!!!", "   "
+    if (accumulatedText.length >= 3 && new Set(accumulatedText).size === 1) return true
   }
 
   return false
