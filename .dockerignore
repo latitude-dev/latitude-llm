@@ -6,6 +6,8 @@
 .pnpm-store/
 **/node_modules/
 **/dist/
+**/.venv/
+**/__pycache__/
 **/coverage/
 **/.turbo/
 **/.next/

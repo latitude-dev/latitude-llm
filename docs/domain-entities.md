@@ -10,7 +10,7 @@ Canonical layout for any domain package is still: entities in `src/entities/`, c
 
 ## Shared building blocks (`@domain/shared`)
 
-- **`cuidSchema`** and **`*IdSchema`** helpers (e.g. `projectIdSchema`, `organizationIdSchema`, `simulationIdOrEmptySchema` for telemetry’s empty-string sentinel) — parse strings into branded IDs. Prefer these in entity schemas instead of raw `z.string()`.
+- **`cuidSchema`** and **`*IdSchema`** helpers (e.g. `projectIdSchema`, `organizationIdSchema`) — parse strings into branded IDs. Prefer these in entity schemas instead of raw `z.string()`.
 - **`organizationSettingsSchema`** / **`projectSettingsSchema`** — settings blobs embedded on org/project entities.
 
 Import from `@domain/shared` in entity files; do not duplicate CUID length or settings field rules.

@@ -13,12 +13,15 @@ type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, 
 
 class TestQueueConsumer implements QueueConsumer {
   handlers: AnyTaskHandlers | null = null
+
   start() {
     return Effect.void
   }
+
   stop() {
     return Effect.void
   }
+
   subscribe<T extends QueueName>(_queue: T, handlers: TaskHandlers<T>) {
     this.handlers = handlers as unknown as AnyTaskHandlers
   }
@@ -51,6 +54,7 @@ const envelopeToDispatchPayload = (envelope: EventEnvelope) => ({
 const setupDispatcher = () => {
   const consumer = new TestQueueConsumer()
   const { publisher, published } = createFakeQueuePublisher()
+
   createDomainEventsWorker({ consumer, publisher })
 
   return { consumer, published }
@@ -183,7 +187,7 @@ describe("domain-events dispatcher", () => {
       name: "Project",
       slug: "project",
     })
-    expect(published[0]?.options?.dedupeKey).toBe("projects:provisioning:proj-1")
+    expect(published[0]?.options?.dedupeKey).toBe("projects:provision:proj-1")
   })
 
   it("fails on unhandled events", async () => {

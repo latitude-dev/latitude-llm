@@ -2,6 +2,7 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type { QueuePublisherShape } from "@domain/queue"
 import { generateId } from "@domain/shared"
 import { OpenAPIHono } from "@hono/zod-openapi"
+import type { RedisClient } from "@platform/cache-redis"
 import { apiKeys } from "@platform/db-postgres/schema/api-keys"
 import { members, organizations, users } from "@platform/db-postgres/schema/better-auth"
 import {
@@ -27,6 +28,7 @@ export interface ApiTestContext extends TestContext {
   app: OpenAPIHono<AppEnv>
   database: InMemoryPostgres
   clickhouse: ClickHouseClient
+  redis: RedisClient
 }
 
 /**
@@ -69,10 +71,12 @@ export const setupTestApi = () => {
   let database: InMemoryPostgres
   let app: OpenAPIHono<AppEnv>
   const clickhouse = setupTestClickHouse()
+  let redis: RedisClient
 
   beforeAll(async () => {
     process.env.LAT_MASTER_ENCRYPTION_KEY = TEST_ENCRYPTION_KEY_HEX
     database = await acquireDatabase()
+    redis = createFakeRedis()
 
     app = new OpenAPIHono<AppEnv>()
     app.onError(honoErrorHandler)
@@ -86,7 +90,7 @@ export const setupTestApi = () => {
       database: database.appPostgresClient,
       adminDatabase: database.adminPostgresClient,
       clickhouse: clickhouse.client,
-      redis: createFakeRedis(),
+      redis,
       queuePublisher: fakePublisher,
       logTouchBuffer: false,
     })
@@ -96,6 +100,7 @@ export const setupTestApi = () => {
     context.app = app
     context.database = database
     context.clickhouse = clickhouse.client
+    context.redis = redis
   })
 
   afterAll(async () => {

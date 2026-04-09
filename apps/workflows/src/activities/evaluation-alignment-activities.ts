@@ -1,0 +1,250 @@
+import { AI } from "@domain/ai"
+import {
+  ALIGNMENT_MANUAL_REALIGNMENT_RATE_LIMIT_MS,
+  type BaselineEvaluationResult,
+  buildEvaluationAlignmentJobStatus,
+  type CollectedEvaluationAlignmentExamples,
+  collectAlignmentExamplesUseCase,
+  EVALUATION_JOB_STATUS_TTL_SECONDS,
+  type EvaluationAlignmentJobStatus,
+  EvaluationManualRealignmentRateLimitedError,
+  evaluateBaselineDraftUseCase,
+  evaluateIncrementalDraftUseCase,
+  evaluationAlignmentJobStatusKey,
+  type GeneratedEvaluationDetails,
+  type GeneratedEvaluationDraft,
+  generateBaselineDraftUseCase,
+  type HydratedEvaluationAlignmentExample,
+  type IncrementalEvaluationRefreshResult,
+  type LoadedEvaluationAlignmentState,
+  loadAlignmentStateUseCase,
+  type PersistEvaluationAlignmentResult,
+  parseStoredEvaluationAlignmentJobStatus,
+  persistAlignmentResultUseCase,
+  truncateEvaluationName,
+  type WriteEvaluationAlignmentJobStatusInput,
+} from "@domain/evaluations"
+import { OrganizationId } from "@domain/shared"
+import { withAi } from "@platform/ai"
+import { AIGenerateLive } from "@platform/ai-vercel"
+import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import {
+  EvaluationAlignmentExamplesRepositoryLive,
+  EvaluationRepositoryLive,
+  IssueRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
+import {
+  buildGepaDetailsPrompt,
+  GEPA_DETAILS_GENERATOR_MODEL,
+  GEPA_DETAILS_GENERATOR_SYSTEM_PROMPT,
+  gepaDetailsOutputSchema,
+} from "@platform/op-gepa"
+import { Data, Effect, Layer } from "effect"
+import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+
+class EvaluationAlignmentActivityError extends Data.TaggedError("EvaluationAlignmentActivityError")<{
+  readonly activity: string
+  readonly cause: unknown
+}> {
+  readonly httpStatus = 500
+
+  get httpMessage() {
+    return `Evaluation alignment activity "${this.activity}" failed`
+  }
+}
+
+const evaluationAlignmentRepositoriesLive = Layer.mergeAll(
+  EvaluationRepositoryLive,
+  EvaluationAlignmentExamplesRepositoryLive,
+  IssueRepositoryLive,
+)
+
+export const writeEvaluationAlignmentJobStatus = async (
+  input: WriteEvaluationAlignmentJobStatusInput,
+): Promise<EvaluationAlignmentJobStatus> => {
+  try {
+    const redis = getRedisClient()
+    const key = evaluationAlignmentJobStatusKey(input.jobId)
+    const existingStatus = parseStoredEvaluationAlignmentJobStatus(await redis.get(key))
+    const status = buildEvaluationAlignmentJobStatus({
+      existingStatus,
+      jobId: input.jobId,
+      status: input.status,
+      evaluationId: input.evaluationId,
+      error: input.error,
+    })
+
+    await redis.set(key, JSON.stringify(status), "EX", EVALUATION_JOB_STATUS_TTL_SECONDS)
+
+    return status
+  } catch (cause) {
+    throw new EvaluationAlignmentActivityError({
+      activity: "writeEvaluationAlignmentJobStatus",
+      cause,
+    })
+  }
+}
+
+const evaluationManualRealignmentRateLimitKey = (evaluationId: string): string =>
+  `evaluation-alignment:manual-rate-limit:${evaluationId}`
+
+export const assertManualEvaluationRealignmentAllowed = async (input: {
+  readonly evaluationId: string
+}): Promise<void> => {
+  try {
+    const redis = getRedisClient()
+    const stored = await redis.set(
+      evaluationManualRealignmentRateLimitKey(input.evaluationId),
+      new Date().toISOString(),
+      "PX",
+      ALIGNMENT_MANUAL_REALIGNMENT_RATE_LIMIT_MS,
+      "NX",
+    )
+
+    if (stored !== "OK") {
+      throw new EvaluationManualRealignmentRateLimitedError({
+        evaluationId: input.evaluationId,
+      })
+    }
+  } catch (cause) {
+    if (cause instanceof EvaluationManualRealignmentRateLimitedError) throw cause
+    throw new EvaluationAlignmentActivityError({
+      activity: "assertManualEvaluationRealignmentAllowed",
+      cause,
+    })
+  }
+}
+
+export const loadEvaluationAlignmentState = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string
+}): Promise<LoadedEvaluationAlignmentState> =>
+  Effect.runPromise(
+    loadAlignmentStateUseCase(input).pipe(
+      withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
+    ),
+  )
+
+export const collectEvaluationAlignmentExamples = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly createdAfter?: string | null
+  readonly requirePositiveExamples?: boolean
+}): Promise<CollectedEvaluationAlignmentExamples> =>
+  Effect.runPromise(
+    collectAlignmentExamplesUseCase(input).pipe(
+      withPostgres(evaluationAlignmentRepositoriesLive, getPostgresClient(), OrganizationId(input.organizationId)),
+      withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+    ),
+  )
+
+export const generateBaselineEvaluationDraft = (input: {
+  readonly jobId: string
+  readonly issueName: string
+  readonly issueDescription: string
+  readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
+  readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
+}): Promise<GeneratedEvaluationDraft> =>
+  Effect.runPromise(
+    generateBaselineDraftUseCase(input).pipe(
+      Effect.mapError(
+        (cause) =>
+          new EvaluationAlignmentActivityError({
+            activity: "generateBaselineEvaluationDraft",
+            cause,
+          }),
+      ),
+    ),
+  )
+
+export const evaluateBaselineEvaluationDraft = (input: {
+  readonly issueName: string
+  readonly issueDescription: string
+  readonly draft: GeneratedEvaluationDraft
+  readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
+  readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
+}): Promise<BaselineEvaluationResult> =>
+  Effect.runPromise(
+    evaluateBaselineDraftUseCase({
+      ...input,
+      script: input.draft.script,
+    }).pipe(
+      withAi(AIGenerateLive, getRedisClient()),
+      Effect.mapError(
+        (cause) =>
+          new EvaluationAlignmentActivityError({
+            activity: "evaluateBaselineEvaluationDraft",
+            cause,
+          }),
+      ),
+    ),
+  )
+
+export const evaluateIncrementalEvaluationDraft = (input: {
+  readonly issueName: string
+  readonly issueDescription: string
+  readonly draft: GeneratedEvaluationDraft
+  readonly previousConfusionMatrix: Parameters<typeof evaluateIncrementalDraftUseCase>[0]["previousConfusionMatrix"]
+  readonly positiveExamples: readonly HydratedEvaluationAlignmentExample[]
+  readonly negativeExamples: readonly HydratedEvaluationAlignmentExample[]
+}): Promise<IncrementalEvaluationRefreshResult> =>
+  Effect.runPromise(
+    evaluateIncrementalDraftUseCase(input).pipe(
+      withAi(AIGenerateLive, getRedisClient()),
+      Effect.mapError(
+        (cause) =>
+          new EvaluationAlignmentActivityError({
+            activity: "evaluateIncrementalEvaluationDraft",
+            cause,
+          }),
+      ),
+    ),
+  )
+
+export const generateEvaluationDetails = (input: {
+  readonly issueName: string
+  readonly issueDescription: string
+  readonly script: string
+}): Promise<GeneratedEvaluationDetails> =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const ai = yield* AI
+      const result = yield* ai.generate({
+        ...GEPA_DETAILS_GENERATOR_MODEL,
+        system: GEPA_DETAILS_GENERATOR_SYSTEM_PROMPT,
+        prompt: buildGepaDetailsPrompt({
+          issueName: input.issueName,
+          issueDescription: input.issueDescription,
+          script: input.script,
+        }),
+        schema: gepaDetailsOutputSchema,
+      })
+
+      return {
+        name: truncateEvaluationName(result.object.name),
+        description: result.object.description,
+      }
+    }).pipe(
+      withAi(AIGenerateLive, getRedisClient()),
+      Effect.mapError(
+        (cause) =>
+          new EvaluationAlignmentActivityError({
+            activity: "generateEvaluationDetails",
+            cause,
+          }),
+      ),
+    ),
+  )
+
+export const persistEvaluationAlignmentResult = (
+  input: Parameters<typeof persistAlignmentResultUseCase>[0],
+): Promise<PersistEvaluationAlignmentResult> =>
+  Effect.runPromise(
+    persistAlignmentResultUseCase(input).pipe(
+      withPostgres(EvaluationRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
+    ),
+  )

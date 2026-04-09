@@ -18,6 +18,7 @@ import { createInvitationEmailWorker } from "./workers/domain-events/invitation-
 import { createMagicLinkEmailWorker } from "./workers/domain-events/magic-link-email.ts"
 import { createUserDeletionWorker } from "./workers/domain-events/user-deletion.ts"
 import { createDomainEventsWorker } from "./workers/domain-events.ts"
+import { createEvaluationsWorker } from "./workers/evaluations.ts"
 import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
@@ -105,6 +106,7 @@ const bootstrap = async () => {
     createDatasetExportWorker(ctx)
     createLiveTracesWorker(ctx)
     await createIssuesWorker(ctx)
+    createEvaluationsWorker(ctx)
     createAnnotationScoresWorker(ctx)
     createLiveEvaluationsWorker(ctx)
     createLiveAnnotationQueuesWorker(ctx)

@@ -59,6 +59,13 @@ export interface GenerateResult<T> {
   readonly object: T
   readonly tokens: number
   readonly duration: number // nanoseconds
+  readonly tokenUsage?: {
+    readonly input: number
+    readonly output: number
+    readonly reasoning?: number | undefined
+    readonly cacheRead?: number | undefined
+    readonly cacheWrite?: number | undefined
+  }
 }
 
 // ---------------------------------------------------------------------------

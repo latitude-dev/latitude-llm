@@ -1,4 +1,4 @@
-import { cuidSchema, type FilterSet, filterSetSchema } from "@domain/shared"
+import { annotationQueueIdSchema, cuidSchema, type FilterSet, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
 import { ANNOTATION_QUEUE_NAME_MAX_LENGTH, ANNOTATION_QUEUE_SLUG_MAX_LENGTH } from "../constants.ts"
@@ -55,7 +55,7 @@ export function isSystemQueue(queue: Pick<AnnotationQueue, "system">): boolean {
 // ---------------------------------------------------------------------------
 
 export const annotationQueueSchema = z.object({
-  id: cuidSchema,
+  id: annotationQueueIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
   system: z.boolean(),

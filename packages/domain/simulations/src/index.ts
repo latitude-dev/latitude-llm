@@ -7,7 +7,6 @@ export {
 export {
   type Simulation,
   type SimulationMetadata,
-  simulationIdSchema,
   simulationMetadataSchema,
   simulationSchema,
 } from "./entities/simulation.ts"

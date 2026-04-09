@@ -1,6 +1,5 @@
 import { baseListScoresInputSchema, ScoreRepository, scoreDraftModeSchema } from "@domain/scores"
-import { BadRequestError, cuidSchema, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
-import { traceIdSchema } from "@domain/spans"
+import { BadRequestError, cuidSchema, ProjectId, type RepositoryError, TraceId, traceIdSchema } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 

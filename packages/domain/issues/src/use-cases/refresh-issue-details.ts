@@ -1,4 +1,7 @@
-import { IssueId, type RepositoryError, SqlClient } from "@domain/shared"
+import { EvaluationRepository } from "@domain/evaluations"
+import type { QueuePublishError } from "@domain/queue"
+import { QueuePublisher } from "@domain/queue"
+import { IssueId, ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { IssueRepository } from "../ports/issue-repository.ts"
 import { type GenerateIssueDetailsError, generateIssueDetailsUseCase } from "./generate-issue-details.ts"
@@ -24,7 +27,38 @@ export type RefreshIssueDetailsResult =
       readonly issueId: string
     }
 
-export type RefreshIssueDetailsError = RepositoryError | GenerateIssueDetailsError
+export type RefreshIssueDetailsError = RepositoryError | GenerateIssueDetailsError | QueuePublishError
+
+const enqueueLinkedEvaluationAlignments = (input: RefreshIssueDetailsInput) =>
+  Effect.gen(function* () {
+    const evaluationRepository = yield* EvaluationRepository
+    const queuePublisher = yield* QueuePublisher
+    const evaluations = yield* evaluationRepository.listByIssueId({
+      projectId: ProjectId(input.projectId),
+      issueId: IssueId(input.issueId),
+    })
+
+    // The refresh-loop workflow owns the real 1h/8h cadence; this fan-out only
+    // needs to stay idempotent per linked evaluation.
+    yield* Effect.forEach(
+      evaluations.items,
+      (evaluation) =>
+        queuePublisher.publish(
+          "evaluations",
+          "align",
+          {
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            issueId: input.issueId,
+            evaluationId: evaluation.id,
+          },
+          {
+            dedupeKey: `evaluations:align:${evaluation.id}`,
+          },
+        ),
+      { concurrency: "unbounded" },
+    )
+  })
 
 export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
   Effect.gen(function* () {
@@ -91,6 +125,10 @@ export const refreshIssueDetailsUseCase = (input: RefreshIssueDetailsInput) =>
         organizationId: input.organizationId,
         issueId: result.issueId,
       })
+    }
+
+    if (result.action !== "not-found") {
+      yield* enqueueLinkedEvaluationAlignments(input)
     }
 
     return result

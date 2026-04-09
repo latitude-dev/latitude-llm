@@ -1,5 +1,5 @@
 import { AnnotationQueueRepository } from "@domain/annotation-queues"
-import { CacheStore, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import { CacheStore, generateId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { annotationQueues } from "../schema/annotation-queues.ts"
@@ -278,7 +278,7 @@ describe("AnnotationQueueRepositoryLive", () => {
           const repo = yield* AnnotationQueueRepository
 
           yield* repo.save({
-            id: makeId("q_systemsave"),
+            id: generateId<"AnnotationQueueId">(),
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
             system: true,
@@ -314,7 +314,7 @@ describe("AnnotationQueueRepositoryLive", () => {
           const repo = yield* AnnotationQueueRepository
 
           return yield* repo.insertIfNotExists({
-            id: makeId("q_systemins"),
+            id: generateId<"AnnotationQueueId">(),
             organizationId: ORG_ID,
             projectId: PROJECT_ID,
             system: true,

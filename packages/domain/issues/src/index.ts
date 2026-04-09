@@ -24,7 +24,6 @@ export {
   type IssueCentroid,
   type IssueState,
   issueCentroidSchema,
-  issueIdSchema,
   issueSchema,
   issueStateSchema,
 } from "./entities/issue.ts"

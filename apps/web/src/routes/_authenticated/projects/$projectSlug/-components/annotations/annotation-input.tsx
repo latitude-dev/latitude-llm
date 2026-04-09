@@ -1,7 +1,7 @@
 import { Button, cn, Icon, Select, type SelectOption, Textarea } from "@repo/ui"
 import { ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import { useState } from "react"
-import { useListIssues } from "../../../../../../domains/issues/issues.collection.ts"
+import { useIssuesCollection } from "../../../../../../domains/issues/issues.collection.ts"
 
 interface AnnotationInputProps {
   readonly projectId: string
@@ -28,10 +28,7 @@ export function AnnotationInput({
   const [comment, setComment] = useState(initialComment)
   const [issueId, setIssueId] = useState<string | null>(initialIssueId)
 
-  const { data: issues = [], isLoading: isIssuesLoading } = useListIssues({
-    projectId,
-    enabled: passed === false,
-  })
+  const { data: issues = [], isLoading: isIssuesLoading } = useIssuesCollection(projectId)
 
   const issueOptions: SelectOption<string>[] = issues.map((issue) => ({
     label: issue.name,
@@ -89,7 +86,7 @@ export function AnnotationInput({
                 placeholder="Issue"
                 options={issueOptions}
                 value={issueId ?? undefined}
-                loading={isIssuesLoading && issues.length === 0}
+                loading={passed === false && isIssuesLoading && issues.length === 0}
                 searchable
                 searchPlaceholder="Search issues…"
                 searchableEmptyMessage="No issues found"

@@ -20,7 +20,7 @@ const createSystemQueue = (
   const slug = toSlug(definition.name)
 
   return {
-    id: generateId(),
+    id: generateId<"AnnotationQueueId">(),
     organizationId,
     projectId,
     system: true,

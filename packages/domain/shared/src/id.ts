@@ -53,7 +53,6 @@ export type AnnotationQueueItemId = Id<"AnnotationQueueItemId">
 export type TraceId = Id<"TraceId">
 export type SpanId = Id<"SpanId">
 export type SessionId = Id<"SessionId">
-/** User identifier from external telemetry instrumentation, not the platform User entity. */
 export type ExternalUserId = Id<"ExternalUserId">
 
 // Factory functions to create branded IDs
@@ -86,13 +85,25 @@ export const apiKeyIdSchema = cuidSchema.transform(ApiKeyId)
 export const datasetIdSchema = cuidSchema.transform(DatasetId)
 export const datasetRowIdSchema = cuidSchema.transform(DatasetRowId)
 export const datasetVersionIdSchema = cuidSchema.transform(DatasetVersionId)
-export const traceIdSchema = cuidSchema.transform(TraceId)
-export const spanIdSchema = cuidSchema.transform(SpanId)
-export const sessionIdSchema = cuidSchema.transform(SessionId)
+export const scoreIdSchema = cuidSchema.transform(ScoreId)
+export const issueIdSchema = cuidSchema.transform(IssueId)
+export const evaluationIdSchema = cuidSchema.transform(EvaluationId)
+export const annotationQueueIdSchema = cuidSchema.transform(AnnotationQueueId)
+export const annotationQueueItemIdSchema = cuidSchema.transform(AnnotationQueueItemId)
 export const simulationIdSchema = cuidSchema.transform(SimulationId)
-/** Telemetry uses an empty string when no simulation is linked (not a CUID). */
-export const simulationIdOrEmptySchema = z.union([z.literal(""), cuidSchema]).transform(SimulationId)
-export const externalUserIdSchema = cuidSchema.transform(ExternalUserId)
+
+// The telemetry-related IDs have custom length constraints
+export const SESSION_ID_LENGTH = 128
+export const sessionIdSchema = z.string().max(SESSION_ID_LENGTH).transform(SessionId)
+
+export const TRACE_ID_LENGTH = 32
+export const traceIdSchema = z.string().length(TRACE_ID_LENGTH).transform(TraceId)
+
+export const SPAN_ID_LENGTH = 16
+export const spanIdSchema = z.string().length(SPAN_ID_LENGTH).transform(SpanId)
+
+export const EXTERNAL_USER_ID_LENGTH = 128
+export const externalUserIdSchema = z.string().max(EXTERNAL_USER_ID_LENGTH).transform(ExternalUserId)
 
 /**
  * Generate a unique ID using CUID2.

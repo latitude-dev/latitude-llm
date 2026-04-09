@@ -1,33 +1,50 @@
-import { createIssueCentroid, type Issue, IssueRepository, MIN_OCCURRENCES_FOR_VISIBILITY } from "@domain/issues"
-import { IssueId, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
+import {
+  createIssueCentroid,
+  type Issue,
+  IssueRepository,
+  issueSchema,
+  MIN_OCCURRENCES_FOR_VISIBILITY,
+} from "@domain/issues"
+import { IssueId, NotFoundError, OrganizationId, ProjectId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
-import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { issues as issuesTable } from "../schema/issues.ts"
 import { scores as scoresTable } from "../schema/scores.ts"
 import { closeInMemoryPostgres, createInMemoryPostgres, type InMemoryPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { IssueRepositoryLive } from "./issue-repository.ts"
 
-const organizationId = "oooooooooooooooooooooooo"
-const projectId = "pppppppppppppppppppppppp"
-const listTestProjectId = "rrrrrrrrrrrrrrrrrrrrrrrr"
-const otherProjectId = "qqqqqqqqqqqqqqqqqqqqqqqq"
+const organizationId = OrganizationId("o".repeat(24))
+const projectId = ProjectId("p".repeat(24))
+const listTestProjectId = "r".repeat(24)
+const otherProjectId = ProjectId("q".repeat(24))
+const issueId = IssueId("i".repeat(24))
+const otherIssueId = IssueId("j".repeat(24))
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
-  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
-  uuid: "11111111-1111-4111-8111-111111111111",
-  organizationId,
-  projectId,
-  name: "Token leakage",
-  description: "The assistant leaks API tokens in its response.",
+const issueBase = {
+  organizationId: organizationId as string,
+  projectId: projectId as string,
   centroid: createIssueCentroid(),
-  clusteredAt: new Date("2026-03-30T10:00:00.000Z"),
+  clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
   escalatedAt: null,
   resolvedAt: null,
   ignoredAt: null,
-  createdAt: new Date("2026-03-30T10:00:00.000Z"),
-  updatedAt: new Date("2026-03-30T10:00:00.000Z"),
-  ...overrides,
-})
+  createdAt: new Date("2026-04-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+}
+
+const makeIssue = (overrides: Partial<Issue> = {}): Issue =>
+  issueSchema.parse({
+    id: issueId,
+    uuid: "11111111-1111-4111-8111-111111111111",
+    name: "Secret leakage",
+    description: "The agent exposes sensitive secrets.",
+    ...issueBase,
+    ...overrides,
+  })
+
+const makeProvider = (database: InMemoryPostgres) =>
+  withPostgres(IssueRepositoryLive, database.appPostgresClient, organizationId)
 
 const makeCustomScoreRow = (input: {
   readonly id: string
@@ -98,39 +115,47 @@ describe("IssueRepositoryLive", () => {
     database = await createInMemoryPostgres()
   })
 
+  beforeEach(async () => {
+    await database.db.delete(scoresTable)
+    await database.db.delete(issuesTable)
+  })
+
   afterAll(async () => {
     await closeInMemoryPostgres(database)
   })
 
-  it("round-trips issue rows by id and uuid", async () => {
-    const issue = makeIssue()
+  it("persists and reads canonical issues", async () => {
+    const canonicalIssue = makeIssue()
+    const otherIssue = makeIssue({
+      id: otherIssueId,
+      uuid: "22222222-2222-4222-8222-222222222222",
+      name: "Incorrect refusal",
+      description: "The agent refuses valid requests.",
+      projectId: otherProjectId as string,
+    })
 
     await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* IssueRepository
-        yield* repository.save(issue)
-      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
-    )
+        yield* repository.save(canonicalIssue)
+        yield* repository.save(otherIssue)
 
-    const loadedById = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repository = yield* IssueRepository
-        return yield* repository.findById(issue.id)
-      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
-    )
+        const found = yield* repository.findById(canonicalIssue.id)
 
-    const loadedByUuid = await Effect.runPromise(
-      Effect.gen(function* () {
-        const repository = yield* IssueRepository
-        return yield* repository.findByUuid({
-          projectId: ProjectId(issue.projectId),
-          uuid: issue.uuid,
-        })
-      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+        expect(found.name).toBe(canonicalIssue.name)
+      }).pipe(makeProvider(database)),
     )
+  })
 
-    expect(loadedById).toEqual(issue)
-    expect(loadedByUuid).toEqual(issue)
+  it("returns NotFoundError when an issue does not exist", async () => {
+    await expect(
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const repository = yield* IssueRepository
+          return yield* repository.findById(IssueId("z".repeat(24)))
+        }).pipe(makeProvider(database)),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError)
   })
 
   it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {
@@ -188,7 +213,7 @@ describe("IssueRepositoryLive", () => {
         yield* repository.save(newest)
         yield* repository.save(hiddenLowEvidence)
         yield* repository.save(wrongProject)
-      }).pipe(withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+      }).pipe(makeProvider(database)),
     )
 
     await database.db.insert(scoresTable).values([
@@ -231,9 +256,6 @@ describe("IssueRepositoryLive", () => {
         createdAt: new Date("2026-03-30T09:30:00.000Z"),
       }),
     )
-
-    const layer = withPostgres(IssueRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))
-
     const page1 = await Effect.runPromise(
       Effect.gen(function* () {
         const repository = yield* IssueRepository
@@ -242,7 +264,7 @@ describe("IssueRepositoryLive", () => {
           limit: 2,
           offset: 0,
         })
-      }).pipe(layer),
+      }).pipe(makeProvider(database)),
     )
 
     expect(page1.items.map((issue) => issue.id)).toEqual([newest.id, mid.id])
@@ -259,7 +281,7 @@ describe("IssueRepositoryLive", () => {
           limit: 2,
           offset: 2,
         })
-      }).pipe(layer),
+      }).pipe(makeProvider(database)),
     )
 
     expect(page2.items.map((issue) => issue.id)).toEqual([older.id])

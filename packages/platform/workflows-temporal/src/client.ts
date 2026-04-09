@@ -74,5 +74,21 @@ export function createWorkflowStarter(client: Client, config: TemporalConfig): W
           throw error
         }
       }),
+    signalWithStart: (workflow, input, options) =>
+      Effect.promise(async () => {
+        const handle = await client.workflow.signalWithStart(workflow, {
+          workflowId: options.workflowId,
+          taskQueue: config.taskQueue,
+          args: [input],
+          signal: options.signal,
+          signalArgs: [...(options.signalArgs ?? [])],
+        })
+        logger.info("signaled workflow with start fallback", {
+          workflow,
+          workflowId: options.workflowId,
+          signal: options.signal,
+          runId: handle.signaledRunId,
+        })
+      }),
   }
 }

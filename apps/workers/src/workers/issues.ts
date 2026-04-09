@@ -1,5 +1,11 @@
 import { discoverIssueUseCase, refreshIssueDetailsUseCase } from "@domain/issues"
-import { type QueueConsumer, WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
+import {
+  type QueueConsumer,
+  QueuePublisher,
+  type QueuePublisherShape,
+  WorkflowStarter,
+  type WorkflowStarterShape,
+} from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
@@ -24,6 +30,7 @@ const logger = createLogger("issues")
 
 interface IssuesDeps {
   consumer: QueueConsumer
+  publisher: QueuePublisherShape
   workflowStarter: WorkflowStarterShape
   postgresClient?: PostgresClient
   clickhouseClient?: ClickHouseClient
@@ -33,6 +40,7 @@ interface IssuesDeps {
 
 export const createIssuesWorker = async ({
   consumer,
+  publisher,
   workflowStarter,
   postgresClient,
   clickhouseClient,
@@ -69,12 +77,13 @@ export const createIssuesWorker = async ({
     refresh: (payload) =>
       refreshIssueDetailsUseCase(payload).pipe(
         withPostgres(
-          Layer.mergeAll(IssueRepositoryLive, ScoreRepositoryLive),
+          Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive, ScoreRepositoryLive),
           pgClient,
           OrganizationId(payload.organizationId),
         ),
         withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIGenerateLive, rdClient),
+        Effect.provide(Layer.succeed(QueuePublisher, publisher)),
         Effect.tap(() =>
           Effect.sync(() =>
             logger.info(`Refreshed issue details and projection for ${payload.projectId}/${payload.issueId}`),

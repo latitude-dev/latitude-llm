@@ -1,10 +1,8 @@
-import { cuidSchema, ScoreId } from "@domain/shared"
-import { sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/spans"
+import { cuidSchema, scoreIdSchema, sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/shared"
 import { z } from "zod"
 import { ANNOTATION_SCORE_PARTIAL_SOURCE_IDS, SCORE_SOURCE_ID_MAX_LENGTH, SCORE_SOURCES } from "../constants.ts"
 
 const scoreSourceIdSchema = z.string().min(1).max(SCORE_SOURCE_ID_MAX_LENGTH)
-export const scoreIdSchema = cuidSchema.transform(ScoreId)
 
 export const scoreSourceSchema = z.enum(SCORE_SOURCES)
 export type ScoreSource = z.infer<typeof scoreSourceSchema>

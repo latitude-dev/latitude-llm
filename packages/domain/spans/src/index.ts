@@ -1,4 +1,9 @@
-export { TRACE_END_DEBOUNCE_MS } from "./constants.ts"
+export {
+  SESSION_ID_MAX_LENGTH,
+  SPAN_ID_LENGTH,
+  TRACE_END_DEBOUNCE_MS,
+  TRACE_ID_LENGTH,
+} from "./constants.ts"
 export type { Session } from "./entities/session.ts"
 export { sessionSchema } from "./entities/session.ts"
 export type { Operation, Span, SpanDetail, SpanKind, SpanStatusCode, ToolDefinition } from "./entities/span.ts"
@@ -25,14 +30,6 @@ export {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
-export {
-  SESSION_ID_MAX_LENGTH,
-  SPAN_ID_LENGTH,
-  sessionIdSchema,
-  spanIdSchema,
-  TRACE_ID_LENGTH,
-  traceIdSchema,
-} from "./ids.ts"
 export type {
   SessionDistinctColumn,
   SessionListCursor,

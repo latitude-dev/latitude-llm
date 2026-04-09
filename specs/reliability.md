@@ -601,8 +601,8 @@ Useful v1 defaults to review before implementing v2, even if they are later re-t
 - optimizer stagnation cap: `10`
 - default seed: `310700`
 - curated dataset bounds: `4` to `1000` rows
-- train/test split: `0.7`
-- validation slice from testset: `0.5`
+- train split: `0.7`
+- validation split: `0.3`
 
 Legacy v1 reference paths for this section:
 
@@ -625,7 +625,7 @@ Important v2 corrections relative to v1:
 - keep learnable feedback as a first-class concept, but redefine the invariant checks around script/runtime contracts rather than prompt provider/model/config compatibility
 - keep the narrow RPC payload design, but send script hashes / example ids / trajectory ids rather than prompt-document-specific payloads
 - do not copy prompt-specific scope semantics, prompt commit forking, or provider/model pinning as a hard optimizer invariant
-- do not assume v1 already had true multi-objective optimization just because GEPA exposed Pareto settings; the actual adapter only supplied a single scalar score, so v2 must implement real ordered objectives for alignment (MCC), cost, and duration
+- do not assume v1 already had true multi-objective optimization just because GEPA exposed Pareto settings; the actual adapter only supplied a single scalar score, and v2 continues to optimize on that scalar correctness signal
 - prefer deterministic sampling/seeding for v2 reliability work rather than copying v1's more ad-hoc randomness
 
 The initial baseline for a brand new issue-linked evaluation should be a sample script that performs a simple `llm()`-as-judge evaluation using:
@@ -2577,19 +2577,19 @@ Legacy v1 reference paths: `packages/core/src/weaviate/index.ts`, `packages/core
 
 Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizations`, `packages/core/src/services/optimizations/optimizers/evaluate.ts`, `packages/core/src/services/optimizations/optimizers/propose.ts`. Checkout branch `latitude-v1` in the old repository before using.
 
-- [ ] Implement canonical evaluation persistence, repository APIs, and lifecycle rules for active/archived/deleted evaluations, including ignore-driven archiving, resolution-driven `keepMonitoring` behavior, and support for several linked evaluations per issue.
-- [ ] Implement the baseline issue-monitor script generator from issue context and examples, using Latitude-owned prompts stored in this repository.
-- [ ] Adapt the v1 optimizer transport/orchestration for evaluation scripts inside the `evaluation-alignment` workflow in the existing Temporal-backed `apps/workflows` service, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the worker-image packaging of the Python engine runtime/source, the skinny id/hash-based RPC payloads, ordered multi-objective support for alignment (MCC), cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds, while keeping the GEPA optimization pass as one workflow activity for now.
-- [ ] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
-- [ ] Implement exact positive/negative ground-truth example selection from annotation-derived evidence as a separate `evaluation-alignment` workflow activity before the optimizer run, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
-- [ ] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
-- [ ] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, immediate return of a `jobId`, Redis-backed status storage using a named key pattern for that job with at least `pending` / `running` / `completed` / `failed` states, and a polling endpoint that reads the status key for the frontend.
-- [ ] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
-- [ ] Implement annotation-driven debounced refresh with the one-hour / eight-hour cadence from the proposal through workflow timers inside `evaluation-alignment` rather than BullMQ delayed/repeat jobs or persisted due-work scans.
-- [ ] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same Redis-backed job-status contract where a user-triggered run needs polling feedback.
-- [ ] Implement the post-alignment name/description generation pass for evaluations as a separate `evaluation-alignment` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
-- [ ] Implement curated example sizing plus deterministic train/test/validation splitting for alignment runs using the configured bounds and defaults from this spec.
-- [ ] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.
+- [x] Implement canonical evaluation persistence, repository APIs, and lifecycle rules for active/archived/deleted evaluations, including ignore-driven archiving, resolution-driven `keepMonitoring` behavior, and support for several linked evaluations per issue.
+- [x] Implement the baseline issue-monitor script generator from issue context and examples, using Latitude-owned prompts stored in this repository.
+- [x] Adapt the v1 optimizer transport/orchestration for evaluation scripts inside the `evaluation-alignment` workflow in the existing Temporal-backed `apps/workflows` service, including the GEPA integration path, the child-process stdio JSON-RPC bridge, the worker-image packaging of the Python engine runtime/source, the skinny id/hash-based RPC payloads, ordered multi-objective support for alignment (MCC), cost in dollars derived from stored microcents, and duration in seconds derived from stored nanoseconds, while keeping the GEPA optimization pass as one workflow activity for now.
+- [x] Implement the proposer/evaluator feedback loop for script optimization, preserving learnable feedback patterns from v1, candidate-invariant validation that turns recoverable failures into learnable feedback, sanitized host-side trajectory context, candidate comparison across derived alignment (MCC), cost, and duration, and the named default proposer-model constant defined by the GEPA implementation package.
+- [x] Implement exact positive/negative ground-truth example selection from annotation-derived evidence as a separate `evaluation-alignment` workflow activity before the optimizer run, using failed, non-errored, non-draft annotation scores linked to the specific issue being aligned as positives, excluding drafts and errored scores from alignment entirely, allowing initial generation from a single positive example with zero negatives, and using the defined negative-example priority order.
+- [x] Implement confusion-matrix storage and derived metric computation on evaluations without persisting MCC separately.
+- [x] Implement user-triggered initial generation/alignment as the `evaluation-alignment` workflow when a user asks to generate an evaluation from an issue, including initial trigger configuration with default sampling loaded from the named constant, immediate return of a `jobId`, Redis-backed status storage using a named key pattern for that job with at least `pending` / `running` / `completed` / `failed` states, and a polling endpoint that reads the status key for the frontend.
+- [x] Implement incremental recomputation when the evaluation hash is unchanged and the alignment drop stays within tolerance, adding new examples into the existing confusion-matrix counters instead of recomputing from scratch.
+- [x] Implement annotation-driven debounced refresh with the one-hour / eight-hour cadence from the proposal through workflow timers inside `evaluation-alignment` rather than BullMQ delayed/repeat jobs or persisted due-work scans.
+- [x] Implement manual rate-limited realignment plus alignment status reporting for `apps/web` and the approved public/machine-facing surfaces, reusing the same `evaluation-alignment` workflow path and the same Redis-backed job-status contract where a user-triggered run needs polling feedback.
+- [x] Implement the post-alignment name/description generation pass for evaluations as a separate `evaluation-alignment` workflow activity after alignment, using Latitude-owned prompts stored in this repository and the named default details-generator-model constant defined by the GEPA implementation package.
+- [x] Implement curated example sizing plus deterministic balanced train/validation splitting for alignment runs using the configured bounds and defaults from this spec.
+- [x] Add deterministic alignment/optimizer integration tests with fixed fixtures covering explicit on-demand generation, multiple linked evaluations on the same issue, single-occurrence generation, example curation, confusion-matrix derivation, and incremental refresh behavior.
 
 **Exit gate**: users can generate evaluations from issues when needed through background jobs with Redis-backed polling feedback and align them against human annotations; alignment is measurable, inspectable, and refreshable; the optimizer targets scripts rather than hidden prompt configs.
 

@@ -1,8 +1,25 @@
 import type { GenerateInput, GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
+import {
+  defaultEvaluationTrigger,
+  type Evaluation,
+  EvaluationRepository,
+  type EvaluationRepositoryShape,
+  emptyEvaluationAlignment,
+} from "@domain/evaluations"
+import { QueuePublisher } from "@domain/queue"
+import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { ScoreRepository, scoreSchema } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { IssueId, NotFoundError, OrganizationId, SqlClient, type SqlClientShape } from "@domain/shared"
+import {
+  EvaluationId,
+  IssueId,
+  NotFoundError,
+  OrganizationId,
+  ProjectId,
+  SqlClient,
+  type SqlClientShape,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import type { Issue } from "../entities/issue.ts"
@@ -59,6 +76,24 @@ const makeScore = (feedback: string) =>
     updatedAt: new Date("2026-03-31T10:00:00.000Z"),
   })
 
+const makeEvaluation = (id: string, issueId: string): Evaluation =>
+  ({
+    id: EvaluationId(id),
+    organizationId,
+    projectId: ProjectId(projectId),
+    issueId: IssueId(issueId),
+    name: `Evaluation ${id}`,
+    description: `Description ${id}`,
+    script: "return { passed: false }",
+    trigger: defaultEvaluationTrigger(),
+    alignment: emptyEvaluationAlignment("hash-1"),
+    alignedAt: new Date("2026-03-31T10:00:00.000Z"),
+    archivedAt: null,
+    deletedAt: null,
+    createdAt: new Date("2026-03-31T10:00:00.000Z"),
+    updatedAt: new Date("2026-03-31T10:00:00.000Z"),
+  }) as Evaluation
+
 const createPassthroughSqlClient = (id: string): SqlClientShape => {
   const sqlClient: SqlClientShape = {
     organizationId: OrganizationId(id),
@@ -68,6 +103,19 @@ const createPassthroughSqlClient = (id: string): SqlClientShape => {
 
   return sqlClient
 }
+
+const createEvaluationRepository = (
+  listByIssueId: EvaluationRepositoryShape["listByIssueId"],
+): EvaluationRepositoryShape => ({
+  findById: () => Effect.die("Unexpected EvaluationRepository.findById in unit test"),
+  save: () => Effect.die("Unexpected EvaluationRepository.save in unit test"),
+  listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId in unit test"),
+  listByIssueId,
+  archive: () => Effect.die("Unexpected EvaluationRepository.archive in unit test"),
+  unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in unit test"),
+  softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in unit test"),
+  archiveByIssueId: () => Effect.die("Unexpected EvaluationRepository.archiveByIssueId in unit test"),
+})
 
 type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>>
 
@@ -115,6 +163,7 @@ describe("refreshIssueDetailsUseCase", () => {
           offset: 0,
         }),
     })
+    const { publisher, published } = createFakeQueuePublisher()
 
     const result = await Effect.runPromise(
       refreshIssueDetailsUseCase({
@@ -126,6 +175,21 @@ describe("refreshIssueDetailsUseCase", () => {
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() =>
+            Effect.succeed({
+              items: [
+                makeEvaluation("eeeeeeeeeeeeeeeeeeeeeeee", initialIssue.id),
+                makeEvaluation("ffffffffffffffffffffffff", initialIssue.id),
+              ],
+              hasMore: false,
+              limit: 100,
+              offset: 0,
+            }),
+          ),
+        ),
+        Effect.provideService(QueuePublisher, publisher),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
       ),
     )
@@ -151,6 +215,37 @@ describe("refreshIssueDetailsUseCase", () => {
         organizationId,
         projectId,
       }),
+    )
+    expect(published).toHaveLength(2)
+    expect(published).toEqual(
+      expect.arrayContaining([
+        {
+          queue: "evaluations",
+          task: "align",
+          payload: {
+            organizationId,
+            projectId,
+            issueId: initialIssue.id,
+            evaluationId: "eeeeeeeeeeeeeeeeeeeeeeee",
+          },
+          options: {
+            dedupeKey: "evaluations:align:eeeeeeeeeeeeeeeeeeeeeeee",
+          },
+        },
+        {
+          queue: "evaluations",
+          task: "align",
+          payload: {
+            organizationId,
+            projectId,
+            issueId: initialIssue.id,
+            evaluationId: "ffffffffffffffffffffffff",
+          },
+          options: {
+            dedupeKey: "evaluations:align:ffffffffffffffffffffffff",
+          },
+        },
+      ]),
     )
   })
 
@@ -179,6 +274,7 @@ describe("refreshIssueDetailsUseCase", () => {
           offset: 0,
         }),
     })
+    const { publisher, published } = createFakeQueuePublisher()
 
     const result = await Effect.runPromise(
       refreshIssueDetailsUseCase({
@@ -190,6 +286,18 @@ describe("refreshIssueDetailsUseCase", () => {
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() =>
+            Effect.succeed({
+              items: [makeEvaluation("gggggggggggggggggggggggg", issue.id)],
+              hasMore: false,
+              limit: 100,
+              offset: 0,
+            }),
+          ),
+        ),
+        Effect.provideService(QueuePublisher, publisher),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
       ),
     )
@@ -200,6 +308,21 @@ describe("refreshIssueDetailsUseCase", () => {
     })
     expect(saveCalls).toBe(0)
     expect(store.size).toBe(0)
+    expect(published).toEqual([
+      {
+        queue: "evaluations",
+        task: "align",
+        payload: {
+          organizationId,
+          projectId,
+          issueId: issue.id,
+          evaluationId: "gggggggggggggggggggggggg",
+        },
+        options: {
+          dedupeKey: "evaluations:align:gggggggggggggggggggggggg",
+        },
+      },
+    ])
   })
 
   it("returns not-found when the issue disappears before the locked save step", async () => {
@@ -220,6 +343,7 @@ describe("refreshIssueDetailsUseCase", () => {
           offset: 0,
         }),
     })
+    const { publisher, published } = createFakeQueuePublisher()
 
     const result = await Effect.runPromise(
       refreshIssueDetailsUseCase({
@@ -231,6 +355,18 @@ describe("refreshIssueDetailsUseCase", () => {
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreRepository, scoreRepository),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() =>
+            Effect.succeed({
+              items: [makeEvaluation("hhhhhhhhhhhhhhhhhhhhhhhh", existingIssue.id)],
+              hasMore: false,
+              limit: 100,
+              offset: 0,
+            }),
+          ),
+        ),
+        Effect.provideService(QueuePublisher, publisher),
         Effect.provideService(SqlClient, createPassthroughSqlClient(organizationId)),
       ),
     )
@@ -241,5 +377,6 @@ describe("refreshIssueDetailsUseCase", () => {
     })
     expect(calls.generate).toHaveLength(1)
     expect(store.size).toBe(0)
+    expect(published).toEqual([])
   })
 })

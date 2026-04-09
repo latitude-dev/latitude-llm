@@ -247,7 +247,7 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - evaluations are script-native, GEPA-backed artifacts that run through a portable runtime shared with simulations
 - newly created issue-linked evaluations initialize `trigger.sampling` from a named constant, with an initial default of `10%`
 - GEPA is the first optimizer, but the optimizer interface must stay replaceable
-- the optimizer abstraction uses ordered Pareto objectives: alignment (MCC), cost in dollars derived from stored microcents, duration in seconds derived from stored nanoseconds
+- the optimizer objective is the scalar trajectory score derived from whether `predictedPositive` equals `expectedPositive`
 - only the confusion matrix is persisted; MCC, accuracy, F1, and other metrics are derived from it
 - unchanged scripts can refresh alignment incrementally before a full re-optimization run, and debounced/manual refresh work runs through the `evaluation-alignment` workflow
 - v1's useful architecture split remains: TypeScript owns orchestration and candidate execution, Node workers remain the primary runtime, and Python can remain just the search engine behind a stdio JSON-RPC boundary packaged into the workers image
