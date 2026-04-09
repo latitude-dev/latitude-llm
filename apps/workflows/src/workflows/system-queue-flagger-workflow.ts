@@ -1,14 +1,17 @@
 import { log, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 
-const { runFlagger, runAnnotate } = proxyActivities<typeof activities>({ startToCloseTimeout: "30 seconds" })
+const { runFlagger, draftAnnotate, persistAnnotation } = proxyActivities<typeof activities>({
+  startToCloseTimeout: "30 seconds",
+})
 
 /**
  * System queue flagger workflow.
  *
  * Runs one async black-box flagger call for a specific trace and queue.
- * When the flagger returns matched=true, the workflow proceeds to create
- * a queue item and draft annotation via the annotate activity.
+ * When the flagger returns matched=true, the workflow proceeds to:
+ * 1. Generate feedback via draftAnnotate (non-transactional LLM call)
+ * 2. Persist queue item + draft annotation via persistAnnotation (transactional)
  *
  * The workflow result distinguishes between:
  * - "annotated": matched and successfully created queue item + draft annotation
@@ -31,37 +34,54 @@ export const systemQueueFlaggerWorkflow = async (input: {
   })
 
   if (result.matched) {
-    log.info("System queue flagger matched, starting annotate", {
+    log.info("System queue flagger matched, starting draft annotate", {
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
       queueSlug: input.queueSlug,
     })
 
-    const annotateResult = await runAnnotate({
+    const draftResult = await draftAnnotate({
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
       queueSlug: input.queueSlug,
     })
 
-    log.info("System queue annotate completed", {
+    log.info("System queue draft annotate completed, starting persist", {
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
       queueSlug: input.queueSlug,
-      queueId: annotateResult.queueId,
-      draftAnnotationId: annotateResult.draftAnnotationId,
-      wasCreated: annotateResult.wasCreated,
+      queueId: draftResult.queueId,
+    })
+
+    const persistResult = await persistAnnotation({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+      queueId: draftResult.queueId,
+      feedback: draftResult.feedback,
+    })
+
+    log.info("System queue persist annotation completed", {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+      queueId: persistResult.queueId,
+      draftAnnotationId: persistResult.draftAnnotationId,
+      wasCreated: persistResult.wasCreated,
     })
 
     return {
       action: "annotated" as const,
       queueSlug: input.queueSlug,
       traceId: input.traceId,
-      queueId: annotateResult.queueId,
-      draftAnnotationId: annotateResult.draftAnnotationId,
-      wasCreated: annotateResult.wasCreated,
+      queueId: persistResult.queueId,
+      draftAnnotationId: persistResult.draftAnnotationId,
+      wasCreated: persistResult.wasCreated,
       durationMs: Date.now() - startTime,
     }
   }
