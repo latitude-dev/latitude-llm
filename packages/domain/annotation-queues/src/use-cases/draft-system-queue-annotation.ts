@@ -1,10 +1,9 @@
-import { ProjectId, type RepositoryError } from "@domain/shared"
+import { BadRequestError, ProjectId, type RepositoryError } from "@domain/shared"
 import { Effect } from "effect"
+import { z } from "zod"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
 import { type RunSystemQueueAnnotatorError, runSystemQueueAnnotatorUseCase } from "./run-system-queue-annotator.ts"
 import { type SystemQueueAnnotateInput, systemQueueAnnotateInputSchema } from "./system-queue-annotator-contracts.ts"
-import { z } from "zod"
-import { BadRequestError } from "@domain/shared"
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
 
