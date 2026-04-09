@@ -110,3 +110,5 @@ export const syncIssueProjections = async (input: SyncIssueProjectionsInput) =>
       withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), OrganizationId(input.organizationId)),
     ),
   )
+
+export { runFlagger } from "./flagger.ts"

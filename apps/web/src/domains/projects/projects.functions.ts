@@ -4,10 +4,15 @@ import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@
 import { isValidId, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { DatasetRepositoryLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
+import {
+  DatasetRepositoryLive,
+  OutboxEventWriterLive,
+  ProjectRepositoryLive,
+  withPostgres,
+} from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
@@ -79,7 +84,7 @@ export const createProject = createServerFn({ method: "POST" })
       createProjectUseCase({
         ...(data.id ? { id: ProjectId(data.id) } : {}),
         name: data.name,
-      }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+      }).pipe(withPostgres(Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive), client, organizationId)),
     )
 
     return toRecord(project)

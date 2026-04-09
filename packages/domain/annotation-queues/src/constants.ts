@@ -31,6 +31,9 @@ export const RESOURCE_OUTLIER_MULTIPLIER = 3
 
 export const ANNOTATION_QUEUE_NAME_MAX_LENGTH = 128
 
+/** Slug can be slightly larger than name to accommodate URL-friendly transformations */
+export const ANNOTATION_QUEUE_SLUG_MAX_LENGTH = 140
+
 // ---------------------------------------------------------------------------
 // Hotkey bindings for the focused queue-review screen
 // ---------------------------------------------------------------------------

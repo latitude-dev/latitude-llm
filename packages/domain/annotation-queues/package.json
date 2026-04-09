@@ -15,6 +15,7 @@
   "dependencies": {
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
+    "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   }

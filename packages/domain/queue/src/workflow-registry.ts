@@ -8,6 +8,12 @@ const _registry = {
     readonly projectId: string
     readonly scoreId: string
   }>(),
+  systemQueueFlaggerWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceId: string
+    readonly queueSlug: string
+  }>(),
 }
 
 export type WorkflowRegistry = typeof _registry
