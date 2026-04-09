@@ -103,10 +103,6 @@ export {
   persistSystemQueueAnnotationUseCase,
 } from "./use-cases/persist-system-queue-annotation.ts"
 export {
-  type SystemQueueAnnotateError,
-  systemQueueAnnotateUseCase,
-} from "./use-cases/system-queue-annotate.ts"
-export {
   type SystemQueueAnnotateInput,
   type SystemQueueAnnotateOutput,
   type SystemQueueAnnotatorOutput,
