@@ -1,1 +1,5 @@
-export const ANNOTATION_ENRICHMENT_MODEL = { provider: "openai", model: "gpt-5.4", reasoning: "medium" } as const
+export const ANNOTATION_ENRICHMENT_MODEL = {
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-opus-4-6-v1",
+  reasoning: "medium",
+} as const
