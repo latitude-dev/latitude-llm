@@ -17,6 +17,8 @@ import {
   ProjectId,
   type RepositoryError,
   SqlClient,
+  TraceId,
+  SqlClient,
   toRepositoryError,
   TraceId,
   traceIdSchema,
