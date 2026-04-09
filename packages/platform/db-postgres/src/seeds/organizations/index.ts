@@ -24,7 +24,7 @@ import {
   SEED_OWNER_EMAIL,
   SEED_OWNER_MEMBERSHIP_ID,
   SEED_OWNER_USER_ID,
-} from "@domain/shared"
+} from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { users as usersTable } from "../../schema/better-auth.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"

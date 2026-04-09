@@ -1,360 +1,321 @@
 import { SYSTEM_QUEUE_DEFAULT_SAMPLING, SYSTEM_QUEUE_DEFINITIONS } from "@domain/annotation-queues"
 import {
-  SEED_ANNOTATION_QUEUE_EMPTY_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_COMPLETED_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_IN_PROGRESS_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_JAIL_444_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_LIVE_777_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_LIVE_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_PENDING_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_REFUSAL_A_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_REFUSAL_B_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_STATUS_COMPLETED_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_STATUS_PENDING_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_STATUS_PROGRESS_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_WEEKLY_A_ID,
-  SEED_ANNOTATION_QUEUE_ITEM_WEEKLY_B_ID,
+  SEED_ADMIN_USER_ID,
+  SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_A_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_B_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_PENDING_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_LIVE_PENDING_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_A_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_B_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_PENDING_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_PENDING_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_A_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_B_ID,
+  SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_PENDING_ID,
   SEED_ANNOTATION_QUEUE_LIVE_ID,
-  SEED_ANNOTATION_QUEUE_MANUAL_ID,
-  SEED_ANNOTATION_QUEUE_REFUSAL_ID,
-  SEED_ANNOTATION_QUEUE_STATUS_DEMO_ID,
+  SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
   SEED_ANNOTATION_QUEUE_SYSTEM_ID,
-  SEED_ANNOTATION_QUEUE_WEEKLY_ID,
-  SEED_CANONICAL_TRACE_IDS,
+  SEED_ANNOTATION_QUEUE_WARRANTY_ID,
+  SEED_ANNOTATION_TRACE_IDS,
   SEED_MANUAL_QUEUE_ASSIGNEES,
-  SEED_MEMBER_1_USER_ID,
   SEED_ORG_ID,
   SEED_OWNER_USER_ID,
   SEED_PROJECT_ID,
-} from "@domain/shared"
-import { and, eq, isNull } from "drizzle-orm"
+} from "@domain/shared/seeding"
+import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
 import { annotationQueueItems, annotationQueues } from "../../schema/annotation-queues.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
-const [defJailbreaking, defRefusal] = SYSTEM_QUEUE_DEFINITIONS
+type AnnotationQueueRow = typeof annotationQueues.$inferInsert
+type AnnotationQueueItemRow = typeof annotationQueueItems.$inferInsert
 
-/** Stable aliases for the seven CH-aligned seed traces (see `SEED_CANONICAL_TRACE_IDS`). */
-const T = {
-  t111: SEED_CANONICAL_TRACE_IDS[0] ?? "11111111111111111111111111111111",
-  t222: SEED_CANONICAL_TRACE_IDS[1] ?? "22222222222222222222222222222222",
-  t333: SEED_CANONICAL_TRACE_IDS[2] ?? "33333333333333333333333333333333",
-  t666: SEED_CANONICAL_TRACE_IDS[3] ?? "66666666666666666666666666666666",
-  t444: SEED_CANONICAL_TRACE_IDS[4] ?? "44444444444444444444444444444444",
-  t555: SEED_CANONICAL_TRACE_IDS[5] ?? "55555555555555555555555555555555",
-  t777: SEED_CANONICAL_TRACE_IDS[6] ?? "77777777777777777777777777777777",
-} as const
+const frustrationQueueDefinition = SYSTEM_QUEUE_DEFINITIONS.find((definition) => definition.name === "Frustration")
+
+if (!frustrationQueueDefinition) {
+  throw new Error("Frustration system queue definition is missing.")
+}
+
+const staleQueueNames = [
+  "Empty backlog (demo)",
+  "All item statuses (demo)",
+  "Review Edge Cases",
+  "Refusal",
+  "Weekly quality sample",
+] as const
+
+function requiredTraceId(index: number): string {
+  const traceId = SEED_ANNOTATION_TRACE_IDS[index]
+  if (traceId === undefined) {
+    throw new Error(`Missing seeded annotation trace at index ${index}`)
+  }
+  return traceId
+}
 
 const queueRows = [
-  // Oldest first — list UI sorts `created_at DESC`
   {
-    id: SEED_ANNOTATION_QUEUE_EMPTY_ID,
+    id: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
     system: false,
-    name: "Empty backlog (demo)",
-    slug: "empty-backlog-demo",
-    description: "Intentionally has no items so the items table can show an empty state.",
-    instructions: "No action — this queue exists only for UI edge-case testing.",
-    settings: {},
-    assignees: [] as string[],
-    totalItems: 0,
-    completedItems: 0,
-    deletedAt: null,
-    createdAt: new Date("2026-03-19T10:00:00.000Z"),
-    updatedAt: new Date("2026-03-19T10:00:00.000Z"),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_STATUS_DEMO_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    system: false,
-    name: "All item statuses (demo)",
-    slug: "all-item-statuses-demo",
-    description: "Exactly one pending, one in progress, and one completed row for local UI testing.",
-    instructions: "Compare status badges and the completed-by column across the three rows.",
-    settings: {},
-    assignees: [SEED_OWNER_USER_ID],
-    totalItems: 3,
-    completedItems: 1,
-    deletedAt: null,
-    createdAt: new Date("2026-03-19T11:30:00.000Z"),
-    updatedAt: new Date("2026-03-19T11:30:00.000Z"),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_MANUAL_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    system: false,
-    name: "Review Edge Cases",
-    slug: "review-edge-cases",
-    description: "Manually curated traces that need careful human review",
+    name: "Warranty Claim Review",
+    slug: "warranty-claim-review",
+    description:
+      "Manual review queue for traces where customers ask for warranty coverage, exclusions, or claim outcomes.",
     instructions:
-      "Review each trace for correctness and adherence to product policy. Mark any issues with detailed feedback.",
+      "Review whether the assistant fabricated coverage, reimbursement, or an unsupported waiver. Mark failed when " +
+      "the agent turns an excluded misuse scenario into a covered claim. Mark passed when the assistant keeps the " +
+      "outcome conditional, cites policy, or limits any exception to a documented approval.",
+    settings: {},
+    assignees: [SEED_OWNER_USER_ID, SEED_ADMIN_USER_ID],
+    totalItems: 3,
+    completedItems: 2,
+    deletedAt: null,
+    createdAt: new Date("2026-03-23T08:00:00.000Z"),
+    updatedAt: new Date("2026-03-23T08:00:00.000Z"),
+  },
+  {
+    id: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    system: false,
+    name: "Combination Safety Review",
+    slug: "combination-safety-review",
+    description:
+      "Manual review queue for traces where the assistant discussed combining Acme products or handling requests for exceptions.",
+    instructions:
+      "Review each trace for unsafe product-combination advice. Mark failed when the assistant recommends or approves " +
+      "an uncertified combination. Mark passed when the assistant refuses the request, cites the policy, or correctly " +
+      "distinguishes an officially tested bundle or a narrowly scoped authorization.",
     settings: {},
     assignees: [...SEED_MANUAL_QUEUE_ASSIGNEES],
     totalItems: 3,
-    completedItems: 1,
+    completedItems: 2,
     deletedAt: null,
-    createdAt: new Date("2026-03-20T08:00:00.000Z"),
-    updatedAt: new Date("2026-03-20T08:00:00.000Z"),
+    createdAt: new Date("2026-03-26T08:00:00.000Z"),
+    updatedAt: new Date("2026-03-26T08:00:00.000Z"),
+  },
+  {
+    id: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    system: false,
+    name: "Logistics Promise Review",
+    slug: "logistics-promise-review",
+    description:
+      "Manual review queue for new traces where the assistant discusses shipping guarantees, delivery waivers, or pickup options.",
+    instructions:
+      "Review whether the assistant invented a logistics capability, fee waiver, pickup workflow, or guaranteed delivery outcome. " +
+      "Mark failed when the assistant promises unsupported service. Mark passed when it clearly states the supported options or keeps any exception scoped to a verified reference.",
+    settings: {},
+    assignees: [SEED_OWNER_USER_ID],
+    totalItems: 3,
+    completedItems: 2,
+    deletedAt: null,
+    createdAt: new Date("2026-03-29T08:15:00.000Z"),
+    updatedAt: new Date("2026-03-29T08:15:00.000Z"),
   },
   {
     id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
     system: true,
-    name: defJailbreaking.name,
-    slug: "jailbreaking",
-    description: defJailbreaking.description,
-    instructions: defJailbreaking.instructions,
+    name: frustrationQueueDefinition.name,
+    slug: "frustration",
+    description: frustrationQueueDefinition.description,
+    instructions: frustrationQueueDefinition.instructions,
     settings: { sampling: SYSTEM_QUEUE_DEFAULT_SAMPLING },
     assignees: [] as string[],
-    totalItems: 2,
+    totalItems: 1,
     completedItems: 0,
     deletedAt: null,
-    createdAt: new Date("2026-03-20T08:30:00.000Z"),
-    updatedAt: new Date("2026-03-20T08:30:00.000Z"),
+    createdAt: new Date("2026-03-27T09:00:00.000Z"),
+    updatedAt: new Date("2026-03-27T09:00:00.000Z"),
   },
   {
     id: SEED_ANNOTATION_QUEUE_LIVE_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
     system: false,
-    name: "High Cost Traces",
+    name: "High-Cost Traces",
     slug: "high-cost-traces",
-    description: "Traces with cost exceeding threshold, populated by live filter",
-    instructions: "Review high-cost traces for optimization opportunities or unnecessary token usage.",
+    description:
+      "Live review queue for unusually expensive support traces so the team can spot over-long or redundant generations.",
+    instructions:
+      "Review traces with unusually high cost. Check whether token usage is justified by the request, or whether the assistant is " +
+      "making redundant calls, over-explaining, or otherwise spending more than necessary.",
     settings: {
       filter: { cost: [{ op: "gte" as const, value: 500 }] },
       sampling: 25,
     },
     assignees: [SEED_OWNER_USER_ID],
-    totalItems: 2,
+    totalItems: 1,
     completedItems: 0,
     deletedAt: null,
-    createdAt: new Date("2026-03-21T10:00:00.000Z"),
-    updatedAt: new Date("2026-03-21T10:00:00.000Z"),
+    createdAt: new Date("2026-03-28T10:00:00.000Z"),
+    updatedAt: new Date("2026-03-28T10:00:00.000Z"),
   },
-  {
-    id: SEED_ANNOTATION_QUEUE_REFUSAL_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    system: true,
-    name: defRefusal.name,
-    slug: "refusal",
-    description: defRefusal.description,
-    instructions: defRefusal.instructions,
-    settings: { sampling: SYSTEM_QUEUE_DEFAULT_SAMPLING },
-    assignees: [] as string[],
-    totalItems: 2,
-    completedItems: 1,
-    deletedAt: null,
-    createdAt: new Date("2026-03-21T14:00:00.000Z"),
-    updatedAt: new Date("2026-03-21T14:00:00.000Z"),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_WEEKLY_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    system: false,
-    name: "Weekly quality sample",
-    slug: "weekly-quality-sample",
-    description: "Rotating sample of traces for weekly human calibration.",
-    instructions: "Spot-check model behavior against internal quality rubric; note regressions.",
-    settings: {},
-    assignees: [SEED_OWNER_USER_ID],
-    totalItems: 2,
-    completedItems: 0,
-    deletedAt: null,
-    createdAt: new Date("2026-03-22T09:00:00.000Z"),
-    updatedAt: new Date("2026-03-22T09:00:00.000Z"),
-  },
-]
+] satisfies AnnotationQueueRow[]
 
 const queueItemRows = [
-  // Manual — pending / in_progress / completed
   {
-    id: SEED_ANNOTATION_QUEUE_ITEM_PENDING_ID,
+    id: SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_PENDING_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_MANUAL_ID,
-    traceId: T.t333,
+    queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
+    traceId: requiredTraceId(2),
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-20T09:00:00.000Z"),
-    updatedAt: new Date("2026-03-20T09:00:00.000Z"),
+    createdAt: new Date("2026-03-23T09:00:00.000Z"),
+    updatedAt: new Date("2026-03-23T09:00:00.000Z"),
   },
   {
-    id: SEED_ANNOTATION_QUEUE_ITEM_IN_PROGRESS_ID,
+    id: SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_A_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_MANUAL_ID,
-    traceId: T.t222,
-    completedAt: null,
-    completedBy: null,
-    reviewStartedAt: new Date("2026-03-20T10:15:00.000Z"),
-    createdAt: new Date("2026-03-20T09:45:00.000Z"),
-    updatedAt: new Date("2026-03-20T10:15:00.000Z"),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_COMPLETED_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_MANUAL_ID,
-    traceId: T.t111,
-    completedAt: new Date("2026-03-20T12:00:00.000Z"),
+    queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
+    traceId: requiredTraceId(0),
+    completedAt: new Date("2026-03-23T11:15:00.000Z"),
     completedBy: SEED_OWNER_USER_ID,
-    reviewStartedAt: new Date("2026-03-20T11:00:00.000Z"),
-    createdAt: new Date("2026-03-20T09:30:00.000Z"),
-    updatedAt: new Date("2026-03-20T12:00:00.000Z"),
+    reviewStartedAt: new Date("2026-03-23T10:30:00.000Z"),
+    createdAt: new Date("2026-03-23T09:30:00.000Z"),
+    updatedAt: new Date("2026-03-23T11:15:00.000Z"),
   },
-  // Status demo — pending / in progress / completed (one row each)
   {
-    id: SEED_ANNOTATION_QUEUE_ITEM_STATUS_PENDING_ID,
+    id: SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_B_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_STATUS_DEMO_ID,
-    traceId: T.t666,
+    queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
+    traceId: requiredTraceId(8),
+    completedAt: new Date("2026-03-23T12:05:00.000Z"),
+    completedBy: SEED_ADMIN_USER_ID,
+    reviewStartedAt: new Date("2026-03-23T11:20:00.000Z"),
+    createdAt: new Date("2026-03-23T09:45:00.000Z"),
+    updatedAt: new Date("2026-03-23T12:05:00.000Z"),
+  },
+  {
+    id: SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_PENDING_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+    traceId: requiredTraceId(18),
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-19T11:35:00.000Z"),
-    updatedAt: new Date("2026-03-19T11:35:00.000Z"),
+    createdAt: new Date("2026-03-26T09:00:00.000Z"),
+    updatedAt: new Date("2026-03-26T09:00:00.000Z"),
   },
   {
-    id: SEED_ANNOTATION_QUEUE_ITEM_STATUS_PROGRESS_ID,
+    id: SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_A_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_STATUS_DEMO_ID,
-    traceId: T.t777,
+    queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+    traceId: requiredTraceId(16),
+    completedAt: new Date("2026-03-26T11:40:00.000Z"),
+    completedBy: SEED_OWNER_USER_ID,
+    reviewStartedAt: new Date("2026-03-26T10:50:00.000Z"),
+    createdAt: new Date("2026-03-26T09:20:00.000Z"),
+    updatedAt: new Date("2026-03-26T11:40:00.000Z"),
+  },
+  {
+    id: SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_B_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+    traceId: requiredTraceId(28),
+    completedAt: new Date("2026-03-26T12:10:00.000Z"),
+    completedBy: SEED_OWNER_USER_ID,
+    reviewStartedAt: new Date("2026-03-26T11:15:00.000Z"),
+    createdAt: new Date("2026-03-26T09:35:00.000Z"),
+    updatedAt: new Date("2026-03-26T12:10:00.000Z"),
+  },
+  {
+    id: SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_PENDING_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
+    traceId: requiredTraceId(40),
     completedAt: null,
     completedBy: null,
-    reviewStartedAt: new Date("2026-03-19T11:40:00.000Z"),
-    createdAt: new Date("2026-03-19T11:36:00.000Z"),
-    updatedAt: new Date("2026-03-19T11:40:00.000Z"),
+    reviewStartedAt: new Date("2026-03-29T09:20:00.000Z"),
+    createdAt: new Date("2026-03-29T09:00:00.000Z"),
+    updatedAt: new Date("2026-03-29T09:20:00.000Z"),
   },
   {
-    id: SEED_ANNOTATION_QUEUE_ITEM_STATUS_COMPLETED_ID,
+    id: SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_A_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_STATUS_DEMO_ID,
-    traceId: T.t555,
-    completedAt: new Date("2026-03-19T11:45:00.000Z"),
-    completedBy: SEED_MEMBER_1_USER_ID,
-    reviewStartedAt: new Date("2026-03-19T11:42:00.000Z"),
-    createdAt: new Date("2026-03-19T11:37:00.000Z"),
-    updatedAt: new Date("2026-03-19T11:45:00.000Z"),
+    queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
+    traceId: requiredTraceId(38),
+    completedAt: new Date("2026-03-29T10:35:00.000Z"),
+    completedBy: SEED_OWNER_USER_ID,
+    reviewStartedAt: new Date("2026-03-29T09:40:00.000Z"),
+    createdAt: new Date("2026-03-29T09:10:00.000Z"),
+    updatedAt: new Date("2026-03-29T10:35:00.000Z"),
   },
-  // Jailbreaking — two pending
   {
-    id: SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_ID,
+    id: SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_B_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
+    traceId: requiredTraceId(43),
+    completedAt: new Date("2026-03-29T11:00:00.000Z"),
+    completedBy: SEED_OWNER_USER_ID,
+    reviewStartedAt: new Date("2026-03-29T10:00:00.000Z"),
+    createdAt: new Date("2026-03-29T09:15:00.000Z"),
+    updatedAt: new Date("2026-03-29T11:00:00.000Z"),
+  },
+  {
+    id: SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_PENDING_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
-    traceId: T.t555,
+    traceId: requiredTraceId(9),
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-21T11:00:00.000Z"),
-    updatedAt: new Date("2026-03-21T11:00:00.000Z"),
+    createdAt: new Date("2026-03-27T10:00:00.000Z"),
+    updatedAt: new Date("2026-03-27T10:00:00.000Z"),
   },
   {
-    id: SEED_ANNOTATION_QUEUE_ITEM_JAIL_444_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
-    traceId: T.t444,
-    completedAt: null,
-    completedBy: null,
-    reviewStartedAt: null,
-    createdAt: new Date("2026-03-21T11:30:00.000Z"),
-    updatedAt: new Date("2026-03-21T11:30:00.000Z"),
-  },
-  // Live — two pending (same traces may appear in other queues; unique is per-queue)
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_LIVE_ID,
+    id: SEED_ANNOTATION_QUEUE_ITEM_LIVE_PENDING_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_LIVE_ID,
-    traceId: T.t666,
+    traceId: requiredTraceId(16),
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-22T14:00:00.000Z"),
-    updatedAt: new Date("2026-03-22T14:00:00.000Z"),
+    createdAt: new Date("2026-03-28T10:15:00.000Z"),
+    updatedAt: new Date("2026-03-28T10:15:00.000Z"),
   },
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_LIVE_777_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_LIVE_ID,
-    traceId: T.t777,
-    completedAt: null,
-    completedBy: null,
-    reviewStartedAt: null,
-    createdAt: new Date("2026-03-22T15:00:00.000Z"),
-    updatedAt: new Date("2026-03-22T15:00:00.000Z"),
-  },
-  // Refusal — one completed, one pending
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_REFUSAL_A_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_REFUSAL_ID,
-    traceId: T.t333,
-    completedAt: new Date("2026-03-21T16:00:00.000Z"),
-    completedBy: SEED_OWNER_USER_ID,
-    reviewStartedAt: new Date("2026-03-21T15:30:00.000Z"),
-    createdAt: new Date("2026-03-21T15:00:00.000Z"),
-    updatedAt: new Date("2026-03-21T16:00:00.000Z"),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_REFUSAL_B_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_REFUSAL_ID,
-    traceId: T.t666,
-    completedAt: null,
-    completedBy: null,
-    reviewStartedAt: null,
-    createdAt: new Date("2026-03-21T16:30:00.000Z"),
-    updatedAt: new Date("2026-03-21T16:30:00.000Z"),
-  },
-  // Weekly — two pending
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_WEEKLY_A_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_WEEKLY_ID,
-    traceId: T.t222,
-    completedAt: null,
-    completedBy: null,
-    reviewStartedAt: null,
-    createdAt: new Date("2026-03-22T10:00:00.000Z"),
-    updatedAt: new Date("2026-03-22T10:00:00.000Z"),
-  },
-  {
-    id: SEED_ANNOTATION_QUEUE_ITEM_WEEKLY_B_ID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    queueId: SEED_ANNOTATION_QUEUE_WEEKLY_ID,
-    traceId: T.t777,
-    completedAt: null,
-    completedBy: null,
-    reviewStartedAt: null,
-    createdAt: new Date("2026-03-22T11:00:00.000Z"),
-    updatedAt: new Date("2026-03-22T11:00:00.000Z"),
-  },
-]
+] satisfies AnnotationQueueItemRow[]
 
 const seedAnnotationQueues: Seeder = {
-  name: "annotation-queues/queue-shapes",
+  name: "annotation-queues/acme-review-queues",
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
+        const staleQueues = await ctx.db
+          .select({ id: annotationQueues.id })
+          .from(annotationQueues)
+          .where(
+            and(
+              eq(annotationQueues.organizationId, SEED_ORG_ID),
+              eq(annotationQueues.projectId, SEED_PROJECT_ID),
+              inArray(annotationQueues.name, [...staleQueueNames]),
+              isNull(annotationQueues.deletedAt),
+            ),
+          )
+
+        if (staleQueues.length > 0) {
+          const staleQueueIds = staleQueues.map((queue) => queue.id)
+          await ctx.db.delete(annotationQueueItems).where(inArray(annotationQueueItems.queueId, staleQueueIds))
+          await ctx.db.delete(annotationQueues).where(inArray(annotationQueues.id, staleQueueIds))
+        }
+
         const queueIdMap = new Map<string, string>()
 
         for (const row of queueRows) {
@@ -381,38 +342,32 @@ const seedAnnotationQueues: Seeder = {
           }
         }
 
-        for (const row of queueItemRows) {
-          const { id, ...set } = row
-          const resolvedQueueId = queueIdMap.get(row.queueId) ?? row.queueId
-          const resolvedRow = { ...row, queueId: resolvedQueueId }
-          const resolvedSet = { ...set, queueId: resolvedQueueId }
-
-          const [existing] = await ctx.db
-            .select({ id: annotationQueueItems.id })
-            .from(annotationQueueItems)
-            .where(
-              and(
-                eq(annotationQueueItems.organizationId, row.organizationId),
-                eq(annotationQueueItems.projectId, row.projectId),
-                eq(annotationQueueItems.queueId, resolvedQueueId),
-                eq(annotationQueueItems.traceId, row.traceId),
-              ),
-            )
-            .limit(1)
-
-          if (existing && existing.id !== id) {
-            await ctx.db.update(annotationQueueItems).set(resolvedSet).where(eq(annotationQueueItems.id, existing.id))
-          } else {
-            await ctx.db
-              .insert(annotationQueueItems)
-              .values(resolvedRow)
-              .onConflictDoUpdate({ target: annotationQueueItems.id, set: resolvedSet })
-          }
+        const currentQueueIds = [...queueIdMap.values()]
+        if (currentQueueIds.length > 0) {
+          await ctx.db.delete(annotationQueueItems).where(inArray(annotationQueueItems.queueId, currentQueueIds))
         }
 
-        console.log(
-          `  -> annotation queues: ${queueRows.length} queues, ${queueItemRows.length} items (canonical trace ids → CH seed remap)`,
-        )
+        for (const row of queueItemRows) {
+          const resolvedQueueId = queueIdMap.get(row.queueId) ?? row.queueId
+          const resolvedRow = { ...row, queueId: resolvedQueueId }
+          await ctx.db
+            .insert(annotationQueueItems)
+            .values(resolvedRow)
+            .onConflictDoUpdate({
+              target: annotationQueueItems.id,
+              set: {
+                queueId: resolvedQueueId,
+                traceId: row.traceId,
+                completedAt: row.completedAt,
+                completedBy: row.completedBy,
+                reviewStartedAt: row.reviewStartedAt,
+                createdAt: row.createdAt,
+                updatedAt: row.updatedAt,
+              },
+            })
+        }
+
+        console.log(`  -> annotation queues: ${queueRows.length} queues, ${queueItemRows.length} items`)
       },
       catch: (error) => new SeedError({ reason: "Failed to seed annotation queues", cause: error }),
     }).pipe(Effect.asVoid),

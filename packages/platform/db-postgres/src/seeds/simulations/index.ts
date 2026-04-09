@@ -1,62 +1,93 @@
 import {
+  COMBINATION_DATASET_ROWS,
+  SEED_COMBINATION_EVALUATION_ID,
   SEED_DATASET_ID,
+  SEED_EVALUATION_ARCHIVED_ID,
   SEED_EVALUATION_ID,
   SEED_ORG_ID,
   SEED_PROJECT_ID,
   SEED_SIMULATION_ERRORED_ID,
   SEED_SIMULATION_ID,
-} from "@domain/shared"
+  SEED_WARRANTY_DATASET_ID,
+  SEED_WARRANTY_SIMULATION_ID,
+  WARRANTY_DATASET_ROWS,
+} from "@domain/shared/seeding"
+import { SIMULATION_DATASET_CUSTOM_SENTINEL, SIMULATION_THRESHOLD_CUSTOM_SENTINEL } from "@domain/simulations"
 import { Effect } from "effect"
 import { simulations } from "../../schema/simulations.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
+type SimulationRow = typeof simulations.$inferInsert
+
 const simulationRows = [
+  {
+    id: SEED_WARRANTY_SIMULATION_ID,
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    name: "Acme Assist Warranty Regression",
+    dataset: SEED_WARRANTY_DATASET_ID,
+    evaluations: [SEED_EVALUATION_ID, SEED_EVALUATION_ARCHIVED_ID],
+    passed: true,
+    errored: false,
+    metadata: {
+      threshold: 92,
+      scenarios: WARRANTY_DATASET_ROWS.length,
+      file: "warranty-guardrails.sim.ts",
+      sdk: "javascript@1.0.0",
+    },
+    error: null,
+    startedAt: new Date("2026-03-26T09:00:00.000Z"),
+    finishedAt: new Date("2026-03-26T09:06:00.000Z"),
+    createdAt: new Date("2026-03-26T09:06:00.000Z"),
+    updatedAt: new Date("2026-03-26T09:06:00.000Z"),
+  },
   {
     id: SEED_SIMULATION_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
-    name: "Support Agent",
-    dataset: SEED_DATASET_ID as string,
-    evaluations: [SEED_EVALUATION_ID as string, "custom-code-simple"],
+    name: "Acme Assist Combination Safety Regression",
+    dataset: SEED_DATASET_ID,
+    evaluations: [SEED_COMBINATION_EVALUATION_ID],
     passed: true,
     errored: false,
     metadata: {
-      threshold: 50,
-      scenarios: 12,
-      file: "supportAgent.sim.ts",
+      threshold: 95,
+      scenarios: COMBINATION_DATASET_ROWS.length,
+      file: "dangerous-combinations.sim.ts",
       sdk: "javascript@1.0.0",
     },
     error: null,
-    startedAt: new Date("2026-03-25T14:00:00.000Z"),
-    finishedAt: new Date("2026-03-25T14:05:30.000Z"),
-    createdAt: new Date("2026-03-25T14:00:00.000Z"),
-    updatedAt: new Date("2026-03-25T14:05:30.000Z"),
+    startedAt: new Date("2026-03-28T13:15:00.000Z"),
+    finishedAt: new Date("2026-03-28T13:24:00.000Z"),
+    createdAt: new Date("2026-03-28T13:24:00.000Z"),
+    updatedAt: new Date("2026-03-28T13:24:00.000Z"),
   },
   {
     id: SEED_SIMULATION_ERRORED_ID,
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
-    name: "Billing Agent",
-    dataset: "CUSTOM",
-    evaluations: ["billing-accuracy"],
+    name: "Acme Assist Logistics Loader Smoke Test",
+    dataset: SIMULATION_DATASET_CUSTOM_SENTINEL,
+    evaluations: [SEED_COMBINATION_EVALUATION_ID],
     passed: false,
     errored: true,
     metadata: {
-      threshold: "CUSTOM" as const,
-      scenarios: 5,
-      file: "billingAgent.sim.ts",
+      threshold: SIMULATION_THRESHOLD_CUSTOM_SENTINEL,
+      scenarios: 6,
+      file: "logistics-loader-smoke.sim.ts",
       sdk: "javascript@1.0.0",
     },
-    error: "Dataset loader function threw: connection refused to external data source",
-    startedAt: new Date("2026-03-26T09:00:00.000Z"),
-    finishedAt: new Date("2026-03-26T09:00:02.000Z"),
-    createdAt: new Date("2026-03-26T09:00:00.000Z"),
-    updatedAt: new Date("2026-03-26T09:00:02.000Z"),
+    error:
+      "Custom dataset loader timed out while fetching mesa-delivery logistics scenarios from the Acme Logistics staging API.",
+    startedAt: new Date("2026-03-29T07:40:00.000Z"),
+    finishedAt: new Date("2026-03-29T07:41:12.000Z"),
+    createdAt: new Date("2026-03-29T07:41:12.000Z"),
+    updatedAt: new Date("2026-03-29T07:41:12.000Z"),
   },
-]
+] satisfies SimulationRow[]
 
 const seedSimulations: Seeder = {
-  name: "simulations/canonical-lifecycle-samples",
+  name: "simulations/acme-support-runs",
   run: (ctx: SeedContext) =>
     Effect.tryPromise({
       try: async () => {
@@ -68,7 +99,7 @@ const seedSimulations: Seeder = {
           })
         }
 
-        console.log(`  -> simulations: ${simulationRows.length} canonical lifecycle samples`)
+        console.log(`  -> simulations: ${simulationRows.length} Acme support runs`)
       },
       catch: (error) => new SeedError({ reason: "Failed to seed simulations", cause: error }),
     }).pipe(Effect.asVoid),
