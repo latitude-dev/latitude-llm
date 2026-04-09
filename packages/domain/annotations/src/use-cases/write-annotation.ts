@@ -1,5 +1,3 @@
-import type { QueuePublishError } from "@domain/queue"
-import { QueuePublisher } from "@domain/queue"
 import {
   type AnnotationScore,
   type AnnotationScoreMetadata,
@@ -11,37 +9,31 @@ import {
   type ScoreDraftUpdateConflictError,
   ScoreRepository,
   scoreValueSchema,
-  writeScoreUseCase,
 } from "@domain/scores"
 import {
   type BadRequestError,
   cuidSchema,
+  OutboxEventWriter,
   ProjectId,
   type RepositoryError,
   SqlClient,
-  sessionIdSchema,
-  spanIdSchema,
+  toRepositoryError,
   TraceId,
   traceIdSchema,
   UserId,
 } from "@domain/shared"
+import { sessionIdSchema, spanIdSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { resolveWriteAnnotationTraceContext } from "../helpers/resolve-write-annotation-trace-context.ts"
+import { persistDraftAnnotation } from "./persist-draft-annotation.ts"
 
 const writeAnnotationInputObjectSchema = z.object({
-  id: baseWriteScoreInputSchema.shape.id, // optional CUID for draft updates
+  id: baseWriteScoreInputSchema.shape.id,
   projectId: cuidSchema.transform(ProjectId),
-  sourceId: annotationScoreSourceIdSchema, // "UI" | "API" | <annotation-queue-cuid>
-  /**
-   * Optional; when omitted the use case fills this from the trace row (`TraceDetail.sessionId` / CH materialized trace).
-   */
+  sourceId: annotationScoreSourceIdSchema,
   sessionId: sessionIdSchema.nullable().default(null),
-  /** Required: annotations are always scoped to a trace. */
   traceId: traceIdSchema.transform(TraceId),
-  /**
-   * Optional; when omitted the use case picks the latest LLM span (`chat` or `text_completion`) for this trace.
-   */
   spanId: spanIdSchema.nullable().default(null),
   simulationId: baseWriteScoreInputSchema.shape.simulationId,
   issueId: baseWriteScoreInputSchema.shape.issueId,
@@ -49,9 +41,7 @@ const writeAnnotationInputObjectSchema = z.object({
   annotatorId: cuidSchema.transform(UserId).nullable().default(null),
   value: scoreValueSchema,
   passed: z.boolean(),
-  /** Human-authored feedback; persisted as `metadata.rawFeedback` and initial `feedback` on the score. */
   feedback: z.string().min(1),
-  /** Conversation / message / text-range anchor; flattened into `metadata` on persist. */
   anchor: annotationAnchorSchema.optional(),
 })
 
@@ -62,16 +52,14 @@ export type WriteAnnotationInput = z.input<typeof writeAnnotationInputSchema>
 export type WriteAnnotationError =
   | RepositoryError
   | BadRequestError
-  | QueuePublishError
   | ScoreDraftClosedError
   | ScoreDraftUpdateConflictError
 
 export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
   Effect.gen(function* () {
     const parsed = writeAnnotationInputSchema.parse(input)
-    const publisher = yield* QueuePublisher
     const sqlClient = yield* SqlClient
-    const scoreRepository = yield* ScoreRepository
+    const outboxEventWriter = yield* OutboxEventWriter
 
     let anchor = parsed.anchor
 
@@ -107,37 +95,46 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
       ...(anchor ?? {}),
     }
 
-    const score = yield* writeScoreUseCase({
-      id: parsed.id,
-      projectId: parsed.projectId,
-      source: "annotation",
-      sourceId: parsed.sourceId,
-      sessionId,
-      traceId: parsed.traceId,
-      spanId,
-      simulationId: parsed.simulationId,
-      issueId: parsed.issueId,
-      annotatorId: parsed.annotatorId,
-      value: parsed.value,
-      passed: parsed.passed,
-      feedback: parsed.feedback, // initial display text; enrichment overwrites `feedback` on publication
-      metadata,
-      error: null, // annotations are human-authored, not executed evaluators
-      draftedAt: new Date(), // annotations always start as drafts
-    })
+    const score = yield* sqlClient.transaction(
+      Effect.gen(function* () {
+        const persistedScore = yield* persistDraftAnnotation({
+          id: parsed.id,
+          projectId: parsed.projectId,
+          sourceId: parsed.sourceId,
+          sessionId,
+          traceId: parsed.traceId,
+          spanId,
+          simulationId: parsed.simulationId,
+          issueId: parsed.issueId,
+          annotatorId: parsed.annotatorId,
+          value: parsed.value,
+          passed: parsed.passed,
+          feedback: parsed.feedback,
+          metadata,
+          organizationId: sqlClient.organizationId,
+          messageIndex: anchor?.messageIndex,
+          partIndex: anchor?.partIndex,
+          startOffset: anchor?.startOffset,
+          endOffset: anchor?.endOffset,
+        })
 
-    yield* publisher.publish(
-      "annotation-scores",
-      "publish",
-      {
-        organizationId: score.organizationId,
-        projectId: score.projectId,
-        scoreId: score.id,
-      },
-      {
-        dedupeKey: `annotation-scores:publish:${score.id}`,
-        debounceMs: SCORE_PUBLICATION_DEBOUNCE,
-      },
+        yield* outboxEventWriter
+          .write({
+            eventName: "AnnotationScorePublishRequested",
+            aggregateType: "score",
+            aggregateId: persistedScore.id,
+            organizationId: persistedScore.organizationId,
+            payload: {
+              organizationId: persistedScore.organizationId,
+              projectId: persistedScore.projectId,
+              scoreId: persistedScore.id,
+              debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+            },
+          })
+          .pipe(Effect.mapError((error) => toRepositoryError(error, "write")))
+
+        return persistedScore
+      }),
     )
 
     return score as AnnotationScore

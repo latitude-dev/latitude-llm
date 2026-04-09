@@ -21,6 +21,12 @@ export {
   listTraceAnnotationsUseCase,
 } from "./use-cases/list-annotations.ts"
 export {
+  type PersistDraftAnnotationError,
+  type PersistDraftAnnotationInput,
+  persistDraftAnnotation,
+  persistDraftAnnotationInputSchema,
+} from "./use-cases/persist-draft-annotation.ts"
+export {
   type PublishAnnotationError,
   type PublishAnnotationInput,
   publishAnnotationUseCase,

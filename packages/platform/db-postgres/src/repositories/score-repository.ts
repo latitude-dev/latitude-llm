@@ -279,6 +279,33 @@ export const ScoreRepositoryLive = Layer.effect(
             eq(scores.projectId, projectId),
           options,
         }),
+
+      findQueueDraftByTraceId: ({
+        projectId,
+        queueId,
+        traceId,
+      }: {
+        readonly projectId: ProjectId
+        readonly queueId: string
+        readonly traceId: TraceId
+      }) =>
+        sqlClient
+          .query((db) =>
+            db
+              .select()
+              .from(scores)
+              .where(
+                and(
+                  eq(scores.projectId, projectId),
+                  eq(scores.source, "annotation"),
+                  eq(scores.sourceId, queueId),
+                  eq(scores.traceId, traceId as string),
+                  isNotNull(scores.draftedAt),
+                ),
+              )
+              .limit(1),
+          )
+          .pipe(Effect.map((rows) => (rows[0] ? toDomainScore(rows[0]) : null))),
     }
   }),
 )

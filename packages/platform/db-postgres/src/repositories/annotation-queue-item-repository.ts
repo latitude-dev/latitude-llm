@@ -7,6 +7,7 @@ import {
   annotationQueueItemStatusRankFromTimestamps,
 } from "@domain/annotation-queues"
 import { RepositoryError, SqlClient, type SqlClientShape, TraceId } from "@domain/shared"
+import { createId } from "@paralleldrive/cuid2"
 import { and, asc, desc, eq, gt, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -200,6 +201,36 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
             Effect.mapError((cause) => new RepositoryError({ operation: "listByQueue", cause })),
           )
       },
+
+      insertIfNotExists: ({ projectId, queueId, traceId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .insert(annotationQueueItems)
+              .values({
+                id: createId(),
+                organizationId,
+                projectId,
+                queueId,
+                traceId,
+                completedAt: null,
+                completedBy: null,
+                reviewStartedAt: null,
+              })
+              .onConflictDoNothing({
+                target: [
+                  annotationQueueItems.organizationId,
+                  annotationQueueItems.projectId,
+                  annotationQueueItems.queueId,
+                  annotationQueueItems.traceId,
+                ],
+              })
+              .returning({ id: annotationQueueItems.id }),
+          )
+          .pipe(
+            Effect.map((result) => result.length > 0),
+            Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
+          ),
     } satisfies AnnotationQueueItemRepositoryShape
   }),
 )

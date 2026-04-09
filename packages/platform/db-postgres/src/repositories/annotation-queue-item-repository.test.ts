@@ -1,11 +1,16 @@
-import { AnnotationQueueItemRepository, annotationQueueItemStatusRankFromTimestamps } from "@domain/annotation-queues"
+import {
+  AnnotationQueueItemRepository,
+  AnnotationQueueRepository,
+  annotationQueueItemStatusRankFromTimestamps,
+} from "@domain/annotation-queues"
 import { OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { annotationQueueItems, annotationQueues } from "../schema/annotation-queues.ts"
 import { setupTestPostgres } from "../test/in-memory-postgres.ts"
 import { withPostgres } from "../with-postgres.ts"
 import { AnnotationQueueItemRepositoryLive } from "./annotation-queue-item-repository.ts"
+import { AnnotationQueueRepositoryLive } from "./annotation-queue-repository.ts"
 
 const ORG_ID = OrganizationId("oooooooooooooooooooooooo")
 const PROJECT_ID = ProjectId("pppppppppppppppppppppppp")
@@ -28,6 +33,19 @@ const pg = setupTestPostgres()
 
 const runWithLive = <A, E>(effect: Effect.Effect<A, E, AnnotationQueueItemRepository>) =>
   Effect.runPromise(effect.pipe(withPostgres(AnnotationQueueItemRepositoryLive, pg.adminPostgresClient, ORG_ID)))
+
+const runWithBothLive = <A, E>(
+  effect: Effect.Effect<A, E, AnnotationQueueItemRepository | AnnotationQueueRepository>,
+) =>
+  Effect.runPromise(
+    effect.pipe(
+      withPostgres(
+        Layer.merge(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive),
+        pg.adminPostgresClient,
+        ORG_ID,
+      ),
+    ),
+  )
 
 describe("AnnotationQueueItemRepositoryLive", () => {
   beforeAll(async () => {
@@ -314,6 +332,253 @@ describe("AnnotationQueueItemRepositoryLive", () => {
       )
 
       expect(item).toBeNull()
+    })
+  })
+
+  describe("insertIfNotExists", () => {
+    it("first insert creates one queue item and returns true", async () => {
+      const traceId = TraceId(makeTrace("new_item"))
+
+      const wasInserted = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.insertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            traceId,
+          })
+        }),
+      )
+
+      expect(wasInserted).toBe(true)
+
+      const item = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          const page = yield* repo.listByQueue({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            options: { limit: 100 },
+          })
+          return page.items.find((i) => i.traceId === traceId)
+        }),
+      )
+
+      expect(item).toBeDefined()
+      expect(item?.queueId).toBe(QUEUE_ID)
+      expect(item?.traceId).toBe(traceId)
+      expect(item?.completedAt).toBeNull()
+      expect(item?.completedBy).toBeNull()
+      expect(item?.reviewStartedAt).toBeNull()
+    })
+
+    it("duplicate insert is idempotent and returns false", async () => {
+      const traceId = TraceId(makeTrace("dup_item"))
+
+      const firstInsert = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.insertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            traceId,
+          })
+        }),
+      )
+      expect(firstInsert).toBe(true)
+
+      const secondInsert = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.insertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            traceId,
+          })
+        }),
+      )
+      expect(secondInsert).toBe(false)
+
+      const page = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.listByQueue({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            options: { limit: 100 },
+          })
+        }),
+      )
+
+      const matchingItems = page.items.filter((i) => i.traceId === traceId)
+      expect(matchingItems).toHaveLength(1)
+    })
+
+    it("first insert with counter increment increments totalItems exactly once", async () => {
+      const traceId = TraceId(makeTrace("counter_test"))
+      const NEW_QUEUE_ID = makeId("counter_queue")
+
+      const db = pg.db
+      const base = new Date()
+      await db.insert(annotationQueues).values({
+        id: NEW_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Counter test queue",
+        slug: "counter-test-queue",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      const initialQueue = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({
+            projectId: PROJECT_ID,
+            queueId: NEW_QUEUE_ID,
+          })
+        }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      )
+      expect(initialQueue?.totalItems).toBe(0)
+
+      const wasInserted = await runWithBothLive(
+        Effect.gen(function* () {
+          const itemsRepo = yield* AnnotationQueueItemRepository
+          const queuesRepo = yield* AnnotationQueueRepository
+
+          const inserted = yield* itemsRepo.insertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: NEW_QUEUE_ID,
+            traceId,
+          })
+
+          if (inserted) {
+            yield* queuesRepo.incrementTotalItems({
+              projectId: PROJECT_ID,
+              queueId: NEW_QUEUE_ID,
+            })
+          }
+
+          return inserted
+        }),
+      )
+
+      expect(wasInserted).toBe(true)
+
+      const updatedQueue = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({
+            projectId: PROJECT_ID,
+            queueId: NEW_QUEUE_ID,
+          })
+        }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      )
+      expect(updatedQueue?.totalItems).toBe(1)
+    })
+
+    it("duplicate insert does not double increment counter", async () => {
+      const traceId = TraceId(makeTrace("no_double_counter"))
+      const NEW_QUEUE_ID = makeId("no_double_queue")
+
+      const db = pg.db
+      const base = new Date()
+      await db.insert(annotationQueues).values({
+        id: NEW_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "No double counter queue",
+        slug: "no-double-counter-queue",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      const firstInsert = await runWithBothLive(
+        Effect.gen(function* () {
+          const itemsRepo = yield* AnnotationQueueItemRepository
+          const queuesRepo = yield* AnnotationQueueRepository
+
+          const inserted = yield* itemsRepo.insertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: NEW_QUEUE_ID,
+            traceId,
+          })
+
+          if (inserted) {
+            yield* queuesRepo.incrementTotalItems({
+              projectId: PROJECT_ID,
+              queueId: NEW_QUEUE_ID,
+            })
+          }
+
+          return inserted
+        }),
+      )
+      expect(firstInsert).toBe(true)
+
+      const secondInsert = await runWithBothLive(
+        Effect.gen(function* () {
+          const itemsRepo = yield* AnnotationQueueItemRepository
+          const queuesRepo = yield* AnnotationQueueRepository
+
+          const inserted = yield* itemsRepo.insertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: NEW_QUEUE_ID,
+            traceId,
+          })
+
+          if (inserted) {
+            yield* queuesRepo.incrementTotalItems({
+              projectId: PROJECT_ID,
+              queueId: NEW_QUEUE_ID,
+            })
+          }
+
+          return inserted
+        }),
+      )
+      expect(secondInsert).toBe(false)
+
+      const finalQueue = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({
+            projectId: PROJECT_ID,
+            queueId: NEW_QUEUE_ID,
+          })
+        }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      )
+      expect(finalQueue?.totalItems).toBe(1)
+
+      const page = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.listByQueue({
+            projectId: PROJECT_ID,
+            queueId: NEW_QUEUE_ID,
+            options: { limit: 100 },
+          })
+        }),
+      )
+
+      const matchingItems = page.items.filter((i) => i.traceId === traceId)
+      expect(matchingItems).toHaveLength(1)
     })
   })
 })

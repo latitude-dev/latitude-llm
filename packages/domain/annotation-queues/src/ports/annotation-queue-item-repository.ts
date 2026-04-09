@@ -1,4 +1,4 @@
-import type { ProjectId, RepositoryError } from "@domain/shared"
+import type { ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { AnnotationQueueItem } from "../entities/annotation-queue-items.ts"
 
@@ -40,9 +40,21 @@ export interface FindAnnotationQueueItemInput {
   readonly itemId: string
 }
 
+export interface InsertAnnotationQueueItemInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly traceId: TraceId
+}
+
 export interface AnnotationQueueItemRepositoryShape {
   listByQueue(input: ListAnnotationQueueItemsInput): Effect.Effect<AnnotationQueueItemListPage, RepositoryError>
   findById(input: FindAnnotationQueueItemInput): Effect.Effect<AnnotationQueueItem | null, RepositoryError>
+  /**
+   * Insert a queue item if no item with the same (organizationId, projectId, queueId, traceId)
+   * exists. Returns true if inserted, false if a conflict was encountered.
+   * This is idempotent and safe for concurrent use.
+   */
+  insertIfNotExists(input: InsertAnnotationQueueItemInput): Effect.Effect<boolean, RepositoryError>
 }
 
 export class AnnotationQueueItemRepository extends ServiceMap.Service<

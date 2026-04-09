@@ -180,6 +180,7 @@ function createTestLayers(initialScore?: Score, generateOverride?: AIGenerate, t
     listBySessionId: () => Effect.succeed({ items: [], hasMore: false, limit: 50, offset: 0 } as ScoreListPage),
     listBySpanId: () => Effect.succeed({ items: [], hasMore: false, limit: 50, offset: 0 } as ScoreListPage),
     listByIssueId: () => Effect.succeed({ items: [], hasMore: false, limit: 50, offset: 0 } as ScoreListPage),
+    findQueueDraftByTraceId: () => Effect.succeed(null),
   })
 
   const OutboxEventWriterTest = Layer.succeed(OutboxEventWriter, {

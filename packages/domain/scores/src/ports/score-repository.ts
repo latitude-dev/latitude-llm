@@ -69,6 +69,16 @@ export interface ScoreRepositoryShape {
     readonly issueId: IssueId
     readonly options?: ScoreListOptions
   }): Effect.Effect<ScoreListPage, RepositoryError>
+  /**
+   * Finds an existing queue-backed draft annotation by (queueId, traceId).
+   * Only returns draft annotations (draftedAt != null), never published rows.
+   * Used for idempotency in system queue annotate workflows.
+   */
+  findQueueDraftByTraceId(input: {
+    readonly projectId: ProjectId
+    readonly queueId: string
+    readonly traceId: TraceId
+  }): Effect.Effect<Score | null, RepositoryError>
 }
 
 export class ScoreRepository extends ServiceMap.Service<ScoreRepository, ScoreRepositoryShape>()(

@@ -13,6 +13,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@domain/ai": "workspace:*",
+    "@domain/annotations": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "@repo/utils": "workspace:*",

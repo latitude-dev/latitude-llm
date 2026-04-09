@@ -676,6 +676,15 @@ importers:
 
   packages/domain/annotation-queues:
     dependencies:
+      '@domain/ai':
+        specifier: workspace:*
+        version: link:../ai
+      '@domain/annotations':
+        specifier: workspace:*
+        version: link:../annotations
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

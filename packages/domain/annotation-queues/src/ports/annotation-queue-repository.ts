@@ -68,6 +68,11 @@ export interface AnnotationQueueRepositoryShape {
    * This is idempotent and safe for concurrent use.
    */
   insertIfNotExists(queue: AnnotationQueue): Effect.Effect<boolean, RepositoryError>
+  /**
+   * Atomically increment the totalItems counter for a queue by 1.
+   * Returns the updated queue.
+   */
+  incrementTotalItems(input: { projectId: ProjectId; queueId: string }): Effect.Effect<AnnotationQueue, RepositoryError>
 }
 
 export class AnnotationQueueRepository extends ServiceMap.Service<
