@@ -183,6 +183,7 @@
   --animate-text-gradient: gradient-animation 3s linear infinite;
   --animate-shine: shine 12s linear infinite;
   --animate-glow: glow 3s ease-in-out infinite;
+  --shadow-popover: var(--shadow-popover);
 }
 
 /* CSS variables for theming */
@@ -232,6 +233,10 @@
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
+  --shadow-popover:
+    0px 1px 3px 0px hsl(var(--background-shadow) / 0.1),
+    0px 1px 2px -1px hsl(var(--background-shadow) / 0.1),
+    0px 0px 6px 0px hsl(var(--background-shadow) / 0.04);
 }
 
 .dark {
@@ -278,6 +283,10 @@
   --chart-3: 30 80% 55%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
+  --shadow-popover:
+    0px 2px 4px 0px hsl(var(--background-shadow) / 0.4),
+    0px 1px 3px -1px hsl(var(--background-shadow) / 0.3),
+    0px 0px 8px 0px hsl(var(--background-shadow) / 0.2);
 }
 
 /* Base styles */

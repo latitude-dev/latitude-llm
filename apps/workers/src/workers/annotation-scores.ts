@@ -1,9 +1,11 @@
+import { markReviewStartedUseCase } from "@domain/annotation-queues"
 import { publishHumanAnnotationUseCase } from "@domain/annotations"
 import type { QueueConsumer } from "@domain/queue"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
+import { ScoreRepository } from "@domain/scores"
 import { OrganizationId, type ScoreId } from "@domain/shared"
 import type { PostgresClient } from "@platform/db-postgres"
-import { ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { AnnotationQueueItemRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getPostgresClient } from "../clients.ts"
@@ -37,6 +39,31 @@ export const createAnnotationScoresWorker = ({ consumer, workflowStarter, postgr
           Effect.sync(() =>
             logger.error(`Annotation publication failed for ${payload.projectId}/${payload.scoreId}`, error),
           ),
+        ),
+        Effect.asVoid,
+      ),
+
+    markReviewStarted: (payload) =>
+      Effect.gen(function* () {
+        const scoreRepo = yield* ScoreRepository
+        const score = yield* scoreRepo.findById(payload.scoreId as ScoreId)
+
+        const count = yield* markReviewStartedUseCase({ score })
+
+        if (count > 0) {
+          logger.info(`Marked ${count} queue item(s) as in-progress for trace ${score.traceId}`)
+        }
+      }).pipe(
+        withPostgres(
+          Layer.mergeAll(ScoreRepositoryLive, AnnotationQueueItemRepositoryLive),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
+        Effect.catchTag("NotFoundError", () =>
+          Effect.sync(() => logger.warn(`Score ${payload.scoreId} not found, skipping markReviewStarted`)),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() => logger.error(`markReviewStarted failed for score ${payload.scoreId}`, error)),
         ),
         Effect.asVoid,
       ),

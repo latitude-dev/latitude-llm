@@ -10,6 +10,9 @@ import {
 
 const BATCH_SIZE = 50
 
+export const annotationQueueQueryKey = (projectId: string, queueId: string) =>
+  ["annotation-queue", projectId, queueId] as const
+
 export const ANNOTATION_QUEUES_DEFAULT_SORTING: InfiniteTableSorting = {
   column: "createdAt",
   direction: "desc",
@@ -81,7 +84,7 @@ export function useAnnotationQueue({
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: ["annotation-queue", projectId, queueId],
+    queryKey: annotationQueueQueryKey(projectId, queueId),
     queryFn: () => getAnnotationQueueByProject({ data: { projectId, queueId } }),
     enabled: enabled && projectId.length > 0 && queueId.length > 0,
   })

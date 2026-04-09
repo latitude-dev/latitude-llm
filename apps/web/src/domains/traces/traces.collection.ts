@@ -18,6 +18,8 @@ import {
   type TraceRecord,
 } from "./traces.functions.ts"
 
+export const traceDetailQueryKey = (projectId: string, traceId: string) => ["traceDetail", projectId, traceId] as const
+
 const BATCH_SIZE = 50
 
 export function useTracesInfiniteScroll({
@@ -168,7 +170,7 @@ export function useTraceDetail({
   readonly enabled?: boolean
 }) {
   return useQuery({
-    queryKey: ["traceDetail", projectId, traceId],
+    queryKey: traceDetailQueryKey(projectId, traceId),
     // getTraceDetail returns `never` at the type level to satisfy TanStack Start's
     // Serialize constraint (see traces.functions.ts); cast back to the actual type
     queryFn: async () => {

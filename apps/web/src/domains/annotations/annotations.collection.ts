@@ -18,6 +18,14 @@ type DeleteAnnotationInput = Parameters<typeof deleteAnnotation>[0]["data"]
 /** Trace-scoped annotation lists default to including drafts so reload/refetch still shows in-progress rows (`draftedAt` set). */
 const DEFAULT_TRACE_DRAFT_MODE = "include" as const
 
+export const annotationsByTraceQueryKey = (
+  projectId: string,
+  traceId: string,
+  limit?: number,
+  offset?: number,
+  draftMode: "exclude" | "include" | "only" = DEFAULT_TRACE_DRAFT_MODE,
+) => ["annotations", "trace", projectId, traceId, limit, offset, draftMode] as const
+
 export function useAnnotationsByTrace({
   projectId,
   traceId,
@@ -36,7 +44,7 @@ export function useAnnotationsByTrace({
   const effectiveDraftMode = draftMode ?? DEFAULT_TRACE_DRAFT_MODE
 
   return useQuery({
-    queryKey: ["annotations", "trace", projectId, traceId, limit, offset, effectiveDraftMode],
+    queryKey: annotationsByTraceQueryKey(projectId, traceId, limit, offset, effectiveDraftMode),
     queryFn: () =>
       listAnnotationsByTrace({
         data: { projectId, traceId, limit, offset, draftMode: effectiveDraftMode },
