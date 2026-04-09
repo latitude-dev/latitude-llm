@@ -1,26 +1,79 @@
 import {
-  SEED_ANNOTATION_QUEUE_ID,
+  ALL_ISSUE_1_TRACES,
+  ALL_ISSUE_2_TRACES,
+  ALL_ISSUE_3_TRACES,
+  type AnnotationTrace,
+  ISSUE_2_ADDITIONAL_NEGATIVES,
+  SEED_ALIGNMENT_FIXTURE_SPAN_IDS,
+  SEED_ALIGNMENT_FIXTURE_TRACE_IDS,
+  SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+  SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
+  SEED_ANNOTATION_QUEUE_WARRANTY_ID,
+  SEED_ANNOTATION_SPAN_IDS,
+  SEED_ANNOTATION_TRACE_IDS,
+  SEED_COMBINATION_EVALUATION_ID,
+  SEED_COMBINATION_ISSUE_ID,
+  SEED_COMBINATION_SIMULATION_SPAN_IDS,
+  SEED_COMBINATION_SIMULATION_TRACE_IDS,
+  SEED_EVALUATION_ARCHIVED_ID,
   SEED_EVALUATION_ID,
+  SEED_GENERATE_ISSUE_ID,
   SEED_ISSUE_ID,
+  SEED_LIFECYCLE_SPAN_IDS,
+  SEED_LIFECYCLE_TRACE_IDS,
   SEED_ORG_ID,
   SEED_PROJECT_ID,
   SEED_SCORE_API_REVIEWED_ID,
+  SEED_SCORE_COMBINATION_SIMULATION_ID,
   SEED_SCORE_ERRORED_ID,
-  SEED_SCORE_ISSUE_LINKED_ID,
   SEED_SCORE_PASSED_ID,
-} from "@domain/shared"
+  SEED_SCORE_PENDING_ID,
+  SEED_SCORE_WARRANTY_SIMULATION_ACTIVE_ID,
+  SEED_SCORE_WARRANTY_SIMULATION_ARCHIVED_ID,
+  SEED_SIMULATION_ID,
+  SEED_WARRANTY_SIMULATION_ID,
+  SEED_WARRANTY_SIMULATION_SPAN_IDS,
+  SEED_WARRANTY_SIMULATION_TRACE_IDS,
+} from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
 import type { Seeder } from "../types.ts"
 
-const analyticsScoreRows = [
+function seedScoreId(prefix: string, index: number): string {
+  return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
+}
+
+function requiredAt<T>(items: readonly T[], index: number): T {
+  const item = items[index]
+  if (item === undefined) {
+    throw new Error(`Missing seeded item at index ${index}`)
+  }
+  return item
+}
+
+function seededTimestamp(day: number, hour: number, minute = 0): string {
+  return `2026-03-${String(day).padStart(2, "0")} ${String(hour).padStart(2, "0")}:${String(minute).padStart(
+    2,
+    "0",
+  )}:00.000`
+}
+
+function annotationValue(passed: boolean, tier: string): number {
+  if (!passed) {
+    return tier === "obvious" || tier === "easy" ? 0.04 : tier === "subtle" || tier === "medium" ? 0.08 : 0.12
+  }
+
+  return tier === "obvious" || tier === "easy" ? 0.99 : tier === "subtle" || tier === "medium" ? 0.96 : 0.93
+}
+
+const lifecycleAnalyticsRows = [
   {
     id: SEED_SCORE_PASSED_ID,
     organization_id: SEED_ORG_ID,
     project_id: SEED_PROJECT_ID,
-    session_id: "seed-score-session-1",
-    trace_id: "11111111111111111111111111111111",
-    span_id: "aaaaaaaaaaaaaaaa",
+    session_id: "",
+    trace_id: requiredAt(SEED_LIFECYCLE_TRACE_IDS, 2),
+    span_id: requiredAt(SEED_LIFECYCLE_SPAN_IDS, 2),
     source: "evaluation",
     source_id: SEED_EVALUATION_ID,
     simulation_id: "",
@@ -31,17 +84,17 @@ const analyticsScoreRows = [
     duration: 850_000_000,
     tokens: 1_820,
     cost: 245_000,
-    created_at: "2026-03-20 10:00:00.000",
+    created_at: seededTimestamp(20, 10),
   },
   {
     id: SEED_SCORE_ERRORED_ID,
     organization_id: SEED_ORG_ID,
     project_id: SEED_PROJECT_ID,
-    session_id: "seed-score-session-1",
-    trace_id: "22222222222222222222222222222222",
-    span_id: "bbbbbbbbbbbbbbbb",
+    session_id: "",
+    trace_id: requiredAt(SEED_LIFECYCLE_TRACE_IDS, 3),
+    span_id: requiredAt(SEED_LIFECYCLE_SPAN_IDS, 3),
     source: "evaluation",
-    source_id: SEED_EVALUATION_ID,
+    source_id: SEED_COMBINATION_EVALUATION_ID,
     simulation_id: "",
     issue_id: "",
     value: 0,
@@ -50,14 +103,14 @@ const analyticsScoreRows = [
     duration: 120_000_000,
     tokens: 0,
     cost: 0,
-    created_at: "2026-03-20 11:00:00.000",
+    created_at: seededTimestamp(20, 11),
   },
   {
     id: SEED_SCORE_API_REVIEWED_ID,
     organization_id: SEED_ORG_ID,
     project_id: SEED_PROJECT_ID,
-    session_id: "seed-score-session-4",
-    trace_id: "66666666666666666666666666666666",
+    session_id: "",
+    trace_id: requiredAt(SEED_LIFECYCLE_TRACE_IDS, 3),
     span_id: "",
     source: "annotation",
     source_id: "API",
@@ -69,34 +122,194 @@ const analyticsScoreRows = [
     duration: 0,
     tokens: 0,
     cost: 0,
-    created_at: "2026-03-22 12:45:00.000",
+    created_at: seededTimestamp(22, 12, 45),
   },
   {
-    id: SEED_SCORE_ISSUE_LINKED_ID,
+    id: SEED_SCORE_PENDING_ID,
     organization_id: SEED_ORG_ID,
     project_id: SEED_PROJECT_ID,
-    session_id: "seed-score-session-3",
-    trace_id: "55555555555555555555555555555555",
-    span_id: "dddddddddddddddd",
-    source: "annotation",
-    source_id: SEED_ANNOTATION_QUEUE_ID,
+    session_id: "",
+    trace_id: requiredAt(SEED_LIFECYCLE_TRACE_IDS, 4),
+    span_id: "",
+    source: "custom",
+    source_id: "seed-import",
     simulation_id: "",
-    issue_id: SEED_ISSUE_ID,
-    value: 0.12,
-    passed: false,
+    issue_id: "",
+    value: 0.88,
+    passed: true,
     errored: false,
-    duration: 15_000_000,
+    duration: 0,
     tokens: 0,
     cost: 0,
-    created_at: "2026-03-23 14:15:00.000",
+    created_at: seededTimestamp(22, 8, 30),
+  },
+]
+
+function buildIssueAnnotationAnalyticsRows(opts: {
+  traces: readonly AnnotationTrace[]
+  offset: number
+  queueId: string
+  issueId: string
+  prefix: string
+  startDay: number
+}) {
+  return opts.traces.map((trace, i) => ({
+    id: seedScoreId(opts.prefix, i),
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "",
+    trace_id: requiredAt(SEED_ANNOTATION_TRACE_IDS, opts.offset + i),
+    span_id: requiredAt(SEED_ANNOTATION_SPAN_IDS, opts.offset + i),
+    source: "annotation",
+    source_id: opts.queueId,
+    simulation_id: "",
+    issue_id: trace.passed ? "" : opts.issueId,
+    value: annotationValue(trace.passed, trace.tier),
+    passed: trace.passed,
+    errored: false,
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+    created_at: seededTimestamp(opts.startDay + Math.floor(i / 4), 9 + (i % 4)),
+  }))
+}
+
+const issue1AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
+  traces: ALL_ISSUE_1_TRACES,
+  offset: 0,
+  queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
+  issueId: SEED_ISSUE_ID,
+  prefix: "i1",
+  startDay: 23,
+})
+
+const issue2AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
+  traces: ALL_ISSUE_2_TRACES,
+  offset: ALL_ISSUE_1_TRACES.length,
+  queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
+  issueId: SEED_COMBINATION_ISSUE_ID,
+  prefix: "i2",
+  startDay: 25,
+})
+
+const issue3AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
+  traces: ALL_ISSUE_3_TRACES,
+  offset: ALL_ISSUE_1_TRACES.length + ALL_ISSUE_2_TRACES.length,
+  queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
+  issueId: SEED_GENERATE_ISSUE_ID,
+  prefix: "i3",
+  startDay: 29,
+})
+
+const alignmentAnalyticsRows = ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => ({
+  id: seedScoreId("al", i),
+  organization_id: SEED_ORG_ID,
+  project_id: SEED_PROJECT_ID,
+  session_id: "",
+  trace_id: requiredAt(SEED_ALIGNMENT_FIXTURE_TRACE_IDS, i),
+  span_id: requiredAt(SEED_ALIGNMENT_FIXTURE_SPAN_IDS, i),
+  source: fixture.source,
+  source_id:
+    fixture.source === "annotation"
+      ? SEED_ANNOTATION_QUEUE_COMBINATION_ID
+      : fixture.source === "evaluation"
+        ? SEED_COMBINATION_EVALUATION_ID
+        : "seed-import",
+  simulation_id: "",
+  issue_id: "",
+  value: 0.95,
+  passed: true,
+  errored: false,
+  duration: 0,
+  tokens: 0,
+  cost: 0,
+  created_at: seededTimestamp(27 + Math.floor(i / 5), 10 + (i % 5)),
+}))
+
+const simulationAnalyticsRows = [
+  {
+    id: SEED_SCORE_WARRANTY_SIMULATION_ACTIVE_ID,
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "",
+    trace_id: requiredAt(SEED_WARRANTY_SIMULATION_TRACE_IDS, 0),
+    span_id: requiredAt(SEED_WARRANTY_SIMULATION_SPAN_IDS, 0),
+    source: "evaluation",
+    source_id: SEED_EVALUATION_ID,
+    simulation_id: SEED_WARRANTY_SIMULATION_ID,
+    issue_id: "",
+    value: 0.97,
+    passed: true,
+    errored: false,
+    duration: 920_000_000,
+    tokens: 2_140,
+    cost: 312_000,
+    created_at: seededTimestamp(26, 9, 6),
+  },
+  {
+    id: SEED_SCORE_WARRANTY_SIMULATION_ARCHIVED_ID,
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "",
+    trace_id: requiredAt(SEED_WARRANTY_SIMULATION_TRACE_IDS, 1),
+    span_id: requiredAt(SEED_WARRANTY_SIMULATION_SPAN_IDS, 1),
+    source: "evaluation",
+    source_id: SEED_EVALUATION_ARCHIVED_ID,
+    simulation_id: SEED_WARRANTY_SIMULATION_ID,
+    issue_id: "",
+    value: 0.92,
+    passed: true,
+    errored: false,
+    duration: 880_000_000,
+    tokens: 1_960,
+    cost: 287_000,
+    created_at: seededTimestamp(26, 9, 7),
+  },
+  {
+    id: SEED_SCORE_COMBINATION_SIMULATION_ID,
+    organization_id: SEED_ORG_ID,
+    project_id: SEED_PROJECT_ID,
+    session_id: "",
+    trace_id: requiredAt(SEED_COMBINATION_SIMULATION_TRACE_IDS, 0),
+    span_id: requiredAt(SEED_COMBINATION_SIMULATION_SPAN_IDS, 0),
+    source: "evaluation",
+    source_id: SEED_COMBINATION_EVALUATION_ID,
+    simulation_id: SEED_SIMULATION_ID,
+    issue_id: "",
+    value: 0.98,
+    passed: true,
+    errored: false,
+    duration: 940_000_000,
+    tokens: 2_220,
+    cost: 325_000,
+    created_at: seededTimestamp(28, 13, 24),
   },
 ] as const
 
+const allAnalyticsRows = [
+  ...lifecycleAnalyticsRows,
+  ...issue1AnnotationAnalyticsRows,
+  ...issue2AnnotationAnalyticsRows,
+  ...issue3AnnotationAnalyticsRows,
+  ...alignmentAnalyticsRows,
+  ...simulationAnalyticsRows,
+]
+
 const seedScores: Seeder = {
-  name: "scores/analytics-lifecycle-samples",
+  name: "scores/acme-support-analytics",
   run: (ctx) =>
-    insertJsonEachRow(ctx.client, "scores", analyticsScoreRows).pipe(
-      Effect.tap(() => Effect.sync(() => console.log(`  -> scores: ${analyticsScoreRows.length} analytics samples`))),
+    insertJsonEachRow(ctx.client, "scores", allAnalyticsRows).pipe(
+      Effect.tap(() =>
+        Effect.sync(() =>
+          console.log(
+            `  -> scores: ${allAnalyticsRows.length} analytics rows (${lifecycleAnalyticsRows.length} lifecycle, ${
+              issue1AnnotationAnalyticsRows.length +
+              issue2AnnotationAnalyticsRows.length +
+              issue3AnnotationAnalyticsRows.length
+            } annotations, ${alignmentAnalyticsRows.length} alignment, ${simulationAnalyticsRows.length} simulation)`,
+          ),
+        ),
+      ),
     ),
 }
 

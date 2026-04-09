@@ -18,7 +18,7 @@ import {
   SimulationId,
   SpanId,
   TraceId,
-} from "@domain/shared"
+} from "@domain/shared/seeding"
 import type { TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"

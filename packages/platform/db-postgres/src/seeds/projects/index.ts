@@ -1,5 +1,5 @@
 import { createProject } from "@domain/projects"
-import { SEED_ORG_ID, SEED_PROJECT_ID, SEED_PROJECT_NAME, SEED_PROJECT_SLUG } from "@domain/shared"
+import { SEED_ORG_ID, SEED_PROJECT_ID, SEED_PROJECT_NAME, SEED_PROJECT_SLUG } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import type { SeedContext, Seeder } from "../types.ts"
 

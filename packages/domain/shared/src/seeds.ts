@@ -14,14 +14,15 @@ import {
   UserId,
 } from "./id.ts"
 
-// Constants for seeding the database with initial data
+// ---------------------------------------------------------------------------
+// Organization, users, project, API key
+// ---------------------------------------------------------------------------
+
 export const SEED_ORG_ID = OrganizationId("iapkf6osmlm7mbw9kulosua4")
 export const SEED_OWNER_USER_ID = UserId("ye9d77pxi50nh1gyqljkffnb")
 export const SEED_ADMIN_USER_ID = UserId("uzm4d8pb5k0bd2oug9ud2xjs")
 export const SEED_PROJECT_ID = ProjectId("yvl1e78evmwfs2mosyjb08rc")
 export const SEED_API_KEY_ID = ApiKeyId("v42lqe92hgq2hpvilg91brnt")
-export const SEED_DATASET_ID = DatasetId("m8k2p4r6t0v1w3x5y7z9a1b3")
-export const SEED_DATASET_VERSION_ID = DatasetVersionId("v1a2b3c4d5e6f7g8h9i0j1k2")
 export const SEED_OWNER_MEMBERSHIP_ID = MembershipId("bg5hvjzpeop0atmz2nqydas7")
 export const SEED_ADMIN_MEMBERSHIP_ID = MembershipId("h5q2nionpzqmzvkgp0sp7jnl")
 
@@ -56,63 +57,150 @@ export const SEED_MANUAL_QUEUE_ASSIGNEES = [
   SEED_MEMBER_4_USER_ID,
   SEED_MEMBER_5_USER_ID,
 ] as const
+
+// ---------------------------------------------------------------------------
+// Datasets
+// ---------------------------------------------------------------------------
+
+export const SEED_WARRANTY_DATASET_ID = DatasetId("w1a2r3r4a5n6t7y8d9s0e1t2")
+export const SEED_WARRANTY_DATASET_VERSION_ID = DatasetVersionId("v1w2a3r4r5a6n7t8y9d0s1e2")
+
+/** Dangerous combination dataset retained as the second mature lifecycle. */
+export const SEED_DATASET_ID = DatasetId("m8k2p4r6t0v1w3x5y7z9a1b3")
+export const SEED_DATASET_VERSION_ID = DatasetVersionId("v1a2b3c4d5e6f7g8h9i0j1k2")
+
+// ---------------------------------------------------------------------------
+// Issues and evaluations
+// ---------------------------------------------------------------------------
+
+/** Issue 1: mature warranty fabrication lifecycle. */
+export const SEED_ISSUE_ID = IssueId("dds0rt8sqgpuku4u4wabze9r")
+export const SEED_ISSUE_UUID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+
+/** Issue 2: mature dangerous-combination lifecycle. */
+export const SEED_COMBINATION_ISSUE_ID = IssueId("c1o2m3b4i5n6a7t8i9o0n1s2")
+export const SEED_COMBINATION_ISSUE_UUID = "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e"
+
+/** Issue 3: generate-ready logistics / service guarantees issue. */
+export const SEED_GENERATE_ISSUE_ID = IssueId("g1e2n3e4r5a6t7e8i9s0s1u2")
+export const SEED_GENERATE_ISSUE_UUID = "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f"
+
+/** Issue 1 active monitor. */
+export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")
+/** Issue 1 archived historical monitor. */
+export const SEED_EVALUATION_ARCHIVED_ID = EvaluationId("hphb8g6uwzx68pfh9hzormqn")
+/** Issue 2 active monitor. */
+export const SEED_COMBINATION_EVALUATION_ID = EvaluationId("c1o2m3b4e5v6a7l8u9a0t1e2")
+
+// ---------------------------------------------------------------------------
+// Queues
+// ---------------------------------------------------------------------------
+
+export const SEED_ANNOTATION_QUEUE_WARRANTY_ID = AnnotationQueueId("q1w2e3r4t5y6u7i8o9p0a1s2")
+export const SEED_ANNOTATION_QUEUE_COMBINATION_ID = AnnotationQueueId("m1a2n3u4a5l6c7o8m9b0q1u2")
+export const SEED_ANNOTATION_QUEUE_LOGISTICS_ID = AnnotationQueueId("l1o2g3i4s5t6i7c8s9q0u1e2")
+export const SEED_ANNOTATION_QUEUE_SYSTEM_ID = AnnotationQueueId("aq2icpkri3o99sw0u24hy50w")
+export const SEED_ANNOTATION_QUEUE_LIVE_ID = AnnotationQueueId("hikmfvizwaptzothgqtllelw")
+
+export const SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_PENDING_ID = AnnotationQueueItemId("w1a2r3n4t5y6p7e8n9d0i1n2")
+export const SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_A_ID = AnnotationQueueItemId("w1a2r3c4o5m6p7l8e9t0a1a2")
+export const SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_B_ID = AnnotationQueueItemId("w1a2r3c4o5m6p7l8e9t0b1b2")
+
+export const SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_PENDING_ID = AnnotationQueueItemId("c1o2m3b4p5e6n7d8i9n0g1a2")
+export const SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_A_ID = AnnotationQueueItemId("c1o2m3b4c5o6m7p8a9a0a1a2")
+export const SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_B_ID = AnnotationQueueItemId("c1o2m3b4c5o6m7p8b9b0b1b2")
+
+export const SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_PENDING_ID = AnnotationQueueItemId("l1o2g3i4p5e6n7d8i9n0g1a2")
+export const SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_A_ID = AnnotationQueueItemId("l1o2g3i4c5o6m7p8a9a0a1a2")
+export const SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_B_ID = AnnotationQueueItemId("l1o2g3i4c5o6m7p8b9b0b1b2")
+
+export const SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_PENDING_ID = AnnotationQueueItemId("s1y2s3t4e5m6p7e8n9d0i1n2")
+export const SEED_ANNOTATION_QUEUE_ITEM_LIVE_PENDING_ID = AnnotationQueueItemId("l1i2v3e4p5e6n7d8i9n0g1a2")
+
+// ---------------------------------------------------------------------------
+// Simulations
+// ---------------------------------------------------------------------------
+
+export const SEED_WARRANTY_SIMULATION_ID = SimulationId("s1i2m3w4a5r6r7a8n9t0y1a2")
+export const SEED_SIMULATION_ID = SimulationId("sim0k7x9g2m4n5p8q1r3s6t0")
+export const SEED_SIMULATION_ERRORED_ID = SimulationId("sim1v2w3x4y5z6a7b8c9d0e1")
+
+// ---------------------------------------------------------------------------
+// Score IDs
+// ---------------------------------------------------------------------------
+
 export const SEED_SCORE_PASSED_ID = ScoreId("qfz1jxhx5p8gzukyz22tz5du")
 export const SEED_SCORE_ERRORED_ID = ScoreId("araxu4s45cudpufdqiioo5a5")
 export const SEED_SCORE_DRAFT_ID = ScoreId("n1hjgos7a7dxb61plvmiigcu")
 export const SEED_SCORE_PENDING_ID = ScoreId("hiy75x2kq8hjhi27qkl9zaeb")
-export const SEED_SCORE_ISSUE_LINKED_ID = ScoreId("qr25ftbv6q70ahxt690a7460")
 export const SEED_SCORE_API_REVIEWED_ID = ScoreId("hvtb8yzxjjrudvhrme7aejiq")
-export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")
-export const SEED_EVALUATION_ARCHIVED_ID = EvaluationId("hphb8g6uwzx68pfh9hzormqn")
-export const SEED_ANNOTATION_QUEUE_ID = "w9pkzh13vu8ntru7ii5ved08"
-export const SEED_ISSUE_ID = IssueId("dds0rt8sqgpuku4u4wabze9r")
-export const SEED_ISSUE_UUID = "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
-export const SEED_ANNOTATION_QUEUE_MANUAL_ID = AnnotationQueueId("w9pkzh13vu8ntru7ii5ved08")
-export const SEED_ANNOTATION_QUEUE_SYSTEM_ID = AnnotationQueueId("aq2icpkri3o99sw0u24hy50w")
-export const SEED_ANNOTATION_QUEUE_LIVE_ID = AnnotationQueueId("hikmfvizwaptzothgqtllelw")
-export const SEED_ANNOTATION_QUEUE_ITEM_PENDING_ID = AnnotationQueueItemId("g7d3fimqkt51mrsf3gs4q8yx")
-export const SEED_ANNOTATION_QUEUE_ITEM_COMPLETED_ID = AnnotationQueueItemId("w50qstqvujrivs8xreens7mt")
-export const SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_ID = AnnotationQueueItemId("txispc9i1qpx0vc2cbjrt4kx")
-export const SEED_ANNOTATION_QUEUE_ITEM_LIVE_ID = AnnotationQueueItemId("tin3ni9h6aqwc0c4fcrkxxx7")
-/** Additional queues for richer local/demo annotation-queue UI. */
-export const SEED_ANNOTATION_QUEUE_REFUSAL_ID = AnnotationQueueId("b8c9d0e1f2g3h4i5j6k7l8m9")
-export const SEED_ANNOTATION_QUEUE_WEEKLY_ID = AnnotationQueueId("n0o1p2q3r4s5t6u7v8w9x0y1")
-export const SEED_ANNOTATION_QUEUE_ITEM_IN_PROGRESS_ID = AnnotationQueueItemId("z2a3b4c5d6e7f8g9h0i1j2k3")
-export const SEED_ANNOTATION_QUEUE_ITEM_REFUSAL_A_ID = AnnotationQueueItemId("l4m5n6o7p8q9r0s1t2u3v4w5")
-export const SEED_ANNOTATION_QUEUE_ITEM_REFUSAL_B_ID = AnnotationQueueItemId("x6y7z8a9b0c1d2e3f4g5h6i7")
-export const SEED_ANNOTATION_QUEUE_ITEM_WEEKLY_A_ID = AnnotationQueueItemId("j8k9l0m1n2o3p4q5r6s7t8u9")
-/** Manual queue with zero items — for empty-state UI. */
-export const SEED_ANNOTATION_QUEUE_EMPTY_ID = AnnotationQueueId("e7m8p9q0r1s2t3u4v5w6x7y8")
-export const SEED_ANNOTATION_QUEUE_ITEM_JAIL_444_ID = AnnotationQueueItemId("f1g2h3i4j5k6l7m8n9o0p1q2")
-export const SEED_ANNOTATION_QUEUE_ITEM_LIVE_777_ID = AnnotationQueueItemId("r3s4t5u6v7w8x9y0z1a2b3c4")
-export const SEED_ANNOTATION_QUEUE_ITEM_WEEKLY_B_ID = AnnotationQueueItemId("d5e6f7g8h9i0j1k2l3m4n5o6")
-/** One queue with exactly pending / in progress / completed items for status UI demos. */
-export const SEED_ANNOTATION_QUEUE_STATUS_DEMO_ID = AnnotationQueueId("kiecgrwfu0hta6cxtgt3eg1u")
-export const SEED_ANNOTATION_QUEUE_ITEM_STATUS_PENDING_ID = AnnotationQueueItemId("a4mmcm5rvda0vr9o6vyman0u")
-export const SEED_ANNOTATION_QUEUE_ITEM_STATUS_PROGRESS_ID = AnnotationQueueItemId("gqkjmzuhjydrk2hczkmljh9v")
-export const SEED_ANNOTATION_QUEUE_ITEM_STATUS_COMPLETED_ID = AnnotationQueueItemId("h1kogt55m89gga64ywwqb097")
-export const SEED_SIMULATION_ID = SimulationId("sim0k7x9g2m4n5p8q1r3s6t0")
-export const SEED_SIMULATION_ERRORED_ID = SimulationId("sim1v2w3x4y5z6a7b8c9d0e1")
-export const SEED_SCORE_SIMULATION_LINKED_ID = ScoreId("wk8m3p5r7t9v1x3z5b7d9f1h")
+export const SEED_SCORE_WARRANTY_SIMULATION_ACTIVE_ID = ScoreId("s1w2a3r4r5s6i7m8a9c0t1v2")
+export const SEED_SCORE_WARRANTY_SIMULATION_ARCHIVED_ID = ScoreId("s1w2a3r4r5s6i7m8a9r0c1h2")
+export const SEED_SCORE_COMBINATION_SIMULATION_ID = ScoreId("s1c2o3m4b5s6i7m8a9c0t1v2")
 
-// Additional constants for seeding
+// ---------------------------------------------------------------------------
+// Deterministic trace/span IDs
+// ---------------------------------------------------------------------------
+
+function fixedTraceHex(prefix: string, index: number): string {
+  return `${prefix}${index.toString(16).padStart(6, "0")}${"0".repeat(24)}`
+}
+
+function fixedSpanHex(prefix: string, index: number): string {
+  return `${prefix}${index.toString(16).padStart(6, "0")}${"0".repeat(8)}`
+}
+
+/** 48 annotation trace IDs (Issue 1: 0-15, Issue 2: 16-37, Issue 3: 38-47). */
+export const SEED_ANNOTATION_TRACE_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedTraceHex("af", i))
+export const SEED_ANNOTATION_SPAN_IDS: readonly string[] = Array.from({ length: 48 }, (_, i) => fixedSpanHex("af", i))
+
+/** 25 additional alignment fixture trace IDs */
+export const SEED_ALIGNMENT_FIXTURE_TRACE_IDS: readonly string[] = Array.from({ length: 25 }, (_, i) =>
+  fixedTraceHex("bf", 100 + i),
+)
+export const SEED_ALIGNMENT_FIXTURE_SPAN_IDS: readonly string[] = Array.from({ length: 25 }, (_, i) =>
+  fixedSpanHex("bf", 100 + i),
+)
+
+/** 5 lifecycle score trace IDs */
+export const SEED_LIFECYCLE_TRACE_IDS: readonly string[] = [
+  "11111111111111111111111111111111",
+  "22222222222222222222222222222222",
+  "33333333333333333333333333333333",
+  "44444444444444444444444444444444",
+  "55555555555555555555555555555555",
+]
+export const SEED_LIFECYCLE_SPAN_IDS: readonly string[] = [
+  "0101010101010101",
+  "0202020202020202",
+  "0303030303030303",
+  "0404040404040404",
+  "0505050505050505",
+]
+
+/** 12 deterministic spans for the warranty simulation run. */
+export const SEED_WARRANTY_SIMULATION_TRACE_IDS: readonly string[] = Array.from({ length: 12 }, (_, i) =>
+  fixedTraceHex("cf", i),
+)
+export const SEED_WARRANTY_SIMULATION_SPAN_IDS: readonly string[] = Array.from({ length: 12 }, (_, i) =>
+  fixedSpanHex("cf", i),
+)
+
+/** 20 deterministic spans for the dangerous-combination simulation run. */
+export const SEED_COMBINATION_SIMULATION_TRACE_IDS: readonly string[] = Array.from({ length: 20 }, (_, i) =>
+  fixedTraceHex("df", i),
+)
+export const SEED_COMBINATION_SIMULATION_SPAN_IDS: readonly string[] = Array.from({ length: 20 }, (_, i) =>
+  fixedSpanHex("df", i),
+)
+
+// ---------------------------------------------------------------------------
+// Organization/project display values
+// ---------------------------------------------------------------------------
+
 export const SEED_ORG_NAME = "Acme Inc."
 export const SEED_ORG_SLUG = "acme"
 export const SEED_OWNER_EMAIL = "owner@acme.com"
 export const SEED_ADMIN_EMAIL = "admin@acme.com"
 export const SEED_PROJECT_NAME = "Default Project"
 export const SEED_PROJECT_SLUG = "default-project"
-
-/**
- * ClickHouse trace ids shared with Postgres score seeds and annotation-queue item seeds.
- * Span seed remaps the first N generated traces to these ids so list/detail UIs resolve real telemetry.
- */
-export const SEED_CANONICAL_TRACE_IDS: readonly string[] = [
-  "11111111111111111111111111111111",
-  "22222222222222222222222222222222",
-  "33333333333333333333333333333333",
-  "66666666666666666666666666666666",
-  "44444444444444444444444444444444",
-  "55555555555555555555555555555555",
-  "77777777777777777777777777777777",
-]
