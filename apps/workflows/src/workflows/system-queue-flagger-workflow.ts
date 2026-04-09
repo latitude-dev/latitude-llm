@@ -1,16 +1,19 @@
 import { log, proxyActivities } from "@temporalio/workflow"
 import type * as activities from "../activities/index.ts"
 
-const { runFlagger } = proxyActivities<typeof activities>({ startToCloseTimeout: "30 seconds" })
+const { runFlagger, runAnnotate } = proxyActivities<typeof activities>({ startToCloseTimeout: "30 seconds" })
 
 /**
  * System queue flagger workflow.
  *
  * Runs one async black-box flagger call for a specific trace and queue.
- * The flagger result is { matched: boolean }.
+ * When the flagger returns matched=true, the workflow proceeds to create
+ * a queue item and draft annotation via the annotate activity.
  *
- * Positive matches intentionally stop at a TODO until the team decides
- * how queue items and draft annotations should be written.
+ * The workflow result distinguishes between:
+ * - "annotated": matched and successfully created queue item + draft annotation
+ * - "matched": matched but annotate failed (will retry via Temporal)
+ * - "not_matched": flagger did not match
  */
 export const systemQueueFlaggerWorkflow = async (input: {
   readonly organizationId: string
@@ -28,17 +31,43 @@ export const systemQueueFlaggerWorkflow = async (input: {
   })
 
   if (result.matched) {
-    // TODO: annotate
-    log.info("System queue flagger matched", {
+    log.info("System queue flagger matched, starting annotate", {
       organizationId: input.organizationId,
       projectId: input.projectId,
       traceId: input.traceId,
       queueSlug: input.queueSlug,
     })
+
+    const annotateResult = await runAnnotate({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+    })
+
+    log.info("System queue annotate completed", {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      traceId: input.traceId,
+      queueSlug: input.queueSlug,
+      queueId: annotateResult.queueId,
+      draftAnnotationId: annotateResult.draftAnnotationId,
+      wasCreated: annotateResult.wasCreated,
+    })
+
+    return {
+      action: "annotated" as const,
+      queueSlug: input.queueSlug,
+      traceId: input.traceId,
+      queueId: annotateResult.queueId,
+      draftAnnotationId: annotateResult.draftAnnotationId,
+      wasCreated: annotateResult.wasCreated,
+      durationMs: Date.now() - startTime,
+    }
   }
 
   return {
-    action: result.matched ? "matched" : ("not_matched" as const),
+    action: "not_matched" as const,
     queueSlug: input.queueSlug,
     traceId: input.traceId,
     durationMs: Date.now() - startTime,
