@@ -1,6 +1,8 @@
 import type { TraceDetail } from "@domain/spans"
 import type { AnnotationQueueItemStatus } from "./entities/annotation-queue-items.ts"
 
+type TraceMessagesOnly = Pick<TraceDetail, "allMessages">
+
 const TOOL_RESULT_ERROR_TEXT = /(^error\b|error:\s*|\bfailed\b|\bfailure\b|\bexception\b|\btimeout\b|\bunavailable\b)/i
 const TOOL_RESULT_ERROR_STATUSES = new Set(["error", "failed", "failure"])
 
@@ -11,7 +13,7 @@ function coalesceInstant(v: Date | string | null | undefined): Date | null {
 }
 
 /** Matches the Tool Call Errors system queue without any LLM classification. */
-export function matchesToolCallErrorsSystemQueue(trace: TraceDetail): boolean {
+export function matchesToolCallErrorsSystemQueue(trace: TraceMessagesOnly): boolean {
   const seenToolCallIds = new Set<string>()
 
   for (const message of trace.allMessages) {
