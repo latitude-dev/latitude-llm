@@ -706,9 +706,6 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
-      '@domain/queue':
-        specifier: workspace:*
-        version: link:../queue
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores
