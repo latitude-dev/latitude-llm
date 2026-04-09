@@ -76,18 +76,18 @@ function SelectValue({ selected, options, placeholder, placeholderIcon }: Select
   const match = options.find((o) => String(o.value) === String(selected))
   if (!match) {
     return (
-      <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-muted-foreground">
         {placeholderIcon ? <span className="shrink-0">{placeholderIcon}</span> : null}
-        <Text.H5 color="foregroundMuted" display="block" className="min-w-0 truncate">
+        <Text.H5 color="foregroundMuted" noWrap ellipsis>
           {placeholder ?? "Select an option"}
         </Text.H5>
       </div>
     )
   }
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
       {match.icon ? <span className="shrink-0">{match.icon}</span> : null}
-      <Text.H5 display="block" className="min-w-0 truncate">
+      <Text.H5 display="block" noWrap ellipsis>
         {match.label}
       </Text.H5>
     </div>

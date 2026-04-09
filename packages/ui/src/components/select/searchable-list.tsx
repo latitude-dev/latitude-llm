@@ -1,4 +1,4 @@
-import { Check, Loader2, Search } from "lucide-react"
+import { Loader2, Search } from "lucide-react"
 import { type KeyboardEvent, type ReactNode, useCallback, useMemo, useState } from "react"
 
 import { cn } from "../../utils/cn.ts"
@@ -23,7 +23,6 @@ interface SearchableSelectListProps<V = unknown> {
 
 export function SearchableSelectList<V = unknown>({
   options,
-  selectedValue,
   onChange,
   onSearchChange,
   searchPlaceholder = "Search...",
@@ -89,7 +88,6 @@ export function SearchableSelectList<V = unknown>({
           </div>
         ) : (
           filtered.map((option) => {
-            const isSelected = String(option.value) === String(selectedValue)
             return (
               <button
                 key={String(option.value)}
@@ -97,15 +95,14 @@ export function SearchableSelectList<V = unknown>({
                 disabled={option.disabled}
                 onClick={() => onChange(String(option.value))}
                 className={cn(
-                  "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
+                  "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 px-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
                   option.disabled && "pointer-events-none opacity-50",
                 )}
               >
-                <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
-                  {isSelected && <Check className="h-4 w-4" />}
-                </span>
                 {option.icon && <span className="pr-2">{option.icon}</span>}
-                <Text.H5>{option.label}</Text.H5>
+                <Text.H5 noWrap ellipsis>
+                  {option.label}
+                </Text.H5>
               </button>
             )
           })

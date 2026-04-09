@@ -147,7 +147,7 @@ export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger }
 export { hashToHue, useHashColor } from "./hooks/use-hash-color.ts"
 export { useHover } from "./hooks/use-hover.ts"
 export { useMountEffect } from "./hooks/use-mount-effect.ts"
-export { useToggleWithDefault } from "./hooks/use-toggle-with-default.ts"
+export { useValueWithDefault } from "./hooks/use-value-with-default.ts"
 // Lib
 export * from "./tokens/colors.ts"
 export * from "./tokens/font.ts"

@@ -4,6 +4,7 @@ import { Tooltip } from "../tooltip/tooltip.tsx"
 import { Avatar, type AvatarSize } from "./avatar.tsx"
 
 const overflowChipClass: Record<AvatarSize, string> = {
+  xs: "h-5 min-w-5 text-[8px]",
   sm: "h-6 min-w-6 text-xs",
   md: "h-7 min-w-7 text-[10px]",
   lg: "h-8 min-w-8 text-sm",

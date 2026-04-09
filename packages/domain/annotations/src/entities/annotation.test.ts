@@ -30,6 +30,7 @@ function buildAnnotationInput() {
     tokens: 0,
     cost: 0,
     draftedAt: null,
+    annotatorId: null,
     createdAt: new Date("2026-03-24T00:00:00.000Z"),
     updatedAt: new Date("2026-03-24T00:00:00.000Z"),
   }

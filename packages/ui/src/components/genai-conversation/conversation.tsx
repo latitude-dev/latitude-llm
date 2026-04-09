@@ -172,6 +172,8 @@ export function Conversation({
         const navIdx = i + (hasSystem ? 1 : 0)
         const onNavigate = messageActions?.get(index)
         const isAssistant = message.role === "assistant"
+        const isUser = message.role === "user"
+        const annotationSlot = messageAnnotationSlot?.(index, message.role)
 
         return (
           <div
@@ -180,19 +182,35 @@ export function Conversation({
               navItemRefs.current[navIdx] = el
             }}
             data-message-index={index}
-            className={cn("group relative pl-4", {
+            className={cn("group relative pl-4 rounded-lg", {
               "pl-10 py-2 transition-colors hover:bg-muted/50": isAssistant && messageActions,
             })}
           >
-            <Message
-              message={message}
-              messageIndex={index}
-              alignment={message.role === "user" ? "right" : "left"}
-              toolResults={message.role === "assistant" ? resultMap : undefined}
-              {...(onNavigate ? { onNavigate } : {})}
-              {...(toolCallActions ? { toolCallActions } : {})}
-            />
-            {messageAnnotationSlot?.(index, message.role)}
+            {isUser ? (
+              <div className="flex flex-col items-end">
+                <div className="inline-flex flex-col items-start">
+                  <Message
+                    message={message}
+                    messageIndex={index}
+                    alignment="left"
+                    {...(toolCallActions ? { toolCallActions } : {})}
+                  />
+                  {annotationSlot && <div className="mt-3">{annotationSlot}</div>}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-start">
+                <Message
+                  message={message}
+                  messageIndex={index}
+                  alignment="left"
+                  toolResults={message.role === "assistant" ? resultMap : undefined}
+                  {...(onNavigate ? { onNavigate } : {})}
+                  {...(toolCallActions ? { toolCallActions } : {})}
+                />
+                {annotationSlot && <div className="mt-3">{annotationSlot}</div>}
+              </div>
+            )}
           </div>
         )
       })}

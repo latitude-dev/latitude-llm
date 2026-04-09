@@ -119,6 +119,7 @@ export const baseScoreSchema = z.object({
   tokens: z.number().int().nonnegative(), // total LLM token usage for this score generation
   cost: z.number().int().nonnegative(), // total LLM cost in microcents
   draftedAt: z.date().nullable(), // set while the score is still editable or awaiting human confirmation
+  annotatorId: cuidSchema.nullable(), // user who created this score (nullable for system-generated scores)
   createdAt: z.date(), // score creation time
   updatedAt: z.date(), // score update time
 })
