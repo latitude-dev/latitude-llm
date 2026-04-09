@@ -29,6 +29,14 @@ function AuthenticatedHomePage() {
   // TODO(frontend-use-effect-policy): imperative navigate after projects collection resolves for multi-project orgs
   useLayoutEffect(() => {
     if (isLoading) return
+    if (projects.length === 1) {
+      void router.navigate({
+        to: "/projects/$projectSlug",
+        params: { projectSlug: projects[0].slug },
+        replace: true,
+      })
+      return
+    }
     if (projects.length < 2) return
     const slug = pickProjectSlugForHome(organizationId, projects)
     if (slug) {
@@ -36,7 +44,7 @@ function AuthenticatedHomePage() {
     }
   }, [isLoading, projects, organizationId, router])
 
-  if (isLoading || projects.length >= 2) {
+  if (isLoading || projects.length >= 2 || projects.length === 1) {
     return (
       <Container className="pt-14">
         <TableSkeleton cols={3} rows={4} variant="listing" />

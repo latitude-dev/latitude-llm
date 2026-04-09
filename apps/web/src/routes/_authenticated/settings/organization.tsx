@@ -6,6 +6,7 @@ import {
   updateOrganizationMutation,
   useOrganizationsCollection,
 } from "../../../domains/organizations/organizations.collection.ts"
+import { toUserMessage } from "../../../lib/errors.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
 
 const authRoute = getRouteApi("/_authenticated")
@@ -26,6 +27,7 @@ export function OrganizationSettingsPanel() {
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
   )
   const [name, setName] = useState("")
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     if (org) setName(org.name)
@@ -34,14 +36,23 @@ export function OrganizationSettingsPanel() {
   if (!org) return null
 
   const trimmed = name.trim()
-  const isUnchanged = trimmed === org.name
-  const canSave = trimmed.length > 0 && !isUnchanged
+  const baseline = org.name.trim()
+  const isUnchanged = trimmed === baseline
+  const canSave = trimmed.length > 0 && !isUnchanged && !isSaving
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSave) return
-    updateOrganizationMutation(org.id, { name: trimmed })
-    toast({ description: "Organization name updated" })
-    void router.invalidate()
+    setIsSaving(true)
+    try {
+      const transaction = updateOrganizationMutation(org.id, { name: trimmed })
+      await transaction.isPersisted.promise
+      toast({ description: "Organization name updated" })
+      void router.invalidate()
+    } catch (error) {
+      toast({ variant: "destructive", description: toUserMessage(error) })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -59,8 +70,8 @@ export function OrganizationSettingsPanel() {
           />
         </FormWrapper>
         <div>
-          <Button type="button" size="sm" disabled={!canSave} onClick={handleSave}>
-            Save
+          <Button type="button" size="sm" disabled={!canSave} onClick={() => void handleSave()}>
+            {isSaving ? "Saving…" : "Save"}
           </Button>
         </div>
       </div>
