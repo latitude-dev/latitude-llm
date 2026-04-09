@@ -1,4 +1,4 @@
-import { Button, cn, Icon, Text, Tooltip, useValueWithDefault } from "@repo/ui"
+import { Button, cn, Icon, Text, Tooltip, useLocalStorage } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { Link, useMatches } from "@tanstack/react-router"
@@ -219,8 +219,12 @@ export function AppSidebar({
   children: (props: { collapsed: boolean }) => ReactNode
 }) {
   const autoCollapse = useShouldCollapseSidebar()
-  const [collapsed, setCollapsed] = useValueWithDefault(autoCollapse)
-  const toggleCollapsed = useCallback(() => setCollapsed(!collapsed), [collapsed, setCollapsed])
+  const { value: collapsedPreference, setValue: setCollapsedPreference } = useLocalStorage<boolean | null>({
+    key: "app-sidebar-collapsed",
+    defaultValue: null,
+  })
+  const collapsed = collapsedPreference ?? autoCollapse
+  const toggleCollapsed = () => setCollapsedPreference((value) => !(value ?? autoCollapse))
   useHotkeys([{ hotkey: "Mod+B", callback: toggleCollapsed }])
   return (
     <aside
