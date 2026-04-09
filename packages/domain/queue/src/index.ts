@@ -13,7 +13,12 @@ export type TaskHandlers<T extends QueueName> = {
 }
 
 export type WorkflowRegistry = WR
-export { WORKFLOW_NAMES } from "./workflow-registry.ts"
+export {
+  EVALUATION_ALIGNMENT_REFRESH_SIGNAL,
+  evaluationAlignmentJobWorkflowId,
+  evaluationAlignmentRefreshWorkflowId,
+  WORKFLOW_NAMES,
+} from "./workflow-registry.ts"
 export type WorkflowName = keyof WorkflowRegistry & string
 export type WorkflowInput<W extends WorkflowName> = WorkflowRegistry[W]
 
@@ -22,6 +27,15 @@ export interface WorkflowStarterShape {
     workflow: W,
     input: WorkflowInput<W>,
     options: { readonly workflowId: string },
+  ) => Effect.Effect<void>
+  readonly signalWithStart: <W extends WorkflowName>(
+    workflow: W,
+    input: WorkflowInput<W>,
+    options: {
+      readonly workflowId: string
+      readonly signal: string
+      readonly signalArgs?: readonly unknown[]
+    },
   ) => Effect.Effect<void>
 }
 

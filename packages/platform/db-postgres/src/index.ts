@@ -29,6 +29,7 @@ export { AnnotationQueueRepositoryLive } from "./repositories/annotation-queue-r
 export { ApiKeyRepositoryLive } from "./repositories/api-key-repository.ts"
 export { DatasetRepositoryLive } from "./repositories/dataset-repository.ts"
 // Repository implementations
+export { EvaluationAlignmentExamplesRepositoryLive } from "./repositories/evaluation-alignment-examples-repository.ts"
 export { EvaluationRepositoryLive } from "./repositories/evaluation-repository.ts"
 export { InvitationRepositoryLive } from "./repositories/invitation-repository.ts"
 export { IssueRepositoryLive } from "./repositories/issue-repository.ts"

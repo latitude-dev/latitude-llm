@@ -1,4 +1,4 @@
-import { base64urlDecode, base64urlEncode } from "@repo/utils"
+import { base64urlDecode, base64urlEncode, encodeUtf8, toBuffer } from "@repo/utils"
 import { Data, Effect } from "effect"
 
 const ALGORITHM = "SHA-256"
@@ -10,18 +10,15 @@ class SignedExportTokenError extends Data.TaggedError("SignedExportTokenError")<
 }> {}
 
 const importHmacKey = (secret: string): Promise<CryptoKey> =>
-  crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: ALGORITHM }, false, [
-    "sign",
-    "verify",
-  ])
+  crypto.subtle.importKey("raw", encodeUtf8(secret), { name: "HMAC", hash: ALGORITHM }, false, ["sign", "verify"])
 
 const hmacSign = async (key: CryptoKey, data: Uint8Array): Promise<Uint8Array> => {
-  const signature = await crypto.subtle.sign("HMAC", key, data)
+  const signature = await crypto.subtle.sign("HMAC", key, toBuffer(data))
   return new Uint8Array(signature)
 }
 
 const hmacVerify = async (key: CryptoKey, signature: Uint8Array, data: Uint8Array): Promise<boolean> => {
-  return crypto.subtle.verify("HMAC", key, signature, data)
+  return crypto.subtle.verify("HMAC", key, toBuffer(signature), toBuffer(data))
 }
 
 function parsePayload(payloadStr: string): Effect.Effect<{ key: string; exp: number }, SignedExportTokenError> {
@@ -53,7 +50,7 @@ export async function createSignedExportToken(key: string, expiresInSeconds: num
   const payloadB64 = base64urlEncode(payload)
 
   const cryptoKey = await importHmacKey(secret)
-  const payloadBytes = new TextEncoder().encode(payload)
+  const payloadBytes = encodeUtf8(payload)
   const sig = await hmacSign(cryptoKey, payloadBytes)
   const sigB64 = base64urlEncode(sig)
 
@@ -87,7 +84,7 @@ export function verifySignedExportToken(token: string, secret: string): Effect.E
             try: async () => {
               const cryptoKey = await importHmacKey(secret)
               const signature = base64urlDecode(sigB64)
-              const data = new TextEncoder().encode(payloadStr)
+              const data = encodeUtf8(payloadStr)
               const valid = await hmacVerify(cryptoKey, signature, data)
               return valid ? payload.key : null
             },

@@ -12,7 +12,7 @@ Domain packages expose entity shapes from `src/entities/<entity>.ts`. Historical
 
 1. **Standardize on Zod** for all `packages/domain/*` **entity** modules: export `*Schema` and derive `export type * = z.infer<typeof *Schema>`.
 2. **Factories and mutators** should validate with `schema.parse` / `safeParse` where appropriate so schemas stay authoritative as rules evolve.
-3. **Shared ID and settings parsing** live in `@domain/shared` (`*IdSchema`, `organizationSettingsSchema`, `projectSettingsSchema`, `simulationIdOrEmptySchema`, etc.) so entity files do not duplicate CUID or settings rules.
+3. **Shared ID and settings parsing** live in `@domain/shared` (`*IdSchema`, `organizationSettingsSchema`, `projectSettingsSchema`) so entity files do not duplicate CUID or settings rules.
 
 Authoring details and checklist: [`docs/domain-entities.md`](../domain-entities.md).
 

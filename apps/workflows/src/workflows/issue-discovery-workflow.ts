@@ -13,30 +13,14 @@ const {
   syncScoreAnalytics,
 } = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
 
-const eligibilityErrorTags = new Set([
-  "ScoreNotFoundForDiscoveryError",
-  "ScoreDiscoveryOrganizationMismatchError",
-  "ScoreDiscoveryProjectMismatchError",
-  "DraftScoreNotEligibleForDiscoveryError",
-  "ErroredScoreNotEligibleForDiscoveryError",
-  "ScoreAlreadyOwnedByIssueError",
-  "MissingScoreFeedbackForDiscoveryError",
-  "PassedScoreNotEligibleForDiscoveryError",
-])
-
 export const issueDiscoveryWorkflow = async (input: {
   readonly organizationId: string
   readonly projectId: string
   readonly scoreId: string
 }) => {
-  try {
-    await checkEligibility(input)
-  } catch (error) {
-    const maybeTag = (error as { _tag?: string } | null)?._tag
-    if (maybeTag && eligibilityErrorTags.has(maybeTag)) {
-      return { action: "skipped" as const, reason: maybeTag }
-    }
-    throw error
+  const eligibility = await checkEligibility(input)
+  if (eligibility.status === "skipped") {
+    return { action: "skipped" as const, reason: eligibility.reason }
   }
 
   const embeddedScoreFeedback = await embedScoreFeedback(input)

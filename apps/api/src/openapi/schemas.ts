@@ -53,7 +53,7 @@ export const openApiResponses = ({
   description,
   extraErrors,
 }: {
-  status: 200 | 201
+  status: 200 | 201 | 202
   schema: z.ZodType
   description: string
   extraErrors?: Record<number, { description?: string }>

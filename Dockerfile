@@ -182,6 +182,12 @@ CMD ["node", "apps/workers/dist/server.cjs"]
 # ---------------------------------------------------------------------------
 FROM runtime AS workflows
 
+# Standalone Python for the GEPA optimizer subprocess (self-contained, no system deps)
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /usr/local/bin/uv
+COPY packages/platform/op-gepa/python/.python-version /tmp/.python-version
+ENV UV_PYTHON_INSTALL_DIR="/opt/python"
+RUN uv python install $(cat /tmp/.python-version) && chown -R latitude:latitude /opt/python
+
 COPY --from=build-workflows /app/apps/workflows/dist ./apps/workflows/dist
 COPY --from=build-workflows /app/apps/workflows/package.json ./apps/workflows/package.json
 COPY --from=build-workflows /app/apps/workflows/src/workflows ./apps/workflows/src/workflows
@@ -191,6 +197,9 @@ COPY --from=build-workflows /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-workflows /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build-workflows /app/packages ./packages
 
+# Install GEPA Python dependencies into a venv via uv
+RUN cd packages/platform/op-gepa/python && uv sync --frozen --no-dev --no-install-project
+
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     install-prod-deps
 
@@ -199,6 +208,7 @@ USER latitude
 EXPOSE 8080
 
 ENV LAT_TEMPORAL_WORKFLOWS_PATH=/app/apps/workflows/src/workflows
+ENV LAT_GEPA_PYTHON_ROOT=/app/packages/platform/op-gepa/python
 
 CMD ["node", "apps/workflows/dist/server.cjs"]
 

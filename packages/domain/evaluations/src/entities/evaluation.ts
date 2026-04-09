@@ -1,7 +1,12 @@
-import { cuidSchema, filterSetSchema } from "@domain/shared"
+import { cuidSchema, evaluationIdSchema, filterSetSchema } from "@domain/shared"
 import { z } from "zod"
 
-import { DEFAULT_EVALUATION_SAMPLING, EVALUATION_NAME_MAX_LENGTH, EVALUATION_TURNS } from "../constants.ts"
+import {
+  DEFAULT_EVALUATION_SAMPLING,
+  EVALUATION_ALIGNMENT_JOB_STATUSES,
+  EVALUATION_NAME_MAX_LENGTH,
+  EVALUATION_TURNS,
+} from "../constants.ts"
 
 // ---------------------------------------------------------------------------
 // EvaluationTrigger
@@ -70,10 +75,54 @@ export function emptyEvaluationAlignment(evaluationHash: string): EvaluationAlig
 }
 
 // ---------------------------------------------------------------------------
-// Evaluation entity
+// Evaluation alignment job status
 // ---------------------------------------------------------------------------
 
-export const evaluationIdSchema = cuidSchema
+export const evaluationAlignmentJobIdSchema = z.string().min(1)
+export type EvaluationAlignmentJobId = z.infer<typeof evaluationAlignmentJobIdSchema>
+
+export const evaluationAlignmentJobStatusStateSchema = z.enum(EVALUATION_ALIGNMENT_JOB_STATUSES)
+export type EvaluationAlignmentJobStatusState = z.infer<typeof evaluationAlignmentJobStatusStateSchema>
+
+export const evaluationAlignmentJobErrorSchema = z.object({
+  message: z.string().min(1),
+  code: z.string().min(1).optional(),
+})
+export type EvaluationAlignmentJobError = z.infer<typeof evaluationAlignmentJobErrorSchema>
+
+const baseEvaluationAlignmentJobStatusSchema = z.object({
+  jobId: evaluationAlignmentJobIdSchema,
+  createdAt: z.date(),
+  updatedAt: z.date(),
+})
+
+export const evaluationAlignmentJobStatusSchema = z.discriminatedUnion("status", [
+  baseEvaluationAlignmentJobStatusSchema.extend({
+    status: z.literal("pending"),
+    evaluationId: z.null(),
+    error: z.null(),
+  }),
+  baseEvaluationAlignmentJobStatusSchema.extend({
+    status: z.literal("running"),
+    evaluationId: evaluationIdSchema.nullable(),
+    error: z.null(),
+  }),
+  baseEvaluationAlignmentJobStatusSchema.extend({
+    status: z.literal("completed"),
+    evaluationId: evaluationIdSchema,
+    error: z.null(),
+  }),
+  baseEvaluationAlignmentJobStatusSchema.extend({
+    status: z.literal("failed"),
+    evaluationId: evaluationIdSchema.nullable(),
+    error: evaluationAlignmentJobErrorSchema,
+  }),
+])
+export type EvaluationAlignmentJobStatus = z.infer<typeof evaluationAlignmentJobStatusSchema>
+
+// ---------------------------------------------------------------------------
+// Evaluation entity
+// ---------------------------------------------------------------------------
 
 export const evaluationSchema = z.object({
   id: evaluationIdSchema, // CUID evaluation identifier
@@ -82,7 +131,9 @@ export const evaluationSchema = z.object({
   issueId: cuidSchema, // in MVP evaluations are issue-linked; multiple evaluations may link to the same issue
   name: z.string().min(1).max(EVALUATION_NAME_MAX_LENGTH), // unique name within the project among non-deleted rows
   description: z.string(), // generated from the resulting script after alignment
-  script: z.string().min(1), // javascript-like evaluation script that runs inside a sandbox/runtime wrapper
+  // TODO(eval-sandbox): when sandbox is available, this field will hold arbitrary JS; until then
+  // it must conform to the fixed LLM-as-judge template enforced by validateEvaluationScript().
+  script: z.string().min(1),
   trigger: evaluationTriggerSchema, // controls when the evaluation runs on live traffic
   alignment: evaluationAlignmentSchema, // persisted confusion matrix and script hash
   alignedAt: z.date(), // last time the evaluation was realigned

@@ -87,6 +87,15 @@ const _registry = {
     }
   }>(),
 
+  evaluations: payloads<{
+    align: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly issueId: string
+      readonly evaluationId: string
+    }
+  }>(),
+
   "annotation-scores": payloads<{
     publish: {
       readonly organizationId: string

@@ -3,7 +3,7 @@ import {
   organizationIdSchema,
   projectIdSchema,
   sessionIdSchema,
-  simulationIdOrEmptySchema,
+  simulationIdSchema,
 } from "@domain/shared"
 import { z } from "zod"
 
@@ -40,7 +40,7 @@ export const sessionSchema = z.object({
   costTotalMicrocents: z.number(),
 
   userId: externalUserIdSchema,
-  simulationId: simulationIdOrEmptySchema, // optional simulation CUID link, empty string when absent
+  simulationId: z.union([z.literal(""), simulationIdSchema]), // optional simulation CUID link, empty string when absent
   tags: z.array(z.string()).readonly(),
   metadata: z.record(z.string(), z.string()).readonly(),
   models: z.array(z.string()).readonly(),

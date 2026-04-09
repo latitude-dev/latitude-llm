@@ -14,7 +14,7 @@ import { EllipsisIcon, GlobeIcon, HashIcon, ThumbsDownIcon, ThumbsUpIcon } from 
 import { useMemo, useState } from "react"
 import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
-import { useListIssues } from "../../../../../../domains/issues/issues.collection.ts"
+import { useIssuesCollection } from "../../../../../../domains/issues/issues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { AnnotationInput } from "./annotation-input.tsx"
@@ -41,10 +41,7 @@ export function AnnotationCard({
   const annotator = pickUserFromMembersMap(memberByUserId, annotation.annotatorId)
   const deleteMutation = useDeleteAnnotation()
 
-  const { data: issues = [] } = useListIssues({
-    projectId,
-    enabled: annotation.issueId !== null,
-  })
+  const { data: issues = [] } = useIssuesCollection(projectId)
   const linkedIssueName = annotation.issueId ? issues.find((i) => i.id === annotation.issueId)?.name : null
 
   const menuOptions: MenuOption[] = useMemo(

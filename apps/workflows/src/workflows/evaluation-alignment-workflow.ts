@@ -1,0 +1,369 @@
+import {
+  ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS,
+  ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS,
+} from "@domain/evaluations/constants"
+import { EVALUATION_ALIGNMENT_REFRESH_SIGNAL } from "@domain/queue/workflow-registry"
+import { condition, defineSignal, proxyActivities, setHandler } from "@temporalio/workflow"
+import type * as activities from "../activities/index.ts"
+
+type EvaluationAlignmentWorkflowInput = {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly jobId: string
+  readonly evaluationId?: string | null
+  readonly refreshLoop?: boolean
+  readonly reason:
+    | "initial-generation"
+    | "manual-realignment"
+    | "debounced-metric-refresh"
+    | "debounced-full-realignment"
+}
+
+type ScheduleRefreshSignalInput = {
+  readonly reason: "manual-realignment" | "debounced-metric-refresh" | "debounced-full-realignment"
+  readonly jobId?: string | null
+}
+
+const scheduleRefreshSignal = defineSignal<[ScheduleRefreshSignalInput]>(EVALUATION_ALIGNMENT_REFRESH_SIGNAL)
+
+const {
+  assertManualEvaluationRealignmentAllowed,
+  collectEvaluationAlignmentExamples,
+  evaluateIncrementalEvaluationDraft,
+  evaluateBaselineEvaluationDraft,
+  generateBaselineEvaluationDraft,
+  generateEvaluationDetails,
+  loadEvaluationAlignmentState,
+  optimizeEvaluationDraft,
+  persistEvaluationAlignmentResult,
+  writeEvaluationAlignmentJobStatus,
+} = proxyActivities<typeof activities>({ startToCloseTimeout: "5 minutes" })
+
+const toFailurePayload = (error: unknown) => {
+  const maybeTag = (error as { _tag?: string } | null)?._tag
+
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      code: maybeTag,
+    }
+  }
+
+  if (typeof error === "string") {
+    return {
+      message: error,
+      code: maybeTag,
+    }
+  }
+
+  return {
+    message: "Evaluation alignment failed",
+    code: maybeTag,
+  }
+}
+
+const shouldTrackJobStatus = (input: EvaluationAlignmentWorkflowInput): boolean =>
+  input.reason === "initial-generation" || input.reason === "manual-realignment"
+
+const runFullAlignment = async (
+  input: EvaluationAlignmentWorkflowInput,
+): Promise<{
+  readonly jobId: string
+  readonly evaluationId: string
+  readonly positiveExampleCount: number
+  readonly negativeExampleCount: number
+}> => {
+  const trackJobStatus = shouldTrackJobStatus(input)
+
+  if (trackJobStatus) {
+    await writeEvaluationAlignmentJobStatus({
+      jobId: input.jobId,
+      status: "running",
+      evaluationId: input.evaluationId ?? null,
+    })
+  }
+
+  try {
+    if (input.reason === "manual-realignment" && input.evaluationId) {
+      await assertManualEvaluationRealignmentAllowed({
+        evaluationId: input.evaluationId,
+      })
+    }
+
+    const existingState = input.evaluationId
+      ? await loadEvaluationAlignmentState({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueId: input.issueId,
+          evaluationId: input.evaluationId,
+        })
+      : null
+
+    const collected = await collectEvaluationAlignmentExamples({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+    })
+
+    const baselineDraft = await generateBaselineEvaluationDraft({
+      jobId: input.jobId,
+      issueName: collected.issueName,
+      issueDescription: collected.issueDescription,
+      positiveExamples: collected.positiveExamples,
+      negativeExamples: collected.negativeExamples,
+    })
+
+    const optimizedDraft = await optimizeEvaluationDraft({
+      draft: baselineDraft,
+      issueName: collected.issueName,
+      issueDescription: collected.issueDescription,
+      positiveExamples: collected.positiveExamples,
+      negativeExamples: collected.negativeExamples,
+    })
+
+    const baselineEvaluation = await evaluateBaselineEvaluationDraft({
+      issueName: collected.issueName,
+      issueDescription: collected.issueDescription,
+      draft: optimizedDraft,
+      positiveExamples: collected.positiveExamples,
+      negativeExamples: collected.negativeExamples,
+    })
+
+    const details = existingState
+      ? {
+          name: existingState.name,
+          description: existingState.description,
+        }
+      : await generateEvaluationDetails({
+          issueName: collected.issueName,
+          issueDescription: collected.issueDescription,
+          script: optimizedDraft.script,
+        })
+
+    const persisted = await persistEvaluationAlignmentResult({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: input.evaluationId ?? null,
+      script: optimizedDraft.script,
+      evaluationHash: optimizedDraft.evaluationHash,
+      confusionMatrix: baselineEvaluation.confusionMatrix,
+      trigger: optimizedDraft.trigger,
+      name: details.name,
+      description: details.description,
+    })
+
+    if (trackJobStatus) {
+      await writeEvaluationAlignmentJobStatus({
+        jobId: input.jobId,
+        status: "completed",
+        evaluationId: persisted.evaluationId,
+      })
+    }
+
+    return {
+      jobId: input.jobId,
+      evaluationId: persisted.evaluationId,
+      positiveExampleCount: collected.positiveExamples.length,
+      negativeExampleCount: collected.negativeExamples.length,
+    }
+  } catch (error) {
+    const failure = toFailurePayload(error)
+
+    if (trackJobStatus) {
+      try {
+        await writeEvaluationAlignmentJobStatus({
+          jobId: input.jobId,
+          status: "failed",
+          evaluationId: input.evaluationId ?? null,
+          error: failure,
+        })
+      } catch {
+        // Preserve the original workflow error if status reporting also fails.
+      }
+    }
+
+    throw error
+  }
+}
+
+const runIncrementalMetricRefresh = async (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly issueId: string
+  readonly evaluationId: string
+}): Promise<{
+  readonly strategy: "no-op" | "metric-only" | "full-reoptimization"
+  readonly evaluationId: string
+  readonly newExampleCount: number
+}> => {
+  const state = await loadEvaluationAlignmentState({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+    evaluationId: input.evaluationId,
+  })
+  const collected = await collectEvaluationAlignmentExamples({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    issueId: input.issueId,
+    createdAfter: state.alignedAt,
+    requirePositiveExamples: false,
+  })
+  const refresh = await evaluateIncrementalEvaluationDraft({
+    issueName: state.issueName,
+    issueDescription: state.issueDescription,
+    draft: state.draft,
+    previousConfusionMatrix: state.confusionMatrix,
+    positiveExamples: collected.positiveExamples,
+    negativeExamples: collected.negativeExamples,
+  })
+
+  if (refresh.strategy === "metric-only") {
+    await persistEvaluationAlignmentResult({
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      issueId: input.issueId,
+      evaluationId: state.evaluationId,
+      script: state.draft.script,
+      evaluationHash: state.draft.evaluationHash,
+      confusionMatrix: refresh.nextConfusionMatrix,
+      trigger: state.draft.trigger,
+      name: state.name,
+      description: state.description,
+    })
+  }
+
+  return {
+    strategy: refresh.strategy,
+    evaluationId: state.evaluationId,
+    newExampleCount: refresh.newExampleCount,
+  }
+}
+
+export const evaluationAlignmentWorkflow = async (input: EvaluationAlignmentWorkflowInput) => {
+  if (!input.refreshLoop) {
+    return runFullAlignment(input)
+  }
+
+  if (!input.evaluationId) {
+    throw new Error("Refresh-loop evaluation alignment requires an evaluationId")
+  }
+
+  let pendingMetricRefreshAtMs: number | null = null
+  let pendingFullRealignmentAtMs: number | null = null
+  let pendingManualJobId: string | null = null
+  let scheduleRevision = 0
+
+  const requestRefresh = (payload: ScheduleRefreshSignalInput) => {
+    switch (payload.reason) {
+      case "manual-realignment":
+        pendingManualJobId = payload.jobId ?? input.jobId
+        scheduleRevision += 1
+        return
+      case "debounced-full-realignment":
+        if (pendingFullRealignmentAtMs === null) {
+          pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS
+          scheduleRevision += 1
+        }
+        return
+      case "debounced-metric-refresh":
+        if (pendingMetricRefreshAtMs === null) {
+          pendingMetricRefreshAtMs = Date.now() + ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS
+          scheduleRevision += 1
+        }
+
+        if (pendingFullRealignmentAtMs === null) {
+          pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS
+          scheduleRevision += 1
+        }
+        return
+    }
+  }
+
+  setHandler(scheduleRefreshSignal, (payload) => {
+    requestRefresh(payload)
+  })
+  if (input.reason !== "initial-generation") {
+    requestRefresh({
+      reason: input.reason,
+      jobId: input.jobId,
+    })
+  }
+
+  for (;;) {
+    const now = Date.now()
+
+    if (pendingManualJobId !== null) {
+      const manualJobId = pendingManualJobId
+      pendingManualJobId = null
+
+      try {
+        await runFullAlignment({
+          ...input,
+          jobId: manualJobId,
+          reason: "manual-realignment",
+        })
+        pendingMetricRefreshAtMs = null
+        pendingFullRealignmentAtMs = null
+      } catch {
+        // Keep the refresh loop alive; manual callers receive the failed job status.
+      }
+      continue
+    }
+
+    if (pendingFullRealignmentAtMs !== null && pendingFullRealignmentAtMs <= now) {
+      pendingFullRealignmentAtMs = null
+      pendingMetricRefreshAtMs = null
+
+      try {
+        await runFullAlignment({
+          ...input,
+          reason: "debounced-full-realignment",
+        })
+      } catch {
+        pendingFullRealignmentAtMs = Date.now() + ALIGNMENT_FULL_REOPTIMIZE_DEBOUNCE_MS
+      }
+      continue
+    }
+
+    if (pendingMetricRefreshAtMs !== null && pendingMetricRefreshAtMs <= now) {
+      pendingMetricRefreshAtMs = null
+
+      try {
+        const result = await runIncrementalMetricRefresh({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          issueId: input.issueId,
+          evaluationId: input.evaluationId,
+        })
+
+        if (result.strategy === "full-reoptimization") {
+          pendingFullRealignmentAtMs = Date.now()
+        }
+      } catch {
+        pendingMetricRefreshAtMs = Date.now() + ALIGNMENT_METRIC_RECOMPUTE_DEBOUNCE_MS
+      }
+      continue
+    }
+
+    const nextDueAtMs =
+      pendingMetricRefreshAtMs === null
+        ? pendingFullRealignmentAtMs
+        : pendingFullRealignmentAtMs === null
+          ? pendingMetricRefreshAtMs
+          : Math.min(pendingMetricRefreshAtMs, pendingFullRealignmentAtMs)
+    const currentRevision = scheduleRevision
+
+    if (nextDueAtMs === null) {
+      await condition(() => scheduleRevision !== currentRevision || pendingManualJobId !== null)
+      continue
+    }
+
+    await condition(
+      () => scheduleRevision !== currentRevision || pendingManualJobId !== null,
+      Math.max(nextDueAtMs - Date.now(), 0),
+    )
+  }
+}

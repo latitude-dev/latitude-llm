@@ -83,7 +83,7 @@ export const SEED_COMBINATION_ISSUE_UUID = "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 
 /** Issue 3: generate-ready logistics / service guarantees issue. */
 export const SEED_GENERATE_ISSUE_ID = IssueId("g1e2n3e4r5a6t7e8i9s0s1u2")
-export const SEED_GENERATE_ISSUE_UUID = "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f"
+export const SEED_GENERATE_ISSUE_UUID = "c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f"
 
 /** Issue 1 active monitor. */
 export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")

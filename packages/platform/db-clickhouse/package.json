@@ -5,6 +5,10 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "ch:create": "bash clickhouse/scripts/create.sh",

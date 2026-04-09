@@ -19,6 +19,15 @@ const generateResultSchema = Schema.Struct({
   object: Schema.Unknown,
   tokens: Schema.Number,
   duration: Schema.Number,
+  tokenUsage: Schema.optional(
+    Schema.Struct({
+      input: Schema.Number,
+      output: Schema.Number,
+      reasoning: Schema.optional(Schema.Number),
+      cacheRead: Schema.optional(Schema.Number),
+      cacheWrite: Schema.optional(Schema.Number),
+    }),
+  ),
 })
 const embedResultSchema = Schema.Struct({
   embedding: Schema.Array(Schema.Number),

@@ -3,12 +3,14 @@ import {
   defaultEvaluationTrigger,
   type Evaluation,
   EvaluationRepository,
+  type EvaluationRepositoryShape,
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
+  EvaluationId,
   IssueId,
   NotFoundError,
   OrganizationId,
@@ -86,7 +88,7 @@ const makeIssue = (overrides?: Partial<Issue>): Issue => ({
 
 const makeEvaluation = (issueId: string, overrides: Partial<Evaluation> = {}): Evaluation =>
   ({
-    id: "eeeeeeeeeeeeeeeeeeeeeeee",
+    id: EvaluationId("eeeeeeeeeeeeeeeeeeeeeeee"),
     organizationId,
     projectId: ProjectId(projectId),
     issueId: IssueId(issueId),
@@ -121,10 +123,22 @@ const createWorkflowStarter = () => {
       Effect.sync(() => {
         startedWorkflows.push({ workflow, input, options })
       }),
+    signalWithStart: () => Effect.die("signalWithStart should not be called in discoverIssueUseCase tests"),
   }
 
   return { workflowStarter, startedWorkflows }
 }
+
+const createEvaluationRepository = (findById: EvaluationRepositoryShape["findById"]): EvaluationRepositoryShape => ({
+  findById,
+  save: () => Effect.die("Unexpected EvaluationRepository.save in unit test"),
+  listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId in unit test"),
+  listByIssueId: () => Effect.die("Unexpected EvaluationRepository.listByIssueId in unit test"),
+  archive: () => Effect.die("Unexpected EvaluationRepository.archive in unit test"),
+  unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in unit test"),
+  softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in unit test"),
+  archiveByIssueId: () => Effect.die("Unexpected EvaluationRepository.archiveByIssueId in unit test"),
+})
 
 describe("discoverIssueUseCase", () => {
   it("assigns a published annotation directly when a preselected issue is provided", async () => {
@@ -152,9 +166,10 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(EvaluationRepository, {
-          findById: () => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" })),
-        }),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
+        ),
         Effect.provideService(OutboxEventWriter, {
           write: (event) =>
             Effect.sync(() => {
@@ -221,12 +236,14 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(EvaluationRepository, {
-          findById: (id) =>
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository((id) =>
             id === linkedEvaluation.id
               ? Effect.succeed(linkedEvaluation)
               : Effect.fail(new NotFoundError({ entity: "Evaluation", id })),
-        }),
+          ),
+        ),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
@@ -266,9 +283,10 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(EvaluationRepository, {
-          findById: () => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" })),
-        }),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
+        ),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
@@ -324,9 +342,10 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(EvaluationRepository, {
-          findById: () => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" })),
-        }),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
+        ),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
@@ -351,7 +370,7 @@ describe("discoverIssueUseCase", () => {
       projectId: otherProjectId,
     })
     const foreignEvaluation = makeEvaluation(foreignIssue.id, {
-      id: "ffffffffffffffffffffffff",
+      id: EvaluationId("ffffffffffffffffffffffff"),
       projectId: ProjectId(otherProjectId),
       issueId: foreignIssue.id,
     })
@@ -384,12 +403,14 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(EvaluationRepository, {
-          findById: (id) =>
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository((id) =>
             id === foreignEvaluation.id
               ? Effect.succeed(foreignEvaluation)
               : Effect.fail(new NotFoundError({ entity: "Evaluation", id })),
-        }),
+          ),
+        ),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
@@ -434,9 +455,10 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(EvaluationRepository, {
-          findById: () => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" })),
-        }),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
+        ),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),
@@ -483,9 +505,10 @@ describe("discoverIssueUseCase", () => {
         Effect.provideService(IssueRepository, issueRepository),
         Effect.provideService(ScoreAnalyticsRepository, scoreAnalyticsRepository),
         Effect.provideService(IssueProjectionRepository, issueProjectionRepository),
-        Effect.provideService(EvaluationRepository, {
-          findById: () => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" })),
-        }),
+        Effect.provideService(
+          EvaluationRepository,
+          createEvaluationRepository(() => Effect.fail(new NotFoundError({ entity: "Evaluation", id: "" }))),
+        ),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         Effect.provide(fakeAi.layer),
         Effect.provideService(WorkflowStarter, workflowStarter),

@@ -1,5 +1,4 @@
-import { cuidSchema } from "@domain/shared"
-import { traceIdSchema } from "@domain/spans"
+import { annotationQueueIdSchema, annotationQueueItemIdSchema, cuidSchema, traceIdSchema } from "@domain/shared"
 import { z } from "zod"
 
 export const ANNOTATION_QUEUE_ITEM_STATUSES = ["pending", "inProgress", "completed"] as const
@@ -7,10 +6,10 @@ export const ANNOTATION_QUEUE_ITEM_STATUSES = ["pending", "inProgress", "complet
 export type AnnotationQueueItemStatus = (typeof ANNOTATION_QUEUE_ITEM_STATUSES)[number]
 
 export const annotationQueueItemSchema = z.object({
-  id: cuidSchema,
+  id: annotationQueueItemIdSchema,
   organizationId: cuidSchema,
   projectId: cuidSchema,
-  queueId: cuidSchema,
+  queueId: annotationQueueIdSchema,
   traceId: traceIdSchema,
   completedAt: z.date().nullable(),
   completedBy: cuidSchema.nullable(),

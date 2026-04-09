@@ -1,5 +1,5 @@
 import { scoreSourceSchema } from "@domain/scores"
-import { cuidSchema, IssueId } from "@domain/shared"
+import { cuidSchema, issueIdSchema } from "@domain/shared"
 import { z } from "zod"
 import { ISSUE_NAME_MAX_LENGTH, ISSUE_STATES } from "../constants.ts"
 
@@ -31,12 +31,6 @@ export const issueCentroidSchema = z.object({
 })
 
 export type IssueCentroid = z.infer<typeof issueCentroidSchema>
-
-// ---------------------------------------------------------------------------
-// Issue entity
-// ---------------------------------------------------------------------------
-
-export const issueIdSchema = cuidSchema.transform(IssueId)
 
 export const issueSchema = z.object({
   id: issueIdSchema, // CUID issue identifier
