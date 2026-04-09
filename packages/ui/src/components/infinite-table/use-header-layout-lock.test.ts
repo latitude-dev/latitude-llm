@@ -4,10 +4,7 @@ import { resolveLockedHeaderLayout } from "./use-header-layout-lock.ts"
 
 type Row = { id: string }
 
-function buildColumn(
-  key: string,
-  overrides: Partial<InfiniteTableColumn<Row>> = {},
-): InfiniteTableColumn<Row> {
+function buildColumn(key: string, overrides: Partial<InfiniteTableColumn<Row>> = {}): InfiniteTableColumn<Row> {
   return {
     key,
     header: key,

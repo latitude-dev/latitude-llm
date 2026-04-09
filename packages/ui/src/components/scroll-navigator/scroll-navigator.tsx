@@ -2,8 +2,10 @@ import { Button, Icon, Tooltip, useMountEffect } from "@repo/ui"
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 import { type ReactNode, type Ref, type RefObject, useImperativeHandle, useRef, useState } from "react"
 
+type ScrollDirection = "up" | "down"
+
 export interface ScrollNavigatorHandle {
-  navigate(direction: "up" | "down"): void
+  navigate(direction: ScrollDirection): void
 }
 
 interface ScrollNavigatorProps {
@@ -11,6 +13,7 @@ interface ScrollNavigatorProps {
   readonly itemRefs: RefObject<(HTMLDivElement | null)[]>
   readonly prevLabel?: ReactNode
   readonly nextLabel?: ReactNode
+  readonly scrollPaddingTop?: number
   readonly ref?: Ref<ScrollNavigatorHandle> | undefined
 }
 
@@ -19,10 +22,25 @@ type ItemMetric = {
   readonly bottom: number
 }
 
-type GapMetric = {
+type NavigationTarget = {
+  readonly index: number
   readonly top: number
-  readonly bottom: number
 }
+
+type ResolveNavigationTargetArgs = {
+  readonly metrics: readonly ItemMetric[]
+  readonly scrollTop: number
+  readonly clientHeight: number
+  readonly scrollHeight: number
+  readonly direction: ScrollDirection
+  readonly scrollPaddingTop?: number
+  readonly fromIndex?: number
+  readonly epsilon?: number
+}
+
+const DEFAULT_SCROLL_PADDING_TOP = 16
+const NAVIGATION_EPSILON = 2
+const PENDING_TARGET_RESET_DELAY_MS = 120
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
@@ -43,21 +61,135 @@ function getItemMetrics(refs: readonly (HTMLDivElement | null)[], container: HTM
   }, [])
 }
 
-function getGapMetrics(metrics: readonly ItemMetric[]): GapMetric[] {
-  const gaps: GapMetric[] = []
-
-  for (let i = 0; i < metrics.length - 1; i++) {
-    gaps.push({
-      top: metrics[i].bottom,
-      bottom: metrics[i + 1].top,
-    })
-  }
-
-  return gaps
+function getCurrentItemIndex(metrics: readonly ItemMetric[], scrollTop: number, epsilon: number) {
+  const currentIndex = metrics.findIndex((metric) => metric.bottom > scrollTop + epsilon)
+  return currentIndex >= 0 ? currentIndex : metrics.length - 1
 }
 
-function isWithinRange(value: number, start: number, end: number, epsilon: number) {
-  return value >= start - epsilon && value <= end + epsilon
+function resolveTargetTop({
+  metrics,
+  targetIndex,
+  clientHeight,
+  scrollHeight,
+  scrollPaddingTop,
+}: {
+  readonly metrics: readonly ItemMetric[]
+  readonly targetIndex: number
+  readonly clientHeight: number
+  readonly scrollHeight: number
+  readonly scrollPaddingTop: number
+}) {
+  const maxScrollTop = Math.max(0, scrollHeight - clientHeight)
+  const targetItem = metrics[targetIndex]
+
+  if (!targetItem) return clamp(targetIndex <= 0 ? 0 : maxScrollTop, 0, maxScrollTop)
+
+  return clamp(targetItem.top - scrollPaddingTop, 0, maxScrollTop)
+}
+
+export function resolveNavigationTarget({
+  metrics,
+  scrollTop,
+  clientHeight,
+  scrollHeight,
+  direction,
+  scrollPaddingTop = DEFAULT_SCROLL_PADDING_TOP,
+  fromIndex,
+  epsilon = NAVIGATION_EPSILON,
+}: ResolveNavigationTargetArgs) {
+  if (metrics.length === 0) return null
+
+  const lastIndex = metrics.length - 1
+  const maxScrollTop = Math.max(0, scrollHeight - clientHeight)
+  if (fromIndex !== undefined) {
+    const baseIndex = clamp(fromIndex, 0, lastIndex)
+
+    if (direction === "down") {
+      const targetIndex = Math.min(baseIndex + 1, lastIndex)
+      return {
+        index: targetIndex,
+        top:
+          baseIndex === lastIndex
+            ? maxScrollTop
+            : resolveTargetTop({
+                metrics,
+                targetIndex,
+                clientHeight,
+                scrollHeight,
+                scrollPaddingTop,
+              }),
+      } satisfies NavigationTarget
+    }
+
+    const targetIndex = Math.max(baseIndex - 1, 0)
+    return {
+      index: targetIndex,
+      top:
+        baseIndex === 0
+          ? 0
+          : resolveTargetTop({
+              metrics,
+              targetIndex,
+              clientHeight,
+              scrollHeight,
+              scrollPaddingTop,
+            }),
+    } satisfies NavigationTarget
+  }
+
+  const currentIndex = getCurrentItemIndex(metrics, scrollTop, epsilon)
+  const currentItem = metrics[currentIndex]
+
+  if (!currentItem) return null
+
+  const isTopOverflowing = currentItem.top < scrollTop - epsilon
+
+  if (direction === "down") {
+    if (currentIndex >= lastIndex) {
+      return { index: lastIndex, top: maxScrollTop } satisfies NavigationTarget
+    }
+
+    const targetIndex = currentIndex + 1
+    return {
+      index: targetIndex,
+      top: resolveTargetTop({
+        metrics,
+        targetIndex,
+        clientHeight,
+        scrollHeight,
+        scrollPaddingTop,
+      }),
+    } satisfies NavigationTarget
+  }
+
+  if (isTopOverflowing) {
+    return {
+      index: currentIndex,
+      top: resolveTargetTop({
+        metrics,
+        targetIndex: currentIndex,
+        clientHeight,
+        scrollHeight,
+        scrollPaddingTop,
+      }),
+    } satisfies NavigationTarget
+  }
+
+  if (currentIndex <= 0) {
+    return { index: 0, top: 0 } satisfies NavigationTarget
+  }
+
+  const targetIndex = currentIndex - 1
+  return {
+    index: targetIndex,
+    top: resolveTargetTop({
+      metrics,
+      targetIndex,
+      clientHeight,
+      scrollHeight,
+      scrollPaddingTop,
+    }),
+  } satisfies NavigationTarget
 }
 
 function NavigatorButtons({
@@ -116,17 +248,47 @@ function NavigatorButtons({
   )
 }
 
-export function ScrollNavigator({ scrollContainerRef, itemRefs, prevLabel, nextLabel, ref }: ScrollNavigatorProps) {
-  const rafRef = useRef(0)
+export function ScrollNavigator({
+  scrollContainerRef,
+  itemRefs,
+  prevLabel,
+  nextLabel,
+  scrollPaddingTop = DEFAULT_SCROLL_PADDING_TOP,
+  ref,
+}: ScrollNavigatorProps) {
+  const scrollStateRafRef = useRef(0)
+  const pendingTargetRef = useRef<NavigationTarget | null>(null)
+  const pendingTargetResetTimeoutRef = useRef<number | null>(null)
   const [hasOverflow, setHasOverflow] = useState(false)
   const [canScrollUp, setCanScrollUp] = useState(false)
   const [canScrollDown, setCanScrollDown] = useState(false)
 
   const updateScrollStateRef = useRef<(() => void) | null>(null)
 
+  const clearPendingTarget = () => {
+    pendingTargetRef.current = null
+
+    if (pendingTargetResetTimeoutRef.current !== null) {
+      window.clearTimeout(pendingTargetResetTimeoutRef.current)
+      pendingTargetResetTimeoutRef.current = null
+    }
+  }
+
+  const schedulePendingTargetReset = () => {
+    if (pendingTargetResetTimeoutRef.current !== null) {
+      window.clearTimeout(pendingTargetResetTimeoutRef.current)
+    }
+
+    pendingTargetResetTimeoutRef.current = window.setTimeout(() => {
+      pendingTargetResetTimeoutRef.current = null
+      pendingTargetRef.current = null
+    }, PENDING_TARGET_RESET_DELAY_MS)
+  }
+
   updateScrollStateRef.current = () => {
     const container = scrollContainerRef?.current
     if (!container) {
+      clearPendingTarget()
       setHasOverflow(false)
       setCanScrollUp(false)
       setCanScrollDown(false)
@@ -136,6 +298,14 @@ export function ScrollNavigator({ scrollContainerRef, itemRefs, prevLabel, nextL
     const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight)
     const scrollTop = container.scrollTop
     const epsilon = 1
+
+    if (pendingTargetRef.current) {
+      if (Math.abs(scrollTop - pendingTargetRef.current.top) <= epsilon) {
+        clearPendingTarget()
+      } else {
+        schedulePendingTargetReset()
+      }
+    }
 
     setHasOverflow(maxScrollTop > epsilon)
     setCanScrollUp(scrollTop > epsilon)
@@ -151,23 +321,29 @@ export function ScrollNavigator({ scrollContainerRef, itemRefs, prevLabel, nextL
     }
 
     const onScroll = () => {
-      cancelAnimationFrame(rafRef.current)
-      rafRef.current = requestAnimationFrame(updateScrollState)
+      cancelAnimationFrame(scrollStateRafRef.current)
+      scrollStateRafRef.current = requestAnimationFrame(updateScrollState)
+    }
+
+    const onResize = () => {
+      clearPendingTarget()
+      updateScrollState()
     }
 
     updateScrollState()
 
     container.addEventListener("scroll", onScroll, { passive: true })
-    window.addEventListener("resize", updateScrollState)
+    window.addEventListener("resize", onResize)
 
     return () => {
       container.removeEventListener("scroll", onScroll)
-      window.removeEventListener("resize", updateScrollState)
-      cancelAnimationFrame(rafRef.current)
+      window.removeEventListener("resize", onResize)
+      clearPendingTarget()
+      cancelAnimationFrame(scrollStateRafRef.current)
     }
   })
 
-  const navigate = (direction: "up" | "down") => {
+  const navigate = (direction: ScrollDirection) => {
     const container = scrollContainerRef?.current
     if (!container) return
 
@@ -177,64 +353,36 @@ export function ScrollNavigator({ scrollContainerRef, itemRefs, prevLabel, nextL
     const metrics = getItemMetrics(refs, container)
     if (metrics.length === 0) return
 
-    const gaps = getGapMetrics(metrics)
-    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight)
     const scrollTop = container.scrollTop
-    const viewportTop = scrollTop
-    const viewportBottom = scrollTop + container.clientHeight
-    const epsilon = 2
+    const pendingTarget = pendingTargetRef.current
+    const activePendingTarget = pendingTarget && Math.abs(scrollTop - pendingTarget.top) > 1 ? pendingTarget : null
 
-    let targetTop = scrollTop
-
-    if (direction === "down") {
-      if (viewportBottom >= container.scrollHeight - epsilon) return
-
-      let targetGap: GapMetric | null = null
-
-      for (const gap of gaps) {
-        const bottomIsOnThisGap = isWithinRange(viewportBottom, gap.top, gap.bottom, epsilon)
-
-        if (bottomIsOnThisGap) continue
-        if (gap.top > viewportBottom + epsilon) {
-          targetGap = gap
-          break
-        }
-      }
-
-      if (targetGap) {
-        targetTop = targetGap.bottom - container.clientHeight
-      } else {
-        targetTop = maxScrollTop
-      }
-    } else {
-      if (viewportTop <= epsilon) return
-
-      let targetGap: GapMetric | null = null
-
-      for (let i = gaps.length - 1; i >= 0; i--) {
-        const gap = gaps[i]
-        const topIsOnThisGap = isWithinRange(viewportTop, gap.top, gap.bottom, epsilon)
-
-        if (topIsOnThisGap) continue
-        if (gap.bottom < viewportTop - epsilon) {
-          targetGap = gap
-          break
-        }
-      }
-
-      if (targetGap) {
-        targetTop = targetGap.top
-      } else {
-        targetTop = 0
-      }
+    if (pendingTarget && !activePendingTarget) {
+      clearPendingTarget()
     }
 
-    targetTop = clamp(targetTop, 0, maxScrollTop)
+    const target = resolveNavigationTarget({
+      metrics,
+      scrollTop,
+      clientHeight: container.clientHeight,
+      scrollHeight: container.scrollHeight,
+      direction,
+      scrollPaddingTop,
+      ...(activePendingTarget ? { fromIndex: activePendingTarget.index } : {}),
+    })
 
-    if (Math.abs(targetTop - scrollTop) <= 1) return
+    if (target === null) return
+
+    if (Math.abs(target.top - scrollTop) <= 1) {
+      clearPendingTarget()
+      return
+    }
+
+    pendingTargetRef.current = target
+    schedulePendingTargetReset()
 
     container.scrollTo({
-      top: targetTop,
+      top: target.top,
       behavior: "smooth",
     })
   }
