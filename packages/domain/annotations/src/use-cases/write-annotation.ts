@@ -73,7 +73,7 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
       if (existingScore) {
         // Preserve annotatorId from original if not provided in update
         if (annotatorId === null && existingScore.annotatorId !== null) {
-          annotatorId = existingScore.annotatorId
+          annotatorId = UserId(existingScore.annotatorId)
         }
 
         // Preserve anchor from metadata if not provided in update
@@ -100,11 +100,6 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
       anchor,
     })
 
-    const metadata: AnnotationScoreMetadata = {
-      rawFeedback: parsed.feedback,
-      ...(anchor ?? {}),
-    }
-
     const score = yield* sqlClient.transaction(
       Effect.gen(function* () {
         const persistedScore = yield* persistDraftAnnotation({
@@ -120,7 +115,6 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
           value: parsed.value,
           passed: parsed.passed,
           feedback: parsed.feedback,
-          metadata,
           organizationId: sqlClient.organizationId,
           messageIndex: anchor?.messageIndex,
           partIndex: anchor?.partIndex,
