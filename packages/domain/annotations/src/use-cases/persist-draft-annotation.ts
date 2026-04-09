@@ -15,6 +15,7 @@ import {
   ProjectId,
   type RepositoryError,
   TraceId,
+  UserId,
 } from "@domain/shared"
 import { sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/spans"
 import { Effect } from "effect"
@@ -30,6 +31,7 @@ const persistDraftAnnotationInputSchemaInternal = z.object({
   spanId: spanIdSchema.nullable().default(null),
   simulationId: baseWriteScoreInputSchema.shape.simulationId,
   issueId: baseWriteScoreInputSchema.shape.issueId,
+  annotatorId: cuidSchema.transform(UserId).nullable().default(null),
   value: scoreValueSchema,
   passed: z.boolean(),
   feedback: z.string().min(1),
@@ -88,6 +90,7 @@ export const persistDraftAnnotation = (input: PersistDraftAnnotationInput & { or
       spanId,
       simulationId: parsed.simulationId,
       issueId: parsed.issueId,
+      annotatorId: parsed.annotatorId,
       value: parsed.value,
       passed: parsed.passed,
       feedback: parsed.feedback,

@@ -60,22 +60,32 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
     const parsed = writeAnnotationInputSchema.parse(input)
     const sqlClient = yield* SqlClient
     const outboxEventWriter = yield* OutboxEventWriter
+    const scoreRepository = yield* ScoreRepository
 
     let anchor = parsed.anchor
+    let annotatorId = parsed.annotatorId
 
-    if (parsed.id && !anchor) {
+    if (parsed.id) {
       const existingScore = yield* scoreRepository
         .findById(parsed.id)
         .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
 
       if (existingScore) {
-        const existingMetadata = existingScore.metadata as AnnotationScoreMetadata | undefined
-        if (existingMetadata?.messageIndex !== undefined) {
-          anchor = {
-            messageIndex: existingMetadata.messageIndex,
-            partIndex: existingMetadata.partIndex,
-            startOffset: existingMetadata.startOffset,
-            endOffset: existingMetadata.endOffset,
+        // Preserve annotatorId from original if not provided in update
+        if (annotatorId === null && existingScore.annotatorId !== null) {
+          annotatorId = existingScore.annotatorId
+        }
+
+        // Preserve anchor from metadata if not provided in update
+        if (!anchor) {
+          const existingMetadata = existingScore.metadata as AnnotationScoreMetadata | undefined
+          if (existingMetadata?.messageIndex !== undefined) {
+            anchor = {
+              messageIndex: existingMetadata.messageIndex,
+              partIndex: existingMetadata.partIndex,
+              startOffset: existingMetadata.startOffset,
+              endOffset: existingMetadata.endOffset,
+            }
           }
         }
       }
@@ -106,7 +116,7 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
           spanId,
           simulationId: parsed.simulationId,
           issueId: parsed.issueId,
-          annotatorId: parsed.annotatorId,
+          annotatorId,
           value: parsed.value,
           passed: parsed.passed,
           feedback: parsed.feedback,
