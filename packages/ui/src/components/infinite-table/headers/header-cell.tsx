@@ -37,7 +37,7 @@ export function HeaderCell({
   align?: "start" | "end"
   resizable?: boolean
   minWidth?: number
-  /** Preferred column width (px); sets `th` width / minWidth for initial table layout. */
+  /** Preferred starting width (px); the first layout lock keeps at least this width. */
   width?: number
   className?: string
   sortable?: boolean
@@ -71,7 +71,10 @@ export function HeaderCell({
 
   const thStyle =
     preferredWidth !== undefined
-      ? ({ width: preferredWidth, minWidth: Math.max(minWidth, preferredWidth) } as const)
+      ? ({
+          width: preferredWidth,
+          ...(minWidth > 60 ? { minWidth } : {}),
+        } as const)
       : minWidth > 60
         ? ({ minWidth } as const)
         : undefined

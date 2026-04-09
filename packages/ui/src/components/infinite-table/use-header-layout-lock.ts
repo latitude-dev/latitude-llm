@@ -1,11 +1,42 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { InfiniteTableColumn } from "./types.ts"
 
+interface MeasurableHeaderCell {
+  offsetWidth: number
+}
+
 interface UseHeaderLayoutLockParams<T> {
   columns: InfiniteTableColumn<T>[]
   hasSelection: boolean
   hasExpansion: boolean
   hasSubheaderRow: boolean
+}
+
+interface ResolveLockedHeaderLayoutParams<T> {
+  headerCells: readonly MeasurableHeaderCell[]
+  columns: readonly InfiniteTableColumn<T>[]
+  leadingColumnCount: number
+  measuredTableWidth: number
+}
+
+export function resolveLockedHeaderLayout<T>({
+  headerCells,
+  columns,
+  leadingColumnCount,
+  measuredTableWidth,
+}: ResolveLockedHeaderLayoutParams<T>) {
+  const lockedHeaderWidths = headerCells.map((headerCell, headerIndex) => {
+    const column = columns[headerIndex - leadingColumnCount]
+    return Math.max(headerCell.offsetWidth, column?.width ?? 0)
+  })
+
+  return {
+    lockedHeaderWidths,
+    lockedTableWidth: Math.max(
+      measuredTableWidth,
+      lockedHeaderWidths.reduce((totalWidth, width) => totalWidth + width, 0),
+    ),
+  }
 }
 
 export function useHeaderLayoutLock<T>({
@@ -16,6 +47,7 @@ export function useHeaderLayoutLock<T>({
 }: UseHeaderLayoutLockParams<T>) {
   const tableRef = useRef<HTMLTableElement>(null)
   const [layoutFixed, setLayoutFixed] = useState(false)
+  const leadingColumnCount = (hasSelection ? 1 : 0) + (hasExpansion ? 1 : 0)
   const headerLayoutKey = useMemo(() => {
     const columnSignature = columns
       .map((col) =>
@@ -71,10 +103,17 @@ export function useHeaderLayoutLock<T>({
         return
       }
 
-      for (const th of headerCells) {
-        th.style.width = `${th.offsetWidth}px`
+      const { lockedHeaderWidths, lockedTableWidth } = resolveLockedHeaderLayout({
+        headerCells,
+        columns,
+        leadingColumnCount,
+        measuredTableWidth: table.offsetWidth,
+      })
+
+      for (const [index, th] of headerCells.entries()) {
+        th.style.width = `${lockedHeaderWidths[index]}px`
       }
-      table.style.width = `${table.offsetWidth}px`
+      table.style.width = `${lockedTableWidth}px`
       setLayoutFixed(true)
     }
 

@@ -73,6 +73,7 @@ export function TracesView({
         key: "startTime",
         header: "Start Time",
         sortKey: "startTime",
+        width: 180,
         render: (t) => (
           <Tooltip asChild trigger={<span>{relativeTime(new Date(t.startTime))}</span>}>
             {new Date(t.startTime).toLocaleString()}
@@ -82,11 +83,13 @@ export function TracesView({
       {
         key: "name",
         header: "Name",
+        width: 180,
         render: (t) => t.rootSpanName || t.traceId.slice(0, 8),
       },
       {
         key: "tags",
         header: "Tags",
+        width: 150,
         render: (t) => <TagList tags={t.tags} />,
       },
       {
@@ -94,6 +97,7 @@ export function TracesView({
         header: "Duration",
         align: "end",
         sortKey: "duration",
+        width: 120,
         render: (t) => formatDuration(t.durationNs),
         renderSubheader: () => (
           <TableMetricSubheader rollup={traceMetrics?.durationNs} format="duration" isLoading={metricsLoading} />
@@ -104,6 +108,7 @@ export function TracesView({
         header: "Time To First Token",
         align: "end",
         sortKey: "ttft",
+        width: 162,
         render: (t) => (t.timeToFirstTokenNs > 0 ? formatDuration(t.timeToFirstTokenNs) : "-"),
         renderSubheader: () => (
           <TableMetricSubheader
@@ -120,6 +125,7 @@ export function TracesView({
         header: "Cost",
         align: "end",
         sortKey: "cost",
+        width: 130,
         render: (t) => formatPrice(t.costTotalMicrocents / 100_000_000),
         renderSubheader: () => (
           <TableMetricSubheader rollup={traceMetrics?.costTotalMicrocents} format="price" isLoading={metricsLoading} />
@@ -128,16 +134,19 @@ export function TracesView({
       {
         key: "sessionId",
         header: "Session ID",
+        width: 160,
         render: (t) => t.sessionId,
       },
       {
         key: "userId",
         header: "User ID",
+        width: 160,
         render: (t) => t.userId,
       },
       {
         key: "models",
         header: "Models",
+        width: 160,
         render: (t) => (
           <div className="flex items-center gap-1.5">
             {t.providers.map((p) => (
@@ -162,6 +171,7 @@ export function TracesView({
         header: "Spans",
         align: "end",
         sortKey: "spans",
+        width: 110,
         render: (t) => (
           <>
             {formatCount(t.spanCount)}
