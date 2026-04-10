@@ -7,6 +7,8 @@ import {
   applyIssueIgnoreToEvaluation,
   applyIssueResolutionToEvaluation,
   archiveEvaluation,
+  buildLiveEvaluationExecuteScopeDedupeKey,
+  buildLiveEvaluationExecuteTraceDedupeKey,
   calculateAccuracy,
   calculateF1,
   calculateMatthewsCorrelationCoefficient,
@@ -18,11 +20,15 @@ import {
   deriveEvaluationAlignmentMetrics,
   emptyConfusionMatrix,
   evaluationAlignmentJobStatusKey,
+  getLiveEvaluationEligibility,
+  getLiveEvaluationTurnScope,
   hasMatthewsCorrelationCoefficientDropExceededTolerance,
   isArchivedEvaluation,
   isDeletedEvaluation,
   mergeConfusionMatrices,
+  shouldSampleLiveEvaluation,
   softDeleteEvaluation,
+  toLiveEvaluationDebounceMs,
   totalConfusionMatrixObservations,
   unarchiveEvaluation,
 } from "./helpers.ts"
@@ -137,6 +143,159 @@ describe("evaluation lifecycle helpers", () => {
 
     expect(() => archiveEvaluation({ evaluation: deleted })).toThrowError(EvaluationDeletedError)
     expect(() => unarchiveEvaluation({ evaluation: deleted })).toThrowError(EvaluationDeletedError)
+  })
+})
+
+describe("live evaluation trigger helpers", () => {
+  it("marks an active non-paused evaluation as eligible for live execution", () => {
+    expect(getLiveEvaluationEligibility(makeEvaluation())).toEqual({ eligible: true })
+  })
+
+  it("rejects paused evaluations from live execution", () => {
+    expect(
+      getLiveEvaluationEligibility(
+        makeEvaluation({
+          trigger: {
+            filter: {},
+            turn: "every",
+            debounce: 0,
+            sampling: 0,
+          },
+        }),
+      ),
+    ).toEqual({
+      eligible: false,
+      reason: "paused",
+    })
+  })
+
+  it("rejects archived evaluations from live execution", () => {
+    expect(
+      getLiveEvaluationEligibility(
+        makeEvaluation({
+          archivedAt: new Date("2026-04-02T00:00:00.000Z"),
+        }),
+      ),
+    ).toEqual({
+      eligible: false,
+      reason: "archived",
+    })
+  })
+
+  it("rejects deleted evaluations from live execution", () => {
+    expect(
+      getLiveEvaluationEligibility(
+        makeEvaluation({
+          deletedAt: new Date("2026-04-03T00:00:00.000Z"),
+        }),
+      ),
+    ).toEqual({
+      eligible: false,
+      reason: "deleted",
+    })
+  })
+
+  it("derives trace scope when no session is present", () => {
+    expect(
+      getLiveEvaluationTurnScope({
+        traceId: "t".repeat(32),
+      }),
+    ).toEqual({
+      kind: "trace",
+      key: `trace:${"t".repeat(32)}`,
+      traceId: "t".repeat(32),
+      sessionId: null,
+    })
+  })
+
+  it("derives session scope when a session is present", () => {
+    expect(
+      getLiveEvaluationTurnScope({
+        traceId: "t".repeat(32),
+        sessionId: "session-123",
+      }),
+    ).toEqual({
+      kind: "session",
+      key: "session:session-123",
+      traceId: "t".repeat(32),
+      sessionId: "session-123",
+    })
+  })
+
+  it("builds a trace-scoped execute dedupe key", () => {
+    expect(
+      buildLiveEvaluationExecuteTraceDedupeKey({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        evaluationId: "eval-1",
+        traceId: "trace-1",
+      }),
+    ).toBe("evaluations:live:execute:org-1:proj-1:eval-1:trace:trace-1")
+  })
+
+  it("builds a scope-scoped execute dedupe key using session scope when present", () => {
+    expect(
+      buildLiveEvaluationExecuteScopeDedupeKey({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        evaluationId: "eval-1",
+        traceId: "trace-1",
+        sessionId: "session-1",
+      }),
+    ).toBe("evaluations:live:execute:org-1:proj-1:eval-1:session:session-1")
+  })
+
+  it("builds a scope-scoped execute dedupe key using trace scope when no session is present", () => {
+    expect(
+      buildLiveEvaluationExecuteScopeDedupeKey({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        evaluationId: "eval-1",
+        traceId: "trace-1",
+      }),
+    ).toBe("evaluations:live:execute:org-1:proj-1:eval-1:trace:trace-1")
+  })
+
+  it("converts debounce seconds into milliseconds", () => {
+    expect(toLiveEvaluationDebounceMs(0)).toBeUndefined()
+    expect(toLiveEvaluationDebounceMs(15)).toBe(15_000)
+  })
+
+  it("returns deterministic sampling decisions for the same evaluation input", async () => {
+    const input = {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      evaluationId: "eval-1",
+      traceId: "trace-1",
+      sampling: 37,
+    } as const
+
+    const first = await shouldSampleLiveEvaluation(input)
+    const second = await shouldSampleLiveEvaluation(input)
+
+    expect(first).toBe(second)
+  })
+
+  it("treats zero and full percentages as hard sampling boundaries", async () => {
+    await expect(
+      shouldSampleLiveEvaluation({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        evaluationId: "eval-1",
+        traceId: "trace-1",
+        sampling: 0,
+      }),
+    ).resolves.toBe(false)
+
+    await expect(
+      shouldSampleLiveEvaluation({
+        organizationId: "org-1",
+        projectId: "proj-1",
+        evaluationId: "eval-1",
+        traceId: "trace-1",
+        sampling: 100,
+      }),
+    ).resolves.toBe(true)
   })
 })
 

@@ -41,6 +41,13 @@ export interface TraceRepositoryShape {
     readonly traceId: TraceId
   }): Effect.Effect<TraceDetail, NotFoundError | RepositoryError>
 
+  matchesFiltersByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly filters?: FilterSet
+  }): Effect.Effect<boolean, RepositoryError>
+
   listByTraceIds(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId

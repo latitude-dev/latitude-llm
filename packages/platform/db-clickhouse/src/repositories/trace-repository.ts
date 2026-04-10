@@ -380,6 +380,47 @@ export const TraceRepositoryLive = Layer.effect(
         )
     }
 
+    const matchesFiltersByTraceId: TraceRepositoryShape["matchesFiltersByTraceId"] = ({
+      organizationId,
+      projectId,
+      traceId,
+      filters,
+    }) => {
+      const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+      const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT count() AS total
+                    FROM (
+                      SELECT trace_id, ${LIST_SELECT}
+                      FROM traces
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        AND trace_id = {traceId:FixedString(32)}
+                        ${extraWhere}
+                      GROUP BY organization_id, project_id, trace_id
+                      ${havingClause}
+                      LIMIT 1
+                    )`,
+            query_params: {
+              organizationId: organizationId as string,
+              projectId: projectId as string,
+              traceId,
+              ...filterParams,
+            },
+            format: "JSONEachRow",
+          })
+          return result.json<{ total: string }>()
+        })
+        .pipe(
+          Effect.map((rows) => Number(rows[0]?.total ?? 0) > 0),
+          Effect.mapError((error) => toRepositoryError(error, "matchesFiltersByTraceId")),
+        )
+    }
+
     return {
       listByProjectId,
 
@@ -552,6 +593,8 @@ export const TraceRepositoryLive = Layer.effect(
             }),
             Effect.mapError((error) => (isNotFoundError(error) ? error : toRepositoryError(error, "findByTraceId"))),
           ),
+
+      matchesFiltersByTraceId,
 
       listByTraceIds,
 

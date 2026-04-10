@@ -109,8 +109,8 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 
 **To-Do**:
 
-- [ ] **P13-PR1-1**: Introduce shared live-trigger helpers for lifecycle gating, deterministic sampling keyed by `(organizationId, projectId, evaluationId, traceId)`, turn scope derivation, and execute-task dedupe/debounce key construction
-- [ ] **P13-PR1-2**: Extend `TraceRepository` with a narrow `matchesFiltersByTraceId`-style contract so live trigger matching reuses the exact existing trace filter semantics instead of re-implementing them in domain or worker code
+- [x] **P13-PR1-1**: Introduce shared live-trigger helpers for lifecycle gating, deterministic sampling keyed by `(organizationId, projectId, evaluationId, traceId)`, turn scope derivation, and execute-task dedupe/debounce key construction
+- [x] **P13-PR1-2**: Extend `TraceRepository` with a narrow `matchesFiltersByTraceId`-style contract so live trigger matching reuses the exact existing trace filter semantics instead of re-implementing them in domain or worker code
 - [ ] **P13-PR1-3**: Extend `ScoreRepository` with narrow canonical-state existence checks for:
   - prior evaluation score in one `(evaluationId, scope)` pair, used by `first`
   - existing evaluation score for one `(evaluationId, traceId)` pair, used by duplicate-result prevention
@@ -242,4 +242,3 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 - `apps/workers/src/workers/live-evaluations*.test.ts`
 - `packages/domain/evaluations/src/*.test.ts`
 - `packages/domain/scores/src/*.test.ts`
-
