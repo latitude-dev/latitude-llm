@@ -7,6 +7,7 @@ const routerLogger = createLogger("web")
 export function getRouter() {
   const router = createTanStackRouter({
     routeTree,
+    defaultStructuralSharing: true,
     defaultNotFoundComponent: () => {
       const currentPath = typeof window !== "undefined" ? window.location.pathname : ""
       if (currentPath) routerLogger.error(`[Router 404] Path not found: ${currentPath}`)

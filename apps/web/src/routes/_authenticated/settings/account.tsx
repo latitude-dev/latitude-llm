@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react"
 import { deleteCurrentUser, updateUserName } from "../../../domains/sessions/session.functions.ts"
 import { authClient } from "../../../lib/auth-client.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { useAuthenticatedUser } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/account")({
   component: AccountSettingsPage,
@@ -65,7 +66,7 @@ function DeleteAccountConfirmModal({ open, setOpen }: { open: boolean; setOpen: 
 }
 
 function AccountSettingsPage() {
-  const { user } = Route.useRouteContext()
+  const user = useAuthenticatedUser()
   const { toast } = useToast()
   const router = useRouter()
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)

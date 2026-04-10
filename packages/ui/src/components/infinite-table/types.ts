@@ -11,7 +11,7 @@ export interface InfiniteTableColumn<T> {
   resizable?: boolean
   /** Minimum width (px); used for resize limits and header measurement. */
   minWidth?: number
-  /** Preferred default width (px) for this column; applied to the header cell so `table-fixed` allocates space. */
+  /** Preferred starting width (px) for the first layout lock; the column can later be resized smaller. */
   width?: number
   sortKey?: string
   /** Optional second header row cell; use for summaries. Keep controls `stopPropagation` if the column is sortable. */

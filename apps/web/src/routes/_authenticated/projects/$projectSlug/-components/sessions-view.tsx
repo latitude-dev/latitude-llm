@@ -216,6 +216,7 @@ export function SessionsView({
         key: "startTime",
         header: "Start Time",
         sortKey: "startTime",
+        width: 180,
         render: (row) => {
           const time = field(row, "startTime")
           return (
@@ -228,6 +229,7 @@ export function SessionsView({
       {
         key: "name",
         header: "Name",
+        width: 180,
         render: (row) => {
           if (row.kind === "session") return EMPTY_CELL
           return row.trace.rootSpanName || row.trace.traceId.slice(0, 8)
@@ -236,12 +238,14 @@ export function SessionsView({
       {
         key: "tags",
         header: "Tags",
+        width: 150,
         render: (row) => <TagList tags={field(row, "tags")} />,
       },
       {
         key: "duration",
         header: "Duration",
         align: "end",
+        width: 120,
         render: (row) => {
           if (row.kind === "session") return EMPTY_CELL
           return formatDuration(row.trace.durationNs)
@@ -258,6 +262,7 @@ export function SessionsView({
         key: "ttft",
         header: "Time To First Token",
         align: "end",
+        width: 162,
         render: (row) => {
           if (row.kind === "session") return EMPTY_CELL
           return row.trace.timeToFirstTokenNs > 0 ? formatDuration(row.trace.timeToFirstTokenNs) : "-"
@@ -268,6 +273,7 @@ export function SessionsView({
         header: "Cost",
         align: "end",
         sortKey: "cost",
+        width: 130,
         render: (row) => formatPrice(field(row, "costTotalMicrocents") / 100_000_000),
         renderSubheader: () => (
           <TableMetricSubheader
@@ -280,6 +286,7 @@ export function SessionsView({
       {
         key: "sessionId",
         header: "Session ID",
+        width: 160,
         render: (row) => {
           if (row.kind === "session") {
             if (onActiveSessionChange) {
@@ -304,11 +311,13 @@ export function SessionsView({
       {
         key: "userId",
         header: "User ID",
+        width: 160,
         render: (row) => field(row, "userId"),
       },
       {
         key: "models",
         header: "Models",
+        width: 160,
         render: (row) => {
           const providers = field(row, "providers")
           const models = field(row, "models")
@@ -337,6 +346,7 @@ export function SessionsView({
         header: "Spans",
         align: "end",
         sortKey: "spans",
+        width: 110,
         render: (row) => {
           const spanCount = field(row, "spanCount")
           const errorCount = field(row, "errorCount")

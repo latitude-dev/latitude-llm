@@ -38,6 +38,7 @@ import {
 } from "../../../domains/members/members.collection.ts"
 import type { MemberRecord } from "../../../domains/members/members.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { useAuthenticatedUser } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/members")({
   component: MembersSettingsPage,
@@ -436,7 +437,7 @@ function MembersTable({
 }
 
 function MembersSettingsPage() {
-  const { user } = Route.useRouteContext()
+  const user = useAuthenticatedUser()
   const [inviteOpen, setInviteOpen] = useState(false)
   const { data, isLoading } = useMembersCollection()
   const members = data ?? []

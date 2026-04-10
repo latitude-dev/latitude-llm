@@ -1,5 +1,6 @@
-import { useMatches } from "@tanstack/react-router"
+import { useRouter } from "@tanstack/react-router"
 import type { ComponentType } from "react"
+import { useMatchIdsWithStaticData } from "../../../lib/hooks/use-router-selectors.ts"
 import { BreadcrumbSeparator } from "./breadcrumb-ui.tsx"
 
 /**
@@ -9,18 +10,20 @@ import { BreadcrumbSeparator } from "./breadcrumb-ui.tsx"
  * `BreadcrumbText`, and `BreadcrumbSeparator` from `breadcrumb-ui.tsx`.
  */
 export function BreadcrumbTrail() {
-  const matches = useMatches()
-  const crumbs = matches.filter(
-    (m): m is typeof m & { staticData: { breadcrumb: ComponentType } } =>
-      m.staticData !== undefined && typeof (m.staticData as { breadcrumb?: unknown }).breadcrumb === "function",
-  )
+  const router = useRouter()
+  const crumbIds = useMatchIdsWithStaticData((staticData) => typeof staticData?.breadcrumb === "function")
+  const crumbs = router.state.matches.flatMap((match) => {
+    if (!crumbIds.includes(match.id)) return []
+    const staticData = match.staticData as { breadcrumb?: unknown } | undefined
+    if (typeof staticData?.breadcrumb !== "function") return []
+    return [{ id: match.id, Breadcrumb: staticData.breadcrumb as ComponentType }]
+  })
 
   return (
     <>
-      {crumbs.map((match) => {
-        const Breadcrumb = match.staticData.breadcrumb
+      {crumbs.map(({ id, Breadcrumb }) => {
         return (
-          <span key={match.id} className="flex items-center gap-2 min-w-0">
+          <span key={id} className="flex items-center gap-2 min-w-0">
             <BreadcrumbSeparator />
             <Breadcrumb />
           </span>

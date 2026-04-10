@@ -29,7 +29,7 @@ interface Organization {
 
 export const Route = createFileRoute("/welcome/")({
   component: WelcomePage,
-  beforeLoad: async () => {
+  loader: async () => {
     const session = await getSession()
     if (!session) {
       throw redirect({ to: "/login" })
@@ -51,7 +51,7 @@ export const Route = createFileRoute("/welcome/")({
 function WelcomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string>()
-  const { organizations } = Route.useRouteContext()
+  const { organizations } = Route.useLoaderData()
   const router = useRouter()
 
   const handleSelectOrg = async (orgId: string) => {

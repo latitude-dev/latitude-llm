@@ -1,11 +1,14 @@
 import { Conversation, ScrollNavigator, type ScrollNavigatorHandle, Skeleton, Text } from "@repo/ui"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { type RefObject, useCallback, useRef } from "react"
+import { type MutableRefObject, type RefObject, useCallback, useRef } from "react"
 import { HotkeyBadge } from "../../../../../../../components/hotkey-badge.tsx"
 import { useConversationSpanMaps } from "../../../../../../../domains/spans/spans.collection.ts"
 import type { TraceDetailRecord } from "../../../../../../../domains/traces/traces.functions.ts"
 import { AnnotationPopover } from "../../annotations/annotation-popover.tsx"
-import { useAnnotationPopover } from "../../annotations/hooks/use-annotation-popover.ts"
+import {
+  type TextSelectionPopoverControls,
+  useAnnotationPopover,
+} from "../../annotations/hooks/use-annotation-popover.ts"
 import { useTraceAnnotationsData } from "../../annotations/hooks/use-trace-annotations-data.ts"
 import { MessageAnnotationTrigger } from "../../annotations/message-annotation-trigger.tsx"
 
@@ -15,12 +18,14 @@ function ConversationContent({
   projectId,
   isActive,
   scrollContainerRef,
+  textSelectionPopoverControlsRef,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
   readonly projectId: string
   readonly isActive: boolean
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
+  readonly textSelectionPopoverControlsRef?: MutableRefObject<TextSelectionPopoverControls | null> | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -55,17 +60,26 @@ function ConversationContent({
   const {
     highlightRanges,
     handleTextSelect,
+    openExistingAnnotationPopover,
     textSelectionPopoverPosition,
     textSelectionAnnotations,
     createTextSelectionAnnotation,
     updateTextSelectionAnnotation,
     closeAnnotationPopover,
+    updateTextSelectionPopoverPosition,
   } = useAnnotationPopover({
     projectId,
     traceId: traceDetail.traceId,
     isActive,
     getSpanIdForMessage,
   })
+
+  if (textSelectionPopoverControlsRef) {
+    textSelectionPopoverControlsRef.current = {
+      openExistingAnnotationPopover,
+      updateTextSelectionPopoverPosition,
+    }
+  }
 
   const messageActions =
     navigateToSpan && spanMaps && Object.keys(spanMaps.messageSpanMap).length > 0
@@ -154,6 +168,7 @@ export function ConversationTab({
   projectId,
   isActive,
   scrollContainerRef,
+  textSelectionPopoverControlsRef,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -163,6 +178,7 @@ export function ConversationTab({
   readonly isActive: boolean
   /** Optional ref to the scroll container. Used for external scroll control (e.g., annotation navigation). */
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
+  readonly textSelectionPopoverControlsRef?: MutableRefObject<TextSelectionPopoverControls | null> | undefined
 }) {
   if (isDetailLoading) {
     return (
@@ -189,6 +205,7 @@ export function ConversationTab({
       navigateToSpan={navigateToSpan}
       projectId={projectId}
       scrollContainerRef={scrollContainerRef}
+      textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
     />
   )
 }

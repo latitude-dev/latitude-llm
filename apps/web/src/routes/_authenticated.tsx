@@ -9,7 +9,14 @@ import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.t
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
-  beforeLoad: async () => {
+  staleTime: Infinity,
+  remountDeps: () => "authenticated-layout",
+  // Keep rendered layout data in `loader` instead of `beforeLoad`.
+  // `beforeLoad` is best for middleware-style redirects/preconditions, while
+  // `loader` participates in TanStack Router's cache (`staleTime`) and can be
+  // consumed via `useLoaderData({ select })` without refetching on same-route
+  // search-param navigations.
+  loader: async () => {
     const session = await getSession()
     if (!session) {
       throw redirect({ to: "/login" })
@@ -54,7 +61,8 @@ function ThemeToggle() {
 }
 
 function NavHeader() {
-  const { user, organizationId } = Route.useRouteContext()
+  const user = Route.useLoaderData({ select: (data) => data.user })
+  const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
   const hasMultipleOrgs = (allOrgs?.length ?? 0) > 1
@@ -152,7 +160,7 @@ function AuthenticatedLayout() {
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <NavHeader />
-      <main className="w-full flex-grow min-h-0 h-full relative overflow-y-auto">
+      <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
         <Outlet />
       </main>
     </div>

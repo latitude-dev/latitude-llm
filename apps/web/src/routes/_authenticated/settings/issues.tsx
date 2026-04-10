@@ -6,13 +6,14 @@ import {
   updateOrganizationMutation,
   useOrganizationsCollection,
 } from "../../../domains/organizations/organizations.collection.ts"
+import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/issues")({
   component: IssuesSettingsPage,
 })
 
 function IssuesSettingsPage() {
-  const { organizationId } = Route.useRouteContext()
+  const organizationId = useAuthenticatedOrganizationId()
   const { toast } = useToast()
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),

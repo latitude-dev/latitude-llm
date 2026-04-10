@@ -34,6 +34,7 @@ import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/in
 import { getQueryClient } from "../../../../../lib/data/query-client.tsx"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, useSelectableRows } from "../../../../../lib/hooks/useSelectableRows.ts"
+import { useRouteProject } from "../-route-data.ts"
 import { CsvImportView, type ParsedCsv } from "./-components/csv-import-view.tsx"
 import { createDraftRowRecord, isDatasetDraftRowId } from "./-components/dataset-draft-row.ts"
 import { DatasetNameEdit } from "./-components/dataset-name-edit.tsx"
@@ -84,7 +85,7 @@ const rowColumns: InfiniteTableColumn<DatasetRowRecord>[] = [
 
 function DatasetDetailPage() {
   const { datasetId } = Route.useParams()
-  const { project } = Route.useRouteContext()
+  const project = useRouteProject()
   const [, setRid] = useParamState("rid", "")
 
   const { data: dataset, isLoading } = useQuery({

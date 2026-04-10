@@ -20,6 +20,11 @@ interface UseAnnotationPopoverOptions {
   readonly getSpanIdForMessage?: (messageIndex: number) => string | undefined
 }
 
+export interface TextSelectionPopoverControls {
+  readonly openExistingAnnotationPopover: (annotation: AnnotationRecord, position: { x: number; y: number }) => void
+  readonly updateTextSelectionPopoverPosition: (position: { x: number; y: number }) => void
+}
+
 export function useAnnotationPopover({
   projectId,
   traceId,
@@ -47,8 +52,30 @@ export function useAnnotationPopover({
     [isActive],
   )
 
+  const openExistingAnnotationPopover = useCallback(
+    (annotation: AnnotationRecord, position: { x: number; y: number }) => {
+      openAnnotationPopover({
+        kind: "existing",
+        annotation,
+        position,
+        passed: annotation.passed,
+        comment: annotation.feedback ?? "",
+        issueId: annotation.issueId,
+      })
+    },
+    [openAnnotationPopover],
+  )
+
   const closeAnnotationPopover = useCallback(() => {
     setPopoverState(null)
+  }, [])
+
+  const updateTextSelectionPopoverPosition = useCallback((position: { x: number; y: number }) => {
+    setPopoverState((current) => {
+      if (!current) return current
+      if (current.position.x === position.x && current.position.y === position.y) return current
+      return { ...current, position }
+    })
   }, [])
 
   const highlightRangesWithHandlers: HighlightRange[] = useMemo(() => {
@@ -58,19 +85,10 @@ export function useAnnotationPopover({
 
       return {
         ...range,
-        onClick: (position: { x: number; y: number }) => {
-          openAnnotationPopover({
-            kind: "existing",
-            annotation,
-            position,
-            passed: annotation.passed,
-            comment: annotation.feedback ?? "",
-            issueId: annotation.issueId,
-          })
-        },
+        onClick: (position: { x: number; y: number }) => openExistingAnnotationPopover(annotation, position),
       }
     })
-  }, [highlightRanges, annotations, openAnnotationPopover])
+  }, [highlightRanges, annotations, openExistingAnnotationPopover])
 
   const handleTextSelect = useCallback(
     (anchor: TextSelectionAnchor, position: { x: number; y: number }) => {
@@ -84,14 +102,7 @@ export function useAnnotationPopover({
       if (existing?.id) {
         const annotation = annotations.find((a) => a.id === existing.id)
         if (annotation) {
-          openAnnotationPopover({
-            kind: "existing",
-            annotation,
-            position,
-            passed: annotation.passed,
-            comment: annotation.feedback ?? "",
-            issueId: annotation.issueId,
-          })
+          openExistingAnnotationPopover(annotation, position)
           return
         }
       }
@@ -104,7 +115,7 @@ export function useAnnotationPopover({
         issueId: null,
       })
     },
-    [highlightRanges, annotations, openAnnotationPopover],
+    [highlightRanges, annotations, openAnnotationPopover, openExistingAnnotationPopover],
   )
 
   const isPopoverLoading = isCreatePending || isUpdatePending || isDeletePending
@@ -158,7 +169,9 @@ export function useAnnotationPopover({
     isPopoverLoading,
     isPopoverEditable,
     openAnnotationPopover,
+    openExistingAnnotationPopover,
     closeAnnotationPopover,
+    updateTextSelectionPopoverPosition,
     handleTextSelect,
     textSelectionPopoverPosition,
     textSelectionAnnotations,
