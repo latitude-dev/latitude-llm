@@ -70,15 +70,27 @@ export function safeParseJson(
   }
 }
 
+const CH_TIMESTAMP_HAS_TIMEZONE = /(?:Z|[+-]\d{2}:\d{2}| UTC)$/
+
+const normalizeCHDateValue = (value: string): string => {
+  if (CH_TIMESTAMP_HAS_TIMEZONE.test(value)) {
+    return value
+  }
+
+  return value.includes("T") ? `${value}Z` : `${value} UTC`
+}
+
 /**
  * Parse a ClickHouse timestamp string (e.g. `"2026-03-25 10:00:00.000"`) as UTC.
  *
  * ClickHouse `DateTime`/`DateTime64` columns return strings without a timezone
- * marker, so `new Date(str)` would parse them as local time. Appending " UTC"
- * forces correct interpretation.
+ * marker, so `new Date(str)` would parse them as local time. This helper
+ * normalizes those values to UTC first, while also accepting already-normalized
+ * ISO timestamps. Invalid values return `fallback` when provided.
  */
-export function parseCHDate(value: string): Date {
-  return new Date(`${value} UTC`)
+export function parseCHDate(value: string, { fallback }: { readonly fallback?: Date } = {}): Date {
+  const parsed = new Date(normalizeCHDateValue(value))
+  return Number.isNaN(parsed.getTime()) ? (fallback ?? parsed) : parsed
 }
 
 const ZWSP_AND_BOM = /[\u200B-\u200D\uFEFF]/g

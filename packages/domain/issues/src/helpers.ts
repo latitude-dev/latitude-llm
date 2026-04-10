@@ -1,13 +1,18 @@
-import type { ScoreSource } from "@domain/scores"
+import type { IssueOccurrenceAggregate, ScoreSource } from "@domain/scores"
 import {
+  AUTO_RESOLVE_INACTIVITY_DAYS,
   CENTROID_EMBEDDING_DIMENSIONS,
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_THRESHOLD_FACTOR,
+  ISSUE_STATES,
+  NEW_ISSUE_AGE_DAYS,
 } from "./constants.ts"
-import type { IssueCentroid } from "./entities/issue.ts"
+import { type Issue, type IssueCentroid, IssueState, type IssueState as IssueStateValue } from "./entities/issue.ts"
 
 const MILLISECONDS_PER_SECOND = 1000
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
 const zeroVector = (dimensions: number) => new Array<number>(dimensions).fill(0)
 
@@ -174,4 +179,47 @@ export const normalizeEmbedding = (embedding: readonly number[]): number[] => {
   const normalized = new Float32Array(embedding.length)
   normalizeTo(normalized, embedding)
   return Array.from(normalized)
+}
+
+export interface DeriveIssueLifecycleStatesInput {
+  readonly issue: Issue
+  readonly occurrence?: IssueOccurrenceAggregate | null
+  readonly now?: Date
+}
+
+export const deriveIssueLifecycleStates = ({
+  issue,
+  occurrence,
+  now = new Date(),
+}: DeriveIssueLifecycleStatesInput): readonly IssueStateValue[] => {
+  const firstSeenAt = occurrence?.firstSeenAt ?? issue.createdAt
+  const lastSeenAt = occurrence?.lastSeenAt ?? issue.createdAt
+  const states = new Set<IssueStateValue>()
+
+  if (firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY) {
+    states.add(IssueState.New)
+  }
+
+  const recentOccurrences = occurrence?.recentOccurrences ?? 0
+  const baselineAverage = occurrence?.baselineAvgOccurrences ?? 0
+  if (recentOccurrences > baselineAverage * ESCALATION_THRESHOLD_FACTOR) {
+    states.add(IssueState.Escalating)
+  }
+
+  const isRegressed = issue.resolvedAt !== null && lastSeenAt.getTime() > issue.resolvedAt.getTime()
+  if (isRegressed) {
+    states.add(IssueState.Regressed)
+  }
+
+  const isResolvedByInactivity =
+    lastSeenAt.getTime() < now.getTime() - AUTO_RESOLVE_INACTIVITY_DAYS * MILLISECONDS_PER_DAY
+  if (!isRegressed && (issue.resolvedAt !== null || isResolvedByInactivity)) {
+    states.add(IssueState.Resolved)
+  }
+
+  if (issue.ignoredAt !== null) {
+    states.add(IssueState.Ignored)
+  }
+
+  return ISSUE_STATES.filter((state): state is IssueStateValue => states.has(state))
 }

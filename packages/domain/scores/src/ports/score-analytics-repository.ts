@@ -60,8 +60,8 @@ export interface IssueOccurrenceAggregate {
   readonly totalOccurrences: number
   readonly recentOccurrences: number // last 1 day
   readonly baselineAvgOccurrences: number // average daily occurrences in previous 7-day baseline
-  readonly firstSeenAt: string // ISO date
-  readonly lastSeenAt: string // ISO date
+  readonly firstSeenAt: Date
+  readonly lastSeenAt: Date
 }
 
 /** A single time-bucket for issue occurrence time-series. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatCount, formatPrice, isBlankCHString, normalizeCHString } from "./format.ts"
+import { formatCount, formatPrice, isBlankCHString, normalizeCHString, parseCHDate } from "./format.ts"
 
 describe("formatCount", () => {
   it("returns small numbers as-is", () => {
@@ -51,6 +51,21 @@ describe("normalizeCHString", () => {
   it("strips zero-width/BOM and trims", () => {
     expect(normalizeCHString("\u200Bx\uFEFF")).toBe("x")
     expect(normalizeCHString("  id  ")).toBe("id")
+  })
+})
+
+describe("parseCHDate", () => {
+  it("parses ClickHouse datetime strings as UTC", () => {
+    expect(parseCHDate("2026-03-25 10:00:00.123").toISOString()).toBe("2026-03-25T10:00:00.123Z")
+  })
+
+  it("accepts already-normalized ISO timestamps", () => {
+    expect(parseCHDate("2026-03-25T10:00:00.123Z").toISOString()).toBe("2026-03-25T10:00:00.123Z")
+  })
+
+  it("returns the provided fallback on invalid input", () => {
+    const fallback = new Date("2026-01-01T00:00:00.000Z")
+    expect(parseCHDate("not-a-date", { fallback })).toBe(fallback)
   })
 })
 

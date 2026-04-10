@@ -44,6 +44,8 @@ export {
 } from "./errors.ts"
 export {
   createIssueCentroid,
+  type DeriveIssueLifecycleStatesInput,
+  deriveIssueLifecycleStates,
   normalizeEmbedding,
   normalizeIssueCentroid,
   type UpdateIssueCentroidInput,
@@ -95,6 +97,8 @@ export {
   hybridSearchIssuesUseCase,
 } from "./use-cases/hybrid-search-issues.ts"
 export {
+  type IssueListItem,
+  type IssueListResult,
   type ListIssuesError,
   type ListIssuesInput,
   listIssuesUseCase,
