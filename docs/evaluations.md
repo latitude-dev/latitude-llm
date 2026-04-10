@@ -224,7 +224,7 @@ Important v2 adaptations:
 
 - the optimized artifact is now an evaluation script, not a prompt document
 - script/runtime contract failures should become learnable feedback when possible, just like prompt failures did in v1
-- v1 configured GEPA with Pareto-oriented settings but still supplied a single scalar score to the optimizer; v2 must implement the real ordered objectives explicitly rather than assuming v1 already solved that
+- v1 configured GEPA with Pareto-oriented search settings but still supplied a single scalar score to the optimizer; v2 continues to optimize on that same scalar correctness signal rather than host-defined objective vectors
 
 The proposer and details-generator use Latitude-owned prompts stored in this repository.
 

@@ -37,6 +37,7 @@ const toRecord = (score: AnnotationScore) => ({
   tokens: score.tokens,
   cost: score.cost,
   draftedAt: score.draftedAt ? score.draftedAt.toISOString() : null,
+  annotatorId: score.annotatorId,
   createdAt: score.createdAt.toISOString(),
   updatedAt: score.updatedAt.toISOString(),
 })
@@ -70,7 +71,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<AnnotationRecord> => {
-    const { organizationId } = await requireSession()
+    const { userId, organizationId } = await requireSession()
     const client = getPostgresClient()
     const chClient = getClickhouseClient()
     const publisher = await getQueuePublisher()
@@ -85,6 +86,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
         spanId: data.spanId ?? null,
         sessionId: data.sessionId ?? null,
         issueId: data.issueId ?? null,
+        annotatorId: userId,
         value: data.value,
         passed: data.passed,
         feedback: data.feedback,
@@ -111,7 +113,6 @@ export const updateAnnotation = createServerFn({ method: "POST" })
       value: z.number(),
       passed: z.boolean(),
       feedback: z.string().min(1),
-      anchor: annotationAnchorSchema.optional(),
       issueId: z.string().optional(),
     }),
   )
@@ -133,7 +134,6 @@ export const updateAnnotation = createServerFn({ method: "POST" })
         value: data.value,
         passed: data.passed,
         feedback: data.feedback,
-        anchor: data.anchor,
       }).pipe(
         withPostgres(repositoriesLayer, client, organizationId),
         withClickHouse(

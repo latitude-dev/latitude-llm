@@ -1,10 +1,12 @@
-import type { QueuePublisherShape } from "@domain/queue"
+import type { QueuePublisherShape, WorkflowStarterShape } from "@domain/queue"
 import { generateId, type StorageDiskPort } from "@domain/shared"
+import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import { createBetterAuth, createOutboxWriter, createPostgresClient, type PostgresClient } from "@platform/db-postgres"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
+import { createTemporalClient, createWorkflowStarter, loadTemporalConfig } from "@platform/workflows-temporal"
 import { tanstackStartCookies } from "better-auth/tanstack-start"
 import { Effect } from "effect"
 
@@ -15,6 +17,8 @@ let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let queuePublisher: Promise<QueuePublisherShape> | undefined
 let outboxWriterInstance: ReturnType<typeof createOutboxWriter> | undefined
+let redisInstance: RedisClient | undefined
+let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
 
 const getEmailFlowFromMagicLinkUrl = ({
   magicLinkUrl,
@@ -68,6 +72,14 @@ export const getStorageDisk = (): StorageDiskPort => {
   return storageDiskInstance
 }
 
+export const getRedisClient = (): RedisClient => {
+  if (!redisInstance) {
+    const redisConn = createRedisConnection()
+    redisInstance = createRedisClient(redisConn)
+  }
+  return redisInstance
+}
+
 export const getOutboxWriter = (): ReturnType<typeof createOutboxWriter> => {
   if (!outboxWriterInstance) {
     outboxWriterInstance = createOutboxWriter(getAdminPostgresClient())
@@ -86,6 +98,14 @@ export const getQueuePublisher = (): Promise<QueuePublisherShape> => {
     })
   }
   return queuePublisher
+}
+
+export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
+  if (!workflowStarterPromise) {
+    const config = loadTemporalConfig()
+    workflowStarterPromise = createTemporalClient(config).then((client) => createWorkflowStarter(client, config))
+  }
+  return workflowStarterPromise
 }
 
 export const getBetterAuth = () => {

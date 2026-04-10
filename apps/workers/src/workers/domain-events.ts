@@ -67,8 +67,8 @@ export const createDomainEventsWorker = ({
           pub.publish("live-annotation-queues", "curate", event.payload, {
             dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
           }),
-          pub.publish("system-annotation-queues", "flag", event.payload, {
-            dedupeKey: `annotation-queues:system:flag:${event.payload.traceId}`,
+          pub.publish("system-annotation-queues", "fanOut", event.payload, {
+            dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
           }),
         ],
         { concurrency: "unbounded" },
@@ -97,6 +97,11 @@ export const createDomainEventsWorker = ({
           dedupeKey: `api-keys:create:${event.payload.organizationId}`,
         },
       ),
+
+    ProjectCreated: (event) =>
+      pub.publish("projects", "provision", event.payload, {
+        dedupeKey: `projects:provision:${event.payload.projectId}`,
+      }),
   }
 
   consumer.subscribe("domain-events", {
@@ -121,7 +126,6 @@ export const createDomainEventsWorker = ({
         return Effect.fail(err)
       }
 
-      // Force type in runtime
       const handler = maybeHandler as EventHandlerFn
       return handler(event)
     },

@@ -10,6 +10,7 @@ export const annotationQueues = latitudeSchema.table(
     projectId: cuid("project_id").notNull(), // owning project
     system: boolean("system").notNull().default(false), // true when the queue definition is provisioned by the system
     name: varchar("name", { length: 128 }).notNull(), // unique queue name within the project
+    slug: varchar("slug", { length: 140 }).notNull(), // unique queue slug within the project
     description: text("description").notNull(),
     instructions: text("instructions").notNull(), // guidance shown to annotators while reviewing the queue
     settings: jsonb("settings").$type<AnnotationQueueSettings>().notNull(), // queue is conceptually "live" when settings.filter is present; system queues keep filter absent but may still store sampling
@@ -25,6 +26,10 @@ export const annotationQueues = latitudeSchema.table(
     unique("annotation_queues_unique_name_per_project_idx")
       .on(t.organizationId, t.projectId, t.name, t.deletedAt)
       .nullsNotDistinct(),
+    unique("annotation_queues_unique_slug_per_project_idx")
+      .on(t.organizationId, t.projectId, t.slug, t.deletedAt)
+      .nullsNotDistinct(),
+    index("annotation_queues_project_system_slug_idx").on(t.organizationId, t.projectId, t.system, t.slug),
   ],
 )
 

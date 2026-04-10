@@ -1,3 +1,4 @@
+import { EvaluationIssueRepository } from "@domain/evaluations"
 import { type Issue, IssueRepository, issueSchema, MIN_OCCURRENCES_FOR_VISIBILITY } from "@domain/issues"
 import { type IssueId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { and, desc, eq, or, sql } from "drizzle-orm"
@@ -39,7 +40,7 @@ const toInsertRow = (issue: Issue): typeof issues.$inferInsert => ({
   updatedAt: issue.updatedAt,
 })
 
-export const IssueRepositoryLive = Layer.effect(
+const issueRepositoryCoreLive = Layer.effect(
   IssueRepository,
   Effect.gen(function* () {
     const sqlClient = (yield* SqlClient) as SqlClientShape<Operator>
@@ -79,6 +80,7 @@ export const IssueRepositoryLive = Layer.effect(
               offset,
             })),
           ),
+
       findById: (id: IssueId) =>
         sqlClient
           .query((db) => db.select().from(issues).where(eq(issues.id, id)).limit(1))
@@ -145,4 +147,16 @@ export const IssueRepositoryLive = Layer.effect(
         }),
     }
   }),
+)
+
+const evaluationIssueRepositoryFromIssueRepositoryLive = Layer.effect(
+  EvaluationIssueRepository,
+  Effect.gen(function* () {
+    return yield* IssueRepository
+  }),
+)
+
+export const IssueRepositoryLive = Layer.mergeAll(
+  issueRepositoryCoreLive,
+  evaluationIssueRepositoryFromIssueRepositoryLive.pipe(Layer.provide(issueRepositoryCoreLive)),
 )

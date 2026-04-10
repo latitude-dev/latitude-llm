@@ -28,7 +28,6 @@ export {
   type Score,
   type ScoreMetadata,
   type ScoreSource,
-  scoreIdSchema,
   scoreMetadataSchemas,
   scoreSchema,
   scoreSourceSchema,

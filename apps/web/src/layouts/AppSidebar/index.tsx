@@ -1,9 +1,9 @@
-import { Button, cn, Icon, Text, Tooltip, useToggleWithDefault } from "@repo/ui"
+import { Button, cn, Icon, Text, Tooltip, useValueWithDefault } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { Link, useMatches } from "@tanstack/react-router"
 import { ChevronDown, ChevronRight, ChevronsUp, PanelLeft, PanelLeftClose } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useCallback, useState } from "react"
 import { HotkeyBadge } from "../../components/hotkey-badge.tsx"
 
 function ProjectEmoji({ name }: { name: string }) {
@@ -121,7 +121,8 @@ export function AppSidebar({
   children: (props: { collapsed: boolean }) => ReactNode
 }) {
   const autoCollapse = useShouldCollapseSidebar()
-  const [collapsed, toggleCollapsed] = useToggleWithDefault(autoCollapse)
+  const [collapsed, setCollapsed] = useValueWithDefault(autoCollapse)
+  const toggleCollapsed = useCallback(() => setCollapsed(!collapsed), [collapsed, setCollapsed])
   useHotkeys([{ hotkey: "Mod+B", callback: toggleCollapsed }])
   return (
     <aside

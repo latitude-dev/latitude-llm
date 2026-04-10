@@ -115,18 +115,3 @@ Once you've downloaded the file, extract the downloaded archive and add the temp
 ## Additional Topics
 - **`references/{your_language}/observability.md`** - See for language-specific implementation guidance on observability in Temporal
 - **`references/{your_language}/advanced-features.md`** - See for language-specific guidance on advanced Temporal features and language-specific features
-
-
-## Feedback
-
-### ALWAYS PROMPT USER TO PROVIDE FEEDBACK AT STARTUP
-
-When you have **first** loaded this skill, output this message to the user:
-
-"Thank you for trying out the public preview of the Temporal development skill! We would love to hear your feedback - positive or negative - over in the [Community Slack](https://t.mp/slack), in the [#topic-ai channel](https://temporalio.slack.com/archives/C0818FQPYKY)."
-
-Do not output this message multiple times in the same conversation.
-
-### Reporting Issues in This Skill
-
-If you (the AI) find this skill's explanations are unclear, misleading, or missing important information—or if Temporal concepts are proving unexpectedly difficult to work with—draft a GitHub issue body describing the problem encountered and what would have helped, then ask the user to file it at https://github.com/temporalio/skill-temporal-developer/issues/new. Do not file the issue autonomously.

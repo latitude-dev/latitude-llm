@@ -39,6 +39,22 @@ async function insertScores(rows: ReturnType<typeof makeScoreRow>[]) {
   await ch.client.insert({ table: "scores", values: rows, format: "JSONEachRow" })
 }
 
+const toClickHouseDateTime64 = (value: Date) => value.toISOString().replace("T", " ").replace("Z", "")
+
+const daysAgoDateTime = (days: number, hour: number): string => {
+  const value = new Date()
+  value.setUTCHours(hour, 0, 0, 0)
+  value.setUTCDate(value.getUTCDate() - days)
+  return toClickHouseDateTime64(value)
+}
+
+const daysAgoBucket = (days: number): string => {
+  const value = new Date()
+  value.setUTCHours(12, 0, 0, 0)
+  value.setUTCDate(value.getUTCDate() - days)
+  return value.toISOString().slice(0, 10)
+}
+
 describe("ScoreAnalyticsRepository", () => {
   let repo: ScoreAnalyticsRepositoryShape
 
@@ -185,21 +201,21 @@ describe("ScoreAnalyticsRepository", () => {
         makeScoreRow({
           source: "evaluation",
           source_id: sourceId,
-          created_at: "2026-03-14 10:00:00.000",
+          created_at: daysAgoDateTime(2, 10),
           value: 0.5,
           passed: true,
         }),
         makeScoreRow({
           source: "evaluation",
           source_id: sourceId,
-          created_at: "2026-03-14 18:00:00.000",
+          created_at: daysAgoDateTime(2, 18),
           value: 0.7,
           passed: true,
         }),
         makeScoreRow({
           source: "evaluation",
           source_id: sourceId,
-          created_at: "2026-03-15 08:00:00.000",
+          created_at: daysAgoDateTime(1, 8),
           value: 0.3,
           passed: false,
         }),
@@ -217,9 +233,9 @@ describe("ScoreAnalyticsRepository", () => {
         }),
       )
       expect(trend.length).toBeGreaterThanOrEqual(2)
-      const day14 = trend.find((b) => b.bucket.startsWith("2026-03-14"))
-      expect(day14).toBeDefined()
-      expect(day14?.totalScores).toBe(2)
+      const twoDaysAgo = trend.find((bucket) => bucket.bucket.startsWith(daysAgoBucket(2)))
+      expect(twoDaysAgo).toBeDefined()
+      expect(twoDaysAgo?.totalScores).toBe(2)
     })
   })
 
@@ -230,9 +246,9 @@ describe("ScoreAnalyticsRepository", () => {
   describe("trendByProject", () => {
     beforeEach(async () => {
       await insertScores([
-        makeScoreRow({ created_at: "2026-03-10 10:00:00.000" }),
-        makeScoreRow({ created_at: "2026-03-10 14:00:00.000" }),
-        makeScoreRow({ created_at: "2026-03-11 08:00:00.000" }),
+        makeScoreRow({ created_at: daysAgoDateTime(2, 10) }),
+        makeScoreRow({ created_at: daysAgoDateTime(2, 14) }),
+        makeScoreRow({ created_at: daysAgoDateTime(1, 8) }),
       ])
     })
 
@@ -390,9 +406,9 @@ describe("ScoreAnalyticsRepository", () => {
 
     beforeEach(async () => {
       await insertScores([
-        makeScoreRow({ issue_id: issueId, created_at: "2026-03-14 10:00:00.000" }),
-        makeScoreRow({ issue_id: issueId, created_at: "2026-03-14 18:00:00.000" }),
-        makeScoreRow({ issue_id: issueId, created_at: "2026-03-15 08:00:00.000" }),
+        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(2, 10) }),
+        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(2, 18) }),
+        makeScoreRow({ issue_id: issueId, created_at: daysAgoDateTime(1, 8) }),
       ])
     })
 
@@ -406,9 +422,9 @@ describe("ScoreAnalyticsRepository", () => {
         }),
       )
       expect(trend.length).toBeGreaterThanOrEqual(2)
-      const day14 = trend.find((b) => b.bucket.startsWith("2026-03-14"))
-      expect(day14).toBeDefined()
-      expect(day14?.count).toBe(2)
+      const twoDaysAgo = trend.find((bucket) => bucket.bucket.startsWith(daysAgoBucket(2)))
+      expect(twoDaysAgo).toBeDefined()
+      expect(twoDaysAgo?.count).toBe(2)
     })
   })
 

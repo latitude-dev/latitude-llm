@@ -3,7 +3,7 @@ import {
   organizationIdSchema,
   projectIdSchema,
   sessionIdSchema,
-  simulationIdOrEmptySchema,
+  simulationIdSchema,
   spanIdSchema,
   traceIdSchema,
 } from "@domain/shared"
@@ -58,7 +58,7 @@ export const spanSchema = z.object({
   spanId: spanIdSchema,
   parentSpanId: z.string(),
   apiKeyId: z.string(),
-  simulationId: simulationIdOrEmptySchema, // optional simulation CUID link, empty string when absent
+  simulationId: z.union([z.literal(""), simulationIdSchema]), // optional simulation CUID link, empty string when absent
   startTime: z.date(),
   endTime: z.date(),
   name: z.string(),

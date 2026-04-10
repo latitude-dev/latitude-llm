@@ -1,5 +1,5 @@
 import { createApiKey } from "@domain/api-keys"
-import { SEED_API_KEY_ID, SEED_ORG_ID } from "@domain/shared"
+import { SEED_API_KEY_ID, SEED_ORG_ID } from "@domain/shared/seeding"
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import type { SeedContext, Seeder } from "../types.ts"

@@ -43,6 +43,7 @@ export const baseWriteScoreInputSchema = baseWritableScoreSchema.extend({
   tokens: baseScoreSchema.shape.tokens.default(0),
   cost: baseScoreSchema.shape.cost.default(0),
   draftedAt: baseScoreSchema.shape.draftedAt.default(null),
+  annotatorId: baseScoreSchema.shape.annotatorId.default(null),
 })
 export type BaseWriteScoreInput = z.input<typeof baseWriteScoreInputSchema>
 
@@ -129,6 +130,7 @@ const buildScore = ({
       tokens: input.tokens,
       cost: input.cost,
       draftedAt: input.draftedAt,
+      annotatorId: existingScore?.annotatorId ?? input.annotatorId,
       createdAt: existingScore?.createdAt ?? now,
       updatedAt: now,
     },

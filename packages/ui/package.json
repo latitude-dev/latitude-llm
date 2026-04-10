@@ -42,6 +42,7 @@
     "echarts-for-react": "^3.0.6",
     "lucide-react": "^0.481.0",
     "react-markdown": "^10.1.0",
+    "react-textarea-autosize": "^8.5.9",
     "remark-breaks": "^4.0.0",
     "remark-emoji": "^5.0.2",
     "remark-gfm": "^4.0.1",

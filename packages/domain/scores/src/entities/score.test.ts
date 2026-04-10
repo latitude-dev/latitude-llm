@@ -33,6 +33,7 @@ function buildBaseScoreInput() {
     tokens: 42,
     cost: 1_000,
     draftedAt: null,
+    annotatorId: null,
     createdAt: new Date("2026-03-24T00:00:00.000Z"),
     updatedAt: new Date("2026-03-24T00:00:00.000Z"),
   }

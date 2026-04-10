@@ -13,6 +13,7 @@ import {
   SpanId,
   SqlClient,
   TraceId,
+  UserId,
 } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import type { Span, TraceDetail } from "@domain/spans"
@@ -388,6 +389,100 @@ describe("writeAnnotationUseCase", () => {
     expect(store.size).toBe(1)
   })
 
+  it("preserves anchor when updating annotation without providing anchor", async () => {
+    const allMessages: GenAIMessage[] = [
+      { role: "user", parts: [{ type: "text", content: "hi" }] },
+      { role: "assistant", parts: [{ type: "text", content: "hello world" }] },
+    ]
+    const { store, layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
+
+    const first = await Effect.runPromise(
+      writeAnnotationUseCase({
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        value: 0.3,
+        passed: false,
+        feedback: "Initial feedback",
+        anchor: {
+          messageIndex: 1,
+          partIndex: 0,
+          startOffset: 0,
+          endOffset: 5,
+        },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(first.metadata.messageIndex).toBe(1)
+    expect(first.metadata.partIndex).toBe(0)
+    expect(first.metadata.startOffset).toBe(0)
+    expect(first.metadata.endOffset).toBe(5)
+
+    const updated = await Effect.runPromise(
+      writeAnnotationUseCase({
+        id: first.id,
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        value: 0.1,
+        passed: true,
+        feedback: "Revised feedback",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(updated.id).toBe(first.id)
+    expect(updated.feedback).toBe("Revised feedback")
+    expect(updated.passed).toBe(true)
+    expect(updated.metadata.messageIndex).toBe(1)
+    expect(updated.metadata.partIndex).toBe(0)
+    expect(updated.metadata.startOffset).toBe(0)
+    expect(updated.metadata.endOffset).toBe(5)
+    expect(store.size).toBe(1)
+  })
+
+  it("preserves message-level anchor when updating annotation without providing anchor", async () => {
+    const allMessages: GenAIMessage[] = [
+      { role: "user", parts: [{ type: "text", content: "hi" }] },
+      { role: "assistant", parts: [{ type: "text", content: "hello" }] },
+    ]
+    const { store, layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
+
+    const first = await Effect.runPromise(
+      writeAnnotationUseCase({
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        value: 0.5,
+        passed: true,
+        feedback: "Good message",
+        anchor: {
+          messageIndex: 1,
+        },
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(first.metadata.messageIndex).toBe(1)
+    expect(first.metadata.partIndex).toBeUndefined()
+
+    const updated = await Effect.runPromise(
+      writeAnnotationUseCase({
+        id: first.id,
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        value: 0.2,
+        passed: false,
+        feedback: "Actually not good",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(updated.id).toBe(first.id)
+    expect(updated.feedback).toBe("Actually not good")
+    expect(updated.passed).toBe(false)
+    expect(updated.metadata.messageIndex).toBe(1)
+    expect(store.size).toBe(1)
+  })
+
   it("does not emit issue events for drafts", async () => {
     const { events, layer } = createTestLayers()
 
@@ -477,5 +572,76 @@ describe("writeAnnotationUseCase", () => {
         }),
       }),
     ])
+  })
+
+  it("preserves original annotatorId when updating a draft", async () => {
+    const originalAnnotatorId = UserId("o".repeat(24))
+    const differentUserId = UserId("d".repeat(24))
+    const { store, layer } = createTestLayers()
+
+    const first = await Effect.runPromise(
+      writeAnnotationUseCase({
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        annotatorId: originalAnnotatorId,
+        value: 0.3,
+        passed: false,
+        feedback: "Initial feedback",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(first.annotatorId).toBe(originalAnnotatorId)
+
+    const updated = await Effect.runPromise(
+      writeAnnotationUseCase({
+        id: first.id,
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        annotatorId: differentUserId,
+        value: 0.1,
+        passed: true,
+        feedback: "Revised by someone else",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(updated.id).toBe(first.id)
+    expect(updated.feedback).toBe("Revised by someone else")
+    expect(updated.annotatorId).toBe(originalAnnotatorId)
+    expect(store.size).toBe(1)
+  })
+
+  it("preserves annotatorId when update omits it entirely", async () => {
+    const originalAnnotatorId = UserId("o".repeat(24))
+    const { layer } = createTestLayers()
+
+    const first = await Effect.runPromise(
+      writeAnnotationUseCase({
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        annotatorId: originalAnnotatorId,
+        value: 0.5,
+        passed: true,
+        feedback: "Good response",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(first.annotatorId).toBe(originalAnnotatorId)
+
+    const updated = await Effect.runPromise(
+      writeAnnotationUseCase({
+        id: first.id,
+        projectId: projectCuid,
+        sourceId: "UI",
+        traceId: traceIdRaw,
+        value: 0.2,
+        passed: false,
+        feedback: "Changed my mind",
+      }).pipe(Effect.provide(layer)),
+    )
+
+    expect(updated.annotatorId).toBe(originalAnnotatorId)
   })
 })

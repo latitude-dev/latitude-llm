@@ -47,7 +47,7 @@ export function CopyButton({
   if (!tooltip) return button
 
   return (
-    <Tooltip trigger={button}>
+    <Tooltip asChild trigger={button}>
       <Text.Mono size="h6">{tooltip}</Text.Mono>
     </Tooltip>
   )

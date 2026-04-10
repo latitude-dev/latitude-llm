@@ -9,11 +9,22 @@ import {
   SCORE_PUBLICATION_DEBOUNCE,
   type ScoreDraftClosedError,
   type ScoreDraftUpdateConflictError,
+  ScoreRepository,
   scoreValueSchema,
   writeScoreUseCase,
 } from "@domain/scores"
-import { type BadRequestError, cuidSchema, ProjectId, type RepositoryError, SqlClient, TraceId } from "@domain/shared"
-import { sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/spans"
+import {
+  type BadRequestError,
+  cuidSchema,
+  ProjectId,
+  type RepositoryError,
+  SqlClient,
+  sessionIdSchema,
+  spanIdSchema,
+  TraceId,
+  traceIdSchema,
+  UserId,
+} from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import { resolveWriteAnnotationTraceContext } from "../helpers/resolve-write-annotation-trace-context.ts"
@@ -34,6 +45,8 @@ const writeAnnotationInputObjectSchema = z.object({
   spanId: spanIdSchema.nullable().default(null),
   simulationId: baseWriteScoreInputSchema.shape.simulationId,
   issueId: baseWriteScoreInputSchema.shape.issueId,
+  /** User who created this annotation (nullable for system-generated annotations). */
+  annotatorId: cuidSchema.transform(UserId).nullable().default(null),
   value: scoreValueSchema,
   passed: z.boolean(),
   /** Human-authored feedback; persisted as `metadata.rawFeedback` and initial `feedback` on the score. */
@@ -58,8 +71,27 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
     const parsed = writeAnnotationInputSchema.parse(input)
     const publisher = yield* QueuePublisher
     const sqlClient = yield* SqlClient
+    const scoreRepository = yield* ScoreRepository
 
-    const anchor = parsed.anchor
+    let anchor = parsed.anchor
+
+    if (parsed.id && !anchor) {
+      const existingScore = yield* scoreRepository
+        .findById(parsed.id)
+        .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+      if (existingScore) {
+        const existingMetadata = existingScore.metadata as AnnotationScoreMetadata | undefined
+        if (existingMetadata?.messageIndex !== undefined) {
+          anchor = {
+            messageIndex: existingMetadata.messageIndex,
+            partIndex: existingMetadata.partIndex,
+            startOffset: existingMetadata.startOffset,
+            endOffset: existingMetadata.endOffset,
+          }
+        }
+      }
+    }
 
     const { sessionId, spanId } = yield* resolveWriteAnnotationTraceContext({
       organizationId: sqlClient.organizationId,
@@ -85,6 +117,7 @@ export const writeAnnotationUseCase = (input: WriteAnnotationInput) =>
       spanId,
       simulationId: parsed.simulationId,
       issueId: parsed.issueId,
+      annotatorId: parsed.annotatorId,
       value: parsed.value,
       passed: parsed.passed,
       feedback: parsed.feedback, // initial display text; enrichment overwrites `feedback` on publication

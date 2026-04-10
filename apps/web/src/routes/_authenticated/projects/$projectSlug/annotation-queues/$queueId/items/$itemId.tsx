@@ -1,15 +1,21 @@
 import { DetailDrawer, Text } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { useSyncExternalStore } from "react"
+import { useEffect, useRef, useSyncExternalStore } from "react"
 import { useAnnotationQueueItem } from "../../../../../../../domains/annotation-queue-items/annotation-queue-items.collection.ts"
-import { useAnnotationQueue } from "../../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
+import { useAnnotationsByTrace } from "../../../../../../../domains/annotations/annotations.collection.ts"
+import type { AnnotationRecord } from "../../../../../../../domains/annotations/annotations.functions.ts"
 import { useProjectsCollection } from "../../../../../../../domains/projects/projects.collection.ts"
 import { useTraceDetail } from "../../../../../../../domains/traces/traces.collection.ts"
+import { useParamState } from "../../../../../../../lib/hooks/useParamState.ts"
+import {
+  isGlobalAnnotation,
+  useAnnotationNavigation,
+} from "../../../-components/annotations/hooks/use-annotation-navigation.ts"
+import { TraceAnnotationsList } from "../../../-components/annotations/trace-annotations-list.tsx"
 import { ConversationTab } from "../../../-components/trace-detail-drawer/tabs/conversation-tab.tsx"
 import { TraceTab } from "../../../-components/trace-detail-drawer/tabs/trace-tab.tsx"
 import { QueueItemLeafBreadcrumb } from "../../-components/queue-item-leaf-breadcrumb.tsx"
-import { AnnotationsSidebar } from "./-components/annotations-sidebar.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/annotation-queues/$queueId/items/$itemId")({
   staticData: {
@@ -39,6 +45,8 @@ function useWindowWidth() {
 function AnnotationQueueItemDetailPage() {
   const { projectSlug, queueId, itemId } = Route.useParams()
   const windowWidth = useWindowWidth()
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [selectedAnnotationId, setSelectedAnnotationId] = useParamState("annotationId", "", { history: "push" })
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
@@ -53,11 +61,6 @@ function AnnotationQueueItemDetailPage() {
     itemId,
   })
 
-  const { data: queue, isLoading: queueLoading } = useAnnotationQueue({
-    projectId,
-    queueId,
-  })
-
   const traceId = itemDetail?.traceId ?? ""
   const hasTraceParams = projectId.length > 0 && traceId.length > 0
 
@@ -66,6 +69,36 @@ function AnnotationQueueItemDetailPage() {
     traceId,
     enabled: hasTraceParams,
   })
+
+  const { data: annotationsData } = useAnnotationsByTrace({
+    projectId,
+    traceId,
+    draftMode: "include",
+    enabled: hasTraceParams,
+  })
+
+  const { scrollToAnnotation } = useAnnotationNavigation({
+    scrollContainerRef,
+  })
+
+  const hasHandledDeepLinkRef = useRef(false)
+
+  function handleAnnotationClick(annotation: AnnotationRecord) {
+    if (isGlobalAnnotation(annotation)) return
+    setSelectedAnnotationId(annotation.id)
+    scrollToAnnotation(annotation)
+  }
+
+  useEffect(() => {
+    if (hasHandledDeepLinkRef.current) return
+    if (!selectedAnnotationId || !annotationsData?.items || !traceDetail) return
+
+    const annotation = annotationsData.items.find((a) => a.id === selectedAnnotationId)
+    if (annotation) {
+      hasHandledDeepLinkRef.current = true
+      scrollToAnnotation(annotation)
+    }
+  }, [selectedAnnotationId, annotationsData, traceDetail, scrollToAnnotation])
 
   const leftMaxWidth = Math.max(LEFT_MIN_WIDTH, Math.floor(windowWidth * 0.4))
   const rightDefaultWidth = Math.max(RIGHT_MIN_WIDTH, Math.floor(windowWidth * 0.3))
@@ -128,10 +161,11 @@ function AnnotationQueueItemDetailPage() {
 
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <ConversationTab
+          isActive
           traceDetail={traceDetail}
           isDetailLoading={isDetailLoading || itemLoading}
           projectId={projectId}
-          isActive
+          scrollContainerRef={scrollContainerRef}
         />
       </div>
 
@@ -141,11 +175,11 @@ function AnnotationQueueItemDetailPage() {
         maxWidth={rightMaxWidth}
         resizeFrom="left"
       >
-        <AnnotationsSidebar
-          instructions={queue?.instructions ?? ""}
+        <TraceAnnotationsList
           projectId={projectId}
           traceId={traceId}
-          isLoading={itemLoading || queueLoading}
+          selectedAnnotationId={selectedAnnotationId}
+          onAnnotationClick={handleAnnotationClick}
         />
       </DetailDrawer>
     </div>

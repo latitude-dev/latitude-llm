@@ -38,6 +38,7 @@ const toDomainScore = (row: typeof scores.$inferSelect): Score =>
     tokens: row.tokens,
     cost: row.cost,
     draftedAt: row.draftedAt,
+    annotatorId: row.annotatorId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   })
@@ -63,6 +64,7 @@ const toInsertRow = (score: Score): typeof scores.$inferInsert => ({
   tokens: score.tokens,
   cost: score.cost,
   draftedAt: score.draftedAt,
+  annotatorId: score.annotatorId,
   createdAt: score.createdAt,
   updatedAt: score.updatedAt,
 })
@@ -153,6 +155,7 @@ export const ScoreRepositoryLive = Layer.effect(
                   tokens: row.tokens,
                   cost: row.cost,
                   draftedAt: row.draftedAt,
+                  annotatorId: row.annotatorId,
                   updatedAt: row.updatedAt,
                 },
               }),

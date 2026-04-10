@@ -6,6 +6,14 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
     matchedIssueUuid: string | null
     similarityScore: number
   }
+  type MockEligibilityResult =
+    | {
+        status: "eligible"
+      }
+    | {
+        status: "skipped"
+        reason: "PassedScoreNotEligibleForDiscoveryError"
+      }
   type MockResolvedIssueMatch = {
     issueId: string | null
   }
@@ -15,9 +23,11 @@ const { callOrder, mockActivities } = vi.hoisted(() => {
   }
 
   const mockActivities = {
-    checkEligibility: vi.fn(async () => {
+    checkEligibility: vi.fn<() => Promise<MockEligibilityResult>>(async () => {
       callOrder.push("checkEligibility")
-      return true as const
+      return {
+        status: "eligible" as const,
+      }
     }),
     embedScoreFeedback: vi.fn(async () => {
       callOrder.push("embedScoreFeedback")
@@ -143,8 +153,9 @@ describe("issueDiscoveryWorkflow", () => {
   })
 
   it("skips retrieval stages for known eligibility errors", async () => {
-    mockActivities.checkEligibility.mockRejectedValueOnce({
-      _tag: "PassedScoreNotEligibleForDiscoveryError",
+    mockActivities.checkEligibility.mockResolvedValueOnce({
+      status: "skipped" as const,
+      reason: "PassedScoreNotEligibleForDiscoveryError" as const,
     })
 
     const result = await issueDiscoveryWorkflow({

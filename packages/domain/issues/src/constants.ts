@@ -81,8 +81,8 @@ export const RERANK_MODEL = "rerank-2.5"
 
 /** Language model used to generate stable issue names/descriptions. */
 export const ISSUE_DETAILS_GENERATION_MODEL = {
-  provider: "openai",
-  model: "gpt-5.4",
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-opus-4-6-v1",
   reasoning: "medium",
 } as const
 
