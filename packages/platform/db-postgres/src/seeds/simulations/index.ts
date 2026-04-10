@@ -11,6 +11,7 @@ import {
   SEED_WARRANTY_DATASET_ID,
   SEED_WARRANTY_SIMULATION_ID,
   WARRANTY_DATASET_ROWS,
+  seedDateDaysAgo,
 } from "@domain/shared/seeding"
 import { SIMULATION_DATASET_CUSTOM_SENTINEL, SIMULATION_THRESHOLD_CUSTOM_SENTINEL } from "@domain/simulations"
 import { Effect } from "effect"
@@ -18,6 +19,10 @@ import { simulations } from "../../schema/simulations.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
 
 type SimulationRow = typeof simulations.$inferInsert
+
+function simulationDate(daysAgo: number, hour: number, minute = 0): Date {
+  return seedDateDaysAgo(daysAgo, hour, minute)
+}
 
 const simulationRows = [
   {
@@ -36,10 +41,10 @@ const simulationRows = [
       sdk: "javascript@1.0.0",
     },
     error: null,
-    startedAt: new Date("2026-03-26T09:00:00.000Z"),
-    finishedAt: new Date("2026-03-26T09:06:00.000Z"),
-    createdAt: new Date("2026-03-26T09:06:00.000Z"),
-    updatedAt: new Date("2026-03-26T09:06:00.000Z"),
+    startedAt: simulationDate(6, 9, 0),
+    finishedAt: simulationDate(6, 9, 6),
+    createdAt: simulationDate(6, 9, 6),
+    updatedAt: simulationDate(6, 9, 6),
   },
   {
     id: SEED_SIMULATION_ID,
@@ -57,10 +62,10 @@ const simulationRows = [
       sdk: "javascript@1.0.0",
     },
     error: null,
-    startedAt: new Date("2026-03-28T13:15:00.000Z"),
-    finishedAt: new Date("2026-03-28T13:24:00.000Z"),
-    createdAt: new Date("2026-03-28T13:24:00.000Z"),
-    updatedAt: new Date("2026-03-28T13:24:00.000Z"),
+    startedAt: simulationDate(4, 13, 15),
+    finishedAt: simulationDate(4, 13, 24),
+    createdAt: simulationDate(4, 13, 24),
+    updatedAt: simulationDate(4, 13, 24),
   },
   {
     id: SEED_SIMULATION_ERRORED_ID,
@@ -79,10 +84,10 @@ const simulationRows = [
     },
     error:
       "Custom dataset loader timed out while fetching mesa-delivery logistics scenarios from the Acme Logistics staging API.",
-    startedAt: new Date("2026-03-29T07:40:00.000Z"),
-    finishedAt: new Date("2026-03-29T07:41:12.000Z"),
-    createdAt: new Date("2026-03-29T07:41:12.000Z"),
-    updatedAt: new Date("2026-03-29T07:41:12.000Z"),
+    startedAt: simulationDate(3, 7, 40),
+    finishedAt: simulationDate(3, 7, 41),
+    createdAt: simulationDate(3, 7, 41),
+    updatedAt: simulationDate(3, 7, 41),
   },
 ] satisfies SimulationRow[]
 

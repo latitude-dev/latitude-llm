@@ -132,20 +132,26 @@ Most traces in the project belong to this ambient layer.
 
 The seed also includes a deterministic Acme support workflow core built from fixed traces and canonical linked records.
 
-The current issue families are:
+The issue graph is intentionally broader than one happy-path lifecycle. The default seed should cover:
 
-| Issue family | Narrative role | Downstream state |
+| Issue family | Narrative role | Lifecycle coverage |
 | --- | --- | --- |
-| Warranty coverage fabrication | Mature support issue | Two evaluations, one dataset, one passed simulation |
-| Dangerous product combinations | Mature support issue | One evaluation, one dataset, one passed simulation |
-| Unsupported logistics guarantees | Generate-ready support issue | Issue and annotation evidence only; no evaluation yet |
+| Warranty coverage fabrication | Mature support issue | Active, escalating, evaluation-linked, dataset-backed, simulation-backed |
+| Dangerous product combinations | Mature issue with regression | Resolved issue that regressed through fresh linked occurrences and still has an active monitor |
+| Unsupported logistics guarantees | Generate-ready support issue | New, escalating, annotation-backed only, no linked evaluation yet |
+| Instant returns eligibility | Resolved issue with continued monitoring | Historical evaluation-linked issue whose monitor remains active after resolution to catch regressions |
+| Courtesy credits and fee waivers | Ignored noisy issue | Custom-score-backed issue with recent ignored state and no linked evaluation |
+| Account recovery verification bypass | Active issue outside the original support-policy cluster | Evaluation-linked security issue with fresh recent activity |
+| Installation certification fabrication | Older lingering issue | Custom-score-backed issue with older occurrences across the rolling seed window |
 
 Important rules:
 
 - annotation evidence comes from deterministic fixed traces with real conversation content
 - positive annotation scores link to their issue when the issue already exists
 - negative examples remain part of the same story and act as counter-examples rather than unrelated filler
-- the generate-ready issue intentionally stops before evaluation creation so that issue-to-evaluation workflows have a real seed target
+- some issues intentionally stop before evaluation creation so that issue-to-evaluation workflows still have real seed targets
+- some issues are evaluation-linked and some are custom-score-backed only so the issue UI can exercise both linked-evaluation and no-linked-evaluation states
+- the issue timeline should span roughly the last three months relative to when the seed runs, not a fixed historical week
 
 ### Alignment, datasets, and simulations
 
@@ -164,12 +170,20 @@ Scores and annotation queues are part of the same graph rather than separate dem
 
 The default seed includes:
 
-- canonical Postgres scores for lifecycle coverage, issue-linked annotations, alignment material, and simulation-linked evaluation results
-- a ClickHouse score mirror for analytics
-- manual annotation queues for the three seeded issue families
+- canonical Postgres scores for lifecycle coverage, issue-linked annotations, alignment material, simulation-linked evaluation results, and additional issue-linked evaluation/custom occurrences
+- a ClickHouse score mirror for analytics using the same rolling timestamps as Postgres
+- manual annotation queues for the three deterministic annotation issue families
 - one system queue and one live queue for queue-type coverage
 
 Queue items and trace-linked scores should point to deterministic traces, not to random generated telemetry.
+
+Issue state coverage depends on score timing, not only issue timestamps. The rolling seed window should preserve enough recent occurrences to keep these UI states populated:
+
+- `new` through fresh logistics annotation evidence
+- `escalating` through issues whose last-day occurrence count exceeds their previous seven-day baseline
+- `resolved` through an issue with no occurrences since its resolution point
+- `regressed` through a resolved issue that later receives new occurrences
+- `ignored` through a manually ignored issue that still keeps its canonical occurrence history
 
 ### Deterministic trace layer
 
@@ -247,6 +261,7 @@ When adding or changing trace-linked workflow data:
 - any passed simulation should reference a real dataset and real evaluation IDs
 - any issue that exists in Weaviate should describe the same issue family, UUID, organization, and project as Postgres
 - any dataset row counts and simulation metadata should remain consistent with the seeded dataset content
+- any issue-state example that relies on escalation, resolution, or regression should be backed by score occurrence timing that still produces that state against the rolling `now()` window used by analytics
 
 ### 6. Prefer coherent additions over UI-only states
 
