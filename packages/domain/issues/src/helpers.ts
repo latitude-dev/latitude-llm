@@ -181,17 +181,6 @@ export const normalizeEmbedding = (embedding: readonly number[]): number[] => {
   return Array.from(normalized)
 }
 
-const normalizeLifecycleTimestamp = (value: string): string => {
-  const withTimeSeparator = value.includes("T") ? value : value.replace(" ", "T")
-  return /(?:Z|[+-]\d{2}:\d{2})$/.test(withTimeSeparator) ? withTimeSeparator : `${withTimeSeparator}Z`
-}
-
-const parseLifecycleDate = (value: string, fallback: Date): Date => {
-  // ClickHouse JSONEachRow datetimes arrive without a timezone suffix; treat them as UTC.
-  const parsed = new Date(normalizeLifecycleTimestamp(value))
-  return Number.isNaN(parsed.getTime()) ? fallback : parsed
-}
-
 export interface DeriveIssueLifecycleStatesInput {
   readonly issue: Issue
   readonly occurrence?: IssueOccurrenceAggregate | null
@@ -203,8 +192,8 @@ export const deriveIssueLifecycleStates = ({
   occurrence,
   now = new Date(),
 }: DeriveIssueLifecycleStatesInput): readonly IssueStateValue[] => {
-  const firstSeenAt = occurrence ? parseLifecycleDate(occurrence.firstSeenAt, issue.createdAt) : issue.createdAt
-  const lastSeenAt = occurrence ? parseLifecycleDate(occurrence.lastSeenAt, issue.createdAt) : issue.createdAt
+  const firstSeenAt = occurrence?.firstSeenAt ?? issue.createdAt
+  const lastSeenAt = occurrence?.lastSeenAt ?? issue.createdAt
   const states = new Set<IssueStateValue>()
 
   if (firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY) {

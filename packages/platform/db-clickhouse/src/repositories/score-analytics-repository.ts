@@ -20,7 +20,7 @@ import {
   SessionId as toSessionId,
   TraceId as toTraceId,
 } from "@domain/shared"
-import { normalizeCHString } from "@repo/utils"
+import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
 
 // ---------------------------------------------------------------------------
@@ -191,8 +191,8 @@ const toIssueOccurrence = (row: IssueOccurrenceRow): IssueOccurrenceAggregate =>
   totalOccurrences: Number(row.total_occurrences),
   recentOccurrences: Number(row.recent_occurrences),
   baselineAvgOccurrences: Number(row.baseline_avg_occurrences),
-  firstSeenAt: row.first_seen_at,
-  lastSeenAt: row.last_seen_at,
+  firstSeenAt: parseCHDate(row.first_seen_at),
+  lastSeenAt: parseCHDate(row.last_seen_at),
 })
 
 const toIssueOccurrenceBucket = (row: IssueOccurrenceBucketRow): IssueOccurrenceBucket => ({

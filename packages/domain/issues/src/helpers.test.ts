@@ -56,8 +56,8 @@ const makeOccurrence = (overrides: Partial<IssueOccurrenceAggregate> = {}): Issu
   totalOccurrences: 3,
   recentOccurrences: 1,
   baselineAvgOccurrences: 1,
-  firstSeenAt: "2026-04-01 00:00:00.000",
-  lastSeenAt: "2026-04-09 00:00:00.000",
+  firstSeenAt: new Date("2026-04-01T00:00:00.000Z"),
+  lastSeenAt: new Date("2026-04-09T00:00:00.000Z"),
   ...overrides,
 })
 
@@ -205,8 +205,8 @@ describe("issue lifecycle helpers", () => {
         clusteredAt: new Date("2026-04-05T08:00:00.000Z"),
       }),
       occurrence: makeOccurrence({
-        firstSeenAt: "2026-04-05 08:00:00.000",
-        lastSeenAt: "2026-04-09 20:00:00.000",
+        firstSeenAt: new Date("2026-04-05T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
         recentOccurrences: 4,
         baselineAvgOccurrences: 2,
       }),
@@ -224,8 +224,8 @@ describe("issue lifecycle helpers", () => {
         clusteredAt: new Date("2026-03-01T08:00:00.000Z"),
       }),
       occurrence: makeOccurrence({
-        firstSeenAt: "2026-03-01 08:00:00.000",
-        lastSeenAt: "2026-03-20 08:00:00.000",
+        firstSeenAt: new Date("2026-03-01T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-03-20T08:00:00.000Z"),
         recentOccurrences: 0,
         baselineAvgOccurrences: 0,
       }),
@@ -244,8 +244,8 @@ describe("issue lifecycle helpers", () => {
         resolvedAt: new Date("2026-04-01T12:00:00.000Z"),
       }),
       occurrence: makeOccurrence({
-        firstSeenAt: "2026-03-01 08:00:00.000",
-        lastSeenAt: "2026-04-05 08:00:00.000",
+        firstSeenAt: new Date("2026-03-01T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
         recentOccurrences: 0,
         baselineAvgOccurrences: 0,
       }),

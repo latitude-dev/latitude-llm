@@ -383,6 +383,8 @@ describe("ScoreAnalyticsRepository", () => {
       const aggA = aggs.find((a) => (a.issueId as string) === issueA)
       expect(aggA).toBeDefined()
       expect(aggA?.totalOccurrences).toBe(3)
+      expect(aggA?.firstSeenAt.toISOString()).toBe("2026-03-10T10:00:00.000Z")
+      expect(aggA?.lastSeenAt.toISOString()).toBe("2026-03-25T10:00:00.000Z")
     })
 
     it("returns empty for no issue ids", async () => {

@@ -65,8 +65,8 @@ describe("listIssuesUseCase", () => {
           totalOccurrences: 4,
           recentOccurrences: 4,
           baselineAvgOccurrences: 2,
-          firstSeenAt: "2026-04-07 08:00:00.000",
-          lastSeenAt: "2026-04-09 20:00:00.000",
+          firstSeenAt: new Date("2026-04-07T08:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
         },
       ],
       [
@@ -76,8 +76,8 @@ describe("listIssuesUseCase", () => {
           totalOccurrences: 6,
           recentOccurrences: 0,
           baselineAvgOccurrences: 0,
-          firstSeenAt: "2026-03-20 08:00:00.000",
-          lastSeenAt: "2026-04-05 08:00:00.000",
+          firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-05T08:00:00.000Z"),
         },
       ],
       [
@@ -87,8 +87,8 @@ describe("listIssuesUseCase", () => {
           totalOccurrences: 2,
           recentOccurrences: 0,
           baselineAvgOccurrences: 0,
-          firstSeenAt: "2026-03-10 08:00:00.000",
-          lastSeenAt: "2026-04-02 08:00:00.000",
+          firstSeenAt: new Date("2026-03-10T08:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-02T08:00:00.000Z"),
         },
       ],
     ])
