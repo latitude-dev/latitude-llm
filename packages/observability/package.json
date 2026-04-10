@@ -25,6 +25,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.71.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.213.0",
     "@opentelemetry/sdk-node": "^0.213.0",
+    "@opentelemetry/sdk-trace-base": "^2.6.0",
     "@latitude-data/telemetry": "catalog:",
     "@platform/env": "workspace:*"
   }

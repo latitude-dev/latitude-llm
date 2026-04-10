@@ -9,6 +9,7 @@ const inputKeyedCandidates = [
   keyedFromInt("llm.token_count.prompt"),
   keyedFromInt("ai.usage.promptTokens"),
   keyedFromInt("ai.usage.inputTokens"),
+  keyedFromInt("input_tokens"), // Claude Code (additive: non-cached input only)
 ]
 
 const outputCandidates = [
@@ -17,6 +18,7 @@ const outputCandidates = [
   fromInt("llm.token_count.completion"),
   fromInt("ai.usage.completionTokens"),
   fromInt("ai.usage.outputTokens"),
+  fromInt("output_tokens"), // Claude Code
 ]
 
 const cacheReadCandidates = [
@@ -25,12 +27,14 @@ const cacheReadCandidates = [
   fromInt("ai.usage.cachedInputTokens"),
   fromInt("ai.usage.inputTokenDetails.cacheReadTokens"),
   fromInt("llm.token_count.prompt_details.cache_read"),
+  fromInt("cache_read_tokens"), // Claude Code
 ]
 
 const cacheCreateCandidates = [
   fromInt("gen_ai.usage.cache_creation.input_tokens"),
   fromInt("llm.token_count.prompt_details.cache_write"),
   fromInt("ai.usage.inputTokenDetails.cacheWriteTokens"),
+  fromInt("cache_creation_tokens"), // Claude Code
 ]
 
 const reasoningCandidates = [
