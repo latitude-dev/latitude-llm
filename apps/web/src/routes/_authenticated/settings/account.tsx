@@ -1,12 +1,11 @@
 import { Button, Container, FormWrapper, Input, Modal, Text, useToast } from "@repo/ui"
-import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
+import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { deleteCurrentUser, updateUserName } from "../../../domains/sessions/session.functions.ts"
 import { authClient } from "../../../lib/auth-client.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { useAuthenticatedUser } from "../-route-data.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
-
-const authRoute = getRouteApi("/_authenticated")
 
 export const Route = createFileRoute("/_authenticated/settings/account")({
   component: AccountSettingsRoutePage,
@@ -77,7 +76,7 @@ function DeleteAccountConfirmModal({ open, setOpen }: { open: boolean; setOpen: 
 }
 
 export function AccountSettingsPanel() {
-  const { user } = authRoute.useRouteContext()
+  const user = useAuthenticatedUser()
   const { toast } = useToast()
   const router = useRouter()
   const [name, setName] = useState(user.name ?? "")

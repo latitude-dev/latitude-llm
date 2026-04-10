@@ -8,13 +8,14 @@ import {
   useProjectsCollection,
 } from "../../../../../../domains/projects/projects.collection.ts"
 import { SettingsPageHeader } from "../../../../settings/-components/settings-page-header.tsx"
+import { useRouteProject } from "../../../-route-data.ts"
 
 const projectLayoutRoute = getRouteApi("/_authenticated/projects/$projectSlug")
 
 export function ProjectGeneralSettingsPanel() {
   const { toast } = useToast()
   const { projectSlug } = projectLayoutRoute.useParams()
-  const { project: routeProject } = projectLayoutRoute.useRouteContext()
+  const routeProject = useRouteProject()
   const { data: projectRow } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
     [projectSlug],

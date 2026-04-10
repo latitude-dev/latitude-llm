@@ -1,7 +1,7 @@
 import { Button, CloseTrigger, Container, FormWrapper, Input, Modal, Text, useToast } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
-import { createFileRoute, getRouteApi } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { useCallback, useRef, useState } from "react"
 import { setActiveOrganization } from "../../../domains/auth/auth.functions.ts"
 import {
@@ -10,9 +10,8 @@ import {
 } from "../../../domains/organizations/organizations.collection.ts"
 import { createOrganization } from "../../../domains/organizations/organizations.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 import { SettingsPageHeader } from "./-components/settings-page-header.tsx"
-
-const authRoute = getRouteApi("/_authenticated")
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
   component: OrganizationSettingsRoutePage,
@@ -23,7 +22,7 @@ function OrganizationSettingsRoutePage() {
 }
 
 function OrganizationNameSection() {
-  const { organizationId } = authRoute.useRouteContext()
+  const organizationId = useAuthenticatedOrganizationId()
   const { toast } = useToast()
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
