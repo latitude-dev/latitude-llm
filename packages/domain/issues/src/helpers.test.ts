@@ -1,7 +1,15 @@
+import type { IssueOccurrenceAggregate } from "@domain/scores"
+import { IssueId } from "@domain/shared"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_HALF_LIFE_SECONDS, CENTROID_SOURCE_WEIGHTS } from "./constants.ts"
-import type { IssueCentroid } from "./entities/issue.ts"
-import { createIssueCentroid, normalizeEmbedding, normalizeIssueCentroid, updateIssueCentroid } from "./helpers.ts"
+import { type Issue, type IssueCentroid, IssueState } from "./entities/issue.ts"
+import {
+  createIssueCentroid,
+  deriveIssueLifecycleStates,
+  normalizeEmbedding,
+  normalizeIssueCentroid,
+  updateIssueCentroid,
+} from "./helpers.ts"
 
 const halfLifeMilliseconds = CENTROID_HALF_LIFE_SECONDS * 1000
 
@@ -25,6 +33,33 @@ const makeCentroid = (overrides: Partial<IssueCentroid> = {}): IssueCentroid => 
     weights: overrides.weights ? { ...overrides.weights } : centroid.weights,
   }
 }
+
+const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
+  id: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+  uuid: "11111111-1111-4111-8111-111111111111",
+  organizationId: "oooooooooooooooooooooooo",
+  projectId: "pppppppppppppppppppppppp",
+  name: "Secret leakage",
+  description: "The assistant reveals internal credentials.",
+  centroid: createIssueCentroid(),
+  clusteredAt: new Date("2026-04-01T00:00:00.000Z"),
+  escalatedAt: null,
+  resolvedAt: null,
+  ignoredAt: null,
+  createdAt: new Date("2026-04-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+  ...overrides,
+})
+
+const makeOccurrence = (overrides: Partial<IssueOccurrenceAggregate> = {}): IssueOccurrenceAggregate => ({
+  issueId: IssueId("iiiiiiiiiiiiiiiiiiiiiiii"),
+  totalOccurrences: 3,
+  recentOccurrences: 1,
+  baselineAvgOccurrences: 1,
+  firstSeenAt: "2026-04-01 00:00:00.000",
+  lastSeenAt: "2026-04-09 00:00:00.000",
+  ...overrides,
+})
 
 describe("issue centroid helpers", () => {
   it("creates empty centroids with the pinned v2 config", () => {
@@ -156,5 +191,82 @@ describe("issue centroid helpers", () => {
         timestamp,
       }),
     ).toThrow("Dimension mismatch: centroid has 2048, score has 2")
+  })
+})
+
+describe("issue lifecycle helpers", () => {
+  const now = new Date("2026-04-10T00:00:00.000Z")
+
+  it("derives new and escalating states from issue occurrences", () => {
+    const states = deriveIssueLifecycleStates({
+      issue: makeIssue({
+        createdAt: new Date("2026-04-05T08:00:00.000Z"),
+        updatedAt: new Date("2026-04-05T08:00:00.000Z"),
+        clusteredAt: new Date("2026-04-05T08:00:00.000Z"),
+      }),
+      occurrence: makeOccurrence({
+        firstSeenAt: "2026-04-05 08:00:00.000",
+        lastSeenAt: "2026-04-09 20:00:00.000",
+        recentOccurrences: 4,
+        baselineAvgOccurrences: 2,
+      }),
+      now,
+    })
+
+    expect(states).toEqual([IssueState.New, IssueState.Escalating])
+  })
+
+  it("marks issues resolved after 14 days of inactivity", () => {
+    const states = deriveIssueLifecycleStates({
+      issue: makeIssue({
+        createdAt: new Date("2026-03-01T08:00:00.000Z"),
+        updatedAt: new Date("2026-03-01T08:00:00.000Z"),
+        clusteredAt: new Date("2026-03-01T08:00:00.000Z"),
+      }),
+      occurrence: makeOccurrence({
+        firstSeenAt: "2026-03-01 08:00:00.000",
+        lastSeenAt: "2026-03-20 08:00:00.000",
+        recentOccurrences: 0,
+        baselineAvgOccurrences: 0,
+      }),
+      now,
+    })
+
+    expect(states).toEqual([IssueState.Resolved])
+  })
+
+  it("marks resolved issues as regressed when new occurrences appear later", () => {
+    const states = deriveIssueLifecycleStates({
+      issue: makeIssue({
+        createdAt: new Date("2026-03-01T08:00:00.000Z"),
+        updatedAt: new Date("2026-03-01T08:00:00.000Z"),
+        clusteredAt: new Date("2026-03-01T08:00:00.000Z"),
+        resolvedAt: new Date("2026-04-01T12:00:00.000Z"),
+      }),
+      occurrence: makeOccurrence({
+        firstSeenAt: "2026-03-01 08:00:00.000",
+        lastSeenAt: "2026-04-05 08:00:00.000",
+        recentOccurrences: 0,
+        baselineAvgOccurrences: 0,
+      }),
+      now,
+    })
+
+    expect(states).toEqual([IssueState.Regressed])
+  })
+
+  it("falls back to issue timestamps when analytics have not caught up yet", () => {
+    const states = deriveIssueLifecycleStates({
+      issue: makeIssue({
+        createdAt: new Date("2026-04-06T08:00:00.000Z"),
+        updatedAt: new Date("2026-04-06T08:00:00.000Z"),
+        clusteredAt: new Date("2026-04-06T08:00:00.000Z"),
+        ignoredAt: new Date("2026-04-08T08:00:00.000Z"),
+      }),
+      occurrence: null,
+      now,
+    })
+
+    expect(states).toEqual([IssueState.New, IssueState.Ignored])
   })
 })

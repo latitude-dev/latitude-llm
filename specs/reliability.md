@@ -2615,7 +2615,7 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 
 **Parallelization notes**: can run in parallel with Phase 13 once phases 11 and 12 land.
 
-- [ ] Implement derived issue lifecycle states: `new`, `escalating`, `resolved`, `regressed`, and `ignored`.
+- [x] Implement derived issue lifecycle states: `new`, `escalating`, `resolved`, `regressed`, and `ignored`.
 - [ ] Implement manual resolve/unresolve/ignore/unignore commands, including both single-item and bulk variants, `apps/web` server-function actions for managed product use, and matching public APIs for approved agent-facing access, including the resolve-action override for keeping linked evaluations active, the confirmation-modal default from `keepMonitoring`, and the immediate archival of linked evaluations when an issue is ignored.
 - [ ] Implement project-level issue search with hybrid search, no rerank, and one-day cached query embeddings.
 - [ ] Build the Issues page in `apps/web` with `Active`, `Regressed`, and `Archived` tabs, counts, search, date filter, and bulk actions, backed by issue server functions/collections, including the manual resolve confirmation modal with the keep-monitoring toggle defaulted from `keepMonitoring`, plus a per-row `Generate evaluation` action that starts a background job and polls its status.
