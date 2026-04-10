@@ -4,12 +4,17 @@ import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { type EvaluationScriptExecution, estimateEvaluationScriptCostMicrocents } from "./alignment-execution.ts"
 import {
+  CONVERSATION_PLACEHOLDER,
   EVALUATION_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
   wrapPromptAsScript,
 } from "./baseline-generation.ts"
 import type { LiveEvaluationExecutionError } from "./errors.ts"
-import { executeLiveEvaluationUseCase } from "./live-execution.ts"
+import {
+  executeLiveEvaluationUseCase,
+  liveEvaluationExecutionInputSchema,
+  liveEvaluationExecutionResultSchema,
+} from "./live-execution.ts"
 
 const evaluationId = "eeeeeeeeeeeeeeeeeeeeeeee"
 
@@ -29,11 +34,21 @@ const validScript = wrapPromptAsScript(
     "Review the following conversation for the target issue.",
     "",
     "Conversation:",
-    "${conversation}",
+    CONVERSATION_PLACEHOLDER,
     "",
     "Set passed to true when the issue is absent.",
   ].join("\n"),
 )
+
+const validInput = liveEvaluationExecutionInputSchema.parse({
+  evaluationId,
+  script: validScript,
+  issue: {
+    name: "Deployment checklist omission",
+    description: "The assistant fails to mention key deployment steps.",
+  },
+  conversation: allMessages,
+})
 
 type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>, AIError>
 
@@ -67,26 +82,24 @@ describe("executeLiveEvaluationUseCase", () => {
 
     const result = await Effect.runPromise(
       executeLiveEvaluationUseCase({
-        evaluationId,
-        script: validScript,
-        issue: {
-          name: "Deployment checklist omission",
-          description: "The assistant fails to mention key deployment steps.",
-        },
-        allMessages,
+        ...validInput,
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(result).toEqual({
-      ...execution,
-      totalCostMicrocents: estimateEvaluationScriptCostMicrocents({
+    expect(result).toEqual(
+      liveEvaluationExecutionResultSchema.parse({
+        result: execution.result,
+        duration: execution.totalDurationNs,
         tokens: execution.totalTokens,
-        tokenUsage: {
-          input: 40,
-          output: execution.totalTokens - 40,
-        },
+        cost: estimateEvaluationScriptCostMicrocents({
+          tokens: execution.totalTokens,
+          tokenUsage: {
+            input: 40,
+            output: execution.totalTokens - 40,
+          },
+        }),
       }),
-    })
+    )
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]?.provider).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.provider)
     expect(calls.generate[0]?.model).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.model)
@@ -104,13 +117,8 @@ describe("executeLiveEvaluationUseCase", () => {
     await expect(
       Effect.runPromise(
         executeLiveEvaluationUseCase({
-          evaluationId,
+          ...validInput,
           script: "const result = 'invalid runtime'",
-          issue: {
-            name: "Deployment checklist omission",
-            description: "The assistant fails to mention key deployment steps.",
-          },
-          allMessages,
         }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toMatchObject({
@@ -135,13 +143,7 @@ describe("executeLiveEvaluationUseCase", () => {
     await expect(
       Effect.runPromise(
         executeLiveEvaluationUseCase({
-          evaluationId,
-          script: validScript,
-          issue: {
-            name: "Deployment checklist omission",
-            description: "The assistant fails to mention key deployment steps.",
-          },
-          allMessages,
+          ...validInput,
         }).pipe(Effect.provide(layer)),
       ),
     ).rejects.toBeInstanceOf(AIError)

@@ -125,6 +125,16 @@ export {
 export {
   type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,
+  type LiveEvaluationConversationInput,
+  type LiveEvaluationExecutionInput,
+  type LiveEvaluationExecutionResult,
+  type LiveEvaluationIssueContext,
+  type LiveEvaluationResultPayload,
+  liveEvaluationConversationInputSchema,
+  liveEvaluationExecutionInputSchema,
+  liveEvaluationExecutionResultSchema,
+  liveEvaluationIssueContextSchema,
+  liveEvaluationResultPayloadSchema,
 } from "./live-execution.ts"
 export {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,

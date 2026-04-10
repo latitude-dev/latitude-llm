@@ -115,7 +115,7 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
   - prior evaluation score in one `(evaluationId, scope)` pair, used by `first`
   - existing evaluation score for one `(evaluationId, traceId)` pair, used by duplicate-result prevention
 - [x] **P13-PR1-4**: Introduce the domain live evaluation execution use case in `@domain/evaluations`, wrapping the current MVP `executeEvaluationScript()` bridge through the existing `AI` service instead of embedding provider-specific logic in workers
-- [ ] **P13-PR1-5**: Define the canonical live execution input/output shapes, including issue context, conversation input, result payload, duration, tokens, and cost
+- [x] **P13-PR1-5**: Define the canonical live execution input/output shapes, including issue context, conversation input, result payload, duration, tokens, and cost
 - [ ] **P13-PR1-6**: Add unit tests for helper semantics, idempotency expectations, filter-match delegation, and execution shape validation
 
 **Exit gate**:
@@ -242,3 +242,4 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 - `apps/workers/src/workers/live-evaluations*.test.ts`
 - `packages/domain/evaluations/src/*.test.ts`
 - `packages/domain/scores/src/*.test.ts`
+
