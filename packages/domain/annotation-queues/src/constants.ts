@@ -22,7 +22,9 @@ export const SYSTEM_QUEUE_FLAGGER_TEMPERATURE = 0
 
 export const SYSTEM_QUEUE_FLAGGER_MAX_TOKENS = 256
 
-export const SYSTEM_QUEUE_ANNOTATOR_MODEL = "gpt-4o-mini"
+export const SYSTEM_QUEUE_ANNOTATOR_PROVIDER = "amazon-bedrock"
+
+export const SYSTEM_QUEUE_ANNOTATOR_MODEL = "amazon.nova-lite-v1:0"
 
 export const SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE = 0.2
 

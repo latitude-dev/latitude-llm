@@ -91,10 +91,10 @@ describe("runSystemQueueAnnotatorUseCase", () => {
     expect(calls.generate).toHaveLength(1)
 
     const generateCall = calls.generate[0]
-    expect(generateCall.model).toBe("gpt-4o-mini")
+    expect(generateCall.model).toBe("amazon.nova-lite-v1:0")
     expect(generateCall.temperature).toBe(0.2)
     expect(generateCall.maxTokens).toBe(2048)
-    expect(generateCall.provider).toBe("openai")
+    expect(generateCall.provider).toBe("amazon-bedrock")
     expect(generateCall.system).toContain("Jailbreaking")
     expect(generateCall.telemetry).toMatchObject({
       spanName: "system-queue-annotator",
