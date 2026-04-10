@@ -12,6 +12,8 @@ import {
   SEED_EVALUATION_ID,
   SEED_GENERATE_ISSUE_ID,
   SEED_GENERATE_ISSUE_UUID,
+  SEED_EXTRA_ISSUE_IDS,
+  SEED_EXTRA_ISSUE_UUIDS,
   SEED_INSTALLATION_ISSUE_ID,
   SEED_INSTALLATION_ISSUE_UUID,
   SEED_ISSUE_ID,
@@ -38,7 +40,7 @@ export type SeedIssueFixture = {
   readonly ignoredDaysAgo: number | null
 }
 
-export const SEED_ISSUE_FIXTURES: readonly SeedIssueFixture[] = [
+const baseIssueFixtures = [
   {
     id: SEED_ISSUE_ID,
     uuid: SEED_ISSUE_UUID,
@@ -146,7 +148,220 @@ export const SEED_ISSUE_FIXTURES: readonly SeedIssueFixture[] = [
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
   },
+]
+
+const extraIssueBlueprints = [
+  {
+    name: "Agent invents enterprise SLAs for standard support plans",
+    description:
+      "The support agent promises named SLAs, priority response guarantees, or dedicated support channels for customers on standard plans. The issue appears when the model upgrades ordinary customers into enterprise-style contracts that do not exist.",
+    createdDaysAgo: 86,
+    clusteredDaysAgo: 61,
+    updatedDaysAgo: 61,
+    escalatedDaysAgo: 70,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent fabricates export-control clearances",
+    description:
+      "The support agent claims export approval, customs pre-clearance, or restricted-destination eligibility for orders that still require legal review. It often invents reference numbers or says the shipment is already cleared.",
+    createdDaysAgo: 79,
+    clusteredDaysAgo: 52,
+    updatedDaysAgo: 52,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: 45,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent guarantees chargeback reversals",
+    description:
+      "The support agent promises that finance will reverse chargebacks or bank disputes automatically after the customer explains the situation, without waiting for payment operations review or issuer confirmation.",
+    createdDaysAgo: 76,
+    clusteredDaysAgo: 37,
+    updatedDaysAgo: 37,
+    escalatedDaysAgo: 54,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: 22,
+  },
+  {
+    name: "Agent invents procurement onboarding approvals",
+    description:
+      "The support agent tells buyers that vendor onboarding, procurement registration, or approved-supplier status is already complete when the procurement team has not yet approved the account.",
+    createdDaysAgo: 73,
+    clusteredDaysAgo: 28,
+    updatedDaysAgo: 28,
+    escalatedDaysAgo: 49,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent overcommits recall reimbursement scope",
+    description:
+      "The support agent says recall reimbursements will include shipping, labor, or incidental damages that are not covered by the documented recall campaign. The issue tends to appear in urgent safety conversations.",
+    createdDaysAgo: 69,
+    clusteredDaysAgo: 18,
+    updatedDaysAgo: 18,
+    escalatedDaysAgo: 41,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent invents reseller discount ladders",
+    description:
+      "The support agent quotes volume or reseller discount tiers that have not been approved for the account. It frequently fabricates threshold names, loyalty tiers, or stackable margin protections.",
+    createdDaysAgo: 64,
+    clusteredDaysAgo: 15,
+    updatedDaysAgo: 15,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: 30,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent promises warehouse stock reservations without hold confirmation",
+    description:
+      "The support agent tells customers inventory has been reserved, placed on hold, or ring-fenced for pickup before warehouse systems or operations staff confirm the reservation.",
+    createdDaysAgo: 60,
+    clusteredDaysAgo: 10,
+    updatedDaysAgo: 10,
+    escalatedDaysAgo: 32,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent fabricates multilingual legal review sign-off",
+    description:
+      "The support agent claims translated contracts, warranty terms, or product disclaimers were legally reviewed in a target language when only the source-language policy exists.",
+    createdDaysAgo: 57,
+    clusteredDaysAgo: 40,
+    updatedDaysAgo: 40,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: 11,
+  },
+  {
+    name: "Agent invents partner-managed installation crews",
+    description:
+      "The support agent says approved partner technicians, field installers, or managed setup crews are automatically available in regions where Acme only ships self-service products.",
+    createdDaysAgo: 54,
+    clusteredDaysAgo: 26,
+    updatedDaysAgo: 26,
+    escalatedDaysAgo: 29,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent overstates certification renewal status",
+    description:
+      "The support agent tells customers that certifications, compliance renewals, or permit extensions are current even when the renewal is still pending or in review.",
+    createdDaysAgo: 51,
+    clusteredDaysAgo: 7,
+    updatedDaysAgo: 7,
+    escalatedDaysAgo: 24,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent fabricates incident root-cause determinations",
+    description:
+      "The support agent states that engineering already confirmed a root cause, failure mode, or defect category before the official incident review is finished.",
+    createdDaysAgo: 47,
+    clusteredDaysAgo: 16,
+    updatedDaysAgo: 16,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: 14,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent promises automatic contract renewals with frozen pricing",
+    description:
+      "The support agent guarantees renewals, frozen price protection, or auto-extension terms for accounts whose contracts still require sales approval or updated pricing review.",
+    createdDaysAgo: 43,
+    clusteredDaysAgo: 9,
+    updatedDaysAgo: 9,
+    escalatedDaysAgo: 15,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent invents hazardous-goods packaging exemptions",
+    description:
+      "The support agent says special packaging rules do not apply because the order qualifies for a waiver, alternate handling class, or internal exemption that does not exist.",
+    createdDaysAgo: 39,
+    clusteredDaysAgo: 12,
+    updatedDaysAgo: 12,
+    escalatedDaysAgo: 18,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent overcommits loyalty-tier case escalation rights",
+    description:
+      "The support agent tells customers their loyalty tier entitles them to executive review, emergency escalation, or expedited refunds that are not actually included in the program.",
+    createdDaysAgo: 35,
+    clusteredDaysAgo: 5,
+    updatedDaysAgo: 5,
+    escalatedDaysAgo: 12,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent invents data-retention deletions already completed",
+    description:
+      "The support agent states that conversation logs, support files, or account data have already been deleted even though the retention or privacy workflow is still pending.",
+    createdDaysAgo: 31,
+    clusteredDaysAgo: 20,
+    updatedDaysAgo: 20,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: 7,
+  },
+  {
+    name: "Agent promises API quota boosts without capacity approval",
+    description:
+      "The support agent tells developers that their quota has already been raised, burst limits were approved, or rate limiting will be waived before platform operations confirms capacity.",
+    createdDaysAgo: 27,
+    clusteredDaysAgo: 6,
+    updatedDaysAgo: 6,
+    escalatedDaysAgo: 8,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent fabricates offline service windows",
+    description:
+      "The support agent commits to maintenance windows, offline service appointments, or scheduled downtime protections that were never booked with operations.",
+    createdDaysAgo: 24,
+    clusteredDaysAgo: 17,
+    updatedDaysAgo: 17,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: 6,
+    ignoredDaysAgo: null,
+  },
+  {
+    name: "Agent invents customer-specific insurance riders",
+    description:
+      "The support agent says the customer has an insurance rider, special loss protection, or premium incident coverage that was never purchased or approved.",
+    createdDaysAgo: 19,
+    clusteredDaysAgo: 3,
+    updatedDaysAgo: 3,
+    escalatedDaysAgo: 5,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  },
 ] as const
+
+const extraIssueFixtures = extraIssueBlueprints.map((issue, index) => ({
+  id: SEED_EXTRA_ISSUE_IDS[index] ?? (() => {
+    throw new Error(`Missing extra seed issue ID for index ${index}`)
+  })(),
+  uuid: SEED_EXTRA_ISSUE_UUIDS[index] ?? (() => {
+    throw new Error(`Missing extra seed issue UUID for index ${index}`)
+  })(),
+  ...issue,
+}))
+
+export const SEED_ISSUE_FIXTURES: readonly SeedIssueFixture[] = [...baseIssueFixtures, ...extraIssueFixtures]
 
 export const SEED_ISSUE_FIXTURES_BY_ID = new Map(SEED_ISSUE_FIXTURES.map((issue) => [issue.id, issue] as const))
 
@@ -209,7 +424,7 @@ export type SeedIssueOccurrenceFixture = {
   readonly cost: number
 }
 
-export const SEED_ADDITIONAL_ISSUE_OCCURRENCES: readonly SeedIssueOccurrenceFixture[] = [
+const curatedIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = [
   {
     issueId: SEED_ISSUE_ID,
     source: "evaluation",
@@ -880,4 +1095,58 @@ export const SEED_ADDITIONAL_ISSUE_OCCURRENCES: readonly SeedIssueOccurrenceFixt
     tokens: 0,
     cost: 0,
   },
+]
+
+function buildExtraOccurrenceDays(issue: SeedIssueFixture, index: number): readonly number[] {
+  const count = index % 3 === 0 ? 2 : 4
+  const terminalDaysAgo =
+    issue.ignoredDaysAgo !== null
+      ? Math.min(issue.createdDaysAgo - 1, issue.ignoredDaysAgo + 2)
+      : issue.resolvedDaysAgo !== null
+        ? Math.min(issue.createdDaysAgo - 1, issue.resolvedDaysAgo + 2)
+        : Math.min(issue.createdDaysAgo - 1, issue.updatedDaysAgo)
+
+  const step = count === 2 ? 7 + (index % 2) : 4 + (index % 3)
+
+  return Array.from({ length: count }, (_, occurrenceIndex) => {
+    const day = terminalDaysAgo + (count - occurrenceIndex - 1) * step
+    return day <= issue.createdDaysAgo ? day : Math.max(0, terminalDaysAgo - (count - occurrenceIndex - 1))
+  })
+}
+
+const extraIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = extraIssueFixtures.flatMap((issue, index) => {
+  const sourceId = index % 2 === 0 ? "seed-issue-scout" : "backlog-audit"
+  const idPrefix = `x${index.toString(36)}`
+  const severity = index % 4 === 0 ? "high" : index % 4 === 1 ? "medium" : "low"
+
+  return buildExtraOccurrenceDays(issue, index).map((daysAgo, occurrenceIndex) => ({
+    issueId: issue.id,
+    source: "custom" as const,
+    sourceId,
+    idPrefix,
+    evaluationHash: null,
+    daysAgo,
+    hour: 8 + ((index + occurrenceIndex) % 7),
+    minute: (index * 7 + occurrenceIndex * 13) % 60,
+    value: 0.05 + ((index + occurrenceIndex) % 5) * 0.02,
+    passed: false,
+    errored: false,
+    error: null,
+    feedback: `Seeded long-tail issue evidence captured another instance of ${issue.name.toLowerCase()}.`,
+    metadata: {
+      importName: sourceId,
+      reviewer: index % 2 === 0 ? "seed-quality" : "ops-triage",
+      batch: `extra-issues-${Math.floor(index / 4) + 1}`,
+      severity,
+      expectedVisibility: buildExtraOccurrenceDays(issue, index).length >= 3 ? "visible" : "denoised",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }))
+})
+
+export const SEED_ADDITIONAL_ISSUE_OCCURRENCES: readonly SeedIssueOccurrenceFixture[] = [
+  ...curatedIssueOccurrenceRows,
+  ...extraIssueOccurrenceRows,
 ] as const

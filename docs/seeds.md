@@ -132,7 +132,7 @@ Most traces in the project belong to this ambient layer.
 
 The seed also includes a deterministic Acme support workflow core built from fixed traces and canonical linked records.
 
-The issue graph is intentionally broader than one happy-path lifecycle. The default seed should cover:
+The issue graph is intentionally broader than one happy-path lifecycle. The default seed should cover at least twenty-five issues in one coherent tenant-scoped project graph:
 
 | Issue family | Narrative role | Lifecycle coverage |
 | --- | --- | --- |
@@ -143,6 +143,7 @@ The issue graph is intentionally broader than one happy-path lifecycle. The defa
 | Courtesy credits and fee waivers | Ignored noisy issue | Custom-score-backed issue with recent ignored state and no linked evaluation |
 | Account recovery verification bypass | Active issue outside the original support-policy cluster | Evaluation-linked security issue with fresh recent activity |
 | Installation certification fabrication | Older lingering issue | Custom-score-backed issue with older occurrences across the rolling seed window |
+| Additional long-tail reliability issues | Diverse backlog coverage | Custom-score-backed issues spanning support, logistics, compliance, billing, procurement, and API operations; some remain intentionally denoised below the visibility threshold while others exceed it |
 
 Important rules:
 
@@ -152,6 +153,7 @@ Important rules:
 - some issues intentionally stop before evaluation creation so that issue-to-evaluation workflows still have real seed targets
 - some issues are evaluation-linked and some are custom-score-backed only so the issue UI can exercise both linked-evaluation and no-linked-evaluation states
 - the issue timeline should span roughly the last three months relative to when the seed runs, not a fixed historical week
+- the default issue list should include both visible and intentionally denoised issues so the repository can exercise `MIN_OCCURRENCES_FOR_VISIBILITY` behavior
 
 ### Alignment, datasets, and simulations
 
@@ -184,6 +186,7 @@ Issue state coverage depends on score timing, not only issue timestamps. The rol
 - `resolved` through an issue with no occurrences since its resolution point
 - `regressed` through a resolved issue that later receives new occurrences
 - `ignored` through a manually ignored issue that still keeps its canonical occurrence history
+- issue denoising through extra custom-score-backed issue families where some have only one or two canonical occurrences while others have three or more
 
 ### Deterministic trace layer
 

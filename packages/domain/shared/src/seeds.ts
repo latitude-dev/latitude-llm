@@ -100,6 +100,20 @@ export const SEED_ACCESS_ISSUE_UUID = "f6a7b8c9-d1e2-4f3a-9b4c-5d6e7f8091a2"
 export const SEED_INSTALLATION_ISSUE_ID = IssueId("i1n2s3t4a5l6l7c8e9r0t1f2")
 export const SEED_INSTALLATION_ISSUE_UUID = "0a7b8c9d-e1f2-4a3b-8c4d-5e6f7091a2b3"
 
+function fixedSeedEntityId(prefix: string, index: number): string {
+  return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
+}
+
+function fixedSeedUuid(index: number): string {
+  return `10000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`
+}
+
+/** Additional long-tail issues used to exercise pagination and denoising. */
+export const SEED_EXTRA_ISSUE_IDS: readonly IssueId[] = Array.from({ length: 18 }, (_, i) =>
+  IssueId(fixedSeedEntityId("xi", i)),
+)
+export const SEED_EXTRA_ISSUE_UUIDS: readonly string[] = Array.from({ length: 18 }, (_, i) => fixedSeedUuid(0x500 + i))
+
 /** Issue 1 active monitor. */
 export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")
 /** Issue 1 archived historical monitor. */
