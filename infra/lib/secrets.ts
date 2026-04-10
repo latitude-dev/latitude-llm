@@ -306,6 +306,28 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["datadog-site"] = datadogSite.secret
   secretVersions["datadog-site"] = datadogSite.secretVersion
 
+  const latitudeTelemetryApiKey = createSingleSecret(
+    baseName,
+    "latitude-telemetry-api-key",
+    "Latitude Telemetry API key",
+    process.env.LAT_LATITUDE_TELEMETRY_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["latitude-telemetry-api-key"] = latitudeTelemetryApiKey.secret
+  secretVersions["latitude-telemetry-api-key"] = latitudeTelemetryApiKey.secretVersion
+
+  const latitudeTelemetryProjectSlug = createSingleSecret(
+    baseName,
+    "latitude-telemetry-project-slug",
+    "Latitude Telemetry project slug",
+    process.env.LAT_LATITUDE_TELEMETRY_PROJECT_SLUG ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["latitude-telemetry-project-slug"] = latitudeTelemetryProjectSlug.secret
+  secretVersions["latitude-telemetry-project-slug"] = latitudeTelemetryProjectSlug.secretVersion
+
   return {
     secrets,
     secretVersions,

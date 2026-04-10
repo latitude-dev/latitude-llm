@@ -317,6 +317,8 @@ function createTaskDefinition(
       secrets["temporal-api-key"].arn,
       secrets["datadog-api-key"].arn,
       secrets["datadog-site"].arn,
+      secrets["latitude-telemetry-api-key"].arn,
+      secrets["latitude-telemetry-project-slug"].arn,
       s3Bucket.id,
     ])
     .apply(
@@ -347,6 +349,8 @@ function createTaskDefinition(
         temporalApiKeyArn,
         datadogApiKeyArn,
         datadogSiteArn,
+        latitudeTelemetryApiKeyArn,
+        latitudeTelemetryProjectSlugArn,
         s3BucketName,
       ]) => {
         const baseEnvironment: { name: string; value: string }[] = [
@@ -401,6 +405,8 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_DOMAIN", valueFrom: mailgunDomainArn },
           { name: "LAT_MAILGUN_FROM", valueFrom: mailgunFromArn },
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
+          { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
+          { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
         ]
 
         // Service-specific environment variables
@@ -604,6 +610,8 @@ function createMigrationTaskDefinition(
       secrets["weaviate-url"].arn,
       secrets["weaviate-api-key"].arn,
       secrets["voyage-api-key"].arn,
+      secrets["latitude-telemetry-api-key"].arn,
+      secrets["latitude-telemetry-project-slug"].arn,
     ])
     .apply(
       ([
@@ -617,6 +625,8 @@ function createMigrationTaskDefinition(
         weaviateUrlArn,
         weaviateApiKeyArn,
         voyageApiKeyArn,
+        latitudeTelemetryApiKeyArn,
+        latitudeTelemetryProjectSlugArn,
       ]) => {
         const def = {
           name: "migrations",
@@ -642,6 +652,8 @@ function createMigrationTaskDefinition(
             { name: "LAT_WEAVIATE_URL", valueFrom: weaviateUrlArn },
             { name: "LAT_WEAVIATE_API_KEY", valueFrom: weaviateApiKeyArn },
             { name: "LAT_VOYAGE_API_KEY", valueFrom: voyageApiKeyArn },
+            { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
+            { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           ],
         }
         return JSON.stringify([def])
