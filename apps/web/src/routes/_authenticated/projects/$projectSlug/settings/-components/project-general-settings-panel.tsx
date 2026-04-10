@@ -8,7 +8,7 @@ import {
   useProjectsCollection,
 } from "../../../../../../domains/projects/projects.collection.ts"
 import { SettingsPageHeader } from "../../../../settings/-components/settings-page-header.tsx"
-import { useRouteProject } from "../../../-route-data.ts"
+import { useRouteProject } from "../../-route-data.ts"
 
 const projectLayoutRoute = getRouteApi("/_authenticated/projects/$projectSlug")
 
