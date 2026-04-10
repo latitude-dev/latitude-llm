@@ -1207,6 +1207,50 @@ type AnnotatorOutput = {
 - draft-annotation creation and queue-item creation should happen together so the queue always has a matching pending annotation artifact
 - deterministic queues (`Tool Call Errors`, `Resource Outliers`, `Output Schema Validation`, `Empty Response`) also go through the `system-annotation-queues:annotate` step to get an LLM-drafted annotation, identical to the LLM-classified queues
 
+Annotator prompt template:
+
+The annotator prompt is a Latitude prompt file stored per deployment. The canonical template:
+
+```
+---
+provider: openai
+model: gpt-4.1
+temperature: 0.2
+schema:
+  type: object
+  required:
+    - feedback
+  properties:
+    feedback:
+      type: string
+      description: Draft annotation text — clusterable, human/LLM-readable feedback for the score's canonical feedback field
+---
+
+<system>
+You are the Annotation Writer for telemetry traces. Given a flagged trace and the queue it was flagged into, write a short, human-readable annotation describing the issue detected.
+The flag decision has already been made — your job is to draft the annotation, not to re-evaluate whether the trace belongs in the queue.
+Format constraints:
+- Write ONE to TWO sentences maximum.
+- Focus on what went wrong and the key evidence — not an exhaustive analysis.
+- Write so that similar issues across different traces produce similar annotations. The text will be used for semantic clustering.
+- Do NOT start with generic prefixes like "Trace shows", "The trace", "This trace", "The assistant" — lead with the specific issue or behavior.
+- Reference concrete numbers or field values when they strengthen the signal (e.g. "8 tool calls", "18s duration"), but do not enumerate every detail.
+Grounding rules:
+- Use ONLY the provided inputs. Do not invent facts.
+- If a detail is missing or ambiguous, say so briefly.
+- Do not mention PromptL, system prompts, or internal implementation details.
+</system>
+
+<user>
+Annotator Payload:
+{{annotator_payload}}
+</user>
+```
+
+The prompt output is a structured JSON object with a single `feedback` field matching the `AnnotatorOutput` type.
+
+The `{{annotator_payload}}` template variable is built by rendering the `AnnotatorPayload` structure into a labeled plain-text block. Unlike the flagger's truncated conversation excerpt, the annotator receives the complete conversation via `formatGenAIConversation` so the draft can reference any part of the interaction. Queue metadata (name, description, instructions), tool definitions, and trace metadata are rendered as labeled key-value sections so the annotator can ground its feedback in concrete evidence.
+
 Flagger output schema:
 
 - the flagger evaluates all sampled-in LLM-classified queues in a single call and returns a JSON array containing only the names of the queues that should be flagged; an empty array means no queues matched:
