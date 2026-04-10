@@ -1,17 +1,25 @@
 import { Button, Checkbox, CodeBlock, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
-import { ChevronLeft, ChevronRight, DoorOpen, ListTree } from "lucide-react"
-import { type ElementType, useRef, useState } from "react"
+import { eq } from "@tanstack/react-db"
+import { Braces, ChevronLeft, ChevronRight, FileCode2, Radio } from "lucide-react"
+import { type ElementType, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
+import {
+  getEnvBlock,
+  getInstallLine,
+  getOnboardingSnippet,
+  ONBOARDING_PROVIDER_SNIPPET_CONFIG,
+  type OnboardingProviderId,
+  type SdkLanguage,
+} from "./onboarding-integration-snippets.ts"
 
 type OnboardingRole = "engineer" | "data-ai-ml" | "product-manager" | "founder" | "other"
-type IntegrationMode = "sdk" | "opentelemetry"
+type IntegrationPanel = "typescript" | "python" | "opentelemetry"
 
-interface ProviderDefinition {
+interface ProviderEntry {
+  readonly id: OnboardingProviderId
   readonly name: string
   readonly icon: string
-  readonly sdkInstall: string
-  readonly sdkEnv: string
-  readonly otelSetup: string
 }
 
 const ROLE_OPTIONS: ReadonlyArray<{
@@ -103,134 +111,77 @@ const WAITING_GALLERY: ReadonlyArray<{ readonly title: string; readonly descript
 
 const DotLottieWc = "dotlottie-wc" as ElementType
 
-const PROVIDERS: ReadonlyArray<ProviderDefinition> = [
-  {
-    name: "OpenAI",
-    icon: "openai",
-    sdkInstall: "npm install openai @latitude-data/telemetry",
-    sdkEnv: "OPENAI_API_KEY=sk-...",
-    otelSetup: "Use OpenTelemetry Node SDK with the OpenAI client and export spans to Latitude.",
-  },
-  {
-    name: "Anthropic",
-    icon: "anthropic",
-    sdkInstall: "npm install @anthropic-ai/sdk @latitude-data/telemetry",
-    sdkEnv: "ANTHROPIC_API_KEY=sk-ant-...",
-    otelSetup: "Instrument Anthropic calls with OpenTelemetry and ship traces to Latitude OTLP endpoint.",
-  },
-  {
-    name: "Gemini",
-    icon: "googleGemini",
-    sdkInstall: "npm install @google/genai @latitude-data/telemetry",
-    sdkEnv: "GEMINI_API_KEY=...",
-    otelSetup: "Enable OpenTelemetry for Google GenAI calls and export trace batches to Latitude.",
-  },
-  {
-    name: "Azure OpenAI",
-    icon: "azure",
-    sdkInstall: "npm install openai @latitude-data/telemetry",
-    sdkEnv: "AZURE_OPENAI_ENDPOINT=https://...\nAZURE_OPENAI_API_KEY=...",
-    otelSetup: "Use OpenTelemetry + Azure OpenAI client and route spans through OTLP exporter.",
-  },
-  {
-    name: "Amazon Bedrock",
-    icon: "bedrock",
-    sdkInstall: "npm install @aws-sdk/client-bedrock-runtime @latitude-data/telemetry",
-    sdkEnv: "AWS_REGION=us-east-1",
-    otelSetup: "Instrument Bedrock runtime calls with OpenTelemetry and forward traces to Latitude.",
-  },
-  {
-    name: "Vertex AI",
-    icon: "googleVertex",
-    sdkInstall: "npm install @google-cloud/vertexai @latitude-data/telemetry",
-    sdkEnv: "GOOGLE_APPLICATION_CREDENTIALS=/path/credentials.json",
-    otelSetup: "Add OpenTelemetry instrumentation around Vertex requests and export to Latitude.",
-  },
-  {
-    name: "Cohere",
-    icon: "cohere",
-    sdkInstall: "npm install cohere-ai @latitude-data/telemetry",
-    sdkEnv: "COHERE_API_KEY=...",
-    otelSetup: "Wrap Cohere requests in OpenTelemetry spans and export through OTLP.",
-  },
-  {
-    name: "Together AI",
-    icon: "sparkles",
-    sdkInstall: "npm install together-ai @latitude-data/telemetry",
-    sdkEnv: "TOGETHER_API_KEY=...",
-    otelSetup: "Capture Together AI spans through OpenTelemetry and ship to Latitude.",
-  },
-  {
-    name: "Google AI Platform",
-    icon: "googleGemini",
-    sdkInstall: "npm install @google-cloud/aiplatform @latitude-data/telemetry",
-    sdkEnv: "GOOGLE_APPLICATION_CREDENTIALS=/path/credentials.json",
-    otelSetup: "Instrument AI Platform client calls with OpenTelemetry and forward to Latitude.",
-  },
-  {
-    name: "Groq",
-    icon: "groq",
-    sdkInstall: "pip install groq latitude-telemetry",
-    sdkEnv: "GROQ_API_KEY=...",
-    otelSetup: "Use OpenTelemetry Python instrumentation and export Groq traces to Latitude.",
-  },
-  {
-    name: "Mistral",
-    icon: "mistral",
-    sdkInstall: "pip install mistralai latitude-telemetry",
-    sdkEnv: "MISTRAL_API_KEY=...",
-    otelSetup: "Emit OpenTelemetry spans for Mistral requests and send via OTLP.",
-  },
-  {
-    name: "LiteLLM",
-    icon: "sparkles",
-    sdkInstall: "pip install litellm latitude-telemetry",
-    sdkEnv: "LITELLM_API_KEY=...",
-    otelSetup: "Attach OpenTelemetry around LiteLLM completions and export to Latitude.",
-  },
-  {
-    name: "Ollama",
-    icon: "sparkles",
-    sdkInstall: "pip install ollama latitude-telemetry",
-    sdkEnv: "OLLAMA_HOST=http://localhost:11434",
-    otelSetup: "Wrap Ollama chat calls with OpenTelemetry spans and export to Latitude.",
-  },
-  {
-    name: "Replicate",
-    icon: "sparkles",
-    sdkInstall: "pip install replicate latitude-telemetry",
-    sdkEnv: "REPLICATE_API_TOKEN=r8_...",
-    otelSetup: "Use OpenTelemetry Python SDK to capture Replicate traces and route to Latitude.",
-  },
-  {
-    name: "AWS SageMaker",
-    icon: "bedrock",
-    sdkInstall: "pip install boto3 latitude-telemetry",
-    sdkEnv: "AWS_REGION=us-east-1",
-    otelSetup: "Instrument SageMaker runtime requests and export OTLP spans to Latitude.",
-  },
-  {
-    name: "Hugging Face Transformers",
-    icon: "sparkles",
-    sdkInstall: "pip install transformers latitude-telemetry",
-    sdkEnv: "HF_TOKEN=hf_...",
-    otelSetup: "Add OpenTelemetry spans around transformer inference and export to Latitude.",
-  },
-  {
-    name: "IBM watsonx.ai",
-    icon: "sparkles",
-    sdkInstall: "pip install ibm-watsonx-ai latitude-telemetry",
-    sdkEnv: "WATSONX_API_KEY=...",
-    otelSetup: "Capture watsonx calls with OpenTelemetry and export traces to Latitude.",
-  },
-  {
-    name: "Aleph Alpha",
-    icon: "sparkles",
-    sdkInstall: "pip install aleph-alpha-client latitude-telemetry",
-    sdkEnv: "ALEPH_ALPHA_API_KEY=...",
-    otelSetup: "Instrument Aleph Alpha request flow and export spans to Latitude OTLP endpoint.",
-  },
+/** Order matches `packages/telemetry` on `main`: TS SDK + Python examples. */
+const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
+  { id: "openai", name: "OpenAI", icon: "openai" },
+  { id: "azure-openai", name: "Azure OpenAI", icon: "azure" },
+  { id: "anthropic", name: "Anthropic", icon: "anthropic" },
+  { id: "gemini", name: "Gemini (Google GenAI)", icon: "google" },
+  { id: "bedrock", name: "Amazon Bedrock", icon: "amazon-bedrock" },
+  { id: "vertexai", name: "Vertex AI", icon: "google-vertex" },
+  { id: "cohere", name: "Cohere", icon: "cohere" },
+  { id: "togetherai", name: "Together AI", icon: "togetherai" },
+  { id: "aiplatform", name: "Google AI Platform", icon: "google" },
+  { id: "langchain", name: "LangChain", icon: "openai" },
+  { id: "llamaindex", name: "LlamaIndex", icon: "openai" },
+  { id: "groq", name: "Groq", icon: "groq" },
+  { id: "mistral", name: "Mistral", icon: "mistral" },
+  { id: "litellm", name: "LiteLLM", icon: "openai" },
+  { id: "ollama", name: "Ollama", icon: "llama" },
+  { id: "replicate", name: "Replicate", icon: "huggingface" },
+  { id: "sagemaker", name: "AWS SageMaker", icon: "amazon-bedrock" },
+  { id: "watsonx", name: "IBM watsonx.ai", icon: "openai" },
+  { id: "aleph-alpha", name: "Aleph Alpha", icon: "openai" },
+  { id: "transformers", name: "Hugging Face Transformers", icon: "huggingface" },
+  { id: "crewai", name: "CrewAI", icon: "openai" },
+  { id: "haystack", name: "Haystack", icon: "openai" },
+  { id: "dspy", name: "DSPy", icon: "openai" },
 ]
+
+function SdkIntegrationInstructions({
+  selectedProviderId,
+  lang,
+  slugForSnippets,
+}: {
+  readonly selectedProviderId: OnboardingProviderId
+  readonly lang: SdkLanguage
+  readonly slugForSnippets: string
+}) {
+  const install = getInstallLine(selectedProviderId, lang)
+  const snippet = getOnboardingSnippet(selectedProviderId, lang, slugForSnippets)
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <Text.H5M>Install</Text.H5M>
+        {install ? (
+          <CodeBlock value={install} copyable />
+        ) : (
+          <Text.H5 color="foregroundMuted">
+            No install line is configured for this language. See <code className="text-xs">packages/telemetry</code> on
+            the main branch.
+          </Text.H5>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Text.H5M>Environment variables</Text.H5M>
+        <Text.H5 color="foregroundMuted">
+          Set these in your <code className="text-xs">.env</code> or runtime environment. Use a Latitude API key from
+          organization settings.
+        </Text.H5>
+        <CodeBlock value={getEnvBlock(selectedProviderId, "sdk", slugForSnippets)} copyable />
+      </div>
+
+      {snippet ? (
+        <div className="flex flex-col gap-2">
+          <Text.H5M>Minimal integration</Text.H5M>
+          <CodeBlock value={snippet} copyable />
+        </div>
+      ) : null}
+    </>
+  )
+}
 
 export function OnboardingFlow({
   projectId,
@@ -241,8 +192,44 @@ export function OnboardingFlow({
 }) {
   const [step, setStep] = useState<"role" | "provider">("role")
   const [role, setRole] = useState<OnboardingRole>("engineer")
-  const [selectedProvider, setSelectedProvider] = useState<ProviderDefinition>(PROVIDERS[0] as ProviderDefinition)
-  const [integrationMode, setIntegrationMode] = useState<IntegrationMode>("sdk")
+  const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
+    PROVIDER_ENTRIES[0] ?? { id: "openai", name: "OpenAI", icon: "openai" },
+  )
+  const [integrationPanel, setIntegrationPanel] = useState<IntegrationPanel>("typescript")
+
+  const { data: project } = useProjectsCollection(
+    (projects) => projects.where(({ project: p }) => eq(p.id, projectId)).findOne(),
+    [projectId],
+  )
+  const slugForSnippets = project?.slug?.trim() ? project.slug : "your-project-slug"
+
+  const integrationTabOptions = useMemo(() => {
+    const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[selectedProvider.id]
+    const opts: Array<{ id: IntegrationPanel; label: string; icon: ReactNode }> = []
+    if (cfg.supportsTypescript) {
+      opts.push({ id: "typescript", label: "TypeScript", icon: <Braces className="w-4 h-4" /> })
+    }
+    if (cfg.supportsPython) {
+      opts.push({ id: "python", label: "Python", icon: <FileCode2 className="w-4 h-4" /> })
+    }
+    opts.push({ id: "opentelemetry", label: "OpenTelemetry", icon: <Radio className="w-4 h-4" /> })
+    return opts
+  }, [selectedProvider.id])
+
+  useLayoutEffect(() => {
+    const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[selectedProvider.id]
+    setIntegrationPanel((current) => {
+      if (current === "opentelemetry") return current
+      if (current === "typescript" && !cfg.supportsTypescript) {
+        return cfg.supportsPython ? "python" : "opentelemetry"
+      }
+      if (current === "python" && !cfg.supportsPython) {
+        return cfg.supportsTypescript ? "typescript" : "opentelemetry"
+      }
+      return current
+    })
+  }, [selectedProvider.id])
+
   const [galleryIndex, setGalleryIndex] = useState(0)
   const [isDotLottieReady, setIsDotLottieReady] = useState(false)
   const [traceReceived, setTraceReceived] = useState(false)
@@ -305,7 +292,12 @@ export function OnboardingFlow({
     document.head.appendChild(script)
   })
 
-  const activeGalleryItem = WAITING_GALLERY[galleryIndex]!
+  const galleryItemIndex = WAITING_GALLERY.length === 0 ? 0 : galleryIndex % WAITING_GALLERY.length
+  const activeGalleryItem = WAITING_GALLERY[galleryItemIndex] ?? {
+    title: "",
+    description: "",
+    image: "",
+  }
 
   return (
     <div className="h-full flex flex-row bg-background">
@@ -370,12 +362,12 @@ export function OnboardingFlow({
             <div className="flex flex-col gap-3">
               <Text.H5M>Select your LLM provider</Text.H5M>
               <div className="flex flex-row flex-wrap gap-1">
-                {PROVIDERS.map((provider) => (
+                {PROVIDER_ENTRIES.map((provider) => (
                   <button
-                    key={provider.name}
+                    key={provider.id}
                     type="button"
                     onClick={() => setSelectedProvider(provider)}
-                    className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.name === provider.name ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
+                    className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
                   >
                     <ProviderIcon provider={provider.icon} size="xs" />
                     <span>{provider.name}</span>
@@ -385,42 +377,28 @@ export function OnboardingFlow({
             </div>
 
             <Tabs
-              options={[
-                {
-                  id: "sdk",
-                  label: "SDK integrations",
-                  icon: <ListTree className="w-4 h-4" />,
-                },
-                {
-                  id: "opentelemetry",
-                  label: "OpenTelemetry",
-                  icon: <DoorOpen className="w-4 h-4" />,
-                },
-              ]}
-              active={integrationMode}
-              onSelect={(id) => setIntegrationMode(id as IntegrationMode)}
+              options={integrationTabOptions}
+              active={integrationPanel}
+              onSelect={(id) => setIntegrationPanel(id as IntegrationPanel)}
             />
 
-            <div className="flex flex-col gap-2">
-              <Text.H5M>Install Latitude Telemetry using your package manager</Text.H5M>
-              <CodeBlock value={selectedProvider.sdkInstall} copyable />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Text.H5M>Add environment variables</Text.H5M>
-              <Text.H5 color="foregroundMuted">
-                Add environment variables to your `.env` file and container environment. You can find your project
-                details in project settings.
-              </Text.H5>
-              <CodeBlock
-                value={
-                  integrationMode === "sdk"
-                    ? `${selectedProvider.sdkEnv}\nLATITUDE_PROJECT_ID=${projectId}`
-                    : `${selectedProvider.otelSetup}\nLATITUDE_PROJECT_ID=${projectId}`
-                }
-                copyable
+            {integrationPanel === "opentelemetry" ? (
+              <div className="flex flex-col gap-2">
+                <Text.H5M>Environment variables</Text.H5M>
+                <Text.H5 color="foregroundMuted">
+                  Use the Latitude SDK when possible. For an existing OpenTelemetry setup, add the Latitude span
+                  processor or point your OTLP exporter at Latitude ingest—see{" "}
+                  <code className="text-xs">packages/telemetry</code> on the main branch for patterns.
+                </Text.H5>
+                <CodeBlock value={getEnvBlock(selectedProvider.id, "opentelemetry", slugForSnippets)} copyable />
+              </div>
+            ) : (
+              <SdkIntegrationInstructions
+                selectedProviderId={selectedProvider.id}
+                lang={integrationPanel === "typescript" ? "typescript" : "python"}
+                slugForSnippets={slugForSnippets}
               />
-            </div>
+            )}
 
             <Button variant="outline" onClick={() => setStep("role")}>
               Back
