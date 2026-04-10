@@ -17,6 +17,11 @@ import { TraceRepositoryLive } from "./trace-repository.ts"
 const ORG_ID = OrganizationId(SEED_ORG_ID)
 const PROJECT_ID = ProjectId(SEED_PROJECT_ID)
 const TRACE_ID = SEED_LIFECYCLE_TRACE_IDS[0] as TraceId
+const firstFixedTraceSeeder = fixedTraceSeeders[0]
+
+if (firstFixedTraceSeeder === undefined) {
+  throw new Error("Expected at least one fixed trace seeder")
+}
 
 const ch = setupTestClickHouse()
 
@@ -32,7 +37,7 @@ describe("TraceRepository", () => {
   })
 
   beforeEach(async () => {
-    await Effect.runPromise(fixedTraceSeeders[0]!.run({ client: ch.client }))
+    await Effect.runPromise(firstFixedTraceSeeder.run({ client: ch.client }))
   })
 
   describe("matchesFiltersByTraceId", () => {

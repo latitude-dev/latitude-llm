@@ -196,7 +196,7 @@ export const getLiveEvaluationEligibility = (
 
 export const getLiveEvaluationTurnScope = (input: {
   readonly traceId: string
-  readonly sessionId?: string | null
+  readonly sessionId?: string | null | undefined
 }): LiveEvaluationTurnScope => {
   const sessionId = input.sessionId ?? null
 

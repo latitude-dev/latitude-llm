@@ -63,12 +63,10 @@ const toLiveEvaluationExecutionResult = (input: {
 export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput) =>
   Effect.gen(function* () {
     if (!validateEvaluationScript(input.script)) {
-      return yield* Effect.fail(
-        new LiveEvaluationExecutionError({
-          evaluationId: input.evaluationId,
-          message: INVALID_LIVE_EVALUATION_SCRIPT_MESSAGE,
-        }),
-      )
+      return yield* new LiveEvaluationExecutionError({
+        evaluationId: input.evaluationId,
+        message: INVALID_LIVE_EVALUATION_SCRIPT_MESSAGE,
+      })
     }
 
     const ai = yield* AI
