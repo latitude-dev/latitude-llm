@@ -20,6 +20,7 @@
     "@domain/spans": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
+    "mustache": "^4.2.0",
     "zod": "catalog:"
   }
 }

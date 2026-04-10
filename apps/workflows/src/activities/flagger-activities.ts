@@ -36,6 +36,7 @@ export const runFlagger = async (input: {
   Effect.runPromise(
     runSystemQueueFlaggerUseCase(input).pipe(
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
+      withAi(AIGenerateLive, getRedisClient()),
       Effect.tap(() =>
         Effect.sync(() =>
           logger.info("Ran system queue flagger", {

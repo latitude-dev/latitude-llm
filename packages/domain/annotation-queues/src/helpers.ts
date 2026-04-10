@@ -149,50 +149,6 @@ export function matchesOutputSchemaValidationSystemQueue(trace: TraceDetail): bo
   return false
 }
 
-// ---------------------------------------------------------------------------
-// Noop matchers for LLM-based system queues (to be implemented)
-// ---------------------------------------------------------------------------
-
-/** Noop matcher for the Jailbreaking system queue. */
-export function matchesJailbreakingSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
-/** Noop matcher for the Refusal system queue. */
-export function matchesRefusalSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
-/** Noop matcher for the Frustration system queue. */
-export function matchesFrustrationSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
-/** Noop matcher for the Forgetting system queue. */
-export function matchesForgettingSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
-/** Noop matcher for the Laziness system queue. */
-export function matchesLazinessSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
-/** Noop matcher for the NSFW system queue. */
-export function matchesNsfwSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
-/** Noop matcher for the Trashing system queue. */
-export function matchesTrashingSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
-/** Noop matcher for the Resource Outliers system queue. */
-export function matchesResourceOutliersSystemQueue(_trace: TraceDetail): boolean {
-  return false
-}
-
 /** Matches the Empty Response system queue without any LLM classification. */
 export function matchesEmptyResponseSystemQueue(trace: TraceDetail): boolean {
   for (const message of trace.outputMessages) {

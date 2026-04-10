@@ -697,6 +697,9 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
