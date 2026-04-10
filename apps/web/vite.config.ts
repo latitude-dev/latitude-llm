@@ -30,17 +30,6 @@ export default defineConfig({
       tslib: "tslib/tslib.es6.mjs",
     },
   },
-  // `apps/web/src/server/clients.ts` imports `@platform/workflows-temporal`.
-  // Its package root also re-exports the Temporal worker, which pulls in
-  // `@temporalio/worker` and native `@swc/core` for workflow bundling.
-  // Vite must not SSR-bundle or optimize/prebundle that native dependency;
-  // Node needs to load the platform-specific binary directly at runtime.
-  ssr: {
-    external: ["@swc/core"],
-  },
-  optimizeDeps: {
-    exclude: ["@swc/core"],
-  },
   build: {
     sourcemap: true,
     rolldownOptions: {
