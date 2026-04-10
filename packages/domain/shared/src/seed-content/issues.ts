@@ -1,9 +1,11 @@
 import {
+  SEED_ACCESS_EVALUATION_HASH,
   SEED_ACCESS_EVALUATION_ID,
   SEED_ACCESS_ISSUE_ID,
   SEED_ACCESS_ISSUE_UUID,
   SEED_BILLING_ISSUE_ID,
   SEED_BILLING_ISSUE_UUID,
+  SEED_COMBINATION_EVALUATION_HASH,
   SEED_COMBINATION_EVALUATION_ID,
   SEED_COMBINATION_ISSUE_ID,
   SEED_COMBINATION_ISSUE_UUID,
@@ -14,15 +16,13 @@ import {
   SEED_INSTALLATION_ISSUE_UUID,
   SEED_ISSUE_ID,
   SEED_ISSUE_UUID,
+  SEED_RETURNS_EVALUATION_HASH,
   SEED_RETURNS_EVALUATION_ID,
   SEED_RETURNS_ISSUE_ID,
   SEED_RETURNS_ISSUE_UUID,
   SEED_TIMELINE_WINDOW_DAYS,
-  SEED_WARRANTY_EVALUATION_HASH,
   SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
-  SEED_COMBINATION_EVALUATION_HASH,
-  SEED_RETURNS_EVALUATION_HASH,
-  SEED_ACCESS_EVALUATION_HASH,
+  SEED_WARRANTY_EVALUATION_HASH,
 } from "../seeds.ts"
 
 export type SeedIssueFixture = {
@@ -439,8 +439,7 @@ export const SEED_ADDITIONAL_ISSUE_OCCURRENCES: readonly SeedIssueOccurrenceFixt
     passed: false,
     errored: false,
     error: null,
-    feedback:
-      "Combination monitor detected an invented Advanced User Waiver authorizing unsupported product pairings.",
+    feedback: "Combination monitor detected an invented Advanced User Waiver authorizing unsupported product pairings.",
     metadata: {
       evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
       scenario: "advanced-user-waiver",
@@ -823,8 +822,7 @@ export const SEED_ADDITIONAL_ISSUE_OCCURRENCES: readonly SeedIssueOccurrenceFixt
     passed: false,
     errored: false,
     error: null,
-    feedback:
-      "Field audit flagged the assistant for inventing a compliance sign-off visit at a canyon worksite.",
+    feedback: "Field audit flagged the assistant for inventing a compliance sign-off visit at a canyon worksite.",
     metadata: {
       importName: "field-audit",
       reviewer: "ops-compliance",

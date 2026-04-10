@@ -19,8 +19,8 @@ import {
   SEED_WARRANTY_SIMULATION_ID,
   SEED_WARRANTY_SIMULATION_SPAN_IDS,
   SEED_WARRANTY_SIMULATION_TRACE_IDS,
-  WARRANTY_DATASET_ROWS,
   seedDateDaysAgo,
+  WARRANTY_DATASET_ROWS,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"

@@ -261,7 +261,10 @@ const issue2AnnotationScoreRows = buildIssueAnnotationScoreRows({
   queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
   issueId: SEED_COMBINATION_ISSUE_ID,
   prefix: "i2",
-  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(ALL_ISSUE_1_TRACES.length, ALL_ISSUE_1_TRACES.length + ALL_ISSUE_2_TRACES.length),
+  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(
+    ALL_ISSUE_1_TRACES.length,
+    ALL_ISSUE_1_TRACES.length + ALL_ISSUE_2_TRACES.length,
+  ),
 })
 
 const issue3AnnotationScoreRows = buildIssueAnnotationScoreRows({

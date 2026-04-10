@@ -177,15 +177,7 @@ const seedTimelineNow = new Date()
  * clock-drift noise between separate Postgres and ClickHouse seed commands.
  */
 export const SEED_TIMELINE_ANCHOR = new Date(
-  Date.UTC(
-    seedTimelineNow.getUTCFullYear(),
-    seedTimelineNow.getUTCMonth(),
-    seedTimelineNow.getUTCDate(),
-    12,
-    0,
-    0,
-    0,
-  ),
+  Date.UTC(seedTimelineNow.getUTCFullYear(), seedTimelineNow.getUTCMonth(), seedTimelineNow.getUTCDate(), 12, 0, 0, 0),
 )
 
 export function seedDateDaysAgo(daysAgo: number, hour = 12, minute = 0): Date {
