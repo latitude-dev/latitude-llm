@@ -81,6 +81,125 @@ jobs:
           ENV_NAME: ${{ inputs.environment }}
           TARGET: ${{ inputs.service }}
         run: |
+          set -euo pipefail
+
+          poll_service_rollout() {
+            local SERVICE="$1"
+            local SERVICE_NAME="latitude-${ENV_NAME}-${SERVICE}"
+            local MAX_ATTEMPTS=60
+            local SLEEP_SECONDS=10
+            local attempt=1
+            local last_event=""
+
+            while [ "${attempt}" -le "${MAX_ATTEMPTS}" ]; do
+              local service_json
+              service_json=$(aws ecs describe-services \
+                --cluster "${CLUSTER}" \
+                --services "${SERVICE_NAME}" \
+                --output json)
+
+              local progress_line
+              progress_line=$(echo "${service_json}" | jq -r '
+                .services[0] as $service |
+                [
+                  "desired=\($service.desiredCount // 0)",
+                  "running=\($service.runningCount // 0)",
+                  "pending=\($service.pendingCount // 0)",
+                  "deployments=" + ((
+                    $service.deployments // []
+                  ) | map("\(.status // "unknown")/\(.rolloutState // "n/a")@\(.taskDefinition | split("/")[-1])") | join(", "))
+                ] | join(" | ")
+              ')
+              echo "[${SERVICE}] Poll ${attempt}/${MAX_ATTEMPTS}: ${progress_line}"
+
+              local newest_event
+              newest_event=$(echo "${service_json}" | jq -r '
+                .services[0].events[0]? |
+                "\(.createdAt // "n/a")|\(.message // "")"
+              ')
+              if [ -n "${newest_event}" ] && [ "${newest_event}" != "null|null" ] && [ "${newest_event}" != "${last_event}" ]; then
+                echo "${service_json}" | jq -r --arg service "${SERVICE}" '
+                  .services[0].events[0:3][]? |
+                  "[" + $service + "] Event: " + (.message // "")
+                '
+                last_event="${newest_event}"
+              fi
+
+              local is_stable
+              is_stable=$(echo "${service_json}" | jq -r '
+                .services[0] as $service |
+                ($service.deployments | length == 1) and
+                (($service.deployments[0].rolloutState // "") == "COMPLETED") and
+                (($service.runningCount // 0) == ($service.desiredCount // 0)) and
+                (($service.pendingCount // 0) == 0)
+              ')
+
+              if [ "${is_stable}" = "true" ]; then
+                echo "[${SERVICE}] Service stabilized successfully"
+                return 0
+              fi
+
+              if [ "${attempt}" -lt "${MAX_ATTEMPTS}" ]; then
+                sleep "${SLEEP_SECONDS}"
+              fi
+              attempt=$((attempt + 1))
+            done
+
+            echo "[${SERVICE}] Timed out waiting for service to stabilize"
+            return 1
+          }
+
+          dump_service_debug() {
+            local SERVICE="$1"
+            local SERVICE_NAME="latitude-${ENV_NAME}-${SERVICE}"
+
+            echo "[${SERVICE}] Final ECS service snapshot:"
+            aws ecs describe-services \
+              --cluster "${CLUSTER}" \
+              --services "${SERVICE_NAME}" \
+              --output json | jq -r --arg service "${SERVICE}" '
+                .services[0] as $service |
+                "[" + $service + "] desired=\($service.desiredCount // 0) running=\($service.runningCount // 0) pending=\($service.pendingCount // 0)",
+                (
+                  $service.deployments[]? |
+                  "[" + $service + "] deployment status=\(.status // "unknown") rollout=\(.rolloutState // "n/a") taskDef=\(.taskDefinition | split("/")[-1]) running=\(.runningCount // 0) pending=\(.pendingCount // 0) created=\(.createdAt // "n/a") updated=\(.updatedAt // "n/a")"
+                ),
+                (
+                  $service.events[0:10][]? |
+                  "[" + $service + "] event: \(.createdAt // "n/a") \(.message // "")"
+                )
+              '
+
+            local stopped_tasks
+            stopped_tasks=$(aws ecs list-tasks \
+              --cluster "${CLUSTER}" \
+              --service-name "${SERVICE_NAME}" \
+              --desired-status STOPPED \
+              --output json | jq -r '.taskArns[:5] | join(" ")')
+
+            if [ -n "${stopped_tasks}" ]; then
+              echo "[${SERVICE}] Recent stopped tasks:"
+              aws ecs describe-tasks \
+                --cluster "${CLUSTER}" \
+                --tasks ${stopped_tasks} \
+                --output json | jq -r --arg service "${SERVICE}" '
+                  .tasks[]? as $task |
+                  "[" + $service + "] task=" + ($task.taskArn | split("/")[-1]) +
+                  " lastStatus=" + ($task.lastStatus // "unknown") +
+                  " stopCode=" + ($task.stopCode // "n/a") +
+                  " stoppedReason=" + ($task.stoppedReason // "n/a"),
+                  (
+                    $task.containers[]? |
+                    "[" + $service + "]   container=" + (.name // "unknown") +
+                    " exitCode=" + ((.exitCode // "n/a") | tostring) +
+                    " reason=" + (.reason // "n/a")
+                  )
+                '
+            else
+              echo "[${SERVICE}] No stopped tasks found for debugging"
+            fi
+          }
+
           if [ "${TARGET}" = "all" ]; then
             SERVICES="web api ingest workers workflows"
           else
@@ -88,8 +207,11 @@ jobs:
           fi
 
           for SERVICE in ${SERVICES}; do
-            echo "Waiting for ${SERVICE} to stabilize..."
-            aws ecs wait services-stable \
-              --cluster "${CLUSTER}" \
-              --services "latitude-${ENV_NAME}-${SERVICE}"
+            echo "::group::Rollback wait ${SERVICE}"
+            if ! poll_service_rollout "${SERVICE}"; then
+              dump_service_debug "${SERVICE}"
+              echo "::endgroup::"
+              exit 1
+            fi
+            echo "::endgroup::"
           done
