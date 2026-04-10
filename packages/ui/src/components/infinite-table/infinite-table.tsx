@@ -24,6 +24,7 @@ export function InfiniteTable<T>({
   isLoading,
   columns,
   getRowKey,
+  getRowClassName,
   onRowClick,
   rowInteractionRole = "button",
   getRowAriaLabel,
@@ -215,6 +216,7 @@ export function InfiniteTable<T>({
 
               const isExpanded = expandedRowKeys?.has(rowKey) ?? false
               const expanded = isExpanded && getExpandedRows ? getExpandedRows(row) : undefined
+              const isActive = activeRowKey === rowKey
 
               return (
                 <tbody key={rowKey} ref={virtualizer.measureElement} data-index={virtualRow.index}>
@@ -222,11 +224,15 @@ export function InfiniteTable<T>({
                     row={row}
                     rowKey={rowKey}
                     columns={columns}
+                    {...(() => {
+                      const rowClassName = getRowClassName?.(row, { isActive, isExpanded, isSubRow: false })
+                      return rowClassName ? { rowClassName } : {}
+                    })()}
                     hasSelection={!!selection}
                     hasExpansion={hasExpansion}
                     isExpandable={hasExpansion}
                     isExpanded={isExpanded}
-                    isActive={activeRowKey === rowKey}
+                    isActive={isActive}
                     {...(selection
                       ? {
                           checkedState: selection.getCheckedState?.(rowKey) ?? selection.isSelected(rowKey),
@@ -258,6 +264,14 @@ export function InfiniteTable<T>({
                           row={subRow}
                           rowKey={subKey}
                           columns={columns}
+                          {...(() => {
+                            const rowClassName = getRowClassName?.(subRow, {
+                              isActive: activeRowKey === subKey,
+                              isExpanded: false,
+                              isSubRow: true,
+                            })
+                            return rowClassName ? { rowClassName } : {}
+                          })()}
                           hasSelection={!!selection}
                           hasExpansion={hasExpansion}
                           isActive={activeRowKey === subKey}

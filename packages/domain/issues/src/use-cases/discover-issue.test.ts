@@ -126,6 +126,7 @@ const createEvaluationRepository = (findById: EvaluationRepositoryShape["findByI
   save: () => Effect.die("Unexpected EvaluationRepository.save in unit test"),
   listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId in unit test"),
   listByIssueId: () => Effect.die("Unexpected EvaluationRepository.listByIssueId in unit test"),
+  listByIssueIds: () => Effect.die("Unexpected EvaluationRepository.listByIssueIds in unit test"),
   archive: () => Effect.die("Unexpected EvaluationRepository.archive in unit test"),
   unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in unit test"),
   softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in unit test"),

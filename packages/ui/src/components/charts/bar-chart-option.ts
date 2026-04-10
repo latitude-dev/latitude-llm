@@ -8,10 +8,12 @@ const maxCategoryAxisLabels = 6
 /** Above this many categories, cap bar thickness so dense histograms stay readable. */
 const barMaxWidthCategoryThreshold = 16
 const barMaxWidthPx = 40
+const gridVerticalInsetPx = 16
 
 export function buildBarChartOption(
   categories: readonly string[],
   values: readonly number[],
+  tooltipCategories: readonly string[],
   colors: ChartCssThemeColors,
   formatTooltip?: (category: string, value: number) => string,
   showYAxis = true,
@@ -26,8 +28,8 @@ export function buildBarChartOption(
     grid: {
       left: showYAxis ? 48 : 8,
       right: 16,
-      top: 16,
-      bottom: 36,
+      top: gridVerticalInsetPx,
+      bottom: gridVerticalInsetPx,
       containLabel: false,
     },
     tooltip: {
@@ -45,10 +47,12 @@ export function buildBarChartOption(
       textStyle: { color: colors.foreground, fontSize: 12 },
       formatter: (params: unknown) => {
         const list = Array.isArray(params) ? params : [params]
-        const first = list[0] as { name?: string; value?: number } | undefined
+        const first = list[0] as { name?: string; value?: number; dataIndex?: number } | undefined
         const name = first?.name ?? ""
+        const dataIndex = typeof first?.dataIndex === "number" ? first.dataIndex : 0
+        const tooltipCategory = tooltipCategories[dataIndex] ?? name
         const value = typeof first?.value === "number" ? first.value : Number(first?.value ?? 0)
-        return formatTooltip ? formatTooltip(name, value) : `${name}<br/><b>${value}</b>`
+        return formatTooltip ? formatTooltip(tooltipCategory, value) : `${tooltipCategory}<br/><b>${value}</b>`
       },
     },
     xAxis: {

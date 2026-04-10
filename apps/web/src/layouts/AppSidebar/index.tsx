@@ -77,42 +77,55 @@ function NavItemActionWrapper({
     </Button>
   )
 
-  const content = to ? (
-    <div
-      className={cn(rowClassName, "flex items-center", {
-        "justify-center": collapsed,
-        "gap-1": !collapsed,
-      })}
-      title={collapsed ? label : undefined}
-    >
+  const content =
+    to && !hasChildren ? (
       <Link
         to={to}
-        className={cn("flex items-center", {
-          "h-full w-full justify-center": collapsed,
-          "min-w-0 flex-1 gap-2": !collapsed,
+        className={cn(rowClassName, "flex items-center", {
+          "w-full gap-2": !collapsed,
+          "justify-center": collapsed,
         })}
+        title={collapsed ? label : undefined}
         aria-label={collapsed ? label : undefined}
       >
         {children}
       </Link>
-      {hasChildren ? disclosureIcon : null}
-    </div>
-  ) : (
-    <button
-      type="button"
-      onClick={hasChildren ? onToggle : undefined}
-      className={cn(rowClassName, "flex w-full items-center text-left", {
-        "justify-center": collapsed,
-        "gap-2": !collapsed,
-      })}
-      title={collapsed ? label : undefined}
-      aria-expanded={hasChildren ? expanded : undefined}
-      aria-label={collapsed ? label : undefined}
-    >
-      {children}
-      {hasChildren ? disclosureIcon : null}
-    </button>
-  )
+    ) : to ? (
+      <div
+        className={cn(rowClassName, "flex items-center", {
+          "w-full gap-1": !collapsed,
+          "justify-center": collapsed,
+        })}
+        title={collapsed ? label : undefined}
+      >
+        <Link
+          to={to}
+          className={cn("flex items-center", {
+            "h-full w-full justify-center": collapsed,
+            "min-w-0 flex-1 gap-2": !collapsed,
+          })}
+          aria-label={collapsed ? label : undefined}
+        >
+          {children}
+        </Link>
+        {hasChildren ? disclosureIcon : null}
+      </div>
+    ) : (
+      <button
+        type="button"
+        onClick={hasChildren ? onToggle : undefined}
+        className={cn(rowClassName, "flex w-full items-center text-left", {
+          "justify-center": collapsed,
+          "gap-2": !collapsed,
+        })}
+        title={collapsed ? label : undefined}
+        aria-expanded={hasChildren ? expanded : undefined}
+        aria-label={collapsed ? label : undefined}
+      >
+        {children}
+        {hasChildren ? disclosureIcon : null}
+      </button>
+    )
 
   return (
     <NavItemTooltipWrapper collapsed={collapsed} label={label}>

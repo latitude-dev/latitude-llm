@@ -150,7 +150,7 @@ const baseIssueFixtures = [
   },
 ]
 
-const extraIssueBlueprints = [
+const curatedExtraIssueBlueprints = [
   {
     name: "Agent invents enterprise SLAs for standard support plans",
     description:
@@ -351,7 +351,178 @@ const extraIssueBlueprints = [
   },
 ] as const
 
-const extraIssueFixtures = extraIssueBlueprints.map((issue, index) => ({
+const generatedIssueDomains = [
+  {
+    titlePrefix: "billing",
+    label: "billing workflows",
+    reviewTeam: "finance operations",
+    workflow: "billing adjustment review",
+    failurePattern: "quotes account-specific credits or reversals as already approved",
+  },
+  {
+    titlePrefix: "export-control",
+    label: "export-control workflows",
+    reviewTeam: "trade compliance",
+    workflow: "export clearance review",
+    failurePattern: "treats restricted shipments as already cleared for release",
+  },
+  {
+    titlePrefix: "identity-recovery",
+    label: "identity-recovery workflows",
+    reviewTeam: "account security",
+    workflow: "ownership verification",
+    failurePattern: "treats weak customer proof as enough to unlock recovery steps",
+  },
+  {
+    titlePrefix: "procurement",
+    label: "procurement workflows",
+    reviewTeam: "vendor operations",
+    workflow: "supplier onboarding review",
+    failurePattern: "claims buyers or vendors already passed procurement review",
+  },
+  {
+    titlePrefix: "warehouse",
+    label: "warehouse workflows",
+    reviewTeam: "fulfillment operations",
+    workflow: "inventory hold confirmation",
+    failurePattern: "presents stock reservations as already locked in the warehouse",
+  },
+  {
+    titlePrefix: "legal-review",
+    label: "legal-review workflows",
+    reviewTeam: "commercial legal",
+    workflow: "terms and language review",
+    failurePattern: "states custom clauses or translated policies are already approved",
+  },
+  {
+    titlePrefix: "contract-renewal",
+    label: "contract-renewal workflows",
+    reviewTeam: "account management",
+    workflow: "commercial renewal review",
+    failurePattern: "guarantees commercial protections that still require account approval",
+  },
+  {
+    titlePrefix: "hazmat-shipping",
+    label: "hazardous-goods workflows",
+    reviewTeam: "hazardous-goods operations",
+    workflow: "special handling review",
+    failurePattern: "waves away packaging, route, or storage restrictions",
+  },
+  {
+    titlePrefix: "privacy",
+    label: "privacy workflows",
+    reviewTeam: "privacy operations",
+    workflow: "retention request processing",
+    failurePattern: "says deletion or redaction tasks already finished",
+  },
+  {
+    titlePrefix: "platform-capacity",
+    label: "platform-capacity workflows",
+    reviewTeam: "platform operations",
+    workflow: "quota and capacity review",
+    failurePattern: "declares limits or burst allowances already lifted",
+  },
+  {
+    titlePrefix: "field-service",
+    label: "field-service workflows",
+    reviewTeam: "field operations",
+    workflow: "onsite dispatch approval",
+    failurePattern: "implies technicians or crews are already scheduled",
+  },
+] as const
+
+const generatedIssueCommitments = [
+  {
+    title: "approval waivers",
+    descriptionObject: "approval waivers",
+    consequence: "skipping the documented approval gate",
+  },
+  {
+    title: "priority escalations",
+    descriptionObject: "priority escalations",
+    consequence: "promoting ordinary requests into emergency handling",
+  },
+  {
+    title: "retroactive credits",
+    descriptionObject: "retroactive credits",
+    consequence: "minting compensation without a case note",
+  },
+  {
+    title: "reservation holds",
+    descriptionObject: "reservation holds",
+    consequence: "claiming stock, time, or capacity is already reserved",
+  },
+  {
+    title: "sign-off confirmations",
+    descriptionObject: "sign-off confirmations",
+    consequence: "treating draft review notes as final approval",
+  },
+  {
+    title: "exception overrides",
+    descriptionObject: "exception overrides",
+    consequence: "inventing a special-case exemption that does not exist",
+  },
+  {
+    title: "quota boosts",
+    descriptionObject: "quota boosts",
+    consequence: "declaring higher limits before capacity review",
+  },
+  {
+    title: "compliance clearances",
+    descriptionObject: "compliance clearances",
+    consequence: "stating restricted actions are already approved",
+  },
+  {
+    title: "renewal protections",
+    descriptionObject: "renewal protections",
+    consequence: "freezing commercial terms without contract review",
+  },
+  {
+    title: "closure confirmations",
+    descriptionObject: "closure confirmations",
+    consequence: "closing workflows that are still in review",
+  },
+] as const
+
+const generatedIssueVerbs = ["invents", "fabricates", "promises", "overstates"] as const
+
+const TARGET_SEEDED_ISSUE_COUNT = 128
+const GENERATED_EXTRA_ISSUE_COUNT =
+  TARGET_SEEDED_ISSUE_COUNT - baseIssueFixtures.length - curatedExtraIssueBlueprints.length
+
+if (GENERATED_EXTRA_ISSUE_COUNT <= 0) {
+  throw new Error("Seed issue target count must exceed the curated base issue set.")
+}
+
+function buildGeneratedExtraIssueBlueprint(index: number): Omit<SeedIssueFixture, "id" | "uuid"> {
+  const domain = generatedIssueDomains[index % generatedIssueDomains.length]
+  const commitment =
+    generatedIssueCommitments[Math.floor(index / generatedIssueDomains.length) % generatedIssueCommitments.length]
+  const verb = generatedIssueVerbs[index % generatedIssueVerbs.length]
+  const createdDaysAgo = 88 - (index % 84)
+  const clusteredDaysAgo = Math.max(0, createdDaysAgo - (2 + (index % 18)))
+  const updatedDaysAgo = Math.max(0, clusteredDaysAgo - (index % 6))
+  const escalatedDaysAgo = index % 3 === 0 ? Math.max(0, updatedDaysAgo - (index % 2)) : null
+
+  return {
+    name: `Agent ${verb} ${domain.titlePrefix} ${commitment.title}`,
+    description:
+      `The support agent ${verb} ${commitment.descriptionObject} in ${domain.label} before ${domain.reviewTeam} completes the documented ${domain.workflow}. ` +
+      `The failure pattern usually involves ${commitment.consequence}, and the model ${domain.failurePattern}.`,
+    createdDaysAgo,
+    clusteredDaysAgo,
+    updatedDaysAgo,
+    escalatedDaysAgo,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  }
+}
+
+const generatedExtraIssueBlueprints = Array.from({ length: GENERATED_EXTRA_ISSUE_COUNT }, (_, index) =>
+  buildGeneratedExtraIssueBlueprint(index),
+)
+
+const extraIssueFixtures = [...curatedExtraIssueBlueprints, ...generatedExtraIssueBlueprints].map((issue, index) => ({
   id:
     SEED_EXTRA_ISSUE_IDS[index] ??
     (() => {
@@ -370,6 +541,10 @@ export const SEED_ISSUE_FIXTURES: readonly SeedIssueFixture[] = [...baseIssueFix
 export const SEED_ISSUE_FIXTURES_BY_ID = new Map(SEED_ISSUE_FIXTURES.map((issue) => [issue.id, issue] as const))
 
 export const SEED_ISSUE_COUNT = SEED_ISSUE_FIXTURES.length
+
+if (SEED_ISSUE_COUNT < 100) {
+  throw new Error("Seed issue fixtures must stay large enough to exercise issues infinite scroll.")
+}
 
 export const ISSUE_1_TRACE_DAYS_AGO = [82, 78, 74, 69, 63, 56, 50, 43, 37, 29, 21, 15, 10, 6, 1, 0] as const
 

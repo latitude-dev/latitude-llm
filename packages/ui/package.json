@@ -16,7 +16,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.2",
@@ -38,9 +38,11 @@
     "@tanstack/react-virtual": "^3.13.23",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^3.6.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
     "lucide-react": "^1.8.0",
+    "react-day-picker": "8.10.1",
     "react-markdown": "^10.1.0",
     "react-textarea-autosize": "^8.5.9",
     "remark-breaks": "^4.0.0",

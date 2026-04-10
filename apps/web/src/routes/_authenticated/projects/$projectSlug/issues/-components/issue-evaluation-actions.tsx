@@ -8,11 +8,10 @@ import {
   startEvaluationAlignment,
   triggerManualEvaluationRealignment,
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
-import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
+import { invalidateIssueQueries } from "../../../../../../domains/issues/issues.collection.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { EvaluationAlignmentStatus } from "./evaluation-alignment-status.tsx"
 
-const queryClient = getQueryClient()
 const POLL_INTERVAL_MS = 1500
 
 type ActiveAlignmentJob =
@@ -76,9 +75,7 @@ export function IssueEvaluationActions({
       setActiveJob(currentJob)
 
       if (isTerminalStatus(nextStatus.status)) {
-        await queryClient.invalidateQueries({
-          queryKey: ["issues", projectId],
-        })
+        await invalidateIssueQueries(projectId)
         return
       }
 

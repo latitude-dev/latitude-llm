@@ -1,4 +1,5 @@
 import {
+  archiveEvaluation,
   buildEvaluationAlignmentJobStatus,
   deriveEvaluationAlignmentMetrics,
   EVALUATION_JOB_STATUS_TTL_SECONDS,
@@ -37,6 +38,12 @@ const evaluationAlignmentJobInputSchema = z.object({
 })
 
 const manualRealignmentInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  evaluationId: z.string(),
+})
+
+const archiveEvaluationInputSchema = z.object({
   projectId: z.string(),
   issueId: z.string(),
   evaluationId: z.string(),
@@ -254,4 +261,31 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
     }
 
     return pendingStatus
+  })
+
+export const archiveIssueEvaluation = createServerFn({ method: "POST" })
+  .inputValidator(archiveEvaluationInputSchema)
+  .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* EvaluationRepository
+        const evaluation = yield* repository.findById(EvaluationId(data.evaluationId))
+
+        if (evaluation.projectId !== projectId || evaluation.issueId !== issueId) {
+          return yield* new BadRequestError({
+            message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
+          })
+        }
+
+        const archivedEvaluation = archiveEvaluation({ evaluation })
+        yield* repository.save(archivedEvaluation)
+
+        return toEvaluationSummaryRecord(archivedEvaluation)
+      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId))),
+    )
   })

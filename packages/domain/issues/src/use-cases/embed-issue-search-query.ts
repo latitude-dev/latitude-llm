@@ -1,0 +1,43 @@
+import { AI } from "@domain/ai"
+import { Effect } from "effect"
+import { z } from "zod"
+import { CENTROID_EMBEDDING_DIMENSIONS, CENTROID_EMBEDDING_MODEL } from "../constants.ts"
+import { normalizeEmbedding } from "../helpers.ts"
+
+const embedIssueSearchQueryInputSchema = z.object({
+  organizationId: z.string(),
+  projectId: z.string(),
+  query: z.string().trim().min(1),
+})
+
+export type EmbedIssueSearchQueryInput = z.input<typeof embedIssueSearchQueryInputSchema>
+
+export interface EmbedIssueSearchQueryResult {
+  readonly query: string
+  readonly normalizedEmbedding: number[]
+}
+
+export const embedIssueSearchQueryUseCase = (input: EmbedIssueSearchQueryInput) =>
+  Effect.gen(function* () {
+    const parsed = embedIssueSearchQueryInputSchema.parse(input)
+    const ai = yield* AI
+
+    const result = yield* ai.embed({
+      text: parsed.query,
+      model: CENTROID_EMBEDDING_MODEL,
+      dimensions: CENTROID_EMBEDDING_DIMENSIONS,
+      telemetry: {
+        spanName: "embed-issue-search-query",
+        tags: ["issues", "embedding", "search"],
+        metadata: {
+          organizationId: parsed.organizationId,
+          projectId: parsed.projectId,
+        },
+      },
+    })
+
+    return {
+      query: parsed.query,
+      normalizedEmbedding: normalizeEmbedding(result.embedding),
+    } satisfies EmbedIssueSearchQueryResult
+  })

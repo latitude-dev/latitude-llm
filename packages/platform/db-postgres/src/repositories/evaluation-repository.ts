@@ -8,7 +8,7 @@ import {
   SqlClient,
   type SqlClientShape,
 } from "@domain/shared"
-import { and, desc, eq, isNotNull, isNull, type SQL } from "drizzle-orm"
+import { and, desc, eq, inArray, isNotNull, isNull, type SQL } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { evaluations } from "../schema/evaluations.ts"
@@ -163,6 +163,32 @@ export const EvaluationRepositoryLive = Layer.effect(
             eq(evaluations.projectId, projectId),
           options,
         }),
+
+      listByIssueIds: ({
+        projectId,
+        issueIds,
+        options,
+      }: {
+        readonly projectId: ProjectId
+        readonly issueIds: readonly IssueId[]
+        readonly options?: EvaluationListOptions
+      }) => {
+        if (issueIds.length === 0) {
+          return Effect.succeed({
+            items: [],
+            hasMore: false,
+            limit: options?.limit ?? 50,
+            offset: options?.offset ?? 0,
+          })
+        }
+
+        return list({
+          baseWhere:
+            and(eq(evaluations.projectId, projectId), inArray(evaluations.issueId, issueIds as unknown as string[])) ??
+            eq(evaluations.projectId, projectId),
+          options,
+        })
+      },
 
       archive: (id: EvaluationId) =>
         sqlClient

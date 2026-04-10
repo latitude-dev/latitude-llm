@@ -1,24 +1,14 @@
-import {
-  Button,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuRoot,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  Text,
-} from "@repo/ui"
-import { CalendarIcon, ChevronDown } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { type DateRange, DateRangePicker, type DateRangePickerPreset } from "@repo/ui"
 
 const TIME_PRESETS = [
-  { label: "Last 30 seconds", seconds: 30 },
-  { label: "Last 15 minutes", seconds: 15 * 60 },
-  { label: "Last 30 minutes", seconds: 30 * 60 },
-  { label: "Last hour", seconds: 60 * 60 },
-  { label: "Last day", seconds: 24 * 60 * 60 },
-  { label: "Last week", seconds: 7 * 24 * 60 * 60 },
-  { label: "Last 2 weeks", seconds: 14 * 24 * 60 * 60 },
-  { label: "Last month", seconds: 30 * 24 * 60 * 60 },
+  { id: "last-30-seconds", label: "Last 30 seconds", seconds: 30 },
+  { id: "last-15-minutes", label: "Last 15 minutes", seconds: 15 * 60 },
+  { id: "last-30-minutes", label: "Last 30 minutes", seconds: 30 * 60 },
+  { id: "last-hour", label: "Last hour", seconds: 60 * 60 },
+  { id: "last-day", label: "Last day", seconds: 24 * 60 * 60 },
+  { id: "last-week", label: "Last week", seconds: 7 * 24 * 60 * 60 },
+  { id: "last-2-weeks", label: "Last 2 weeks", seconds: 14 * 24 * 60 * 60 },
+  { id: "last-month", label: "Last month", seconds: 30 * 24 * 60 * 60 },
 ] as const
 
 interface TimeFilterDropdownProps {
@@ -27,123 +17,78 @@ interface TimeFilterDropdownProps {
   readonly onChange: (from?: string, to?: string) => void
 }
 
-function getActivePresetLabel(from?: string, _to?: string): string | null {
-  if (!from) return null
-  const fromDate = new Date(from)
-  const diffMs = Date.now() - fromDate.getTime()
-  const diffSeconds = Math.round(diffMs / 1000)
-
-  for (const preset of TIME_PRESETS) {
-    if (Math.abs(diffSeconds - preset.seconds) < preset.seconds * 0.1) {
-      return preset.label
-    }
-  }
-  return null
+function buildPresetRange(seconds: number): DateRange {
+  return { from: new Date(Date.now() - seconds * 1000) }
 }
 
-function formatDateForInput(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, "0")
-  const d = String(date.getDate()).padStart(2, "0")
-  const h = String(date.getHours()).padStart(2, "0")
-  const min = String(date.getMinutes()).padStart(2, "0")
-  return `${y}-${m}-${d}T${h}:${min}`
+function buildPickerRange(startTimeFrom?: string, startTimeTo?: string): DateRange | undefined {
+  if (!startTimeFrom && !startTimeTo) return undefined
+
+  return {
+    ...(startTimeFrom ? { from: new Date(startTimeFrom) } : {}),
+    ...(startTimeTo ? { to: new Date(startTimeTo) } : {}),
+  }
+}
+
+function startOfLocalDay(date: Date): Date {
+  const next = new Date(date)
+  next.setHours(0, 0, 0, 0)
+  return next
+}
+
+function endOfLocalDay(date: Date): Date {
+  const next = new Date(date)
+  next.setHours(23, 59, 59, 999)
+  return next
+}
+
+function getActivePresetId(startTimeFrom?: string, startTimeTo?: string): string | undefined {
+  if (!startTimeFrom || startTimeTo) return undefined
+
+  const diffSeconds = Math.round((Date.now() - new Date(startTimeFrom).getTime()) / 1000)
+
+  for (const preset of TIME_PRESETS) {
+    const toleranceSeconds = Math.max(2, Math.round(preset.seconds * 0.1))
+    if (Math.abs(diffSeconds - preset.seconds) <= toleranceSeconds) {
+      return preset.id
+    }
+  }
+
+  return undefined
 }
 
 export function TimeFilterDropdown({ startTimeFrom, startTimeTo, onChange }: TimeFilterDropdownProps) {
-  const [open, setOpen] = useState(false)
-  const [customFrom, setCustomFrom] = useState("")
-  const [customTo, setCustomTo] = useState("")
-
-  const activeLabel = useMemo(() => {
-    const presetLabel = getActivePresetLabel(startTimeFrom, startTimeTo)
-    if (presetLabel) return presetLabel
-    if (startTimeFrom || startTimeTo) return "Custom range"
-    return "All time"
-  }, [startTimeFrom, startTimeTo])
-
-  const applyPreset = useCallback(
-    (seconds: number) => {
-      const from = new Date(Date.now() - seconds * 1000).toISOString()
-      onChange(from, undefined)
-      setOpen(false)
-    },
-    [onChange],
-  )
-
-  const applyCustomRange = useCallback(() => {
-    const from = customFrom ? new Date(customFrom).toISOString() : undefined
-    const to = customTo ? new Date(customTo).toISOString() : undefined
-    onChange(from, to)
-    setOpen(false)
-  }, [customFrom, customTo, onChange])
-
-  const clearTimeFilter = useCallback(() => {
-    onChange(undefined, undefined)
-    setCustomFrom("")
-    setCustomTo("")
-    setOpen(false)
-  }, [onChange])
+  const presets: readonly DateRangePickerPreset[] = TIME_PRESETS.map((preset) => ({
+    id: preset.id,
+    label: preset.label,
+    range: buildPresetRange(preset.seconds),
+  }))
+  const pickerRange = buildPickerRange(startTimeFrom, startTimeTo)
+  const selectedPresetId = getActivePresetId(startTimeFrom, startTimeTo)
 
   return (
-    <DropdownMenuRoot open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <CalendarIcon className="h-4 w-4" />
-          <Text.H6>{activeLabel}</Text.H6>
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        {TIME_PRESETS.map((preset) => (
-          <DropdownMenuItem
-            key={preset.seconds}
-            className="cursor-pointer"
-            onSelect={() => applyPreset(preset.seconds)}
-          >
-            <Text.H6>{preset.label}</Text.H6>
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <fieldset
-          className="flex flex-col gap-2 px-2 py-2 border-none p-0 m-0"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <Text.H6 color="foregroundMuted">Custom range</Text.H6>
-          <div className="flex flex-col gap-1.5">
-            <label className="flex flex-col gap-0.5">
-              <span className="text-[11px] text-muted-foreground">From</span>
-              <input
-                type="datetime-local"
-                value={customFrom || (startTimeFrom ? formatDateForInput(new Date(startTimeFrom)) : "")}
-                onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded border bg-background px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-              />
-            </label>
-            <label className="flex flex-col gap-0.5">
-              <span className="text-[11px] text-muted-foreground">To</span>
-              <input
-                type="datetime-local"
-                value={customTo || (startTimeTo ? formatDateForInput(new Date(startTimeTo)) : "")}
-                onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded border bg-background px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-ring"
-              />
-            </label>
-          </div>
-          <Button variant="outline" size="sm" onClick={applyCustomRange}>
-            <Text.H6>Apply</Text.H6>
-          </Button>
-        </fieldset>
-        {(startTimeFrom || startTimeTo) && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer" onSelect={clearTimeFilter}>
-              <Text.H6 color="destructive">Clear time filter</Text.H6>
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenuRoot>
+    <DateRangePicker
+      value={pickerRange}
+      presets={presets}
+      selectedPresetId={selectedPresetId}
+      placeholder="All time"
+      onChange={({ range, source }) => {
+        if (source === "clear" || !range) {
+          onChange(undefined, undefined)
+          return
+        }
+
+        if (source === "preset") {
+          onChange(range.from?.toISOString(), range.to?.toISOString())
+          return
+        }
+
+        const normalizedFrom = range.from ? startOfLocalDay(range.from).toISOString() : undefined
+        const rangeEnd = range.to ?? range.from
+        const normalizedTo = rangeEnd ? endOfLocalDay(rangeEnd).toISOString() : undefined
+
+        onChange(normalizedFrom, normalizedTo)
+      }}
+    />
   )
 }

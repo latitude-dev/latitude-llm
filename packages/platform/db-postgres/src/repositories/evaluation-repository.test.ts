@@ -103,10 +103,16 @@ describe("EvaluationRepositoryLive", () => {
           issueId,
           options: { lifecycle: "all" },
         })
+        const byIssueIdsPage = yield* repository.listByIssueIds({
+          projectId,
+          issueIds: [issueId, otherIssueId],
+          options: { lifecycle: "all" },
+        })
 
         expect(activePage.items.map((item) => item.id)).toEqual([active.id])
         expect(archivedPage.items.map((item) => item.id)).toEqual([archived.id])
         expect(allPage.items.map((item) => item.id).sort()).toEqual([active.id, archived.id].sort())
+        expect(byIssueIdsPage.items.map((item) => item.id).sort()).toEqual([active.id, archived.id].sort())
       }).pipe(makeProvider(database)),
     )
   })

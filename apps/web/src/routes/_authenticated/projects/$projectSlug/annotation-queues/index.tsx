@@ -1,6 +1,7 @@
 import {
   AvatarGroup,
   Button,
+  Icon,
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableSorting,
@@ -10,6 +11,7 @@ import {
 import { mapByEntityId, relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { LayersPlusIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import {
   ANNOTATION_QUEUES_DEFAULT_SORTING,
@@ -152,8 +154,9 @@ function AnnotationQueuesPage() {
         <Layout.ActionsRow>
           <Layout.ActionRowItem />
           <Layout.ActionRowItem>
-            <Button type="button" size="sm">
-              New queue
+            <Button variant="outline">
+              <Icon size="sm" icon={LayersPlusIcon} />
+              Queue
             </Button>
           </Layout.ActionRowItem>
         </Layout.ActionsRow>

@@ -1,6 +1,6 @@
 import { CopyableText } from "@repo/ui"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
-import { DatabaseIcon, MessageSquareText, Settings, ShieldAlert, UnlinkIcon } from "lucide-react"
+import { CircleAlertIcon, DatabaseIcon, LayersIcon, MessageSquareTextIcon, SettingsIcon } from "lucide-react"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
@@ -48,21 +48,21 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
       {({ collapsed }) => (
         <>
           <NavItem
-            icon={MessageSquareText}
+            icon={MessageSquareTextIcon}
             label="Traces"
             to={`/projects/${projectSlug}`}
             active={isTracesActive}
             collapsed={collapsed}
           />
           <NavItem
-            icon={UnlinkIcon}
+            icon={LayersIcon}
             label="Annotation queues"
             to={`/projects/${projectSlug}/annotation-queues`}
             active={isAnnotationQueuesActive}
             collapsed={collapsed}
           />
           <NavItem
-            icon={ShieldAlert}
+            icon={CircleAlertIcon}
             label="Issues"
             to={`/projects/${projectSlug}/issues`}
             active={isIssuesActive}
@@ -76,7 +76,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
             collapsed={collapsed}
           />
           <NavItem
-            icon={Settings}
+            icon={SettingsIcon}
             label="Settings"
             to={`/projects/${projectSlug}/settings`}
             active={isSettingsActive}

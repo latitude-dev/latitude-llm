@@ -14,7 +14,7 @@
     "check": "biome check src",
     "format": "biome format --write src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests --dir src",
     "check:fix": "biome check --fix src"
   },
   "dependencies": {

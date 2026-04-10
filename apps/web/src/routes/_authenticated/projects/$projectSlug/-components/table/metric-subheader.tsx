@@ -67,16 +67,20 @@ export function TableMetricSubheader({
     <div className="flex min-w-0 w-full items-center justify-end gap-0.5">
       <Button
         variant="ghost"
-        className="py-0"
+        className="min-h-0 h-auto w-auto px-0 py-0"
         onClick={(e) => {
           e.stopPropagation()
           bump(1)
         }}
       >
-        <Text.H6 color="foregroundMuted" className="min-w-0 flex-1 truncate text-center tabular-nums">
-          {KIND_LABELS[kind]}
-        </Text.H6>
-        <Text.H6B color="foreground">{formatMetricValue(raw, format)}</Text.H6B>
+        <span className="flex min-w-0 items-center justify-end gap-0.5">
+          <span className="shrink-0 text-xs leading-4 font-medium text-muted-foreground tabular-nums">
+            {KIND_LABELS[kind]}
+          </span>
+          <span className="shrink-0 text-xs leading-4 font-semibold text-foreground">
+            {formatMetricValue(raw, format)}
+          </span>
+        </span>
       </Button>
     </div>
   )

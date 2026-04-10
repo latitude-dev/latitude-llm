@@ -133,8 +133,35 @@ export function formatClickhouseTime(date: Date): string {
   return iso.replace("T", " ").replace("Z", "000")
 }
 
+export function parseClickhouseTime(value: string): Date {
+  return new Date(`${value.replace(" ", "T")}Z`)
+}
+
 export function addMs(date: Date, ms: number): Date {
   return new Date(date.getTime() + ms)
+}
+
+export function clampSpansToWindowEnd(spans: readonly SpanRow[], windowEnd: Date): SpanRow[] {
+  const windowEndMs = windowEnd.getTime()
+
+  return spans.map((span) => {
+    const start = parseClickhouseTime(span.start_time)
+    const end = parseClickhouseTime(span.end_time)
+
+    if (start.getTime() <= windowEndMs && end.getTime() <= windowEndMs) {
+      return span
+    }
+
+    const clampedStart = start.getTime() > windowEndMs ? new Date(windowEndMs) : start
+    const clampedEnd = end.getTime() > windowEndMs ? new Date(windowEndMs) : end
+    const normalizedEnd = clampedEnd.getTime() < clampedStart.getTime() ? clampedStart : clampedEnd
+
+    return {
+      ...span,
+      start_time: formatClickhouseTime(clampedStart),
+      end_time: formatClickhouseTime(normalizedEnd),
+    }
+  })
 }
 
 export function randomTimeInWindow(from: Date, to: Date): Date {

@@ -2,6 +2,7 @@ import { AGENT_ERROR_RATES, AGENT_PROFILES, type AgentProfile } from "@domain/sh
 import { generateTraceByPattern } from "./pattern-generators.ts"
 import { generateSessionTraces } from "./session-generator.ts"
 import {
+  clampSpansToWindowEnd,
   pick,
   pickByWeight,
   randomTimeInWindow,
@@ -97,5 +98,8 @@ function generateIndependentTrace(config: TraceConfig, agent: AgentProfile): Spa
     metadata,
   }
 
-  return generateTraceByPattern(ctx, agent, pattern, [userMessage(userPrompt)], assistantReply)
+  return clampSpansToWindowEnd(
+    generateTraceByPattern(ctx, agent, pattern, [userMessage(userPrompt)], assistantReply),
+    config.timeWindow.to,
+  )
 }

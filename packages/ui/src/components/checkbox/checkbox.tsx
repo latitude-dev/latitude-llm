@@ -6,6 +6,7 @@ import { cn } from "../../utils/cn.ts"
 export type CheckedState = CheckboxPrimitive.CheckedState
 
 interface CheckboxProps {
+  id?: string
   checked?: CheckedState
   defaultChecked?: CheckedState
   onCheckedChange?: (checked: CheckedState) => void
@@ -15,6 +16,8 @@ interface CheckboxProps {
   value?: string
   className?: string
   onClick?: (e: React.MouseEvent) => void
+  "aria-label"?: string
+  "aria-labelledby"?: string
   /** Visualize the hit area with a dashed border + tinted background (uses hit-area-debug) */
   debugHitArea?: boolean
 }

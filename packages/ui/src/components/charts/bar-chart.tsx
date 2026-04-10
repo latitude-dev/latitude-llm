@@ -13,6 +13,7 @@ import { useChartCssTheme } from "./use-chart-css-theme.ts"
 
 export type BarChartDataPoint = {
   readonly category: string
+  readonly tooltipCategory?: string
   readonly value: number
 }
 
@@ -64,11 +65,12 @@ function BarChart({
   const colors = colorScheme ? chartThemeFallback(colorScheme === "dark") : cssTheme
 
   const categories = useMemo(() => data.map((d) => d.category), [data])
+  const tooltipCategories = useMemo(() => data.map((d) => d.tooltipCategory ?? d.category), [data])
   const values = useMemo(() => data.map((d) => d.value), [data])
 
   const option = useMemo(
-    () => buildBarChartOption(categories, values, colors, formatTooltip, showYAxis),
-    [categories, values, colors, formatTooltip, showYAxis],
+    () => buildBarChartOption(categories, values, tooltipCategories, colors, formatTooltip, showYAxis),
+    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis],
   )
 
   if (!mounted) {

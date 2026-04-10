@@ -6,10 +6,10 @@ import { createFileRoute } from "@tanstack/react-router"
 import {
   AppWindowIcon,
   ChevronDown,
-  Columns2Icon,
   DatabaseIcon,
   FilterIcon,
   MessagesSquareIcon,
+  SearchIcon,
   TextIcon,
   UnlinkIcon,
 } from "lucide-react"
@@ -21,10 +21,11 @@ import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
 import { TraceAggregationsPanel } from "./-components/aggregations/aggregations-panel.tsx"
+import { ColumnsSelector } from "./-components/columns-selector.tsx"
 import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
-import { TracesView } from "./-components/traces-view.tsx"
+import { TRACE_COLUMN_OPTIONS, type TraceColumnId, TracesView } from "./-components/traces-view.tsx"
 import { AddToQueueModal } from "./annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
 
@@ -54,6 +55,25 @@ function getTimeFilterValue(filters: FilterSet, op: "gte" | "lte"): string | und
   if (!conds) return undefined
   const match = conds.find((c) => c.op === op)
   return match ? String(match.value) : undefined
+}
+
+const DEFAULT_TRACE_COLUMNS: TraceColumnId[] = TRACE_COLUMN_OPTIONS.map((column) => column.id)
+
+function parseTraceColumnIds(raw?: string): TraceColumnId[] {
+  const values = raw
+    ?.split(",")
+    .map((value) => value.trim())
+    .filter((value): value is TraceColumnId => TRACE_COLUMN_OPTIONS.some((column) => column.id === value))
+
+  if (!values || values.length === 0) {
+    return [...DEFAULT_TRACE_COLUMNS]
+  }
+
+  return values.includes("startTime") ? values : ["startTime", ...values]
+}
+
+function serializeTraceColumnIds(columnIds: readonly TraceColumnId[]): string {
+  return Array.from(new Set(["startTime", ...columnIds])).join(",")
 }
 
 function getSelectedCount(state: SelectionState<string>, total: number): number {
@@ -98,6 +118,10 @@ function ProjectPage() {
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
+  const [rawTraceColumns, setRawTraceColumns] = useParamState(
+    "traceColumns",
+    serializeTraceColumnIds(DEFAULT_TRACE_COLUMNS),
+  )
 
   // Tracks which drawer tab is active so J/K knows when to defer to span navigation
   const [activeDrawerTab, setActiveDrawerTab] = useState<string>("trace")
@@ -106,6 +130,7 @@ function ProjectPage() {
   const traceIdsRef = useRef<string[]>([])
 
   const filters = useMemo(() => parseFilters(rawFilters || undefined), [rawFilters])
+  const visibleTraceColumnIds = parseTraceColumnIds(rawTraceColumns || undefined)
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
   const timeTo = getTimeFilterValue(filters, "lte")
@@ -210,11 +235,14 @@ function ProjectPage() {
                 setRawFilters(serializeFilters(next) ?? "")
               }}
             />
-            <Button variant="outline" size="sm" disabled>
-              <Columns2Icon className="h-4 w-4" />
-              Columns
-              <ChevronDown className="h-4 w-4" />
-            </Button>
+            <ColumnsSelector
+              columns={TRACE_COLUMN_OPTIONS}
+              selectedColumnIds={visibleTraceColumnIds}
+              onChange={(nextColumnIds) =>
+                setRawTraceColumns(serializeTraceColumnIds(nextColumnIds as TraceColumnId[]))
+              }
+              disabled={activeTab !== "traces"}
+            />
             <Tooltip
               asChild
               trigger={
@@ -257,12 +285,15 @@ function ProjectPage() {
                 setActiveTab(id)
               }}
             />
-            <Input
-              placeholder={activeTab === "sessions" ? "Search sessions" : "Search traces"}
-              size="sm"
-              className="w-60"
-              disabled
-            />
+            <div className="relative">
+              <Input
+                placeholder={activeTab === "sessions" ? "Search sessions" : "Search traces"}
+                size="sm"
+                className="peer w-60 pl-8"
+                disabled
+              />
+              <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground peer-disabled:opacity-50" />
+            </div>
           </Layout.ActionRowItem>
         </Layout.ActionsRow>
       </Layout.Actions>
@@ -285,7 +316,7 @@ function ProjectPage() {
       </div>
 
       {activeTab === "traces" ? (
-        <TracesView {...sharedViewProps} />
+        <TracesView {...sharedViewProps} visibleColumnIds={visibleTraceColumnIds} />
       ) : (
         <SessionsView {...sharedViewProps} onActiveSessionChange={onActiveSessionChange} />
       )}

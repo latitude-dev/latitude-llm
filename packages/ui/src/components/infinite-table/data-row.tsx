@@ -9,6 +9,7 @@ interface DataRowProps<T> {
   row: T
   rowKey: string
   columns: InfiniteTableColumn<T>[]
+  rowClassName?: string
   checkedState?: CheckedState
   isActive?: boolean
   onToggleRow?: (key: string, checked: CheckedState, options?: { shiftKey?: boolean }) => void
@@ -27,6 +28,7 @@ function DataRowInner<T>({
   row,
   rowKey,
   columns,
+  rowClassName,
   checkedState,
   isActive,
   onToggleRow,
@@ -63,14 +65,18 @@ function DataRowInner<T>({
       {...(isClickable && rowAriaLabel ? { "aria-label": rowAriaLabel } : {})}
       {...(ariaExpanded !== undefined ? { "aria-expanded": ariaExpanded } : {})}
       {...(ariaPressed !== undefined ? { "aria-pressed": ariaPressed } : {})}
-      className={cn({
-        "bg-secondary": !isSubRow && !isExpanded,
-        "bg-muted": isExpanded && !isActive,
-        "bg-accent": isActive,
-        "hover:bg-muted cursor-pointer": onClick && !isExpanded && !isActive,
-        "hover:bg-accent cursor-pointer": onClick && (isExpanded || isActive),
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset": isClickable,
-      })}
+      className={cn(
+        {
+          "bg-secondary": !isSubRow && !isExpanded,
+          "bg-muted": isExpanded && !isActive,
+          "bg-accent": isActive,
+          "hover:bg-muted cursor-pointer": onClick && !isExpanded && !isActive,
+          "hover:bg-accent cursor-pointer": onClick && (isExpanded || isActive),
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset":
+            isClickable,
+        },
+        rowClassName,
+      )}
       onClick={onClick ? () => onClick(row) : undefined}
       onMouseDown={onClick ? (e) => e.preventDefault() : undefined}
       tabIndex={onClick ? 0 : undefined}

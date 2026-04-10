@@ -431,6 +431,146 @@ describe("ScoreAnalyticsRepository", () => {
   })
 
   // ------------------------------------------------------------------
+  // issue page analytics helpers
+  // ------------------------------------------------------------------
+
+  describe("issue page analytics reads", () => {
+    const issueA = "aaaaaaaaaaaaaaaaaaaaaaaa"
+    const issueB = "bbbbbbbbbbbbbbbbbbbbbbbb"
+    const traceA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    const traceB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    const from = new Date("2026-04-08T00:00:00.000Z")
+    const to = new Date("2026-04-10T23:59:59.999Z")
+
+    beforeEach(async () => {
+      await insertScores([
+        makeScoreRow({
+          issue_id: issueA,
+          trace_id: traceA,
+          source: "evaluation",
+          source_id: "eval_source_a",
+          created_at: "2026-04-08 10:00:00.000",
+        }),
+        makeScoreRow({
+          issue_id: issueA,
+          trace_id: traceA,
+          source: "evaluation",
+          source_id: "eval_source_a",
+          created_at: "2026-04-09 10:00:00.000",
+        }),
+        makeScoreRow({
+          issue_id: issueB,
+          trace_id: traceB,
+          source: "custom",
+          source_id: "custom_source_b",
+          created_at: "2026-04-10 09:00:00.000",
+        }),
+        makeScoreRow({
+          issue_id: issueB,
+          trace_id: traceB,
+          source: "custom",
+          source_id: "custom_source_b",
+          created_at: "2026-04-01 09:00:00.000",
+        }),
+      ])
+    })
+
+    it("lists issue window metrics within the selected range and score filters", async () => {
+      const metrics = await Effect.runPromise(
+        repo.listIssueWindowMetrics({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          filters: {
+            "score.source": [{ op: "eq", value: "evaluation" }],
+          },
+          timeRange: { from, to },
+        }),
+      )
+
+      expect(metrics).toEqual([
+        {
+          issueId: IssueId(issueA),
+          occurrences: 2,
+          firstSeenAt: new Date("2026-04-08T10:00:00.000Z"),
+          lastSeenAt: new Date("2026-04-09T10:00:00.000Z"),
+        },
+      ])
+    })
+
+    it("builds grouped histogram and per-issue trends for the requested issue ids", async () => {
+      const histogram = await Effect.runPromise(
+        repo.histogramByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueA), IssueId(issueB)],
+          timeRange: { from, to },
+        }),
+      )
+      const trend = await Effect.runPromise(
+        repo.trendByIssues({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueIds: [IssueId(issueA), IssueId(issueB)],
+          timeRange: { from, to },
+        }),
+      )
+
+      expect(histogram).toEqual([
+        { bucket: "2026-04-08", count: 1 },
+        { bucket: "2026-04-09", count: 1 },
+        { bucket: "2026-04-10", count: 1 },
+      ])
+      expect(trend).toEqual([
+        {
+          issueId: IssueId(issueA),
+          buckets: [
+            { bucket: "2026-04-08", count: 1 },
+            { bucket: "2026-04-09", count: 1 },
+          ],
+        },
+        {
+          issueId: IssueId(issueB),
+          buckets: [{ bucket: "2026-04-10", count: 1 }],
+        },
+      ])
+    })
+
+    it("counts distinct traces inside the selected issue window", async () => {
+      const total = await Effect.runPromise(
+        repo.countDistinctTracesByTimeRange({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          timeRange: { from, to },
+        }),
+      )
+
+      expect(total).toBe(2)
+    })
+
+    it("lists distinct traces for one issue newest-first with pagination", async () => {
+      const page = await Effect.runPromise(
+        repo.listTracesByIssue({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          issueId: IssueId(issueA),
+          limit: 1,
+          offset: 0,
+        }),
+      )
+
+      expect(page.items).toEqual([
+        {
+          traceId: TraceId(traceA),
+          lastSeenAt: new Date("2026-04-09T10:00:00.000Z"),
+        },
+      ])
+      expect(page.hasMore).toBe(false)
+      expect(page.limit).toBe(1)
+      expect(page.offset).toBe(0)
+    })
+  })
+
+  // ------------------------------------------------------------------
   // Simulation exclusion
   // ------------------------------------------------------------------
 

@@ -507,7 +507,7 @@ Even before the full runtime exists, MVP must already treat this as the real arc
 
 Evaluations generated from issues (by user demand) are the mainline flow of the reliability system.
 
-Issue discovery and issue creation do not automatically generate evaluations. Instead, the issue table row and issue details modal/page expose a `Generate evaluation` action. Issues may have several linked evaluations, and each time a user triggers that action, the server starts the `evaluation-alignment` workflow, returns a `jobId` immediately, and the frontend polls a dedicated status endpoint that reads a Redis key for that job while the initial generation/alignment pipeline runs in the background.
+Issue discovery and issue creation do not automatically generate evaluations. Instead, monitoring is started explicitly from the issue details drawer. When an issue currently has no linked evaluations, that drawer exposes a `Monitor issue` action inside the linked-evaluations section. Triggering it starts the `evaluation-alignment` workflow, returns a `jobId` immediately, and the frontend polls a dedicated status endpoint that reads a Redis key for that job while the initial generation/alignment pipeline runs in the background. Issues may still accumulate several linked evaluations over time, but the managed UI should not show a second monitor-generation button once at least one linked evaluation already exists.
 
 After explicit creation, automatic dynamic realignment remains unchanged for each linked evaluation: the system still refreshes alignment asynchronously as new annotations arrive.
 
@@ -1844,7 +1844,7 @@ Issues are initially discovered from human annotations and failed evaluation/cus
 
 Because humans cannot annotate everything, users can generate evaluations from issues when they want to monitor active issues on live traffic.
 
-Issue discovery never auto-creates those evaluations. The issue table row and the issue details modal/page must expose a `Generate evaluation` action, and issues may accumulate several linked evaluations over time.
+Issue discovery never auto-creates those evaluations. The managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations. Issues may still accumulate several linked evaluations over time.
 
 That action is asynchronous:
 
@@ -2042,56 +2042,159 @@ export async function getIssuesCollection({ tenantName }: { tenantName: string }
 
 This code is preserved verbatim as a v1 reference. Do not copy it blindly into v2 without also applying the intentional v2 changes documented above, especially the project-scoped tenant name and UUID-backed Postgres/Weaviate linkage.
 
-### Issue Table
+### Issues Page
 
 Each project has an `Issues` page.
 
-Before the table:
+Its overall shell should mirror the project `Traces` page:
 
-- a tab menu with `Active`, `Regressed`, and `Archived`
-- count per tab
-- search bar that performs hybrid search without rerank
-- date range selector
+- a top action row
+- an aggregate-counts-plus-histogram analytics panel
+- an infinitely paginated issues table
+- a right-side details drawer opened from table row click
 
-The search query embedding should be cached for one day in Redis.
+#### Actions Row
 
-Issue management actions:
+The top action row uses the same left-end / spacer / right-end layout pattern as the project `Traces` page.
 
-- resolve/unresolve/ignore/unignore are available from the issue product surface
-- `Generate evaluation` is available per issue and starts a background `evaluation-alignment` workflow run
-- manual resolve opens a confirmation modal with a keep-monitoring toggle
-- that toggle defaults from `keepMonitoring` and can be overridden before confirming the resolution
+On the left end side:
+
+1. a time range selector, using the same component family as the `Traces` page
+2. a `Columns` selector, using the same component family as the `Traces` page
+
+In the middle:
+
+- flexible empty space
+
+On the right end side:
+
+1. a tab menu with `Active` and `Archived`
+2. a search bar that performs issue hybrid search without rerank
+
+Action-row semantics:
+
+- the time range selector defaults to all time, meaning no time filter on the table or aggregate counts
+- the time range is applied to score `created_at` in ClickHouse, not to issue-row timestamps in Postgres
+- the columns selector only affects which columns are visible in the issues table
+- the `Active` / `Archived` tab filters the issues table only; it does not affect the analytics panel
+- the page exposes no additional shared trace-filter builder; the Issues action row is limited to time range, columns, lifecycle tab, and search
+- the search query embedding should rely on the shared AI-layer Redis cache
+
+#### Issues Page Read Orchestration
+
+The issues page list read is intentionally multi-store and must not be simplified into a single Postgres query.
+
+Read responsibilities:
+
+- ClickHouse owns score-backed time filtering, analytics, and per-issue occurrence/trend metrics
+- Weaviate owns issue hybrid search and similarity scores
+- Postgres owns canonical issue rows, lifecycle group filtering, and linked evaluation hydration
+
+Execution order:
+
+1. Build the score-backed ClickHouse predicate from the selected time range.
+2. Build the canonical issue-row Postgres predicate from lifecycle group state (`Active` / `Archived`).
+3. If search text is present, run Weaviate hybrid search without rerank, rely on the shared AI-layer Redis cache for the query embedding, and capture the matched issue UUIDs plus similarity scores.
+4. Run ClickHouse reads first to determine the issue ids that match the selected time range and to compute the issue-page analytics data needed for the panel and table.
+5. Intersect the ClickHouse candidate issue ids with the Weaviate search candidates when search text is present.
+6. Query canonical Postgres issues using `IN (...)` clauses on the matched issue ids / UUIDs and apply the lifecycle-group filter there.
+7. Hydrate linked evaluations from Postgres after the canonical issue rows are known.
+8. Perform final table ordering and pagination after merging Postgres rows with ClickHouse metrics and optional Weaviate similarity scores, so the cross-store sort keys are preserved.
+
+Control application rules:
+
+- the selected time range applies to the final issues table and the analytics panel through ClickHouse-backed issue candidate selection
+- search applies to the final issues table and the analytics panel through Weaviate candidate selection
+- lifecycle-group filtering in Postgres does not affect the analytics panel
+- no generic trace-filter builder or filter drawer is part of the Issues page surface
+- Postgres score rows must not be used for issue-page filtering or aggregations
+
+#### Analytics Panel
+
+The analytics block should reuse the same aggregate-counts-plus-histogram component pattern as the `Traces` page.
+
+Aggregate counts:
+
+1. new issues count
+2. escalating issues count
+3. regressed issues count
+4. resolved issues count
+5. seen occurrences count
+
+Aggregate-count rules:
+
+- the aggregate counts use the full selected time-range semantics on score `created_at`
+- no time selected means all time
+- only `from` selected means `created_at >= from`
+- only `to` selected means `created_at <= to`
+- both selected means a bounded time range
+- search and the selected time range affect these counts
+- the `Active` / `Archived` tab does not
+
+Histogram rules:
+
+- show the total occurrences of all matched issues by day
+- if both `from` and `to` are selected, render that exact range
+- if neither is selected, render the last 7 days ending today
+- if exactly one endpoint is selected, render the last 7 days ending at that selected endpoint
+- the histogram uses the same matched issue set as the analytics counts, meaning search and the selected time range apply, but the lifecycle-group tab does not
+
+#### Issues Table
+
+The issues table is infinitely paginated, following the same general table pattern as the `Traces` page. After fetching the current page, the next page should be prefetched in the background.
+
+Table interaction rules:
+
+- no bulk-selection checkbox or bulk-action bar is shown in this UI revision
+- row click opens the issue details drawer
+- default sorting is by last seen descending, then occurrences descending
+- when search text is present, similarity score descending is also preserved as an additional tie-breaker
+- the `Occurrences` column is user-sortable in ascending or descending order
 
 Issues table columns:
 
-- checkbox for bulk actions
-- `Name` with lifecycle tags and linked evaluation derived alignment tags when present
-- `Seen at`: last seen / age, like `11d ago / 3y old`
-- `Occurrences`: full-history count
-- `Trend`: mini bar chart for the last 14 days
+- `Issue`: issue name plus lifecycle tags; truncate/ellipsis the issue name so the column does not consume more than one third of the table width
+- `Trend`: mini histogram of issue occurrences for the last 14 days by day; use the same end-day selection logic as the analytics histogram, but always render exactly 14 daily buckets
+- `Seen at`: last seen / age, like `11d ago / 3y old`; this display uses full-history issue timestamps and is not re-based by the page-level time range, lifecycle-tab, or search controls
+- `Occurrences`: occurrence count for the selected time range; the column header also shows the sum of occurrences across all matched issues, not only the issues visible on the current page
+- `Affected traces`: `occurrences / total traces in the selected time window`, expressed as a percentage and capped at `100%`
+- `Evaluations`: linked evaluations shown as truncated tags containing the evaluation name plus alignment MCC percentage; if no evaluations are linked, show `-`
 
-Sorting:
+#### Issue Details Drawer
 
-- by last seen descending, then occurrences descending
+Clicking an issue row opens a right-side drawer, following the same interaction pattern as the `Traces` details drawer.
 
-Pagination:
+Drawer rules:
 
-- limit/offset
+- page-level time range, lifecycle-tab, and search controls do not apply inside this drawer; everything shown here uses full history
+- the header left side contains the close button and previous/next navigation buttons, mirroring the `Traces` details drawer chrome
+- the header right side contains an ignore/unignore secondary button and a resolve/unresolve primary button
 
-### Issue Details
+Drawer body sections:
 
-Row click opens a modal with:
+1. issue name and description
+2. a summary row with issue status, `Seen at`, and total occurrences
+3. a collapsible 14-day trend histogram ending today
+4. a collapsible linked evaluations section
+5. a collapsible mini traces list table
 
-- full name and description
-- `Generate evaluation` button
-- pending generation/alignment status when the current issue has a polled background job in flight
-- linked evaluations and their derived alignment (MCC)
-- last seen / first seen timestamps
-- total occurrences
-- 30-day occurrences chart
-- trace/session table with timestamp, preview, and duration
+Linked evaluations section behavior:
 
-The trace/session table uses keyset pagination and sorts by newest first.
+- render one evaluation row per linked evaluation
+- each evaluation row has two subrows:
+  1. evaluation name
+  2. last alignment date, alignment MCC percentage, and a manual realign action
+- if a realignment is currently in progress, replace the realign action with a loading spinner and the text `Aligning...`
+- each linked evaluation row also includes an archive action with a confirmation modal explaining that archiving it will stop monitoring this issue through that evaluation
+- when there are no linked evaluations, show a `Monitor issue` button here
+- when there is already at least one linked evaluation, do not show another monitor-generation button in the managed UI
+- `Monitor issue` reuses the asynchronous `evaluation-alignment` workflow kickoff plus polling flow defined above
+
+Mini traces table behavior:
+
+- use the same infinite-table family as the `Traces` page
+- show only timestamp and duration columns
+- list full-history seen traces for the issue, newest first
 
 ## Simulations
 
@@ -2616,14 +2719,20 @@ Legacy v1 reference paths: `apps/engine`, `packages/core/src/services/optimizati
 **Parallelization notes**: can run in parallel with Phase 13 once phases 11 and 12 land.
 
 - [x] Implement derived issue lifecycle states: `new`, `escalating`, `resolved`, `regressed`, and `ignored`.
-- [ ] Implement manual resolve/unresolve/ignore/unignore commands, including both single-item and bulk variants, `apps/web` server-function actions for managed product use, and matching public APIs for approved agent-facing access, including the resolve-action override for keeping linked evaluations active, the confirmation-modal default from `keepMonitoring`, and the immediate archival of linked evaluations when an issue is ignored.
-- [ ] Implement project-level issue search with hybrid search, no rerank, and one-day cached query embeddings.
-- [ ] Build the Issues page in `apps/web` with `Active`, `Regressed`, and `Archived` tabs, counts, search, date filter, and bulk actions, backed by issue server functions/collections, including the manual resolve confirmation modal with the keep-monitoring toggle defaulted from `keepMonitoring`, plus a per-row `Generate evaluation` action that starts a background job and polls its status.
-- [ ] Build the issue details modal/page with a `Generate evaluation` action, linked evaluations and their alignment state, pending generation/alignment status for in-flight jobs, seen-at data, trend chart, and trace/session drilldown table.
-- [ ] Surface linked evaluation names and alignment tags inside issue rows and details.
-- [ ] Add lifecycle regression tests covering bulk actions, `Generate evaluation` entry points in rows/details, Redis-backed polling feedback for in-flight generation, linked-evaluation listing, ignore-driven archival, resolve defaults from `keepMonitoring`, and regression reopening behavior.
+- [x] Implement manual resolve/unresolve/ignore/unignore commands, including both single-item and bulk variants, `apps/web` server-function actions for managed product use, and matching public APIs for approved agent-facing access, including the resolve-action override for keeping linked evaluations active, the confirmation-modal default from `keepMonitoring`, and the immediate archival of linked evaluations when an issue is ignored.
+- [x] Implement the issues-page read contract that splits time range, search, and lifecycle controls across ClickHouse, Weaviate, and Postgres; runs ClickHouse first, invokes Weaviate only when search text is present, and then queries canonical Postgres issues through `IN (...)` clauses while preserving cross-store sort keys for final pagination.
+- [x] Implement ClickHouse-backed issue-page analytics reads for histogram buckets, lifecycle aggregate counts, per-issue occurrences in the selected time range, per-issue last seen values, per-issue 14-day trend buckets, and the selected-window total trace count used by `Affected traces`.
+- [x] Implement project-level issue search with Weaviate hybrid search, no rerank, shared AI-layer Redis caching for query embeddings, and propagation of search similarity scores into the final table ordering.
+- [x] Implement the `apps/web` issues domain server functions and collections for the new issues-page state model, including time-range state, columns state, Active/Archived lifecycle tab state, search state, infinite pagination, and next-page prefetch.
+- [x] Build the issues-page action row in `apps/web` so it mirrors the Traces-page structure with time range, columns, Active/Archived tabs, and search.
+- [x] Build the issues-page analytics panel in `apps/web` using the Traces-page aggregate-plus-histogram component pattern, including the default 7-day histogram fallback rules and aggregate counts for `new`, `escalating`, `regressed`, `resolved`, and `seen occurrences`.
+- [x] Build the infinitely paginated issues table in `apps/web` with columns `Issue`, `Trend`, `Seen at`, `Occurrences`, `Affected traces`, and `Evaluations`, including lifecycle tags, issue-name truncation, occurrence subheader aggregation, occurrence sorting, linked evaluation tags, and row-click drawer opening.
+- [x] Build the issue details drawer in `apps/web` with Traces-style close/navigation chrome, ignore/unignore and resolve/unresolve header actions, full-history summary data, a collapsible 14-day trend histogram, a collapsible linked evaluations section, and a collapsible infinitely paginated mini traces table.
+- [x] Integrate drawer-side monitoring and evaluation controls so `Monitor issue` appears only when no linked evaluations exist, monitor-generation kickoff polls background status until the resulting evaluation appears, linked evaluations show alignment metadata, manual realign shows `Aligning...` while in flight, and per-evaluation archive actions require confirmation.
+- [x] Keep the Phase 14 issue management surface web-only for now: implement search, analytics, drawer reads, lifecycle commands, and monitor-generation status through `apps/web` server functions and do not expose public `apps/api` issue routes yet.
+- [x] Add backend regression coverage for bulk lifecycle actions, the multi-store control split, analytics-vs-table control application rules, hybrid search ordering, ClickHouse-backed issue-trace pagination, ignore-driven archival, resolve defaults from `keepMonitoring`, regression reopening behavior, and the web-private issue read orchestration; do not add dedicated React/UI tests for this product surface.
 
-**Exit gate**: users can find, inspect, and manage issues end-to-end; issue lifecycle state is visible and consistent across APIs and UI; issues expose explicit monitor-generation entry points with background kickoff plus polling feedback; ignoring an issue archives its linked evaluations immediately, while resolution follows `keepMonitoring`.
+**Exit gate**: users can filter, search, inspect, and manage issues end to end through an Issues page that mirrors the Traces page shell; analytics, search, and table rows stay consistent across ClickHouse, Weaviate, and Postgres reads; the issue drawer exposes lifecycle and monitoring controls with the specified full-history behavior; and the managed issue surface remains web-only until a later phase explicitly introduces a public API contract.
 
 ### (LAT-472) Phase 15 - Evaluations Product Surface And API
 

@@ -5,7 +5,7 @@ import { useTraceMetrics, useTracesCount } from "../../../../../../domains/trace
 
 function AggregationItem({ label, value }: { readonly label: string; readonly value: string }) {
   return (
-    <div className="flex min-w-[120px] flex-col gap-2">
+    <div className="flex basis-[176px] min-w-[176px] shrink-0 flex-col gap-2">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       <Text.H5 color="foreground" className="tabular-nums">
         {value}
@@ -55,7 +55,7 @@ export function GeneralAggregations({
   const showTtftAggregations = traceMetrics && traceMetrics.timeToFirstTokenNs.max > 0
 
   return (
-    <div className="flex flex-row flex-wrap gap-4 p-4">
+    <div className="flex flex-row flex-wrap gap-3 p-4">
       <AggregationItem label="Traces" value={traceCountStr} />
       <AggregationItem label="Total cost" value={totalCostStr} />
       <AggregationItem label="Median duration" value={medianDurationStr} />

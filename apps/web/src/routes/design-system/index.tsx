@@ -14,6 +14,8 @@ import {
   ChartSkeleton,
   Checkbox,
   CopyButton,
+  type DateRange,
+  DateRangePicker,
   FormField,
   GitHubIcon,
   GoogleIcon,
@@ -24,6 +26,7 @@ import {
   Label,
   LatitudeLogo,
   RichTextEditor,
+  Status,
   Text,
   useMountEffect,
 } from "@repo/ui"
@@ -249,6 +252,39 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
         </div>
       </ShowcaseSection>
 
+      <ShowcaseSection
+        theme={theme}
+        title="Date Range Picker"
+        description="V1-inspired calendar popover with presets, adapted to the v2 design system."
+      >
+        <DateRangePickerShowcase />
+      </ShowcaseSection>
+
+      <ShowcaseSection
+        theme={theme}
+        title="Status"
+        description="Compact pill statuses with semantic variants and a leading dot."
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Status label="Neutral" variant="neutral" />
+            <Status label="Info" variant="info" />
+            <Status label="Success" variant="success" />
+            <Status label="Warning" variant="warning" />
+            <Status label="Destructive" variant="destructive" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">Truncation</Text.H6>
+            <div className="max-w-64">
+              <Status
+                label="This is a longer status label that truncates cleanly in constrained layouts"
+                variant="info"
+              />
+            </div>
+          </div>
+        </div>
+      </ShowcaseSection>
+
       <ShowcaseSection theme={theme} title="Checkbox" description="Selection control with indeterminate state.">
         <CheckboxShowcase />
       </ShowcaseSection>
@@ -440,6 +476,89 @@ function RichTextEditorShowcase() {
       <div className="flex flex-col gap-1">
         <Text.H6 weight="bold">Plain text</Text.H6>
         <RichTextEditor value={textValue} onChange={setTextValue} minHeight="80px" />
+      </div>
+    </div>
+  )
+}
+
+function startOfLocalDay(date: Date): Date {
+  const next = new Date(date)
+  next.setHours(0, 0, 0, 0)
+  return next
+}
+
+function endOfLocalDay(date: Date): Date {
+  const next = new Date(date)
+  next.setHours(23, 59, 59, 999)
+  return next
+}
+
+function subtractDays(days: number): Date {
+  const next = new Date()
+  next.setDate(next.getDate() - days)
+  return next
+}
+
+function formatRangePreview(range?: DateRange) {
+  if (range?.from && range?.to) {
+    return `${range.from.toLocaleString()} - ${range.to.toLocaleString()}`
+  }
+
+  if (range?.from) {
+    return `From ${range.from.toLocaleString()}`
+  }
+
+  if (range?.to) {
+    return `Until ${range.to.toLocaleString()}`
+  }
+
+  return "No range selected"
+}
+
+function DateRangePickerShowcase() {
+  const presets = [
+    {
+      id: "today",
+      label: "Today",
+      range: {
+        from: startOfLocalDay(new Date()),
+        to: endOfLocalDay(new Date()),
+      },
+    },
+    {
+      id: "last-7-days",
+      label: "Last 7 days",
+      range: {
+        from: startOfLocalDay(subtractDays(7)),
+        to: endOfLocalDay(new Date()),
+      },
+    },
+    {
+      id: "last-30-days",
+      label: "Last 30 days",
+      range: {
+        from: startOfLocalDay(subtractDays(30)),
+        to: endOfLocalDay(new Date()),
+      },
+    },
+  ] as const
+  const [range, setRange] = useState<DateRange | undefined>(presets[1].range)
+  const [selectedPresetId, setSelectedPresetId] = useState<string | undefined>(presets[1].id)
+
+  return (
+    <div className="flex flex-col gap-3">
+      <DateRangePicker
+        value={range}
+        presets={presets}
+        selectedPresetId={selectedPresetId}
+        placeholder="All time"
+        onChange={({ range: nextRange, source, presetId }) => {
+          setRange(nextRange)
+          setSelectedPresetId(source === "preset" ? presetId : undefined)
+        }}
+      />
+      <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+        <Text.H6 color="foregroundMuted">{formatRangePreview(range)}</Text.H6>
       </div>
     </div>
   )

@@ -31,6 +31,11 @@ export interface EvaluationRepositoryShape {
     readonly issueId: IssueId
     readonly options?: EvaluationListOptions
   }): Effect.Effect<EvaluationListPage, RepositoryError>
+  listByIssueIds(input: {
+    readonly projectId: ProjectId
+    readonly issueIds: readonly IssueId[]
+    readonly options?: EvaluationListOptions
+  }): Effect.Effect<EvaluationListPage, RepositoryError>
   archive(id: EvaluationId): Effect.Effect<void, RepositoryError>
   unarchive(id: EvaluationId): Effect.Effect<void, RepositoryError>
   softDelete(id: EvaluationId): Effect.Effect<void, RepositoryError>

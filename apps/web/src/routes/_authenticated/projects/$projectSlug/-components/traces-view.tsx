@@ -19,6 +19,21 @@ import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 
 const DEFAULT_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
+export const TRACE_COLUMN_OPTIONS = [
+  { id: "startTime", label: "Start Time", required: true },
+  { id: "name", label: "Name" },
+  { id: "tags", label: "Tags" },
+  { id: "duration", label: "Duration" },
+  { id: "ttft", label: "Time To First Token" },
+  { id: "cost", label: "Cost" },
+  { id: "sessionId", label: "Session ID" },
+  { id: "userId", label: "User ID" },
+  { id: "models", label: "Models" },
+  { id: "spans", label: "Spans" },
+] as const
+
+export type TraceColumnId = (typeof TRACE_COLUMN_OPTIONS)[number]["id"]
+
 interface TracesViewProps {
   readonly projectId: string
   readonly filters: FilterSet
@@ -32,6 +47,7 @@ interface TracesViewProps {
   readonly onFiltersClose: () => void
   readonly onActiveTraceChange: (traceId: string | undefined) => void
   readonly traceIdsRef: RefObject<string[]>
+  readonly visibleColumnIds: readonly TraceColumnId[]
 }
 
 export function TracesView({
@@ -47,6 +63,7 @@ export function TracesView({
   onFiltersClose,
   onActiveTraceChange,
   traceIdsRef,
+  visibleColumnIds,
 }: TracesViewProps) {
   const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
 
@@ -67,7 +84,7 @@ export function TracesView({
     ...(hasActiveFilters ? { filters } : {}),
   })
 
-  const columns = useMemo((): InfiniteTableColumn<TraceRecord>[] => {
+  const allColumns = useMemo((): InfiniteTableColumn<TraceRecord>[] => {
     return [
       {
         key: "startTime",
@@ -184,6 +201,11 @@ export function TracesView({
       },
     ]
   }, [traceMetrics, metricsLoading])
+
+  const columns = useMemo(
+    () => allColumns.filter((column) => visibleColumnIds.includes(column.key as TraceColumnId)),
+    [allColumns, visibleColumnIds],
+  )
 
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
 
