@@ -697,9 +697,16 @@ importers:
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
+      mustache:
+        specifier: ^4.2.0
+        version: 4.2.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
+    devDependencies:
+      '@types/mustache':
+        specifier: ^4.2.6
+        version: 4.2.6
 
   packages/domain/annotations:
     dependencies:
@@ -6337,6 +6344,9 @@ packages:
 
   '@types/mssql@9.1.11':
     resolution: {integrity: sha512-vcujgrDbDezCxNDO4KY6gjwduLYOKfrexpRUwhoysRvcXZ3+IgZ/PMYFDgh8c3cQIxZ6skAwYo+H6ibMrBWPjQ==}
+
+  '@types/mustache@4.2.6':
+    resolution: {integrity: sha512-t+8/QWTAhOFlrF1IVZqKnMRJi84EgkIK5Kh0p2JV4OLywUvCwJPFxbJAl7XAow7DVIHsF+xW9f1MVzg0L6Szjw==}
 
   '@types/mysql@2.15.27':
     resolution: {integrity: sha512-YfWiV16IY0OeBfBCk8+hXKmdTKrKlwKN1MNKAPBu5JYxLwBEZl7QzeEpGnlZb3VMGJrrGmB84gXiH+ofs/TezA==}
@@ -16362,6 +16372,8 @@ snapshots:
     transitivePeerDependencies:
       - '@azure/core-client'
       - supports-color
+
+  '@types/mustache@4.2.6': {}
 
   '@types/mysql@2.15.27':
     dependencies:

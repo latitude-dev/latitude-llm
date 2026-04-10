@@ -5,6 +5,7 @@ import { Effect } from "effect"
 import {
   SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
   SYSTEM_QUEUE_ANNOTATOR_MODEL,
+  SYSTEM_QUEUE_ANNOTATOR_PROVIDER,
   SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE,
   SYSTEM_QUEUE_DEFINITIONS,
 } from "../constants.ts"
@@ -97,7 +98,7 @@ export const runSystemQueueAnnotatorUseCase = (input: RunSystemQueueAnnotatorInp
     const prompt = `Full conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
 
     const result = yield* ai.generate({
-      provider: "openai",
+      provider: SYSTEM_QUEUE_ANNOTATOR_PROVIDER,
       model: SYSTEM_QUEUE_ANNOTATOR_MODEL,
       temperature: SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE,
       maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
