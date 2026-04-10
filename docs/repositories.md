@@ -57,7 +57,7 @@ The following lists **current** port methods in `packages/domain/*/src/ports/*re
 - **ProjectRepository** — `findById`, `findBySlug`, `list`, `listIncludingDeleted`, `save`, `softDelete`, `hardDelete`, `existsByName`, `existsBySlug`.
 - **DatasetRepository** — `findById`, `listByProject`, `softDelete`, `save` split into `create` / `updateName` / … is acceptable for partial updates.
 - **DatasetRowRepository** — `list`, `listPage`, `count`, `findById`, `insertBatch`, `updateRow`, `deleteBatch`, `deleteAll`.
-- **ScoreRepository** — `findById` → `NotFoundError` if missing; `listBy`*, `save`, `delete`, `assignIssueIfUnowned`.
+- **ScoreRepository** — `findById` → `NotFoundError` if missing; `listBy`*, `save`, `delete`, `assignIssueIfUnowned`, plus specialized `existsByEvaluationIdAndScope` / `existsByEvaluationIdAndTraceId` reads for live-monitoring canonical-state checks.
 - **ScoreAnalyticsRepository** — `insert`, `delete` (row mask); `aggregateBy`*, `rollupBy*`, `trendBy*`.
 - **IssueProjectionRepository** — `upsert`, `delete`, `hybridSearch` (projection store).
 - **InvitationRepository** — `findPublicPendingPreviewById` → `NotFoundError` if missing, invalid, or expired (unauthenticated preview).

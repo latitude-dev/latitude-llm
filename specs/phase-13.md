@@ -111,7 +111,7 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 
 - [x] **P13-PR1-1**: Introduce shared live-trigger helpers for lifecycle gating, deterministic sampling keyed by `(organizationId, projectId, evaluationId, traceId)`, turn scope derivation, and execute-task dedupe/debounce key construction
 - [x] **P13-PR1-2**: Extend `TraceRepository` with a narrow `matchesFiltersByTraceId`-style contract so live trigger matching reuses the exact existing trace filter semantics instead of re-implementing them in domain or worker code
-- [ ] **P13-PR1-3**: Extend `ScoreRepository` with narrow canonical-state existence checks for:
+- [x] **P13-PR1-3**: Extend `ScoreRepository` with narrow canonical-state existence checks for:
   - prior evaluation score in one `(evaluationId, scope)` pair, used by `first`
   - existing evaluation score for one `(evaluationId, traceId)` pair, used by duplicate-result prevention
 - [ ] **P13-PR1-4**: Introduce the domain live evaluation execution use case in `@domain/evaluations`, wrapping the current MVP `executeEvaluationScript()` bridge through the existing `AI` service instead of embedding provider-specific logic in workers
