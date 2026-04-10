@@ -1,7 +1,23 @@
+import { stringAttr } from "../attributes.ts"
 import type { Candidate } from "./utils.ts"
 import { fromString } from "./utils.ts"
 
 const VERCEL_PROVIDER_SUFFIX = /\.(chat|messages|responses|generative-ai|embed)$/
+
+/**
+ * Strip ANSI SGR escape sequences and trailing terminal noise from model strings.
+ *
+ * Claude Code emits the `model` attribute with ANSI color codes embedded (e.g.
+ * `"\x1b[32mclaude-opus-4-5\x1b[0m"`) because it renders the value in a terminal
+ * before writing it to the span. No other instrumentation source we know of does this.
+ */
+const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*m`, "g")
+function sanitizeModelName(raw: string): string {
+  return raw
+    .replace(ANSI_SGR_RE, "")
+    .replace(/\[[0-9;]*m$/i, "")
+    .trim()
+}
 
 const PROVIDER_ALIASES: Record<string, string> = {
   bedrock: "amazon-bedrock",
@@ -30,14 +46,22 @@ export const providerCandidates: Candidate<string>[] = [
     const stripped = v.replace(VERCEL_PROVIDER_SUFFIX, "")
     return PROVIDER_ALIASES[stripped] ?? stripped
   }),
+  { resolve: (attrs) => (stringAttr(attrs, "span.type") === "llm_request" ? "anthropic" : undefined) }, // Claude Code
 ]
 
-export const modelCandidates = [
+export const modelCandidates: Candidate<string>[] = [
   fromString("gen_ai.request.model"), // OTEL GenAI semconv
   fromString("llm.model_name"), // OpenInference / Arize Phoenix
   fromString("ai.model.id"), // Vercel AI SDK
   fromString("embedding.model_name"), // OpenInference (embeddings)
   fromString("reranker.model_name"), // OpenInference (reranker)
+  {
+    resolve: (attrs) => {
+      const raw = stringAttr(attrs, "model")
+      if (!raw) return undefined
+      return sanitizeModelName(raw) || undefined
+    },
+  }, // Claude Code (strips ANSI escape codes)
 ]
 
 export const responseModelCandidates = [

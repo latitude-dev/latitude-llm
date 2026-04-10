@@ -34,11 +34,14 @@ const ttftEventNames = new Set(["gen_ai.content.completion", "gen_ai.choice", "a
 
 /** Span-level TTFT in nanoseconds (instrumentation already measured server-side latency). */
 function ttftFromAttributes(spanAttrs: readonly OtlpKeyValue[]): number | undefined {
-  const candidates = ["gen_ai.server.time_to_first_token", "llm.latency.time_to_first_token"]
-  for (const key of candidates) {
+  const candidatesNs = ["gen_ai.server.time_to_first_token", "llm.latency.time_to_first_token"]
+  for (const key of candidatesNs) {
     const v = intAttr(spanAttrs, key)
     if (v !== undefined && v > 0) return v
   }
+  // Claude Code reports TTFT in milliseconds
+  const ttftMs = intAttr(spanAttrs, "ttft_ms")
+  if (ttftMs !== undefined && ttftMs > 0) return ttftMs * NS_PER_MS
   return undefined
 }
 
