@@ -16,11 +16,11 @@ import {
   OutboxEventWriter,
   ProjectId,
   type RepositoryError,
+  SqlClient,
   sessionIdSchema,
   spanIdSchema,
-  SqlClient,
-  toRepositoryError,
   TraceId,
+  toRepositoryError,
   traceIdSchema,
   UserId,
 } from "@domain/shared"

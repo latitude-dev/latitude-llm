@@ -49,7 +49,7 @@ export const runFlagger = async (input: {
     ),
   )
 
-export interface DraftAnnotateOutput {
+interface DraftAnnotateOutput {
   readonly queueId: string
   readonly traceId: string
   readonly feedback: string
