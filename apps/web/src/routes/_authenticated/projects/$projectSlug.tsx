@@ -9,8 +9,14 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
   staticData: {
     breadcrumb: ProjectBreadcrumbSegment,
   },
+  staleTime: Infinity,
+  remountDeps: ({ params }) => params,
   component: ProjectLayout,
-  beforeLoad: async ({ params }) => {
+  // Keep the rendered project record in `loader` so TanStack Router can cache
+  // it across same-route search-param navigations. `beforeLoad` is better for
+  // middleware-only checks, while descendants can read cached loader data with
+  // `useLoaderData({ select })`.
+  loader: async ({ params }) => {
     try {
       const project = await getProjectBySlug({
         data: { slug: params.projectSlug },
@@ -23,8 +29,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug")({
 })
 
 function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; projectSlug: string }) {
-  const routerState = useRouterState()
-  const pathname = routerState.location.pathname
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
 
   const isTracesActive =
     pathname === `/projects/${projectSlug}` ||
@@ -34,6 +39,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
   const isDatasetsActive = pathname.startsWith(`/projects/${projectSlug}/datasets`)
   const isSettingsActive = pathname.startsWith(`/projects/${projectSlug}/settings`)
   const isAnnotationQueuesActive = pathname.startsWith(`/projects/${projectSlug}/annotation-queues`)
+
   return (
     <AppSidebar
       title={project.name}
@@ -84,7 +90,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
 
 function ProjectLayout() {
   const { projectSlug } = Route.useParams()
-  const { project } = Route.useRouteContext()
+  const project = Route.useLoaderData({ select: (data) => data.project })
   return (
     <div className="flex h-full">
       <ProjectSidebar project={project} projectSlug={projectSlug} />

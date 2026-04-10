@@ -3,6 +3,7 @@ import { eq } from "@tanstack/react-db"
 import { createFileRoute } from "@tanstack/react-router"
 import { updateProjectMutation, useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
+import { useRouteProject } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/settings")({
   component: ProjectSettingsPage,
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/sett
 
 function ProjectSettingsPage() {
   const { projectSlug } = Route.useParams()
-  const { project: routeProject } = Route.useRouteContext()
+  const routeProject = useRouteProject()
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),

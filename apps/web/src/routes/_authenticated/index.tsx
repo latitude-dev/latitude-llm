@@ -33,6 +33,7 @@ import {
 } from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+import { useAuthenticatedOrganizationId } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
@@ -325,7 +326,7 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
 
 function DashboardPageContent() {
   const [createOpen, setCreateOpen] = useState(false)
-  const { organizationId } = Route.useRouteContext()
+  const organizationId = useAuthenticatedOrganizationId()
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),
   )

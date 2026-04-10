@@ -46,7 +46,7 @@ function AnnotationQueueItemDetailPage() {
   const { projectSlug, queueId, itemId } = Route.useParams()
   const windowWidth = useWindowWidth()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const [selectedAnnotationId, setSelectedAnnotationId] = useParamState("annotationId", "", { history: "push" })
+  const [selectedAnnotationId, setSelectedAnnotationId] = useParamState("annotationId", "")
 
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),

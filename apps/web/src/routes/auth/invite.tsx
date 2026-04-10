@@ -14,7 +14,7 @@ const invitationSearchParams = z.object({
 
 export const Route = createFileRoute("/auth/invite")({
   validateSearch: invitationSearchParams,
-  beforeLoad: async ({ search }) => {
+  loader: async ({ search }) => {
     const preview = await getInvitationPreview({ data: { invitationId: search.invitationId } })
     if (!preview) {
       throw redirect({ to: "/" })
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/auth/invite")({
 
 function InvitePage() {
   const { invitationId } = Route.useSearch()
-  const { invitationPreview, session } = Route.useRouteContext()
+  const { invitationPreview, session } = Route.useLoaderData()
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string>()

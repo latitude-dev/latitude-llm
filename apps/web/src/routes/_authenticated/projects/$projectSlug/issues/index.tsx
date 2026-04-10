@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { useIssuesCollection } from "../../../../../domains/issues/issues.collection.ts"
 import type { IssueRecord } from "../../../../../domains/issues/issues.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
+import { useRouteProject } from "../-route-data.ts"
 import { IssueEvaluationActions } from "./-components/issue-evaluation-actions.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issues/")({
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/issu
 })
 
 function IssuesPage() {
-  const { project } = Route.useRouteContext()
+  const project = useRouteProject()
   const { data, isLoading } = useIssuesCollection(project.id)
   const issues = data ?? []
   const columns = useMemo(

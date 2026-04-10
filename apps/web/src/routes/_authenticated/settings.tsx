@@ -1,6 +1,7 @@
-import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router"
+import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { Building2, Key, ShieldAlert, UserRound, Users } from "lucide-react"
 import { AppSidebar, NavItem } from "../../layouts/AppSidebar/index.tsx"
+import { usePathname } from "../../lib/hooks/use-router-selectors.ts"
 
 export const Route = createFileRoute("/_authenticated/settings")({
   component: SettingsLayout,
@@ -15,8 +16,7 @@ const navItems = [
 ] as const
 
 function SettingsLayout() {
-  const routerState = useRouterState()
-  const pathname = routerState.location.pathname
+  const pathname = usePathname()
   return (
     <div className="flex h-full">
       <AppSidebar title="Settings">

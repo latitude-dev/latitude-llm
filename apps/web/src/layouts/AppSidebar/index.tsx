@@ -1,10 +1,11 @@
 import { Button, cn, Icon, Text, Tooltip, useLocalStorage } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { Link, useMatches } from "@tanstack/react-router"
+import { Link } from "@tanstack/react-router"
 import { ChevronDown, ChevronRight, ChevronsUp, PanelLeft, PanelLeftClose } from "lucide-react"
-import { type ReactElement, type ReactNode, useCallback, useState } from "react"
+import { type ReactElement, type ReactNode, useState } from "react"
 import { HotkeyBadge } from "../../components/hotkey-badge.tsx"
+import { useHasMatchStaticData } from "../../lib/hooks/use-router-selectors.ts"
 
 type NavItemIcon = React.ComponentType<React.SVGProps<SVGSVGElement>>
 
@@ -206,8 +207,7 @@ export function NavItem({
 }
 
 function useShouldCollapseSidebar() {
-  const matches = useMatches()
-  return matches.some((m) => (m.staticData as { collapseSidebar?: boolean } | undefined)?.collapseSidebar === true)
+  return useHasMatchStaticData((staticData) => staticData?.collapseSidebar === true)
 }
 export function AppSidebar({
   title,
@@ -226,6 +226,7 @@ export function AppSidebar({
   const collapsed = collapsedPreference ?? autoCollapse
   const toggleCollapsed = () => setCollapsedPreference((value) => !(value ?? autoCollapse))
   useHotkeys([{ hotkey: "Mod+B", callback: toggleCollapsed }])
+
   return (
     <aside
       className={cn("flex h-full shrink-0 flex-col border-r border-border transition-all duration-200", {

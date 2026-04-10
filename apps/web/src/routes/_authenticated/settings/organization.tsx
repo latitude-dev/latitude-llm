@@ -10,13 +10,14 @@ import {
 } from "../../../domains/organizations/organizations.collection.ts"
 import { createOrganization } from "../../../domains/organizations/organizations.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { useAuthenticatedOrganizationId } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/organization")({
   component: OrganizationSettingsPage,
 })
 
 function OrganizationNameSection() {
-  const { organizationId } = Route.useRouteContext()
+  const organizationId = useAuthenticatedOrganizationId()
   const { toast } = useToast()
   const { data: org } = useOrganizationsCollection((orgs) =>
     orgs.where(({ organizations }) => eq(organizations.id, organizationId)).findOne(),

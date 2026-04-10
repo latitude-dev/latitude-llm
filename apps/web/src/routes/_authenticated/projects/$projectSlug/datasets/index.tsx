@@ -19,6 +19,7 @@ import { createDatasetMutation } from "../../../../../domains/datasets/datasets.
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { toUserMessage } from "../../../../../lib/errors.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
+import { useRouteProject } from "../-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/datasets/")({
   component: DatasetsPage,
@@ -53,7 +54,7 @@ const columns: InfiniteTableColumn<DatasetRecord>[] = [
 
 function DatasetsPage() {
   const { projectSlug } = Route.useParams()
-  const { project } = Route.useRouteContext()
+  const project = useRouteProject()
   const navigate = Route.useNavigate()
   const { toast } = useToast()
   const [creating, setCreating] = useState(false)
