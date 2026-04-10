@@ -1,4 +1,4 @@
-export const THEME_STORAGE_KEY = "latitude-theme"
+const THEME_STORAGE_KEY = "latitude-theme"
 export const THEME_CHANGE_EVENT_NAME = "latitude-theme-change"
 export const HOST_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)"
 
@@ -27,18 +27,6 @@ export function getStoredTheme(): Theme | null {
   } catch {
     return null
   }
-}
-
-function getSystemTheme(): Theme {
-  if (typeof window === "undefined") {
-    return "light"
-  }
-
-  return window.matchMedia(HOST_THEME_MEDIA_QUERY).matches ? "dark" : "light"
-}
-
-export function resolveTheme(): Theme {
-  return getStoredTheme() ?? getSystemTheme()
 }
 
 export function applyTheme(theme: Theme) {
