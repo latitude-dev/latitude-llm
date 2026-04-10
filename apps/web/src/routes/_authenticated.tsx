@@ -1,11 +1,10 @@
-import { Avatar, Button, DropdownMenu, DropdownMenuTrigger, Icon, LatitudeLogo, useMountEffect } from "@repo/ui"
+import { Avatar, Button, DropdownMenu, DropdownMenuTrigger, Icon, LatitudeLogo } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
-import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
-import { getDocumentTheme, setThemePreference, THEME_CHANGE_EVENT_NAME, type Theme } from "../lib/theme.ts"
+import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
 
 export const Route = createFileRoute("/_authenticated")({
@@ -39,21 +38,7 @@ export const Route = createFileRoute("/_authenticated")({
 })
 
 function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() => getDocumentTheme())
-
-  useMountEffect(() => {
-    const syncTheme = () => {
-      setTheme(getDocumentTheme())
-    }
-
-    syncTheme()
-    window.addEventListener(THEME_CHANGE_EVENT_NAME, syncTheme)
-
-    return () => {
-      window.removeEventListener(THEME_CHANGE_EVENT_NAME, syncTheme)
-    }
-  })
-
+  const { theme, setTheme } = useThemePreference()
   const nextTheme = theme === "dark" ? "light" : "dark"
 
   return (
@@ -65,7 +50,7 @@ function ThemeToggle() {
       title={`Switch to ${nextTheme} mode`}
       aria-pressed={theme === "dark"}
       className="h-8 w-8 group-hover:text-foreground"
-      onClick={() => setThemePreference(nextTheme)}
+      onClick={() => setTheme(nextTheme)}
     >
       <Icon icon={theme === "dark" ? Sun : Moon} size="sm" />
     </Button>

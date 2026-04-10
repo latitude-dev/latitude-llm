@@ -1,86 +1,63 @@
-const THEME_STORAGE_KEY = "latitude-theme"
-export const THEME_CHANGE_EVENT_NAME = "latitude-theme-change"
-export const HOST_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)"
+import { useLocalStorage } from "@repo/ui"
+import { useCallback, useSyncExternalStore } from "react"
 
-export type Theme = "light" | "dark"
+const THEME_STORAGE_KEY = "theme"
+const HOST_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)"
+const DEFAULT_THEME: Theme = "light"
+
+type Theme = "light" | "dark"
 
 function isTheme(value: unknown): value is Theme {
   return value === "light" || value === "dark"
 }
 
-export function getDocumentTheme(): Theme {
-  if (typeof document === "undefined") {
-    return "light"
-  }
-
-  return document.documentElement.classList.contains("dark") ? "dark" : "light"
-}
-
-export function getStoredTheme(): Theme | null {
+function getSystemTheme(): Theme {
   if (typeof window === "undefined") {
-    return null
+    return DEFAULT_THEME
   }
 
-  try {
-    const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
-    return isTheme(storedTheme) ? storedTheme : null
-  } catch {
-    return null
+  return window.matchMedia(HOST_THEME_MEDIA_QUERY).matches ? "dark" : "light"
+}
+
+function subscribeToSystemTheme(onStoreChange: () => void) {
+  if (typeof window === "undefined") {
+    return () => {}
+  }
+
+  const media = window.matchMedia(HOST_THEME_MEDIA_QUERY)
+  media.addEventListener("change", onStoreChange)
+
+  return () => {
+    media.removeEventListener("change", onStoreChange)
   }
 }
 
-export function applyTheme(theme: Theme) {
-  if (typeof document === "undefined") {
-    return
-  }
-
-  const root = document.documentElement
-  const isDark = theme === "dark"
-
-  root.classList.toggle("dark", isDark)
-  root.style.colorScheme = theme
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT_NAME, { detail: theme }))
-  }
+function useSystemTheme(): Theme {
+  return useSyncExternalStore(subscribeToSystemTheme, getSystemTheme, () => DEFAULT_THEME)
 }
 
-export function setThemePreference(theme: Theme) {
-  if (typeof window !== "undefined") {
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, theme)
-    } catch {
-      // Ignore storage errors so theme toggling still works in-memory.
-    }
+export function useThemePreference(): {
+  readonly theme: Theme
+  readonly setTheme: (theme: Theme) => void
+} {
+  const { value, setValue } = useLocalStorage<Theme | null>({
+    key: THEME_STORAGE_KEY,
+    defaultValue: null,
+  })
+  const systemTheme = useSystemTheme()
+  const storedTheme = isTheme(value) ? value : null
+
+  const setTheme = useCallback(
+    (theme: Theme) => {
+      setValue(theme)
+    },
+    [setValue],
+  )
+
+  const theme: Theme = storedTheme ?? systemTheme
+
+  return {
+    theme,
+    setTheme,
   }
-
-  applyTheme(theme)
-}
-
-export function createThemeInitializationScript() {
-  const storageKey = JSON.stringify(THEME_STORAGE_KEY)
-  const themeChangeEventName = JSON.stringify(THEME_CHANGE_EVENT_NAME)
-  const mediaQuery = JSON.stringify(HOST_THEME_MEDIA_QUERY)
-
-  return `(() => {
-  const isTheme = (value) => value === "light" || value === "dark";
-  const applyTheme = (theme) => {
-    const root = document.documentElement;
-    const isDark = theme === "dark";
-    root.classList.toggle("dark", isDark);
-    root.style.colorScheme = theme;
-    window.dispatchEvent(new CustomEvent(${themeChangeEventName}, { detail: theme }));
-  };
-
-  try {
-    const storedTheme = window.localStorage.getItem(${storageKey});
-    if (isTheme(storedTheme)) {
-      applyTheme(storedTheme);
-      return;
-    }
-  } catch {}
-
-  const systemTheme = window.matchMedia(${mediaQuery}).matches ? "dark" : "light";
-  applyTheme(systemTheme);
-})();`
 }
