@@ -71,19 +71,31 @@ hash(traceId) % 100 < sampling
 
 ### System Queue Flagger Workflow
 
-The Temporal workflow currently orchestrates queue evaluation through a single domain activity:
+The Temporal workflow orchestrates queue evaluation through a three-step process:
 
 **Workflow**: `systemQueueFlaggerWorkflow`
 - Input: `(organizationId, projectId, traceId, queueSlug)`
-- Output: Flag decision per queue
+- Output: Flag decision per queue with optional annotation
 
-**Activity**:
+**Activities**:
 
 1. **`runFlagger`**:
    - delegates to `runSystemQueueFlaggerUseCase` in `@domain/annotation-queues`
    - loads the trace detail from the trace repository
    - resolves the queue slug through a domain matcher map
    - returns `{ matched: boolean }`
+
+2. **`draftAnnotate`** (only when `matched: true`):
+   - delegates to `draftSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
+   - generates feedback using LLM with full conversation context
+   - non-transactional operation that can be retried independently
+   - returns `{ queueId, traceId, feedback }`
+
+3. **`persistAnnotation`** (only when draft succeeds):
+   - delegates to `persistSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
+   - creates queue item and draft annotation transactionally
+   - handles idempotency (checks for existing drafts)
+   - returns `{ queueId, draftAnnotationId, wasCreated }`
 
 **Current matcher coverage**:
 
@@ -121,11 +133,15 @@ systemQueueFlaggerWorkflow (one workflow per sampled queue)
     ↓
 runFlagger activity
     ↓
-If flagged:
-    workflow logs the match result
-
-Queue-item creation and draft-annotation writing remain a separate follow-up phase.
+If matched:
+    draftAnnotate activity (LLM feedback generation)
+        ↓
+    persistAnnotation activity (transactional persist)
+        ↓
+    Queue item created + Draft annotation written
 ```
+
+The workflow now fully automates the path from trace to reviewable draft annotation.
 
 ### Key Infrastructure Files
 
@@ -133,6 +149,8 @@ Queue-item creation and draft-annotation writing remain a separate follow-up pha
   - `provision-system-queues.ts` - Idempotent queue creation
   - `get-project-system-queues.ts` - Cached queue listing
   - `run-system-queue-flagger.ts` - Slug-to-matcher queue evaluation
+  - `draft-system-queue-annotation.ts` - LLM feedback generation
+  - `persist-system-queue-annotation.ts` - Transactional queue item + draft creation
 
 - **Workers**: `apps/workers/src/workers/`
   - `project-provisioning.ts` - BullMQ-based provisioning
@@ -140,8 +158,8 @@ Queue-item creation and draft-annotation writing remain a separate follow-up pha
   - `domain-events.ts` - Event dispatch
 
 - **Workflows**: `apps/workflows/src/workflows/`
-  - `system-queue-flagger-workflow.ts` - Temporal workflow
-  - `activities/index.ts` - `runFlagger` activity wired to the domain use case
+  - `system-queue-flagger-workflow.ts` - Temporal workflow with flagger, draft, and persist activities
+  - `activities/index.ts` - `runFlagger`, `draftAnnotate`, and `persistAnnotation` activities
 
 - **Repository**: `packages/platform/db-postgres/src/repositories/annotation-queue-repository.ts`
   - `findSystemQueueBySlugInProject` - Slug-based lookup
@@ -236,7 +254,7 @@ Every project starts with these system-created manual queues:
 - the currently implemented deterministic matchers are `tool-call-errors`, `output-schema-validation`, and `empty-response`
 - the remaining system queues already have matcher entrypoints, but they currently return `false` until their concrete classifiers are implemented
 - the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
-- positive workflow matches are currently logged; queue-item creation and draft annotation writing remain a later phase
+- positive workflow matches trigger `draftAnnotate` (LLM feedback generation) followed by `persistAnnotation` (transactional queue item + draft creation)
 - system-created queue sampling is stored in `annotation_queues.settings.sampling`, seeded from a named default constant when the queue is provisioned, and can later be edited by the user
 
 ### Live Queues
@@ -314,7 +332,7 @@ Creation rules:
 
 - manual queue insertion creates the row from the trace dashboard bulk action
 - manual session insertion creates the row from the sessions dashboard bulk action after resolving the session to its newest trace
-- system-created queue insertion will happen after the later queue-write / draft-annotation phase is implemented; current flagger workflows stop at the match decision
+- system-created queue insertion happens automatically via `systemQueueFlaggerWorkflow` when a positive match is determined, creating both the queue item and the draft annotation
 - live queue insertion creates the row when a new trace passes the queue filter and then the queue sampling check
 - all paths create queue items with `completedAt = null`
 
@@ -343,7 +361,7 @@ Required Postgres indexes:
 - `assignees` behaves as a set of unique same-organization user ids and is validated in application/domain logic
 - `annotation_queue_items` stores `trace_id` only; it does not store `session_id`, because the newest trace of a session already contains the full incremental conversation context
 - manual queue insertion, system-created queue insertion, and live queue materialization all create queue items with `completedAt = null`
-- system-created queue insertion remains pending the later phase that will turn positive system-queue matches into queue items and draft annotations
+- system-created queue insertion happens automatically via the `systemQueueFlaggerWorkflow` when a positive match is determined, creating both the queue item and the draft annotation transactionally
 - live queue materialization is incremental on `TraceEnded` and evaluates `filter` before `sampling`
 - queue review order is derived from deterministic query order (`created_at ASC`, then `trace_id ASC`), not from a persisted position column
 

@@ -1,5 +1,3 @@
-import { QueuePublisher } from "@domain/queue"
-import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
@@ -82,7 +80,6 @@ function makeTraceDetail(allMessages: readonly GenAIMessage[]): TraceDetail {
 
 function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansForTrace?: readonly Span[] }) {
   const events: unknown[] = []
-  const { publisher, published } = createFakeQueuePublisher()
   const { repository: scoreRepository, scores: store } = createFakeScoreRepository()
   const { repository: scoreAnalyticsRepository } = createFakeScoreAnalyticsRepository()
 
@@ -113,8 +110,6 @@ function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansFor
       }),
   })
 
-  const QueuePublisherTest = Layer.succeed(QueuePublisher, publisher)
-
   const SqlClientTest = Layer.succeed(SqlClient, createFakeSqlClient({ organizationId: OrganizationId(cuid) }))
 
   const TraceRepositoryTest = Layer.succeed(TraceRepository, traceRepository)
@@ -123,12 +118,10 @@ function createTestLayers(options?: { traceDetail?: TraceDetail | null; spansFor
   return {
     store,
     events,
-    published,
     layer: Layer.mergeAll(
       ScoreRepositoryTest,
       ScoreAnalyticsRepositoryTest,
       OutboxEventWriterTest,
-      QueuePublisherTest,
       SqlClientTest,
       TraceRepositoryTest,
       SpanRepositoryTest,
@@ -233,7 +226,7 @@ describe("writeAnnotationUseCase", () => {
     expect(score.draftedAt).not.toBeNull()
   })
 
-  it("creates annotation with anchor metadata and validates anchor against trace messages (does not persist excerpt)", async () => {
+  it("creates annotation with anchor metadata and validates anchor against trace messages", async () => {
     const sliceSource = "The refund policy says no returns after 30 days."
     const allMessages: GenAIMessage[] = [
       { role: "user", parts: [{ type: "text", content: "hi" }] },
@@ -311,7 +304,6 @@ describe("writeAnnotationUseCase", () => {
   it("validates anchor field consistency", async () => {
     const { layer } = createTestLayers()
 
-    // partIndex without messageIndex should fail
     await expect(
       Effect.runPromise(
         writeAnnotationUseCase({
@@ -326,7 +318,6 @@ describe("writeAnnotationUseCase", () => {
       ),
     ).rejects.toThrow()
 
-    // startOffset without endOffset should fail
     await expect(
       Effect.runPromise(
         writeAnnotationUseCase({
@@ -341,7 +332,6 @@ describe("writeAnnotationUseCase", () => {
       ),
     ).rejects.toThrow()
 
-    // startOffset > endOffset should fail
     await expect(
       Effect.runPromise(
         writeAnnotationUseCase({
@@ -497,8 +487,10 @@ describe("writeAnnotationUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    // Drafts are never immutable — draftedAt is always set
-    expect(events.length).toBe(0)
+    const issueEvents = events.filter(
+      (e: unknown) => (e as { eventName: string }).eventName === "IssueDiscoveryRequested",
+    )
+    expect(issueEvents.length).toBe(0)
   })
 
   it("persists a preselected issue on UI drafts as intent only", async () => {
@@ -519,7 +511,10 @@ describe("writeAnnotationUseCase", () => {
     expect(score.issueId).toBe("i".repeat(24))
     expect(score.draftedAt).not.toBeNull()
     expect(store.get(score.id)?.issueId).toBe("i".repeat(24))
-    expect(events).toHaveLength(0)
+    const issueEvents = events.filter(
+      (e: unknown) => (e as { eventName: string }).eventName === "IssueDiscoveryRequested",
+    )
+    expect(issueEvents.length).toBe(0)
   })
 
   it("persists a preselected issue on API drafts as intent only", async () => {
@@ -540,11 +535,14 @@ describe("writeAnnotationUseCase", () => {
     expect(score.issueId).toBe("j".repeat(24))
     expect(score.draftedAt).not.toBeNull()
     expect(store.get(score.id)?.issueId).toBe("j".repeat(24))
-    expect(events).toHaveLength(0)
+    const issueEvents = events.filter(
+      (e: unknown) => (e as { eventName: string }).eventName === "IssueDiscoveryRequested",
+    )
+    expect(issueEvents.length).toBe(0)
   })
 
-  it("publishes debounced annotation-scores:publish after write", async () => {
-    const { published, layer } = createTestLayers()
+  it("writes outbox event for publication scheduling after write", async () => {
+    const { events, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
       writeAnnotationUseCase({
@@ -557,19 +555,18 @@ describe("writeAnnotationUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(published).toEqual([
+    expect(events).toEqual([
       expect.objectContaining({
-        queue: "annotation-scores",
-        task: "publish",
+        eventName: "AnnotationScorePublishRequested",
+        aggregateType: "score",
+        aggregateId: score.id,
+        organizationId: cuid,
         payload: {
           organizationId: cuid,
           projectId: projectCuid,
           scoreId: score.id,
-        },
-        options: expect.objectContaining({
-          dedupeKey: `annotation-scores:publish:${score.id}`,
           debounceMs: SCORE_PUBLICATION_DEBOUNCE,
-        }),
+        },
       }),
     ])
   })

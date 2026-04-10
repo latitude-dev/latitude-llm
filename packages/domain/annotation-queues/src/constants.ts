@@ -12,8 +12,19 @@ export const SYSTEM_QUEUE_DEFAULT_SAMPLING = 10
 // Context-window limits for the system-queue flagger LLM
 // ---------------------------------------------------------------------------
 
-/** Maximum number of trailing messages sent to the low-cost flagger model. */
 export const SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW = 8
+
+export const SYSTEM_QUEUE_ANNOTATOR_MODEL = "gpt-4o-mini"
+
+export const SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE = 0.2
+
+export const SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS = 2048
+
+export const SYSTEM_QUEUE_DRAFT_DEFAULTS = {
+  passed: false,
+  value: 0,
+  hasAnchor: false,
+} as const
 
 // ---------------------------------------------------------------------------
 // Outlier thresholds (Resource Outliers system queue)

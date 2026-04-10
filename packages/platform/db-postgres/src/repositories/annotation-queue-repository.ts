@@ -369,6 +369,46 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
             Effect.tap((wasInserted) => (wasInserted ? evictSystemQueueCache(queue) : Effect.void)),
           ),
+
+      incrementTotalItems: ({ projectId, queueId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .update(annotationQueues)
+              .set({
+                totalItems: sql`${annotationQueues.totalItems} + 1`,
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(annotationQueues.organizationId, organizationId),
+                  eq(annotationQueues.projectId, projectId),
+                  eq(annotationQueues.id, queueId),
+                  isNull(annotationQueues.deletedAt),
+                ),
+              )
+              .returning(),
+          )
+          .pipe(
+            Effect.flatMap((rows) => {
+              const row = rows[0]
+              if (row === undefined) {
+                return Effect.fail(
+                  new RepositoryError({
+                    operation: "incrementTotalItems",
+                    cause: new Error(`Queue not found: ${queueId}`),
+                  }),
+                )
+              }
+              return Effect.succeed(toDomainQueue(row))
+            }),
+            Effect.mapError((cause) =>
+              cause instanceof RepositoryError
+                ? cause
+                : new RepositoryError({ operation: "incrementTotalItems", cause }),
+            ),
+            Effect.tap((queue) => evictSystemQueueCache(queue)),
+          ),
     } satisfies AnnotationQueueRepositoryShape
   }),
 )

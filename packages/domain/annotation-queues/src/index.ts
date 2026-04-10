@@ -4,8 +4,12 @@ export {
   LIVE_QUEUE_DEFAULT_SAMPLING,
   QUEUE_REVIEW_HOTKEYS,
   RESOURCE_OUTLIER_MULTIPLIER,
+  SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
+  SYSTEM_QUEUE_ANNOTATOR_MODEL,
+  SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE,
   SYSTEM_QUEUE_DEFAULT_SAMPLING,
   SYSTEM_QUEUE_DEFINITIONS,
+  SYSTEM_QUEUE_DRAFT_DEFAULTS,
   SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW,
   type SystemQueueDefinition,
 } from "./constants.ts"
@@ -63,6 +67,11 @@ export {
   type ListSystemQueuesInput,
 } from "./ports/annotation-queue-repository.ts"
 export {
+  type DraftSystemQueueAnnotationError,
+  type DraftSystemQueueAnnotationOutput,
+  draftSystemQueueAnnotationUseCase,
+} from "./use-cases/draft-system-queue-annotation.ts"
+export {
   CACHE_TTL_SECONDS,
   type EvictProjectSystemQueuesInput,
   evictProjectSystemQueuesUseCase,
@@ -71,10 +80,21 @@ export {
   type SystemQueueCacheEntry,
 } from "./use-cases/get-project-system-queues.ts"
 export {
+  type PersistSystemQueueAnnotationError,
+  type PersistSystemQueueAnnotationInput,
+  persistSystemQueueAnnotationUseCase,
+} from "./use-cases/persist-system-queue-annotation.ts"
+export {
   type ProvisionSystemQueuesError,
   type ProvisionSystemQueuesInput,
   provisionSystemQueuesUseCase,
 } from "./use-cases/provision-system-queues.ts"
+export {
+  type RunSystemQueueAnnotatorError,
+  type RunSystemQueueAnnotatorInput,
+  type RunSystemQueueAnnotatorResult,
+  runSystemQueueAnnotatorUseCase,
+} from "./use-cases/run-system-queue-annotator.ts"
 export {
   getSystemQueueMatcherBySlug,
   type RunSystemQueueFlaggerError,
@@ -82,3 +102,11 @@ export {
   type RunSystemQueueFlaggerResult,
   runSystemQueueFlaggerUseCase,
 } from "./use-cases/run-system-queue-flagger.ts"
+export {
+  type SystemQueueAnnotateInput,
+  type SystemQueueAnnotateOutput,
+  type SystemQueueAnnotatorOutput,
+  systemQueueAnnotateInputSchema,
+  systemQueueAnnotateOutputSchema,
+  systemQueueAnnotatorOutputSchema,
+} from "./use-cases/system-queue-annotator-contracts.ts"
