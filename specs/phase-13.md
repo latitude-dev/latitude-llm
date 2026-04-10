@@ -116,7 +116,7 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
   - existing evaluation score for one `(evaluationId, traceId)` pair, used by duplicate-result prevention
 - [x] **P13-PR1-4**: Introduce the domain live evaluation execution use case in `@domain/evaluations`, wrapping the current MVP `executeEvaluationScript()` bridge through the existing `AI` service instead of embedding provider-specific logic in workers
 - [x] **P13-PR1-5**: Define the canonical live execution input/output shapes, including issue context, conversation input, result payload, duration, tokens, and cost
-- [ ] **P13-PR1-6**: Add unit tests for helper semantics, idempotency expectations, filter-match delegation, and execution shape validation
+- [x] **P13-PR1-6**: Add unit tests for helper semantics, idempotency expectations, filter-match delegation, and execution shape validation
 
 **Exit gate**:
 
@@ -125,6 +125,8 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 - canonical-state checks for `first` and duplicate-result prevention are defined
 - trace-filter matching stays delegated to the trace repository
 - no worker has been activated yet
+
+**Status**: complete. PR 1 now has the reusable helper/contract layer, canonical-state reads, live execution seam, canonical execution shapes, and focused validation needed for the worker PRs.
 
 ### PR 2 - `live-evaluations:enqueue`
 

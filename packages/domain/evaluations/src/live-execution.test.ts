@@ -66,6 +66,68 @@ const createSuccessfulGenerate =
     })
 
 describe("executeLiveEvaluationUseCase", () => {
+  it("validates the canonical live execution input shape", () => {
+    expect(liveEvaluationExecutionInputSchema.safeParse(validInput).success).toBe(true)
+
+    expect(
+      liveEvaluationExecutionInputSchema.safeParse({
+        ...validInput,
+        issue: {
+          name: "",
+          description: validInput.issue.description,
+        },
+      }).success,
+    ).toBe(false)
+
+    expect(
+      liveEvaluationExecutionInputSchema.safeParse({
+        ...validInput,
+        conversation: ["not-a-message"],
+      }).success,
+    ).toBe(false)
+  })
+
+  it("validates the canonical live execution result shape", () => {
+    expect(
+      liveEvaluationExecutionResultSchema.safeParse({
+        result: {
+          passed: false,
+          value: 0,
+          feedback: "The issue is present in the conversation.",
+        },
+        duration: 456_000_000,
+        tokens: 120,
+        cost: 6400,
+      }).success,
+    ).toBe(true)
+
+    expect(
+      liveEvaluationExecutionResultSchema.safeParse({
+        result: {
+          passed: true,
+          value: 2,
+          feedback: "Out-of-range score",
+        },
+        duration: 456_000_000,
+        tokens: 120,
+        cost: 6400,
+      }).success,
+    ).toBe(false)
+
+    expect(
+      liveEvaluationExecutionResultSchema.safeParse({
+        result: {
+          passed: true,
+          value: 1,
+          feedback: "Negative accounting fields are invalid",
+        },
+        duration: -1,
+        tokens: -2,
+        cost: -3,
+      }).success,
+    ).toBe(false)
+  })
+
   it("executes the MVP script bridge through the shared AI service", async () => {
     const execution = {
       result: {
