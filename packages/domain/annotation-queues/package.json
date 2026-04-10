@@ -22,5 +22,8 @@
     "effect": "catalog:",
     "mustache": "^4.2.0",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/mustache": "^4.2.6"
   }
 }

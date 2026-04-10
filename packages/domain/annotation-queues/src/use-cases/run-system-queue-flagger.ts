@@ -255,7 +255,7 @@ export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) 
     }
 
     const trace = yield* loadTraceDetail(input)
-    const decisions = yield* runLlmFlagger(input, trace)
+    const decisions = yield* runLlmFlagger({ ...input, queueSlug: input.queueSlug }, trace)
 
     return {
       matched: decisions.matched,
