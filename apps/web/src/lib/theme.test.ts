@@ -31,7 +31,7 @@ function setSystemTheme(theme: "light" | "dark") {
 beforeEach(() => {
   document.documentElement.className = ""
   document.documentElement.style.colorScheme = ""
-  window.localStorage.clear()
+  window.localStorage.removeItem(THEME_STORAGE_KEY)
   vi.unstubAllGlobals()
   setSystemTheme("light")
 })
