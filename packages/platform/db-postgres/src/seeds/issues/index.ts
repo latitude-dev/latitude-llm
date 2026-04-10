@@ -25,7 +25,7 @@ const issueRows = SEED_ISSUE_FIXTURES.map((issue) => ({
   ignoredAt: issue.ignoredDaysAgo === null ? null : seedDateDaysAgo(issue.ignoredDaysAgo, 13, 10),
   createdAt: seedDateDaysAgo(issue.createdDaysAgo, 14, 15),
   updatedAt: seedDateDaysAgo(issue.updatedDaysAgo, 16, 30),
-})) as const
+}))
 
 const seedIssues: Seeder = {
   name: "issues/acme-support-issue-families",

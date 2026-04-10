@@ -21,7 +21,7 @@ const issueDocuments = SEED_ISSUE_FIXTURES.map((issue) => ({
     title: issue.name,
     description: issue.description,
   },
-})) as const
+}))
 
 const seedIssues: Seeder = {
   name: "issues/acme-support-issue-families",
