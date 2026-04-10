@@ -14,8 +14,9 @@ const invitationSearchParams = z.object({
 
 export const Route = createFileRoute("/auth/invite")({
   validateSearch: invitationSearchParams,
-  loader: async ({ search }) => {
-    const preview = await getInvitationPreview({ data: { invitationId: search.invitationId } })
+  loaderDeps: ({ search }) => ({ invitationId: search.invitationId }),
+  loader: async ({ deps: { invitationId } }) => {
+    const preview = await getInvitationPreview({ data: { invitationId } })
     if (!preview) {
       throw redirect({ to: "/" })
     }
@@ -25,7 +26,7 @@ export const Route = createFileRoute("/auth/invite")({
       throw redirect({
         to: "/login",
         search: {
-          redirect: `/auth/invite?invitationId=${search.invitationId}`,
+          redirect: `/auth/invite?invitationId=${invitationId}`,
           email: preview.inviteeEmail,
         },
       })
@@ -93,7 +94,7 @@ function InvitePage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-      <div className="flex flex-col gap-y-6 max-w-[22rem] w-full">
+      <div className="flex flex-col gap-y-6 max-w-88 w-full">
         <div className="flex flex-col items-center justify-center gap-y-6">
           <LatitudeLogo />
           <div className="flex flex-col items-center justify-center gap-y-2">
@@ -147,7 +148,7 @@ function InvitePage() {
                 size="full"
                 type="submit"
                 disabled={isSubmitting}
-                className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-[1px] active:shadow-none transition-all"
+                className="relative w-full inline-flex items-center justify-center rounded-lg text-sm font-semibold leading-5 text-white bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none h-9 px-3 py-2 shadow-[inset_0px_0px_0px_1px_rgba(0,0,0,0.4)] active:translate-y-px active:shadow-none transition-all"
               >
                 {isSubmitting ? "Accepting…" : "Accept invitation"}
               </Button>

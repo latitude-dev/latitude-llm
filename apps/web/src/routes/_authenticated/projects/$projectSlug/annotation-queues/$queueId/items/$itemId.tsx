@@ -12,6 +12,7 @@ import {
   isGlobalAnnotation,
   useAnnotationNavigation,
 } from "../../../-components/annotations/hooks/use-annotation-navigation.ts"
+import type { TextSelectionPopoverControls } from "../../../-components/annotations/hooks/use-annotation-popover.ts"
 import { TraceAnnotationsList } from "../../../-components/annotations/trace-annotations-list.tsx"
 import { ConversationTab } from "../../../-components/trace-detail-drawer/tabs/conversation-tab.tsx"
 import { TraceTab } from "../../../-components/trace-detail-drawer/tabs/trace-tab.tsx"
@@ -46,6 +47,7 @@ function AnnotationQueueItemDetailPage() {
   const { projectSlug, queueId, itemId } = Route.useParams()
   const windowWidth = useWindowWidth()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const textSelectionPopoverControlsRef = useRef<TextSelectionPopoverControls | null>(null)
   const [selectedAnnotationId, setSelectedAnnotationId] = useParamState("annotationId", "")
 
   const { data: project } = useProjectsCollection(
@@ -79,6 +81,7 @@ function AnnotationQueueItemDetailPage() {
 
   const { scrollToAnnotation } = useAnnotationNavigation({
     scrollContainerRef,
+    textSelectionPopoverControlsRef,
   })
 
   const hasHandledDeepLinkRef = useRef(false)
@@ -166,6 +169,7 @@ function AnnotationQueueItemDetailPage() {
           isDetailLoading={isDetailLoading || itemLoading}
           projectId={projectId}
           scrollContainerRef={scrollContainerRef}
+          textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
         />
       </div>
 

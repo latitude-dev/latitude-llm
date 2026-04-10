@@ -27,6 +27,7 @@ import { useTraceDetail } from "../../../../../domains/traces/traces.collection.
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { useParamState } from "../../../../../lib/hooks/useParamState.ts"
 import { isGlobalAnnotation, useAnnotationNavigation } from "./annotations/hooks/use-annotation-navigation.ts"
+import type { TextSelectionPopoverControls } from "./annotations/hooks/use-annotation-popover.ts"
 import { TraceAnnotationsList } from "./annotations/trace-annotations-list.tsx"
 import { ConversationTab } from "./trace-detail-drawer/tabs/conversation-tab.tsx"
 import { SpansTab } from "./trace-detail-drawer/tabs/spans-tab.tsx"
@@ -87,11 +88,13 @@ export function TraceDetailDrawer({
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<TabId>>(() => new Set(["trace"]))
   const [selectedSpanId, setSelectedSpanId] = useParamState("spanId", "")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const textSelectionPopoverControlsRef = useRef<TextSelectionPopoverControls | null>(null)
 
   const { scrollToAnnotation, executePendingScroll } = useAnnotationNavigation({
     scrollContainerRef,
     onSwitchToConversation: () => handleSetActiveTab("conversation"),
     isConversationActive: activeTab === "conversation",
+    textSelectionPopoverControlsRef,
   })
 
   useMountEffect(() => {
@@ -255,6 +258,7 @@ export function TraceDetailDrawer({
             projectId={projectId}
             isActive={activeTab === "conversation"}
             scrollContainerRef={scrollContainerRef}
+            textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
           />
         )}
       </div>
