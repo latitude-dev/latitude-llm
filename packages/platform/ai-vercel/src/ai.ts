@@ -1,6 +1,7 @@
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
+import { fromNodeProviderChain } from "@aws-sdk/credential-providers"
 import {
   AICredentialError,
   AIError,
@@ -90,6 +91,8 @@ const createBedrockProvider = (): Effect.Effect<ReturnType<typeof createAmazonBe
         mapCredentialError("Amazon Bedrock credentials are invalid: LAT_AWS_BEARER_TOKEN_BEDROCK must be a string."),
       ),
     )
+    const shouldUseCredentialProviderChain =
+      apiKey === undefined && accessKeyId === undefined && secretAccessKey === undefined && sessionToken === undefined
 
     return createAmazonBedrock({
       region,
@@ -99,6 +102,11 @@ const createBedrockProvider = (): Effect.Effect<ReturnType<typeof createAmazonBe
             accessKeyId,
             secretAccessKey,
             ...(sessionToken !== undefined ? { sessionToken } : {}),
+          }
+        : {}),
+      ...(shouldUseCredentialProviderChain
+        ? {
+            credentialProvider: fromNodeProviderChain(),
           }
         : {}),
     })

@@ -1054,6 +1054,9 @@ importers:
       '@ai-sdk/openai':
         specifier: 4.0.0-beta.12
         version: 4.0.0-beta.12(zod@4.3.6)
+      '@aws-sdk/credential-providers':
+        specifier: 3.1027.0
+        version: 3.1027.0
       '@domain/ai':
         specifier: workspace:*
         version: link:../../domain/ai
@@ -10993,7 +10996,6 @@ snapshots:
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
-    optional: true
 
   '@aws-sdk/client-ecs@3.1027.0':
     dependencies:
@@ -11176,7 +11178,6 @@ snapshots:
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
-    optional: true
 
   '@aws-sdk/credential-provider-env@3.972.25':
     dependencies:
@@ -11306,7 +11307,6 @@ snapshots:
       tslib: 2.8.1
     transitivePeerDependencies:
       - aws-crt
-    optional: true
 
   '@aws-sdk/eventstream-handler-node@3.972.13':
     dependencies:
