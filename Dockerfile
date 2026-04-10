@@ -204,6 +204,13 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     install-prod-deps
 
 RUN prune-workspace
+
+# Temporal bundles workflow source at runtime and resolves these workspace package
+# subpath exports from the final image. Re-copy the small set of exported source
+# files that workflows import after pruning removes package src/ directories.
+COPY --from=build-workflows /app/packages/domain/evaluations/src/constants.ts ./packages/domain/evaluations/src/constants.ts
+COPY --from=build-workflows /app/packages/domain/queue/src/workflow-registry.ts ./packages/domain/queue/src/workflow-registry.ts
+
 USER latitude
 EXPOSE 8080
 
