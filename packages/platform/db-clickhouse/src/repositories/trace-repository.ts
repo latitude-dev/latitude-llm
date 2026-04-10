@@ -14,7 +14,15 @@ import {
   toRepositoryError,
   TraceId as toTraceId,
 } from "@domain/shared"
-import type { Trace, TraceDetail, TraceListPage, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
+import type {
+  Trace,
+  TraceCohortBaselineData,
+  TraceDetail,
+  TraceListPage,
+  TraceMetricPercentiles,
+  TraceMetrics,
+  TraceTimeHistogramBucket,
+} from "@domain/spans"
 import { emptyTraceMetrics, TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
@@ -289,6 +297,155 @@ export const TraceRepositoryLive = Layer.effect(
   Effect.gen(function* () {
     const chSqlClient = (yield* ChSqlClient) as ChSqlClientShape<ClickHouseClient>
 
+    const getCohortBaselineByProjectId: TraceRepositoryShape["getCohortBaselineByProjectId"] = ({
+      organizationId,
+      projectId,
+      filters,
+      excludeTraceId,
+    }) => {
+      const { havingClauses, whereClauses, params: filterParams } = buildTraceFilterClauses(filters)
+      const havingClause = havingClauses.length > 0 ? `HAVING ${havingClauses.join(" AND ")}` : ""
+      const extraWhere = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : ""
+      const excludeClause = excludeTraceId ? `AND trace_id != {excludeTraceId:FixedString(32)}` : ""
+
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT
+                      count() AS trace_count,
+                      countIf(duration_ns > 0) AS duration_ns_samples,
+                      quantileTDigest(0.5)(duration_ns) AS duration_ns_p50,
+                      quantileTDigest(0.9)(duration_ns) AS duration_ns_p90,
+                      quantileTDigest(0.95)(duration_ns) AS duration_ns_p95,
+                      quantileTDigest(0.99)(duration_ns) AS duration_ns_p99,
+                      countIf(cost_total_microcents > 0) AS cost_total_microcents_samples,
+                      quantileTDigest(0.5)(cost_total_microcents) AS cost_total_microcents_p50,
+                      quantileTDigest(0.9)(cost_total_microcents) AS cost_total_microcents_p90,
+                      quantileTDigest(0.95)(cost_total_microcents) AS cost_total_microcents_p95,
+                      quantileTDigest(0.99)(cost_total_microcents) AS cost_total_microcents_p99,
+                      countIf(tokens_total > 0) AS tokens_total_samples,
+                      quantileTDigest(0.5)(tokens_total) AS tokens_total_p50,
+                      quantileTDigest(0.9)(tokens_total) AS tokens_total_p90,
+                      quantileTDigest(0.95)(tokens_total) AS tokens_total_p95,
+                      quantileTDigest(0.99)(tokens_total) AS tokens_total_p99,
+                      countIf(time_to_first_token_ns > 0) AS time_to_first_token_ns_samples,
+                      quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p50,
+                      quantileTDigestIf(0.9)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p90,
+                      quantileTDigestIf(0.95)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p95,
+                      quantileTDigestIf(0.99)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p99
+                    FROM (
+                      SELECT ${LIST_SELECT}
+                      FROM traces
+                      WHERE organization_id = {organizationId:String}
+                        AND project_id = {projectId:String}
+                        ${extraWhere}
+                        ${excludeClause}
+                      GROUP BY organization_id, project_id, trace_id
+                      ${havingClause}
+                    )`,
+            query_params: {
+              organizationId: organizationId as string,
+              projectId: projectId as string,
+              ...filterParams,
+              ...(excludeTraceId ? { excludeTraceId: excludeTraceId as string } : {}),
+            },
+            format: "JSONEachRow",
+          })
+          return result.json<{
+            trace_count: string
+            duration_ns_samples: string
+            duration_ns_p50: string
+            duration_ns_p90: string
+            duration_ns_p95: string
+            duration_ns_p99: string
+            cost_total_microcents_samples: string
+            cost_total_microcents_p50: string
+            cost_total_microcents_p90: string
+            cost_total_microcents_p95: string
+            cost_total_microcents_p99: string
+            tokens_total_samples: string
+            tokens_total_p50: string
+            tokens_total_p90: string
+            tokens_total_p95: string
+            tokens_total_p99: string
+            time_to_first_token_ns_samples: string
+            time_to_first_token_ns_p50: string
+            time_to_first_token_ns_p90: string
+            time_to_first_token_ns_p95: string
+            time_to_first_token_ns_p99: string
+          }>()
+        })
+        .pipe(
+          Effect.map((rows): TraceCohortBaselineData => {
+            const row = rows[0]
+            if (!row || Number(row.trace_count) === 0) {
+              return {
+                traceCount: 0,
+                metrics: {
+                  durationNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  costTotalMicrocents: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  tokensTotal: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                  timeToFirstTokenNs: { sampleCount: 0, p50: 0, p90: 0, p95: null, p99: null },
+                },
+              }
+            }
+
+            const traceCount = Number(row.trace_count)
+            const toMetricPercentiles = (
+              samples: string,
+              p50: string,
+              p90: string,
+              p95: string,
+              p99: string,
+            ): TraceMetricPercentiles => {
+              const sampleCount = Number(samples)
+              return {
+                sampleCount,
+                p50: Number(p50),
+                p90: Number(p90),
+                p95: sampleCount >= 100 ? Number(p95) : null,
+                p99: sampleCount >= 1000 ? Number(p99) : null,
+              }
+            }
+
+            return {
+              traceCount,
+              metrics: {
+                durationNs: toMetricPercentiles(
+                  row.duration_ns_samples,
+                  row.duration_ns_p50,
+                  row.duration_ns_p90,
+                  row.duration_ns_p95,
+                  row.duration_ns_p99,
+                ),
+                costTotalMicrocents: toMetricPercentiles(
+                  row.cost_total_microcents_samples,
+                  row.cost_total_microcents_p50,
+                  row.cost_total_microcents_p90,
+                  row.cost_total_microcents_p95,
+                  row.cost_total_microcents_p99,
+                ),
+                tokensTotal: toMetricPercentiles(
+                  row.tokens_total_samples,
+                  row.tokens_total_p50,
+                  row.tokens_total_p90,
+                  row.tokens_total_p95,
+                  row.tokens_total_p99,
+                ),
+                timeToFirstTokenNs: toMetricPercentiles(
+                  row.time_to_first_token_ns_samples,
+                  row.time_to_first_token_ns_p50,
+                  row.time_to_first_token_ns_p90,
+                  row.time_to_first_token_ns_p95,
+                  row.time_to_first_token_ns_p99,
+                ),
+              },
+            }
+          }),
+          Effect.mapError((error) => toRepositoryError(error, "getCohortBaselineByProjectId")),
+        )
+    }
+
     const listByProjectId: TraceRepositoryShape["listByProjectId"] = ({ organizationId, projectId, options }) => {
       const sort = SORT_COLUMNS[options.sortBy ?? ""] ?? DEFAULT_SORT
       const orderDir = options.sortDirection === "asc" ? "ASC" : "DESC"
@@ -425,6 +582,7 @@ export const TraceRepositoryLive = Layer.effect(
     }
 
     return {
+      getCohortBaselineByProjectId,
       listByProjectId,
 
       countByProjectId: ({ organizationId, projectId, filters }) => {

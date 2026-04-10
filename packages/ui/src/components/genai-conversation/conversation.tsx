@@ -156,7 +156,7 @@ export function Conversation({
   }
 
   const content = (
-    <div ref={containerRef} className={cn("flex flex-col gap-6", { "select-none": !enableTextSelection })}>
+    <div ref={containerRef} className={cn("flex min-w-0 flex-col gap-6", { "select-none": !enableTextSelection })}>
       {hasSystem && (
         <div
           ref={(el) => {
@@ -182,13 +182,13 @@ export function Conversation({
               navItemRefs.current[navIdx] = el
             }}
             data-message-index={index}
-            className={cn("group relative pl-4 rounded-lg", {
+            className={cn("group relative min-w-0 rounded-lg pl-4 pr-4", {
               "pl-10 py-2 transition-colors hover:bg-muted/50": isAssistant && messageActions,
             })}
           >
             {isUser ? (
-              <div className="flex flex-col items-end">
-                <div className="inline-flex flex-col items-start">
+              <div className="flex min-w-0 flex-col items-end">
+                <div className="inline-flex min-w-0 max-w-full flex-col items-start">
                   <Message
                     message={message}
                     messageIndex={index}
@@ -199,7 +199,7 @@ export function Conversation({
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-start">
+              <div className="flex min-w-0 w-full flex-col items-start">
                 <Message
                   message={message}
                   messageIndex={index}

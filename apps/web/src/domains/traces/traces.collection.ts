@@ -2,6 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import {
   pickTraceHistogramBucketSeconds,
   resolveTraceHistogramRangeIso,
+  type TraceCohortSummary,
   type TraceTimeHistogramBucket,
 } from "@domain/spans"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
@@ -9,6 +10,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   countTracesByProject,
+  getTraceCohortSummaryByProject,
   getTraceDetail,
   getTraceDistinctValues,
   getTraceMetricsByProject,
@@ -97,29 +99,56 @@ export function useTraceMetrics({ projectId, filters }: { readonly projectId: st
   })
 }
 
-export function useTraceTimeHistogram({
+export function useTraceCohortSummary({
   projectId,
   filters,
 }: {
   readonly projectId: string
+  readonly filters?: FilterSet
+}) {
+  return useQuery<TraceCohortSummary>({
+    queryKey: ["traces-cohort-summary", projectId, filters],
+    queryFn: () =>
+      getTraceCohortSummaryByProject({
+        data: {
+          projectId,
+          ...(filters ? { filters } : {}),
+        },
+      }),
+    staleTime: 30_000,
+    enabled: projectId.length > 0,
+  })
+}
+
+export function useTraceTimeHistogram({
+  projectId,
+  filters,
+  rangeStartIso: rangeStartIsoOverride,
+  rangeEndIso: rangeEndIsoOverride,
+}: {
+  readonly projectId: string
   readonly filters: FilterSet
+  readonly rangeStartIso?: string
+  readonly rangeEndIso?: string
 }) {
   const { rangeStartIso, rangeEndIso, bucketSeconds, queryKey } = useMemo(() => {
     const nowMs = Date.now()
     const { rangeStartIso: rs, rangeEndIso: re } = resolveTraceHistogramRangeIso(filters, nowMs)
-    const startMs = Date.parse(rs)
-    const endMs = Date.parse(re)
+    const effectiveRangeStartIso = rangeStartIsoOverride ?? rs
+    const effectiveRangeEndIso = rangeEndIsoOverride ?? re
+    const startMs = Date.parse(effectiveRangeStartIso)
+    const endMs = Date.parse(effectiveRangeEndIso)
     const bs =
       Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs
         ? pickTraceHistogramBucketSeconds(startMs, endMs)
         : 60
     return {
-      rangeStartIso: rs,
-      rangeEndIso: re,
+      rangeStartIso: effectiveRangeStartIso,
+      rangeEndIso: effectiveRangeEndIso,
       bucketSeconds: bs,
-      queryKey: ["traces-histogram", projectId, filters, rs, re, bs] as const,
+      queryKey: ["traces-histogram", projectId, filters, effectiveRangeStartIso, effectiveRangeEndIso, bs] as const,
     }
-  }, [projectId, filters])
+  }, [projectId, filters, rangeStartIsoOverride, rangeEndIsoOverride])
 
   const query = useQuery({
     queryKey,

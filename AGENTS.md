@@ -15,12 +15,13 @@ At a glance: **`apps/*`** own HTTP boundaries (validation, authz, routing to use
 
 Detailed policies, command examples, and code samples live under **`.agents/skills/<skill-name>/SKILL.md`**. Load narrow skills instead of memorizing the entire monorepo at once.
 
-**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **13** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
+**Index coverage:** The glossary lists **every** skill in `.agents/skills/` (one row per `*/SKILL.md`, **14** total), ordered **alphabetically by folder name**. When you add or remove a skill folder, update this table in the same change.
 
 ## Skill glossary
 
 | Skill | Path | Use when |
 | --- | --- | --- |
+| **Agentation watch mode** | [.agents/skills/agentation-watch-mode/SKILL.md](.agents/skills/agentation-watch-mode/SKILL.md) | Agentation annotation watch loops, continuous feedback handling, or when the user says **`watch mode`** and wants annotations acknowledged, fixed, and resolved as they arrive |
 | **Architecture and boundaries** | [.agents/skills/architecture-boundaries/SKILL.md](.agents/skills/architecture-boundaries/SKILL.md) | Layering, web vs public API, **app layout** (clients, routes, logging), ports/adapters, **web-standard APIs in domain/shared/utils**, multi-tenancy, DDD layout, anti-patterns, **machine-facing MCP/API product surfaces** |
 | **Background jobs and events** | [.agents/skills/async-jobs-and-events/SKILL.md](.agents/skills/async-jobs-and-events/SKILL.md) | **Queues/workers**, **domain events**, side effects **outside** HTTP handlers, task payload design, debounce/dedupe, delayed job semantics |
 | **Authentication** | [.agents/skills/authentication/SKILL.md](.agents/skills/authentication/SKILL.md) | **Better Auth**, sessions, web session helpers, org context on session, **`@domain/auth`** flows |
