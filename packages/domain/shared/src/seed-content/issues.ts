@@ -10,10 +10,10 @@ import {
   SEED_COMBINATION_ISSUE_ID,
   SEED_COMBINATION_ISSUE_UUID,
   SEED_EVALUATION_ID,
-  SEED_GENERATE_ISSUE_ID,
-  SEED_GENERATE_ISSUE_UUID,
   SEED_EXTRA_ISSUE_IDS,
   SEED_EXTRA_ISSUE_UUIDS,
+  SEED_GENERATE_ISSUE_ID,
+  SEED_GENERATE_ISSUE_UUID,
   SEED_INSTALLATION_ISSUE_ID,
   SEED_INSTALLATION_ISSUE_UUID,
   SEED_ISSUE_ID,
@@ -352,12 +352,16 @@ const extraIssueBlueprints = [
 ] as const
 
 const extraIssueFixtures = extraIssueBlueprints.map((issue, index) => ({
-  id: SEED_EXTRA_ISSUE_IDS[index] ?? (() => {
-    throw new Error(`Missing extra seed issue ID for index ${index}`)
-  })(),
-  uuid: SEED_EXTRA_ISSUE_UUIDS[index] ?? (() => {
-    throw new Error(`Missing extra seed issue UUID for index ${index}`)
-  })(),
+  id:
+    SEED_EXTRA_ISSUE_IDS[index] ??
+    (() => {
+      throw new Error(`Missing extra seed issue ID for index ${index}`)
+    })(),
+  uuid:
+    SEED_EXTRA_ISSUE_UUIDS[index] ??
+    (() => {
+      throw new Error(`Missing extra seed issue UUID for index ${index}`)
+    })(),
   ...issue,
 }))
 
