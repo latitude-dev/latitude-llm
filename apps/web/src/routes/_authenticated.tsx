@@ -6,6 +6,7 @@ import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
+import { useRootThemePreference } from "./-root-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
@@ -38,7 +39,8 @@ export const Route = createFileRoute("/_authenticated")({
 })
 
 function ThemeToggle() {
-  const { theme, setTheme } = useThemePreference()
+  const theme = useRootThemePreference()
+  const { setTheme } = useThemePreference(theme)
   const nextTheme = theme === "dark" ? "light" : "dark"
 
   return (

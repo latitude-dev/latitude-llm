@@ -4,6 +4,7 @@ import { HotkeysProvider } from "@tanstack/react-hotkeys"
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
+import { getThemePreference } from "../domains/theme/theme.functions.ts"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 import { useThemePreference } from "../lib/theme.ts"
@@ -20,6 +21,11 @@ export const Route = createRootRoute({
   errorComponent: ({ error, info, reset }) => (
     <ErrorFallback error={error} componentStack={info?.componentStack ?? null} reset={reset} />
   ),
+  loader: async () => {
+    const theme = await getThemePreference()
+
+    return { theme }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -51,7 +57,8 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
-  const { theme } = useThemePreference()
+  const initialTheme = Route.useLoaderData({ select: (data) => data.theme })
+  const { theme } = useThemePreference(initialTheme)
 
   return (
     <html
