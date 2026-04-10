@@ -4,7 +4,13 @@ import { fromString } from "./utils.ts"
 
 const VERCEL_PROVIDER_SUFFIX = /\.(chat|messages|responses|generative-ai|embed)$/
 
-/** Strip ANSI SGR escape sequences and trailing terminal noise from model strings. */
+/**
+ * Strip ANSI SGR escape sequences and trailing terminal noise from model strings.
+ *
+ * Claude Code emits the `model` attribute with ANSI color codes embedded (e.g.
+ * `"\x1b[32mclaude-opus-4-5\x1b[0m"`) because it renders the value in a terminal
+ * before writing it to the span. No other instrumentation source we know of does this.
+ */
 const ANSI_SGR_RE = new RegExp(`${String.fromCharCode(0x1b)}\\[[0-9;]*m`, "g")
 function sanitizeModelName(raw: string): string {
   return raw
