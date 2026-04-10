@@ -23,19 +23,19 @@ export const SYSTEM_QUEUE_DEFAULT_SAMPLING = 10
 
 export const SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW = 8
 
-export const SYSTEM_QUEUE_FLAGGER_PROVIDER = "amazon-bedrock"
-
-export const SYSTEM_QUEUE_FLAGGER_MODEL = "amazon.nova-micro-v1:0"
-
-export const SYSTEM_QUEUE_FLAGGER_TEMPERATURE = 0
+export const SYSTEM_QUEUE_FLAGGER_MODEL = {
+  provider: "amazon-bedrock",
+  model: "amazon.nova-micro-v1:0",
+  temperature: 0,
+} as const
 
 export const SYSTEM_QUEUE_FLAGGER_MAX_TOKENS = 256
 
-export const SYSTEM_QUEUE_ANNOTATOR_PROVIDER = "amazon-bedrock"
-
-export const SYSTEM_QUEUE_ANNOTATOR_MODEL = "amazon.nova-lite-v1:0"
-
-export const SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE = 0.2
+export const SYSTEM_QUEUE_ANNOTATOR_MODEL = {
+  provider: "amazon-bedrock",
+  model: "amazon.nova-lite-v1:0",
+  temperature: 0.2,
+} as const
 
 export const SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS = 2048
 

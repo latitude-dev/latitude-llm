@@ -6,8 +6,6 @@ import { Effect } from "effect"
 import {
   SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
   SYSTEM_QUEUE_ANNOTATOR_MODEL,
-  SYSTEM_QUEUE_ANNOTATOR_PROVIDER,
-  SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE,
   SYSTEM_QUEUE_DEFINITIONS,
 } from "../constants.ts"
 import { systemQueueAnnotatorOutputSchema } from "./system-queue-annotator-contracts.ts"
@@ -132,9 +130,7 @@ export const runSystemQueueAnnotatorUseCase = (input: RunSystemQueueAnnotatorInp
     const prompt = `Deterministic match context:\n\n${matchReasonText}\n\nFull conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
 
     const result = yield* ai.generate({
-      provider: SYSTEM_QUEUE_ANNOTATOR_PROVIDER,
-      model: SYSTEM_QUEUE_ANNOTATOR_MODEL,
-      temperature: SYSTEM_QUEUE_ANNOTATOR_TEMPERATURE,
+      ...SYSTEM_QUEUE_ANNOTATOR_MODEL,
       maxTokens: SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
       system: systemPrompt,
       prompt,

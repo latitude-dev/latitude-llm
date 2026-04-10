@@ -56,13 +56,21 @@ export type SelectProps<V = unknown> = Omit<FormFieldProps, "children"> &
     required?: boolean
     onChange?: (value: V) => void
     width?: "auto" | "full"
+    contentWidth?: "auto" | "trigger"
+    contentClassName?: string
     size?: "small" | "default"
     removable?: boolean
     searchable?: boolean
     searchPlaceholder?: string
     searchableEmptyMessage?: string
     searchLoading?: boolean
+    wrapSearchableOptionText?: boolean
     onSearch?: (search: string) => void
+    infiniteScroll?: {
+      hasMore: boolean
+      isLoadingMore: boolean
+      onLoadMore: () => void
+    }
     open?: boolean
     onOpenChange?: (open: boolean) => void
     footerAction?: {
@@ -90,6 +98,8 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     info,
     onChange,
     width = "full",
+    contentWidth = "auto",
+    contentClassName,
     size = "default",
     align = "start",
     alignOffset,
@@ -102,7 +112,9 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
     searchable = false,
     searchableEmptyMessage,
     searchLoading = false,
+    wrapSearchableOptionText = false,
     onSearch,
+    infiniteScroll,
     searchPlaceholder,
     open: controlledOpen,
     onOpenChange: controlledOnOpenChange,
@@ -195,13 +207,23 @@ export function Select<V = unknown>(selectProps: SelectProps<V>) {
                     },
                   }
                 : {})}
-              className={cn(zIndex.dropdown, "p-0")}
+              className={cn(
+                zIndex.dropdown,
+                "p-0",
+                {
+                  "w-(--radix-select-trigger-width)": contentWidth === "trigger",
+                },
+                contentClassName,
+              )}
             >
               {searchable ? (
                 <SearchableSelectList<V>
                   loading={searchLoading}
                   options={options}
                   onChange={_onChange}
+                  searchMode={onSearch ? "server" : "client"}
+                  wrapOptionText={wrapSearchableOptionText}
+                  {...(infiniteScroll ? { infiniteScroll } : {})}
                   {...(onSearch ? { onSearchChange: onSearch } : {})}
                   {...(searchPlaceholder ? { searchPlaceholder } : {})}
                   {...(searchableEmptyMessage ? { searchableEmptyMessage } : {})}

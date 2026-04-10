@@ -93,7 +93,9 @@ export function TraceAnnotationsList({
           <Text.H5M color="foregroundMuted">{annotations.length}</Text.H5M>
         </div>
 
-        <Text.H5 color="foregroundMuted">Select text, a message or annotate the entire turn in this section</Text.H5>
+        <Text.H5 color="foregroundMuted">
+          Select text, a message or annotate the entire conversation in this section
+        </Text.H5>
       </div>
 
       {/* Input and list */}

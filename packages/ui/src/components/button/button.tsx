@@ -1,6 +1,6 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import type { ButtonHTMLAttributes, Ref } from "react"
+import { type ButtonHTMLAttributes, Children, forwardRef, isValidElement, type ReactNode } from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
@@ -79,70 +79,105 @@ export interface ButtonProps
     VariantProps<typeof buttonVariantsConfig> {
   asChild?: boolean
   isLoading?: boolean
-  ref?: Ref<HTMLButtonElement>
 }
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  isLoading = false,
-  children,
-  disabled,
-  ref,
-  ...props
-}: ButtonProps) {
-  const effectiveVariant = variant ?? "default"
-
-  if (asChild) {
-    return (
-      <Slot
-        ref={ref}
-        className={cn(
-          buttonContainerVariants({ variant }),
-          buttonVariantsConfig({ variant, size }),
-          className,
-          isLoading && "animate-pulse",
-        )}
-        {...props}
-      >
-        {children}
-      </Slot>
-    )
+function getElementDisplayName(type: unknown): string {
+  if (typeof type === "string") {
+    return type
   }
 
-  return (
-    <button
-      ref={ref}
-      {...props}
-      className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
-      disabled={disabled || isLoading}
-      aria-busy={isLoading ? "true" : undefined}
-    >
-      {effectiveVariant !== "outline" && effectiveVariant !== "ghost" && effectiveVariant !== "link" && (
-        <div
-          className={cn(
-            "pointer-events-none absolute -inset-1 z-0 scale-95 rounded-xl opacity-0 transition-all duration-200 ease-out group-hover:scale-100 group-hover:opacity-100 group-active:-inset-0.5",
-            effectiveVariant === "destructive"
-              ? "bg-destructive/30"
-              : effectiveVariant === "default"
-                ? "bg-primary/20"
-                : "bg-foreground/10",
-          )}
-          aria-hidden
-        />
-      )}
-      <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
-        <div className="flex max-w-full flex-row items-center gap-x-1.5">
-          {isLoading && (
-            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-          )}
-          {children}
-        </div>
-      </div>
-    </button>
-  )
+  if (typeof type === "function") {
+    const componentType = type as { displayName?: string; name?: string }
+    return componentType.displayName ?? componentType.name ?? ""
+  }
+
+  if (typeof type === "object" && type !== null) {
+    return "displayName" in type && typeof type.displayName === "string"
+      ? type.displayName
+      : "name" in type && typeof type.name === "string"
+        ? type.name
+        : ""
+  }
+
+  return ""
 }
+
+function isLeadingIconLikeChild(child: unknown): boolean {
+  if (!isValidElement(child)) {
+    return false
+  }
+
+  const displayName = getElementDisplayName(child.type)
+  return displayName === "svg" || displayName === "Icon" || displayName.endsWith("Icon")
+}
+
+function stripLeadingIconChild(children: ReactNode): ReactNode {
+  const childArray = Children.toArray(children)
+  const firstMeaningfulChildIndex = childArray.findIndex(
+    (child) => !(typeof child === "string" && child.trim().length === 0),
+  )
+
+  if (firstMeaningfulChildIndex < 0 || !isLeadingIconLikeChild(childArray[firstMeaningfulChildIndex])) {
+    return childArray
+  }
+
+  return childArray.filter((_, index) => index !== firstMeaningfulChildIndex)
+}
+
+const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
+    const effectiveVariant = variant ?? "default"
+    const visibleChildren = isLoading ? stripLeadingIconChild(children) : children
+
+    if (asChild) {
+      return (
+        <Slot
+          ref={ref}
+          className={cn(
+            buttonContainerVariants({ variant }),
+            buttonVariantsConfig({ variant, size }),
+            className,
+            isLoading && "animate-pulse",
+          )}
+          {...props}
+        >
+          {visibleChildren}
+        </Slot>
+      )
+    }
+    return (
+      <button
+        ref={ref}
+        {...props}
+        className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
+        disabled={disabled || isLoading}
+        aria-busy={isLoading ? "true" : undefined}
+      >
+        {effectiveVariant !== "outline" && effectiveVariant !== "ghost" && effectiveVariant !== "link" && (
+          <div
+            className={cn(
+              "pointer-events-none absolute -inset-1 z-0 scale-95 rounded-xl opacity-0 transition-all duration-200 ease-out group-hover:scale-100 group-hover:opacity-100 group-active:-inset-0.5",
+              effectiveVariant === "destructive"
+                ? "bg-destructive/30"
+                : effectiveVariant === "default"
+                  ? "bg-primary/20"
+                  : "bg-foreground/10",
+            )}
+            aria-hidden
+          />
+        )}
+        <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
+          <div className="flex max-w-full flex-row items-center gap-x-1.5">
+            {isLoading && (
+              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            )}
+            {visibleChildren}
+          </div>
+        </div>
+      </button>
+    )
+  },
+)
+Button.displayName = "Button"
 
 export { Button, buttonVariantsConfig }

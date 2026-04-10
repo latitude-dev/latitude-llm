@@ -8,27 +8,32 @@ const maxCategoryAxisLabels = 6
 /** Above this many categories, cap bar thickness so dense histograms stay readable. */
 const barMaxWidthCategoryThreshold = 16
 const barMaxWidthPx = 40
+const gridVerticalInsetPx = 16
 
 export function buildBarChartOption(
   categories: readonly string[],
   values: readonly number[],
+  tooltipCategories: readonly string[],
   colors: ChartCssThemeColors,
   formatTooltip?: (category: string, value: number) => string,
   showYAxis = true,
   enableBrush = false,
+  xAxisLabelFontSize = 11,
 ): EChartsCoreOption {
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
       ? 0
       : Math.max(1, Math.ceil(categories.length / maxCategoryAxisLabels)) - 1
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
+  const splitLineColor = colors.isDark ? colors.mutedForeground : colors.border
+  const splitLineOpacity = colors.isDark ? 0.3 : 0.6
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
       left: showYAxis ? 48 : 8,
       right: 16,
-      top: 16,
-      bottom: 36,
+      top: gridVerticalInsetPx,
+      bottom: gridVerticalInsetPx,
       containLabel: false,
     },
     tooltip: {
@@ -46,10 +51,12 @@ export function buildBarChartOption(
       textStyle: { color: colors.foreground, fontSize: 12 },
       formatter: (params: unknown) => {
         const list = Array.isArray(params) ? params : [params]
-        const first = list[0] as { name?: string; value?: number } | undefined
+        const first = list[0] as { name?: string; value?: number; dataIndex?: number } | undefined
         const name = first?.name ?? ""
+        const dataIndex = typeof first?.dataIndex === "number" ? first.dataIndex : 0
+        const tooltipCategory = tooltipCategories[dataIndex] ?? name
         const value = typeof first?.value === "number" ? first.value : Number(first?.value ?? 0)
-        return formatTooltip ? formatTooltip(name, value) : `${name}<br/><b>${value}</b>`
+        return formatTooltip ? formatTooltip(tooltipCategory, value) : `${tooltipCategory}<br/><b>${value}</b>`
       },
     },
     xAxis: {
@@ -58,7 +65,7 @@ export function buildBarChartOption(
       axisLine: { lineStyle: { color: colors.border } },
       axisLabel: {
         color: colors.mutedForeground,
-        fontSize: 11,
+        fontSize: xAxisLabelFontSize,
         rotate: 0,
         interval: categoryLabelInterval,
         hideOverlap: true,
@@ -68,7 +75,7 @@ export function buildBarChartOption(
     yAxis: {
       type: "value",
       minInterval: 1,
-      splitLine: { lineStyle: { color: colors.border, type: "dashed", opacity: 0.6 } },
+      splitLine: { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } },
       axisLine: { show: false },
       ...(showYAxis ? {} : { axisTick: { show: false } }),
       axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },
@@ -95,8 +102,10 @@ export function buildBarChartOption(
   }
 
   if (enableBrush) {
+    option.toolbox = {
+      show: false,
+    }
     option.brush = {
-      toolbox: [],
       brushMode: "single",
       transformable: false,
       throttleType: "debounce",

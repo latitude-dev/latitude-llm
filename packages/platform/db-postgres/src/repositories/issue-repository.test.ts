@@ -158,6 +158,42 @@ describe("IssueRepositoryLive", () => {
     ).rejects.toBeInstanceOf(NotFoundError)
   })
 
+  it("finds canonical issues by id within the requested project", async () => {
+    const firstIssue = makeIssue()
+    const secondIssue = makeIssue({
+      id: IssueId("k".repeat(24)),
+      uuid: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
+      name: "Second canonical issue",
+    })
+    const otherProjectIssue = makeIssue({
+      id: IssueId("l".repeat(24)),
+      uuid: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbc",
+      projectId: otherProjectId as string,
+      name: "Other project issue",
+    })
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        yield* repository.save(firstIssue)
+        yield* repository.save(secondIssue)
+        yield* repository.save(otherProjectIssue)
+      }).pipe(makeProvider(database)),
+    )
+
+    const items = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* IssueRepository
+        return yield* repository.findByIds({
+          projectId,
+          issueIds: [firstIssue.id, secondIssue.id, otherProjectIssue.id],
+        })
+      }).pipe(makeProvider(database)),
+    )
+
+    expect(items.map((item) => item.id).sort()).toEqual([firstIssue.id, secondIssue.id].sort())
+  })
+
   it("lists only visible issues scoped to project, newest-first, and paginates with hasMore", async () => {
     const older = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),

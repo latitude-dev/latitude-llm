@@ -21,7 +21,7 @@ import { UsageSummary } from "./spans-tab/span-detail/usage-summary.tsx"
 
 function JsonBlock({ value }: { readonly value: unknown }) {
   const formatted = useMemo(() => JSON.stringify(value, null, 2), [value])
-  return <CodeBlock value={formatted} copyable />
+  return <CodeBlock value={formatted} copyable className="bg-secondary" />
 }
 
 type Baselines = TraceCohortSummary["baselines"]
@@ -301,7 +301,7 @@ export function TraceTab({
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
           ) : traceDetail?.systemInstructions.length ? (
-            <div className="flex flex-col border-dashed border-border border-2 rounded-lg p-4 bg-secondary">
+            <div className="flex flex-col rounded-lg bg-secondary p-4">
               <Conversation systemInstructions={traceDetail.systemInstructions} messages={[]} />
             </div>
           ) : (
@@ -317,7 +317,7 @@ export function TraceTab({
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
           ) : traceDetail?.inputMessages.length ? (
-            <div className="flex flex-col border-dashed border-border border-2 rounded-lg p-4 bg-secondary">
+            <div className="flex flex-col rounded-lg bg-secondary p-4">
               <Conversation messages={traceDetail.inputMessages} />
             </div>
           ) : (
@@ -333,7 +333,7 @@ export function TraceTab({
           isDetailLoading ? (
             <Skeleton className="h-20 w-full" />
           ) : traceDetail?.outputMessages.length ? (
-            <div className="flex flex-col border-dashed border-border border-2 rounded-lg p-4 bg-secondary">
+            <div className="flex flex-col rounded-lg bg-secondary p-4">
               <Conversation messages={traceDetail.outputMessages} />
             </div>
           ) : (

@@ -18,6 +18,8 @@ interface CheckboxProps {
   className?: string | undefined
   onClick?: ((e: React.MouseEvent) => void) | undefined
   ref?: React.Ref<React.ComponentRef<typeof CheckboxPrimitive.Root>> | undefined
+  "aria-label"?: string
+  "aria-labelledby"?: string
   /** Visualize the hit area with a dashed border + tinted background (uses hit-area-debug) */
   debugHitArea?: boolean | undefined
 }

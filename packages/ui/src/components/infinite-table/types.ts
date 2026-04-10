@@ -49,6 +49,14 @@ export interface InfiniteTableSharedProps<T> {
   isLoading?: boolean
   columns: InfiniteTableColumn<T>[]
   getRowKey: (row: T) => string
+  getRowClassName?: (
+    row: T,
+    context: {
+      isActive: boolean
+      isExpanded: boolean
+      isSubRow: boolean
+    },
+  ) => string | undefined
   activeRowKey?: string
   activeRowAutoScroll?: boolean
   selection?: InfiniteTableSelection

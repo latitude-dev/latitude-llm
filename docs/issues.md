@@ -291,7 +291,7 @@ Issue-linked evaluation creation is explicit:
 
 - issue discovery and issue creation do not automatically create evaluations
 - issues may have several linked evaluations
-- the issue table row and issue details modal/page expose `Generate evaluation`
+- the managed UI exposes `Monitor issue` only from the issue details drawer, and only when the issue currently has no linked evaluations
 - each trigger publishes a background generation/alignment job, returns a `jobId`, and then the frontend polls its Redis-backed status until the resulting evaluation is ready
 - once created, automatic debounced realignment continues as new annotations arrive
 
@@ -405,25 +405,53 @@ Weaviate object ids are UUID-based, so the issue row should store a dedicated `u
 
 ## Product Surface
 
-The project `Issues` page includes:
+The project `Issues` page mirrors the project `Traces` page shell:
 
-- `Active`, `Regressed`, and `Archived` tabs
-- per-tab counts
-- hybrid search without rerank
-- date range selector
-- bulk actions for resolve/unresolve/ignore/unignore
-- a manual resolve confirmation modal whose keep-monitoring toggle defaults from `keepMonitoring`
-- a per-row `Generate evaluation` action that starts a background job and shows polled in-flight status
-- an issues table with `Name`, `Seen at`, `Occurrences`, and `Trend`
+- a top action row
+- a shared aggregate-counts-plus-histogram analytics panel
+- an infinitely paginated issues table
+- a right-side issue details drawer opened from row click
 
-`Seen at` should combine recency and age, for example `11d ago / 3y old`.
+Action-row behavior:
 
-Issue details include:
+- left side: time range selector and columns selector
+- right side: `Active` / `Archived` tabs plus hybrid search without rerank
+- the time range filters score `created_at` in ClickHouse, not issue-row timestamps in Postgres
+- the lifecycle tabs affect the issues table only, not the analytics panel
+- the page does not expose the generic Traces filter builder or filter drawer
+- issue search relies on the shared AI-layer Redis cache for embeddings; the issues domain does not add an extra embedding cache on top
+- the managed Issues surface is web-only for now; there is no public `apps/api` issues contract yet
 
-- full name and description
-- `Generate evaluation` button
-- pending generation/alignment status when the current issue has a polled background job in flight
-- linked evaluations with derived alignment (MCC)
-- last seen / first seen / occurrence counts
-- 30-day trend chart
-- trace/session drilldown table
+Read orchestration:
+
+- ClickHouse owns score-backed time-range filtering, occurrence analytics, and issue trend metrics
+- Weaviate owns hybrid search and similarity scores
+- Postgres owns canonical issue rows, lifecycle grouping, and linked evaluation hydration
+- issue-page reads query ClickHouse first, run Weaviate only when search text is present, and then hydrate canonical Postgres issues through `IN (...)` issue-id / issue-uuid clauses
+
+Analytics panel behavior:
+
+- aggregate counts show `new`, `escalating`, `regressed`, `resolved`, and total seen occurrences
+- the histogram shows matched issue occurrences by day
+- when no full range is selected, the histogram falls back to a 7-day window ending today or ending at the single selected endpoint
+
+Issues table behavior:
+
+- no bulk-selection UI is shown in this revision, even though backend bulk lifecycle actions may still exist for API parity
+- default sorting is last seen descending, then occurrences descending, with search similarity preserved as an additional tie-breaker when search text is present
+- visible columns are `Issue`, `Trend`, `Seen at`, `Occurrences`, `Affected traces`, and `Evaluations`
+- `Issue` shows the issue name plus lifecycle tags, with truncation
+- `Seen at` combines recency and age, for example `11d ago / 3y old`
+- `Occurrences` uses the selected time range and its column header also shows the sum across all matched issues
+- `Affected traces` is the occurrences count divided by the total number of traces in the selected time window, capped at `100%`
+- `Evaluations` shows linked evaluation tags with truncated names plus alignment MCC percentage, or `-` when none are linked
+
+Issue details drawer behavior:
+
+- page-level time range, lifecycle-tab, and search controls do not apply inside the drawer; drawer reads use full history
+- the header uses the same close and previous/next navigation pattern as the `Traces` details drawer
+- the header actions are ignore/unignore and resolve/unresolve
+- the body includes issue name/description, a summary row, a collapsible 14-day trend histogram ending today, a collapsible linked-evaluations section, and a collapsible infinitely paginated mini traces table
+- linked evaluations show name, last alignment date, MCC, manual realign, and per-evaluation archive actions
+- while a realignment is in flight, the UI shows `Aligning...`
+- when an issue has no linked evaluations, the drawer shows `Monitor issue`; once at least one linked evaluation exists, the managed UI no longer shows another monitor-generation button

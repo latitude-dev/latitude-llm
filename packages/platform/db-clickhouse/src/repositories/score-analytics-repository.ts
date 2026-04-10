@@ -2,9 +2,14 @@ import type { ClickHouseClient } from "@clickhouse/client"
 import type {
   IssueOccurrenceAggregate,
   IssueOccurrenceBucket,
+  IssueTracePage,
+  IssueTraceSummary,
+  IssueTrendSeries,
+  IssueWindowMetric,
   Score,
   ScoreAggregate,
   ScoreAnalyticsOptions,
+  ScoreAnalyticsTimeRange,
   ScoreTrendBucket,
   SessionScoreRollup,
   TraceScoreRollup,
@@ -13,15 +18,19 @@ import { ScoreAnalyticsRepository } from "@domain/scores"
 import {
   ChSqlClient,
   type ChSqlClientShape,
+  type FilterSet,
   type OrganizationId,
   type ProjectId,
   type ScoreId,
   IssueId as toIssueId,
+  toRepositoryError,
   SessionId as toSessionId,
   TraceId as toTraceId,
 } from "@domain/shared"
 import { normalizeCHString, parseCHDate } from "@repo/utils"
 import { Effect, Layer } from "effect"
+import { buildClickHouseWhere } from "../filter-builder.ts"
+import { SCORE_FIELD_REGISTRY } from "../registries/score-fields.ts"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -124,6 +133,28 @@ type IssueOccurrenceBucketRow = {
   count: string
 }
 
+type IssueWindowMetricRow = {
+  issue_id: string
+  occurrences: string
+  first_seen_at: string
+  last_seen_at: string
+}
+
+type IssueTrendSeriesRow = {
+  issue_id: string
+  bucket: string
+  count: string
+}
+
+type CountRow = {
+  total: string
+}
+
+type IssueTraceSummaryRow = {
+  trace_id: string
+  last_seen_at: string
+}
+
 // ---------------------------------------------------------------------------
 // Mappers
 // ---------------------------------------------------------------------------
@@ -200,6 +231,37 @@ const toIssueOccurrenceBucket = (row: IssueOccurrenceBucketRow): IssueOccurrence
   count: Number(row.count),
 })
 
+const toIssueWindowMetric = (row: IssueWindowMetricRow): IssueWindowMetric => ({
+  issueId: toIssueId(normalizeCHString(row.issue_id)),
+  occurrences: Number(row.occurrences),
+  firstSeenAt: parseCHDate(row.first_seen_at),
+  lastSeenAt: parseCHDate(row.last_seen_at),
+})
+
+const toIssueTrendSeries = (rows: readonly IssueTrendSeriesRow[]): readonly IssueTrendSeries[] => {
+  const bucketsByIssueId = new Map<string, IssueOccurrenceBucket[]>()
+
+  for (const row of rows) {
+    const issueId = normalizeCHString(row.issue_id)
+    const buckets = bucketsByIssueId.get(issueId) ?? []
+    buckets.push({
+      bucket: row.bucket,
+      count: Number(row.count),
+    })
+    bucketsByIssueId.set(issueId, buckets)
+  }
+
+  return [...bucketsByIssueId.entries()].map(([issueId, buckets]) => ({
+    issueId: toIssueId(issueId),
+    buckets,
+  }))
+}
+
+const toIssueTraceSummary = (row: IssueTraceSummaryRow): IssueTraceSummary => ({
+  traceId: toTraceId(normalizeCHString(row.trace_id)),
+  lastSeenAt: parseCHDate(row.last_seen_at),
+})
+
 // ---------------------------------------------------------------------------
 // Aggregate SELECT fragment (reused across project/source queries)
 // ---------------------------------------------------------------------------
@@ -225,6 +287,50 @@ const TREND_SELECT = `
   sum(cost)                                            AS total_cost,
   sum(tokens)                                          AS total_tokens
 `
+
+const buildScoreCreatedAtTimeRange = (
+  timeRange: ScoreAnalyticsTimeRange | undefined,
+  prefix: string,
+): { clauses: string[]; params: Record<string, unknown> } => {
+  const clauses: string[] = []
+  const params: Record<string, unknown> = {}
+
+  if (timeRange?.from) {
+    clauses.push(`created_at >= toDateTime64({${prefix}_from:String}, 3, 'UTC')`)
+    params[`${prefix}_from`] = toClickHouseDateTime64(timeRange.from)
+  }
+
+  if (timeRange?.to) {
+    clauses.push(`created_at <= toDateTime64({${prefix}_to:String}, 3, 'UTC')`)
+    params[`${prefix}_to`] = toClickHouseDateTime64(timeRange.to)
+  }
+
+  return { clauses, params }
+}
+
+const buildIssueAnalyticsWhere = (input: {
+  readonly filters: FilterSet | undefined
+  readonly timeRange: ScoreAnalyticsTimeRange | undefined
+  readonly issueIds: readonly string[] | undefined
+  readonly paramPrefix: string
+}): { clauses: string[]; params: Record<string, unknown> } => {
+  const filterResult = input.filters
+    ? buildClickHouseWhere(input.filters, SCORE_FIELD_REGISTRY, { paramPrefix: input.paramPrefix })
+    : { clauses: [], params: {} }
+  const timeRangeResult = buildScoreCreatedAtTimeRange(input.timeRange, input.paramPrefix)
+  const clauses = ["issue_id != ''", ...filterResult.clauses, ...timeRangeResult.clauses]
+  const params = {
+    ...filterResult.params,
+    ...timeRangeResult.params,
+  }
+
+  if (input.issueIds && input.issueIds.length > 0) {
+    clauses.push(`issue_id IN ({${input.paramPrefix}_issueIds:Array(String)})`)
+    params[`${input.paramPrefix}_issueIds`] = input.issueIds
+  }
+
+  return { clauses, params }
+}
 
 // ---------------------------------------------------------------------------
 // Repository implementation
@@ -473,6 +579,169 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
             return result.json<IssueOccurrenceBucketRow>()
           })
           .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
+      },
+      listIssueWindowMetrics: ({ organizationId, projectId, filters, timeRange, issueIds, options }) => {
+        if (issueIds && issueIds.length === 0) {
+          return Effect.succeed([])
+        }
+
+        const { clauses, params } = buildIssueAnalyticsWhere({
+          filters,
+          timeRange,
+          issueIds: issueIds ? Array.from(issueIds) : undefined,
+          paramPrefix: "iw",
+        })
+        const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        issue_id,
+                        count()         AS occurrences,
+                        min(created_at) AS first_seen_at,
+                        max(created_at) AS last_seen_at
+                      FROM scores
+                      WHERE ${scopeClause(options)}${extraWhere}
+                      GROUP BY issue_id`,
+              query_params: {
+                ...scopeParams(organizationId, projectId),
+                ...params,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<IssueWindowMetricRow>()
+          })
+          .pipe(Effect.map((rows) => rows.map(toIssueWindowMetric)))
+      },
+      histogramByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, options }) => {
+        if (issueIds.length === 0) {
+          return Effect.succeed([])
+        }
+
+        const { clauses, params } = buildIssueAnalyticsWhere({
+          filters,
+          timeRange,
+          issueIds: Array.from(issueIds),
+          paramPrefix: "ih",
+        })
+        const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        toDate(created_at) AS bucket,
+                        count()            AS count
+                      FROM scores
+                      WHERE ${scopeClause(options)}${extraWhere}
+                      GROUP BY bucket
+                      ORDER BY bucket ASC`,
+              query_params: {
+                ...scopeParams(organizationId, projectId),
+                ...params,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<IssueOccurrenceBucketRow>()
+          })
+          .pipe(Effect.map((rows) => rows.map(toIssueOccurrenceBucket)))
+      },
+      trendByIssues: ({ organizationId, projectId, issueIds, filters, timeRange, options }) => {
+        if (issueIds.length === 0) {
+          return Effect.succeed([])
+        }
+
+        const { clauses, params } = buildIssueAnalyticsWhere({
+          filters,
+          timeRange,
+          issueIds: Array.from(issueIds),
+          paramPrefix: "it",
+        })
+        const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        issue_id,
+                        toDate(created_at) AS bucket,
+                        count()            AS count
+                      FROM scores
+                      WHERE ${scopeClause(options)}${extraWhere}
+                      GROUP BY issue_id, bucket
+                      ORDER BY issue_id ASC, bucket ASC`,
+              query_params: {
+                ...scopeParams(organizationId, projectId),
+                ...params,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<IssueTrendSeriesRow>()
+          })
+          .pipe(Effect.map(toIssueTrendSeries))
+      },
+      countDistinctTracesByTimeRange: ({ organizationId, projectId, timeRange, options }) => {
+        const { clauses, params } = buildScoreCreatedAtTimeRange(timeRange, "trace_window")
+        const extraWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT uniqExact(trace_id) AS total
+                      FROM scores
+                      WHERE ${scopeClause(options)}
+                        AND trace_id != ''${extraWhere}`,
+              query_params: {
+                ...scopeParams(organizationId, projectId),
+                ...params,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<CountRow>()
+          })
+          .pipe(Effect.map((rows) => Number(rows[0]?.total ?? 0)))
+      },
+      listTracesByIssue: ({ organizationId, projectId, issueId, limit, offset, options }) => {
+        const pageLimit = limit ?? 25
+        const pageOffset = offset ?? 0
+
+        return chSqlClient
+          .query(async (client) => {
+            const result = await client.query({
+              query: `SELECT
+                        trace_id,
+                        max(created_at) AS last_seen_at
+                      FROM scores
+                      WHERE ${scopeClause(options)}
+                        AND issue_id = {issueId:FixedString(24)}
+                        AND trace_id != ''
+                      GROUP BY trace_id
+                      ORDER BY last_seen_at DESC, trace_id DESC
+                      LIMIT {limit:UInt32}
+                      OFFSET {offset:UInt32}`,
+              query_params: {
+                ...scopeParams(organizationId, projectId),
+                issueId: issueId as string,
+                limit: pageLimit + 1,
+                offset: pageOffset,
+              },
+              format: "JSONEachRow",
+            })
+            return result.json<IssueTraceSummaryRow>()
+          })
+          .pipe(
+            Effect.map((rows): IssueTracePage => {
+              const items = rows.slice(0, pageLimit).map(toIssueTraceSummary)
+              return {
+                items,
+                hasMore: rows.length > pageLimit,
+                limit: pageLimit,
+                offset: pageOffset,
+              }
+            }),
+            Effect.mapError((error) => toRepositoryError(error, "listTracesByIssue")),
+          )
       },
       // Lightweight DELETE (row mask); omits deleted rows from subsequent SELECTs without full part rewrite.
       delete: deleteScore,

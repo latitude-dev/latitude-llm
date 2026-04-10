@@ -4,6 +4,7 @@ export {
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_MIN_OCCURRENCES_THRESHOLD,
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_DETAILS_GENERATION_MODEL,
   ISSUE_DETAILS_MAX_OCCURRENCES,
@@ -46,6 +47,7 @@ export {
   createIssueCentroid,
   type DeriveIssueLifecycleStatesInput,
   deriveIssueLifecycleStates,
+  getEscalationOccurrenceThreshold,
   normalizeEmbedding,
   normalizeIssueCentroid,
   type UpdateIssueCentroidInput,
@@ -60,6 +62,15 @@ export {
   type UpsertIssueProjectionInput,
 } from "./ports/issue-projection-repository.ts"
 export { IssueRepository } from "./ports/issue-repository.ts"
+export {
+  type ApplyIssueLifecycleCommandError,
+  type ApplyIssueLifecycleCommandInput,
+  type ApplyIssueLifecycleCommandResult,
+  applyIssueLifecycleCommandUseCase,
+  type IssueLifecycleCommand,
+  type IssueLifecycleCommandItem,
+  issueLifecycleCommandSchema,
+} from "./use-cases/apply-issue-lifecycle-command.ts"
 export {
   type AssignScoreToIssueError,
   type AssignScoreToIssueInput,
@@ -81,6 +92,11 @@ export {
   discoverIssueUseCase,
 } from "./use-cases/discover-issue.ts"
 export {
+  type EmbedIssueSearchQueryInput,
+  type EmbedIssueSearchQueryResult,
+  embedIssueSearchQueryUseCase,
+} from "./use-cases/embed-issue-search-query.ts"
+export {
   type EmbeddedScoreFeedback,
   type EmbedScoreFeedbackInput,
   embedScoreFeedbackUseCase,
@@ -98,10 +114,20 @@ export {
   hybridSearchIssuesUseCase,
 } from "./use-cases/hybrid-search-issues.ts"
 export {
+  type IssueListAnalytics,
+  type IssueListAnalyticsCounts,
   type IssueListItem,
-  type IssueListResult,
+  type IssuesLifecycleGroup,
+  type IssuesSortDirection,
+  type IssuesSortField,
+  issueSearchSchema,
+  issuesLifecycleGroupSchema,
+  issuesSortDirectionSchema,
+  issuesSortFieldSchema,
+  issuesTimeRangeSchema,
   type ListIssuesError,
   type ListIssuesInput,
+  type ListIssuesResult,
   listIssuesUseCase,
 } from "./use-cases/list-issues.ts"
 export {

@@ -1,5 +1,5 @@
 import { type AnnotationQueueItemStatus, annotationQueueItemStatus } from "@domain/annotation-queues"
-import { Badge, type BadgeProps } from "@repo/ui"
+import { Status, type StatusProps } from "@repo/ui"
 import type { AnnotationQueueItemRecord } from "../../../../../../domains/annotation-queue-items/annotation-queue-items.functions.ts"
 
 const STATUS_LABEL: Record<AnnotationQueueItemStatus, string> = {
@@ -8,9 +8,9 @@ const STATUS_LABEL: Record<AnnotationQueueItemStatus, string> = {
   completed: "Completed",
 }
 
-const STATUS_VARIANT: Record<AnnotationQueueItemStatus, NonNullable<BadgeProps["variant"]>> = {
-  pending: "outlineMuted",
-  inProgress: "yellow",
+const STATUS_VARIANT: Record<AnnotationQueueItemStatus, NonNullable<StatusProps["variant"]>> = {
+  pending: "neutral",
+  inProgress: "warning",
   completed: "success",
 }
 
@@ -20,9 +20,5 @@ export function QueueItemStatusBadge({
   readonly row: Pick<AnnotationQueueItemRecord, "completedAt" | "reviewStartedAt">
 }) {
   const status = annotationQueueItemStatus(row)
-  return (
-    <Badge variant={STATUS_VARIANT[status]} size="small" noWrap>
-      {STATUS_LABEL[status]}
-    </Badge>
-  )
+  return <Status variant={STATUS_VARIANT[status]} label={STATUS_LABEL[status]} />
 }

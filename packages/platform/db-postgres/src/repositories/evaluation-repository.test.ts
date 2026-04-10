@@ -103,15 +103,21 @@ describe("EvaluationRepositoryLive", () => {
           issueId,
           options: { lifecycle: "all" },
         })
+        const byIssueIdsPage = yield* repository.listByIssueIds({
+          projectId,
+          issueIds: [issueId, otherIssueId],
+          options: { lifecycle: "all" },
+        })
 
         expect(activePage.items.map((item) => item.id)).toEqual([active.id])
         expect(archivedPage.items.map((item) => item.id)).toEqual([archived.id])
         expect(allPage.items.map((item) => item.id).sort()).toEqual([active.id, archived.id].sort())
+        expect(byIssueIdsPage.items.map((item) => item.id).sort()).toEqual([active.id, archived.id].sort())
       }).pipe(makeProvider(database)),
     )
   })
 
-  it("applies archive, unarchive, soft-delete, and archiveByIssueId lifecycle operations", async () => {
+  it("applies archive, unarchive, soft-delete, and softDeleteByIssueId lifecycle operations", async () => {
     const first = makeEvaluation({
       id: EvaluationId("f".repeat(24)),
       name: "First lifecycle evaluation",
@@ -135,7 +141,7 @@ describe("EvaluationRepositoryLive", () => {
         yield* repository.archive(first.id)
         yield* repository.unarchive(first.id)
         yield* repository.softDelete(first.id)
-        yield* repository.archiveByIssueId({ projectId, issueId })
+        yield* repository.softDeleteByIssueId({ projectId, issueId })
       }).pipe(makeProvider(database)),
     )
 
@@ -147,11 +153,11 @@ describe("EvaluationRepositoryLive", () => {
       )
 
     const deletedRow = rows.find((row) => row.id === first.id)
-    const archivedRow = rows.find((row) => row.id === second.id)
+    const secondDeletedRow = rows.find((row) => row.id === second.id)
     const untouchedRow = rows.find((row) => row.id === otherIssueEvaluation.id)
 
     expect(deletedRow?.deletedAt).not.toBeNull()
-    expect(archivedRow?.archivedAt).not.toBeNull()
-    expect(untouchedRow?.archivedAt).toBeNull()
+    expect(secondDeletedRow?.deletedAt).not.toBeNull()
+    expect(untouchedRow?.deletedAt).toBeNull()
   })
 })

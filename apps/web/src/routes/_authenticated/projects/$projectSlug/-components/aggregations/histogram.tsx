@@ -1,6 +1,6 @@
 import type { FilterSet } from "@domain/shared"
 import { denseTraceTimeHistogramBuckets } from "@domain/spans"
-import { BarChart, ChartSkeleton, Text } from "@repo/ui"
+import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useCallback, useMemo } from "react"
 
@@ -63,7 +63,7 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
   if (isLoading) {
     return (
       <div className="px-4 py-3">
-        <ChartSkeleton minHeight={160} className="border-0 bg-transparent p-0" />
+        <HistogramSkeleton height={160} />
       </div>
     )
   }
@@ -71,7 +71,7 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
   if (isError) {
     return (
       <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-        <Text.H6 color="destructive">Could not load histogram</Text.H6>
+        <Text.H6 color="destructive">Could not load analytics</Text.H6>
       </div>
     )
   }

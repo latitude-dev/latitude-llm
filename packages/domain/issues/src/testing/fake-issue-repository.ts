@@ -21,6 +21,13 @@ export const createFakeIssueRepository = (seed: readonly Issue[] = [], overrides
         return issue
       }),
 
+    findByIds: ({ projectId, issueIds }) =>
+      Effect.sync(() =>
+        issueIds
+          .map((issueId) => issues.get(issueId))
+          .filter((issue): issue is Issue => issue !== undefined && issue.projectId === projectId),
+      ),
+
     findByUuid: ({ projectId, uuid }) =>
       Effect.gen(function* () {
         const issue = [...issues.values()].find((i) => i.projectId === projectId && i.uuid === uuid)

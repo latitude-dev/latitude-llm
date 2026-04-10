@@ -159,7 +159,12 @@ namespace Text {
   })
   H4.displayName = "Text.H4"
 
-  export const H4B = forwardRef<HTMLHeadingElement, Common>(function H4M(props, ref) {
+  export const H4M = forwardRef<HTMLHeadingElement, Common>(function H4M(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" weight="medium" {...props} />
+  })
+  H4M.displayName = "Text.H4M"
+
+  export const H4B = forwardRef<HTMLHeadingElement, Common>(function H4B(props, ref) {
     return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h4" weight="bold" {...props} />
   })
   H4B.displayName = "Text.H4B"

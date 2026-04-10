@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react"
+import { type RefObject, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { InfiniteTableColumn } from "./types.ts"
 
 interface MeasurableHeaderCell {
@@ -10,6 +10,7 @@ interface UseHeaderLayoutLockParams<T> {
   hasSelection: boolean
   hasExpansion: boolean
   hasSubheaderRow: boolean
+  containerRef: RefObject<HTMLDivElement | null>
 }
 
 interface ResolveLockedHeaderLayoutParams<T> {
@@ -44,9 +45,11 @@ export function useHeaderLayoutLock<T>({
   hasSelection,
   hasExpansion,
   hasSubheaderRow,
+  containerRef,
 }: UseHeaderLayoutLockParams<T>) {
   const tableRef = useRef<HTMLTableElement>(null)
   const [layoutFixed, setLayoutFixed] = useState(false)
+  const [containerWidth, setContainerWidth] = useState(0)
   const leadingColumnCount = (hasSelection ? 1 : 0) + (hasExpansion ? 1 : 0)
   const headerLayoutKey = useMemo(() => {
     const columnSignature = columns
@@ -67,6 +70,36 @@ export function useHeaderLayoutLock<T>({
   }, [columns, hasSelection, hasExpansion, hasSubheaderRow])
 
   useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    let frameId = 0
+
+    const syncContainerWidth = () => {
+      const nextWidth = container.clientWidth
+      setContainerWidth((previousWidth) => (previousWidth === nextWidth ? previousWidth : nextWidth))
+    }
+
+    syncContainerWidth()
+
+    if (typeof ResizeObserver === "undefined") {
+      return
+    }
+
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frameId)
+      frameId = requestAnimationFrame(syncContainerWidth)
+    })
+
+    observer.observe(container)
+
+    return () => {
+      cancelAnimationFrame(frameId)
+      observer.disconnect()
+    }
+  }, [containerRef, headerLayoutKey])
+
+  useLayoutEffect(() => {
     const table = tableRef.current
     if (!table) return
 
@@ -81,7 +114,7 @@ export function useHeaderLayoutLock<T>({
     }
     table.style.width = ""
     setLayoutFixed(false)
-  }, [headerLayoutKey])
+  }, [headerLayoutKey, containerWidth])
 
   useLayoutEffect(() => {
     if (layoutFixed) return
@@ -98,7 +131,7 @@ export function useHeaderLayoutLock<T>({
       if (headerCells.length === 0) return
 
       // Lock once headers are measurable so interactive header content changes do not reflow columns.
-      if (table.offsetWidth === 0 || headerCells.some((th) => th.offsetWidth === 0)) {
+      if ((containerWidth === 0 && table.offsetWidth === 0) || headerCells.some((th) => th.offsetWidth === 0)) {
         rafId = requestAnimationFrame(lockLayout)
         return
       }
@@ -107,7 +140,7 @@ export function useHeaderLayoutLock<T>({
         headerCells,
         columns,
         leadingColumnCount,
-        measuredTableWidth: table.offsetWidth,
+        measuredTableWidth: containerWidth || table.offsetWidth,
       })
 
       for (const [index, th] of headerCells.entries()) {
@@ -119,7 +152,7 @@ export function useHeaderLayoutLock<T>({
 
     lockLayout()
     return () => cancelAnimationFrame(rafId)
-  }, [layoutFixed, headerLayoutKey])
+  }, [layoutFixed, headerLayoutKey, containerWidth])
 
   return { tableRef, layoutFixed }
 }

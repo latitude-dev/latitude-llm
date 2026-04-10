@@ -77,42 +77,55 @@ function NavItemActionWrapper({
     </Button>
   )
 
-  const content = to ? (
-    <div
-      className={cn(rowClassName, "flex items-center", {
-        "justify-center": collapsed,
-        "gap-1": !collapsed,
-      })}
-      title={collapsed ? label : undefined}
-    >
+  const content =
+    to && !hasChildren ? (
       <Link
         to={to}
-        className={cn("flex items-center", {
-          "h-full w-full justify-center": collapsed,
-          "min-w-0 flex-1 gap-2": !collapsed,
+        className={cn(rowClassName, "flex items-center", {
+          "w-full gap-2": !collapsed,
+          "justify-center": collapsed,
         })}
+        title={collapsed ? label : undefined}
         aria-label={collapsed ? label : undefined}
       >
         {children}
       </Link>
-      {hasChildren ? disclosureIcon : null}
-    </div>
-  ) : (
-    <button
-      type="button"
-      onClick={hasChildren ? onToggle : undefined}
-      className={cn(rowClassName, "flex w-full items-center text-left", {
-        "justify-center": collapsed,
-        "gap-2": !collapsed,
-      })}
-      title={collapsed ? label : undefined}
-      aria-expanded={hasChildren ? expanded : undefined}
-      aria-label={collapsed ? label : undefined}
-    >
-      {children}
-      {hasChildren ? disclosureIcon : null}
-    </button>
-  )
+    ) : to ? (
+      <div
+        className={cn(rowClassName, "flex items-center", {
+          "w-full gap-1": !collapsed,
+          "justify-center": collapsed,
+        })}
+        title={collapsed ? label : undefined}
+      >
+        <Link
+          to={to}
+          className={cn("flex items-center", {
+            "h-full w-full justify-center": collapsed,
+            "min-w-0 flex-1 gap-2": !collapsed,
+          })}
+          aria-label={collapsed ? label : undefined}
+        >
+          {children}
+        </Link>
+        {hasChildren ? disclosureIcon : null}
+      </div>
+    ) : (
+      <button
+        type="button"
+        onClick={hasChildren ? onToggle : undefined}
+        className={cn(rowClassName, "flex w-full items-center text-left", {
+          "justify-center": collapsed,
+          "gap-2": !collapsed,
+        })}
+        title={collapsed ? label : undefined}
+        aria-expanded={hasChildren ? expanded : undefined}
+        aria-label={collapsed ? label : undefined}
+      >
+        {children}
+        {hasChildren ? disclosureIcon : null}
+      </button>
+    )
 
   return (
     <NavItemTooltipWrapper collapsed={collapsed} label={label}>
@@ -213,10 +226,12 @@ export function AppSidebar({
   title,
   subtitle,
   children,
+  footer,
 }: {
   title: string
   subtitle?: ReactNode
   children: (props: { collapsed: boolean }) => ReactNode
+  footer?: (props: { collapsed: boolean }) => ReactNode
 }) {
   const autoCollapse = useShouldCollapseSidebar()
   const { value: collapsedPreference, setValue: setCollapsedPreference } = useLocalStorage<boolean | null>({
@@ -234,9 +249,9 @@ export function AppSidebar({
         "w-[280px]": !collapsed,
       })}
     >
-      <div className="flex flex-col shrink-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div
-          className={cn("flex flex-col gap-2 border-b border-border p-4", {
+          className={cn("flex shrink-0 flex-col gap-2 border-b border-border p-4", {
             "items-center": collapsed,
           })}
         >
@@ -272,13 +287,24 @@ export function AppSidebar({
           {!collapsed && subtitle ? <div className="min-w-0">{subtitle}</div> : null}
         </div>
 
-        <nav
-          className={cn("flex flex-col gap-1 p-4", {
-            "items-center": collapsed,
-          })}
-        >
-          {children({ collapsed })}
-        </nav>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <nav
+            className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4 custom-scrollbar", {
+              "items-center": collapsed,
+            })}
+          >
+            {children({ collapsed })}
+          </nav>
+          {footer ? (
+            <nav
+              className={cn("flex shrink-0 flex-col gap-1 px-4 pb-4", {
+                "items-center": collapsed,
+              })}
+            >
+              {footer({ collapsed })}
+            </nav>
+          ) : null}
+        </div>
       </div>
     </aside>
   )

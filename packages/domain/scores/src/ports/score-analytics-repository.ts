@@ -1,4 +1,13 @@
-import type { IssueId, OrganizationId, ProjectId, RepositoryError, ScoreId, SessionId, TraceId } from "@domain/shared"
+import type {
+  FilterSet,
+  IssueId,
+  OrganizationId,
+  ProjectId,
+  RepositoryError,
+  ScoreId,
+  SessionId,
+  TraceId,
+} from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Score, ScoreSource } from "../entities/score.ts"
 
@@ -68,6 +77,40 @@ export interface IssueOccurrenceAggregate {
 export interface IssueOccurrenceBucket {
   readonly bucket: string // ISO date string
   readonly count: number
+}
+
+/** Time range applied to score.created_at analytics reads. */
+export interface ScoreAnalyticsTimeRange {
+  readonly from?: Date
+  readonly to?: Date
+}
+
+/** Per-issue occurrence rollup inside a selected score window. */
+export interface IssueWindowMetric {
+  readonly issueId: IssueId
+  readonly occurrences: number
+  readonly firstSeenAt: Date
+  readonly lastSeenAt: Date
+}
+
+/** Grouped issue trend result for batched chart reads. */
+export interface IssueTrendSeries {
+  readonly issueId: IssueId
+  readonly buckets: readonly IssueOccurrenceBucket[]
+}
+
+/** Distinct trace scoped to one issue, ordered by last seen timestamp. */
+export interface IssueTraceSummary {
+  readonly traceId: TraceId
+  readonly lastSeenAt: Date
+}
+
+/** Paginated distinct traces for an issue. */
+export interface IssueTracePage {
+  readonly items: readonly IssueTraceSummary[]
+  readonly hasMore: boolean
+  readonly limit: number
+  readonly offset: number
 }
 
 /** Common options for analytics queries. */
@@ -148,6 +191,44 @@ export interface ScoreAnalyticsRepositoryShape {
     readonly days?: number // default 30
     readonly options?: ScoreAnalyticsOptions
   }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError>
+  listIssueWindowMetrics(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+    readonly timeRange?: ScoreAnalyticsTimeRange
+    readonly issueIds?: readonly IssueId[]
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<readonly IssueWindowMetric[], RepositoryError>
+  histogramByIssues(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueIds: readonly IssueId[]
+    readonly filters?: FilterSet
+    readonly timeRange: ScoreAnalyticsTimeRange
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<readonly IssueOccurrenceBucket[], RepositoryError>
+  trendByIssues(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueIds: readonly IssueId[]
+    readonly filters?: FilterSet
+    readonly timeRange: ScoreAnalyticsTimeRange
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<readonly IssueTrendSeries[], RepositoryError>
+  countDistinctTracesByTimeRange(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly timeRange?: ScoreAnalyticsTimeRange
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<number, RepositoryError>
+  listTracesByIssue(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly issueId: IssueId
+    readonly limit?: number
+    readonly offset?: number
+    readonly options?: ScoreAnalyticsOptions
+  }): Effect.Effect<IssueTracePage, RepositoryError>
 }
 
 export class ScoreAnalyticsRepository extends ServiceMap.Service<

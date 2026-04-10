@@ -121,9 +121,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(result).toEqual({ matched: true })
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]).toMatchObject({
-      provider: "amazon-bedrock",
-      model: SYSTEM_QUEUE_FLAGGER_MODEL,
-      temperature: 0,
+      ...SYSTEM_QUEUE_FLAGGER_MODEL,
       maxTokens: 256,
       telemetry: {
         spanName: "system-queue-flagger",

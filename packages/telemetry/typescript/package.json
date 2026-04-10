@@ -39,7 +39,7 @@
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --pool=forks --passWithNoTests"
+    "test": "vitest run --pool=forks --passWithNoTests --dir src"
   },
   "dependencies": {
     "@opentelemetry/api": "catalog:",

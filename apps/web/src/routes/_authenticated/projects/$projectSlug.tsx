@@ -1,6 +1,6 @@
 import { CopyableText } from "@repo/ui"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
-import { DatabaseIcon, MessageSquareText, Settings, ShieldAlert, UnlinkIcon } from "lucide-react"
+import { DatabaseIcon, FrownIcon, LayersIcon, SettingsIcon, TextAlignStartIcon } from "lucide-react"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
@@ -44,25 +44,34 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     <AppSidebar
       title={project.name}
       subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" />}
+      footer={({ collapsed }) => (
+        <NavItem
+          icon={SettingsIcon}
+          label="Settings"
+          to={`/projects/${projectSlug}/settings`}
+          active={isSettingsActive}
+          collapsed={collapsed}
+        />
+      )}
     >
       {({ collapsed }) => (
         <>
           <NavItem
-            icon={MessageSquareText}
+            icon={TextAlignStartIcon}
             label="Traces"
             to={`/projects/${projectSlug}`}
             active={isTracesActive}
             collapsed={collapsed}
           />
           <NavItem
-            icon={UnlinkIcon}
+            icon={LayersIcon}
             label="Annotation queues"
             to={`/projects/${projectSlug}/annotation-queues`}
             active={isAnnotationQueuesActive}
             collapsed={collapsed}
           />
           <NavItem
-            icon={ShieldAlert}
+            icon={FrownIcon}
             label="Issues"
             to={`/projects/${projectSlug}/issues`}
             active={isIssuesActive}
@@ -73,13 +82,6 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
             label="Datasets"
             to={`/projects/${projectSlug}/datasets`}
             active={isDatasetsActive}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={Settings}
-            label="Settings"
-            to={`/projects/${projectSlug}/settings`}
-            active={isSettingsActive}
             collapsed={collapsed}
           />
         </>

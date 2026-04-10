@@ -115,10 +115,11 @@ function createEvaluationRepository(
     save: () => Effect.die("Unexpected call to save"),
     listByProjectId,
     listByIssueId: () => Effect.die("Unexpected call to listByIssueId"),
+    listByIssueIds: () => Effect.die("Unexpected call to listByIssueIds"),
     archive: () => Effect.die("Unexpected call to archive"),
     unarchive: () => Effect.die("Unexpected call to unarchive"),
     softDelete: () => Effect.die("Unexpected call to softDelete"),
-    archiveByIssueId: () => Effect.die("Unexpected call to archiveByIssueId"),
+    softDeleteByIssueId: () => Effect.die("Unexpected call to softDeleteByIssueId"),
   }
 }
 

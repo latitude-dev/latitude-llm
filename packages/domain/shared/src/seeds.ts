@@ -108,11 +108,11 @@ function fixedSeedUuid(index: number): string {
   return `10000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`
 }
 
-/** Additional long-tail issues used to exercise pagination and denoising. */
-export const SEED_EXTRA_ISSUE_IDS: readonly IssueId[] = Array.from({ length: 18 }, (_, i) =>
+/** Additional long-tail issue IDs used to exercise pagination, infinite scroll, and denoising. */
+export const SEED_EXTRA_ISSUE_IDS: readonly IssueId[] = Array.from({ length: 128 }, (_, i) =>
   IssueId(fixedSeedEntityId("xi", i)),
 )
-export const SEED_EXTRA_ISSUE_UUIDS: readonly string[] = Array.from({ length: 18 }, (_, i) => fixedSeedUuid(0x500 + i))
+export const SEED_EXTRA_ISSUE_UUIDS: readonly string[] = Array.from({ length: 128 }, (_, i) => fixedSeedUuid(0x500 + i))
 
 /** Issue 1 active monitor. */
 export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")
@@ -198,7 +198,7 @@ export function seedDateDaysAgo(daysAgo: number, hour = 12, minute = 0): Date {
   const date = new Date(SEED_TIMELINE_ANCHOR)
   date.setUTCDate(date.getUTCDate() - daysAgo)
   date.setUTCHours(hour, minute, 0, 0)
-  return date
+  return date.getTime() > seedTimelineNow.getTime() ? new Date(seedTimelineNow) : date
 }
 
 export function seedTimestampDaysAgo(daysAgo: number, hour = 12, minute = 0): string {

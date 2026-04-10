@@ -53,6 +53,7 @@ export function HeaderCell({
 }) {
   const TextComp = sortable ? "button" : "div"
   const textProps = sortable ? { type: "button" as const, onClick: onSortClick } : {}
+  const showSortIndicator = sortable || (sortDirection !== null && sortDirection !== undefined)
   const thRef = useRef<HTMLTableCellElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
   const subheaderMeasureRef = useRef<HTMLDivElement>(null)
@@ -109,7 +110,7 @@ export function HeaderCell({
           })}
         >
           <span ref={measureRef} className="inline-flex w-max shrink-0 items-center gap-1 whitespace-nowrap">
-            {sortable && <SortIcon direction={sortDirection ?? null} />}
+            {showSortIndicator ? <SortIcon direction={sortDirection ?? null} /> : null}
             {headerLabel}
           </span>
         </TextComp>
@@ -141,7 +142,7 @@ export function HeaderCell({
         className,
       )}
       style={thStyle}
-      aria-sort={sortable ? ariaSort(sortDirection) : undefined}
+      aria-sort={showSortIndicator ? ariaSort(sortDirection) : undefined}
     >
       {headerBody}
       {resizable ? <ResizableHandle minWidth={headerMinWidth} thRef={thRef} disabled={false} /> : null}

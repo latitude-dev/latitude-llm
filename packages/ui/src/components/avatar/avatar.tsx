@@ -14,15 +14,11 @@ const sizeClass: Record<AvatarSize, string> = {
 export function initialsFromDisplayName(name: string): string {
   const trimmed = name.trim()
   if (trimmed.length === 0) return "?"
-  const fromWords = trimmed
-    .split(/\s+/)
-    .map((part) => part[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
-  if (fromWords.length > 0) return fromWords
-  return trimmed.slice(0, 2).toUpperCase()
+
+  const firstWord = trimmed.split(/\s+/).find(Boolean)
+  if (!firstWord) return "?"
+
+  return Array.from(firstWord)[0]?.toUpperCase() ?? "?"
 }
 
 export interface AvatarProps {

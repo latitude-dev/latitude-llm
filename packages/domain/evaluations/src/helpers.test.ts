@@ -114,26 +114,26 @@ describe("evaluation lifecycle helpers", () => {
     ).toEqual(evaluation)
   })
 
-  it("applies keepMonitoring=false by archiving the evaluation", () => {
-    const archivedAt = new Date("2026-04-05T00:00:00.000Z")
-    const archived = applyIssueResolutionToEvaluation({
+  it("applies keepMonitoring=false by soft deleting the evaluation", () => {
+    const deletedAt = new Date("2026-04-05T00:00:00.000Z")
+    const deleted = applyIssueResolutionToEvaluation({
       evaluation: makeEvaluation(),
       keepMonitoring: false,
-      archivedAt,
+      deletedAt,
     })
 
-    expect(archived.archivedAt).toEqual(archivedAt)
-    expect(isArchivedEvaluation(archived)).toBe(true)
+    expect(deleted.deletedAt).toEqual(deletedAt)
+    expect(isDeletedEvaluation(deleted)).toBe(true)
   })
 
-  it("archives linked evaluations when an issue is ignored", () => {
-    const archivedAt = new Date("2026-04-06T00:00:00.000Z")
-    const archived = applyIssueIgnoreToEvaluation({
+  it("soft deletes linked evaluations when an issue is ignored", () => {
+    const deletedAt = new Date("2026-04-06T00:00:00.000Z")
+    const deleted = applyIssueIgnoreToEvaluation({
       evaluation: makeEvaluation(),
-      archivedAt,
+      deletedAt,
     })
 
-    expect(archived.archivedAt).toEqual(archivedAt)
+    expect(deleted.deletedAt).toEqual(deletedAt)
   })
 
   it("rejects direct archive and unarchive operations for deleted evaluations", () => {
