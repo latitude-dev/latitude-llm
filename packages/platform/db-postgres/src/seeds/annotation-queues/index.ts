@@ -22,6 +22,7 @@ import {
   SEED_ORG_ID,
   SEED_OWNER_USER_ID,
   SEED_PROJECT_ID,
+  seedDateDaysAgo,
 } from "@domain/shared/seeding"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { Effect } from "effect"
@@ -53,6 +54,10 @@ function requiredTraceId(index: number): string {
   return traceId
 }
 
+function queueDate(daysAgo: number, hour: number, minute = 0): Date {
+  return seedDateDaysAgo(daysAgo, hour, minute)
+}
+
 const queueRows = [
   {
     id: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
@@ -72,8 +77,8 @@ const queueRows = [
     totalItems: 3,
     completedItems: 2,
     deletedAt: null,
-    createdAt: new Date("2026-03-23T08:00:00.000Z"),
-    updatedAt: new Date("2026-03-23T08:00:00.000Z"),
+    createdAt: queueDate(12, 8),
+    updatedAt: queueDate(12, 8),
   },
   {
     id: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
@@ -93,8 +98,8 @@ const queueRows = [
     totalItems: 3,
     completedItems: 2,
     deletedAt: null,
-    createdAt: new Date("2026-03-26T08:00:00.000Z"),
-    updatedAt: new Date("2026-03-26T08:00:00.000Z"),
+    createdAt: queueDate(7, 8),
+    updatedAt: queueDate(7, 8),
   },
   {
     id: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
@@ -113,8 +118,8 @@ const queueRows = [
     totalItems: 3,
     completedItems: 2,
     deletedAt: null,
-    createdAt: new Date("2026-03-29T08:15:00.000Z"),
-    updatedAt: new Date("2026-03-29T08:15:00.000Z"),
+    createdAt: queueDate(3, 8, 15),
+    updatedAt: queueDate(3, 8, 15),
   },
   {
     id: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
@@ -130,8 +135,8 @@ const queueRows = [
     totalItems: 1,
     completedItems: 0,
     deletedAt: null,
-    createdAt: new Date("2026-03-27T09:00:00.000Z"),
-    updatedAt: new Date("2026-03-27T09:00:00.000Z"),
+    createdAt: queueDate(5, 9),
+    updatedAt: queueDate(5, 9),
   },
   {
     id: SEED_ANNOTATION_QUEUE_LIVE_ID,
@@ -153,8 +158,8 @@ const queueRows = [
     totalItems: 1,
     completedItems: 0,
     deletedAt: null,
-    createdAt: new Date("2026-03-28T10:00:00.000Z"),
-    updatedAt: new Date("2026-03-28T10:00:00.000Z"),
+    createdAt: queueDate(4, 10),
+    updatedAt: queueDate(4, 10),
   },
 ] satisfies AnnotationQueueRow[]
 
@@ -168,8 +173,8 @@ const queueItemRows = [
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-23T09:00:00.000Z"),
-    updatedAt: new Date("2026-03-23T09:00:00.000Z"),
+    createdAt: queueDate(12, 9),
+    updatedAt: queueDate(12, 9),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_A_ID,
@@ -177,11 +182,11 @@ const queueItemRows = [
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
     traceId: requiredTraceId(0),
-    completedAt: new Date("2026-03-23T11:15:00.000Z"),
+    completedAt: queueDate(12, 11, 15),
     completedBy: SEED_OWNER_USER_ID,
-    reviewStartedAt: new Date("2026-03-23T10:30:00.000Z"),
-    createdAt: new Date("2026-03-23T09:30:00.000Z"),
-    updatedAt: new Date("2026-03-23T11:15:00.000Z"),
+    reviewStartedAt: queueDate(12, 10, 30),
+    createdAt: queueDate(12, 9, 30),
+    updatedAt: queueDate(12, 11, 15),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_WARRANTY_COMPLETED_B_ID,
@@ -189,11 +194,11 @@ const queueItemRows = [
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
     traceId: requiredTraceId(8),
-    completedAt: new Date("2026-03-23T12:05:00.000Z"),
+    completedAt: queueDate(12, 12, 5),
     completedBy: SEED_ADMIN_USER_ID,
-    reviewStartedAt: new Date("2026-03-23T11:20:00.000Z"),
-    createdAt: new Date("2026-03-23T09:45:00.000Z"),
-    updatedAt: new Date("2026-03-23T12:05:00.000Z"),
+    reviewStartedAt: queueDate(12, 11, 20),
+    createdAt: queueDate(12, 9, 45),
+    updatedAt: queueDate(12, 12, 5),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_PENDING_ID,
@@ -204,8 +209,8 @@ const queueItemRows = [
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-26T09:00:00.000Z"),
-    updatedAt: new Date("2026-03-26T09:00:00.000Z"),
+    createdAt: queueDate(7, 9),
+    updatedAt: queueDate(7, 9),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_A_ID,
@@ -213,11 +218,11 @@ const queueItemRows = [
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
     traceId: requiredTraceId(16),
-    completedAt: new Date("2026-03-26T11:40:00.000Z"),
+    completedAt: queueDate(7, 11, 40),
     completedBy: SEED_OWNER_USER_ID,
-    reviewStartedAt: new Date("2026-03-26T10:50:00.000Z"),
-    createdAt: new Date("2026-03-26T09:20:00.000Z"),
-    updatedAt: new Date("2026-03-26T11:40:00.000Z"),
+    reviewStartedAt: queueDate(7, 10, 50),
+    createdAt: queueDate(7, 9, 20),
+    updatedAt: queueDate(7, 11, 40),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_COMBINATION_COMPLETED_B_ID,
@@ -225,11 +230,11 @@ const queueItemRows = [
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
     traceId: requiredTraceId(28),
-    completedAt: new Date("2026-03-26T12:10:00.000Z"),
+    completedAt: queueDate(7, 12, 10),
     completedBy: SEED_OWNER_USER_ID,
-    reviewStartedAt: new Date("2026-03-26T11:15:00.000Z"),
-    createdAt: new Date("2026-03-26T09:35:00.000Z"),
-    updatedAt: new Date("2026-03-26T12:10:00.000Z"),
+    reviewStartedAt: queueDate(7, 11, 15),
+    createdAt: queueDate(7, 9, 35),
+    updatedAt: queueDate(7, 12, 10),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_PENDING_ID,
@@ -239,9 +244,9 @@ const queueItemRows = [
     traceId: requiredTraceId(40),
     completedAt: null,
     completedBy: null,
-    reviewStartedAt: new Date("2026-03-29T09:20:00.000Z"),
-    createdAt: new Date("2026-03-29T09:00:00.000Z"),
-    updatedAt: new Date("2026-03-29T09:20:00.000Z"),
+    reviewStartedAt: queueDate(3, 9, 20),
+    createdAt: queueDate(3, 9),
+    updatedAt: queueDate(3, 9, 20),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_A_ID,
@@ -249,11 +254,11 @@ const queueItemRows = [
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
     traceId: requiredTraceId(38),
-    completedAt: new Date("2026-03-29T10:35:00.000Z"),
+    completedAt: queueDate(3, 10, 35),
     completedBy: SEED_OWNER_USER_ID,
-    reviewStartedAt: new Date("2026-03-29T09:40:00.000Z"),
-    createdAt: new Date("2026-03-29T09:10:00.000Z"),
-    updatedAt: new Date("2026-03-29T10:35:00.000Z"),
+    reviewStartedAt: queueDate(3, 9, 40),
+    createdAt: queueDate(3, 9, 10),
+    updatedAt: queueDate(3, 10, 35),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_LOGISTICS_COMPLETED_B_ID,
@@ -261,11 +266,11 @@ const queueItemRows = [
     projectId: SEED_PROJECT_ID,
     queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
     traceId: requiredTraceId(43),
-    completedAt: new Date("2026-03-29T11:00:00.000Z"),
+    completedAt: queueDate(3, 11),
     completedBy: SEED_OWNER_USER_ID,
-    reviewStartedAt: new Date("2026-03-29T10:00:00.000Z"),
-    createdAt: new Date("2026-03-29T09:15:00.000Z"),
-    updatedAt: new Date("2026-03-29T11:00:00.000Z"),
+    reviewStartedAt: queueDate(3, 10),
+    createdAt: queueDate(3, 9, 15),
+    updatedAt: queueDate(3, 11),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_SYSTEM_PENDING_ID,
@@ -276,8 +281,8 @@ const queueItemRows = [
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-27T10:00:00.000Z"),
-    updatedAt: new Date("2026-03-27T10:00:00.000Z"),
+    createdAt: queueDate(5, 10),
+    updatedAt: queueDate(5, 10),
   },
   {
     id: SEED_ANNOTATION_QUEUE_ITEM_LIVE_PENDING_ID,
@@ -288,8 +293,8 @@ const queueItemRows = [
     completedAt: null,
     completedBy: null,
     reviewStartedAt: null,
-    createdAt: new Date("2026-03-28T10:15:00.000Z"),
-    updatedAt: new Date("2026-03-28T10:15:00.000Z"),
+    createdAt: queueDate(4, 10, 15),
+    updatedAt: queueDate(4, 10, 15),
   },
 ] satisfies AnnotationQueueItemRow[]
 

@@ -1,4 +1,5 @@
 import {
+  ALL_ANNOTATION_TRACE_DAYS_AGO,
   ALL_ANNOTATION_TRACES,
   COMBINATION_DATASET_ROWS,
   type DatasetRow,
@@ -18,6 +19,7 @@ import {
   SEED_WARRANTY_SIMULATION_ID,
   SEED_WARRANTY_SIMULATION_SPAN_IDS,
   SEED_WARRANTY_SIMULATION_TRACE_IDS,
+  seedDateDaysAgo,
   WARRANTY_DATASET_ROWS,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
@@ -108,13 +110,14 @@ function createFixedSpan(opts: {
   }
 }
 
-function generateBaseTime(index: number): { start: string; end: string } {
-  const baseDate = new Date("2026-03-15T10:00:00Z")
-  const offset = index * 1800_000
-  const start = new Date(baseDate.getTime() + offset)
+function formatClickHouseTimestamp(date: Date): string {
+  return date.toISOString().replace("T", " ").replace("Z", "000")
+}
+
+function generateTime(daysAgo: number, hour: number, minute = 0): { start: string; end: string } {
+  const start = seedDateDaysAgo(daysAgo, hour, minute)
   const end = new Date(start.getTime() + 4000)
-  const fmt = (date: Date) => date.toISOString().replace("T", " ").replace("Z", "000")
-  return { start: fmt(start), end: fmt(end) }
+  return { start: formatClickHouseTimestamp(start), end: formatClickHouseTimestamp(end) }
 }
 
 function requiredAt<T>(items: readonly T[], index: number): T {
@@ -127,7 +130,11 @@ function requiredAt<T>(items: readonly T[], index: number): T {
 
 function buildAnnotationTraceSpans(): SpanRow[] {
   return ALL_ANNOTATION_TRACES.map((trace, i) => {
-    const time = generateBaseTime(i)
+    const daysAgo = ALL_ANNOTATION_TRACE_DAYS_AGO[i]
+    if (daysAgo === undefined) {
+      throw new Error(`Missing seeded annotation trace day at index ${i}`)
+    }
+    const time = generateTime(daysAgo, 9 + (i % 4))
     return createFixedSpan({
       traceId: requiredAt(SEED_ANNOTATION_TRACE_IDS, i),
       spanId: requiredAt(SEED_ANNOTATION_SPAN_IDS, i),
@@ -145,7 +152,7 @@ function buildAnnotationTraceSpans(): SpanRow[] {
 
 function buildAlignmentFixtureSpans(): SpanRow[] {
   return ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => {
-    const time = generateBaseTime(100 + i)
+    const time = generateTime(26 - Math.floor(i / 5), 10 + (i % 5))
     return createFixedSpan({
       traceId: requiredAt(SEED_ALIGNMENT_FIXTURE_TRACE_IDS, i),
       spanId: requiredAt(SEED_ALIGNMENT_FIXTURE_SPAN_IDS, i),
@@ -189,7 +196,7 @@ function buildLifecycleSpans(): SpanRow[] {
   ] as const
 
   return specs.map((spec, i) => {
-    const time = generateBaseTime(200 + i)
+    const time = generateTime(12 - i, 10 + i)
     return createFixedSpan({
       traceId: requiredAt(SEED_LIFECYCLE_TRACE_IDS, i),
       spanId: requiredAt(SEED_LIFECYCLE_SPAN_IDS, i),
@@ -215,7 +222,7 @@ function buildSimulationTraceSpans(opts: {
   story: string
 }): SpanRow[] {
   return opts.rows.map((row, i) => {
-    const time = generateBaseTime(opts.startIndex + i)
+    const time = generateTime(opts.startIndex + i, 9 + (i % 5), i % 2 === 0 ? 6 : 7)
     return createFixedSpan({
       traceId: requiredAt(opts.traceIds, i),
       spanId: requiredAt(opts.spanIds, i),
@@ -245,7 +252,7 @@ const allFixedSpans = [
     traceIds: SEED_WARRANTY_SIMULATION_TRACE_IDS,
     spanIds: SEED_WARRANTY_SIMULATION_SPAN_IDS,
     simulationId: SEED_WARRANTY_SIMULATION_ID,
-    startIndex: 300,
+    startIndex: 6,
     datasetName: "Warranty Coverage Guardrails",
     story: "warranty-simulation",
   }),
@@ -254,7 +261,7 @@ const allFixedSpans = [
     traceIds: SEED_COMBINATION_SIMULATION_TRACE_IDS,
     spanIds: SEED_COMBINATION_SIMULATION_SPAN_IDS,
     simulationId: SEED_SIMULATION_ID,
-    startIndex: 400,
+    startIndex: 4,
     datasetName: "Dangerous Combination Guardrails",
     story: "combination-simulation",
   }),

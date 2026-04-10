@@ -1,13 +1,4 @@
-import {
-  SEED_COMBINATION_ISSUE_ID,
-  SEED_COMBINATION_ISSUE_UUID,
-  SEED_GENERATE_ISSUE_ID,
-  SEED_GENERATE_ISSUE_UUID,
-  SEED_ISSUE_ID,
-  SEED_ISSUE_UUID,
-  SEED_ORG_ID,
-  SEED_PROJECT_ID,
-} from "@domain/shared/seeding"
+import { SEED_ISSUE_FIXTURES, SEED_ORG_ID, SEED_PROJECT_ID, seedDateDaysAgo } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { issues } from "../../schema/issues.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
@@ -20,64 +11,21 @@ const baseCentroid = {
   weights: { annotation: 1.0, evaluation: 0.8, custom: 0.8 },
 } as const
 
-const issueRows = [
-  {
-    id: SEED_ISSUE_ID,
-    uuid: SEED_ISSUE_UUID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    name: "Agent promises warranty coverage for excluded incidents",
-    description:
-      "The support agent tells customers that misuse incidents are covered by warranty when Acme policy " +
-      "explicitly excludes cliffs, mesas, rooftop use, canyon anchoring, and other unsupported terrain or " +
-      "installation conditions. The model may invent loyalty waivers, promise reimbursement before review, " +
-      "or reframe misuse as a covered manufacturing defect.",
-    centroid: baseCentroid,
-    clusteredAt: new Date("2026-03-23T14:15:00.000Z"),
-    escalatedAt: new Date("2026-03-24T09:00:00.000Z"),
-    resolvedAt: null,
-    ignoredAt: null,
-    createdAt: new Date("2026-03-23T14:15:00.000Z"),
-    updatedAt: new Date("2026-03-27T16:30:00.000Z"),
-  },
-  {
-    id: SEED_COMBINATION_ISSUE_ID,
-    uuid: SEED_COMBINATION_ISSUE_UUID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    name: "Agent recommends dangerous product combinations",
-    description:
-      "The support agent suggests combining Acme products in ways that compound danger, such as pairing " +
-      "propulsion products, spatial distortion tools, weather controls, or seismic products. The model often " +
-      "ignores documented incident history, invents authorization exceptions, or treats uncertified bundles as safe.",
-    centroid: baseCentroid,
-    clusteredAt: new Date("2026-03-26T11:10:00.000Z"),
-    escalatedAt: new Date("2026-03-27T10:20:00.000Z"),
-    resolvedAt: null,
-    ignoredAt: null,
-    createdAt: new Date("2026-03-26T11:10:00.000Z"),
-    updatedAt: new Date("2026-03-28T12:45:00.000Z"),
-  },
-  {
-    id: SEED_GENERATE_ISSUE_ID,
-    uuid: SEED_GENERATE_ISSUE_UUID,
-    organizationId: SEED_ORG_ID,
-    projectId: SEED_PROJECT_ID,
-    name: "Agent invents unsupported logistics guarantees",
-    description:
-      "The support agent fabricates shipping promises, fee waivers, warehouse pickup options, or specialty " +
-      "delivery services that Acme does not actually provide. The behavior is especially risky around cliffside " +
-      "destinations, hazardous goods, and interplanetary shipping requests where the model turns review-only paths " +
-      "into guaranteed service commitments.",
-    centroid: baseCentroid,
-    clusteredAt: new Date("2026-03-29T08:35:00.000Z"),
-    escalatedAt: null,
-    resolvedAt: null,
-    ignoredAt: null,
-    createdAt: new Date("2026-03-29T08:35:00.000Z"),
-    updatedAt: new Date("2026-03-29T08:35:00.000Z"),
-  },
-] as const
+const issueRows = SEED_ISSUE_FIXTURES.map((issue) => ({
+  id: issue.id,
+  uuid: issue.uuid,
+  organizationId: SEED_ORG_ID,
+  projectId: SEED_PROJECT_ID,
+  name: issue.name,
+  description: issue.description,
+  centroid: baseCentroid,
+  clusteredAt: seedDateDaysAgo(issue.clusteredDaysAgo, 14, 15),
+  escalatedAt: issue.escalatedDaysAgo === null ? null : seedDateDaysAgo(issue.escalatedDaysAgo, 9, 0),
+  resolvedAt: issue.resolvedDaysAgo === null ? null : seedDateDaysAgo(issue.resolvedDaysAgo, 11, 30),
+  ignoredAt: issue.ignoredDaysAgo === null ? null : seedDateDaysAgo(issue.ignoredDaysAgo, 13, 10),
+  createdAt: seedDateDaysAgo(issue.createdDaysAgo, 14, 15),
+  updatedAt: seedDateDaysAgo(issue.updatedDaysAgo, 16, 30),
+}))
 
 const seedIssues: Seeder = {
   name: "issues/acme-support-issue-families",

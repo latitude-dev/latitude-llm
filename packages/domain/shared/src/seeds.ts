@@ -85,12 +85,51 @@ export const SEED_COMBINATION_ISSUE_UUID = "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e
 export const SEED_GENERATE_ISSUE_ID = IssueId("g1e2n3e4r5a6t7e8i9s0s1u2")
 export const SEED_GENERATE_ISSUE_UUID = "c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f"
 
+/** Issue 4: resolved returns-policy drift issue. */
+export const SEED_RETURNS_ISSUE_ID = IssueId("r1e2t3u4r5n6p7o8l9i0c1y2")
+export const SEED_RETURNS_ISSUE_UUID = "d4e5f6a7-b8c9-4d1e-9f2a-3b4c5d6e7f80"
+
+/** Issue 5: ignored courtesy-credit issue. */
+export const SEED_BILLING_ISSUE_ID = IssueId("b1i2l3l4i5n6g7c8r9e0d1t2")
+export const SEED_BILLING_ISSUE_UUID = "e5f6a7b8-c9d1-4e2f-8a3b-4c5d6e7f8091"
+
+/** Issue 6: active account-recovery issue. */
+export const SEED_ACCESS_ISSUE_ID = IssueId("a1c2c3o4u5n6t7r8e9c0o1v2")
+export const SEED_ACCESS_ISSUE_UUID = "f6a7b8c9-d1e2-4f3a-9b4c-5d6e7f8091a2"
+/** Issue 7: historical installation-certification issue. */
+export const SEED_INSTALLATION_ISSUE_ID = IssueId("i1n2s3t4a5l6l7c8e9r0t1f2")
+export const SEED_INSTALLATION_ISSUE_UUID = "0a7b8c9d-e1f2-4a3b-8c4d-5e6f7091a2b3"
+
+function fixedSeedEntityId(prefix: string, index: number): string {
+  return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
+}
+
+function fixedSeedUuid(index: number): string {
+  return `10000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`
+}
+
+/** Additional long-tail issues used to exercise pagination and denoising. */
+export const SEED_EXTRA_ISSUE_IDS: readonly IssueId[] = Array.from({ length: 18 }, (_, i) =>
+  IssueId(fixedSeedEntityId("xi", i)),
+)
+export const SEED_EXTRA_ISSUE_UUIDS: readonly string[] = Array.from({ length: 18 }, (_, i) => fixedSeedUuid(0x500 + i))
+
 /** Issue 1 active monitor. */
 export const SEED_EVALUATION_ID = EvaluationId("y0zr3gtsous6knd2qwdj1dit")
 /** Issue 1 archived historical monitor. */
 export const SEED_EVALUATION_ARCHIVED_ID = EvaluationId("hphb8g6uwzx68pfh9hzormqn")
 /** Issue 2 active monitor. */
 export const SEED_COMBINATION_EVALUATION_ID = EvaluationId("c1o2m3b4e5v6a7l8u9a0t1e2")
+/** Issue 4 active monitor retained after the issue resolved. */
+export const SEED_RETURNS_EVALUATION_ID = EvaluationId("r1e2t3u4r5n6e7v8a9l0u1a2")
+/** Issue 6 active monitor. */
+export const SEED_ACCESS_EVALUATION_ID = EvaluationId("a1c2c3e4s5s6e7v8a9l0u1a2")
+
+export const SEED_WARRANTY_EVALUATION_HASH = "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00"
+export const SEED_WARRANTY_ARCHIVED_EVALUATION_HASH = "bb11cc22dd33ee44ff55aa66bb77cc88dd99ee00"
+export const SEED_COMBINATION_EVALUATION_HASH = "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00"
+export const SEED_RETURNS_EVALUATION_HASH = "dd11ee22ff33aa44bb55cc66dd77ee88ff99aa00"
+export const SEED_ACCESS_EVALUATION_HASH = "ee11ff22aa33bb44cc55dd66ee77ff88aa99bb00"
 
 // ---------------------------------------------------------------------------
 // Queues
@@ -137,6 +176,34 @@ export const SEED_SCORE_API_REVIEWED_ID = ScoreId("hvtb8yzxjjrudvhrme7aejiq")
 export const SEED_SCORE_WARRANTY_SIMULATION_ACTIVE_ID = ScoreId("s1w2a3r4r5s6i7m8a9c0t1v2")
 export const SEED_SCORE_WARRANTY_SIMULATION_ARCHIVED_ID = ScoreId("s1w2a3r4r5s6i7m8a9r0c1h2")
 export const SEED_SCORE_COMBINATION_SIMULATION_ID = ScoreId("s1c2o3m4b5s6i7m8a9c0t1v2")
+
+// ---------------------------------------------------------------------------
+// Relative timeline helpers
+// ---------------------------------------------------------------------------
+
+export const SEED_TIMELINE_WINDOW_DAYS = 90
+
+const seedTimelineNow = new Date()
+
+/**
+ * Stable day anchor for seeding across stores.
+ * Using the current UTC day keeps issue states useful over time while avoiding
+ * clock-drift noise between separate Postgres and ClickHouse seed commands.
+ */
+export const SEED_TIMELINE_ANCHOR = new Date(
+  Date.UTC(seedTimelineNow.getUTCFullYear(), seedTimelineNow.getUTCMonth(), seedTimelineNow.getUTCDate(), 12, 0, 0, 0),
+)
+
+export function seedDateDaysAgo(daysAgo: number, hour = 12, minute = 0): Date {
+  const date = new Date(SEED_TIMELINE_ANCHOR)
+  date.setUTCDate(date.getUTCDate() - daysAgo)
+  date.setUTCHours(hour, minute, 0, 0)
+  return date
+}
+
+export function seedTimestampDaysAgo(daysAgo: number, hour = 12, minute = 0): string {
+  return seedDateDaysAgo(daysAgo, hour, minute).toISOString().slice(0, 23).replace("T", " ")
+}
 
 // ---------------------------------------------------------------------------
 // Deterministic trace/span IDs

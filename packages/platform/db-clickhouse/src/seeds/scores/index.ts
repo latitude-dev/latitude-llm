@@ -1,9 +1,11 @@
 import {
+  ALL_ANNOTATION_TRACE_DAYS_AGO,
   ALL_ISSUE_1_TRACES,
   ALL_ISSUE_2_TRACES,
   ALL_ISSUE_3_TRACES,
   type AnnotationTrace,
   ISSUE_2_ADDITIONAL_NEGATIVES,
+  SEED_ADDITIONAL_ISSUE_OCCURRENCES,
   SEED_ALIGNMENT_FIXTURE_SPAN_IDS,
   SEED_ALIGNMENT_FIXTURE_TRACE_IDS,
   SEED_ANNOTATION_QUEUE_COMBINATION_ID,
@@ -34,6 +36,7 @@ import {
   SEED_WARRANTY_SIMULATION_ID,
   SEED_WARRANTY_SIMULATION_SPAN_IDS,
   SEED_WARRANTY_SIMULATION_TRACE_IDS,
+  seedTimestampDaysAgo,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { insertJsonEachRow } from "../../sql.ts"
@@ -51,11 +54,8 @@ function requiredAt<T>(items: readonly T[], index: number): T {
   return item
 }
 
-function seededTimestamp(day: number, hour: number, minute = 0): string {
-  return `2026-03-${String(day).padStart(2, "0")} ${String(hour).padStart(2, "0")}:${String(minute).padStart(
-    2,
-    "0",
-  )}:00.000`
+function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): string {
+  return seedTimestampDaysAgo(daysAgo, hour, minute)
 }
 
 function annotationValue(passed: boolean, tier: string): number {
@@ -84,7 +84,7 @@ const lifecycleAnalyticsRows = [
     duration: 850_000_000,
     tokens: 1_820,
     cost: 245_000,
-    created_at: seededTimestamp(20, 10),
+    created_at: createdAtFromDaysAgo(10, 10),
   },
   {
     id: SEED_SCORE_ERRORED_ID,
@@ -103,7 +103,7 @@ const lifecycleAnalyticsRows = [
     duration: 120_000_000,
     tokens: 0,
     cost: 0,
-    created_at: seededTimestamp(20, 11),
+    created_at: createdAtFromDaysAgo(9, 11),
   },
   {
     id: SEED_SCORE_API_REVIEWED_ID,
@@ -122,7 +122,7 @@ const lifecycleAnalyticsRows = [
     duration: 0,
     tokens: 0,
     cost: 0,
-    created_at: seededTimestamp(22, 12, 45),
+    created_at: createdAtFromDaysAgo(2, 12, 45),
   },
   {
     id: SEED_SCORE_PENDING_ID,
@@ -141,7 +141,7 @@ const lifecycleAnalyticsRows = [
     duration: 0,
     tokens: 0,
     cost: 0,
-    created_at: seededTimestamp(22, 8, 30),
+    created_at: createdAtFromDaysAgo(1, 8, 30),
   },
 ]
 
@@ -151,27 +151,34 @@ function buildIssueAnnotationAnalyticsRows(opts: {
   queueId: string
   issueId: string
   prefix: string
-  startDay: number
+  daysAgo: readonly number[]
 }) {
-  return opts.traces.map((trace, i) => ({
-    id: seedScoreId(opts.prefix, i),
-    organization_id: SEED_ORG_ID,
-    project_id: SEED_PROJECT_ID,
-    session_id: "",
-    trace_id: requiredAt(SEED_ANNOTATION_TRACE_IDS, opts.offset + i),
-    span_id: requiredAt(SEED_ANNOTATION_SPAN_IDS, opts.offset + i),
-    source: "annotation",
-    source_id: opts.queueId,
-    simulation_id: "",
-    issue_id: trace.passed ? "" : opts.issueId,
-    value: annotationValue(trace.passed, trace.tier),
-    passed: trace.passed,
-    errored: false,
-    duration: 0,
-    tokens: 0,
-    cost: 0,
-    created_at: seededTimestamp(opts.startDay + Math.floor(i / 4), 9 + (i % 4)),
-  }))
+  return opts.traces.map((trace, i) => {
+    const dayOffset = opts.daysAgo[i]
+    if (dayOffset === undefined) {
+      throw new Error(`Missing seeded annotation day for ${opts.prefix} index ${i}`)
+    }
+
+    return {
+      id: seedScoreId(opts.prefix, i),
+      organization_id: SEED_ORG_ID,
+      project_id: SEED_PROJECT_ID,
+      session_id: "",
+      trace_id: requiredAt(SEED_ANNOTATION_TRACE_IDS, opts.offset + i),
+      span_id: requiredAt(SEED_ANNOTATION_SPAN_IDS, opts.offset + i),
+      source: "annotation",
+      source_id: opts.queueId,
+      simulation_id: "",
+      issue_id: trace.passed ? "" : opts.issueId,
+      value: annotationValue(trace.passed, trace.tier),
+      passed: trace.passed,
+      errored: false,
+      duration: 0,
+      tokens: 0,
+      cost: 0,
+      created_at: createdAtFromDaysAgo(dayOffset, 9 + (i % 4)),
+    }
+  })
 }
 
 const issue1AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
@@ -180,7 +187,7 @@ const issue1AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
   queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
   issueId: SEED_ISSUE_ID,
   prefix: "i1",
-  startDay: 23,
+  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(0, ALL_ISSUE_1_TRACES.length),
 })
 
 const issue2AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
@@ -189,7 +196,10 @@ const issue2AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
   queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
   issueId: SEED_COMBINATION_ISSUE_ID,
   prefix: "i2",
-  startDay: 25,
+  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(
+    ALL_ISSUE_1_TRACES.length,
+    ALL_ISSUE_1_TRACES.length + ALL_ISSUE_2_TRACES.length,
+  ),
 })
 
 const issue3AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
@@ -198,7 +208,7 @@ const issue3AnnotationAnalyticsRows = buildIssueAnnotationAnalyticsRows({
   queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
   issueId: SEED_GENERATE_ISSUE_ID,
   prefix: "i3",
-  startDay: 29,
+  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(ALL_ISSUE_1_TRACES.length + ALL_ISSUE_2_TRACES.length),
 })
 
 const alignmentAnalyticsRows = ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => ({
@@ -223,7 +233,7 @@ const alignmentAnalyticsRows = ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => 
   duration: 0,
   tokens: 0,
   cost: 0,
-  created_at: seededTimestamp(27 + Math.floor(i / 5), 10 + (i % 5)),
+  created_at: createdAtFromDaysAgo(26 - Math.floor(i / 5), 10 + (i % 5)),
 }))
 
 const simulationAnalyticsRows = [
@@ -244,7 +254,7 @@ const simulationAnalyticsRows = [
     duration: 920_000_000,
     tokens: 2_140,
     cost: 312_000,
-    created_at: seededTimestamp(26, 9, 6),
+    created_at: createdAtFromDaysAgo(6, 9, 6),
   },
   {
     id: SEED_SCORE_WARRANTY_SIMULATION_ARCHIVED_ID,
@@ -263,7 +273,7 @@ const simulationAnalyticsRows = [
     duration: 880_000_000,
     tokens: 1_960,
     cost: 287_000,
-    created_at: seededTimestamp(26, 9, 7),
+    created_at: createdAtFromDaysAgo(6, 9, 7),
   },
   {
     id: SEED_SCORE_COMBINATION_SIMULATION_ID,
@@ -282,15 +292,36 @@ const simulationAnalyticsRows = [
     duration: 940_000_000,
     tokens: 2_220,
     cost: 325_000,
-    created_at: seededTimestamp(28, 13, 24),
+    created_at: createdAtFromDaysAgo(4, 13, 24),
   },
 ] as const
+
+const issueOccurrenceAnalyticsRows = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => ({
+  id: seedScoreId(occurrence.idPrefix, i),
+  organization_id: SEED_ORG_ID,
+  project_id: SEED_PROJECT_ID,
+  session_id: "",
+  trace_id: "",
+  span_id: "",
+  source: occurrence.source,
+  source_id: occurrence.sourceId,
+  simulation_id: "",
+  issue_id: occurrence.issueId,
+  value: occurrence.value,
+  passed: occurrence.passed,
+  errored: occurrence.errored,
+  duration: occurrence.duration,
+  tokens: occurrence.tokens,
+  cost: occurrence.cost,
+  created_at: createdAtFromDaysAgo(occurrence.daysAgo, occurrence.hour, occurrence.minute),
+}))
 
 const allAnalyticsRows = [
   ...lifecycleAnalyticsRows,
   ...issue1AnnotationAnalyticsRows,
   ...issue2AnnotationAnalyticsRows,
   ...issue3AnnotationAnalyticsRows,
+  ...issueOccurrenceAnalyticsRows,
   ...alignmentAnalyticsRows,
   ...simulationAnalyticsRows,
 ]
@@ -306,7 +337,7 @@ const seedScores: Seeder = {
               issue1AnnotationAnalyticsRows.length +
               issue2AnnotationAnalyticsRows.length +
               issue3AnnotationAnalyticsRows.length
-            } annotations, ${alignmentAnalyticsRows.length} alignment, ${simulationAnalyticsRows.length} simulation)`,
+            } annotations, ${issueOccurrenceAnalyticsRows.length} issue occurrences, ${alignmentAnalyticsRows.length} alignment, ${simulationAnalyticsRows.length} simulation)`,
           ),
         ),
       ),

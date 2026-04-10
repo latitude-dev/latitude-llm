@@ -1,10 +1,12 @@
 import {
+  ALL_ANNOTATION_TRACE_DAYS_AGO,
   ALL_ISSUE_1_TRACES,
   ALL_ISSUE_2_TRACES,
   ALL_ISSUE_3_TRACES,
   type AnnotationTrace,
   ISSUE_2_ADDITIONAL_NEGATIVES,
   ScoreId,
+  SEED_ADDITIONAL_ISSUE_OCCURRENCES,
   SEED_ALIGNMENT_FIXTURE_SPAN_IDS,
   SEED_ALIGNMENT_FIXTURE_TRACE_IDS,
   SEED_ANNOTATION_QUEUE_COMBINATION_ID,
@@ -12,6 +14,7 @@ import {
   SEED_ANNOTATION_QUEUE_WARRANTY_ID,
   SEED_ANNOTATION_SPAN_IDS,
   SEED_ANNOTATION_TRACE_IDS,
+  SEED_COMBINATION_EVALUATION_HASH,
   SEED_COMBINATION_EVALUATION_ID,
   SEED_COMBINATION_ISSUE_ID,
   SEED_COMBINATION_SIMULATION_SPAN_IDS,
@@ -33,17 +36,16 @@ import {
   SEED_SCORE_WARRANTY_SIMULATION_ACTIVE_ID,
   SEED_SCORE_WARRANTY_SIMULATION_ARCHIVED_ID,
   SEED_SIMULATION_ID,
+  SEED_WARRANTY_ARCHIVED_EVALUATION_HASH,
+  SEED_WARRANTY_EVALUATION_HASH,
   SEED_WARRANTY_SIMULATION_ID,
   SEED_WARRANTY_SIMULATION_SPAN_IDS,
   SEED_WARRANTY_SIMULATION_TRACE_IDS,
+  seedDateDaysAgo,
 } from "@domain/shared/seeding"
 import { Effect } from "effect"
 import { scores } from "../../schema/scores.ts"
 import { type SeedContext, SeedError, type Seeder } from "../types.ts"
-
-const WARRANTY_EVAL_HASH = "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00"
-const WARRANTY_ARCHIVED_EVAL_HASH = "bb11cc22dd33ee44ff55aa66bb77cc88dd99ee00"
-const COMBINATION_EVAL_HASH = "cc11dd22ee33ff44aa55bb66cc77dd88ee99ff00"
 
 function seedScoreId(prefix: string, index: number): string {
   return `${prefix}${index.toString().padStart(3, "0")}${"x".repeat(24 - prefix.length - 3)}`
@@ -57,10 +59,8 @@ function requiredAt<T>(items: readonly T[], index: number): T {
   return item
 }
 
-function seededDate(day: number, hour: number, minute = 0): Date {
-  return new Date(
-    `2026-03-${String(day).padStart(2, "0")}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00.000Z`,
-  )
+function createdAtFromDaysAgo(daysAgo: number, hour: number, minute = 0): Date {
+  return seedDateDaysAgo(daysAgo, hour, minute)
 }
 
 function annotationValue(passed: boolean, tier: string): number {
@@ -86,15 +86,15 @@ const lifecycleScoreRows = [
     value: 0.98,
     passed: true,
     feedback: "The agent correctly cited the warranty exclusion and did not promise coverage.",
-    metadata: { evaluationHash: WARRANTY_EVAL_HASH },
+    metadata: { evaluationHash: SEED_WARRANTY_EVALUATION_HASH },
     error: null,
     errored: false,
     duration: 850_000_000,
     tokens: 1_820,
     cost: 245_000,
     draftedAt: null,
-    createdAt: seededDate(20, 10),
-    updatedAt: seededDate(20, 10),
+    createdAt: createdAtFromDaysAgo(10, 10),
+    updatedAt: createdAtFromDaysAgo(10, 10),
   },
   {
     id: SEED_SCORE_ERRORED_ID,
@@ -110,15 +110,15 @@ const lifecycleScoreRows = [
     value: 0,
     passed: false,
     feedback: "Score generation errored before the dangerous-combination monitor produced a verdict.",
-    metadata: { evaluationHash: COMBINATION_EVAL_HASH },
+    metadata: { evaluationHash: SEED_COMBINATION_EVALUATION_HASH },
     error: "Evaluator request timed out while scoring the trace.",
     errored: true,
     duration: 120_000_000,
     tokens: 0,
     cost: 0,
     draftedAt: null,
-    createdAt: seededDate(20, 11),
-    updatedAt: seededDate(20, 11),
+    createdAt: createdAtFromDaysAgo(9, 11),
+    updatedAt: createdAtFromDaysAgo(9, 11),
   },
   {
     id: SEED_SCORE_DRAFT_ID,
@@ -146,9 +146,9 @@ const lifecycleScoreRows = [
     duration: 0,
     tokens: 0,
     cost: 0,
-    draftedAt: seededDate(21, 9, 5),
-    createdAt: seededDate(21, 9),
-    updatedAt: seededDate(21, 9, 5),
+    draftedAt: createdAtFromDaysAgo(3, 9, 5),
+    createdAt: createdAtFromDaysAgo(3, 9),
+    updatedAt: createdAtFromDaysAgo(3, 9, 5),
   },
   {
     id: SEED_SCORE_API_REVIEWED_ID,
@@ -173,8 +173,8 @@ const lifecycleScoreRows = [
     tokens: 0,
     cost: 0,
     draftedAt: null,
-    createdAt: seededDate(22, 12, 45),
-    updatedAt: seededDate(22, 12, 45),
+    createdAt: createdAtFromDaysAgo(2, 12, 45),
+    updatedAt: createdAtFromDaysAgo(2, 12, 45),
   },
   {
     id: SEED_SCORE_PENDING_ID,
@@ -197,8 +197,8 @@ const lifecycleScoreRows = [
     tokens: 0,
     cost: 0,
     draftedAt: null,
-    createdAt: seededDate(22, 8, 30),
-    updatedAt: seededDate(22, 8, 30),
+    createdAt: createdAtFromDaysAgo(1, 8, 30),
+    updatedAt: createdAtFromDaysAgo(1, 8, 30),
   },
 ] as const
 
@@ -208,10 +208,14 @@ function buildIssueAnnotationScoreRows(opts: {
   queueId: string
   issueId: string
   prefix: string
-  startDay: number
+  daysAgo: readonly number[]
 }) {
   return opts.traces.map((trace, i) => {
-    const createdAt = seededDate(opts.startDay + Math.floor(i / 4), 9 + (i % 4))
+    const dayOffset = opts.daysAgo[i]
+    if (dayOffset === undefined) {
+      throw new Error(`Missing seeded annotation day for ${opts.prefix} index ${i}`)
+    }
+    const createdAt = createdAtFromDaysAgo(dayOffset, 9 + (i % 4))
 
     return {
       id: ScoreId(seedScoreId(opts.prefix, i)),
@@ -248,7 +252,7 @@ const issue1AnnotationScoreRows = buildIssueAnnotationScoreRows({
   queueId: SEED_ANNOTATION_QUEUE_WARRANTY_ID,
   issueId: SEED_ISSUE_ID,
   prefix: "i1",
-  startDay: 23,
+  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(0, ALL_ISSUE_1_TRACES.length),
 })
 
 const issue2AnnotationScoreRows = buildIssueAnnotationScoreRows({
@@ -257,7 +261,10 @@ const issue2AnnotationScoreRows = buildIssueAnnotationScoreRows({
   queueId: SEED_ANNOTATION_QUEUE_COMBINATION_ID,
   issueId: SEED_COMBINATION_ISSUE_ID,
   prefix: "i2",
-  startDay: 25,
+  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(
+    ALL_ISSUE_1_TRACES.length,
+    ALL_ISSUE_1_TRACES.length + ALL_ISSUE_2_TRACES.length,
+  ),
 })
 
 const issue3AnnotationScoreRows = buildIssueAnnotationScoreRows({
@@ -266,11 +273,11 @@ const issue3AnnotationScoreRows = buildIssueAnnotationScoreRows({
   queueId: SEED_ANNOTATION_QUEUE_LOGISTICS_ID,
   issueId: SEED_GENERATE_ISSUE_ID,
   prefix: "i3",
-  startDay: 29,
+  daysAgo: ALL_ANNOTATION_TRACE_DAYS_AGO.slice(ALL_ISSUE_1_TRACES.length + ALL_ISSUE_2_TRACES.length),
 })
 
 const alignmentFixtureScoreRows = ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) => {
-  const createdAt = seededDate(27 + Math.floor(i / 5), 10 + (i % 5))
+  const createdAt = createdAtFromDaysAgo(26 - Math.floor(i / 5), 10 + (i % 5))
   const sourceId =
     fixture.source === "annotation"
       ? SEED_ANNOTATION_QUEUE_COMBINATION_ID
@@ -282,7 +289,7 @@ const alignmentFixtureScoreRows = ISSUE_2_ADDITIONAL_NEGATIVES.map((fixture, i) 
     fixture.source === "annotation"
       ? { rawFeedback: fixture.feedback }
       : fixture.source === "evaluation"
-        ? { evaluationHash: COMBINATION_EVAL_HASH }
+        ? { evaluationHash: SEED_COMBINATION_EVALUATION_HASH }
         : { importName: "seed-import", tier: fixture.tier }
 
   return {
@@ -326,15 +333,15 @@ const simulationScoreRows = [
     value: 0.97,
     passed: true,
     feedback: "The active warranty monitor passed the seeded regression scenario set.",
-    metadata: { evaluationHash: WARRANTY_EVAL_HASH },
+    metadata: { evaluationHash: SEED_WARRANTY_EVALUATION_HASH },
     error: null,
     errored: false,
     duration: 920_000_000,
     tokens: 2_140,
     cost: 312_000,
     draftedAt: null,
-    createdAt: seededDate(26, 9, 6),
-    updatedAt: seededDate(26, 9, 6),
+    createdAt: createdAtFromDaysAgo(6, 9, 6),
+    updatedAt: createdAtFromDaysAgo(6, 9, 6),
   },
   {
     id: SEED_SCORE_WARRANTY_SIMULATION_ARCHIVED_ID,
@@ -350,15 +357,15 @@ const simulationScoreRows = [
     value: 0.92,
     passed: true,
     feedback: "The archived terrain-specific monitor still passes the warranty regression set.",
-    metadata: { evaluationHash: WARRANTY_ARCHIVED_EVAL_HASH },
+    metadata: { evaluationHash: SEED_WARRANTY_ARCHIVED_EVALUATION_HASH },
     error: null,
     errored: false,
     duration: 880_000_000,
     tokens: 1_960,
     cost: 287_000,
     draftedAt: null,
-    createdAt: seededDate(26, 9, 7),
-    updatedAt: seededDate(26, 9, 7),
+    createdAt: createdAtFromDaysAgo(6, 9, 7),
+    updatedAt: createdAtFromDaysAgo(6, 9, 7),
   },
   {
     id: SEED_SCORE_COMBINATION_SIMULATION_ID,
@@ -374,23 +381,53 @@ const simulationScoreRows = [
     value: 0.98,
     passed: true,
     feedback: "The dangerous-combination guardrail monitor passed the seeded simulation run.",
-    metadata: { evaluationHash: COMBINATION_EVAL_HASH },
+    metadata: { evaluationHash: SEED_COMBINATION_EVALUATION_HASH },
     error: null,
     errored: false,
     duration: 940_000_000,
     tokens: 2_220,
     cost: 325_000,
     draftedAt: null,
-    createdAt: seededDate(28, 13, 24),
-    updatedAt: seededDate(28, 13, 24),
+    createdAt: createdAtFromDaysAgo(4, 13, 24),
+    updatedAt: createdAtFromDaysAgo(4, 13, 24),
   },
 ] as const
+
+const issueOccurrenceScoreRows = SEED_ADDITIONAL_ISSUE_OCCURRENCES.map((occurrence, i) => {
+  const createdAt = createdAtFromDaysAgo(occurrence.daysAgo, occurrence.hour, occurrence.minute)
+
+  return {
+    id: ScoreId(seedScoreId(occurrence.idPrefix, i)),
+    organizationId: SEED_ORG_ID,
+    projectId: SEED_PROJECT_ID,
+    sessionId: null,
+    traceId: null,
+    spanId: null,
+    source: occurrence.source,
+    sourceId: occurrence.sourceId,
+    simulationId: null,
+    issueId: occurrence.issueId,
+    value: occurrence.value,
+    passed: occurrence.passed,
+    feedback: occurrence.feedback,
+    metadata: occurrence.metadata,
+    error: occurrence.error,
+    errored: occurrence.errored,
+    duration: occurrence.duration,
+    tokens: occurrence.tokens,
+    cost: occurrence.cost,
+    draftedAt: null,
+    createdAt,
+    updatedAt: createdAt,
+  } as const
+})
 
 const allScoreRows = [
   ...lifecycleScoreRows,
   ...issue1AnnotationScoreRows,
   ...issue2AnnotationScoreRows,
   ...issue3AnnotationScoreRows,
+  ...issueOccurrenceScoreRows,
   ...alignmentFixtureScoreRows,
   ...simulationScoreRows,
 ]
@@ -411,7 +448,7 @@ const seedScores: Seeder = {
         console.log(
           `  -> scores: ${allScoreRows.length} total (${lifecycleScoreRows.length} lifecycle, ${
             issue1AnnotationScoreRows.length + issue2AnnotationScoreRows.length + issue3AnnotationScoreRows.length
-          } annotations, ${alignmentFixtureScoreRows.length} alignment, ${simulationScoreRows.length} simulation)`,
+          } annotations, ${issueOccurrenceScoreRows.length} issue occurrences, ${alignmentFixtureScoreRows.length} alignment, ${simulationScoreRows.length} simulation)`,
         )
       },
       catch: (error) => new SeedError({ reason: "Failed to seed scores", cause: error }),
