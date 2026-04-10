@@ -6,12 +6,13 @@ import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
+import { applyTheme, createThemeInitializationScript, getStoredTheme, HOST_THEME_MEDIA_QUERY } from "../lib/theme.ts"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
   "Latitude is the platform for building and running AI agents without code. With Latte, you can create complex automations using a single prompt. Latitude handles everything: creating the agents, connecting them to 2,500+ tools, and deploying them into production."
 const URL = "https://app.latitude.so"
-const HOST_THEME_MEDIA_QUERY = "(prefers-color-scheme: dark)"
+const INITIAL_THEME_SCRIPT = createThemeInitializationScript()
 const AgentationToolbar = import.meta.env.DEV
   ? lazy(() => import("agentation").then((module) => ({ default: module.Agentation })))
   : null
@@ -52,8 +53,9 @@ function RootComponent() {
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: INITIAL_THEME_SCRIPT }} />
         <HeadContent />
       </head>
       <body>
@@ -75,24 +77,30 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 
 function HostThemeSync() {
   useMountEffect(() => {
-    const root = document.documentElement
     const media = window.matchMedia(HOST_THEME_MEDIA_QUERY)
-
-    const applyTheme = (isDark: boolean) => {
-      root.classList.toggle("dark", isDark)
-      root.style.colorScheme = isDark ? "dark" : "light"
+    const syncTheme = () => {
+      const storedTheme = getStoredTheme()
+      applyTheme(storedTheme ?? (media.matches ? "dark" : "light"))
     }
 
-    applyTheme(media.matches)
+    syncTheme()
 
     const onThemeChange = (event: MediaQueryListEvent) => {
-      applyTheme(event.matches)
+      if (getStoredTheme() === null) {
+        applyTheme(event.matches ? "dark" : "light")
+      }
+    }
+
+    const onStorage = () => {
+      syncTheme()
     }
 
     media.addEventListener("change", onThemeChange)
+    window.addEventListener("storage", onStorage)
 
     return () => {
       media.removeEventListener("change", onThemeChange)
+      window.removeEventListener("storage", onStorage)
     }
   })
 
