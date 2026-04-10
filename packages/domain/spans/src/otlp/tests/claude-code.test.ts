@@ -65,8 +65,6 @@ describe("Claude Code OTLP span expansion", () => {
     expect(d.inputMessages[0]?.role).toBe("user")
     const parts = d.inputMessages[0]?.parts
     expect(parts?.[0]).toMatchObject({ type: "text", content: "hi claudio" })
-    expect(d.attrString["gen_ai.input.messages"]).toContain("hi claudio")
-    expect(d.attrString["gen_ai.operation.name"]).toBe("prompt")
   })
 
   it("maps llm_request spans: model, tokens, cache, TTFT, provider", () => {
@@ -108,7 +106,5 @@ describe("Claude Code OTLP span expansion", () => {
     expect(d.tokensCacheCreate).toBe(4797)
     expect(d.timeToFirstTokenNs).toBe(1_953_000_000)
     expect(d.isStreaming).toBe(true)
-    expect(d.attrString["gen_ai.request.model"]).toBe("claude-opus-4-6")
-    expect(d.attrInt["gen_ai.server.time_to_first_token"]).toBe(1_953_000_000)
   })
 })

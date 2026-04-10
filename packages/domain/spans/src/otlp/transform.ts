@@ -1,7 +1,6 @@
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import type { SpanDetail, SpanKind, SpanStatusCode } from "../entities/span.ts"
 import { stringAttr } from "./attributes.ts"
-import { expandClaudeCodeSpanAttributes } from "./claude-code.ts"
 import { parseContent } from "./content/index.ts"
 import { resolveAttributes } from "./resolvers/index.ts"
 import { resolvePerformance } from "./resolvers/performance.ts"
@@ -73,9 +72,7 @@ function transformSpan({
   context: TransformContext
   ingestedAt: Date
 }): SpanDetail {
-  const rawAttrs = span.attributes ?? []
-  const expanded = expandClaudeCodeSpanAttributes(rawAttrs)
-  const spanAttrs = expanded.length > 0 ? expanded : rawAttrs
+  const spanAttrs = span.attributes ?? []
   const spanEvents = span.events ?? []
   const resourceAttrs = resource?.attributes ?? []
   const statusCode = INT_TO_STATUS_CODE[span.status?.code ?? 0] ?? "unset"
