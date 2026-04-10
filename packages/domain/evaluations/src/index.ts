@@ -84,6 +84,7 @@ export {
   EvaluationDeletedError,
   EvaluationManualRealignmentRateLimitedError,
   EvaluationNotFoundError,
+  LiveEvaluationExecutionError,
 } from "./errors.ts"
 export {
   addConfusionMatrixObservation,
@@ -121,6 +122,10 @@ export {
   truncateEvaluationName,
   unarchiveEvaluation,
 } from "./helpers.ts"
+export {
+  type ExecuteLiveEvaluationError,
+  executeLiveEvaluationUseCase,
+} from "./live-execution.ts"
 export {
   DEFAULT_ALIGNMENT_EXAMPLE_LIMIT,
   type EvaluationAlignmentExample,
