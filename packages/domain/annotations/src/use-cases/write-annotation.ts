@@ -16,15 +16,14 @@ import {
   OutboxEventWriter,
   ProjectId,
   type RepositoryError,
-  SqlClient,
-  TraceId,
+  sessionIdSchema,
+  spanIdSchema,
   SqlClient,
   toRepositoryError,
   TraceId,
   traceIdSchema,
   UserId,
 } from "@domain/shared"
-import { sessionIdSchema, spanIdSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { resolveWriteAnnotationTraceContext } from "../helpers/resolve-write-annotation-trace-context.ts"

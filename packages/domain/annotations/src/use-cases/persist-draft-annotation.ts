@@ -14,10 +14,12 @@ import {
   OrganizationId,
   ProjectId,
   type RepositoryError,
+  sessionIdSchema,
+  spanIdSchema,
   TraceId,
+  traceIdSchema,
   UserId,
 } from "@domain/shared"
-import { sessionIdSchema, spanIdSchema, traceIdSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { resolveWriteAnnotationTraceContext } from "../helpers/resolve-write-annotation-trace-context.ts"
