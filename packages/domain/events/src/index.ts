@@ -1,5 +1,6 @@
-import type { RepositoryError } from "@domain/shared"
 import type { Effect } from "effect"
+
+export * from "./outbox-event-writer.ts"
 
 export interface EventPayloads {
   MagicLinkEmailRequested: {
@@ -29,13 +30,13 @@ export interface EventPayloads {
     readonly projectId: string
     readonly traceId: string
   }
-  IssueDiscoveryRequested: {
+  ScoreCreated: {
     readonly organizationId: string
     readonly projectId: string
     readonly scoreId: string
     readonly issueId: string | null
   }
-  IssueRefreshRequested: {
+  ScoreAssignedToIssue: {
     readonly organizationId: string
     readonly projectId: string
     readonly issueId: string
@@ -70,21 +71,4 @@ export interface EventEnvelope<TEvent extends DomainEvent = DomainEvent> {
 
 export interface EventsPublisher<TError = unknown> {
   publish(envelope: DomainEvent): Effect.Effect<void, TError, never>
-}
-
-/**
- * Port for writing domain events to the transactional outbox.
- *
- * Apps use this abstraction instead of inserting into the outbox table directly.
- */
-export type OutboxWriter = {
-  write<TEventName extends keyof EventPayloads>(event: {
-    readonly id?: string
-    readonly eventName: TEventName
-    readonly aggregateType: string
-    readonly aggregateId: string
-    readonly organizationId: string
-    readonly payload: EventPayloads[TEventName]
-    readonly occurredAt?: Date
-  }): Effect.Effect<void, RepositoryError>
 }

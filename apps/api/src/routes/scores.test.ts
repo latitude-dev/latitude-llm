@@ -101,7 +101,14 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(0)
+    expect(publicationRequests).toHaveLength(1)
+    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
+    expect(publicationRequests[0]?.payload).toEqual({
+      organizationId: tenant.organizationId,
+      projectId,
+      scoreId: body.id,
+      issueId: null,
+    })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
     expect(analyticsRows).toHaveLength(1)
@@ -167,7 +174,14 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(publicationRequests).toHaveLength(0)
+    expect(publicationRequests).toHaveLength(1)
+    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
+    expect(publicationRequests[0]?.payload).toEqual({
+      organizationId: tenant.organizationId,
+      projectId,
+      scoreId: body.id,
+      issueId: null,
+    })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
     expect(analyticsRows).toHaveLength(1)
@@ -248,7 +262,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(outboxRows).toHaveLength(1)
-    expect(outboxRows[0]?.eventName).toBe("IssueDiscoveryRequested")
+    expect(outboxRows[0]?.eventName).toBe("ScoreCreated")
     expect(outboxRows[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,
@@ -300,7 +314,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(outboxRows).toHaveLength(1)
-    expect(outboxRows[0]?.eventName).toBe("IssueDiscoveryRequested")
+    expect(outboxRows[0]?.eventName).toBe("ScoreCreated")
     expect(outboxRows[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,
@@ -381,7 +395,14 @@ describe("Scores Routes Integration", () => {
       .from(outboxEvents)
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
-    expect(outboxRows).toHaveLength(0)
+    expect(outboxRows).toHaveLength(1)
+    expect(outboxRows[0]?.eventName).toBe("ScoreCreated")
+    expect(outboxRows[0]?.payload).toEqual({
+      organizationId: tenant.organizationId,
+      projectId,
+      scoreId: body.id,
+      issueId: null,
+    })
 
     const analyticsRows = await queryAnalyticsScores(clickhouse, tenant.organizationId, body.id)
     expect(analyticsRows).toHaveLength(1)
@@ -436,7 +457,7 @@ describe("Scores Routes Integration", () => {
       .where(eq(outboxEvents.organizationId, tenant.organizationId))
 
     expect(publicationRequests).toHaveLength(1)
-    expect(publicationRequests[0]?.eventName).toBe("IssueDiscoveryRequested")
+    expect(publicationRequests[0]?.eventName).toBe("ScoreCreated")
     expect(publicationRequests[0]?.payload).toEqual({
       organizationId: tenant.organizationId,
       projectId,

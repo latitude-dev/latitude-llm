@@ -1,4 +1,4 @@
-import { discoverIssueUseCase, refreshIssueDetailsUseCase } from "@domain/issues"
+import { maybeDiscoverIssueUseCase, refreshIssueDetailsUseCase } from "@domain/issues"
 import {
   type QueueConsumer,
   QueuePublisher,
@@ -54,7 +54,21 @@ export const createIssuesWorker = async ({
 
   consumer.subscribe("issues", {
     discovery: (payload) =>
-      discoverIssueUseCase(payload).pipe(
+      maybeDiscoverIssueUseCase(payload).pipe(
+        Effect.tap((outcome) =>
+          outcome.skipped
+            ? Effect.void
+            : Effect.sync(() => {
+                const detail =
+                  outcome.result.action === "workflow-started"
+                    ? `${outcome.result.action}:${outcome.result.workflow}`
+                    : outcome.result.action
+                logger.info(`Processed issue discovery for ${payload.projectId}/${payload.scoreId} (${detail})`)
+              }),
+        ),
+        Effect.tapError((error) =>
+          Effect.sync(() => logger.error(`Issue discovery failed for ${payload.projectId}/${payload.scoreId}`, error)),
+        ),
         withPostgres(
           Layer.mergeAll(EvaluationRepositoryLive, IssueRepositoryLive, OutboxEventWriterLive, ScoreRepositoryLive),
           pgClient,
@@ -64,14 +78,6 @@ export const createIssuesWorker = async ({
         withWeaviate(IssueProjectionRepositoryLive, wvClient, OrganizationId(payload.organizationId)),
         withAi(AIEmbedLive, rdClient),
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
-        Effect.tap((result) =>
-          Effect.sync(() =>
-            logger.info(`Processed issue discovery for ${payload.projectId}/${payload.scoreId} (${result.action})`),
-          ),
-        ),
-        Effect.tapError((error) =>
-          Effect.sync(() => logger.error(`Issue discovery failed for ${payload.projectId}/${payload.scoreId}`, error)),
-        ),
         Effect.asVoid,
       ),
     refresh: (payload) =>

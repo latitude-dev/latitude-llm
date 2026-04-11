@@ -1,10 +1,10 @@
-import { SCORE_PUBLICATION_DEBOUNCE, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import { OutboxEventWriter } from "@domain/events"
+import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
   NotFoundError,
   OrganizationId,
-  OutboxEventWriter,
   ProjectId,
   SessionId,
   SimulationId,
@@ -20,7 +20,8 @@ import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } fro
 import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
-import { writeAnnotationUseCase } from "./write-annotation.ts"
+import { writePublishedAnnotationUseCase } from "./write-annotation.ts"
+import { writeDraftAnnotation } from "./write-draft-annotation.ts"
 
 const cuid = "a".repeat(24)
 const projectCuid = "b".repeat(24)
@@ -134,7 +135,7 @@ describe("writeAnnotationUseCase", () => {
     const { store, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
@@ -146,7 +147,7 @@ describe("writeAnnotationUseCase", () => {
 
     expect(score.source).toBe("annotation")
     expect(score.sourceId).toBe("UI")
-    expect(score.draftedAt).toBeInstanceOf(Date)
+    expect(score.draftedAt).toBeNull()
     expect(score.feedback).toBe("The model hallucinated a date")
     expect(score.metadata.rawFeedback).toBe("The model hallucinated a date")
     expect(store.size).toBe(1)
@@ -178,7 +179,7 @@ describe("writeAnnotationUseCase", () => {
     const { layer } = createTestLayers({ spansForTrace: [older, newer] })
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
@@ -196,7 +197,7 @@ describe("writeAnnotationUseCase", () => {
 
     await expect(
       Effect.runPromise(
-        writeAnnotationUseCase({
+        writePublishedAnnotationUseCase({
           projectId: projectCuid,
           sourceId: "UI",
           traceId: traceIdRaw,
@@ -212,7 +213,7 @@ describe("writeAnnotationUseCase", () => {
     const { layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "API",
         traceId: traceIdRaw,
@@ -223,7 +224,7 @@ describe("writeAnnotationUseCase", () => {
     )
 
     expect(score.sourceId).toBe("API")
-    expect(score.draftedAt).not.toBeNull()
+    expect(score.draftedAt).toBeNull()
   })
 
   it("creates annotation with anchor metadata and validates anchor against trace messages", async () => {
@@ -236,7 +237,7 @@ describe("writeAnnotationUseCase", () => {
     const { layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
@@ -269,7 +270,7 @@ describe("writeAnnotationUseCase", () => {
     const { layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
@@ -288,7 +289,7 @@ describe("writeAnnotationUseCase", () => {
 
     await expect(
       Effect.runPromise(
-        writeAnnotationUseCase({
+        writePublishedAnnotationUseCase({
           projectId: projectCuid,
           sourceId: "UI",
           traceId: traceIdRaw,
@@ -306,7 +307,7 @@ describe("writeAnnotationUseCase", () => {
 
     await expect(
       Effect.runPromise(
-        writeAnnotationUseCase({
+        writePublishedAnnotationUseCase({
           projectId: projectCuid,
           sourceId: "UI",
           traceId: traceIdRaw,
@@ -320,7 +321,7 @@ describe("writeAnnotationUseCase", () => {
 
     await expect(
       Effect.runPromise(
-        writeAnnotationUseCase({
+        writePublishedAnnotationUseCase({
           projectId: projectCuid,
           sourceId: "UI",
           traceId: traceIdRaw,
@@ -334,7 +335,7 @@ describe("writeAnnotationUseCase", () => {
 
     await expect(
       Effect.runPromise(
-        writeAnnotationUseCase({
+        writePublishedAnnotationUseCase({
           projectId: projectCuid,
           sourceId: "UI",
           traceId: traceIdRaw,
@@ -347,22 +348,23 @@ describe("writeAnnotationUseCase", () => {
     ).rejects.toThrow()
   })
 
-  it("updates a draft annotation with same id", async () => {
+  it("publishes and revises a draft when saving with the same id", async () => {
     const { store, layer } = createTestLayers()
 
     const first = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
         value: 0.3,
         passed: false,
         feedback: "Initial feedback",
+        organizationId: cuid,
       }).pipe(Effect.provide(layer)),
     )
 
     const updated = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         id: first.id,
         projectId: projectCuid,
         sourceId: "UI",
@@ -376,6 +378,7 @@ describe("writeAnnotationUseCase", () => {
     expect(updated.id).toBe(first.id)
     expect(updated.feedback).toBe("Revised feedback")
     expect(updated.metadata.rawFeedback).toBe("Revised feedback")
+    expect(updated.draftedAt).toBeNull()
     expect(store.size).toBe(1)
   })
 
@@ -387,19 +390,18 @@ describe("writeAnnotationUseCase", () => {
     const { store, layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
 
     const first = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
         value: 0.3,
         passed: false,
         feedback: "Initial feedback",
-        anchor: {
-          messageIndex: 1,
-          partIndex: 0,
-          startOffset: 0,
-          endOffset: 5,
-        },
+        messageIndex: 1,
+        partIndex: 0,
+        startOffset: 0,
+        endOffset: 5,
+        organizationId: cuid,
       }).pipe(Effect.provide(layer)),
     )
 
@@ -409,7 +411,7 @@ describe("writeAnnotationUseCase", () => {
     expect(first.metadata.endOffset).toBe(5)
 
     const updated = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         id: first.id,
         projectId: projectCuid,
         sourceId: "UI",
@@ -427,6 +429,7 @@ describe("writeAnnotationUseCase", () => {
     expect(updated.metadata.partIndex).toBe(0)
     expect(updated.metadata.startOffset).toBe(0)
     expect(updated.metadata.endOffset).toBe(5)
+    expect(updated.draftedAt).toBeNull()
     expect(store.size).toBe(1)
   })
 
@@ -438,16 +441,15 @@ describe("writeAnnotationUseCase", () => {
     const { store, layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
 
     const first = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
         value: 0.5,
         passed: true,
         feedback: "Good message",
-        anchor: {
-          messageIndex: 1,
-        },
+        messageIndex: 1,
+        organizationId: cuid,
       }).pipe(Effect.provide(layer)),
     )
 
@@ -455,7 +457,7 @@ describe("writeAnnotationUseCase", () => {
     expect(first.metadata.partIndex).toBeUndefined()
 
     const updated = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         id: first.id,
         projectId: projectCuid,
         sourceId: "UI",
@@ -470,14 +472,15 @@ describe("writeAnnotationUseCase", () => {
     expect(updated.feedback).toBe("Actually not good")
     expect(updated.passed).toBe(false)
     expect(updated.metadata.messageIndex).toBe(1)
+    expect(updated.draftedAt).toBeNull()
     expect(store.size).toBe(1)
   })
 
-  it("does not emit issue events for drafts", async () => {
+  it("writes ScoreCreated when persisting a published UI annotation", async () => {
     const { events, layer } = createTestLayers()
 
     await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
@@ -487,77 +490,71 @@ describe("writeAnnotationUseCase", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    const issueEvents = events.filter(
-      (e: unknown) => (e as { eventName: string }).eventName === "IssueDiscoveryRequested",
-    )
-    expect(issueEvents.length).toBe(0)
+    const scoreCreatedEvents = events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreCreated")
+    expect(scoreCreatedEvents).toHaveLength(1)
   })
 
-  it("persists a preselected issue on UI drafts as intent only", async () => {
+  it("persists a preselected issue on published UI annotations as intent only", async () => {
     const { events, store, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
         issueId: "i".repeat(24),
         value: 0.1,
         passed: false,
-        feedback: "Manual draft linked to an issue",
+        feedback: "Manual annotation linked to an issue",
       }).pipe(Effect.provide(layer)),
     )
 
     expect(score.issueId).toBe("i".repeat(24))
-    expect(score.draftedAt).not.toBeNull()
+    expect(score.draftedAt).toBeNull()
     expect(store.get(score.id)?.issueId).toBe("i".repeat(24))
-    const issueEvents = events.filter(
-      (e: unknown) => (e as { eventName: string }).eventName === "IssueDiscoveryRequested",
-    )
-    expect(issueEvents.length).toBe(0)
+    const scoreCreatedEvents = events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreCreated")
+    expect(scoreCreatedEvents).toHaveLength(1)
   })
 
-  it("persists a preselected issue on API drafts as intent only", async () => {
+  it("persists a preselected issue on published API annotations as intent only", async () => {
     const { events, store, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "API",
         traceId: traceIdRaw,
         issueId: "j".repeat(24),
         value: 0.1,
         passed: false,
-        feedback: "API draft linked to an issue",
+        feedback: "API annotation linked to an issue",
       }).pipe(Effect.provide(layer)),
     )
 
     expect(score.issueId).toBe("j".repeat(24))
-    expect(score.draftedAt).not.toBeNull()
+    expect(score.draftedAt).toBeNull()
     expect(store.get(score.id)?.issueId).toBe("j".repeat(24))
-    const issueEvents = events.filter(
-      (e: unknown) => (e as { eventName: string }).eventName === "IssueDiscoveryRequested",
-    )
-    expect(issueEvents.length).toBe(0)
+    const scoreCreatedEvents = events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreCreated")
+    expect(scoreCreatedEvents).toHaveLength(1)
   })
 
-  it("writes outbox event for publication scheduling after write", async () => {
+  it("writes ScoreCreated after published annotation write", async () => {
     const { events, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
         value: 0.2,
         passed: false,
-        feedback: "Needs enrichment later",
+        feedback: "Published from UI",
       }).pipe(Effect.provide(layer)),
     )
 
     expect(events).toEqual([
       expect.objectContaining({
-        eventName: "AnnotationScorePublishRequested",
+        eventName: "ScoreCreated",
         aggregateType: "score",
         aggregateId: score.id,
         organizationId: cuid,
@@ -565,19 +562,19 @@ describe("writeAnnotationUseCase", () => {
           organizationId: cuid,
           projectId: projectCuid,
           scoreId: score.id,
-          debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+          issueId: null,
         },
       }),
     ])
   })
 
-  it("preserves original annotatorId when updating a draft", async () => {
+  it("preserves original annotatorId when publishing a revision over a draft", async () => {
     const originalAnnotatorId = UserId("o".repeat(24))
     const differentUserId = UserId("d".repeat(24))
     const { store, layer } = createTestLayers()
 
     const first = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
@@ -585,13 +582,14 @@ describe("writeAnnotationUseCase", () => {
         value: 0.3,
         passed: false,
         feedback: "Initial feedback",
+        organizationId: cuid,
       }).pipe(Effect.provide(layer)),
     )
 
     expect(first.annotatorId).toBe(originalAnnotatorId)
 
     const updated = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         id: first.id,
         projectId: projectCuid,
         sourceId: "UI",
@@ -606,6 +604,7 @@ describe("writeAnnotationUseCase", () => {
     expect(updated.id).toBe(first.id)
     expect(updated.feedback).toBe("Revised by someone else")
     expect(updated.annotatorId).toBe(originalAnnotatorId)
+    expect(updated.draftedAt).toBeNull()
     expect(store.size).toBe(1)
   })
 
@@ -614,7 +613,7 @@ describe("writeAnnotationUseCase", () => {
     const { layer } = createTestLayers()
 
     const first = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: "UI",
         traceId: traceIdRaw,
@@ -622,13 +621,14 @@ describe("writeAnnotationUseCase", () => {
         value: 0.5,
         passed: true,
         feedback: "Good response",
+        organizationId: cuid,
       }).pipe(Effect.provide(layer)),
     )
 
     expect(first.annotatorId).toBe(originalAnnotatorId)
 
     const updated = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writePublishedAnnotationUseCase({
         id: first.id,
         projectId: projectCuid,
         sourceId: "UI",
@@ -640,5 +640,6 @@ describe("writeAnnotationUseCase", () => {
     )
 
     expect(updated.annotatorId).toBe(originalAnnotatorId)
+    expect(updated.draftedAt).toBeNull()
   })
 })

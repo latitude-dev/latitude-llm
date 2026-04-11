@@ -1,18 +1,11 @@
-import type { EventPayloads, OutboxWriter } from "@domain/events"
-import { generateId, OutboxEventWriter, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
+import type { EventPayloads, OutboxEventWriterShape, OutboxWriteEvent } from "@domain/events"
+import { OutboxEventWriter } from "@domain/events"
+import { generateId, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import type { Operator, PostgresClient } from "./client.ts"
 import { outboxEvents } from "./schema/outbox-events.ts"
 
-const toOutboxInsertValues = (event: {
-  readonly id?: string
-  readonly eventName: string
-  readonly aggregateType: string
-  readonly aggregateId: string
-  readonly organizationId: string
-  readonly payload: unknown
-  readonly occurredAt?: Date
-}) => ({
+const toOutboxInsertValues = (event: OutboxWriteEvent) => ({
   id: event.id ?? generateId(),
   eventName: event.eventName,
   aggregateType: event.aggregateType,
@@ -22,7 +15,7 @@ const toOutboxInsertValues = (event: {
   occurredAt: event.occurredAt ?? new Date(),
 })
 
-export const createOutboxWriter = (client: PostgresClient): OutboxWriter => ({
+export const createOutboxWriter = (client: PostgresClient): OutboxEventWriterShape => ({
   write: (event) =>
     Effect.tryPromise({
       try: () => client.db.insert(outboxEvents).values(toOutboxInsertValues(event)),

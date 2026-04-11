@@ -238,10 +238,10 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
-  it("routes IssueDiscoveryRequested to issues:discovery with dedupe", async () => {
+  it("routes ScoreCreated to issues:discovery with dedupe", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("IssueDiscoveryRequested", {
+    const envelope = makeEnvelope("ScoreCreated", {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",

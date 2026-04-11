@@ -1,5 +1,6 @@
+import { OutboxEventWriter } from "@domain/events"
 import { type Score, ScoreRepository } from "@domain/scores"
-import { IssueId, OutboxEventWriter, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
+import { IssueId, type RepositoryError, ScoreId, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import type { Issue } from "../entities/issue.ts"
 import type { CheckEligibilityError } from "../errors.ts"
@@ -158,7 +159,7 @@ export const assignScoreToIssueUseCase = (input: AssignScoreToIssueInput) =>
 
         yield* issueRepository.save(updatedIssue)
         yield* outboxEventWriter.write({
-          eventName: "IssueRefreshRequested",
+          eventName: "ScoreAssignedToIssue",
           aggregateType: "score",
           aggregateId: score.id,
           organizationId: score.organizationId,
