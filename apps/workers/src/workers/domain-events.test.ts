@@ -215,10 +215,10 @@ describe("domain-events dispatcher", () => {
     }
   })
 
-  it("routes IssueRefreshRequested to issues:refresh with dedupe and debounce", async () => {
+  it("routes ScoreAssignedToIssue to issues:refresh with dedupe and debounce", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("IssueRefreshRequested", {
+    const envelope = makeEnvelope("ScoreAssignedToIssue", {
       organizationId: "org-1",
       projectId: "proj-1",
       issueId: "issue-42",
