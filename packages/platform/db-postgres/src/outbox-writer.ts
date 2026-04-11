@@ -1,4 +1,4 @@
-import type { EventPayloads, OutboxEventWriterShape, OutboxWriteEvent } from "@domain/events"
+import type { OutboxEventWriterShape, OutboxWriteEvent } from "@domain/events"
 import { OutboxEventWriter } from "@domain/events"
 import { generateId, SqlClient, type SqlClientShape, toRepositoryError } from "@domain/shared"
 import { Effect, Layer } from "effect"
@@ -11,7 +11,7 @@ const toOutboxInsertValues = (event: OutboxWriteEvent) => ({
   aggregateType: event.aggregateType,
   aggregateId: event.aggregateId,
   organizationId: event.organizationId,
-  payload: event.payload as EventPayloads[keyof EventPayloads],
+  payload: event.payload,
   occurredAt: event.occurredAt ?? new Date(),
 })
 
