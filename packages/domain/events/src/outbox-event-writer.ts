@@ -1,18 +1,18 @@
 import { type Effect, ServiceMap } from "effect"
-import type { EventPayloads } from "./index.ts"
+import type { EventPayloads } from "./event-payloads.ts"
 
-/** Row shape for transactional outbox inserts. */
-export interface OutboxWriteEvent {
-  readonly id?: string
-  readonly eventName: keyof EventPayloads
-  readonly aggregateType: string
-  readonly aggregateId: string
-  readonly organizationId: string
-  readonly payload: unknown
-  readonly occurredAt?: Date
-}
+export type OutboxWriteEvent = {
+  [K in keyof EventPayloads]: {
+    readonly id?: string
+    readonly eventName: K
+    readonly aggregateType: string
+    readonly aggregateId: string
+    readonly organizationId: string
+    readonly payload: EventPayloads[K]
+    readonly occurredAt?: Date
+  }
+}[keyof EventPayloads]
 
-/** Plain implementation (e.g. `createOutboxWriter` in `@platform/db-postgres`) and Effect service backing. */
 export interface OutboxEventWriterShape {
   write(event: OutboxWriteEvent): Effect.Effect<void, unknown>
 }
