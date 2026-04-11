@@ -77,6 +77,7 @@ export {
   type DiscoverIssueError,
   type DiscoverIssueInput,
   type DiscoverIssueResult,
+  type DiscoverIssueStartedWorkflow,
   discoverIssueUseCase,
 } from "./use-cases/discover-issue.ts"
 export {
@@ -103,6 +104,10 @@ export {
   type ListIssuesInput,
   listIssuesUseCase,
 } from "./use-cases/list-issues.ts"
+export {
+  type MaybeDiscoverIssueResult,
+  maybeDiscoverIssueUseCase,
+} from "./use-cases/maybe-discover-issue.ts"
 export {
   type RefreshIssueDetailsError,
   type RefreshIssueDetailsInput,

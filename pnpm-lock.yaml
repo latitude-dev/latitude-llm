@@ -365,10 +365,10 @@ importers:
         version: link:../../packages/utils
       '@tanstack/query-db-collection':
         specifier: 1.0.30
-        version: 1.0.30(@tanstack/query-core@5.90.20)(typescript@5.9.3)
+        version: 1.0.30(@tanstack/query-core@5.90.20)(typescript@5.8.3)
       '@tanstack/react-db':
         specifier: 0.1.77
-        version: 0.1.77(react@19.2.4)(typescript@5.9.3)
+        version: 0.1.77(react@19.2.4)(typescript@5.8.3)
       '@tanstack/react-form':
         specifier: ^1.28.4
         version: 1.28.6(@tanstack/react-start@1.167.16(crossws@0.4.4(srvx@0.11.15))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(webpack@5.106.0(esbuild@0.27.7)))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -557,6 +557,9 @@ importers:
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../packages/domain/annotation-queues
+      '@domain/annotations':
+        specifier: workspace:*
+        version: link:../../packages/domain/annotations
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../../packages/domain/evaluations
@@ -660,7 +663,7 @@ importers:
     dependencies:
       '@latitude-data/telemetry':
         specifier: 'catalog:'
-        version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.9.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
+        version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
       '@repo/utils':
         specifier: workspace:*
         version: link:../../utils
@@ -713,6 +716,12 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores
@@ -731,6 +740,13 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 4.3.6
+    devDependencies:
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../vitest-config
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/domain/api-keys:
     dependencies:
@@ -826,9 +842,6 @@ importers:
 
   packages/domain/events:
     dependencies:
-      '@domain/shared':
-        specifier: workspace:*
-        version: link:../shared
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -841,6 +854,9 @@ importers:
       '@domain/evaluations':
         specifier: workspace:*
         version: link:../evaluations
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
@@ -900,6 +916,9 @@ importers:
 
   packages/domain/projects:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -928,6 +947,9 @@ importers:
 
   packages/domain/scores:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1012,7 +1034,7 @@ importers:
     dependencies:
       '@latitude-data/telemetry':
         specifier: 'catalog:'
-        version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.9.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
+        version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1
@@ -1057,7 +1079,7 @@ importers:
         version: link:../../domain/ai
       '@latitude-data/telemetry':
         specifier: 'catalog:'
-        version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.9.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
+        version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
 
   packages/platform/ai-vercel:
     dependencies:
@@ -3553,10 +3575,6 @@ packages:
 
   '@noble/ciphers@2.1.1':
     resolution: {integrity: sha512-bysYuiVfhxNJuldNXlFEitTVdNnYUc+XNJZd7Qm2a5j1vZHgY+fazadNFWFaMK/2vye0JVlxV3gHmC0WDfAOQw==}
-    engines: {node: '>= 20.19.0'}
-
-  '@noble/hashes@2.0.1':
-    resolution: {integrity: sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==}
     engines: {node: '>= 20.19.0'}
 
   '@noble/hashes@2.2.0':
@@ -10961,7 +10979,7 @@ snapshots:
       '@smithy/invalid-dependency': 4.2.13
       '@smithy/middleware-content-length': 4.2.13
       '@smithy/middleware-endpoint': 4.4.29
-      '@smithy/middleware-retry': 4.5.0
+      '@smithy/middleware-retry': 4.5.1
       '@smithy/middleware-serde': 4.2.17
       '@smithy/middleware-stack': 4.2.13
       '@smithy/node-config-provider': 4.3.13
@@ -10977,7 +10995,7 @@ snapshots:
       '@smithy/util-defaults-mode-node': 4.2.49
       '@smithy/util-endpoints': 3.3.4
       '@smithy/util-middleware': 4.2.13
-      '@smithy/util-retry': 4.3.0
+      '@smithy/util-retry': 4.3.1
       '@smithy/util-stream': 4.5.22
       '@smithy/util-utf8': 4.2.2
       tslib: 2.8.1
@@ -13037,7 +13055,7 @@ snapshots:
       - ws
     optional: true
 
-  '@latitude-data/telemetry@3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.9.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)':
+  '@latitude-data/telemetry@3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.8.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)':
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/context-async-hooks': 2.6.1(@opentelemetry/api@1.9.1)
@@ -13055,7 +13073,7 @@ snapshots:
       '@traceloop/instrumentation-openai': 0.22.5
       '@traceloop/instrumentation-together': 0.22.5
       '@traceloop/instrumentation-vertexai': 0.22.5
-      typescript: 5.9.3
+      typescript: 5.8.3
     optionalDependencies:
       '@anthropic-ai/sdk': 0.82.0(zod@4.3.6)
       '@aws-sdk/client-bedrock-runtime': 3.1027.0
@@ -13217,8 +13235,6 @@ snapshots:
     optional: true
 
   '@noble/ciphers@2.1.1': {}
-
-  '@noble/hashes@2.0.1': {}
 
   '@noble/hashes@2.2.0': {}
 
@@ -14362,7 +14378,7 @@ snapshots:
 
   '@paralleldrive/cuid2@3.3.0':
     dependencies:
-      '@noble/hashes': 2.0.1
+      '@noble/hashes': 2.2.0
       bignumber.js: 9.3.1
       error-causes: 3.0.2
 
@@ -15817,18 +15833,18 @@ snapshots:
       tailwindcss: 4.2.2
       vite: 8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
-  '@tanstack/db-ivm@0.1.17(typescript@5.9.3)':
+  '@tanstack/db-ivm@0.1.17(typescript@5.8.3)':
     dependencies:
       fractional-indexing: 3.2.0
       sorted-btree: 1.8.1
-      typescript: 5.9.3
+      typescript: 5.8.3
 
-  '@tanstack/db@0.5.33(typescript@5.9.3)':
+  '@tanstack/db@0.5.33(typescript@5.8.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      '@tanstack/db-ivm': 0.1.17(typescript@5.9.3)
+      '@tanstack/db-ivm': 0.1.17(typescript@5.8.3)
       '@tanstack/pacer-lite': 0.2.1
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   '@tanstack/devtools-event-client@0.4.3': {}
 
@@ -15850,16 +15866,16 @@ snapshots:
 
   '@tanstack/query-core@5.90.20': {}
 
-  '@tanstack/query-db-collection@1.0.30(@tanstack/query-core@5.90.20)(typescript@5.9.3)':
+  '@tanstack/query-db-collection@1.0.30(@tanstack/query-core@5.90.20)(typescript@5.8.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
-      '@tanstack/db': 0.5.33(typescript@5.9.3)
+      '@tanstack/db': 0.5.33(typescript@5.8.3)
       '@tanstack/query-core': 5.90.20
-      typescript: 5.9.3
+      typescript: 5.8.3
 
-  '@tanstack/react-db@0.1.77(react@19.2.4)(typescript@5.9.3)':
+  '@tanstack/react-db@0.1.77(react@19.2.4)(typescript@5.8.3)':
     dependencies:
-      '@tanstack/db': 0.5.33(typescript@5.9.3)
+      '@tanstack/db': 0.5.33(typescript@5.8.3)
       react: 19.2.4
       use-sync-external-store: 1.6.0(react@19.2.4)
     transitivePeerDependencies:
@@ -16435,7 +16451,7 @@ snapshots:
 
   '@types/pg-pool@2.0.7':
     dependencies:
-      '@types/pg': 8.15.6
+      '@types/pg': 8.16.0
 
   '@types/pg@8.15.6':
     dependencies:
@@ -16795,7 +16811,7 @@ snapshots:
       '@better-auth/utils': 0.3.0
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
-      '@noble/hashes': 2.0.1
+      '@noble/hashes': 2.2.0
       better-call: 1.1.8(zod@4.3.6)
       defu: 6.1.7
       jose: 6.2.2
@@ -16826,7 +16842,7 @@ snapshots:
       '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
-      '@noble/hashes': 2.0.1
+      '@noble/hashes': 2.2.0
       better-call: 1.3.2(zod@4.3.6)
       defu: 6.1.7
       jose: 6.2.2
@@ -16859,7 +16875,7 @@ snapshots:
       '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       '@noble/ciphers': 2.1.1
-      '@noble/hashes': 2.0.1
+      '@noble/hashes': 2.2.0
       better-call: 1.3.2(zod@4.3.6)
       defu: 6.1.7
       jose: 6.2.2
@@ -16883,7 +16899,7 @@ snapshots:
 
   better-call@1.1.8(zod@4.3.6):
     dependencies:
-      '@better-auth/utils': 0.3.0
+      '@better-auth/utils': 0.3.1
       '@better-fetch/fetch': 1.1.21
       rou3: 0.7.12
       set-cookie-parser: 2.7.2

@@ -1,15 +1,12 @@
-import type { AIError } from "@domain/ai"
 import { EvaluationRepository } from "@domain/evaluations"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreRepository, syncScoreAnalyticsUseCase } from "@domain/scores"
 import { IssueId, type RepositoryError, ScoreId } from "@domain/shared"
 import { Effect } from "effect"
-import type { CheckEligibilityError, IssueNotFoundForAssignmentError } from "../errors.ts"
+import type { CheckEligibilityError } from "../errors.ts"
 import { ScoreAlreadyOwnedByIssueError } from "../errors.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
-import { type AssignScoreToIssueResult, assignScoreToIssueUseCase } from "./assign-score-to-issue.ts"
 import { checkEligibilityUseCase } from "./check-eligibility.ts"
-import { embedScoreFeedbackUseCase } from "./embed-score-feedback.ts"
 import { syncIssueProjectionsUseCase } from "./sync-projections.ts"
 
 export interface DiscoverIssueInput {
@@ -21,6 +18,8 @@ export interface DiscoverIssueInput {
 
 type DiscoverIssueSkipReason = CheckEligibilityError["_tag"]
 
+export type DiscoverIssueStartedWorkflow = "issueDiscoveryWorkflow" | "assignScoreToKnownIssueWorkflow"
+
 export type DiscoverIssueResult =
   | {
       readonly action: "skipped"
@@ -30,20 +29,13 @@ export type DiscoverIssueResult =
       readonly action: "already-assigned"
       readonly issueId: string
     }
-  | ({
-      readonly action: Exclude<AssignScoreToIssueResult["action"], "already-assigned">
-    } & Pick<AssignScoreToIssueResult, "issueId">)
   | {
       readonly action: "workflow-started"
+      readonly workflow: DiscoverIssueStartedWorkflow
       readonly scoreId: string
     }
 
-export type DiscoverIssueError =
-  | RepositoryError
-  | AIError
-  | CheckEligibilityError
-  | IssueNotFoundForAssignmentError
-  | ScoreAlreadyOwnedByIssueError
+export type DiscoverIssueError = RepositoryError | ScoreAlreadyOwnedByIssueError
 
 const resolveKnownIssueId = ({ issueId, projectId }: { readonly issueId: string; readonly projectId: string }) =>
   Effect.gen(function* () {
@@ -90,6 +82,24 @@ const startDiscoveryWorkflow = (workflowStarter: WorkflowStarterShape, input: Di
     },
     {
       workflowId: `issues:discovery:${input.scoreId}`,
+    },
+  )
+
+const startAssignScoreToKnownIssueWorkflow = (
+  workflowStarter: WorkflowStarterShape,
+  input: DiscoverIssueInput,
+  issueId: string,
+) =>
+  workflowStarter.start(
+    "assignScoreToKnownIssueWorkflow",
+    {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      scoreId: input.scoreId,
+      issueId,
+    },
+    {
+      workflowId: `issues:assign-known:${input.scoreId}`,
     },
   )
 
@@ -176,27 +186,15 @@ export const discoverIssueUseCase = (input: DiscoverIssueInput) =>
       yield* startDiscoveryWorkflow(workflowStarter, input)
       return {
         action: "workflow-started",
+        workflow: "issueDiscoveryWorkflow",
         scoreId: score.id,
       } satisfies DiscoverIssueResult
     }
 
-    const embeddedScore = yield* embedScoreFeedbackUseCase(input)
-    const assignment = yield* assignScoreToIssueUseCase({
-      organizationId: input.organizationId,
-      projectId: input.projectId,
-      scoreId: input.scoreId,
-      issueId: selectedIssueId,
-      normalizedEmbedding: embeddedScore.normalizedEmbedding,
-    })
-
-    yield* syncIssueProjectionsUseCase({
-      organizationId: input.organizationId,
-      issueId: assignment.issueId,
-    })
-    yield* syncScoreAnalyticsUseCase({
-      organizationId: input.organizationId,
-      scoreId: input.scoreId,
-    })
-
-    return assignment satisfies DiscoverIssueResult
+    yield* startAssignScoreToKnownIssueWorkflow(workflowStarter, input, selectedIssueId)
+    return {
+      action: "workflow-started",
+      workflow: "assignScoreToKnownIssueWorkflow",
+      scoreId: score.id,
+    } satisfies DiscoverIssueResult
   })

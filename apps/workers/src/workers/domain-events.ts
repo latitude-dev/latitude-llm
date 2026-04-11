@@ -74,12 +74,12 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    IssueDiscoveryRequested: (event) =>
+    ScoreCreated: (event) =>
       pub.publish("issues", "discovery", event.payload, {
         dedupeKey: `issues:discovery:${event.payload.scoreId}`,
       }),
 
-    IssueRefreshRequested: (event) =>
+    ScoreAssignedToIssue: (event) =>
       pub.publish("issues", "refresh", event.payload, {
         dedupeKey: `issues:refresh:${event.payload.issueId}`,
         debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,

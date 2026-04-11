@@ -6,19 +6,11 @@ import {
   type EvaluationRepositoryShape,
   emptyEvaluationAlignment,
 } from "@domain/evaluations"
+import { OutboxEventWriter } from "@domain/events"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { type Score, ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
-import {
-  EvaluationId,
-  IssueId,
-  NotFoundError,
-  OrganizationId,
-  OutboxEventWriter,
-  ProjectId,
-  ScoreId,
-  SqlClient,
-} from "@domain/shared"
+import { EvaluationId, IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId, SqlClient } from "@domain/shared"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
@@ -183,23 +175,30 @@ describe("discoverIssueUseCase", () => {
     )
 
     expect(result).toEqual({
-      action: "assigned-existing",
-      issueId: existingIssue.id,
+      action: "workflow-started",
+      workflow: "assignScoreToKnownIssueWorkflow",
+      scoreId: score.id,
     })
-    expect(scores.get(score.id)?.issueId).toBe(existingIssue.id)
-    expect(issues.get(existingIssue.id)?.centroid.mass).toBeGreaterThan(0)
-    expect(inserted).toEqual([score.id])
-    expect(store.size).toBe(1)
-    expect(startedWorkflows).toHaveLength(0)
-    expect(writtenEvents).toEqual([
-      expect.objectContaining({
-        eventName: "IssueRefreshRequested",
-        payload: expect.objectContaining({
+    expect(scores.get(score.id)?.issueId).toBeNull()
+    expect(issues.get(existingIssue.id)?.centroid.mass).toBe(0)
+    expect(inserted).toHaveLength(0)
+    expect(store.size).toBe(0)
+    expect(fakeAi.calls.embed).toHaveLength(0)
+    expect(startedWorkflows).toEqual([
+      {
+        workflow: "assignScoreToKnownIssueWorkflow",
+        input: {
+          organizationId,
           projectId,
+          scoreId: score.id,
           issueId: existingIssue.id,
-        }),
-      }),
+        },
+        options: {
+          workflowId: `issues:assign-known:${score.id}`,
+        },
+      },
     ])
+    expect(writtenEvents).toHaveLength(0)
   })
 
   it("uses the linked evaluation issue before starting the full workflow", async () => {
@@ -252,12 +251,27 @@ describe("discoverIssueUseCase", () => {
     )
 
     expect(result).toEqual({
-      action: "assigned-existing",
-      issueId: existingIssue.id,
+      action: "workflow-started",
+      workflow: "assignScoreToKnownIssueWorkflow",
+      scoreId: ScoreId("tttttttttttttttttttttttt"),
     })
-    expect(inserted).toEqual([ScoreId("tttttttttttttttttttttttt")])
-    expect(store.size).toBe(1)
-    expect(startedWorkflows).toHaveLength(0)
+    expect(inserted).toHaveLength(0)
+    expect(store.size).toBe(0)
+    expect(fakeAi.calls.embed).toHaveLength(0)
+    expect(startedWorkflows).toEqual([
+      {
+        workflow: "assignScoreToKnownIssueWorkflow",
+        input: {
+          organizationId,
+          projectId,
+          scoreId: ScoreId("tttttttttttttttttttttttt"),
+          issueId: existingIssue.id,
+        },
+        options: {
+          workflowId: "issues:assign-known:tttttttttttttttttttttttt",
+        },
+      },
+    ])
   })
 
   it("starts the discovery workflow when no selected or linked issue is available", async () => {
@@ -296,6 +310,7 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
+      workflow: "issueDiscoveryWorkflow",
       scoreId: score.id,
     })
     expect(inserted).toHaveLength(0)
@@ -355,6 +370,7 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
+      workflow: "issueDiscoveryWorkflow",
       scoreId: score.id,
     })
     expect(scores.get(score.id)?.issueId).toBeNull()
@@ -420,6 +436,7 @@ describe("discoverIssueUseCase", () => {
 
     expect(result).toEqual({
       action: "workflow-started",
+      workflow: "issueDiscoveryWorkflow",
       scoreId: score.id,
     })
     expect(scores.get(score.id)?.issueId).toBeNull()

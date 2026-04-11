@@ -1,6 +1,6 @@
+import { OutboxEventWriter } from "@domain/events"
 import {
   type ConflictError,
-  OutboxEventWriter,
   type ProjectId,
   type RepositoryError,
   SqlClient,

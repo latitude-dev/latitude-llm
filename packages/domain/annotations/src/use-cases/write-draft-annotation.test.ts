@@ -1,10 +1,10 @@
+import { OutboxEventWriter } from "@domain/events"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
   NotFoundError,
   OrganizationId,
-  OutboxEventWriter,
   ProjectId,
   SessionId,
   SimulationId,
@@ -19,7 +19,7 @@ import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } fro
 import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
-import { persistDraftAnnotation } from "./persist-draft-annotation.ts"
+import { writeDraftAnnotation } from "./write-draft-annotation.ts"
 
 const cuid = "a".repeat(24)
 const projectCuid = "b".repeat(24)
@@ -134,7 +134,7 @@ describe("persistDraftAnnotation", () => {
     const { store, events, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -156,14 +156,23 @@ describe("persistDraftAnnotation", () => {
     expect(score.sessionId).toBe(SessionId("session"))
     expect(score.spanId).toBe(defaultResolvedSpanId)
 
-    expect(events.length).toBe(0)
+    expect(events).toEqual([
+      expect.objectContaining({
+        eventName: "ScoreCreated",
+        payload: expect.objectContaining({
+          organizationId: cuid,
+          projectId: projectCuid,
+          scoreId: score.id,
+        }),
+      }),
+    ])
   })
 
   it("resolves trace context when not provided", async () => {
     const { layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -186,7 +195,7 @@ describe("persistDraftAnnotation", () => {
     const providedSpanId = SpanId("p".repeat(16))
 
     const score = await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -213,7 +222,7 @@ describe("persistDraftAnnotation", () => {
     const { layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
 
     const score = await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -235,11 +244,11 @@ describe("persistDraftAnnotation", () => {
     expect(score.metadata.rawFeedback).toBe("Issue with refund policy")
   })
 
-  it("does not write any outbox events", async () => {
+  it("writes ScoreCreated for draft persistence (discovery worker noops while drafted)", async () => {
     const { events, layer } = createTestLayers()
 
     await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -250,14 +259,23 @@ describe("persistDraftAnnotation", () => {
       }).pipe(Effect.provide(layer)),
     )
 
-    expect(events.length).toBe(0)
+    expect(events).toEqual([
+      expect.objectContaining({
+        eventName: "ScoreCreated",
+        payload: expect.objectContaining({
+          organizationId: cuid,
+          projectId: projectCuid,
+          issueId: null,
+        }),
+      }),
+    ])
   })
 
   it("updates existing draft when id is provided", async () => {
     const { store, events, layer } = createTestLayers()
 
     const first = await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -269,7 +287,7 @@ describe("persistDraftAnnotation", () => {
     )
 
     const updated = await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         id: first.id,
         projectId: projectCuid,
         sourceId: queueId,
@@ -285,14 +303,14 @@ describe("persistDraftAnnotation", () => {
     expect(updated.feedback).toBe("Updated AI feedback")
     expect(updated.metadata.rawFeedback).toBe("Updated AI feedback")
     expect(store.size).toBe(1)
-    expect(events.length).toBe(0)
+    expect(events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreCreated")).toHaveLength(2)
   })
 
   it("supports queue-backed drafts with source=annotation and queue sourceId", async () => {
     const { store, events, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      persistDraftAnnotation({
+      writeDraftAnnotation({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -307,6 +325,6 @@ describe("persistDraftAnnotation", () => {
     expect(score.sourceId).toBe(queueId)
     expect(score.draftedAt).not.toBeNull()
     expect(store.size).toBe(1)
-    expect(events.length).toBe(0)
+    expect(events.filter((e: unknown) => (e as { eventName: string }).eventName === "ScoreCreated")).toHaveLength(1)
   })
 })
