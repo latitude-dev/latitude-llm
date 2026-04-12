@@ -69,10 +69,14 @@ export interface AnnotationQueueRepositoryShape {
    */
   insertIfNotExists(queue: AnnotationQueue): Effect.Effect<boolean, RepositoryError>
   /**
-   * Atomically increment the totalItems counter for a queue by 1.
+   * Atomically increment the totalItems counter for a queue by the given delta (defaults to 1).
    * Returns the updated queue.
    */
-  incrementTotalItems(input: { projectId: ProjectId; queueId: string }): Effect.Effect<AnnotationQueue, RepositoryError>
+  incrementTotalItems(input: {
+    projectId: ProjectId
+    queueId: string
+    delta?: number
+  }): Effect.Effect<AnnotationQueue, RepositoryError>
 }
 
 export class AnnotationQueueRepository extends ServiceMap.Service<

@@ -11,6 +11,7 @@ export const annotationQueueItemSchema = z.object({
   projectId: cuidSchema,
   queueId: annotationQueueIdSchema,
   traceId: traceIdSchema,
+  traceCreatedAt: z.date(),
   completedAt: z.date().nullable(),
   completedBy: cuidSchema.nullable(),
   reviewStartedAt: z.date().nullable(),

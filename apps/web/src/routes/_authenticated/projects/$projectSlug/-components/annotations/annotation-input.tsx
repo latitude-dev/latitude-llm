@@ -1,6 +1,6 @@
 import { Button, cn, Icon, Select, type SelectOption, Textarea } from "@repo/ui"
 import { ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { useIssuesCollection } from "../../../../../../domains/issues/issues.collection.ts"
 
 interface AnnotationInputProps {
@@ -13,6 +13,40 @@ interface AnnotationInputProps {
   readonly onSave: (data: { passed: boolean; comment: string; issueId: string | null }) => void
   readonly onCancel?: (() => void) | undefined
 }
+
+const IssueSelector = memo(function IssueSelector({
+  projectId,
+  value,
+  onChange,
+}: {
+  readonly projectId: string
+  readonly value: string | null
+  readonly onChange: (id: string | null) => void
+}) {
+  const { data: issues = [], isLoading: isIssuesLoading } = useIssuesCollection(projectId)
+
+  const issueOptions: SelectOption<string>[] = issues.map((issue) => ({
+    label: issue.name,
+    value: issue.id,
+  }))
+
+  return (
+    <Select<string>
+      name="issue"
+      placeholder="Issue"
+      options={issueOptions}
+      value={value ?? undefined}
+      loading={isIssuesLoading && issues.length === 0}
+      searchable
+      searchPlaceholder="Search issues…"
+      searchableEmptyMessage="No issues found"
+      removable
+      onChange={(id) => onChange(id ?? null)}
+      side="top"
+      size="small"
+    />
+  )
+})
 
 export function AnnotationInput({
   projectId,
@@ -27,13 +61,6 @@ export function AnnotationInput({
   const [passed, setPassed] = useState<boolean | null>(initialPassed)
   const [comment, setComment] = useState(initialComment)
   const [issueId, setIssueId] = useState<string | null>(initialIssueId)
-
-  const { data: issues = [], isLoading: isIssuesLoading } = useIssuesCollection(projectId)
-
-  const issueOptions: SelectOption<string>[] = issues.map((issue) => ({
-    label: issue.name,
-    value: issue.id,
-  }))
 
   function handleSave() {
     if (passed === null || isLoading) return
@@ -81,20 +108,7 @@ export function AnnotationInput({
         <div className="flex items-center gap-1 min-w-0">
           {passed === false && (
             <div className="min-w-0 max-w-40">
-              <Select<string>
-                name="issue"
-                placeholder="Issue"
-                options={issueOptions}
-                value={issueId ?? undefined}
-                loading={passed === false && isIssuesLoading && issues.length === 0}
-                searchable
-                searchPlaceholder="Search issues…"
-                searchableEmptyMessage="No issues found"
-                removable
-                onChange={(id) => setIssueId(id ?? null)}
-                side="top"
-                size="small"
-              />
+              <IssueSelector projectId={projectId} value={issueId} onChange={setIssueId} />
             </div>
           )}
           {cancellable && onCancel && (

@@ -1,3 +1,4 @@
+import { isManualQueue, isSystemQueue } from "@domain/annotation-queues"
 import type { InfiniteTableInfiniteScroll, InfiniteTableSorting } from "@repo/ui"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
@@ -84,4 +85,32 @@ export function useAnnotationQueue({
     queryFn: () => getAnnotationQueueByProject({ data: { projectId, queueId } }),
     enabled: enabled && projectId.length > 0 && queueId.length > 0,
   })
+}
+
+export function useAnnotationQueuesList(projectId: string) {
+  const { data: paginatedData, isLoading } = useInfiniteQuery({
+    queryKey: ["annotation-queues-list", projectId],
+    queryFn: async ({ pageParam }) => {
+      const result = await listAnnotationQueuesByProject({
+        data: {
+          projectId,
+          limit: 100,
+          cursor: pageParam,
+          sortBy: "name",
+          sortDirection: "asc",
+        },
+      })
+      return result ?? { queues: [], hasMore: false }
+    },
+    initialPageParam: undefined as { sortValue: string; id: string } | undefined,
+    getNextPageParam: (lastPage) => lastPage?.nextCursor,
+    enabled: projectId.length > 0,
+  })
+
+  const data = useMemo(() => {
+    const allQueues = paginatedData?.pages.flatMap((p) => p?.queues ?? []) ?? []
+    return allQueues.filter((q) => !isSystemQueue(q) && isManualQueue(q.settings))
+  }, [paginatedData])
+
+  return { data, isLoading }
 }

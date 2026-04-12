@@ -53,7 +53,7 @@ export function AnnotationPopover({
         />
       </PopoverAnchor>
 
-      <AnnotationPopoverWrapper data-selection-popover sideOffset={8} onOpenAutoFocus={(e) => e.preventDefault()}>
+      <AnnotationPopoverWrapper data-selection-popover sideOffset={8}>
         <AnnotationPopoverContent
           projectId={projectId}
           annotations={annotations}

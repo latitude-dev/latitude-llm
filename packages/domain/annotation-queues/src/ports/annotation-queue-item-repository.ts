@@ -44,6 +44,13 @@ export interface InsertAnnotationQueueItemInput {
   readonly projectId: ProjectId
   readonly queueId: string
   readonly traceId: TraceId
+  readonly traceCreatedAt: Date
+}
+
+export interface BulkInsertAnnotationQueueItemInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly items: ReadonlyArray<{ readonly traceId: TraceId; readonly traceCreatedAt: Date }>
 }
 
 export interface AnnotationQueueItemRepositoryShape {
@@ -55,6 +62,14 @@ export interface AnnotationQueueItemRepositoryShape {
    * This is idempotent and safe for concurrent use.
    */
   insertIfNotExists(input: InsertAnnotationQueueItemInput): Effect.Effect<boolean, RepositoryError>
+  /**
+   * Bulk insert queue items using INSERT ... ON CONFLICT DO NOTHING.
+   * Returns the count of actually inserted rows.
+   * This is idempotent and safe for concurrent use.
+   */
+  bulkInsertIfNotExists(
+    input: BulkInsertAnnotationQueueItemInput,
+  ): Effect.Effect<{ insertedCount: number }, RepositoryError>
 }
 
 export class AnnotationQueueItemRepository extends ServiceMap.Service<

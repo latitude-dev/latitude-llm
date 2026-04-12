@@ -28,6 +28,7 @@ const toDomainItem = (row: typeof annotationQueueItems.$inferSelect): Annotation
     projectId: row.projectId,
     queueId: row.queueId,
     traceId: TraceId(row.traceId),
+    traceCreatedAt: row.traceCreatedAt,
     completedAt: row.completedAt,
     completedBy: row.completedBy,
     reviewStartedAt: row.reviewStartedAt,
@@ -43,20 +44,20 @@ const resolveSort = (
   sortDirection: sortDirection ?? "asc",
 })
 
-const cursorWhereCreatedAt = (sortDirection: "asc" | "desc", cursor: { sortValue: string; id: string }) => {
-  const createdAt = new Date(cursor.sortValue)
-  if (Number.isNaN(createdAt.getTime())) {
+const cursorWhereTraceCreatedAt = (sortDirection: "asc" | "desc", cursor: { sortValue: string; id: string }) => {
+  const traceCreatedAt = new Date(cursor.sortValue)
+  if (Number.isNaN(traceCreatedAt.getTime())) {
     return null
   }
   if (sortDirection === "desc") {
     return or(
-      lt(annotationQueueItems.createdAt, createdAt),
-      and(eq(annotationQueueItems.createdAt, createdAt), lt(annotationQueueItems.id, cursor.id)),
+      lt(annotationQueueItems.traceCreatedAt, traceCreatedAt),
+      and(eq(annotationQueueItems.traceCreatedAt, traceCreatedAt), lt(annotationQueueItems.id, cursor.id)),
     )
   }
   return or(
-    gt(annotationQueueItems.createdAt, createdAt),
-    and(eq(annotationQueueItems.createdAt, createdAt), gt(annotationQueueItems.id, cursor.id)),
+    gt(annotationQueueItems.traceCreatedAt, traceCreatedAt),
+    and(eq(annotationQueueItems.traceCreatedAt, traceCreatedAt), gt(annotationQueueItems.id, cursor.id)),
   )
 }
 
@@ -68,22 +69,30 @@ const cursorWhereStatus = (
   if (cr < 0 || cr > 2) {
     return null
   }
-  const createdAt = new Date(cursor.sortValue)
-  if (Number.isNaN(createdAt.getTime())) {
+  const traceCreatedAt = new Date(cursor.sortValue)
+  if (Number.isNaN(traceCreatedAt.getTime())) {
     return null
   }
 
   if (sortDirection === "asc") {
     return or(
       gt(statusRankSql, cr),
-      and(eq(statusRankSql, cr), lt(annotationQueueItems.createdAt, createdAt)),
-      and(eq(statusRankSql, cr), eq(annotationQueueItems.createdAt, createdAt), lt(annotationQueueItems.id, cursor.id)),
+      and(eq(statusRankSql, cr), lt(annotationQueueItems.traceCreatedAt, traceCreatedAt)),
+      and(
+        eq(statusRankSql, cr),
+        eq(annotationQueueItems.traceCreatedAt, traceCreatedAt),
+        lt(annotationQueueItems.id, cursor.id),
+      ),
     )
   }
   return or(
     lt(statusRankSql, cr),
-    and(eq(statusRankSql, cr), lt(annotationQueueItems.createdAt, createdAt)),
-    and(eq(statusRankSql, cr), eq(annotationQueueItems.createdAt, createdAt), lt(annotationQueueItems.id, cursor.id)),
+    and(eq(statusRankSql, cr), lt(annotationQueueItems.traceCreatedAt, traceCreatedAt)),
+    and(
+      eq(statusRankSql, cr),
+      eq(annotationQueueItems.traceCreatedAt, traceCreatedAt),
+      lt(annotationQueueItems.id, cursor.id),
+    ),
   )
 }
 
@@ -91,16 +100,16 @@ const orderClause = (sortBy: AnnotationQueueItemListSortBy, sortDirection: "asc"
   if (sortBy === "createdAt") {
     const primary = sortDirection === "desc" ? desc : asc
     const idOrd = sortDirection === "desc" ? desc(annotationQueueItems.id) : asc(annotationQueueItems.id)
-    return [primary(annotationQueueItems.createdAt), idOrd] as const
+    return [primary(annotationQueueItems.traceCreatedAt), idOrd] as const
   }
 
   const rankOrd = sortDirection === "asc" ? asc(statusRankSql) : desc(statusRankSql)
-  return [rankOrd, desc(annotationQueueItems.createdAt), desc(annotationQueueItems.id)] as const
+  return [rankOrd, desc(annotationQueueItems.traceCreatedAt), desc(annotationQueueItems.id)] as const
 }
 
 const tailToCursor = (sortBy: AnnotationQueueItemListSortBy, tail: typeof annotationQueueItems.$inferSelect) => {
   const base = {
-    sortValue: tail.createdAt.toISOString(),
+    sortValue: tail.traceCreatedAt.toISOString(),
     id: tail.id,
   } as const
   if (sortBy === "status") {
@@ -118,7 +127,7 @@ const cursorWhere = (
   cursor: { sortValue: string; id: string; statusRank?: number },
 ) => {
   if (sortBy === "createdAt") {
-    return cursorWhereCreatedAt(sortDirection, cursor)
+    return cursorWhereTraceCreatedAt(sortDirection, cursor)
   }
   if (cursor.statusRank === undefined) {
     return null
@@ -202,7 +211,7 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
           )
       },
 
-      insertIfNotExists: ({ projectId, queueId, traceId }) =>
+      insertIfNotExists: ({ projectId, queueId, traceId, traceCreatedAt }) =>
         sqlClient
           .query((db, organizationId) =>
             db
@@ -213,6 +222,7 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
                 projectId,
                 queueId,
                 traceId,
+                traceCreatedAt,
                 completedAt: null,
                 completedBy: null,
                 reviewStartedAt: null,
@@ -231,6 +241,42 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
             Effect.map((result) => result.length > 0),
             Effect.mapError((cause) => new RepositoryError({ operation: "insertIfNotExists", cause })),
           ),
+
+      bulkInsertIfNotExists: ({ projectId, queueId, items }) =>
+        Effect.gen(function* () {
+          if (items.length === 0) {
+            return { insertedCount: 0 }
+          }
+
+          const result = yield* sqlClient.query((db, organizationId) =>
+            db
+              .insert(annotationQueueItems)
+              .values(
+                items.map((item) => ({
+                  id: createId(),
+                  organizationId,
+                  projectId,
+                  queueId,
+                  traceId: item.traceId,
+                  traceCreatedAt: item.traceCreatedAt,
+                  completedAt: null,
+                  completedBy: null,
+                  reviewStartedAt: null,
+                })),
+              )
+              .onConflictDoNothing({
+                target: [
+                  annotationQueueItems.organizationId,
+                  annotationQueueItems.projectId,
+                  annotationQueueItems.queueId,
+                  annotationQueueItems.traceId,
+                ],
+              })
+              .returning({ id: annotationQueueItems.id }),
+          )
+
+          return { insertedCount: result.length }
+        }).pipe(Effect.mapError((cause) => new RepositoryError({ operation: "bulkInsertIfNotExists", cause }))),
     } satisfies AnnotationQueueItemRepositoryShape
   }),
 )

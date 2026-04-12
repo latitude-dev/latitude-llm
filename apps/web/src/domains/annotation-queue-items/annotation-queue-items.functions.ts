@@ -3,11 +3,14 @@ import {
   type AnnotationQueueItemListOptions,
   type AnnotationQueueItemListSortBy,
   AnnotationQueueItemRepository,
+  addTracesToQueue,
+  createQueueFromTraces,
+  type TraceSelection,
 } from "@domain/annotation-queues"
-import { OrganizationId, ProjectId, TraceId } from "@domain/shared"
+import { AnnotationQueueId, filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { ChSqlClientLive, TraceRepositoryLive } from "@platform/db-clickhouse"
-import { AnnotationQueueItemRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive, SqlClientLive } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
@@ -34,6 +37,7 @@ const toItemRecord = (row: {
   projectId: string
   queueId: string
   traceId: string
+  traceCreatedAt: Date
   completedAt: Date | null
   completedBy: string | null
   reviewStartedAt: Date | null
@@ -45,6 +49,7 @@ const toItemRecord = (row: {
   projectId: row.projectId,
   queueId: row.queueId,
   traceId: row.traceId,
+  traceCreatedAt: row.traceCreatedAt.toISOString(),
   completedAt: row.completedAt ? row.completedAt.toISOString() : null,
   completedBy: row.completedBy,
   reviewStartedAt: row.reviewStartedAt ? row.reviewStartedAt.toISOString() : null,
@@ -147,6 +152,64 @@ export const listAnnotationQueueItemsByQueue = createServerFn({ method: "GET" })
     )
 
     return page
+  })
+
+const bulkSelectionSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("selected"), rowIds: z.array(z.string()).min(1) }),
+  z.object({ mode: z.literal("all"), filters: filterSetSchema.optional() }),
+  z.object({ mode: z.literal("allExcept"), rowIds: z.array(z.string()), filters: filterSetSchema.optional() }),
+])
+
+function toTraceSelection(sel: z.infer<typeof bulkSelectionSchema>): TraceSelection {
+  if (sel.mode === "all") {
+    return { mode: "all", ...(sel.filters ? { filters: sel.filters } : {}) }
+  }
+  if (sel.mode === "allExcept") {
+    return { mode: sel.mode, traceIds: sel.rowIds.map(TraceId), ...(sel.filters ? { filters: sel.filters } : {}) }
+  }
+  return { mode: sel.mode, traceIds: sel.rowIds.map(TraceId) }
+}
+
+export const addTracesToQueueFunction = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string().optional(),
+      newQueueName: z.string().optional(),
+      selection: bulkSelectionSchema,
+    }),
+  )
+  .handler(async ({ data }): Promise<{ queueId: string; insertedCount: number }> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+    const ch = getClickhouseClient()
+
+    const layer = Layer.mergeAll(
+      AnnotationQueueItemRepositoryLive,
+      AnnotationQueueRepositoryLive,
+      TraceRepositoryLive,
+    ).pipe(Layer.provideMerge(SqlClientLive(pg, orgId)), Layer.provideMerge(ChSqlClientLive(ch, orgId)))
+
+    const selection = toTraceSelection(data.selection)
+
+    if (data.queueId) {
+      const queueId = AnnotationQueueId(data.queueId)
+      const result = await Effect.runPromise(
+        addTracesToQueue({ projectId, queueId, selection }).pipe(Effect.provide(layer)),
+      )
+      return { queueId: data.queueId, insertedCount: result.insertedCount }
+    }
+
+    if (data.newQueueName) {
+      const result = await Effect.runPromise(
+        createQueueFromTraces({ projectId, name: data.newQueueName, selection }).pipe(Effect.provide(layer)),
+      )
+      return { queueId: result.queueId as string, insertedCount: result.insertedCount }
+    }
+
+    throw new Error("Either queueId or newQueueName must be provided")
   })
 
 export const getAnnotationQueueItemDetail = createServerFn({ method: "GET" })

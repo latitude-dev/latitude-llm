@@ -41,6 +41,7 @@ export const annotationQueueItems = latitudeSchema.table(
     projectId: cuid("project_id").notNull(), // owning project
     queueId: cuid("queue_id").notNull(),
     traceId: varchar("trace_id", { length: 32 }).notNull(), // ClickHouse trace id of the queued trace
+    traceCreatedAt: tzTimestamp("trace_created_at").notNull(), // the trace's startTime from ClickHouse
     completedAt: tzTimestamp("completed_at"), // set when a reviewer marks the queue item as fully annotated
     /** User who marked the item complete (nullable until completed). */
     completedBy: cuid("completed_by"),
@@ -55,7 +56,7 @@ export const annotationQueueItems = latitudeSchema.table(
       t.projectId,
       t.queueId,
       t.completedAt,
-      t.createdAt,
+      t.traceCreatedAt,
       t.traceId,
     ),
     unique("annotation_queue_items_unique_trace_per_queue_idx").on(t.organizationId, t.projectId, t.queueId, t.traceId),
