@@ -77,6 +77,8 @@ export interface ScoreAnalyticsOptions {
 
 export interface ScoreAnalyticsRepositoryShape {
   existsById(id: ScoreId): Effect.Effect<boolean, RepositoryError>
+  // TODO(repositories): rename insert -> save to keep repository write verbs
+  // consistent across append-only and upsert-backed stores.
   insert(score: Score): Effect.Effect<void, RepositoryError>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError>
 
