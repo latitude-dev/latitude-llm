@@ -11,12 +11,22 @@ import {
   emptyEvaluationAlignment,
   evaluationSchema,
 } from "../../entities/evaluation.ts"
-import { shouldSampleLiveEvaluation } from "../../helpers.ts"
+import {
+  buildLiveEvaluationExecuteScopeDedupeKey,
+  buildLiveEvaluationExecuteTraceDedupeKey,
+  shouldSampleLiveEvaluation,
+  toLiveEvaluationDebounceMs,
+} from "../../helpers.ts"
 import {
   type EvaluationListPage,
   EvaluationRepository,
   type EvaluationRepositoryShape,
 } from "../../ports/evaluation-repository.ts"
+import {
+  LiveEvaluationQueuePublisher,
+  type LiveEvaluationQueuePublisherShape,
+  type PublishLiveEvaluationExecuteInput,
+} from "../../ports/live-evaluation-queue-publisher.ts"
 import { enqueueLiveEvaluationsUseCase } from "./enqueue-live-evaluations.ts"
 
 const INPUT = {
@@ -65,6 +75,7 @@ function makeTraceDetail(): TraceDetail {
 function makeEvaluation(
   id: string,
   options?: {
+    readonly debounce?: number
     readonly filter?: Evaluation["trigger"]["filter"]
     readonly sampling?: number
     readonly turn?: Evaluation["trigger"]["turn"]
@@ -82,6 +93,7 @@ function makeEvaluation(
     script: "export default async function evaluate() { return { score: 1 } }",
     trigger: {
       ...trigger,
+      ...(options?.debounce !== undefined ? { debounce: options.debounce } : {}),
       ...(options?.filter !== undefined ? { filter: options.filter } : {}),
       ...(options?.sampling !== undefined ? { sampling: options.sampling } : {}),
       ...(options?.turn !== undefined ? { turn: options.turn } : {}),
@@ -110,15 +122,34 @@ function createEvaluationRepository(
   }
 }
 
-function createRepositoriesLayer(input: {
+function createLiveEvaluationQueuePublisher(overrides?: Partial<LiveEvaluationQueuePublisherShape>) {
+  const published: PublishLiveEvaluationExecuteInput[] = []
+
+  const queuePublisher: LiveEvaluationQueuePublisherShape = {
+    publishExecute: (input) => {
+      published.push(input)
+      return Effect.void
+    },
+    ...overrides,
+  }
+
+  return { queuePublisher, published }
+}
+
+function createUseCaseLayer(input: {
   readonly traceRepository: ReturnType<typeof createFakeTraceRepository>["repository"]
   readonly evaluationRepository: EvaluationRepositoryShape
   readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"]
+  readonly liveEvaluationQueuePublisher?: LiveEvaluationQueuePublisherShape
 }) {
   return Layer.mergeAll(
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
     Layer.succeed(ScoreRepository, input.scoreRepository ?? createFakeScoreRepository().repository),
+    Layer.succeed(
+      LiveEvaluationQueuePublisher,
+      input.liveEvaluationQueuePublisher ?? createLiveEvaluationQueuePublisher().queuePublisher,
+    ),
   )
 }
 
@@ -155,14 +186,16 @@ describe("enqueueLiveEvaluationsUseCase", () => {
       Effect.die("Active evaluations should not be listed when the trace is missing"),
     )
     const { repository: scoreRepository } = createFakeScoreRepository()
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
 
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          createRepositoriesLayer({
+          createUseCaseLayer({
             traceRepository,
             evaluationRepository,
             scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
           }),
         ),
       ),
@@ -173,6 +206,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
       reason: "trace-not-found",
       traceId: INPUT.traceId,
     })
+    expect(published).toEqual([])
   })
 
   it("loads the trace and paginates active evaluations", async () => {
@@ -192,6 +226,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
       },
     })
     const { repository: scoreRepository } = createFakeScoreRepository()
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
 
     const recordedCalls: Array<{
       readonly projectId: string
@@ -240,10 +275,11 @@ describe("enqueueLiveEvaluationsUseCase", () => {
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          createRepositoriesLayer({
+          createUseCaseLayer({
             traceRepository,
             evaluationRepository,
             scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
           }),
         ),
       ),
@@ -269,6 +305,32 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         filterIds: ["e".repeat(24), "f".repeat(24)],
       },
     ])
+    expect(published).toEqual([
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId: "e".repeat(24),
+        traceId: INPUT.traceId,
+        dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId: "e".repeat(24),
+          traceId: INPUT.traceId,
+        }),
+      },
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId: "f".repeat(24),
+        traceId: INPUT.traceId,
+        dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId: "f".repeat(24),
+          traceId: INPUT.traceId,
+        }),
+      },
+    ])
     expect(result).toEqual({
       action: "completed",
       summary: {
@@ -279,7 +341,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         skippedPausedCount: 0,
         skippedSamplingCount: 0,
         skippedTurnCount: 0,
-        publishedExecuteCount: 0,
+        publishedExecuteCount: 2,
       },
     })
   })
@@ -291,6 +353,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         Effect.succeed(filterSets.map((filterSet) => filterSet.filterId)),
     })
     const { repository: scoreRepository } = createFakeScoreRepository()
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
 
     const evaluationRepository = createEvaluationRepository(() =>
       Effect.succeed({
@@ -304,15 +367,30 @@ describe("enqueueLiveEvaluationsUseCase", () => {
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          createRepositoriesLayer({
+          createUseCaseLayer({
             traceRepository,
             evaluationRepository,
             scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
           }),
         ),
       ),
     )
 
+    expect(published).toEqual([
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId: "e".repeat(24),
+        traceId: INPUT.traceId,
+        dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId: "e".repeat(24),
+          traceId: INPUT.traceId,
+        }),
+      },
+    ])
     expect(result).toEqual({
       action: "completed",
       summary: {
@@ -323,7 +401,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         skippedPausedCount: 1,
         skippedSamplingCount: 0,
         skippedTurnCount: 0,
-        publishedExecuteCount: 0,
+        publishedExecuteCount: 1,
       },
     })
   })
@@ -345,6 +423,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         return Effect.succeed(true)
       },
     })
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
     const evaluationRepository = createEvaluationRepository(() =>
       Effect.succeed({
         items: [
@@ -360,16 +439,18 @@ describe("enqueueLiveEvaluationsUseCase", () => {
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          createRepositoriesLayer({
+          createUseCaseLayer({
             traceRepository,
             evaluationRepository,
             scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
           }),
         ),
       ),
     )
 
     expect(turnCheckCalls).toEqual([])
+    expect(published).toEqual([])
     expect(result).toEqual({
       action: "completed",
       summary: {
@@ -403,6 +484,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         return Effect.succeed(true)
       },
     })
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
     const evaluationRepository = createEvaluationRepository(() =>
       Effect.succeed({
         items: [makeEvaluation(evaluationId, { sampling: 100, turn: "first" })],
@@ -415,10 +497,11 @@ describe("enqueueLiveEvaluationsUseCase", () => {
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          createRepositoriesLayer({
+          createUseCaseLayer({
             traceRepository,
             evaluationRepository,
             scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
           }),
         ),
       ),
@@ -432,6 +515,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         sessionId: "session",
       },
     ])
+    expect(published).toEqual([])
     expect(result).toEqual({
       action: "completed",
       summary: {
@@ -443,6 +527,191 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         skippedSamplingCount: 0,
         skippedTurnCount: 1,
         publishedExecuteCount: 0,
+      },
+    })
+  })
+
+  it("publishes first-turn execute tasks when no prior scope score exists", async () => {
+    const evaluationId = "h".repeat(24)
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: () => Effect.succeed([evaluationId]),
+    })
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      existsByEvaluationIdAndScope: () => Effect.succeed(false),
+    })
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [makeEvaluation(evaluationId, { sampling: 100, turn: "first" })],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+
+    const result = await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
+          }),
+        ),
+      ),
+    )
+
+    expect(published).toEqual([
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: INPUT.traceId,
+        dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId,
+          traceId: INPUT.traceId,
+        }),
+      },
+    ])
+    expect(result).toEqual({
+      action: "completed",
+      summary: {
+        traceId: INPUT.traceId,
+        sessionId: "session",
+        activeEvaluationsScanned: 1,
+        filterMatchedCount: 1,
+        skippedPausedCount: 0,
+        skippedSamplingCount: 0,
+        skippedTurnCount: 0,
+        publishedExecuteCount: 1,
+      },
+    })
+  })
+
+  it("publishes scope-scoped debounced execute tasks for every-turn debounce", async () => {
+    const evaluationId = "i".repeat(24)
+    const debounceSeconds = 15
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: () => Effect.succeed([evaluationId]),
+    })
+    const { repository: scoreRepository } = createFakeScoreRepository()
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [makeEvaluation(evaluationId, { sampling: 100, turn: "every", debounce: debounceSeconds })],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+
+    const result = await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
+          }),
+        ),
+      ),
+    )
+
+    expect(published).toEqual([
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: INPUT.traceId,
+        dedupeKey: buildLiveEvaluationExecuteScopeDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId,
+          traceId: INPUT.traceId,
+          sessionId: "session",
+        }),
+        debounceMs: toLiveEvaluationDebounceMs(debounceSeconds),
+      },
+    ])
+    expect(result).toEqual({
+      action: "completed",
+      summary: {
+        traceId: INPUT.traceId,
+        sessionId: "session",
+        activeEvaluationsScanned: 1,
+        filterMatchedCount: 1,
+        skippedPausedCount: 0,
+        skippedSamplingCount: 0,
+        skippedTurnCount: 0,
+        publishedExecuteCount: 1,
+      },
+    })
+  })
+
+  it("publishes scope-scoped debounced execute tasks for last-turn evaluations", async () => {
+    const evaluationId = "j".repeat(24)
+    const debounceSeconds = 30
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: () => Effect.succeed([evaluationId]),
+    })
+    const { repository: scoreRepository } = createFakeScoreRepository()
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [makeEvaluation(evaluationId, { sampling: 100, turn: "last", debounce: debounceSeconds })],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+
+    const result = await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
+          }),
+        ),
+      ),
+    )
+
+    expect(published).toEqual([
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: INPUT.traceId,
+        dedupeKey: buildLiveEvaluationExecuteScopeDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId,
+          traceId: INPUT.traceId,
+          sessionId: "session",
+        }),
+        debounceMs: toLiveEvaluationDebounceMs(debounceSeconds),
+      },
+    ])
+    expect(result).toEqual({
+      action: "completed",
+      summary: {
+        traceId: INPUT.traceId,
+        sessionId: "session",
+        activeEvaluationsScanned: 1,
+        filterMatchedCount: 1,
+        skippedPausedCount: 0,
+        skippedSamplingCount: 0,
+        skippedTurnCount: 0,
+        publishedExecuteCount: 1,
       },
     })
   })

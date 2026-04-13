@@ -58,6 +58,7 @@ export {
   EvaluationManualRealignmentRateLimitedError,
   EvaluationNotFoundError,
   LiveEvaluationExecutionError,
+  LiveEvaluationQueuePublishError,
 } from "./errors.ts"
 export {
   addConfusionMatrixObservation,
@@ -118,6 +119,11 @@ export {
   type EvaluationRepositoryShape,
   evaluationListLifecycleSchema,
 } from "./ports/evaluation-repository.ts"
+export {
+  LiveEvaluationQueuePublisher,
+  type LiveEvaluationQueuePublisherShape,
+  type PublishLiveEvaluationExecuteInput,
+} from "./ports/live-evaluation-queue-publisher.ts"
 export {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   EVALUATION_SCRIPT_RUNTIME_MODEL,

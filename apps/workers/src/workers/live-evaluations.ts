@@ -1,5 +1,10 @@
-import { enqueueLiveEvaluationsUseCase } from "@domain/evaluations"
-import type { QueueConsumer } from "@domain/queue"
+import {
+  enqueueLiveEvaluationsUseCase,
+  LiveEvaluationQueuePublishError,
+  LiveEvaluationQueuePublisher,
+  type LiveEvaluationQueuePublisherShape,
+} from "@domain/evaluations"
+import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { EvaluationRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
@@ -17,13 +22,49 @@ interface EnqueuePayload {
 
 interface LiveEvaluationsDeps {
   consumer: QueueConsumer
+  publisher: QueuePublisherShape
 }
 
 // TODO(eval-sandbox): when implementing live evaluation execution, use the same extract-and-call
 // approach from executeEvaluationScript for MVP, then migrate to sandboxed JS runtime.
-export const createLiveEvaluationsWorker = ({ consumer }: LiveEvaluationsDeps) => {
+export const createLiveEvaluationsWorker = ({ consumer, publisher }: LiveEvaluationsDeps) => {
   const pgClient = getPostgresClient()
   const chClient = getClickhouseClient()
+  const liveEvaluationQueuePublisher = {
+    publishExecute: ({ organizationId, projectId, evaluationId, traceId, dedupeKey, debounceMs }) => {
+      const publishOptions =
+        dedupeKey === undefined
+          ? debounceMs === undefined
+            ? undefined
+            : { debounceMs }
+          : debounceMs === undefined
+            ? { dedupeKey }
+            : { dedupeKey, debounceMs }
+
+      return publisher
+        .publish(
+          "live-evaluations",
+          "execute",
+          {
+            organizationId,
+            projectId,
+            evaluationId,
+            traceId,
+          },
+          publishOptions,
+        )
+        .pipe(
+          Effect.mapError(
+            (cause) =>
+              new LiveEvaluationQueuePublishError({
+                evaluationId,
+                traceId,
+                cause,
+              }),
+          ),
+        )
+    },
+  } satisfies LiveEvaluationQueuePublisherShape
 
   consumer.subscribe("live-evaluations", {
     enqueue: (payload: EnqueuePayload) =>
@@ -34,6 +75,7 @@ export const createLiveEvaluationsWorker = ({ consumer }: LiveEvaluationsDeps) =
           OrganizationId(payload.organizationId),
         ),
         withClickHouse(TraceRepositoryLive, chClient, OrganizationId(payload.organizationId)),
+        Effect.provide(Layer.succeed(LiveEvaluationQueuePublisher, liveEvaluationQueuePublisher)),
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "skipped") {

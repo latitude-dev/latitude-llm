@@ -43,3 +43,12 @@ export class LiveEvaluationExecutionError extends Data.TaggedError("LiveEvaluati
     return this.message
   }
 }
+
+export class LiveEvaluationQueuePublishError extends Data.TaggedError("LiveEvaluationQueuePublishError")<{
+  readonly evaluationId: string
+  readonly traceId: string
+  readonly cause?: unknown
+}> {
+  readonly httpStatus = 503
+  readonly httpMessage = "Failed to enqueue live evaluation execution"
+}

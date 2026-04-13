@@ -3,8 +3,19 @@ import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domai
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
-import { getLiveEvaluationEligibility, shouldSampleLiveEvaluation } from "../../helpers.ts"
+import type { LiveEvaluationQueuePublishError } from "../../errors.ts"
+import {
+  buildLiveEvaluationExecuteScopeDedupeKey,
+  buildLiveEvaluationExecuteTraceDedupeKey,
+  getLiveEvaluationEligibility,
+  shouldSampleLiveEvaluation,
+  toLiveEvaluationDebounceMs,
+} from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import {
+  LiveEvaluationQueuePublisher,
+  type PublishLiveEvaluationExecuteInput,
+} from "../../ports/live-evaluation-queue-publisher.ts"
 
 const ACTIVE_EVALUATION_SCAN_PAGE_SIZE = 100
 
@@ -36,7 +47,7 @@ export type EnqueueLiveEvaluationsResult =
       readonly summary: EnqueueLiveEvaluationsSummary
     }
 
-export type EnqueueLiveEvaluationsError = RepositoryError
+export type EnqueueLiveEvaluationsError = RepositoryError | LiveEvaluationQueuePublishError
 
 const listAllActiveEvaluations = ({ projectId }: { readonly projectId: ProjectId }) =>
   Effect.gen(function* () {
@@ -64,9 +75,74 @@ const listAllActiveEvaluations = ({ projectId }: { readonly projectId: ProjectId
     }
   })
 
+const buildExecutePublication = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+  readonly sessionId?: string | null
+  readonly evaluation: Evaluation
+}): PublishLiveEvaluationExecuteInput => {
+  const debounceMs = toLiveEvaluationDebounceMs(input.evaluation.trigger.debounce)
+  const traceDedupeKey = buildLiveEvaluationExecuteTraceDedupeKey({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluation.id,
+    traceId: input.traceId,
+  })
+  const scopeDedupeKey = buildLiveEvaluationExecuteScopeDedupeKey({
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluation.id,
+    traceId: input.traceId,
+    ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
+  })
+
+  if (input.evaluation.trigger.turn === "every" && debounceMs === undefined) {
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      evaluationId: input.evaluation.id,
+      traceId: input.traceId,
+      dedupeKey: traceDedupeKey,
+    }
+  }
+
+  if (input.evaluation.trigger.turn === "last") {
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      evaluationId: input.evaluation.id,
+      traceId: input.traceId,
+      dedupeKey: scopeDedupeKey,
+      ...(debounceMs !== undefined ? { debounceMs } : {}),
+    }
+  }
+
+  if (input.evaluation.trigger.turn === "every" && debounceMs !== undefined) {
+    return {
+      organizationId: input.organizationId,
+      projectId: input.projectId,
+      evaluationId: input.evaluation.id,
+      traceId: input.traceId,
+      dedupeKey: scopeDedupeKey,
+      debounceMs,
+    }
+  }
+
+  return {
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluation.id,
+    traceId: input.traceId,
+    dedupeKey: traceDedupeKey,
+    ...(debounceMs !== undefined ? { debounceMs } : {}),
+  }
+}
+
 export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput) =>
   Effect.gen(function* () {
     const scoreRepository = yield* ScoreRepository
+    const liveEvaluationQueuePublisher = yield* LiveEvaluationQueuePublisher
     const traceRepository = yield* TraceRepository
     const traceDetail = yield* traceRepository
       .findByTraceId({
@@ -140,9 +216,20 @@ export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput
     }
 
     let skippedTurnCount = 0
+    let publishedExecuteCount = 0
 
     for (const evaluation of sampledEvaluations) {
       if (evaluation.trigger.turn !== "first") {
+        yield* liveEvaluationQueuePublisher.publishExecute(
+          buildExecutePublication({
+            organizationId: input.organizationId,
+            projectId: input.projectId,
+            traceId: input.traceId,
+            sessionId: traceDetail.sessionId ?? null,
+            evaluation,
+          }),
+        )
+        publishedExecuteCount += 1
         continue
       }
 
@@ -155,7 +242,19 @@ export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput
 
       if (alreadyExists) {
         skippedTurnCount += 1
+        continue
       }
+
+      yield* liveEvaluationQueuePublisher.publishExecute(
+        buildExecutePublication({
+          organizationId: input.organizationId,
+          projectId: input.projectId,
+          traceId: input.traceId,
+          sessionId: traceDetail.sessionId ?? null,
+          evaluation,
+        }),
+      )
+      publishedExecuteCount += 1
     }
 
     return {
@@ -168,11 +267,11 @@ export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput
         skippedPausedCount,
         skippedSamplingCount,
         skippedTurnCount,
-        publishedExecuteCount: 0,
+        publishedExecuteCount,
       },
     } satisfies EnqueueLiveEvaluationsResult
   }) as Effect.Effect<
     EnqueueLiveEvaluationsResult,
     EnqueueLiveEvaluationsError,
-    TraceRepository | EvaluationRepository | ScoreRepository
+    TraceRepository | EvaluationRepository | LiveEvaluationQueuePublisher | ScoreRepository
   >
