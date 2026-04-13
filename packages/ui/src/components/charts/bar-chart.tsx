@@ -1,8 +1,8 @@
 /// <reference path="../../echarts-subpaths.d.ts" />
-import type { EChartsCoreOption } from "echarts/core"
+import type { ECharts, EChartsCoreOption } from "echarts/core"
 import EChartsReact from "echarts-for-react/lib/core"
 import type { ComponentType, CSSProperties, HTMLAttributes } from "react"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
 import { useMountEffect } from "../../hooks/use-mount-effect.ts"
 import { cn } from "../../utils/cn.ts"
@@ -16,7 +16,7 @@ export type BarChartDataPoint = {
   readonly value: number
 }
 
-export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
+export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "onSelect"> & {
   readonly data: readonly BarChartDataPoint[]
   /** Pixel height of the chart area (default 200). */
   readonly height?: number
@@ -30,7 +30,15 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children"> & {
   readonly formatTooltip?: (category: string, value: number) => string
   /** When false, hides y-axis tick labels and frees left grid margin (tooltip still shows values). */
   readonly showYAxis?: boolean
+  /**
+   * Called when user selects a range via brush (e.g., drag on the histogram).
+   * Receives the selected data range [startIndex, endIndex] or null if cleared.
+   */
+  readonly onSelect?: ((range: { startIndex: number; endIndex: number } | null) => void) | undefined
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type EChartsEventHandler = (params: any) => void
 
 type EChartsReactBridgeProps = {
   readonly echarts: typeof echarts
@@ -39,6 +47,8 @@ type EChartsReactBridgeProps = {
   readonly opts?: { readonly renderer?: "canvas" | "svg" }
   readonly notMerge?: boolean
   readonly lazyUpdate?: boolean
+  readonly onEvents?: Record<string, EChartsEventHandler> | undefined
+  readonly onChartReady?: ((instance: ECharts) => void) | undefined
 }
 
 /** `echarts-for-react` ships a CJS module; handle ESM interop and cast for React 19 JSX typing. */
@@ -52,10 +62,16 @@ function BarChart({
   colorScheme,
   formatTooltip,
   showYAxis = true,
+  onSelect,
   className,
   ...rest
 }: BarChartProps) {
   const [mounted, setMounted] = useState(false)
+  const chartRef = useRef<ECharts | null>(null)
+  const onSelectRef = useRef(onSelect)
+  onSelectRef.current = onSelect
+  const hasBrush = !!onSelect
+
   useMountEffect(() => {
     setMounted(true)
   })
@@ -67,9 +83,48 @@ function BarChart({
   const values = useMemo(() => data.map((d) => d.value), [data])
 
   const option = useMemo(
-    () => buildBarChartOption(categories, values, colors, formatTooltip, showYAxis),
-    [categories, values, colors, formatTooltip, showYAxis],
+    () => buildBarChartOption(categories, values, colors, formatTooltip, showYAxis, hasBrush),
+    [categories, values, colors, formatTooltip, showYAxis, hasBrush],
   )
+
+  // Stable event handlers that read the latest onSelect from a ref.
+  // This prevents echarts-for-react from rebinding events on every render.
+  const onEvents = useMemo(() => {
+    if (!hasBrush) return undefined
+    return {
+      brushEnd: (params: unknown) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const areas = (params as any)?.areas as Array<{ coordRange?: [number, number] }> | undefined
+        if (!areas || areas.length === 0) return
+        const coordRange = areas[0]?.coordRange
+        if (!coordRange) return
+        const [startIndex, endIndex] = coordRange
+        onSelectRef.current?.({ startIndex, endIndex })
+      },
+      click: () => {
+        if (chartRef.current) {
+          chartRef.current.dispatchAction({ type: "brush", areas: [] })
+        }
+        onSelectRef.current?.(null)
+      },
+    }
+  }, [hasBrush])
+
+  const onChartReady = useMemo(() => {
+    if (!hasBrush) return undefined
+    return (instance: ECharts) => {
+      chartRef.current = instance
+      // Activate brush cursor on every chart init/re-init
+      instance.dispatchAction({
+        type: "takeGlobalCursor",
+        key: "brush",
+        brushOption: {
+          brushType: "lineX",
+          brushMode: "single",
+        },
+      })
+    }
+  }, [hasBrush])
 
   if (!mounted) {
     return (
@@ -93,6 +148,8 @@ function BarChart({
         opts={{ renderer: "canvas" }}
         notMerge
         lazyUpdate
+        onEvents={onEvents}
+        onChartReady={onChartReady}
       />
     </div>
   )

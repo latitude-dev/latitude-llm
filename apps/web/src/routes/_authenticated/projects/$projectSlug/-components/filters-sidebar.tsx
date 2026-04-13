@@ -469,11 +469,6 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
     [setField],
   )
 
-  const clearAll = useCallback(() => {
-    onFiltersChange({})
-  }, [onFiltersChange])
-
-  const hasActiveFilters = Object.keys(filters).length > 0
   const statusValues = getInValues(filters, "status")
   const textFields = getTextFieldsForMode(mode)
 
@@ -509,16 +504,9 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
     <Layout.Sidebar>
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <Text.H5>Filters</Text.H5>
-        <div className="flex items-center gap-1">
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearAll}>
-              Clear all
-            </Button>
-          )}
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <XIcon className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          <XIcon className="h-4 w-4" />
+        </Button>
       </div>
 
       <div className="flex flex-col px-4 overflow-y-auto flex-1">
