@@ -13,7 +13,7 @@ catalog:
   '@opentelemetry/api': ^1.9.0
   '@paralleldrive/cuid2': 3.3.0
   '@temporalio/client': 1.15.0
-  '@temporalio/worker': 1.15.0
+  '@temporalio/worker': 1.16.0
   '@temporalio/workflow': 1.15.0
   '@types/node': 22.14.1
   '@types/pg': 8.16.0
