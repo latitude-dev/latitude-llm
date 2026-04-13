@@ -31,6 +31,7 @@ import { getObservabilityState } from "./state.ts"
 import type { InitializeObservabilityOptions } from "./types.ts"
 
 export type { Span, Tracer }
+export { recordSpanExceptionForDatadog } from "./record-span-exception.ts"
 export { trace, SpanStatusCode }
 
 export const createLogger = (scope: string) => createLoggerWithState(getObservabilityState(), scope)

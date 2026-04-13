@@ -1,4 +1,4 @@
-import { createLogger, SpanStatusCode, trace } from "@repo/observability"
+import { createLogger, recordSpanExceptionForDatadog, SpanStatusCode, trace } from "@repo/observability"
 import { Button, CopyableText, Text, useMountEffect } from "@repo/ui"
 import { createServerFn } from "@tanstack/react-start"
 import { useMemo } from "react"
@@ -25,7 +25,7 @@ const reportClientError = createServerFn({ method: "POST" })
     tracer.startActiveSpan("client.error", (span) => {
       const error = new Error(data.message)
       if (data.stack) error.stack = data.stack
-      span.recordException(error)
+      recordSpanExceptionForDatadog(span, error)
       span.setAttribute("error.id", data.errorId)
       if (data.componentStack) {
         span.setAttribute("error.component_stack", data.componentStack)

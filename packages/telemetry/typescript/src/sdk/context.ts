@@ -1,8 +1,18 @@
-import { type Context, context, createContextKey, trace } from "@opentelemetry/api"
+import { type Context, context, createContextKey, type Span, trace } from "@opentelemetry/api"
 import type { ContextOptions } from "./types.ts"
 
 export const LATITUDE_CONTEXT_KEY = createContextKey("latitude-internal-context")
 const CAPTURE_TRACER_NAME = "so.latitude.instrumentation.capture"
+
+function recordSpanExceptionForDatadog(span: Span, error: unknown): void {
+  const err = error instanceof Error ? error : new Error(String(error))
+  span.recordException(err)
+  span.setAttributes({
+    "error.message": err.message,
+    "error.stack": err.stack ?? "",
+    "error.type": err.constructor.name,
+  })
+}
 
 type LatitudeContextData = {
   name: string | undefined
@@ -49,7 +59,7 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
     try {
       result = fn()
     } catch (error) {
-      span.recordException(error as Error)
+      recordSpanExceptionForDatadog(span, error)
       span.end()
       throw error
     }
@@ -57,7 +67,7 @@ export function capture<T>(name: string, fn: () => T | Promise<T>, options: Cont
     if (result instanceof Promise) {
       return result
         .catch((error) => {
-          span.recordException(error as Error)
+          recordSpanExceptionForDatadog(span, error)
           throw error
         })
         .finally(() => {

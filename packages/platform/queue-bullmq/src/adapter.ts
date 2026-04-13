@@ -10,7 +10,7 @@ import type {
 } from "@domain/queue"
 import { QueueClientError, QueuePublishError, QueuePublisher, QueueSubscribeError, TOPIC_NAMES } from "@domain/queue"
 import { SpanStatusCode, trace } from "@opentelemetry/api"
-import { serializeError } from "@repo/observability"
+import { recordSpanExceptionForDatadog, serializeError } from "@repo/observability"
 import { Queue, Worker } from "bullmq"
 import { Cause, Effect, Layer } from "effect"
 import { Redis } from "ioredis"
@@ -195,8 +195,7 @@ export const createBullMqQueueConsumer = (config: BullMqRedisConfig): Effect.Eff
                       await Effect.runPromiseWith(services)(handler(payload))
                       span.setStatus({ code: SpanStatusCode.OK })
                     } catch (error) {
-                      const err = toError(error)
-                      span.recordException(err)
+                      const err = recordSpanExceptionForDatadog(span, error)
                       span.setStatus({
                         code: SpanStatusCode.ERROR,
                         message: err.message,

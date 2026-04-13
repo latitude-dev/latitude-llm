@@ -1,6 +1,12 @@
 import type { DomainError } from "@domain/shared"
 import type { Span, Tracer } from "@repo/observability"
-import { createLogger, initializeObservability, SpanStatusCode, trace } from "@repo/observability"
+import {
+  createLogger,
+  initializeObservability,
+  recordSpanExceptionForDatadog,
+  SpanStatusCode,
+  trace,
+} from "@repo/observability"
 import { isHttpError } from "@repo/utils"
 import { createMiddleware, createStart } from "@tanstack/react-start"
 
@@ -26,10 +32,10 @@ export const tracingRequestMiddleware = ({ tracer }: { tracer: Tracer }) =>
         }
         return result
       } catch (error) {
-        span.recordException(error as Error)
+        recordSpanExceptionForDatadog(span, error)
         span.setStatus({
           code: SpanStatusCode.ERROR,
-          message: (error as Error).message,
+          message: error instanceof Error ? error.message : String(error),
         })
         throw error
       } finally {
@@ -44,7 +50,7 @@ export const tracingFnMiddleware = ({ tracer, logger }: { tracer: Tracer; logger
       try {
         return await next()
       } catch (e) {
-        span.recordException(e as Error)
+        recordSpanExceptionForDatadog(span, e)
 
         const httpError = isHttpError(e)
         const tag =
