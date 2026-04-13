@@ -35,11 +35,11 @@ const INPUT = {
   traceId: "c".repeat(32),
 } as const
 
-function makeTraceDetail(): TraceDetail {
+function makeTraceDetail(overrides?: Partial<Pick<TraceDetail, "projectId" | "traceId" | "sessionId">>): TraceDetail {
   return {
     organizationId: OrganizationId(INPUT.organizationId),
-    projectId: ProjectId(INPUT.projectId),
-    traceId: TraceId(INPUT.traceId),
+    projectId: overrides?.projectId ?? ProjectId(INPUT.projectId),
+    traceId: overrides?.traceId ?? TraceId(INPUT.traceId),
     spanCount: 3,
     errorCount: 0,
     startTime: new Date("2026-01-01T00:00:00.000Z"),
@@ -55,7 +55,7 @@ function makeTraceDetail(): TraceDetail {
     costInputMicrocents: 50,
     costOutputMicrocents: 25,
     costTotalMicrocents: 75,
-    sessionId: SessionId("session"),
+    sessionId: overrides?.sessionId ?? SessionId("session"),
     userId: ExternalUserId("user"),
     simulationId: SimulationId(""),
     tags: [],
@@ -590,6 +590,170 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         publishedExecuteCount: 1,
       },
     })
+  })
+
+  it("publishes trace-scoped debounced execute tasks for first-turn debounce", async () => {
+    const evaluationId = "k".repeat(24)
+    const debounceSeconds = 45
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: () => Effect.succeed([evaluationId]),
+    })
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      existsByEvaluationIdAndScope: () => Effect.succeed(false),
+    })
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [makeEvaluation(evaluationId, { sampling: 100, turn: "first", debounce: debounceSeconds })],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+
+    const result = await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+            liveEvaluationQueuePublisher: queuePublisher,
+          }),
+        ),
+      ),
+    )
+
+    expect(published).toEqual([
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: INPUT.traceId,
+        dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId,
+          traceId: INPUT.traceId,
+        }),
+        debounceMs: toLiveEvaluationDebounceMs(debounceSeconds),
+      },
+    ])
+    expect(result).toEqual({
+      action: "completed",
+      summary: {
+        traceId: INPUT.traceId,
+        sessionId: "session",
+        activeEvaluationsScanned: 1,
+        filterMatchedCount: 1,
+        skippedPausedCount: 0,
+        skippedSamplingCount: 0,
+        skippedTurnCount: 0,
+        publishedExecuteCount: 1,
+      },
+    })
+  })
+
+  it("keeps first-turn debounce trace-scoped across multiple eligible traces in one session", async () => {
+    const evaluationId = "l".repeat(24)
+    const debounceSeconds = 45
+    const firstTraceId = "m".repeat(32)
+    const secondTraceId = "n".repeat(32)
+    const sharedSessionId = SessionId("shared-first-debounce")
+    const turnCheckCalls: Array<{
+      readonly projectId: string
+      readonly evaluationId: string
+      readonly traceId: string
+      readonly sessionId: string | null | undefined
+    }> = []
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: ({ traceId }) =>
+        Effect.succeed(
+          makeTraceDetail({
+            traceId,
+            sessionId: sharedSessionId,
+          }),
+        ),
+      listMatchingFilterIdsByTraceId: () => Effect.succeed([evaluationId]),
+    })
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      existsByEvaluationIdAndScope: ({ projectId, evaluationId, traceId, sessionId }) => {
+        turnCheckCalls.push({ projectId, evaluationId, traceId, sessionId })
+        return Effect.succeed(false)
+      },
+    })
+    const { queuePublisher, published } = createLiveEvaluationQueuePublisher()
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [makeEvaluation(evaluationId, { sampling: 100, turn: "first", debounce: debounceSeconds })],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+    const useCaseLayer = createUseCaseLayer({
+      traceRepository,
+      evaluationRepository,
+      scoreRepository,
+      liveEvaluationQueuePublisher: queuePublisher,
+    })
+
+    await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase({
+        ...INPUT,
+        traceId: firstTraceId,
+      }).pipe(Effect.provide(useCaseLayer)),
+    )
+    await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase({
+        ...INPUT,
+        traceId: secondTraceId,
+      }).pipe(Effect.provide(useCaseLayer)),
+    )
+
+    expect(turnCheckCalls).toEqual([
+      {
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: firstTraceId,
+        sessionId: "shared-first-debounce",
+      },
+      {
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: secondTraceId,
+        sessionId: "shared-first-debounce",
+      },
+    ])
+    expect(published).toEqual([
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: firstTraceId,
+        dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId,
+          traceId: firstTraceId,
+        }),
+        debounceMs: toLiveEvaluationDebounceMs(debounceSeconds),
+      },
+      {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: secondTraceId,
+        dedupeKey: buildLiveEvaluationExecuteTraceDedupeKey({
+          organizationId: INPUT.organizationId,
+          projectId: INPUT.projectId,
+          evaluationId,
+          traceId: secondTraceId,
+        }),
+        debounceMs: toLiveEvaluationDebounceMs(debounceSeconds),
+      },
+    ])
   })
 
   it("publishes scope-scoped debounced execute tasks for every-turn debounce", async () => {
