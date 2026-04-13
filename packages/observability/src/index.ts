@@ -4,7 +4,6 @@ import { SpanStatusCode, trace } from "@opentelemetry/api"
 export type { Span, Tracer }
 
 import { getEnvironment, getTracesConfig, getTracingProvider, isObservabilityEnabled } from "./config.ts"
-import { startDatadogTracing } from "./datadog-trace.ts"
 import { createLogger as createLoggerWithState, emitLog, serializeError as serializeErrorImpl } from "./logger.ts"
 import { startTracing } from "./otel.ts"
 import { getObservabilityState } from "./state.ts"
@@ -44,6 +43,7 @@ export const initializeObservability = async ({ serviceName }: InitializeObserva
     const tracingProvider = getTracingProvider()
 
     if (tracingProvider === "datadog") {
+      const { startDatadogTracing } = await import("./datadog-trace.ts")
       state.shutdown = await startDatadogTracing({
         serviceName,
         environment: resolvedEnvironment,

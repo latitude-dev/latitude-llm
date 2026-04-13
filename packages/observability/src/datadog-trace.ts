@@ -1,5 +1,4 @@
 import type { SpanProcessor } from "@opentelemetry/sdk-trace-base"
-import tracer from "dd-trace"
 
 import { createLatitudeSpanProcessor } from "./latitude-telemetry.ts"
 import { appendResourceAttribute } from "./resource-attributes.ts"
@@ -11,12 +10,8 @@ type DatadogOtelTracerProvider = {
   shutdown: () => Promise<void>
 }
 
-const getDatadogTracerProviderConstructor = (): (new (config?: Record<string, unknown>) => DatadogOtelTracerProvider) =>
-  tracer.TracerProvider as unknown as new (
-    config?: Record<string, unknown>,
-  ) => DatadogOtelTracerProvider
-
-export const startDatadogTracing = ({
+/** Loads dd-trace at runtime only so SSR bundlers never crawl its optional @datadog/* graph. */
+export const startDatadogTracing = async ({
   serviceName,
   environment,
   state,
@@ -25,6 +20,16 @@ export const startDatadogTracing = ({
   environment: string
   state: ObservabilityState
 }): Promise<() => Promise<void>> => {
+  const tracerModule = await import(/* @vite-ignore */ "dd-trace")
+  const tracer = tracerModule.default
+
+  const getDatadogTracerProviderConstructor = (): (new (
+    config?: Record<string, unknown>,
+  ) => DatadogOtelTracerProvider) =>
+    tracer.TracerProvider as unknown as new (
+      config?: Record<string, unknown>,
+    ) => DatadogOtelTracerProvider
+
   const resolvedService = process.env.DD_SERVICE ?? serviceName
   const resolvedEnv = process.env.DD_ENV ?? environment
 
@@ -65,8 +70,8 @@ export const startDatadogTracing = ({
   }
   provider.register()
 
-  return Promise.resolve(async () => {
+  return async () => {
     delete state.resolveLogTraceContext
     await provider.shutdown()
-  })
+  }
 }
