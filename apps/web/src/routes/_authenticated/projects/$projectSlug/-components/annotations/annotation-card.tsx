@@ -1,14 +1,4 @@
-import {
-  Avatar,
-  Badge,
-  Button,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  Icon,
-  type MenuOption,
-  Text,
-  Tooltip,
-} from "@repo/ui"
+import { Avatar, Badge, Button, DropdownMenu, Icon, type MenuOption, Text, Tooltip } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
 import { EllipsisIcon, GlobeIcon, HashIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -120,11 +110,9 @@ export function AnnotationCard({
             options={menuOptions}
             align="end"
             trigger={() => (
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Icon icon={EllipsisIcon} size="xs" color="foregroundMuted" />
-                </Button>
-              </DropdownMenuTrigger>
+              <Button variant="ghost" size="icon">
+                <Icon icon={EllipsisIcon} size="xs" color="foregroundMuted" />
+              </Button>
             )}
           />
         </div>

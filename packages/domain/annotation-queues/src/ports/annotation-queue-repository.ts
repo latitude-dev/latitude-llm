@@ -56,6 +56,8 @@ export interface IncrementCompletedItemsInput {
   readonly delta: number
 }
 
+export type SaveQueueInput = Omit<AnnotationQueue, "id"> & { id?: string }
+
 export interface AnnotationQueueRepositoryShape {
   listByProject(input: ListAnnotationQueuesInput): Effect.Effect<AnnotationQueueListPage, RepositoryError>
   findByIdInProject(input: {
@@ -67,7 +69,7 @@ export interface AnnotationQueueRepositoryShape {
   findSystemQueueBySlugInProject(
     input: FindSystemQueueBySlugInput,
   ): Effect.Effect<AnnotationQueue | null, RepositoryError>
-  save(queue: AnnotationQueue): Effect.Effect<void, RepositoryError>
+  save(queue: SaveQueueInput): Effect.Effect<AnnotationQueue, RepositoryError>
   /**
    * Insert a queue if no queue with the same (organizationId, projectId, slug, deletedAt)
    * exists. Returns true if inserted, false if a conflict was encountered.

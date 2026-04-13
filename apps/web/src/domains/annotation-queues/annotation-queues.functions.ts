@@ -2,12 +2,16 @@ import {
   type AnnotationQueueListCursor,
   AnnotationQueueRepository,
   type AnnotationQueueSettings,
+  createQueueUseCase,
+  deleteQueueUseCase,
+  updateQueueUseCase,
 } from "@domain/annotation-queues"
 import { OrganizationId, ProjectId } from "@domain/shared"
 import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
+import { queueInputSchema } from "../../components/annotation-queues/queue-form-schema.ts"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
 
@@ -125,4 +129,77 @@ export const getAnnotationQueueByProject = createServerFn({ method: "GET" })
     }
 
     return toAnnotationQueueRecord(queue)
+  })
+
+const createQueueInputSchema = queueInputSchema.extend({
+  projectId: z.string(),
+})
+
+export const createAnnotationQueue = createServerFn({ method: "POST" })
+  .inputValidator(createQueueInputSchema)
+  .handler(async ({ data }): Promise<AnnotationQueueRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const client = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      createQueueUseCase({
+        organizationId,
+        projectId: ProjectId(data.projectId),
+        name: data.name,
+        description: data.description,
+        instructions: data.instructions,
+        assignees: data.assignees ?? [],
+        ...(data.settings !== undefined ? { settings: data.settings } : {}),
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+    )
+
+    return toAnnotationQueueRecord(result.queue)
+  })
+
+const updateQueueInputSchema = queueInputSchema.extend({
+  projectId: z.string(),
+  queueId: z.string(),
+})
+
+export const updateAnnotationQueue = createServerFn({ method: "POST" })
+  .inputValidator(updateQueueInputSchema)
+  .handler(async ({ data }): Promise<AnnotationQueueRecord> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const client = getPostgresClient()
+
+    const result = await Effect.runPromise(
+      updateQueueUseCase({
+        projectId: ProjectId(data.projectId),
+        queueId: data.queueId,
+        name: data.name,
+        description: data.description,
+        instructions: data.instructions,
+        assignees: data.assignees ?? [],
+        ...(data.settings !== undefined ? { settings: data.settings } : {}),
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+    )
+
+    return toAnnotationQueueRecord(result.queue)
+  })
+
+const deleteQueueInputSchema = z.object({
+  projectId: z.string(),
+  queueId: z.string(),
+})
+
+export const deleteAnnotationQueue = createServerFn({ method: "POST" })
+  .inputValidator(deleteQueueInputSchema)
+  .handler(async ({ data }): Promise<void> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const client = getPostgresClient()
+
+    await Effect.runPromise(
+      deleteQueueUseCase({
+        projectId: ProjectId(data.projectId),
+        queueId: data.queueId,
+      }).pipe(withPostgres(AnnotationQueueRepositoryLive, client, orgId)),
+    )
   })

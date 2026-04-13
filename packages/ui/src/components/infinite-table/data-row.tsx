@@ -112,20 +112,20 @@ function DataRowInner<T>({
       )}
       {columns.map((col) => {
         const content = col.render(row, dataIndex)
+        const useEllipsis = col.ellipsis !== false
         return (
           <td
             key={col.key}
             className={cn(
-              "px-4 py-2 max-w-0",
+              "px-4 py-2",
               "first:rounded-l-lg last:rounded-r-lg overflow-hidden",
-              "align-middle text-sm leading-5 font-normal whitespace-nowrap text-ellipsis",
+              "align-middle text-sm leading-5 font-normal",
+              { "max-w-0 whitespace-nowrap text-ellipsis": useEllipsis },
               { "text-right": col.align === "end" },
             )}
           >
             {typeof content === "string" ? (
-              <Text.H5 noWrap ellipsis>
-                {content || "-"}
-              </Text.H5>
+              <Text.H5 {...(useEllipsis ? { noWrap: true, ellipsis: true } : {})}>{content || "-"}</Text.H5>
             ) : (
               content
             )}

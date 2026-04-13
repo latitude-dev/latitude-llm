@@ -18,7 +18,7 @@ export interface ChFieldMapping {
   readonly mapValue?: (value: FilterCondition["value"]) => FilterCondition["value"]
 }
 
-export type ChFieldRegistry = Readonly<Record<string, ChFieldMapping>>
+export type ChFieldRegistry<K extends string = string> = Readonly<Record<K, ChFieldMapping>>
 
 // ---------------------------------------------------------------------------
 // Operator -> SQL mapping

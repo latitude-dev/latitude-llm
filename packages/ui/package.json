@@ -19,6 +19,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@base-ui/react": "^1.4.0",
     "@codemirror/commands": "^6.10.2",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/language": "^6.12.2",
