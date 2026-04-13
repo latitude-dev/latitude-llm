@@ -60,7 +60,7 @@ Live queues are ideal for continuous monitoring workflows:
 
 When a reviewer opens a queue, they see a focused review interface:
 
-1. **Left panel** — Metadata, existing scores, and issue links for the current trace
+1. **Left panel** — Metadata, existing annotations, and issue links for the current trace
 2. **Center panel** — The full conversation between user and agent
 3. **Right panel** — Annotation creation area
 
@@ -91,9 +91,9 @@ Each queue tracks:
 
 A powerful pattern for improving evaluation alignment:
 
-1. Create a live queue filtered to traces where a specific evaluation has produced scores
+1. Create a live queue filtered to traces where a specific evaluation has produced annotations
 2. Have reviewers annotate those traces independently
-3. Check the evaluation's alignment dashboard — it now has overlapping human and machine scores
+3. Check the evaluation's alignment dashboard — it now has overlapping human and machine annotations
 4. Use the alignment metrics to identify where the evaluation needs improvement
 
 This systematic approach to generating alignment data ensures your evaluations stay calibrated over time.
@@ -101,5 +101,5 @@ This systematic approach to generating alignment data ensures your evaluations s
 ## Next Steps
 
 - [Inline Annotations](./inline-annotations) — Annotating outside of queues
-- [Annotations Overview](./overview) — How annotations produce scores
+- [Annotations Overview](./overview) — How the annotation system works
 - [Evaluation Alignment](../evaluations/alignment) — Using annotations to calibrate evaluations

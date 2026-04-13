@@ -19,7 +19,7 @@ When viewing any trace in Latitude:
 4. Provide your verdict (thumbs up / thumbs down) and feedback
 5. Optionally link the annotation to an issue
 
-Inline annotations follow the same draft → published workflow as queue annotations. They produce scores that feed into analytics, issue discovery, and evaluation alignment.
+Inline annotations follow the same draft → published workflow as queue annotations. They feed into analytics, issue discovery, and evaluation alignment.
 
 ## When to Use Inline Annotations
 

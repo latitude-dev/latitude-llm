@@ -27,14 +27,6 @@
         ]
       },
       {
-        "group": "Scores",
-        "pages": [
-          "v2/scores/overview",
-          "v2/scores/sources",
-          "v2/scores/analytics"
-        ]
-      },
-      {
         "group": "Evaluations",
         "pages": [
           "v2/evaluations/overview",
@@ -54,7 +46,8 @@
         "pages": [
           "v2/annotations/overview",
           "v2/annotations/annotation-queues",
-          "v2/annotations/inline-annotations"
+          "v2/annotations/inline-annotations",
+          "v2/annotations/analytics"
         ]
       },
       {

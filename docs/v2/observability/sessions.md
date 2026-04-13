@@ -17,14 +17,14 @@ A session might look like:
 2. **Trace 2**: User asks "What about tomorrow?" → Agent responds with the forecast
 3. **Trace 3**: User asks "Should I bring an umbrella?" → Agent gives a recommendation
 
-Each turn is its own trace with its own spans, scores, and evaluations. The session ties them together.
+Each turn is its own trace with its own spans, annotations, and evaluations. The session ties them together.
 
 ## Why Sessions Matter
 
 Sessions enable:
 
 - **Conversation-level evaluation** — Evaluations can target session-level interactions, not just individual turns. This catches problems like context loss, contradiction, and conversational drift.
-- **Session-level score aggregation** — Roll up scores across an entire conversation to see overall quality, not just per-turn results.
+- **Session-level annotation aggregation** — Roll up annotations across an entire conversation to see overall quality, not just per-turn results.
 - **Richer issue context** — When drilling into issues, seeing the full session context helps understand failure patterns that only emerge across multiple turns.
 - **Simulation granularity** — Simulation reports can show results at the session level when your test scenarios involve multi-turn conversations.
 
@@ -52,6 +52,6 @@ This means:
 
 ## Next Steps
 
-- [Scores](../scores/overview) — How scores attach to traces and sessions
+- [Annotations](../annotations/overview) — How annotations attach to traces and sessions
 - [Evaluations](../evaluations/triggers) — Configuring evaluations to target sessions
 - [Annotation Queues](../annotations/annotation-queues) — Adding sessions to review backlogs

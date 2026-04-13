@@ -5,27 +5,27 @@ description: Understand how automated evaluations monitor your agent's quality i
 
 # Evaluations Overview
 
-Evaluations are automated scripts that continuously score your agent's interactions. They are the primary mechanism for detecting quality regressions, monitoring specific failure patterns, and providing quantitative feedback on every trace.
+Evaluations are automated scripts that continuously annotate your agent's interactions. They are the primary mechanism for detecting quality regressions, monitoring specific failure patterns, and providing quantitative feedback on every trace.
 
 ## What Is an Evaluation
 
-An evaluation is a **JavaScript-like script** that receives a trace's messages and metadata, processes them (optionally using LLM calls), and returns a verdict with a score and feedback.
+An evaluation is a **JavaScript-like script** that receives a trace's messages and metadata, processes them (optionally using LLM calls), and returns a verdict with a value and feedback.
 
 Each evaluation consists of:
 
 - **A name** — A descriptive identifier (e.g., "Jailbreak Detection", "Answer Completeness")
 - **A script** — The logic that analyzes a trace and produces a verdict
 - **A trigger configuration** — Which traces the evaluation should run against
-- **A threshold** — What score value separates pass from fail (default: 0.5)
+- **A threshold** — What value separates pass from fail (default: 0.5)
 
 ## How Evaluations Work
 
 1. A trace completes in your project (see [Trace Completion](../observability/traces))
 2. Latitude checks the trace against each active evaluation's **trigger configuration**
 3. For each matching evaluation, the script runs with the trace's data as input
-4. The script returns a **result**: a numeric score (normalized to 0–1) and feedback text
-5. Latitude creates a **score** from the result, attached to the trace
-6. If the score fails, it feeds into **issue discovery**
+4. The script returns a **result**: a numeric value (normalized to 0–1) and feedback text
+5. Latitude creates an **annotation** from the result, attached to the trace
+6. If the annotation fails, it feeds into **issue discovery**
 
 ## Evaluation Scripts
 
@@ -80,7 +80,7 @@ There are three ways to create evaluations:
 
 ### From Issues
 
-The most common path. When Latitude discovers an issue from failing scores, you can click **"Generate Evaluation"** on the issue detail page. Latitude uses the issue's description and example failures to generate a monitoring script automatically.
+The most common path. When Latitude discovers an issue from failing annotations, you can click **"Generate Evaluation"** on the issue detail page. Latitude uses the issue's description and example failures to generate a monitoring script automatically.
 
 ### From Templates
 

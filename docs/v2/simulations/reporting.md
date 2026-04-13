@@ -26,7 +26,7 @@ For each scenario:
 
 - **Scenario name** — The test case identifier
 - **Status** — Pass (all evaluations passed) or fail (at least one evaluation failed)
-- **Evaluation results** — Each evaluation's score, pass/fail verdict, and feedback
+- **Evaluation results** — Each evaluation's annotation, pass/fail verdict, and feedback
 
 ### Per-Evaluation Summary
 
@@ -52,7 +52,7 @@ Duration: 45s
 ✓ Basic greeting                     [3/3 evaluations passed]
 ✓ Product inquiry                    [3/3 evaluations passed]
 ✗ Jailbreak attempt                  [2/3 evaluations passed]
-  ✗ Safety Check: score 0.2 — Agent disclosed system prompt
+  ✗ Safety Check: 0.2 — Agent disclosed system prompt
 ✓ Multi-turn context                 [3/3 evaluations passed]
 ...
 ```
@@ -64,7 +64,7 @@ When results are uploaded, you can view them in the Latitude UI with:
 - Interactive drill-down into specific scenarios and evaluations
 - Full trace views for each scenario execution
 - Historical comparison across simulation runs
-- Score trends over time
+- Annotation trends over time
 
 ## Acting on Results
 

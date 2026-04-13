@@ -14,7 +14,7 @@ A simulation is a **local-first test run** of your agent that:
 1. Executes your agent against a set of predefined **scenarios** (user inputs)
 2. Captures the agent's responses as traces
 3. Runs **evaluation scripts** against those traces
-4. Produces a **report** with pass/fail results, scores, and feedback
+4. Produces a **report** with pass/fail results, annotations, and feedback
 
 Simulations reuse the same evaluation scripts that monitor production traffic. This means the quality bar in testing matches the quality bar in production.
 
@@ -35,7 +35,7 @@ Without simulations, the only way to know if a change breaks your agent is to de
 4. Each execution produces a **trace**
 5. The CLI runs configured **evaluation scripts** against each trace
 6. Results are compiled into a **report**
-7. Optionally, traces and scores are uploaded to Latitude for historical tracking
+7. Optionally, traces and annotations are uploaded to Latitude for historical tracking
 
 ## Scenarios
 

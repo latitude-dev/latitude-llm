@@ -43,7 +43,7 @@ Sessions let you:
 
 - View the full conversation context across turns
 - Evaluate behavior at the session level (not just individual turns)
-- Aggregate scores and analytics across a conversation
+- Aggregate annotations and analytics across a conversation
 
 ## How Data Flows In
 
@@ -100,4 +100,4 @@ These same filters power evaluation triggers and live annotation queues — when
 
 - [Traces](./traces) — Understand the trace model and lifecycle in detail
 - [Sessions](./sessions) — Learn about session-level aggregation
-- [Scores](../scores/overview) — See how scores attach to your telemetry
+- [Annotations](../annotations/overview) — See how annotations attach to your telemetry

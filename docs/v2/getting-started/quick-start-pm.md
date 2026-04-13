@@ -32,7 +32,7 @@ Click on a trace to see:
 - **The conversation**: The full message exchange between user and agent
 - **Spans**: Individual steps the agent took (LLM calls, tool uses, etc.)
 - **Metadata**: Timing, token usage, cost, and any custom metadata
-- **Scores**: Any evaluations, annotations, or custom scores attached to this trace
+- **Annotations**: Any evaluations, human reviews, or custom annotations attached to this trace
 
 Use the filter sidebar to narrow traces by status, cost, duration, model, provider, tags, or custom metadata.
 
@@ -51,7 +51,7 @@ Annotation queues are where your team provides human judgment on agent interacti
 
 Open a queue and click into it to start reviewing. The review screen shows:
 
-1. **Left**: Metadata and existing scores for this trace
+1. **Left**: Metadata and existing annotations for this trace
 2. **Center**: The full conversation
 3. **Right**: Annotations panel — create new annotations or review existing ones
 
@@ -65,7 +65,7 @@ To annotate:
 
 ## Understanding Issues
 
-The **Issues** page shows failure patterns your agent is experiencing. Issues are discovered automatically when failed scores share similar feedback.
+The **Issues** page shows failure patterns your agent is experiencing. Issues are discovered automatically when failed annotations share similar feedback.
 
 Each issue has:
 
@@ -82,30 +82,30 @@ You can:
 
 ## Understanding Evaluations
 
-The **Evaluations** page shows automated scripts that score your agent's interactions in real time.
+The **Evaluations** page shows automated scripts that annotate your agent's interactions in real time.
 
 Evaluations are typically generated from issues — when you click "Generate Evaluation" on an issue, Latitude creates a monitoring script that watches for that failure pattern on live traffic.
 
 Each evaluation shows:
 
-- Score trends over time
+- Annotation trends over time
 - Alignment with human annotations (how well the automation agrees with human reviewers)
 - Trigger configuration (which traces it monitors and how often)
 
-## Understanding Scores
+## Understanding Annotations
 
-Scores are the fundamental unit of measurement in Latitude V2. Every score has:
+Annotations are the fundamental unit of measurement in Latitude V2. Every annotation has:
 
 - A **value** between 0 and 1
 - A **pass/fail** verdict
 - **Feedback** text describing the verdict
-- A **source** — evaluation, annotation, or custom
+- A **source** — evaluation, human review, or custom
 
-Scores appear throughout the product: on traces, in evaluation dashboards, in issue details, and in simulation reports.
+Annotations appear throughout the product: on traces, in evaluation dashboards, in issue details, and in simulation reports.
 
 ## What's Next
 
-- [Scores](../scores/overview) — Deep dive into how scores work
+- [Annotations](../annotations/overview) — Deep dive into how annotations work
 - [Issues](../issues/overview) — Learn about issue lifecycle and management
 - [Annotations](../annotations/overview) — Build effective human review workflows
 - [Evaluations](../evaluations/overview) — Understand automated monitoring
