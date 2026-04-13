@@ -56,7 +56,7 @@
     "@traceloop/instrumentation-cohere": "^0.22.0",
     "@traceloop/instrumentation-langchain": "^0.22.0",
     "@traceloop/instrumentation-llamaindex": "^0.22.0",
-    "@traceloop/instrumentation-together": "^0.22.0",
+    "@traceloop/instrumentation-together": "^0.24.0",
     "@traceloop/instrumentation-vertexai": "^0.22.0"
   },
   "devDependencies": {
