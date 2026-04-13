@@ -416,8 +416,16 @@ function createTaskDefinition(
           { name: "LAT_TEMPORAL_TASK_QUEUE", value: temporalCloud.taskQueue },
         ]
 
+        // Temporal's worker runs webpack to bundle workflows at startup; V8's default
+        // container-derived heap (~half of this task's container memory) is too small and OOMs.
+        const workflowsMaxOldSpaceMb = Math.max(384, Math.floor(serviceConfig.memory * 0.7))
+
         const serviceSpecificEnvVars: Record<string, { name: string; value: string }[]> = {
-          workflows: [{ name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" }, ...temporalEnvVars],
+          workflows: [
+            { name: "LAT_WORKFLOWS_HEALTH_PORT", value: "8080" },
+            { name: "NODE_OPTIONS", value: `--max-old-space-size=${workflowsMaxOldSpaceMb}` },
+            ...temporalEnvVars,
+          ],
           workers: temporalEnvVars,
         }
 
