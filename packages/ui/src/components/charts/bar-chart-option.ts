@@ -18,6 +18,7 @@ export function buildBarChartOption(
   formatTooltip?: (category: string, value: number) => string,
   showYAxis = true,
   enableBrush = false,
+  xAxisLabelFontSize = 11,
 ): EChartsCoreOption {
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
@@ -62,7 +63,7 @@ export function buildBarChartOption(
       axisLine: { lineStyle: { color: colors.border } },
       axisLabel: {
         color: colors.mutedForeground,
-        fontSize: 11,
+        fontSize: xAxisLabelFontSize,
         rotate: 0,
         interval: categoryLabelInterval,
         hideOverlap: true,

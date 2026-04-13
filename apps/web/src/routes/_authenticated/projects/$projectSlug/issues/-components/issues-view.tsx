@@ -126,9 +126,9 @@ export function IssuesView({
       minWidth: ISSUE_COLUMN_MIN_WIDTH,
       render: (issue) => (
         <div className="flex min-w-0 items-center gap-2">
-          <Text.H5M className="min-w-0 flex-1" noWrap ellipsis>
+          <Text.H5 className="min-w-0 flex-1" noWrap ellipsis>
             {issue.name}
-          </Text.H5M>
+          </Text.H5>
           <div className="shrink-0">
             <IssueLifecycleStatuses
               states={issue.states}
@@ -139,7 +139,7 @@ export function IssuesView({
                       {
                         key: "monitored",
                         label: "Monitored",
-                        variant: "info",
+                        variant: "success",
                         tooltip: (
                           <MonitoredByTooltip
                             evaluationNames={issue.evaluations.map((evaluation) => evaluation.name)}
@@ -159,7 +159,18 @@ export function IssuesView({
       header: "Trend",
       width: 176,
       minWidth: 160,
-      render: (issue) => <IssueTrendBar buckets={issue.trend} height={36} emptyLabel="-" showLabels={false} />,
+      render: (issue) => (
+        <IssueTrendBar
+          buckets={issue.trend}
+          height={36}
+          emptyLabel="-"
+          showLabels={false}
+          states={issue.states}
+          resolvedAt={issue.resolvedAt}
+          escalationOccurrenceThreshold={issue.escalationOccurrenceThreshold}
+          showEscalationThresholdGuide
+        />
+      ),
     },
     {
       key: "seenAt",
@@ -216,7 +227,7 @@ export function IssuesView({
           getRowKey={(issue) => issue.id}
           getRowClassName={(issue, context) =>
             issue.states.includes("regressed") && !context.isActive
-              ? "bg-destructive/10 hover:bg-destructive/15"
+              ? "bg-rose-500/10 hover:bg-rose-500/14 dark:bg-rose-500/15 dark:hover:bg-rose-500/19"
               : undefined
           }
           {...(activeIssueId ? { activeRowKey: activeIssueId } : {})}

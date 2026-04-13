@@ -4,6 +4,7 @@ import {
   applyIssueLifecycleCommandUseCase,
   deriveIssueLifecycleStates,
   embedIssueSearchQueryUseCase,
+  getEscalationOccurrenceThreshold,
   type Issue,
   type IssueListItem,
   IssueProjectionRepository,
@@ -75,6 +76,7 @@ const toIssueRecord = (issue: IssueListItem) => ({
   occurrences: issue.occurrences,
   similarityScore: issue.similarityScore,
   affectedTracesPercent: issue.affectedTracesPercent,
+  escalationOccurrenceThreshold: issue.escalationOccurrenceThreshold,
   trend: issue.trend.map(toIssuesBucketRecord),
   evaluations: issue.evaluations.map(toEvaluationSummaryRecord),
 })
@@ -162,6 +164,7 @@ const toIssueDetailRecord = (input: {
   readonly firstSeenAt: Date
   readonly lastSeenAt: Date
   readonly totalOccurrences: number
+  readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly { readonly bucket: string; readonly count: number }[]
   readonly evaluations: readonly EvaluationSummaryRecord[]
   readonly keepMonitoringDefault: boolean
@@ -180,6 +183,7 @@ const toIssueDetailRecord = (input: {
   firstSeenAt: input.firstSeenAt.toISOString(),
   lastSeenAt: input.lastSeenAt.toISOString(),
   totalOccurrences: input.totalOccurrences,
+  escalationOccurrenceThreshold: input.escalationOccurrenceThreshold,
   trend: input.trend,
   evaluations: input.evaluations,
   keepMonitoringDefault: input.keepMonitoringDefault,
@@ -376,6 +380,8 @@ export const getIssueDetail = createServerFn({ method: "GET" })
           firstSeenAt: occurrence?.firstSeenAt ?? issue.createdAt,
           lastSeenAt: occurrence?.lastSeenAt ?? issue.createdAt,
           totalOccurrences: occurrence?.totalOccurrences ?? 0,
+          escalationOccurrenceThreshold:
+            occurrence !== null ? getEscalationOccurrenceThreshold(occurrence.baselineAvgOccurrences) : null,
           trend: fillBuckets({
             scaffold: trendScaffold,
             buckets: trend,

@@ -307,7 +307,7 @@ describe("listIssuesUseCase", () => {
     expect(result.items.map((issue) => ({ id: issue.id, states: issue.states }))).toEqual([
       {
         id: newestIssue.id,
-        states: [IssueState.New, IssueState.Escalating],
+        states: [IssueState.New],
       },
       {
         id: regressedIssue.id,

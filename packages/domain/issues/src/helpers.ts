@@ -187,6 +187,9 @@ export interface DeriveIssueLifecycleStatesInput {
   readonly now?: Date
 }
 
+export const getEscalationOccurrenceThreshold = (baselineAvgOccurrences: number): number =>
+  Math.floor(Math.max(0, baselineAvgOccurrences) * ESCALATION_THRESHOLD_FACTOR) + 1
+
 export const deriveIssueLifecycleStates = ({
   issue,
   occurrence,
@@ -195,14 +198,15 @@ export const deriveIssueLifecycleStates = ({
   const firstSeenAt = occurrence?.firstSeenAt ?? issue.createdAt
   const lastSeenAt = occurrence?.lastSeenAt ?? issue.createdAt
   const states = new Set<IssueStateValue>()
+  const isNew = firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY
 
-  if (firstSeenAt.getTime() > now.getTime() - NEW_ISSUE_AGE_DAYS * MILLISECONDS_PER_DAY) {
+  if (isNew) {
     states.add(IssueState.New)
   }
 
   const recentOccurrences = occurrence?.recentOccurrences ?? 0
   const baselineAverage = occurrence?.baselineAvgOccurrences ?? 0
-  if (recentOccurrences > baselineAverage * ESCALATION_THRESHOLD_FACTOR) {
+  if (!isNew && recentOccurrences >= getEscalationOccurrenceThreshold(baselineAverage)) {
     states.add(IssueState.Escalating)
   }
 

@@ -53,12 +53,13 @@ export function IssuesAnalyticsPanel({
         <div className="px-4 py-3">
           <BarChart
             data={analytics.histogram.map((bucket) => ({
-              category: formatDayBucketLabel(bucket.bucket),
+              category: formatDayBucketLabel(bucket.bucket).replaceAll(" ", "\u00A0"),
               tooltipCategory: formatDayBucketTooltipLabel(bucket.bucket),
               value: bucket.count,
             }))}
             height={160}
             showYAxis={false}
+            xAxisLabelFontSize={10}
             ariaLabel="Issue occurrences by day"
             formatTooltip={(category, value) => `${category}<br/><b>${formatCount(value)}</b> occurrences`}
           />

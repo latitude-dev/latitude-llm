@@ -3,6 +3,8 @@ const HOUR_MS = 60 * MINUTE_MS
 const DAY_MS = 24 * HOUR_MS
 const MONTH_MS = 30 * DAY_MS
 const YEAR_MS = 365 * DAY_MS
+const lifecycleDisplayOrder = ["regressed", "escalating", "new", "resolved", "ignored"] as const
+const lifecycleDisplayOrderSet = new Set<string>(lifecycleDisplayOrder)
 
 function formatCompactElapsed(elapsedMs: number): string {
   if (elapsedMs < HOUR_MS) {
@@ -67,6 +69,15 @@ export function formatDayBucketTooltipLabel(bucket: string): string {
     month: "long",
     day: "numeric",
   })
+}
+
+export function getLifecycleStatesForDisplay(states: readonly string[]): readonly string[] {
+  const stateSet = new Set(states)
+
+  return [
+    ...lifecycleDisplayOrder.filter((state) => stateSet.has(state)),
+    ...states.filter((state) => !lifecycleDisplayOrderSet.has(state)),
+  ]
 }
 
 export function formatLifecycleLabel(state: string): string {

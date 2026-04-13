@@ -11,7 +11,7 @@ import { cuidSchema, OrganizationId, ProjectId, type RepositoryError } from "@do
 import { Effect } from "effect"
 import { z } from "zod"
 import { type Issue, IssueState } from "../entities/issue.ts"
-import { deriveIssueLifecycleStates } from "../helpers.ts"
+import { deriveIssueLifecycleStates, getEscalationOccurrenceThreshold } from "../helpers.ts"
 import { type IssueProjectionCandidate, IssueProjectionRepository } from "../ports/issue-projection-repository.ts"
 import { IssueRepository } from "../ports/issue-repository.ts"
 
@@ -88,6 +88,7 @@ export interface IssueListItem {
   readonly occurrences: number
   readonly similarityScore: number | null
   readonly affectedTracesPercent: number
+  readonly escalationOccurrenceThreshold: number | null
   readonly trend: readonly IssueOccurrenceBucket[]
   readonly evaluations: readonly Evaluation[]
 }
@@ -109,6 +110,7 @@ interface AnalyticsCandidate {
   readonly similarityScore: number | null
   readonly firstSeenAt: Date
   readonly lastSeenAt: Date
+  readonly escalationOccurrenceThreshold: number | null
 }
 
 const toUtcDayStart = (value: Date): Date =>
@@ -287,6 +289,8 @@ const toCandidate = (input: {
     similarityScore: input.similarityScore,
     firstSeenAt: input.occurrence?.firstSeenAt ?? input.windowMetric.firstSeenAt ?? input.issue.createdAt,
     lastSeenAt: input.occurrence?.lastSeenAt ?? input.windowMetric.lastSeenAt ?? input.issue.createdAt,
+    escalationOccurrenceThreshold:
+      input.occurrence !== null ? getEscalationOccurrenceThreshold(input.occurrence.baselineAvgOccurrences) : null,
   }
 }
 
@@ -505,6 +509,7 @@ export const listIssuesUseCase = (
         occurrences: candidate.windowMetric.occurrences,
         similarityScore: candidate.similarityScore,
         affectedTracesPercent: totalTraces === 0 ? 0 : Math.min(candidate.windowMetric.occurrences / totalTraces, 1),
+        escalationOccurrenceThreshold: candidate.escalationOccurrenceThreshold,
         trend: trendByIssueId.get(candidate.issue.id) ?? fillBuckets({ scaffold: trendScaffold, buckets: [] }),
         evaluations: evaluationsByIssueId.get(candidate.issue.id) ?? [],
       })),

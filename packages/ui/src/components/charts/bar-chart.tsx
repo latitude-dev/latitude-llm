@@ -31,6 +31,8 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
   readonly formatTooltip?: (category: string, value: number) => string
   /** When false, hides y-axis tick labels and frees left grid margin (tooltip still shows values). */
   readonly showYAxis?: boolean
+  /** Optional x-axis label font size override in pixels. */
+  readonly xAxisLabelFontSize?: number
   /**
    * Called when user selects a range via brush (e.g., drag on the histogram).
    * Receives the selected data range [startIndex, endIndex] or null if cleared.
@@ -65,6 +67,7 @@ function BarChart({
   colorScheme,
   formatTooltip,
   showYAxis = true,
+  xAxisLabelFontSize,
   onSelect,
   className,
   ...rest
@@ -87,8 +90,18 @@ function BarChart({
   const values = useMemo(() => data.map((d) => d.value), [data])
 
   const option = useMemo(
-    () => buildBarChartOption(categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush),
-    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush],
+    () =>
+      buildBarChartOption(
+        categories,
+        values,
+        tooltipCategories,
+        colors,
+        formatTooltip,
+        showYAxis,
+        hasBrush,
+        xAxisLabelFontSize,
+      ),
+    [categories, values, tooltipCategories, colors, formatTooltip, showYAxis, hasBrush, xAxisLabelFontSize],
   )
 
   // Stable event handlers that read the latest onSelect from a ref.

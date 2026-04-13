@@ -1,13 +1,13 @@
 import { Badge, Tooltip } from "@repo/ui"
 import type { ComponentProps, ReactNode } from "react"
-import { formatLifecycleLabel } from "./issue-formatters.ts"
+import { formatLifecycleLabel, getLifecycleStatesForDisplay } from "./issue-formatters.ts"
 
 const STATE_VARIANTS = {
-  new: "outlineSuccessMuted",
-  escalating: "outlineDestructiveMuted",
+  new: "outlineAccent",
+  escalating: "outlineWarningMuted",
   resolved: "outlineMuted",
-  regressed: "outlineWarningMuted",
-  ignored: "outlineAccent",
+  regressed: "outlineDestructiveMuted",
+  ignored: "outlineMuted",
 } as const
 
 interface IssueExtraBadge {
@@ -30,9 +30,11 @@ export function IssueLifecycleBadges({
     return null
   }
 
+  const orderedStates = getLifecycleStatesForDisplay(states)
+
   return (
     <div className={wrap ? "flex flex-row flex-wrap gap-1" : "flex flex-row gap-1"}>
-      {states.map((state) => (
+      {orderedStates.map((state) => (
         <Badge
           key={state}
           variant={STATE_VARIANTS[state as keyof typeof STATE_VARIANTS] ?? "outline"}

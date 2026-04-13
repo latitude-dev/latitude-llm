@@ -15,7 +15,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowUpIcon, BotIcon, ChartColumnIcon, Clock3Icon } from "lucide-react"
+import { ArrowDownIcon, ArrowDownRightIcon, ArrowUpIcon, MessageSquareTextIcon, RadarIcon } from "lucide-react"
 import { useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import {
@@ -219,7 +219,7 @@ export function IssueDetailDrawer({
         header={
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-1">
-              {isLoading ? <Skeleton className="h-7 w-56" /> : <Text.H4>{issue?.name ?? "Issue not found"}</Text.H4>}
+              {isLoading ? <Skeleton className="h-7 w-56" /> : <Text.H4M>{issue?.name ?? "Issue not found"}</Text.H4M>}
               {isLoading ? (
                 <Skeleton className="h-5 w-full" />
               ) : (
@@ -239,17 +239,30 @@ export function IssueDetailDrawer({
           </div>
 
           <DetailSection
-            icon={<Icon icon={ChartColumnIcon} size="sm" />}
+            icon={<Icon icon={ArrowDownRightIcon} size="sm" />}
             label="Trend"
             defaultOpen
             contentClassName="pl-0 max-h-none overflow-visible"
           >
-            <IssueTrendBar buckets={issue?.trend ?? []} height={120} isLoading={isLoading} />
+            <div className="flex flex-col rounded-lg bg-secondary p-2">
+              <div className="px-4 py-3">
+                <IssueTrendBar
+                  buckets={issue?.trend ?? []}
+                  height={120}
+                  isLoading={isLoading}
+                  barVariant="primary"
+                  states={issue?.states ?? []}
+                  resolvedAt={issue?.resolvedAt ?? null}
+                  escalationOccurrenceThreshold={issue?.escalationOccurrenceThreshold ?? null}
+                  showEscalationThresholdGuide
+                />
+              </div>
+            </div>
           </DetailSection>
 
           <DetailSection
-            icon={<Icon icon={BotIcon} size="sm" />}
-            label="Linked evaluations"
+            icon={<Icon icon={RadarIcon} size="sm" />}
+            label="Evaluations"
             defaultOpen
             contentClassName="pl-0 max-h-none overflow-visible"
           >
@@ -261,8 +274,8 @@ export function IssueDetailDrawer({
           </DetailSection>
 
           <DetailSection
-            icon={<Icon icon={Clock3Icon} size="sm" />}
-            label="Seen traces"
+            icon={<Icon icon={MessageSquareTextIcon} size="sm" />}
+            label="Traces"
             defaultOpen
             contentClassName="pl-0 max-h-none overflow-visible"
           >

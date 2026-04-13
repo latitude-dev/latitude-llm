@@ -179,17 +179,17 @@ function RangeCalendar({
           "[&:has([aria-selected])]:text-foreground",
         ),
         day: cn(
-          "inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-sm font-medium transition-colors",
+          "inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-sm font-normal transition-colors",
           "hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         ),
         day_selected:
-          "bg-foreground text-background hover:bg-foreground/90 hover:text-background aria-selected:opacity-100",
-        day_today: "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+          "bg-foreground text-background font-medium hover:bg-foreground/90 hover:text-background aria-selected:opacity-100",
+        day_today: "bg-primary text-primary-foreground font-medium hover:bg-primary/90 hover:text-primary-foreground",
         day_outside: "text-muted-foreground opacity-50",
         day_disabled: "text-muted-foreground opacity-30",
         day_hidden: "invisible",
         day_range_middle:
-          "day-range-middle !rounded-none !bg-transparent !text-foreground hover:!bg-transparent hover:!text-foreground",
+          "day-range-middle !rounded-none !bg-transparent !text-foreground !font-normal hover:!bg-transparent hover:!text-foreground",
         day_range_start:
           "day-range-start !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background",
         day_range_end: "day-range-end !bg-foreground !text-background hover:!bg-foreground/90 hover:!text-background",

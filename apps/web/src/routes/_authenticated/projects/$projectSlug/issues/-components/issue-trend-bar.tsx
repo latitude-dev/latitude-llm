@@ -4,6 +4,35 @@ import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-forma
 
 const MAX_VISIBLE_BUCKET_LABELS = 6
 const MIN_VISIBLE_BAR_HEIGHT_PERCENT = 12
+const MAX_VISIBLE_BAR_HEIGHT_PERCENT = 88
+const BAR_TOP_HEADROOM_PERCENT = 100 - MAX_VISIBLE_BAR_HEIGHT_PERCENT
+const MINI_HISTOGRAM_GUIDE_LINE_COUNT = 5
+const MINI_HISTOGRAM_TOP_INSET_PX = 6
+const REGRESSED_BAR_CLASSES = "bg-rose-700 dark:bg-rose-400"
+const ESCALATING_BAR_CLASSES = "bg-yellow-500/75 dark:bg-yellow-300/85"
+const DEFAULT_MUTED_BAR_CLASSES = "bg-muted-foreground/60 dark:bg-muted-foreground/70"
+const DEFAULT_MUTED_GUIDE_CLASSES = "border-muted-foreground/60 dark:border-muted-foreground/70"
+const DEFAULT_PRIMARY_BAR_CLASSES = "bg-primary"
+
+function toBucketEndMs(bucket: string): number {
+  return new Date(`${bucket}T23:59:59.999Z`).getTime()
+}
+
+function resolveBarClasses(input: {
+  readonly barVariant: "muted" | "primary"
+  readonly isRegressedBucket: boolean
+  readonly isEscalatingBucket: boolean
+}) {
+  if (input.isRegressedBucket) {
+    return REGRESSED_BAR_CLASSES
+  }
+
+  if (input.isEscalatingBucket) {
+    return ESCALATING_BAR_CLASSES
+  }
+
+  return input.barVariant === "primary" ? DEFAULT_PRIMARY_BAR_CLASSES : DEFAULT_MUTED_BAR_CLASSES
+}
 
 function shouldShowBucketLabel(index: number, totalBuckets: number) {
   if (totalBuckets <= MAX_VISIBLE_BUCKET_LABELS) {
@@ -14,18 +43,36 @@ function shouldShowBucketLabel(index: number, totalBuckets: number) {
   return index % interval === 0 || index === totalBuckets - 1
 }
 
+function toVisibleHeightPercent(count: number, maxCount: number): number {
+  if (count === 0) {
+    return 0
+  }
+
+  return Math.max(MIN_VISIBLE_BAR_HEIGHT_PERCENT, (count / maxCount) * MAX_VISIBLE_BAR_HEIGHT_PERCENT)
+}
+
 export function IssueTrendBar({
   buckets,
   height = 48,
   isLoading = false,
   emptyLabel = "No issue occurrences",
   showLabels = true,
+  barVariant = "muted",
+  states = [],
+  resolvedAt = null,
+  escalationOccurrenceThreshold = null,
+  showEscalationThresholdGuide = false,
 }: {
   readonly buckets: readonly { readonly bucket: string; readonly count: number }[]
   readonly height?: number
   readonly isLoading?: boolean
   readonly emptyLabel?: string
   readonly showLabels?: boolean
+  readonly barVariant?: "muted" | "primary"
+  readonly states?: readonly string[]
+  readonly resolvedAt?: string | null
+  readonly escalationOccurrenceThreshold?: number | null
+  readonly showEscalationThresholdGuide?: boolean
 }) {
   if (isLoading) {
     return <ChartSkeleton minHeight={height} className="border-0 bg-transparent p-0" />
@@ -46,34 +93,103 @@ export function IssueTrendBar({
     count: bucket.count,
   }))
   const maxCount = Math.max(...chartBuckets.map((bucket) => bucket.count), 1)
+  const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
+  const isRegressedIssue = states.includes("regressed")
+  const isEscalatingIssue = states.includes("escalating")
+  const escalationGuideCount =
+    showEscalationThresholdGuide && isEscalatingIssue && escalationOccurrenceThreshold !== null
+      ? escalationOccurrenceThreshold
+      : null
+  const escalationGuideHeightPercent =
+    escalationGuideCount !== null ? toVisibleHeightPercent(escalationGuideCount, maxCount) : null
+  const escalationGuideBottomPercent =
+    escalationGuideHeightPercent !== null ? Math.max(0, escalationGuideHeightPercent - BAR_TOP_HEADROOM_PERCENT) : null
 
   return (
     <div className="flex min-w-0 flex-col" style={{ height }} role="img" aria-label="Issue occurrence trend">
       <TooltipProvider>
-        <div className="flex min-h-0 flex-1 items-end gap-1">
-          {chartBuckets.map((bucket) => {
-            const heightPercent =
-              bucket.count === 0 ? 0 : Math.max(MIN_VISIBLE_BAR_HEIGHT_PERCENT, (bucket.count / maxCount) * 100)
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col justify-between"
+            style={{ top: MINI_HISTOGRAM_TOP_INSET_PX }}
+            aria-hidden
+          >
+            {Array.from({ length: MINI_HISTOGRAM_GUIDE_LINE_COUNT }, (_, index) => (
+              <span
+                key={index}
+                className={
+                  index === MINI_HISTOGRAM_GUIDE_LINE_COUNT - 1
+                    ? "w-full border-t border-border/60"
+                    : "w-full border-t border-dashed border-border/60"
+                }
+              />
+            ))}
+          </div>
+          <div
+            className="absolute inset-x-0 bottom-0 flex items-end gap-1"
+            style={{ top: MINI_HISTOGRAM_TOP_INSET_PX }}
+          >
+            {chartBuckets.map((bucket) => {
+              const heightPercent = toVisibleHeightPercent(bucket.count, maxCount)
+              const isRegressedBucket =
+                isRegressedIssue &&
+                resolvedAtMs !== null &&
+                bucket.count > 0 &&
+                toBucketEndMs(bucket.key) > resolvedAtMs
+              const isEscalatingBucket =
+                !isRegressedBucket &&
+                isEscalatingIssue &&
+                escalationOccurrenceThreshold !== null &&
+                bucket.count >= escalationOccurrenceThreshold
 
-            return (
-              <TooltipRoot key={bucket.key} delayDuration={100}>
-                <TooltipTrigger asChild>
-                  <span className="group/bucket flex h-full min-w-0 flex-1 items-end">
-                    <span
-                      className="w-full rounded-t-sm bg-primary transition-opacity group-hover/bucket:opacity-80"
-                      style={{ height: `${heightPercent}%` }}
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="top" sideOffset={6}>
-                  <div className="flex flex-col gap-0.5">
-                    <Text.H6>{bucket.tooltipLabel}</Text.H6>
-                    <Text.H6B>{formatCount(bucket.count)} occurrences</Text.H6B>
-                  </div>
-                </TooltipContent>
-              </TooltipRoot>
-            )
-          })}
+              return (
+                <TooltipRoot key={bucket.key} delayDuration={100}>
+                  <TooltipTrigger asChild>
+                    <span className="group/bucket relative flex h-full min-w-0 flex-1 items-end">
+                      <span
+                        className="pointer-events-none absolute inset-0 rounded-[2px] bg-foreground/[0.06] opacity-0 transition-opacity group-hover/bucket:opacity-100"
+                        aria-hidden
+                      />
+                      <span
+                        className={`relative z-[1] w-full transition-[filter] group-hover/bucket:brightness-90 ${
+                          barVariant === "primary"
+                            ? `rounded-t-sm ${resolveBarClasses({
+                                barVariant,
+                                isRegressedBucket,
+                                isEscalatingBucket,
+                              })}`
+                            : `rounded-t-[2px] ${resolveBarClasses({
+                                barVariant,
+                                isRegressedBucket,
+                                isEscalatingBucket,
+                              })}`
+                        }`}
+                        style={{ height: `${heightPercent}%` }}
+                      />
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" sideOffset={6}>
+                    <div className="flex flex-col gap-0.5">
+                      <Text.H6>{bucket.tooltipLabel}</Text.H6>
+                      <Text.H6B>{formatCount(bucket.count)} occurrences</Text.H6B>
+                    </div>
+                  </TooltipContent>
+                </TooltipRoot>
+              )
+            })}
+          </div>
+          {escalationGuideCount !== null && escalationGuideBottomPercent !== null ? (
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+              style={{ top: MINI_HISTOGRAM_TOP_INSET_PX }}
+              aria-hidden
+            >
+              <div
+                className={`absolute inset-x-0 border-t border-dashed ${DEFAULT_MUTED_GUIDE_CLASSES}`}
+                style={{ bottom: `${escalationGuideBottomPercent}%` }}
+              />
+            </div>
+          ) : null}
         </div>
       </TooltipProvider>
       {showLabels ? (
