@@ -1,4 +1,4 @@
-import { publishAnnotationUseCase } from "@domain/annotations"
+import { publishHumanAnnotationUseCase } from "@domain/annotations"
 import type { QueueConsumer } from "@domain/queue"
 import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { OrganizationId, type ScoreId } from "@domain/shared"
@@ -20,8 +20,8 @@ export const createAnnotationScoresWorker = ({ consumer, workflowStarter, postgr
   const pgClient = postgresClient ?? getPostgresClient()
 
   consumer.subscribe("annotation-scores", {
-    publish: (payload) =>
-      publishAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
+    publishHumanAnnotation: (payload) =>
+      publishHumanAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
         withPostgres(ScoreRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
         Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
         Effect.tap((result) =>

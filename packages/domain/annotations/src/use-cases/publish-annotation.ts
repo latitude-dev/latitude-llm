@@ -30,11 +30,10 @@ const startPublishAnnotationWorkflow = (
     },
   )
 
-export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
+export const publishHumanAnnotationUseCase = (input: PublishAnnotationInput) =>
   Effect.gen(function* () {
     const workflowStarter = yield* WorkflowStarter
     const scoreRepository = yield* ScoreRepository
-
     const score = yield* scoreRepository
       .findById(input.scoreId)
       .pipe(
@@ -54,6 +53,13 @@ export const publishAnnotationUseCase = (input: PublishAnnotationInput) =>
       return yield* new BadRequestError({
         message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
       })
+    }
+
+    if (score.annotatorId === null) {
+      return {
+        action: "not-human",
+        score: score as AnnotationScore,
+      }
     }
 
     yield* startPublishAnnotationWorkflow(workflowStarter, {

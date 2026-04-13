@@ -20,8 +20,8 @@ import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } fro
 import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
-import { writePublishedAnnotationUseCase } from "./write-annotation.ts"
 import { writeDraftAnnotation } from "./write-draft-annotation.ts"
+import { writePublishedAnnotationUseCase } from "./write-published-annotation.ts"
 
 const cuid = "a".repeat(24)
 const projectCuid = "b".repeat(24)

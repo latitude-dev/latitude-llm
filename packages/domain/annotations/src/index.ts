@@ -35,17 +35,17 @@ export {
   type PublishAnnotationError,
   type PublishAnnotationInput,
   type PublishAnnotationResult,
-  publishAnnotationUseCase,
+  publishHumanAnnotationUseCase,
 } from "./use-cases/publish-annotation.ts"
-export {
-  type WriteAnnotationError,
-  type WriteAnnotationInput,
-  writeAnnotationInputSchema,
-  writePublishedAnnotationUseCase as writeAnnotationUseCase,
-} from "./use-cases/write-annotation.ts"
 export {
   type PersistDraftAnnotationError,
   persistDraftAnnotationInputSchema,
   type WriteDraftAnnotationInput as PersistDraftAnnotationInput,
   writeDraftAnnotation as persistDraftAnnotation,
 } from "./use-cases/write-draft-annotation.ts"
+export {
+  type WriteAnnotationError,
+  type WriteAnnotationInput,
+  writeAnnotationInputSchema,
+  writePublishedAnnotationUseCase as writeAnnotationUseCase,
+} from "./use-cases/write-published-annotation.ts"

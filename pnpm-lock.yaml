@@ -481,6 +481,9 @@ importers:
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../../packages/domain/scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../../packages/domain/shared
