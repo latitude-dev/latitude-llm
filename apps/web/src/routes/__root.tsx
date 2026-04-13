@@ -8,6 +8,7 @@ import { getThemePreference } from "../domains/theme/theme.functions.ts"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
 import { useThemePreference } from "../lib/theme.ts"
+import { useRootThemePreference } from "./-root-route-data.ts"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
@@ -57,7 +58,7 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
-  const initialTheme = Route.useLoaderData({ select: (data) => data.theme })
+  const initialTheme = useRootThemePreference()
   const { theme } = useThemePreference(initialTheme)
 
   return (
