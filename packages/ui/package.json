@@ -40,7 +40,7 @@
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
-    "lucide-react": "^0.481.0",
+    "lucide-react": "^1.8.0",
     "react-markdown": "^10.1.0",
     "react-textarea-autosize": "^8.5.9",
     "remark-breaks": "^4.0.0",
