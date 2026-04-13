@@ -12,6 +12,9 @@ export const NEW_ISSUE_AGE_DAYS = 7
  * */
 export const ESCALATION_THRESHOLD_FACTOR = 1.33
 
+/** Escalating issues must clear at least this many recent occurrences. */
+export const ESCALATION_MIN_OCCURRENCES_THRESHOLD = 20
+
 /** An issue with no occurrences in this many days is auto-resolved. */
 export const AUTO_RESOLVE_INACTIVITY_DAYS = 14
 

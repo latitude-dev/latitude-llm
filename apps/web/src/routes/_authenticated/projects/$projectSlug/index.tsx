@@ -8,10 +8,10 @@ import {
   ChevronDown,
   DatabaseIcon,
   FilterIcon,
+  LayersIcon,
   MessagesSquareIcon,
   SearchIcon,
   TextIcon,
-  UnlinkIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
@@ -330,7 +330,7 @@ function ProjectPage() {
             Add to Dataset ({selectedCount})
           </Button>
           <Button variant="outline" size="sm" onClick={() => setAddToQueueOpen(true)}>
-            <Icon icon={UnlinkIcon} size="sm" />
+            <Icon icon={LayersIcon} size="sm" />
             Add to Annotation Queue ({selectedCount})
           </Button>
         </div>

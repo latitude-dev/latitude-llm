@@ -5,6 +5,7 @@ import {
   CENTROID_EMBEDDING_MODEL,
   CENTROID_HALF_LIFE_SECONDS,
   CENTROID_SOURCE_WEIGHTS,
+  ESCALATION_MIN_OCCURRENCES_THRESHOLD,
   ESCALATION_THRESHOLD_FACTOR,
   ISSUE_STATES,
   NEW_ISSUE_AGE_DAYS,
@@ -188,7 +189,10 @@ export interface DeriveIssueLifecycleStatesInput {
 }
 
 export const getEscalationOccurrenceThreshold = (baselineAvgOccurrences: number): number =>
-  Math.floor(Math.max(0, baselineAvgOccurrences) * ESCALATION_THRESHOLD_FACTOR) + 1
+  Math.max(
+    ESCALATION_MIN_OCCURRENCES_THRESHOLD,
+    Math.floor(Math.max(0, baselineAvgOccurrences) * ESCALATION_THRESHOLD_FACTOR) + 1,
+  )
 
 export const deriveIssueLifecycleStates = ({
   issue,

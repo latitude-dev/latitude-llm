@@ -199,10 +199,11 @@ describe("issue lifecycle helpers", () => {
   const now = new Date("2026-04-10T00:00:00.000Z")
 
   it("computes the minimum integer occurrences needed to cross the escalation threshold", () => {
-    expect(getEscalationOccurrenceThreshold(0)).toBe(1)
-    expect(getEscalationOccurrenceThreshold(1)).toBe(2)
-    expect(getEscalationOccurrenceThreshold(2)).toBe(3)
-    expect(getEscalationOccurrenceThreshold(2.5)).toBe(4)
+    expect(getEscalationOccurrenceThreshold(0)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(1)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(2)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(2.5)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(16)).toBe(22)
   })
 
   it("does not mark new issues as escalating even when they exceed the escalation threshold", () => {
@@ -215,7 +216,7 @@ describe("issue lifecycle helpers", () => {
       occurrence: makeOccurrence({
         firstSeenAt: new Date("2026-04-05T08:00:00.000Z"),
         lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
-        recentOccurrences: 4,
+        recentOccurrences: 20,
         baselineAvgOccurrences: 2,
       }),
       now,
@@ -234,7 +235,7 @@ describe("issue lifecycle helpers", () => {
       occurrence: makeOccurrence({
         firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
         lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
-        recentOccurrences: 4,
+        recentOccurrences: 20,
         baselineAvgOccurrences: 2,
       }),
       now,
