@@ -32,9 +32,6 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
-    // echarts core (~522kB) is the minimum for a bar chart with brush selection,
-    // already isolated via code splitting and lazy-loaded.
-    chunkSizeWarningLimit: 550,
     rolldownOptions: {
       output: {
         codeSplitting: {

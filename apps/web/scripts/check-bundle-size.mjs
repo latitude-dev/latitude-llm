@@ -5,6 +5,9 @@ import { existsSync } from "node:fs"
 const MAX_SIZE_BYTES = 500 * 1024
 const assetsDir = path.resolve(process.cwd(), ".output/public/assets")
 
+// Chunks that are known to exceed the limit and are lazy-loaded on demand.
+const ALLOWED_OVERSIZE = new Set(["echarts"])
+
 async function collectFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true })
   const files = []
@@ -39,6 +42,12 @@ async function main() {
 
   for (const file of files) {
     if (!file.endsWith(".js")) {
+      continue
+    }
+
+    const basename = path.basename(file)
+    const chunkName = basename.replace(/-[\w]+\.js$/, "")
+    if (ALLOWED_OVERSIZE.has(chunkName)) {
       continue
     }
 
