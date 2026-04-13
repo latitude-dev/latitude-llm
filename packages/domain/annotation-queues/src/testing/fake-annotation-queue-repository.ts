@@ -4,21 +4,75 @@ import type { AnnotationQueue } from "../entities/annotation-queue.ts"
 import type { AnnotationQueueRepositoryShape } from "../ports/annotation-queue-repository.ts"
 
 export const createFakeAnnotationQueueRepository = (
-  overrides?: Partial<AnnotationQueueRepositoryShape>,
-): { repository: AnnotationQueueRepositoryShape; getLastSavedQueue: () => AnnotationQueue | undefined } => {
-  let lastSavedQueue: AnnotationQueue | undefined
+  seedOrOverrides?: readonly AnnotationQueue[] | Partial<AnnotationQueueRepositoryShape>,
+  maybeOverrides?: Partial<AnnotationQueueRepositoryShape>,
+) => {
+  const seed = Array.isArray(seedOrOverrides) ? seedOrOverrides : []
+  const overrides = Array.isArray(seedOrOverrides) ? maybeOverrides : seedOrOverrides
+
+  const queues = new Map<string, AnnotationQueue>(seed.map((queue) => [queue.id, queue] as const))
 
   const repository: AnnotationQueueRepositoryShape = {
-    listByProject: () => Effect.succeed({ items: [], hasMore: false }),
-    findByIdInProject: () => Effect.succeed(null),
-    findBySlugInProject: () => Effect.succeed(null),
-    listSystemQueuesByProject: () => Effect.succeed([]),
-    findSystemQueueBySlugInProject: () => Effect.succeed(null),
+    listByProject: ({ projectId, options }) =>
+      Effect.sync(() => {
+        const filtered = [...queues.values()].filter((q) => q.projectId === projectId && !q.deletedAt)
+        const limit = options?.limit ?? 50
+        return {
+          items: filtered.slice(0, limit),
+          hasMore: filtered.length > limit,
+        }
+      }),
+
+    listSystemQueuesByProject: ({ projectId }) =>
+      Effect.sync(() => [...queues.values()].filter((q) => q.projectId === projectId && q.system && !q.deletedAt)),
+
+    findByIdInProject: ({ projectId, queueId }) =>
+      Effect.sync(() => {
+        const queue = queues.get(queueId)
+        if (!queue || queue.projectId !== projectId || queue.deletedAt) return null
+        return queue
+      }),
+
+    findBySlugInProject: ({ projectId, queueSlug }) =>
+      Effect.sync(() => {
+        const queue = [...queues.values()].find(
+          (q) => q.projectId === projectId && q.slug === queueSlug && !q.deletedAt,
+        )
+        return queue ?? null
+      }),
+
+    findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
+      Effect.sync(() => {
+        const queue = [...queues.values()].find(
+          (q) => q.projectId === projectId && q.slug === queueSlug && q.system && !q.deletedAt,
+        )
+        return queue ?? null
+      }),
+
     save: (queue) =>
       Effect.sync(() => {
-        lastSavedQueue = queue
+        queues.set(queue.id, queue)
       }),
-    insertIfNotExists: () => Effect.succeed(true),
+
+    insertIfNotExists: (queue) =>
+      Effect.sync(() => {
+        if (queues.has(queue.id)) return false
+        queues.set(queue.id, queue)
+        return true
+      }),
+
+    incrementCompletedItems: ({ queueId, delta }) =>
+      Effect.sync(() => {
+        const queue = queues.get(queueId)
+        if (queue) {
+          queues.set(queueId, {
+            ...queue,
+            completedItems: Math.max(0, queue.completedItems + delta),
+            updatedAt: new Date(),
+          })
+        }
+      }),
+
     incrementTotalItems: ({ queueId, delta = 1 }) =>
       Effect.succeed({
         id: AnnotationQueueId(queueId),
@@ -37,8 +91,18 @@ export const createFakeAnnotationQueueRepository = (
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
+
     ...overrides,
   }
 
-  return { repository, getLastSavedQueue: () => lastSavedQueue }
+  let lastSavedQueue: AnnotationQueue | null = null
+  const originalSave = repository.save
+  repository.save = (queue) => {
+    lastSavedQueue = queue
+    return originalSave(queue)
+  }
+
+  const getLastSavedQueue = () => lastSavedQueue
+
+  return { repository, queues, getLastSavedQueue }
 }

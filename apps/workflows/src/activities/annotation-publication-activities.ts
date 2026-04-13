@@ -54,11 +54,9 @@ export const writePublishedAnnotationScore = async (input: {
         )
 
       if (score.source !== "annotation") {
-        return yield* Effect.fail(
-          new BadRequestError({
-            message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
-          }),
-        )
+        return yield* new BadRequestError({
+          message: `Score ${input.scoreId} is not an annotation (source: ${score.source})`,
+        })
       }
 
       const toWrite = mergeEnrichmentIntoAnnotationScoreForPublication(score as AnnotationScore, {

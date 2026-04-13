@@ -239,7 +239,7 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
-  it("routes ScoreCreated to issues:discovery and debounced annotation-scores publish", async () => {
+  it("routes ScoreCreated to issues:discovery, annotation-scores publish, and markReviewStarted", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("ScoreCreated", {
@@ -276,6 +276,19 @@ describe("domain-events dispatcher", () => {
         },
         options: {
           debounceMs: SCORE_PUBLICATION_DEBOUNCE,
+        },
+      },
+      {
+        queue: "annotation-scores",
+        task: "markReviewStarted",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+        options: {
+          dedupeKey: "annotation-scores:mark-review-started:score-3",
         },
       },
     ])

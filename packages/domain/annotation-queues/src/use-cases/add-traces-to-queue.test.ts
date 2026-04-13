@@ -40,7 +40,7 @@ const createTestLayer = (overrides?: {
   queueRepo?: Partial<AnnotationQueueRepositoryShape>
 }) => {
   const { repository: traceRepository } = createFakeTraceRepository(overrides?.traceRepo)
-  const itemRepository = createFakeAnnotationQueueItemRepository(overrides?.itemRepo)
+  const { repository: itemRepository } = createFakeAnnotationQueueItemRepository(overrides?.itemRepo)
   const { repository: queueRepository } = createFakeAnnotationQueueRepository(overrides?.queueRepo)
 
   const fakeSqlClient: SqlClientShape<unknown> = {

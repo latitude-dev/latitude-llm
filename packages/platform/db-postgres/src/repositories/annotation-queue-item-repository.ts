@@ -6,7 +6,7 @@ import {
   annotationQueueItemSchema,
   annotationQueueItemStatusRankFromTimestamps,
 } from "@domain/annotation-queues"
-import { RepositoryError, SqlClient, type SqlClientShape, TraceId } from "@domain/shared"
+import { NotFoundError, RepositoryError, SqlClient, type SqlClientShape, TraceId } from "@domain/shared"
 import { createId } from "@paralleldrive/cuid2"
 import { and, asc, desc, eq, gt, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
@@ -39,7 +39,10 @@ const toDomainItem = (row: typeof annotationQueueItems.$inferSelect): Annotation
 const resolveSort = (
   sortBy: AnnotationQueueItemListSortBy | undefined,
   sortDirection: "asc" | "desc" | undefined,
-): { sortBy: AnnotationQueueItemListSortBy; sortDirection: "asc" | "desc" } => ({
+): {
+  sortBy: AnnotationQueueItemListSortBy
+  sortDirection: "asc" | "desc"
+} => ({
   sortBy: sortBy ?? "status",
   sortDirection: sortDirection ?? "asc",
 })
@@ -172,7 +175,10 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
         const cursorClause = options.cursor ? cursorWhere(sortBy, sortDirection, options.cursor) : undefined
         if (options.cursor && cursorClause === null) {
           return Effect.fail(
-            new RepositoryError({ operation: "listByQueue", cause: new Error("Invalid item list cursor") }),
+            new RepositoryError({
+              operation: "listByQueue",
+              cause: new Error("Invalid item list cursor"),
+            }),
           )
         }
 
@@ -277,6 +283,154 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
 
           return { insertedCount: result.length }
         }).pipe(Effect.mapError((cause) => new RepositoryError({ operation: "bulkInsertIfNotExists", cause }))),
+      listByTraceId: ({ projectId, traceId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(annotationQueueItems)
+              .where(
+                and(
+                  eq(annotationQueueItems.organizationId, organizationId),
+                  eq(annotationQueueItems.projectId, projectId),
+                  eq(annotationQueueItems.traceId, traceId),
+                ),
+              ),
+          )
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainItem)),
+            Effect.mapError((cause) => new RepositoryError({ operation: "listByTraceId", cause })),
+          ),
+
+      getAdjacentItems: ({ projectId, queueId, currentItemId }) =>
+        sqlClient
+          .query((db, organizationId) => {
+            const orderClauseSql = sql`${statusRankSql} ASC, ${annotationQueueItems.traceCreatedAt} DESC, ${annotationQueueItems.id} DESC`
+
+            return db.execute<{ prev_id: string | null; next_id: string | null }>(sql`
+              WITH ranked AS (
+                SELECT
+                  ${annotationQueueItems.id} AS id,
+                  LAG(${annotationQueueItems.id}) OVER (ORDER BY ${orderClauseSql}) AS prev_id,
+                  LEAD(${annotationQueueItems.id}) OVER (ORDER BY ${orderClauseSql}) AS next_id
+                FROM ${annotationQueueItems}
+                WHERE ${annotationQueueItems.organizationId} = ${organizationId}
+                  AND ${annotationQueueItems.projectId} = ${projectId}
+                  AND ${annotationQueueItems.queueId} = ${queueId}
+              )
+              SELECT prev_id, next_id FROM ranked WHERE id = ${currentItemId}
+            `)
+          })
+          .pipe(
+            Effect.map((result) => {
+              const row = result.rows[0]
+              return {
+                previousItemId: row?.prev_id ?? null,
+                nextItemId: row?.next_id ?? null,
+              }
+            }),
+            Effect.mapError((cause) => new RepositoryError({ operation: "getAdjacentItems", cause })),
+          ),
+
+      getQueuePosition: ({ projectId, queueId, currentItemId }) =>
+        sqlClient
+          .query((db, organizationId) => {
+            const orderClauseSql = sql`${statusRankSql} ASC, ${annotationQueueItems.traceCreatedAt} DESC, ${annotationQueueItems.id} DESC`
+
+            return db.execute<{ row_num: number | null; total: number }>(sql`
+              WITH ranked AS (
+                SELECT
+                  ${annotationQueueItems.id} AS id,
+                  ROW_NUMBER() OVER (ORDER BY ${orderClauseSql}) AS row_num,
+                  COUNT(*) OVER () AS total
+                FROM ${annotationQueueItems}
+                WHERE ${annotationQueueItems.organizationId} = ${organizationId}
+                  AND ${annotationQueueItems.projectId} = ${projectId}
+                  AND ${annotationQueueItems.queueId} = ${queueId}
+              )
+              SELECT
+                (SELECT row_num FROM ranked WHERE id = ${currentItemId}) AS row_num,
+                COALESCE((SELECT total FROM ranked LIMIT 1), 0) AS total
+            `)
+          })
+          .pipe(
+            Effect.map((result) => {
+              const row = result.rows[0]
+              return {
+                currentIndex: row?.row_num ?? 0,
+                totalItems: row?.total ?? 0,
+              }
+            }),
+            Effect.mapError((cause) => new RepositoryError({ operation: "getQueuePosition", cause })),
+          ),
+
+      update: ({ projectId, queueId, itemId, completedAt, completedBy, reviewStartedAt }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .update(annotationQueueItems)
+              .set({
+                ...(completedAt !== undefined && { completedAt }),
+                ...(completedBy !== undefined && { completedBy }),
+                ...(reviewStartedAt !== undefined && { reviewStartedAt }),
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(annotationQueueItems.organizationId, organizationId),
+                  eq(annotationQueueItems.projectId, projectId),
+                  eq(annotationQueueItems.queueId, queueId),
+                  eq(annotationQueueItems.id, itemId),
+                ),
+              )
+              .returning(),
+          )
+          .pipe(
+            Effect.flatMap((rows) => {
+              const updated = rows[0]
+              if (!updated) {
+                return Effect.fail(
+                  new NotFoundError({
+                    entity: "AnnotationQueueItem",
+                    id: itemId,
+                  }),
+                )
+              }
+              return Effect.succeed(toDomainItem(updated))
+            }),
+            Effect.mapError((cause) => {
+              if (cause instanceof NotFoundError) return cause
+              return new RepositoryError({ operation: "update", cause })
+            }),
+          ),
+
+      getNextUncompletedItem: ({ projectId, queueId, currentItemId: _currentItemId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select({ id: annotationQueueItems.id })
+              .from(annotationQueueItems)
+              .where(
+                and(
+                  eq(annotationQueueItems.organizationId, organizationId),
+                  eq(annotationQueueItems.projectId, projectId),
+                  eq(annotationQueueItems.queueId, queueId),
+                  sql`${annotationQueueItems.completedAt} IS NULL`,
+                ),
+              )
+              .orderBy(desc(annotationQueueItems.traceCreatedAt), desc(annotationQueueItems.id))
+              .limit(1),
+          )
+          .pipe(
+            Effect.map((rows) => rows[0]?.id ?? null),
+            Effect.mapError(
+              (cause) =>
+                new RepositoryError({
+                  operation: "getNextUncompletedItem",
+                  cause,
+                }),
+            ),
+          ),
     } satisfies AnnotationQueueItemRepositoryShape
   }),
 )

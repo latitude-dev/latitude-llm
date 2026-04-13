@@ -133,7 +133,10 @@ const tailToCursor = (sortBy: AnnotationQueueListSortBy, tail: typeof annotation
   if (sortBy === "completedItems") {
     return { sortValue: String(tail.completedItems), id: tail.id } as const
   }
-  return { sortValue: String(Math.max(0, tail.totalItems - tail.completedItems)), id: tail.id } as const
+  return {
+    sortValue: String(Math.max(0, tail.totalItems - tail.completedItems)),
+    id: tail.id,
+  } as const
 }
 
 const evictSystemQueueCache = (queue: Pick<AnnotationQueue, "organizationId" | "projectId">) =>
@@ -154,7 +157,10 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
         const cursorClause = options.cursor ? cursorWhere(sortBy, sortDirection, options.cursor) : undefined
         if (options.cursor && cursorClause === null) {
           return Effect.fail(
-            new RepositoryError({ operation: "listByProject", cause: new Error("Invalid queue list cursor") }),
+            new RepositoryError({
+              operation: "listByProject",
+              cause: new Error("Invalid queue list cursor"),
+            }),
           )
         }
 
@@ -184,7 +190,10 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
               const tail = pageRows[pageRows.length - 1]
               const nextCursor =
                 hasMore && tail !== undefined
-                  ? (tailToCursor(sortBy, tail) as { sortValue: string; id: string })
+                  ? (tailToCursor(sortBy, tail) as {
+                      sortValue: string
+                      id: string
+                    })
                   : undefined
               return {
                 items,
@@ -241,7 +250,13 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
               const row = rows[0]
               return row !== undefined ? toDomainQueue(row) : null
             }),
-            Effect.mapError((cause) => new RepositoryError({ operation: "findBySlugInProject", cause })),
+            Effect.mapError(
+              (cause) =>
+                new RepositoryError({
+                  operation: "findBySlugInProject",
+                  cause,
+                }),
+            ),
           ),
 
       listSystemQueuesByProject: ({ projectId }) =>
@@ -262,7 +277,13 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
           )
           .pipe(
             Effect.map((rows) => rows.map(toDomainQueue)),
-            Effect.mapError((cause) => new RepositoryError({ operation: "listSystemQueuesByProject", cause })),
+            Effect.mapError(
+              (cause) =>
+                new RepositoryError({
+                  operation: "listSystemQueuesByProject",
+                  cause,
+                }),
+            ),
           ),
 
       findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
@@ -286,7 +307,13 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
               const row = rows[0]
               return row !== undefined ? toDomainQueue(row) : null
             }),
-            Effect.mapError((cause) => new RepositoryError({ operation: "findSystemQueueBySlugInProject", cause })),
+            Effect.mapError(
+              (cause) =>
+                new RepositoryError({
+                  operation: "findSystemQueueBySlugInProject",
+                  cause,
+                }),
+            ),
           ),
 
       save: (queue) =>
@@ -405,9 +432,39 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             Effect.mapError((cause) =>
               cause instanceof RepositoryError
                 ? cause
-                : new RepositoryError({ operation: "incrementTotalItems", cause }),
+                : new RepositoryError({
+                    operation: "incrementTotalItems",
+                    cause,
+                  }),
             ),
             Effect.tap((queue) => evictSystemQueueCache(queue)),
+          ),
+      incrementCompletedItems: ({ projectId, queueId, delta }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .update(annotationQueues)
+              .set({
+                completedItems: sql`GREATEST(0, ${annotationQueues.completedItems} + ${delta})`,
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(annotationQueues.organizationId, organizationId),
+                  eq(annotationQueues.projectId, projectId),
+                  eq(annotationQueues.id, queueId),
+                ),
+              ),
+          )
+          .pipe(
+            Effect.asVoid,
+            Effect.mapError(
+              (cause) =>
+                new RepositoryError({
+                  operation: "incrementCompletedItems",
+                  cause,
+                }),
+            ),
           ),
     } satisfies AnnotationQueueRepositoryShape
   }),

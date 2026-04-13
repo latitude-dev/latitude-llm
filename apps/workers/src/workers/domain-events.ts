@@ -83,6 +83,9 @@ export const createDomainEventsWorker = ({
         pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
           debounceMs: SCORE_PUBLICATION_DEBOUNCE, // 5 minutes
         }),
+        pub.publish("annotation-scores", "markReviewStarted", event.payload, {
+          dedupeKey: `annotation-scores:mark-review-started:${event.payload.scoreId}`,
+        }),
       ]),
 
     ScoreAssignedToIssue: (event) =>

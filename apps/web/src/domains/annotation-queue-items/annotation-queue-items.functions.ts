@@ -3,8 +3,10 @@ import {
   type AnnotationQueueItemListOptions,
   type AnnotationQueueItemListSortBy,
   AnnotationQueueItemRepository,
+  completeQueueItemUseCase,
   requestBulkQueueItems,
   type TraceSelection,
+  uncompleteQueueItemUseCase,
 } from "@domain/annotation-queues"
 import { AnnotationQueueId, filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
@@ -257,6 +259,123 @@ export const getAnnotationQueueItemDetail = createServerFn({ method: "GET" })
           ...toItemRecord(item),
           traceDisplayName,
         }
+      }).pipe(Effect.provide(layer)),
+    )
+  })
+
+interface QueueItemNavigationResult {
+  readonly previousItemId: string | null
+  readonly nextItemId: string | null
+  readonly currentIndex: number
+  readonly totalItems: number
+}
+
+export const getQueueItemNavigation = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      itemId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<QueueItemNavigationResult> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+
+    const layer = AnnotationQueueItemRepositoryLive.pipe(Layer.provideMerge(SqlClientLive(pg, orgId)))
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const itemRepo = yield* AnnotationQueueItemRepository
+
+        const [adjacent, position] = yield* Effect.all([
+          itemRepo.getAdjacentItems({
+            projectId,
+            queueId: data.queueId,
+            currentItemId: data.itemId,
+          }),
+          itemRepo.getQueuePosition({
+            projectId,
+            queueId: data.queueId,
+            currentItemId: data.itemId,
+          }),
+        ])
+
+        return {
+          previousItemId: adjacent.previousItemId,
+          nextItemId: adjacent.nextItemId,
+          currentIndex: position.currentIndex,
+          totalItems: position.totalItems,
+        }
+      }).pipe(Effect.provide(layer)),
+    )
+  })
+
+export const completeQueueItem = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      itemId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<{ nextItemId: string | null }> => {
+    const { organizationId, userId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+
+    const layer = Layer.mergeAll(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive).pipe(
+      Layer.provideMerge(SqlClientLive(pg, orgId)),
+    )
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const itemRepo = yield* AnnotationQueueItemRepository
+
+        yield* completeQueueItemUseCase({
+          projectId,
+          queueId: data.queueId,
+          itemId: data.itemId,
+          userId,
+        })
+
+        const nextItemId = yield* itemRepo.getNextUncompletedItem({
+          projectId,
+          queueId: data.queueId,
+          currentItemId: data.itemId,
+        })
+
+        return { nextItemId }
+      }).pipe(Effect.provide(layer)),
+    )
+  })
+
+export const uncompleteQueueItem = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      itemId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<void> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+
+    const layer = Layer.mergeAll(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive).pipe(
+      Layer.provideMerge(SqlClientLive(pg, orgId)),
+    )
+
+    await Effect.runPromise(
+      uncompleteQueueItemUseCase({
+        projectId,
+        queueId: data.queueId,
+        itemId: data.itemId,
       }).pipe(Effect.provide(layer)),
     )
   })

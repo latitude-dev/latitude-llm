@@ -67,11 +67,10 @@ export const ANNOTATION_QUEUE_SLUG_MAX_LENGTH = 140
 // ---------------------------------------------------------------------------
 
 export const QUEUE_REVIEW_HOTKEYS = {
-  previousItem: "Shift+J",
-  nextItem: "Shift+K",
-  markComplete: "Shift+Enter",
+  previousItem: "Shift+H",
+  nextItem: "Shift+L",
+  markComplete: "Mod+Enter",
   addToDataset: "Shift+D",
-  newAnnotation: "Shift+A",
 } as const
 
 // ---------------------------------------------------------------------------

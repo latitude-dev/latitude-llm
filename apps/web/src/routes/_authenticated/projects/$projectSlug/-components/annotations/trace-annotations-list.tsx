@@ -1,4 +1,5 @@
 import { cn, Skeleton, Text } from "@repo/ui"
+import { useAnnotationQueue } from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
 import {
   useAnnotationsByTrace,
   useCreateAnnotation,
@@ -12,11 +13,13 @@ import { isGlobalAnnotation } from "./hooks/use-annotation-navigation.ts"
 export function TraceAnnotationsList({
   projectId,
   traceId,
+  queueId,
   selectedAnnotationId,
   onAnnotationClick,
 }: {
   readonly projectId: string
   readonly traceId: string
+  readonly queueId?: string | undefined
   readonly selectedAnnotationId?: string | undefined
   readonly onAnnotationClick?: ((annotation: AnnotationRecord) => void) | undefined
 }) {
@@ -24,6 +27,11 @@ export function TraceAnnotationsList({
     projectId,
     traceId,
     draftMode: "include",
+  })
+  const { data: queue, isLoading: queueLoading } = useAnnotationQueue({
+    projectId,
+    queueId: queueId ?? "",
+    enabled: !!queueId,
   })
 
   const createMutation = useCreateAnnotation()
@@ -38,6 +46,7 @@ export function TraceAnnotationsList({
     createMutation.mutate({
       projectId,
       traceId,
+      queueId,
       value: data.passed ? 1 : 0,
       passed: data.passed,
       feedback: data.comment || " ",
@@ -53,6 +62,7 @@ export function TraceAnnotationsList({
       scoreId: annotation.id,
       projectId,
       traceId,
+      queueId,
       value: data.passed ? 1 : 0,
       passed: data.passed,
       feedback: data.comment || " ",
@@ -62,6 +72,21 @@ export function TraceAnnotationsList({
 
   return (
     <div className="flex flex-col flex-1 overflow-y-auto custom-scrollbar p-6 gap-6">
+      {queueId && (
+        <>
+          <div className="flex flex-col">
+            <Text.H5M>Instructions</Text.H5M>
+            {queueLoading ? (
+              <Skeleton className="h-12 w-full" />
+            ) : (
+              <Text.H5 color="foregroundMuted">
+                {queue?.instructions?.trim() ? queue.instructions : "No instructions provided for this queue"}
+              </Text.H5>
+            )}
+          </div>
+          <hr className="border border-border border-dashed" />
+        </>
+      )}
       <div className="flex flex-col">
         <div className="flex items-center gap-1">
           <Text.H5M>Annotations</Text.H5M>

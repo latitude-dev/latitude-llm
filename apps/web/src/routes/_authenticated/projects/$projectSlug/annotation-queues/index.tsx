@@ -74,17 +74,6 @@ function AnnotationQueuesPage() {
         ),
       },
       {
-        key: "instructions",
-        header: "Instructions",
-        minWidth: 220,
-        width: 360,
-        render: (q) => (
-          <Text.H5 color="foregroundMuted" display="block" lineClamp={3}>
-            {q.instructions?.trim() ? q.instructions : "—"}
-          </Text.H5>
-        ),
-      },
-      {
         key: "createdAt",
         header: "Created",
         sortKey: "createdAt",
