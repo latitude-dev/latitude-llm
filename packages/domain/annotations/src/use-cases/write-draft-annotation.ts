@@ -16,7 +16,3 @@ export type PersistDraftAnnotationError =
 /** Thin primitive: persist or update a **draft** annotation score (`draftedAt` set). */
 export const writeDraftAnnotationUseCase = (input: WriteDraftAnnotationInput & { organizationId: string }) =>
   writeAnnotation(input, new Date())
-
-/** Thin primitive: persist a **published** annotation score (`draftedAt` null). */
-export const writePublishedAnnotationUseCase = (input: WriteDraftAnnotationInput & { organizationId: string }) =>
-  writeAnnotation(input, null)

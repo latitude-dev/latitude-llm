@@ -1,4 +1,4 @@
-import { persistDraftAnnotationInputSchema, writePublishedAnnotationUseCase } from "@domain/annotations"
+import { persistDraftAnnotationInputSchema, writeDraftAnnotationUseCase } from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, annotationScoreSchema } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
@@ -88,7 +88,7 @@ export const createAnnotationsRoutes = () => {
         const projectRepository = yield* ProjectRepository
         yield* projectRepository.findById(projectId)
 
-        return yield* writePublishedAnnotationUseCase({
+        return yield* writeDraftAnnotationUseCase({
           ...body,
           projectId,
           sourceId: "API",
