@@ -1,5 +1,5 @@
 import { type formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
-import { BadRequestError, type ResolvedSettings } from "@domain/shared"
+import { BadRequestError, deterministicSampling, type ResolvedSettings } from "@domain/shared"
 import type { EvaluationAlignmentConversationMessage } from "./alignment-types.ts"
 import {
   ALIGNMENT_MCC_TOLERANCE,
@@ -50,14 +50,6 @@ type LiveEvaluationTurnScope = {
 }
 
 const LIVE_EVALUATION_EXECUTE_KEY_PREFIX = "evaluations:live:execute"
-const liveEvaluationSamplingTextEncoder = new TextEncoder()
-
-const hashLiveEvaluationSamplingInput = async (value: string): Promise<string> => {
-  const bytes = liveEvaluationSamplingTextEncoder.encode(value)
-  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes)
-
-  return Array.from(new Uint8Array(hashBuffer), (byte) => byte.toString(16).padStart(2, "0")).join("")
-}
 
 const safeDivide = (numerator: number, denominator: number): number => {
   if (denominator === 0) {
@@ -223,22 +215,11 @@ export const shouldSampleLiveEvaluation = async (input: {
   readonly evaluationId: string
   readonly traceId: string
   readonly sampling: number
-}): Promise<boolean> => {
-  if (input.sampling <= 0) {
-    return false
-  }
-
-  if (input.sampling >= 100) {
-    return true
-  }
-
-  const hashInput = `${input.organizationId}:${input.projectId}:${input.evaluationId}:${input.traceId}`
-  const hashResult = await hashLiveEvaluationSamplingInput(hashInput)
-  const hashPrefix = Number.parseInt(hashResult.slice(0, 8), 16)
-  const normalized = (hashPrefix % 10000) / 100
-
-  return normalized < input.sampling
-}
+}): Promise<boolean> =>
+  deterministicSampling({
+    sampling: input.sampling,
+    keyParts: [input.organizationId, input.projectId, input.evaluationId, input.traceId],
+  })
 
 export const buildLiveEvaluationExecuteTraceDedupeKey = (input: {
   readonly organizationId: string

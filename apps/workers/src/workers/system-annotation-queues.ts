@@ -1,12 +1,11 @@
 import { getProjectSystemQueuesUseCase, type SystemQueueCacheEntry } from "@domain/annotation-queues"
 import type { QueueConsumer, WorkflowStarterShape } from "@domain/queue"
-import { OrganizationId, ProjectId } from "@domain/shared"
+import { deterministicSampling, OrganizationId, ProjectId } from "@domain/shared"
 import { RedisCacheStoreLive } from "@platform/cache-redis"
 import { AnnotationQueueRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect } from "effect"
 import { getPostgresClient, getRedisClient } from "../clients.ts"
-import { deterministicSampling } from "../services/deterministic-sampling.ts"
 import { createIterationProgress } from "../services/iteration-progress.ts"
 
 const logger = createLogger("system-annotation-queues")
@@ -90,11 +89,8 @@ const handleFanOut = (deps: SystemAnnotationQueuesDeps) => {
 
             const isSampled = yield* Effect.promise(() =>
               deterministicSampling({
-                organizationId: payload.organizationId,
-                projectId: payload.projectId,
-                traceId: payload.traceId,
-                queueSlug: queue.queueSlug,
                 sampling: queue.sampling,
+                keyParts: [payload.organizationId, payload.projectId, payload.traceId, queue.queueSlug],
               }),
             )
 
