@@ -1,6 +1,7 @@
+import { OutboxEventWriter } from "@domain/events"
 import { type AnnotationScore, ScoreRepository } from "@domain/scores"
 import { createFakeScoreRepository } from "@domain/scores/testing"
-import { IssueId, OrganizationId, OutboxEventWriter, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
+import { IssueId, OrganizationId, ScoreId, SqlClient, type SqlClientShape } from "@domain/shared"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
 import { CENTROID_EMBEDDING_DIMENSIONS } from "../constants.ts"
@@ -114,11 +115,14 @@ describe("assignScoreToIssueUseCase", () => {
     expect(issues.get(existingIssue.id)?.centroid.mass).toBeGreaterThan(0)
     expect(writtenEvents).toEqual([
       expect.objectContaining({
-        eventName: "IssueRefreshRequested",
+        eventName: "ScoreAssignedToIssue",
+        aggregateType: "score",
         aggregateId: score.id,
+        organizationId,
         payload: expect.objectContaining({
           projectId,
           issueId: existingIssue.id,
+          organizationId,
         }),
       }),
     ])

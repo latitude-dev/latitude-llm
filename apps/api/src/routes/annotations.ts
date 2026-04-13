@@ -1,4 +1,4 @@
-import { writeAnnotationInputSchema, writeAnnotationUseCase } from "@domain/annotations"
+import { persistDraftAnnotationInputSchema, writePublishedAnnotationUseCase } from "@domain/annotations"
 import { ProjectRepository } from "@domain/projects"
 import { type AnnotationScore, annotationScoreSchema } from "@domain/scores"
 import { cuidSchema, ProjectId } from "@domain/shared"
@@ -18,7 +18,7 @@ import type { OrganizationScopedEnv } from "../types.ts"
 /**
  * POST body: use-case input without `projectId` (URL) or
  * `sourceId` (forced to `"API"`). */
-const RequestSchema = writeAnnotationInputSchema
+const RequestSchema = persistDraftAnnotationInputSchema
   .omit({ projectId: true, sourceId: true })
   .openapi("CreateAnnotationBody")
 
@@ -88,10 +88,11 @@ export const createAnnotationsRoutes = () => {
         const projectRepository = yield* ProjectRepository
         yield* projectRepository.findById(projectId)
 
-        return yield* writeAnnotationUseCase({
+        return yield* writePublishedAnnotationUseCase({
           ...body,
           projectId,
           sourceId: "API",
+          organizationId,
         })
       }).pipe(
         withPostgres(

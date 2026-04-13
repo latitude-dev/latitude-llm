@@ -28,6 +28,17 @@ const _registry = {
     readonly projectId: string
     readonly scoreId: string
   }>(),
+  assignScoreToKnownIssueWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly scoreId: string
+    readonly issueId: string
+  }>(),
+  publishAnnotationWorkflow: input<{
+    readonly organizationId: string
+    readonly projectId: string
+    readonly scoreId: string
+  }>(),
   systemQueueFlaggerWorkflow: input<{
     readonly organizationId: string
     readonly projectId: string

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
+    "@domain/events": "workspace:*",
     "@domain/evaluations": "workspace:*",
     "@domain/queue": "workspace:*",
     "@domain/shared": "workspace:*",
@@ -26,6 +27,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
     "vitest": "catalog:"
   }
 }

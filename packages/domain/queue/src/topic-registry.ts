@@ -97,7 +97,7 @@ const _registry = {
   }>(),
 
   "annotation-scores": payloads<{
-    publish: {
+    publishHumanAnnotation: {
       readonly organizationId: string
       readonly projectId: string
       readonly scoreId: string

@@ -84,7 +84,7 @@ a clear aggregate should use aggregate_type: "system" with a generated ID.
 ## Acceptance Criteria
 
 - [ ] Migration adds aggregate_type column with index
-- [ ] OutboxWriter interface updated to accept aggregateType
+- [ ] OutboxEventWriterShape updated to accept aggregateType
 - [ ] All existing outboxWriter.write() calls updated
 - [ ] Can query events by aggregate_type
 ```
@@ -99,8 +99,8 @@ Missing column in outbox_events table.
 ## Solution
 
 1. Add `aggregate_type VARCHAR(64)` to packages/platform/db-postgres/src/schema/outbox-events.ts
-2. In packages/domain/events/src/index.ts, change OutboxWriter interface:
-   export interface OutboxWriter {
+2. In packages/domain/events/src/outbox-event-writer.ts, change OutboxEventWriterShape:
+   export interface OutboxEventWriterShape {
      write(event: {
        aggregateType: string  // ADD THIS
        ...

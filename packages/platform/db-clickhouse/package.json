@@ -40,7 +40,9 @@
   "devDependencies": {
     "@platform/db-postgres": "workspace:*",
     "@platform/testkit": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
     "dotenv": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vitest": "catalog:"
   }
 }

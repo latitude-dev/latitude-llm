@@ -1,4 +1,5 @@
-import { OrganizationId, OutboxEventWriter, SessionId, SpanId, SqlClient, TraceId, UserId } from "@domain/shared"
+import { OutboxEventWriter } from "@domain/events"
+import { OrganizationId, SessionId, SpanId, SqlClient, TraceId, UserId } from "@domain/shared"
 import { createFakeSqlClient } from "@domain/shared/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"

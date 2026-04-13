@@ -1,4 +1,8 @@
 export {
+  enrichAnnotationForPublication,
+  writePublishedAnnotationScore,
+} from "./annotation-publication-activities.ts"
+export {
   assertManualEvaluationRealignmentAllowed,
   collectEvaluationAlignmentExamples,
   evaluateBaselineEvaluationDraft,

@@ -2,6 +2,7 @@ import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { DomainEvent, EventEnvelope, EventPayloads } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
@@ -74,12 +75,17 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    IssueDiscoveryRequested: (event) =>
-      pub.publish("issues", "discovery", event.payload, {
-        dedupeKey: `issues:discovery:${event.payload.scoreId}`,
-      }),
+    ScoreCreated: (event) =>
+      Effect.all([
+        pub.publish("issues", "discovery", event.payload, {
+          dedupeKey: `issues:discovery:${event.payload.scoreId}`,
+        }),
+        pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
+          debounceMs: SCORE_PUBLICATION_DEBOUNCE, // 5 minutes
+        }),
+      ]),
 
-    IssueRefreshRequested: (event) =>
+    ScoreAssignedToIssue: (event) =>
       pub.publish("issues", "refresh", event.payload, {
         dedupeKey: `issues:refresh:${event.payload.issueId}`,
         debounceMs: ISSUE_REFRESH_DEBOUNCE_MS,

@@ -1,57 +1,37 @@
-import { publishAnnotationUseCase } from "@domain/annotations"
+import { publishHumanAnnotationUseCase } from "@domain/annotations"
 import type { QueueConsumer } from "@domain/queue"
+import { WorkflowStarter, type WorkflowStarterShape } from "@domain/queue"
 import { OrganizationId, type ScoreId } from "@domain/shared"
-import { withAi } from "@platform/ai"
-import { AIGenerateLive } from "@platform/ai-vercel"
-import type { RedisClient } from "@platform/cache-redis"
-import type { ClickHouseClient } from "@platform/db-clickhouse"
-import {
-  ScoreAnalyticsRepositoryLive,
-  SpanRepositoryLive,
-  TraceRepositoryLive,
-  withClickHouse,
-} from "@platform/db-clickhouse"
 import type { PostgresClient } from "@platform/db-postgres"
-import { OutboxEventWriterLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
-import { getClickhouseClient, getPostgresClient, getRedisClient } from "../clients.ts"
+import { getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("annotation-scores")
 
 interface AnnotationScoresDeps {
   consumer: QueueConsumer
+  workflowStarter: WorkflowStarterShape
   postgresClient?: PostgresClient
-  clickhouseClient?: ClickHouseClient
-  redisClient?: RedisClient
 }
 
-export const createAnnotationScoresWorker = ({
-  consumer,
-  postgresClient,
-  clickhouseClient,
-  redisClient,
-}: AnnotationScoresDeps) => {
+export const createAnnotationScoresWorker = ({ consumer, workflowStarter, postgresClient }: AnnotationScoresDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
-  const chClient = clickhouseClient ?? getClickhouseClient()
-  const rdClient = redisClient ?? getRedisClient()
 
   consumer.subscribe("annotation-scores", {
-    publish: (payload) =>
-      publishAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
-        withPostgres(
-          Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive),
-          pgClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withClickHouse(
-          Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),
-          chClient,
-          OrganizationId(payload.organizationId),
-        ),
-        withAi(AIGenerateLive, rdClient),
-        Effect.tap(() =>
-          Effect.sync(() => logger.info(`Published annotation score ${payload.projectId}/${payload.scoreId}`)),
+    publishHumanAnnotation: (payload) =>
+      publishHumanAnnotationUseCase({ scoreId: payload.scoreId as ScoreId }).pipe(
+        withPostgres(ScoreRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
+        Effect.provide(Layer.succeed(WorkflowStarter, workflowStarter)),
+        Effect.tap((result) =>
+          Effect.sync(() => {
+            if (result.action === "workflow-started") {
+              logger.info(`Started annotation publication workflow for ${payload.projectId}/${payload.scoreId}`)
+            } else {
+              logger.info(`Annotation score ${payload.projectId}/${payload.scoreId} already published (idempotent)`)
+            }
+          }),
         ),
         Effect.tapError((error) =>
           Effect.sync(() =>

@@ -1,4 +1,4 @@
-import { type PersistDraftAnnotationError, persistDraftAnnotation } from "@domain/annotations"
+import { type PersistDraftAnnotationError, writeDraftAnnotationUseCase } from "@domain/annotations"
 import { ScoreRepository } from "@domain/scores"
 import {
   BadRequestError,
@@ -138,7 +138,7 @@ export const persistSystemQueueAnnotationUseCase = (input: PersistSystemQueueAnn
           }
         }
 
-        const draftAnnotation = yield* persistDraftAnnotation({
+        const draftAnnotation = yield* writeDraftAnnotationUseCase({
           id: generateId<"ScoreId">(),
           projectId,
           sourceId: queueId,

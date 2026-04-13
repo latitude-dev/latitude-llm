@@ -14,11 +14,17 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
+    "@domain/events": "workspace:*",
+    "@domain/queue": "workspace:*",
     "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "effect": "catalog:",
     "rosetta-ai": "catalog:",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
   }
 }

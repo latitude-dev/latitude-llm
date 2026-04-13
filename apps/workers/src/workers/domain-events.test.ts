@@ -3,6 +3,7 @@ import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
+import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -215,10 +216,10 @@ describe("domain-events dispatcher", () => {
     }
   })
 
-  it("routes IssueRefreshRequested to issues:refresh with dedupe and debounce", async () => {
+  it("routes ScoreAssignedToIssue to issues:refresh with dedupe and debounce", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("IssueRefreshRequested", {
+    const envelope = makeEnvelope("ScoreAssignedToIssue", {
       organizationId: "org-1",
       projectId: "proj-1",
       issueId: "issue-42",
@@ -238,10 +239,10 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
-  it("routes IssueDiscoveryRequested to issues:discovery with dedupe", async () => {
+  it("routes ScoreCreated to issues:discovery and debounced annotation-scores publish", async () => {
     const { consumer, published } = setupDispatcher()
 
-    const envelope = makeEnvelope("IssueDiscoveryRequested", {
+    const envelope = makeEnvelope("ScoreCreated", {
       organizationId: "org-1",
       projectId: "proj-1",
       scoreId: "score-3",
@@ -262,6 +263,19 @@ describe("domain-events dispatcher", () => {
         },
         options: {
           dedupeKey: "issues:discovery:score-3",
+        },
+      },
+      {
+        queue: "annotation-scores",
+        task: "publishHumanAnnotation",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          scoreId: "score-3",
+          issueId: null,
+        },
+        options: {
+          debounceMs: SCORE_PUBLICATION_DEBOUNCE,
         },
       },
     ])
