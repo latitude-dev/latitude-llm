@@ -146,6 +146,7 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 - **P13-PR2-6**: Publish `live-evaluations:execute` once per matching `(evaluationId, traceId)` pair, including dedupe/debounce where required
 - **P13-PR2-7**: Add structured enqueue-path logging for active evaluations scanned, filter matches, sampling skips, turn/debounce skips, and execute tasks published
 - **P13-PR2-8**: Add worker-level tests for matching, skipping, deterministic sampling, turn semantics, and execute publication
+- **P13-PR2-9**: Optimize trigger filter matching for one ended trace by adding a batched trace-repository read that evaluates multiple independent evaluation FilterSets in one query rather than one query per evaluation
 
 **Exit gate**:
 

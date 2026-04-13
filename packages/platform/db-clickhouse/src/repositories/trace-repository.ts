@@ -380,6 +380,9 @@ export const TraceRepositoryLive = Layer.effect(
         )
     }
 
+    // TODO(phase-13): add a batched variant for checking one trace against
+    // multiple independent FilterSets in one query so enqueue can reuse the
+    // grouped trace row across many evaluation trigger checks.
     const matchesFiltersByTraceId: TraceRepositoryShape["matchesFiltersByTraceId"] = ({
       organizationId,
       projectId,
@@ -395,7 +398,7 @@ export const TraceRepositoryLive = Layer.effect(
           const result = await client.query({
             query: `SELECT count() AS total
                     FROM (
-                      SELECT trace_id, ${LIST_SELECT}
+                      SELECT ${LIST_SELECT}
                       FROM traces
                       WHERE organization_id = {organizationId:String}
                         AND project_id = {projectId:String}
@@ -434,7 +437,7 @@ export const TraceRepositoryLive = Layer.effect(
             const result = await client.query({
               query: `SELECT count() AS total
                       FROM (
-                        SELECT trace_id, ${LIST_SELECT}
+                        SELECT ${LIST_SELECT}
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -493,7 +496,7 @@ export const TraceRepositoryLive = Layer.effect(
                         quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_median,
                         sumIf(time_to_first_token_ns, time_to_first_token_ns > 0) AS ttft_sum
                       FROM (
-                        SELECT trace_id, ${LIST_SELECT}
+                        SELECT ${LIST_SELECT}
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
@@ -532,7 +535,7 @@ export const TraceRepositoryLive = Layer.effect(
                         ) AS bucket_start,
                         count() AS trace_count
                       FROM (
-                        SELECT trace_id, ${LIST_SELECT}
+                        SELECT ${LIST_SELECT}
                         FROM traces
                         WHERE organization_id = {organizationId:String}
                           AND project_id = {projectId:String}
