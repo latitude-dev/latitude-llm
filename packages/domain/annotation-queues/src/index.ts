@@ -68,7 +68,6 @@ export {
   type ListSystemQueuesInput,
 } from "./ports/annotation-queue-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
-export { type CreateQueueFromTracesError, createQueueFromTraces } from "./use-cases/create-queue-from-traces.ts"
 export {
   type DraftSystemQueueAnnotationError,
   type DraftSystemQueueAnnotationOutput,
@@ -92,6 +91,11 @@ export {
   type ProvisionSystemQueuesInput,
   provisionSystemQueuesUseCase,
 } from "./use-cases/provision-system-queues.ts"
+export {
+  type RequestBulkQueueItemsError,
+  type RequestBulkQueueItemsInput,
+  requestBulkQueueItems,
+} from "./use-cases/request-bulk-queue-items.ts"
 export {
   type RunSystemQueueAnnotatorError,
   type RunSystemQueueAnnotatorInput,

@@ -67,43 +67,34 @@ export function AddToQueueModal({
 
   const handleSubmit = useCallback(async () => {
     if (selectedCount === 0) return
+    if (creatingNew && !newQueueName.trim()) return
+    if (!creatingNew && !selectedQueueId) return
+
     setSubmitting(true)
     try {
+      const data = creatingNew
+        ? { projectId, newQueueName: newQueueName.trim(), selection: selectionWithFilters }
+        : { projectId, queueId: selectedQueueId as string, selection: selectionWithFilters }
+
+      const result = await addTracesToQueueFunction({ data })
+
+      toast({
+        title: creatingNew ? "Queue created" : "Traces queued",
+        description: "Traces are being added in the background. Will appear in the queue shortly.",
+      })
+
+      getQueryClient().invalidateQueries({ queryKey: ["annotation-queues", projectId] })
+      getQueryClient().invalidateQueries({ queryKey: ["annotation-queues-list", projectId] })
+      getQueryClient().invalidateQueries({ queryKey: ["annotation-queue-items", projectId, result.queueId] })
+
+      onSuccess()
+      onOpenChange(false)
+
       if (creatingNew) {
-        if (!newQueueName.trim()) return
-        const result = await addTracesToQueueFunction({
-          data: {
-            projectId,
-            newQueueName: newQueueName.trim(),
-            selection: selectionWithFilters,
-          },
-        })
-        toast({
-          title: "Queue created",
-          description: `"${newQueueName.trim()}" created with ${result.insertedCount} trace${result.insertedCount === 1 ? "" : "s"}.`,
-        })
-        getQueryClient().invalidateQueries({ queryKey: ["annotation-queues", projectId] })
-        getQueryClient().invalidateQueries({ queryKey: ["annotation-queues-list", projectId] })
-        onSuccess()
-        onOpenChange(false)
         navigate({
           to: "/projects/$projectSlug/annotation-queues/$queueId",
           params: { projectSlug, queueId: result.queueId },
         })
-      } else {
-        if (!selectedQueueId) return
-        const result = await addTracesToQueueFunction({
-          data: { projectId, queueId: selectedQueueId, selection: selectionWithFilters },
-        })
-        toast({
-          title: "Traces added to queue",
-          description: `${result.insertedCount} trace${result.insertedCount === 1 ? "" : "s"} added.`,
-        })
-        getQueryClient().invalidateQueries({ queryKey: ["annotation-queues", projectId] })
-        getQueryClient().invalidateQueries({ queryKey: ["annotation-queues-list", projectId] })
-        getQueryClient().invalidateQueries({ queryKey: ["annotation-queue-items", projectId, selectedQueueId] })
-        onSuccess()
-        onOpenChange(false)
       }
     } catch (error) {
       toast({

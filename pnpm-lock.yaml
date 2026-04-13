@@ -688,6 +688,9 @@ importers:
       '@domain/annotations':
         specifier: workspace:*
         version: link:../annotations
+      '@domain/queue':
+        specifier: workspace:*
+        version: link:../queue
       '@domain/scores':
         specifier: workspace:*
         version: link:../scores
