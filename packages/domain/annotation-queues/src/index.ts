@@ -2,6 +2,7 @@ export {
   ANNOTATION_QUEUE_NAME_MAX_LENGTH,
   ANNOTATION_QUEUE_SLUG_MAX_LENGTH,
   LIVE_QUEUE_DEFAULT_SAMPLING,
+  MAX_TRACES_PER_QUEUE_IMPORT,
   QUEUE_REVIEW_HOTKEYS,
   RESOURCE_OUTLIER_MULTIPLIER,
   SYSTEM_QUEUE_ANNOTATOR_MAX_TOKENS,
@@ -33,6 +34,8 @@ export {
   type AnnotationQueueItemStatus,
   annotationQueueItemSchema,
 } from "./entities/annotation-queue-items.ts"
+export { TooManyTracesSelectedError } from "./errors.ts"
+export type { TraceSelection } from "./helpers/bulk-create-from-traces-helpers.ts"
 export {
   annotationQueueItemStatus,
   annotationQueueItemStatusRankFromTimestamps,
@@ -47,7 +50,9 @@ export {
   type AnnotationQueueItemListSortBy,
   AnnotationQueueItemRepository,
   type AnnotationQueueItemRepositoryShape,
+  type BulkInsertAnnotationQueueItemInput,
   type FindAnnotationQueueItemInput,
+  type InsertAnnotationQueueItemInput,
   type ListAnnotationQueueItemsInput,
 } from "./ports/annotation-queue-item-repository.ts"
 export {
@@ -62,6 +67,8 @@ export {
   type ListAnnotationQueuesInput,
   type ListSystemQueuesInput,
 } from "./ports/annotation-queue-repository.ts"
+export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
+export { type CreateQueueFromTracesError, createQueueFromTraces } from "./use-cases/create-queue-from-traces.ts"
 export {
   type DraftSystemQueueAnnotationError,
   type DraftSystemQueueAnnotationOutput,

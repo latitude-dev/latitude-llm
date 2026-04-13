@@ -99,6 +99,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
         projectId: PROJECT_ID,
         queueId: QUEUE_ID,
         traceId: makeTrace("done"),
+        traceCreatedAt: new Date("2025-03-30T10:00:00.000Z"),
         completedAt: new Date("2025-04-02T00:00:00.000Z"),
         completedBy: userId,
         reviewStartedAt: new Date("2025-04-01T15:00:00.000Z"),
@@ -111,6 +112,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
         projectId: PROJECT_ID,
         queueId: QUEUE_ID,
         traceId: makeTrace("prog"),
+        traceCreatedAt: new Date("2025-03-30T11:00:00.000Z"),
         completedAt: null,
         completedBy: null,
         reviewStartedAt: new Date("2025-04-01T14:00:00.000Z"),
@@ -123,6 +125,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
         projectId: PROJECT_ID,
         queueId: QUEUE_ID,
         traceId: makeTrace("pend1"),
+        traceCreatedAt: new Date("2025-03-30T09:00:00.000Z"),
         completedAt: null,
         completedBy: null,
         reviewStartedAt: null,
@@ -135,6 +138,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
         projectId: PROJECT_ID,
         queueId: QUEUE_ID,
         traceId: makeTrace("pend2"),
+        traceCreatedAt: new Date("2025-03-30T12:00:00.000Z"),
         completedAt: null,
         completedBy: null,
         reviewStartedAt: null,
@@ -338,6 +342,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
   describe("insertIfNotExists", () => {
     it("first insert creates one queue item and returns true", async () => {
       const traceId = TraceId(makeTrace("new_item"))
+      const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
 
       const wasInserted = await runWithLive(
         Effect.gen(function* () {
@@ -346,6 +351,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
             projectId: PROJECT_ID,
             queueId: QUEUE_ID,
             traceId,
+            traceCreatedAt,
           })
         }),
       )
@@ -374,6 +380,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
 
     it("duplicate insert is idempotent and returns false", async () => {
       const traceId = TraceId(makeTrace("dup_item"))
+      const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
 
       const firstInsert = await runWithLive(
         Effect.gen(function* () {
@@ -382,6 +389,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
             projectId: PROJECT_ID,
             queueId: QUEUE_ID,
             traceId,
+            traceCreatedAt,
           })
         }),
       )
@@ -394,6 +402,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
             projectId: PROJECT_ID,
             queueId: QUEUE_ID,
             traceId,
+            traceCreatedAt,
           })
         }),
       )
@@ -416,6 +425,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
 
     it("first insert with counter increment increments totalItems exactly once", async () => {
       const traceId = TraceId(makeTrace("counter_test"))
+      const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
       const NEW_QUEUE_ID = makeId("counter_queue")
 
       const db = pg.db
@@ -458,6 +468,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
             projectId: PROJECT_ID,
             queueId: NEW_QUEUE_ID,
             traceId,
+            traceCreatedAt,
           })
 
           if (inserted) {
@@ -487,6 +498,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
 
     it("duplicate insert does not double increment counter", async () => {
       const traceId = TraceId(makeTrace("no_double_counter"))
+      const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
       const NEW_QUEUE_ID = makeId("no_double_queue")
 
       const db = pg.db
@@ -518,6 +530,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
             projectId: PROJECT_ID,
             queueId: NEW_QUEUE_ID,
             traceId,
+            traceCreatedAt,
           })
 
           if (inserted) {
@@ -541,6 +554,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
             projectId: PROJECT_ID,
             queueId: NEW_QUEUE_ID,
             traceId,
+            traceCreatedAt,
           })
 
           if (inserted) {
@@ -579,6 +593,313 @@ describe("AnnotationQueueItemRepositoryLive", () => {
 
       const matchingItems = page.items.filter((i) => i.traceId === traceId)
       expect(matchingItems).toHaveLength(1)
+    })
+  })
+
+  describe("bulkInsertIfNotExists", () => {
+    it("inserts multiple items and returns correct count", async () => {
+      const BULK_QUEUE_ID = makeId("bulk_queue_1")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values({
+        id: BULK_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Bulk insert test queue",
+        slug: "bulk-insert-test-queue",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      const items = [
+        { traceId: TraceId(makeTrace("bulk_1")), traceCreatedAt: new Date("2025-04-01T10:00:00.000Z") },
+        { traceId: TraceId(makeTrace("bulk_2")), traceCreatedAt: new Date("2025-04-01T11:00:00.000Z") },
+        { traceId: TraceId(makeTrace("bulk_3")), traceCreatedAt: new Date("2025-04-01T12:00:00.000Z") },
+      ]
+
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            items,
+          })
+        }),
+      )
+
+      expect(result.insertedCount).toBe(3)
+
+      const page = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.listByQueue({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            options: { limit: 100 },
+          })
+        }),
+      )
+
+      expect(page.items).toHaveLength(3)
+      const traces = new Set(page.items.map((i) => i.traceId as string))
+      expect(traces).toEqual(new Set([makeTrace("bulk_1"), makeTrace("bulk_2"), makeTrace("bulk_3")]))
+    })
+
+    it("returns 0 when given empty items array", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            items: [],
+          })
+        }),
+      )
+
+      expect(result.insertedCount).toBe(0)
+    })
+
+    it("skips existing items and returns only new insert count", async () => {
+      const BULK_QUEUE_ID = makeId("bulk_queue_2")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values({
+        id: BULK_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Bulk skip test queue",
+        slug: "bulk-skip-test-queue",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      const firstBatch = [
+        { traceId: TraceId(makeTrace("skip_1")), traceCreatedAt: new Date("2025-04-01T10:00:00.000Z") },
+        { traceId: TraceId(makeTrace("skip_2")), traceCreatedAt: new Date("2025-04-01T11:00:00.000Z") },
+      ]
+
+      const firstResult = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            items: firstBatch,
+          })
+        }),
+      )
+      expect(firstResult.insertedCount).toBe(2)
+
+      const secondBatch = [
+        { traceId: TraceId(makeTrace("skip_1")), traceCreatedAt: new Date("2025-04-01T10:00:00.000Z") },
+        { traceId: TraceId(makeTrace("skip_3")), traceCreatedAt: new Date("2025-04-01T12:00:00.000Z") },
+      ]
+
+      const secondResult = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            items: secondBatch,
+          })
+        }),
+      )
+
+      expect(secondResult.insertedCount).toBe(1)
+
+      const page = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.listByQueue({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            options: { limit: 100 },
+          })
+        }),
+      )
+
+      expect(page.items).toHaveLength(3)
+    })
+
+    it("is idempotent - inserting same items twice returns 0 on second call", async () => {
+      const BULK_QUEUE_ID = makeId("bulk_queue_3")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values({
+        id: BULK_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Bulk idempotent test queue",
+        slug: "bulk-idempotent-test-queue",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      const items = [
+        { traceId: TraceId(makeTrace("idem_1")), traceCreatedAt: new Date("2025-04-01T10:00:00.000Z") },
+        { traceId: TraceId(makeTrace("idem_2")), traceCreatedAt: new Date("2025-04-01T11:00:00.000Z") },
+      ]
+
+      const firstResult = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            items,
+          })
+        }),
+      )
+      expect(firstResult.insertedCount).toBe(2)
+
+      const secondResult = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            items,
+          })
+        }),
+      )
+      expect(secondResult.insertedCount).toBe(0)
+    })
+
+    it("totalItems counter updates correctly after bulk insert", async () => {
+      const BULK_QUEUE_ID = makeId("bulk_queue_4")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values({
+        id: BULK_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Bulk counter test queue",
+        slug: "bulk-counter-test-queue",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      const items = [
+        { traceId: TraceId(makeTrace("cnt_1")), traceCreatedAt: new Date("2025-04-01T10:00:00.000Z") },
+        { traceId: TraceId(makeTrace("cnt_2")), traceCreatedAt: new Date("2025-04-01T11:00:00.000Z") },
+        { traceId: TraceId(makeTrace("cnt_3")), traceCreatedAt: new Date("2025-04-01T12:00:00.000Z") },
+      ]
+
+      const result = await runWithBothLive(
+        Effect.gen(function* () {
+          const itemsRepo = yield* AnnotationQueueItemRepository
+          const queuesRepo = yield* AnnotationQueueRepository
+
+          const { insertedCount } = yield* itemsRepo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            items,
+          })
+
+          if (insertedCount > 0) {
+            yield* queuesRepo.incrementTotalItems({
+              projectId: PROJECT_ID,
+              queueId: BULK_QUEUE_ID,
+              delta: insertedCount,
+            })
+          }
+
+          return { insertedCount }
+        }),
+      )
+
+      expect(result.insertedCount).toBe(3)
+
+      const updatedQueue = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+          })
+        }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      )
+      expect(updatedQueue?.totalItems).toBe(3)
+
+      const duplicateItems = [
+        { traceId: TraceId(makeTrace("cnt_1")), traceCreatedAt: new Date("2025-04-01T10:00:00.000Z") },
+        { traceId: TraceId(makeTrace("cnt_4")), traceCreatedAt: new Date("2025-04-01T13:00:00.000Z") },
+      ]
+
+      const secondResult = await runWithBothLive(
+        Effect.gen(function* () {
+          const itemsRepo = yield* AnnotationQueueItemRepository
+          const queuesRepo = yield* AnnotationQueueRepository
+
+          const { insertedCount } = yield* itemsRepo.bulkInsertIfNotExists({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+            items: duplicateItems,
+          })
+
+          if (insertedCount > 0) {
+            yield* queuesRepo.incrementTotalItems({
+              projectId: PROJECT_ID,
+              queueId: BULK_QUEUE_ID,
+              delta: insertedCount,
+            })
+          }
+
+          return { insertedCount }
+        }),
+      )
+
+      expect(secondResult.insertedCount).toBe(1)
+
+      const finalQueue = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({
+            projectId: PROJECT_ID,
+            queueId: BULK_QUEUE_ID,
+          })
+        }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      )
+      expect(finalQueue?.totalItems).toBe(4)
     })
   })
 })

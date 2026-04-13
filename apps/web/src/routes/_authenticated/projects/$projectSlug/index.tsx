@@ -1,5 +1,5 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
-import { Button, Input, Tabs, Tooltip } from "@repo/ui"
+import { Button, Icon, Input, Tabs, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
@@ -11,6 +11,7 @@ import {
   FilterIcon,
   MessagesSquareIcon,
   TextIcon,
+  UnlinkIcon,
 } from "lucide-react"
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
@@ -24,12 +25,20 @@ import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
+import { AddToQueueModal } from "./annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
 
 function parseFilters(raw?: string): FilterSet {
   if (!raw) return {}
   try {
-    return filterSetSchema.parse(JSON.parse(raw))
+    let parsed = JSON.parse(raw)
+    // TanStack Router JSON-stringifies search param values. When we store a
+    // pre-serialized JSON string (e.g. '{"startTime":...}'), it becomes
+    // '"{\"startTime\":...}"' in the URL. Unwrap the extra layer if present.
+    if (typeof parsed === "string") {
+      parsed = JSON.parse(parsed)
+    }
+    return filterSetSchema.parse(parsed)
   } catch {
     return {}
   }
@@ -103,6 +112,7 @@ function ProjectPage() {
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
+  const [addToQueueOpen, setAddToQueueOpen] = useState(false)
 
   const { totalCount: totalTraceCount } = useTracesCount({
     projectId: project?.id ?? "",
@@ -260,8 +270,12 @@ function ProjectPage() {
       {selectedCount > 0 && (
         <div className="flex items-center gap-2 px-6">
           <Button variant="outline" size="sm" onClick={() => setAddToDatasetOpen(true)}>
-            <DatabaseIcon className="h-4 w-4" />
+            <Icon icon={DatabaseIcon} size="sm" />
             Add to Dataset ({selectedCount})
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setAddToQueueOpen(true)}>
+            <Icon icon={UnlinkIcon} size="sm" />
+            Add to Annotation Queue ({selectedCount})
           </Button>
         </div>
       )}
@@ -293,14 +307,26 @@ function ProjectPage() {
       ) : null}
 
       {bulkSelection && (
-        <AddToDatasetModal
-          open={addToDatasetOpen}
-          onOpenChange={setAddToDatasetOpen}
-          projectId={project?.id ?? ""}
-          selection={bulkSelection}
-          selectedCount={selectedCount}
-          onSuccess={clearSelections}
-        />
+        <>
+          <AddToDatasetModal
+            open={addToDatasetOpen}
+            onOpenChange={setAddToDatasetOpen}
+            projectId={project?.id ?? ""}
+            selection={bulkSelection}
+            selectedCount={selectedCount}
+            onSuccess={clearSelections}
+          />
+          <AddToQueueModal
+            open={addToQueueOpen}
+            onOpenChange={setAddToQueueOpen}
+            projectId={project?.id ?? ""}
+            projectSlug={projectSlug}
+            selection={bulkSelection}
+            selectedCount={selectedCount}
+            {...(hasActiveFilters ? { filters } : {})}
+            onSuccess={clearSelections}
+          />
+        </>
       )}
     </Layout>
   )

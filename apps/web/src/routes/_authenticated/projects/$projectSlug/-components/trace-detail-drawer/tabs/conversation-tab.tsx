@@ -41,12 +41,12 @@ function ConversationContent({
     {
       hotkey: "N",
       callback: () => navigatorRef.current?.navigate("down"),
-      options: { enabled: isActive },
+      options: { enabled: isActive, ignoreInputs: true },
     },
     {
       hotkey: "P",
       callback: () => navigatorRef.current?.navigate("up"),
-      options: { enabled: isActive },
+      options: { enabled: isActive, ignoreInputs: true },
     },
   ])
 

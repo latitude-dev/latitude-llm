@@ -370,13 +370,13 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             Effect.tap((wasInserted) => (wasInserted ? evictSystemQueueCache(queue) : Effect.void)),
           ),
 
-      incrementTotalItems: ({ projectId, queueId }) =>
+      incrementTotalItems: ({ projectId, queueId, delta = 1 }) =>
         sqlClient
           .query((db, organizationId) =>
             db
               .update(annotationQueues)
               .set({
-                totalItems: sql`${annotationQueues.totalItems} + 1`,
+                totalItems: sql`${annotationQueues.totalItems} + ${delta}`,
                 updatedAt: new Date(),
               })
               .where(

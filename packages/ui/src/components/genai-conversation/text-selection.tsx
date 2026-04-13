@@ -293,6 +293,10 @@ function useTextSelectionHook(
       const el = e.target instanceof Element ? e.target : (e.target as Node).parentElement
       if (!el) return
       if (el.closest("[data-selection-popover]") || el.closest('[role="dialog"]')) return
+      // Skip input elements - calling clearSelection() on input clicks interferes with
+      // the browser's text input handling, preventing users from typing in textareas/inputs.
+      const tagName = (e.target as Element)?.tagName?.toLowerCase()
+      if (tagName === "textarea" || tagName === "input") return
       if (containerRef.current && !containerRef.current.contains(el)) clearSelection()
     }
 

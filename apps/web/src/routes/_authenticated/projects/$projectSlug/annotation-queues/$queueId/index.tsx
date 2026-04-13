@@ -73,12 +73,12 @@ function AnnotationQueueItemsPage() {
         ),
       },
       {
-        key: "createdAt",
-        header: "Created",
+        key: "traceCreatedAt",
+        header: "Trace Created",
         sortKey: "createdAt",
         render: (row) => (
-          <Tooltip asChild trigger={<span>{relativeTime(new Date(row.createdAt))}</span>}>
-            {new Date(row.createdAt).toLocaleString()}
+          <Tooltip asChild trigger={<span>{relativeTime(new Date(row.traceCreatedAt))}</span>}>
+            {new Date(row.traceCreatedAt).toLocaleString()}
           </Tooltip>
         ),
       },
