@@ -54,7 +54,14 @@ function makeTraceDetail(): TraceDetail {
   }
 }
 
-function makeEvaluation(id: string) {
+function makeEvaluation(
+  id: string,
+  options?: {
+    readonly sampling?: number
+  },
+) {
+  const trigger = defaultEvaluationTrigger()
+
   return evaluationSchema.parse({
     id,
     organizationId: INPUT.organizationId,
@@ -63,7 +70,10 @@ function makeEvaluation(id: string) {
     name: `Eval ${id.slice(-4)}`,
     description: "Live evaluation",
     script: "export default async function evaluate() { return { score: 1 } }",
-    trigger: defaultEvaluationTrigger(),
+    trigger: {
+      ...trigger,
+      ...(options?.sampling !== undefined ? { sampling: options.sampling } : {}),
+    },
     alignment: emptyEvaluationAlignment("hash"),
     alignedAt: new Date("2026-01-01T00:00:00.000Z"),
     archivedAt: null,
@@ -154,7 +164,12 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         offset: options?.offset ?? 0,
       })
 
-      return Effect.succeed(pages.get(options?.offset ?? 0) ?? pages.get(100)!)
+      const page = pages.get(options?.offset ?? 0) ?? pages.get(100)
+      if (page === undefined) {
+        return Effect.die("Expected a seeded evaluation page")
+      }
+
+      return Effect.succeed(page)
     })
 
     const result = await Effect.runPromise(
@@ -190,6 +205,46 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         activeEvaluationsScanned: 2,
         filterMatchedCount: 0,
         skippedPausedCount: 0,
+        skippedSamplingCount: 0,
+        skippedTurnCount: 0,
+        publishedExecuteCount: 0,
+      },
+    })
+  })
+
+  it("counts sampling=0 evaluations as paused skips", async () => {
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+    })
+
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [makeEvaluation("e".repeat(24)), makeEvaluation("f".repeat(24), { sampling: 0 })],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+
+    const result = await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase(INPUT).pipe(
+        Effect.provide(
+          Layer.merge(
+            Layer.succeed(TraceRepository, traceRepository),
+            Layer.succeed(EvaluationRepository, evaluationRepository),
+          ),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "completed",
+      summary: {
+        traceId: INPUT.traceId,
+        sessionId: "session",
+        activeEvaluationsScanned: 2,
+        filterMatchedCount: 0,
+        skippedPausedCount: 1,
         skippedSamplingCount: 0,
         skippedTurnCount: 0,
         publishedExecuteCount: 0,

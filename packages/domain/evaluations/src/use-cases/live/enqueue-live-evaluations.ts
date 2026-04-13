@@ -2,6 +2,7 @@ import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domai
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
+import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
 const ACTIVE_EVALUATION_SCAN_PAGE_SIZE = 100
@@ -84,6 +85,15 @@ export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput
     const activeEvaluations = yield* listAllActiveEvaluations({
       projectId: traceDetail.projectId,
     })
+    const skippedPausedCount = activeEvaluations.reduce((count, evaluation) => {
+      const eligibility = getLiveEvaluationEligibility(evaluation)
+
+      if (!eligibility.eligible && eligibility.reason === "paused") {
+        return count + 1
+      }
+
+      return count
+    }, 0)
 
     // Later PR2 steps will fill these counters by applying filter, sampling, and turn logic.
     return {
@@ -93,7 +103,7 @@ export const enqueueLiveEvaluationsUseCase = (input: EnqueueLiveEvaluationsInput
         sessionId: traceDetail.sessionId ?? null,
         activeEvaluationsScanned: activeEvaluations.length,
         filterMatchedCount: 0,
-        skippedPausedCount: 0,
+        skippedPausedCount,
         skippedSamplingCount: 0,
         skippedTurnCount: 0,
         publishedExecuteCount: 0,
