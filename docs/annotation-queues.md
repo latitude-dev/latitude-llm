@@ -83,11 +83,12 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
    - delegates to `runSystemQueueFlaggerUseCase` in `@domain/annotation-queues`
    - loads trace analytics context from the shared trace repository path
    - resolves the queue slug through a domain matcher map
-   - returns `{ matched, reasons, traceUnavailable }`
+   - returns `{ matched, matchReasons }` where `matchReasons` contains outlier threshold details for resource-outliers matches
 
 2. **`draftAnnotate`** (only when `matched: true`):
    - delegates to `draftSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
-   - generates feedback using LLM with full conversation context
+   - receives `matchReasons` from the flagger result (when available) to provide context to the LLM annotator
+   - generates feedback using LLM with full conversation context and match reasons
    - non-transactional operation that can be retried independently
    - returns `{ queueId, traceId, feedback }`
 
