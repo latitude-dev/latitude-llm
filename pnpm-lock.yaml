@@ -94,8 +94,8 @@ catalogs:
       specifier: 2.5.8
       version: 2.5.8
     typescript:
-      specifier: 5.8.3
-      version: 5.8.3
+      specifier: 5.9.3
+      version: 5.9.3
     vite:
       specifier: 8.0.5
       version: 8.0.5
@@ -138,7 +138,7 @@ importers:
         version: 2.5.8
       typescript:
         specifier: 'catalog:'
-        version: 5.8.3
+        version: 5.9.3
       vitest:
         specifier: 'catalog:'
         version: 4.1.0(@opentelemetry/api@1.9.1)(@types/node@22.14.1)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@22.14.1)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
@@ -653,7 +653,7 @@ importers:
         specifier: ^22.0.0
         version: 22.19.17
       typescript:
-        specifier: ^5.0.0
+        specifier: ^5.9.3
         version: 5.9.3
 
   packages/domain/ai:
@@ -797,7 +797,7 @@ importers:
         specifier: 5.2.9
         version: 5.2.9
       typescript:
-        specifier: ^5.7.0
+        specifier: ^5.9.3
         version: 5.9.3
 
   packages/domain/evaluations:
@@ -923,7 +923,7 @@ importers:
         specifier: 'catalog:'
         version: 2.4.6
       typescript:
-        specifier: ^5.7.0
+        specifier: ^5.9.3
         version: 5.9.3
 
   packages/domain/scores:
@@ -1603,7 +1603,7 @@ importers:
         version: 1.4.0
       typescript:
         specifier: 'catalog:'
-        version: 5.8.3
+        version: 5.9.3
 
   packages/utils:
     dependencies:
@@ -10244,11 +10244,6 @@ packages:
   type-fest@5.5.0:
     resolution: {integrity: sha512-PlBfpQwiUvGViBNX84Yxwjsdhd1TUlXr6zjX7eoirtCPIr08NAmxwa+fcYBTeRQxHo9YC9wwF3m9i700sHma8g==}
     engines: {node: '>=20'}
-
-  typescript@5.8.3:
-    resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
-    engines: {node: '>=14.17'}
-    hasBin: true
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -20830,8 +20825,6 @@ snapshots:
   type-fest@5.5.0:
     dependencies:
       tagged-tag: 1.0.0
-
-  typescript@5.8.3: {}
 
   typescript@5.9.3: {}
 
