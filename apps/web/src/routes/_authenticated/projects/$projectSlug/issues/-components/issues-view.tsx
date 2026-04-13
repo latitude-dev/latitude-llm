@@ -227,7 +227,7 @@ export function IssuesView({
           getRowKey={(issue) => issue.id}
           getRowClassName={(issue, context) =>
             issue.states.includes("regressed") && !context.isActive
-              ? "bg-rose-500/10 hover:bg-rose-500/14 dark:bg-rose-500/15 dark:hover:bg-rose-500/19"
+              ? "bg-rose-500/7 hover:bg-rose-500/10 dark:bg-rose-500/15 dark:hover:bg-rose-500/19"
               : undefined
           }
           {...(activeIssueId ? { activeRowKey: activeIssueId } : {})}
