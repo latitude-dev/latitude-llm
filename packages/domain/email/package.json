@@ -22,6 +22,6 @@
     "@react-email/preview-server": "5.2.9",
     "@types/react": "catalog:",
     "react-email": "5.2.9",
-    "typescript": "^5.7.0"
+    "typescript": "^5.9.3"
   }
 }
