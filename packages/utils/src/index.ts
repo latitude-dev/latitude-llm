@@ -13,4 +13,5 @@ export {
 } from "./format.ts"
 export * from "./http-errors.ts"
 export { mapByEntityId } from "./map-by-entity-id.ts"
+export { LatitudeObservabilityTestError } from "./observability-test.ts"
 export { relativeTime } from "./relativeTime.ts"

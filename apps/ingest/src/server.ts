@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server"
 import { httpInstrumentationMiddleware as otel } from "@hono/otel"
 import { parseEnv } from "@platform/env"
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
-import { isHttpError, toHttpResponse } from "@repo/utils"
+import { isHttpError, LatitudeObservabilityTestError, toHttpResponse } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { Hono } from "hono"
@@ -26,6 +26,10 @@ const start = async () => {
   app.use(otel())
 
   app.onError((err, c) => {
+    if (err instanceof LatitudeObservabilityTestError) {
+      return c.json({ name: err.name, message: err.message, service: err.service }, 500)
+    }
+
     if (isHttpError(err)) {
       const { status, body } = toHttpResponse(err)
       return c.json(body, status as 400 | 401 | 403 | 404 | 500)

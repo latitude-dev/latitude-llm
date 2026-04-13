@@ -7,7 +7,14 @@ import {
   createEventsPublisher,
   loadBullMqConfig,
 } from "@platform/queue-bullmq"
-import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
+import {
+  createLogger,
+  initializeObservability,
+  recordSpanExceptionForDatadog,
+  shutdownObservability,
+  trace,
+} from "@repo/observability"
+import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
 import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
@@ -43,7 +50,27 @@ const bootstrap = async () => {
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
   const healthServer = createServer((req, res) => {
-    if (req.url === "/health" && req.method === "GET") {
+    const pathname = new URL(req.url ?? "/", "http://127.0.0.1").pathname
+
+    if (pathname === "/health/observability-test" && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ service: "workers", observabilityTest: "armed" }))
+      return
+    }
+
+    if (pathname === "/health/observability-test/error" && req.method === "GET") {
+      const err = new LatitudeObservabilityTestError("workers")
+      logger.error(err)
+      const span = trace.getActiveSpan()
+      if (span) {
+        recordSpanExceptionForDatadog(span, err)
+      }
+      res.writeHead(500, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ name: err.name, message: err.message }))
+      return
+    }
+
+    if (pathname === "/health" && req.method === "GET") {
       const status = ready ? 200 : 503
       res.writeHead(status, { "Content-Type": "application/json" })
       res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
