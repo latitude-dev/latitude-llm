@@ -44,7 +44,6 @@ export function createEcs(
   imageTag: pulumi.Input<string>,
   albTargetGroupArns: Record<string, Output<string>>,
   temporalCloud: TemporalCloudConfig,
-  gitRepositoryUrl: string,
 ): EcsOutput {
   const cluster = new aws.ecs.Cluster(`${name}-cluster`, {
     name: `${name}-cluster`,
@@ -170,7 +169,6 @@ export function createEcs(
       s3Bucket,
       imageTag,
       temporalCloud,
-      gitRepositoryUrl,
     )
     taskDefinitions[serviceConfig.name] = taskDef
 
@@ -278,7 +276,6 @@ function createTaskDefinition(
   s3Bucket: S3Bucket,
   imageTag: pulumi.Input<string>,
   temporalCloud: TemporalCloudConfig,
-  gitRepositoryUrl: string,
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
 
@@ -356,8 +353,6 @@ function createTaskDefinition(
         latitudeTelemetryProjectSlugArn,
         s3BucketName,
       ]) => {
-        const tagIsGitSha = tag !== "latest" && /^[a-f0-9]{7,40}$/i.test(tag)
-
         const baseEnvironment: { name: string; value: string }[] = [
           { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
           { name: "PORT", value: "8080" },
@@ -391,16 +386,10 @@ function createTaskDefinition(
           { name: "DD_DOGSTATSD_PORT", value: "8125" },
           { name: "DD_AGENT_HOST", value: "localhost" },
           { name: "LAT_OBSERVABILITY_ENABLED", value: "true" },
-          { name: "LAT_OBSERVABILITY_TRACING_PROVIDER", value: "datadog" },
-          { name: "DD_LOGS_INJECTION", value: "true" },
-          { name: "DD_VERSION", value: tag },
-          { name: "DD_GIT_REPOSITORY_URL", value: gitRepositoryUrl },
-          ...(tagIsGitSha ? [{ name: "DD_GIT_COMMIT_SHA", value: tag }] : []),
+          { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
-          // Datadog site for dd-trace (same secret as the agent). API key stays on the agent only — traces go localhost:8126.
-          { name: "DD_SITE", valueFrom: datadogSiteArn },
           { name: "LAT_DATABASE_URL", valueFrom: dbSecretArn },
           { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbAdminSecretArn },
           { name: "LAT_BETTER_AUTH_SECRET", valueFrom: betterAuthArn },
