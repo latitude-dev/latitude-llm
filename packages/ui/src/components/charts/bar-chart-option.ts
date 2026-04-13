@@ -25,6 +25,8 @@ export function buildBarChartOption(
       ? 0
       : Math.max(1, Math.ceil(categories.length / maxCategoryAxisLabels)) - 1
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
+  const splitLineColor = colors.isDark ? colors.mutedForeground : colors.border
+  const splitLineOpacity = colors.isDark ? 0.3 : 0.6
   const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
@@ -73,7 +75,7 @@ export function buildBarChartOption(
     yAxis: {
       type: "value",
       minInterval: 1,
-      splitLine: { lineStyle: { color: colors.border, type: "dashed", opacity: 0.6 } },
+      splitLine: { lineStyle: { color: splitLineColor, type: "dashed", opacity: splitLineOpacity } },
       axisLine: { show: false },
       ...(showYAxis ? {} : { axisTick: { show: false } }),
       axisLabel: showYAxis ? { color: colors.mutedForeground, fontSize: 11 } : { show: false },

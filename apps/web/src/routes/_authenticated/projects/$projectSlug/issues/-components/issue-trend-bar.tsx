@@ -11,6 +11,7 @@ const MINI_HISTOGRAM_TOP_INSET_PX = 6
 const REGRESSED_BAR_CLASSES = "bg-rose-700 dark:bg-rose-400"
 const ESCALATING_BAR_CLASSES = "bg-yellow-500/75 dark:bg-yellow-300/85"
 const DEFAULT_MUTED_BAR_CLASSES = "bg-muted-foreground/60 dark:bg-muted-foreground/70"
+const DEFAULT_BACKGROUND_GUIDE_CLASSES = "border-border/60 dark:border-muted-foreground/30"
 const DEFAULT_MUTED_GUIDE_CLASSES = "border-muted-foreground/60 dark:border-muted-foreground/70"
 const DEFAULT_PRIMARY_BAR_CLASSES = "bg-primary"
 
@@ -22,6 +23,7 @@ function resolveBarClasses(input: {
   readonly barVariant: "muted" | "primary"
   readonly isRegressedBucket: boolean
   readonly isEscalatingBucket: boolean
+  readonly hasLifecycleHighlight: boolean
 }) {
   if (input.isRegressedBucket) {
     return REGRESSED_BAR_CLASSES
@@ -29,6 +31,10 @@ function resolveBarClasses(input: {
 
   if (input.isEscalatingBucket) {
     return ESCALATING_BAR_CLASSES
+  }
+
+  if (input.hasLifecycleHighlight) {
+    return DEFAULT_MUTED_BAR_CLASSES
   }
 
   return input.barVariant === "primary" ? DEFAULT_PRIMARY_BAR_CLASSES : DEFAULT_MUTED_BAR_CLASSES
@@ -94,6 +100,7 @@ export function IssueTrendBar({
   }))
   const maxCount = Math.max(...chartBuckets.map((bucket) => bucket.count), 1)
   const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
+  const resolvedDayBucketKey = resolvedAt ? resolvedAt.slice(0, 10) : null
   const isRegressedIssue = states.includes("regressed")
   const isEscalatingIssue = states.includes("escalating")
   const escalationGuideCount =
@@ -104,6 +111,26 @@ export function IssueTrendBar({
     escalationGuideCount !== null ? toVisibleHeightPercent(escalationGuideCount, maxCount) : null
   const escalationGuideBottomPercent =
     escalationGuideHeightPercent !== null ? Math.max(0, escalationGuideHeightPercent - BAR_TOP_HEADROOM_PERCENT) : null
+  const visualBuckets = chartBuckets.map((bucket) => {
+    const heightPercent = toVisibleHeightPercent(bucket.count, maxCount)
+    const isRegressedBucket =
+      isRegressedIssue && resolvedAtMs !== null && bucket.count > 0 && toBucketEndMs(bucket.key) > resolvedAtMs
+    const isEscalatingBucket =
+      !isRegressedBucket &&
+      isEscalatingIssue &&
+      escalationOccurrenceThreshold !== null &&
+      bucket.count >= escalationOccurrenceThreshold
+
+    return {
+      ...bucket,
+      heightPercent,
+      isRegressedBucket,
+      isEscalatingBucket,
+      isResolvedBoundaryBucket:
+        isRegressedIssue && resolvedDayBucketKey !== null && bucket.key === resolvedDayBucketKey,
+    }
+  })
+  const hasLifecycleHighlight = visualBuckets.some((bucket) => bucket.isRegressedBucket || bucket.isEscalatingBucket)
 
   return (
     <div className="flex min-w-0 flex-col" style={{ height }} role="img" aria-label="Issue occurrence trend">
@@ -119,8 +146,8 @@ export function IssueTrendBar({
                 key={index}
                 className={
                   index === MINI_HISTOGRAM_GUIDE_LINE_COUNT - 1
-                    ? "w-full border-t border-border/60"
-                    : "w-full border-t border-dashed border-border/60"
+                    ? `w-full border-t ${DEFAULT_BACKGROUND_GUIDE_CLASSES}`
+                    : `w-full border-t border-dashed ${DEFAULT_BACKGROUND_GUIDE_CLASSES}`
                 }
               />
             ))}
@@ -129,19 +156,7 @@ export function IssueTrendBar({
             className="absolute inset-x-0 bottom-0 flex items-end gap-1"
             style={{ top: MINI_HISTOGRAM_TOP_INSET_PX }}
           >
-            {chartBuckets.map((bucket) => {
-              const heightPercent = toVisibleHeightPercent(bucket.count, maxCount)
-              const isRegressedBucket =
-                isRegressedIssue &&
-                resolvedAtMs !== null &&
-                bucket.count > 0 &&
-                toBucketEndMs(bucket.key) > resolvedAtMs
-              const isEscalatingBucket =
-                !isRegressedBucket &&
-                isEscalatingIssue &&
-                escalationOccurrenceThreshold !== null &&
-                bucket.count >= escalationOccurrenceThreshold
-
+            {visualBuckets.map((bucket) => {
               return (
                 <TooltipRoot key={bucket.key} delayDuration={100}>
                   <TooltipTrigger asChild>
@@ -150,27 +165,38 @@ export function IssueTrendBar({
                         className="pointer-events-none absolute inset-0 rounded-[2px] bg-foreground/[0.06] opacity-0 transition-opacity group-hover/bucket:opacity-100"
                         aria-hidden
                       />
+                      {bucket.isResolvedBoundaryBucket ? (
+                        <span
+                          className={`pointer-events-none absolute bottom-0 top-0 left-1/2 z-[2] -translate-x-1/2 border-l border-dashed ${DEFAULT_MUTED_GUIDE_CLASSES}`}
+                          aria-hidden
+                        />
+                      ) : null}
                       <span
                         className={`relative z-[1] w-full transition-[filter] group-hover/bucket:brightness-90 ${
                           barVariant === "primary"
                             ? `rounded-t-sm ${resolveBarClasses({
                                 barVariant,
-                                isRegressedBucket,
-                                isEscalatingBucket,
+                                isRegressedBucket: bucket.isRegressedBucket,
+                                isEscalatingBucket: bucket.isEscalatingBucket,
+                                hasLifecycleHighlight,
                               })}`
                             : `rounded-t-[2px] ${resolveBarClasses({
                                 barVariant,
-                                isRegressedBucket,
-                                isEscalatingBucket,
+                                isRegressedBucket: bucket.isRegressedBucket,
+                                isEscalatingBucket: bucket.isEscalatingBucket,
+                                hasLifecycleHighlight,
                               })}`
                         }`}
-                        style={{ height: `${heightPercent}%` }}
+                        style={{ height: `${bucket.heightPercent}%` }}
                       />
                     </span>
                   </TooltipTrigger>
                   <TooltipContent side="top" sideOffset={6}>
                     <div className="flex flex-col gap-0.5">
                       <Text.H6>{bucket.tooltipLabel}</Text.H6>
+                      {bucket.isResolvedBoundaryBucket ? (
+                        <Text.H6 color="foregroundMuted">Issue was resolved</Text.H6>
+                      ) : null}
                       <Text.H6B>{formatCount(bucket.count)} occurrences</Text.H6B>
                     </div>
                   </TooltipContent>
