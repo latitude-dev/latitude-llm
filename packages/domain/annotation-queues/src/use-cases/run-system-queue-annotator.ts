@@ -20,6 +20,7 @@ export interface RunSystemQueueAnnotatorInput {
 
 export interface RunSystemQueueAnnotatorResult {
   readonly feedback: string
+  readonly traceCreatedAt: string
 }
 
 export type RunSystemQueueAnnotatorError = RepositoryError | AIError | AICredentialError
@@ -119,5 +120,6 @@ export const runSystemQueueAnnotatorUseCase = (input: RunSystemQueueAnnotatorInp
 
     return {
       feedback: result.object.feedback,
+      traceCreatedAt: trace.startTime.toISOString(),
     }
   })

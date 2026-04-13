@@ -16,7 +16,15 @@ interface QueueItemInput {
 
 const PAGE_SIZE = 1_000
 
-function collectAllTraces(args: { readonly projectId: ProjectId; readonly filters?: FilterSet }) {
+/**
+ * Collects traces up to `maxItems + 1`. If more than `maxItems` are found,
+ * returns early with `exceededLimit: true` to avoid unbounded memory usage.
+ */
+function collectTracesWithLimit(args: {
+  readonly projectId: ProjectId
+  readonly filters?: FilterSet
+  readonly maxItems: number
+}) {
   return Effect.gen(function* () {
     const chSqlClient = yield* ChSqlClient
     const repo = yield* TraceRepository
@@ -33,14 +41,19 @@ function collectAllTraces(args: { readonly projectId: ProjectId; readonly filter
           ...(args.filters ? { filters: args.filters } : {}),
         },
       })
+
       for (const trace of page.items) {
         items.push({ traceId: trace.traceId, traceCreatedAt: trace.startTime })
+        if (items.length > args.maxItems) {
+          return { items, exceededLimit: true as const }
+        }
       }
+
       if (!page.hasMore || !page.nextCursor) break
       cursor = page.nextCursor
     }
 
-    return items
+    return { items, exceededLimit: false as const }
   })
 }
 
@@ -82,30 +95,39 @@ export function resolveQueueItems(args: {
       })
     }
 
-    const allItems = yield* collectAllTraces({
-      projectId: args.projectId,
-      ...(args.selection.filters ? { filters: args.selection.filters } : {}),
-    })
-
     if (args.selection.mode === "all") {
-      if (allItems.length > MAX_TRACES_PER_QUEUE_IMPORT) {
+      const result = yield* collectTracesWithLimit({
+        projectId: args.projectId,
+        maxItems: MAX_TRACES_PER_QUEUE_IMPORT,
+        ...(args.selection.filters ? { filters: args.selection.filters } : {}),
+      })
+
+      if (result.exceededLimit) {
         return yield* new TooManyTracesSelectedError({
-          count: allItems.length,
+          count: result.items.length,
           limit: MAX_TRACES_PER_QUEUE_IMPORT,
         })
       }
-      return allItems
+
+      return result.items
     }
 
-    const excluded = new Set<string>(args.selection.traceIds as readonly string[])
-    const filtered = allItems.filter((item) => !excluded.has(item.traceId as string))
+    const excludedCount = args.selection.traceIds.length
+    const result = yield* collectTracesWithLimit({
+      projectId: args.projectId,
+      maxItems: MAX_TRACES_PER_QUEUE_IMPORT + excludedCount,
+      ...(args.selection.filters ? { filters: args.selection.filters } : {}),
+    })
 
-    if (filtered.length > MAX_TRACES_PER_QUEUE_IMPORT) {
+    if (result.exceededLimit) {
       return yield* new TooManyTracesSelectedError({
-        count: filtered.length,
+        count: result.items.length - excludedCount,
         limit: MAX_TRACES_PER_QUEUE_IMPORT,
       })
     }
+
+    const excluded = new Set<string>(args.selection.traceIds as readonly string[])
+    const filtered = result.items.filter((item) => !excluded.has(item.traceId as string))
 
     return filtered
   })

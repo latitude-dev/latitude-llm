@@ -87,7 +87,10 @@ describe("runSystemQueueAnnotatorUseCase", () => {
       ),
     )
 
-    expect(result).toEqual({ feedback: expectedFeedback })
+    expect(result).toEqual({
+      feedback: expectedFeedback,
+      traceCreatedAt: "2026-01-01T00:00:00.000Z",
+    })
     expect(calls.generate).toHaveLength(1)
 
     const generateCall = calls.generate[0]
@@ -130,7 +133,10 @@ describe("runSystemQueueAnnotatorUseCase", () => {
       ),
     )
 
-    expect(result).toEqual({ feedback: expectedFeedback })
+    expect(result).toEqual({
+      feedback: expectedFeedback,
+      traceCreatedAt: "2026-01-01T00:00:00.000Z",
+    })
   })
 
   it("propagates AI generation error", async () => {
