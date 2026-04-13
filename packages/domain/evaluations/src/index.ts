@@ -151,6 +151,13 @@ export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-bas
 export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
 export {
+  type EnqueueLiveEvaluationsError,
+  type EnqueueLiveEvaluationsInput,
+  type EnqueueLiveEvaluationsResult,
+  type EnqueueLiveEvaluationsSummary,
+  enqueueLiveEvaluationsUseCase,
+} from "./use-cases/live/enqueue-live-evaluations.ts"
+export {
   type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,
   type LiveEvaluationConversationInput,

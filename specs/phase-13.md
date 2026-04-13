@@ -44,6 +44,7 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 
 - `packages/domain/evaluations/src/entities/evaluation.ts` already defines `trigger`, `alignment`, lifecycle timestamps, and helpers like `isActiveEvaluation()` and `isPausedEvaluation()`
 - `packages/domain/evaluations/src/runtime/evaluation-execution.ts` already exposes `executeEvaluationScript()` for the MVP extract-and-call execution bridge
+- `packages/domain/evaluations/src/use-cases/live/enqueue-live-evaluations.ts` already exposes the enqueue domain seam that reloads one ended trace, scans active evaluations, and returns a structured summary for worker logging and tests
 - `packages/domain/evaluations/src/runtime/evaluation-execution.ts` already fixes the MVP hosted model to Latitude-managed OpenAI `gpt-5.4`
 - `packages/platform/ai-vercel/src/ai.ts` already provides the hosted Vercel AI SDK adapter through `AIGenerateLive`
 - `packages/domain/scores/src/use-cases/write-score.ts` already performs canonical Postgres-first writes and immediate analytics sync for immutable scores
@@ -58,7 +59,7 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 ### Not Yet Implemented
 
 - `apps/workers/src/workers/live-traces.ts` is still a stub and does not publish `TraceEnded`
-- `apps/workers/src/workers/live-evaluations.ts` is still a stub and does not implement `enqueue` or `execute`
+- `apps/workers/src/workers/live-evaluations.ts` now wires `enqueue` through the new domain use case, but trigger evaluation, execute-task publication, and the `execute` handler are still not implemented
 - `apps/workers/src/workers/live-annotation-queues.ts` is still a stub, which matters for rollout once `TraceEnded` becomes real
 
 ## Locked Decisions
@@ -134,7 +135,7 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 
 **Intent**: implement selection and task publication while keeping the upstream trace-end signal dormant.
 
-**Status**: ready to start. The ownership, implementation approach, and test plan are now defined for `phase-13-part-2`.
+**Status**: in progress. `P13-PR2-1`, `P13-PR2-2`, and `P13-PR2-3` are now landed as a safe foundation on `phase-13-part-2`; remaining work is trigger evaluation, execute-task publication, and worker-level enqueue coverage.
 
 **Responsibilities**:
 
@@ -146,7 +147,8 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 
 **Starting point**:
 
-- `apps/workers/src/workers/live-evaluations.ts` still has stub `enqueue` and `execute` handlers
+- `apps/workers/src/workers/live-evaluations.ts` now has a thin `enqueue` wrapper around `enqueueLiveEvaluationsUseCase`, while `execute` remains a stub
+- `packages/domain/evaluations/src/use-cases/live/enqueue-live-evaluations.ts` now reloads `TraceDetail` and paginates active evaluations, but intentionally stops before filter/sampling/turn evaluation and execute-task publication
 - `apps/workers/src/workers/domain-events.ts` already fans out `TraceEnded -> live-evaluations:enqueue`
 - `TraceEnded` currently carries only `organizationId`, `projectId`, and `traceId`, so enqueue must reload `TraceDetail` to recover `sessionId` before scope-aware turn logic
 - `EvaluationRepository.listByProjectId({ lifecycle: "active" })` is already the canonical project-wide active scan and excludes archived/deleted rows
@@ -157,6 +159,7 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 
 - introduce `enqueueLiveEvaluationsUseCase` under `packages/domain/evaluations/src/use-cases/live/` so trigger selection and publication rules do not live in the worker
 - keep `apps/workers/src/workers/live-evaluations.ts` as the composition root for `QueuePublisher`, `EvaluationRepositoryLive`, `ScoreRepositoryLive`, `TraceRepositoryLive`, logging, and queue subscription
+- the first PR 2 increment may land a safe foundation that only reloads the trace, scans active evaluations, and returns a structured summary before the real trigger-selection and publication logic is added
 - delegate all trigger filter semantics to `TraceRepository`; neither the domain helper layer nor the worker may re-implement `FilterSet` matching
 - apply trigger gates in exact order: `filter`, then `sampling`, then `turn` / `debounce`
 - `turn = first` checks `ScoreRepository.existsByEvaluationIdAndScope()` only after the trace has passed filter and sampling
@@ -174,9 +177,9 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 
 **To-Do**:
 
-- [ ] **P13-PR2-1**: Replace the `enqueue` stub in `apps/workers/src/workers/live-evaluations.ts` by wiring a thin worker wrapper around the new enqueue use case
-- [ ] **P13-PR2-2**: Load the ended trace detail with `TraceRepository.findByTraceId()` so trigger checks can use `sessionId` and current trace context
-- [ ] **P13-PR2-3**: List active evaluations project-wide through `EvaluationRepository.listByProjectId({ lifecycle: "active" })` instead of manually re-implementing lifecycle filtering
+- [x] **P13-PR2-1**: Replace the `enqueue` stub in `apps/workers/src/workers/live-evaluations.ts` by wiring a thin worker wrapper around the new enqueue use case
+- [x] **P13-PR2-2**: Load the ended trace detail with `TraceRepository.findByTraceId()` so trigger checks can use `sessionId` and current trace context
+- [x] **P13-PR2-3**: List active evaluations project-wide through `EvaluationRepository.listByProjectId({ lifecycle: "active" })` instead of manually re-implementing lifecycle filtering
 - [ ] **P13-PR2-4**: Treat `sampling = 0` as paused via the shared live-evaluation eligibility helpers and skip those evaluations before publication
 - [ ] **P13-PR2-5**: Apply trigger evaluation order exactly as specified: `filter`, then `sampling`, then `turn` / `debounce`
 - [ ] **P13-PR2-6**: Publish `live-evaluations:execute` once per matching `(evaluationId, traceId)` pair, including trace-scoped or scope-scoped dedupe/debounce where required by `first` / `every` / `last`

@@ -472,6 +472,9 @@ importers:
       '@domain/email':
         specifier: workspace:*
         version: link:../../packages/domain/email
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../../packages/domain/evaluations
       '@domain/events':
         specifier: workspace:*
         version: link:../../packages/domain/events
