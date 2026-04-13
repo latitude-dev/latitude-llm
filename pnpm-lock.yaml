@@ -10,8 +10,8 @@ catalogs:
       specifier: 2.4.6
       version: 2.4.6
     '@clickhouse/client':
-      specifier: 1.17.0
-      version: 1.17.0
+      specifier: 1.18.2
+      version: 1.18.2
     '@hono/node-server':
       specifier: 1.19.13
       version: 1.19.13
@@ -147,7 +147,7 @@ importers:
     dependencies:
       '@clickhouse/client':
         specifier: 'catalog:'
-        version: 1.17.0
+        version: 1.18.2
       '@domain/annotations':
         specifier: workspace:*
         version: link:../../packages/domain/annotations
@@ -1151,7 +1151,7 @@ importers:
     dependencies:
       '@clickhouse/client':
         specifier: 'catalog:'
-        version: 1.17.0
+        version: 1.18.2
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
@@ -1428,7 +1428,7 @@ importers:
     dependencies:
       '@clickhouse/client':
         specifier: 'catalog:'
-        version: 1.17.0
+        version: 1.18.2
       '@domain/shared':
         specifier: workspace:*
         version: link:../../domain/shared
@@ -2366,11 +2366,11 @@ packages:
   '@clack/prompts@0.11.0':
     resolution: {integrity: sha512-pMN5FcrEw9hUkZA4f+zLlzivQSeQf5dRGJjSUbvVYDLvpKCdQx5OaknvKzgbtXOizhP+SJJJjqEbOe55uKKfAw==}
 
-  '@clickhouse/client-common@1.17.0':
-    resolution: {integrity: sha512-MiwwgXViFAQA2YZkN4ymF1ynzG0K49KeSX9/iOcmJetWkxqSekDdpyp1GjwATWa9R215uQ+hGzJtJujeQVZZIw==}
+  '@clickhouse/client-common@1.18.2':
+    resolution: {integrity: sha512-J0SG6q9V31ydxonglpj9xhNRsUxCsF71iEZ784yldqMYwsHixj/9xHFDgBDX3DuMiDx/kPDfXnf+pimp08wIBA==}
 
-  '@clickhouse/client@1.17.0':
-    resolution: {integrity: sha512-Y3DQoamKZ/Iyosoq7Lj7lqpDkQDK4R/5mI52yJs4ZLPIO+d6/CYDqTbFBIb4No3C/AlXUYE4TKhj/kXDpe6rOA==}
+  '@clickhouse/client@1.18.2':
+    resolution: {integrity: sha512-fuquQswRSHWM6D079ZeuGqkMOsqtcUPL06UdTnowmoeeYjVrqisfVmvnw8pc3OeKS4kVb91oygb/MfLDiMs0TQ==}
     engines: {node: '>=16'}
 
   '@codemirror/commands@6.10.3':
@@ -12258,11 +12258,11 @@ snapshots:
       picocolors: 1.1.1
       sisteransi: 1.0.5
 
-  '@clickhouse/client-common@1.17.0': {}
+  '@clickhouse/client-common@1.18.2': {}
 
-  '@clickhouse/client@1.17.0':
+  '@clickhouse/client@1.18.2':
     dependencies:
-      '@clickhouse/client-common': 1.17.0
+      '@clickhouse/client-common': 1.18.2
 
   '@codemirror/commands@6.10.3':
     dependencies:
@@ -16367,7 +16367,7 @@ snapshots:
 
   '@types/mssql@9.1.11(@azure/core-client@1.10.1)':
     dependencies:
-      '@types/node': 25.6.0
+      '@types/node': 22.19.17
       tarn: 3.0.2
       tedious: 19.2.1(@azure/core-client@1.10.1)
     transitivePeerDependencies:
@@ -16396,6 +16396,7 @@ snapshots:
   '@types/node@25.6.0':
     dependencies:
       undici-types: 7.19.2
+    optional: true
 
   '@types/nodemailer@6.4.23':
     dependencies:
@@ -16437,7 +16438,7 @@ snapshots:
 
   '@types/readable-stream@4.0.23':
     dependencies:
-      '@types/node': 25.6.0
+      '@types/node': 22.19.17
 
   '@types/request@2.48.13':
     dependencies:
@@ -20574,7 +20575,7 @@ snapshots:
       '@azure/identity': 4.13.1
       '@azure/keyvault-keys': 4.10.0(@azure/core-client@1.10.1)
       '@js-joda/core': 5.7.0
-      '@types/node': 25.6.0
+      '@types/node': 22.19.17
       bl: 6.1.6
       iconv-lite: 0.6.3
       js-md4: 0.3.2
@@ -20590,7 +20591,7 @@ snapshots:
       '@azure/identity': 4.13.1
       '@azure/keyvault-keys': 4.10.0(@azure/core-client@1.10.1)
       '@js-joda/core': 5.7.0
-      '@types/node': 25.6.0
+      '@types/node': 22.19.17
       bl: 6.1.6
       iconv-lite: 0.7.2
       js-md4: 0.3.2
@@ -20826,7 +20827,8 @@ snapshots:
   undici-types@7.16.0:
     optional: true
 
-  undici-types@7.19.2: {}
+  undici-types@7.19.2:
+    optional: true
 
   undici@7.24.7: {}
 
