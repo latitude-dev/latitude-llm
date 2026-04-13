@@ -1,4 +1,8 @@
-import { CONVERSATION_PLACEHOLDER, generateBaselinePromptText, wrapPromptAsScript } from "@domain/evaluations"
+import {
+  EVALUATION_CONVERSATION_PLACEHOLDER,
+  generateBaselinePromptText,
+  wrapPromptAsEvaluationScript,
+} from "@domain/evaluations"
 import { createIssueCentroid } from "@domain/issues"
 import { IssueId, OrganizationId, ProjectId, ScoreId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
@@ -146,7 +150,7 @@ const insertEvaluation = async (input: {
     issueId,
     name: "Existing evaluation",
     description: "Existing evaluation description",
-    script: wrapPromptAsScript("Evaluate the conversation for the issue."),
+    script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
     trigger: {
       filter: {},
       turn: "every",
@@ -284,7 +288,7 @@ describe("evaluation-alignment activities", () => {
       "Tool output leakage",
       "Secrets are exposed in assistant tool output.",
     )
-    const expectedScript = wrapPromptAsScript(expectedPrompt)
+    const expectedScript = wrapPromptAsEvaluationScript(expectedPrompt)
 
     expect(result.script).toBe(expectedScript)
     expect(result.evaluationHash).toBe(await sha1Hex(expectedScript))
@@ -310,7 +314,9 @@ describe("evaluation-alignment activities", () => {
       }),
     )
 
-    const script = wrapPromptAsScript(`Check the conversation for fabricated guarantees.\n${CONVERSATION_PLACEHOLDER}`)
+    const script = wrapPromptAsEvaluationScript(
+      `Check the conversation for fabricated guarantees.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+    )
 
     const result = await generateEvaluationDetails({
       issueName: "Fabricated refund guarantees in support answers",
@@ -347,7 +353,7 @@ describe("evaluation-alignment activities", () => {
     const result = await generateEvaluationDetails({
       issueName: "Test issue",
       issueDescription: "Test description",
-      script: wrapPromptAsScript("Test prompt"),
+      script: wrapPromptAsEvaluationScript("Test prompt"),
     })
 
     expect(result.name.length).toBeLessThanOrEqual(128)
@@ -371,7 +377,9 @@ describe("evaluation-alignment activities", () => {
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
-        script: wrapPromptAsScript(`Check if the conversation contains leaked secrets:\n${CONVERSATION_PLACEHOLDER}`),
+        script: wrapPromptAsEvaluationScript(
+          `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+        ),
         evaluationHash: "hash-1",
         trigger: {
           filter: {},
@@ -454,7 +462,7 @@ describe("evaluation-alignment activities", () => {
       description: "Existing evaluation description",
       alignedAt: new Date("2026-04-01T00:00:00.000Z").toISOString(),
       draft: {
-        script: wrapPromptAsScript("Evaluate the conversation for the issue."),
+        script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
         evaluationHash: "hash-existing",
         trigger: {
           filter: {},
@@ -477,7 +485,7 @@ describe("evaluation-alignment activities", () => {
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
-        script: wrapPromptAsScript("Evaluate the conversation for the issue."),
+        script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
         evaluationHash: "hash-existing",
         trigger: {
           filter: {},
@@ -530,7 +538,9 @@ describe("evaluation-alignment activities", () => {
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
-        script: wrapPromptAsScript(`Check if the conversation contains leaked secrets:\n${CONVERSATION_PLACEHOLDER}`),
+        script: wrapPromptAsEvaluationScript(
+          `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+        ),
         evaluationHash: "hash-existing",
         trigger: {
           filter: {},
@@ -594,7 +604,7 @@ describe("evaluation-alignment activities", () => {
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
       draft: {
-        script: wrapPromptAsScript("Always flag as issue present"),
+        script: wrapPromptAsEvaluationScript("Always flag as issue present"),
         evaluationHash: "hash-existing",
         trigger: {
           filter: {},
@@ -696,10 +706,10 @@ describe("evaluation-alignment activities", () => {
   })
 
   it("runs the workflow optimization seam through the optimizer port", async () => {
-    const optimizedPrompt = `Improved: detect leaked tokens in the conversation.\n${CONVERSATION_PLACEHOLDER}`
-    const expectedOptimizedScript = wrapPromptAsScript(optimizedPrompt)
-    const baselineScript = wrapPromptAsScript(
-      `Check if the conversation contains leaked secrets:\n${CONVERSATION_PLACEHOLDER}`,
+    const optimizedPrompt = `Improved: detect leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`
+    const expectedOptimizedScript = wrapPromptAsEvaluationScript(optimizedPrompt)
+    const baselineScript = wrapPromptAsEvaluationScript(
+      `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
     )
 
     mockAi.generate.mockImplementation(
@@ -830,7 +840,9 @@ describe("evaluation-alignment activities", () => {
       projectId,
       issueId,
       evaluationId: null,
-      script: wrapPromptAsScript(`Check for leaked tokens in the conversation.\n${CONVERSATION_PLACEHOLDER}`),
+      script: wrapPromptAsEvaluationScript(
+        `Check for leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,
+      ),
       evaluationHash: "hash-activity-test",
       confusionMatrix: {
         truePositives: 3,

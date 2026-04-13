@@ -19,6 +19,8 @@ export interface SpanMessagesData {
  * Repository port for spans (ClickHouse).
  */
 export interface SpanRepositoryShape {
+  // TODO(repositories): rename insert -> save to keep repository write verbs
+  // consistent across append-only and upsert-backed stores.
   insert(spans: readonly SpanDetail[]): Effect.Effect<void, RepositoryError>
 
   listByTraceId(input: {

@@ -163,6 +163,8 @@ export const DatasetRowRepositoryLive = Layer.effect(
           return new Set(result.map((r) => TraceId(r.trace_id)))
         }),
 
+      // TODO(repositories): rename insertBatch -> saveBatch so repository write
+      // verbs converge on save/saveBatch instead of insert/insertBatch.
       insertBatch: (args) =>
         chSqlClient.query(async (client, organizationId) => {
           const values = args.rows.map((row) => ({

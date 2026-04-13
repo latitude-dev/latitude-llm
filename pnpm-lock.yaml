@@ -978,6 +978,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: 'catalog:'
         version: 3.3.0
+      '@repo/utils':
+        specifier: workspace:*
+        version: link:../../utils
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4

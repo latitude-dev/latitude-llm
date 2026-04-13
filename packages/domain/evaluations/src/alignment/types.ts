@@ -3,17 +3,13 @@ import type {
   EvaluationAlignmentJobError,
   EvaluationAlignmentJobStatus,
   EvaluationTrigger,
-} from "./entities/evaluation.ts"
-import type { EvaluationAlignmentMetrics } from "./helpers.ts"
-import type { EvaluationAlignmentExample } from "./ports/evaluation-alignment-examples-repository.ts"
-
-export interface EvaluationAlignmentConversationMessage {
-  readonly role: string
-  readonly content: string
-}
+} from "../entities/evaluation.ts"
+import type { EvaluationAlignmentMetrics } from "../helpers.ts"
+import type { EvaluationAlignmentExample } from "../ports/evaluation-alignment-examples-repository.ts"
+import type { EvaluationConversationMessage } from "../runtime/evaluation-execution.ts"
 
 export interface HydratedEvaluationAlignmentExample extends EvaluationAlignmentExample {
-  readonly conversation: readonly EvaluationAlignmentConversationMessage[]
+  readonly conversation: readonly EvaluationConversationMessage[]
   readonly conversationText: string
 }
 

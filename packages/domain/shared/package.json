@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "catalog:",
+    "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "zod": "catalog:"
   }

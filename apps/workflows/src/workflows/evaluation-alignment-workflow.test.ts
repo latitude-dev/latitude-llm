@@ -1,4 +1,4 @@
-import { wrapPromptAsScript } from "@domain/evaluations"
+import { wrapPromptAsEvaluationScript } from "@domain/evaluations"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { callOrder, mockActivities, workflowRuntime, workflowPrimitives } = vi.hoisted(() => {
@@ -80,7 +80,7 @@ const { callOrder, mockActivities, workflowRuntime, workflowPrimitives } = vi.ho
         description: "Existing evaluation description",
         alignedAt: new Date("2026-04-01T00:00:00.000Z").toISOString(),
         draft: {
-          script: wrapPromptAsScript("Evaluate the conversation for the issue."),
+          script: wrapPromptAsEvaluationScript("Evaluate the conversation for the issue."),
           evaluationHash: "hash-existing",
           trigger: {
             filter: {},
@@ -138,7 +138,7 @@ const { callOrder, mockActivities, workflowRuntime, workflowPrimitives } = vi.ho
     generateBaselineEvaluationDraft: vi.fn(async () => {
       callOrder.push("generateBaselineEvaluationDraft")
       return {
-        script: wrapPromptAsScript("Placeholder evaluation prompt."),
+        script: wrapPromptAsEvaluationScript("Placeholder evaluation prompt."),
         evaluationHash: "hash-1",
         trigger: {
           filter: {},
@@ -331,7 +331,7 @@ describe("evaluationAlignmentWorkflow", () => {
     expect(mockActivities.generateEvaluationDetails).toHaveBeenCalledWith({
       issueName: "Tool output leakage",
       issueDescription: "Secrets are exposed in assistant tool output.",
-      script: wrapPromptAsScript("Placeholder evaluation prompt."),
+      script: wrapPromptAsEvaluationScript("Placeholder evaluation prompt."),
     })
   })
 
