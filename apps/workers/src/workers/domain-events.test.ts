@@ -98,14 +98,15 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("api-keys")
-    expect(published[0]?.task).toBe("create")
-    expect(published[0]?.payload).toEqual({
+    const apiKeysPublish = published.find((p) => p.queue === "api-keys")
+    expect(apiKeysPublish?.task).toBe("create")
+    expect(apiKeysPublish?.payload).toEqual({
       organizationId: "org-new",
       name: DEFAULT_API_KEY_NAME,
     })
-    expect(published[0]?.options?.dedupeKey).toBe("api-keys:create:org-new")
+    expect(apiKeysPublish?.options?.dedupeKey).toBe("api-keys:create:org-new")
+    // OrganizationCreated is whitelisted for PostHog.
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 
   it("routes UserDeletionRequested to user-deletion:delete", async () => {
@@ -179,16 +180,17 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("projects")
-    expect(published[0]?.task).toBe("provision")
-    expect(published[0]?.payload).toEqual({
+    const projectsPublish = published.find((p) => p.queue === "projects")
+    expect(projectsPublish?.task).toBe("provision")
+    expect(projectsPublish?.payload).toEqual({
       organizationId: "org-1",
       projectId: "proj-1",
       name: "Project",
       slug: "project",
     })
-    expect(published[0]?.options?.dedupeKey).toBe("projects:provision:proj-1")
+    expect(projectsPublish?.options?.dedupeKey).toBe("projects:provision:proj-1")
+    // ProjectCreated is whitelisted for PostHog.
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 
   it("fails on unhandled events", async () => {
@@ -239,6 +241,41 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.debounceMs).toBe(ISSUE_REFRESH_DEBOUNCE_MS)
   })
 
+  it("fans out whitelisted events to posthog-analytics:track in addition to the primary handler", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    const envelope = makeEnvelope("OrganizationCreated", { organizationId: "org-ph", name: "PH", slug: "ph" }, "org-ph")
+
+    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+
+    // One to the primary handler (api-keys:create) and one to posthog-analytics.
+    const byQueue = published.map((p) => `${p.queue}:${p.task}`).sort()
+    expect(byQueue).toEqual(["api-keys:create", "posthog-analytics:track"])
+
+    const ph = published.find((p) => p.queue === "posthog-analytics")
+    expect(ph?.payload).toMatchObject({
+      eventName: "OrganizationCreated",
+      organizationId: "org-ph",
+      payload: { organizationId: "org-ph", name: "PH", slug: "ph" },
+    })
+    expect(ph?.options?.dedupeKey).toBe(`posthog:${envelope.id}`)
+  })
+
+  it("does NOT fan out non-whitelisted events to posthog-analytics", async () => {
+    const { consumer, published } = setupDispatcher()
+
+    // TraceEnded is deliberately excluded from the whitelist due to volume.
+    const envelope = makeEnvelope("TraceEnded", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-x",
+    })
+
+    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
+  })
+
   it("routes ScoreCreated to issues:discovery and debounced annotation-scores publish", async () => {
     const { consumer, published } = setupDispatcher()
 
@@ -251,7 +288,10 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toEqual([
+    // Primary handler publishes to issues + annotation-scores; ScoreCreated is
+    // also in the PostHog whitelist so a third publish goes to posthog-analytics.
+    const primary = published.filter((p) => p.queue !== "posthog-analytics")
+    expect(primary).toEqual([
       {
         queue: "issues",
         task: "discovery",
@@ -279,5 +319,7 @@ describe("domain-events dispatcher", () => {
         },
       },
     ])
+
+    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 })

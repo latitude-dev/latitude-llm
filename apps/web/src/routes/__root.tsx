@@ -6,6 +6,7 @@ import type { ReactNode } from "react"
 import { lazy, Suspense } from "react"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
+import { PostHogProvider } from "../lib/posthog/posthog-provider.tsx"
 
 const TITLE = "Latitude - The Agent Engineering Platform"
 const DESCRIPTION =
@@ -58,6 +59,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       </head>
       <body>
         <HostThemeSync />
+        <PostHogProvider />
         <AppQueryProvider>
           <HotkeysProvider>{children}</HotkeysProvider>
           <Toaster />

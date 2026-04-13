@@ -10,7 +10,7 @@ import {
 import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowStarter } from "./clients.ts"
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
@@ -24,6 +24,7 @@ import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createLiveTracesWorker } from "./workers/live-traces.ts"
+import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
@@ -114,6 +115,7 @@ const bootstrap = async () => {
     createLiveAnnotationQueuesWorker(ctx)
     createSystemAnnotationQueuesWorker(ctx)
     createProjectsWorker(ctx)
+    createPostHogAnalyticsWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start())
     await Effect.runPromise(queueConsumer.start())
@@ -140,6 +142,11 @@ const bootstrap = async () => {
       await Effect.runPromise(consumers.outboxConsumer.stop())
       await Effect.runPromise(consumers.queueConsumer.stop())
       await Effect.runPromise(queuePublisher.close())
+      // Flush in-flight PostHog events before process exit. No-op when the
+      // integration isn't configured.
+      await getPostHogClient()
+        .shutdown()
+        .catch((error) => logger.warn("PostHog shutdown failed", error))
     } catch (error) {
       logger.error("Error during shutdown (workers may not have started)", error)
     }

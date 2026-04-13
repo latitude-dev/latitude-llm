@@ -165,6 +165,15 @@ const _registry = {
           }
     }
   }>(),
+
+  "posthog-analytics": payloads<{
+    track: {
+      readonly eventName: string
+      readonly organizationId: string
+      readonly payload: Record<string, unknown>
+      readonly occurredAt: string
+    }
+  }>(),
 }
 
 export type TopicRegistry = typeof _registry

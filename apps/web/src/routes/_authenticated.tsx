@@ -5,6 +5,8 @@ import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
+import { resetPostHog } from "../lib/posthog/posthog-client.ts"
+import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
 
 export const Route = createFileRoute("/_authenticated")({
@@ -133,9 +135,14 @@ function NavHeader() {
               label: "Log out",
               type: "destructive",
               onClick: () => {
-                void authClient.signOut().then(() => {
-                  void router.navigate({ to: "/login" })
-                })
+                // Flush/reset PostHog before revoking so the final events
+                // still carry the right identity, then the next user on this
+                // device starts anonymous.
+                void resetPostHog().finally(() =>
+                  authClient.signOut().then(() => {
+                    void router.navigate({ to: "/login" })
+                  }),
+                )
               },
             },
           ]}
@@ -157,8 +164,25 @@ function NavHeader() {
 }
 
 function AuthenticatedLayout() {
+  const user = Route.useLoaderData({ select: (data) => data.user })
+  const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
+  const { data: allOrgs } = useOrganizationsCollection()
+  const org = allOrgs?.find((o) => o.id === organizationId)
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
+      {/* Keyed by userId so switching users (rare, but possible on the same
+          device) remounts the component and re-runs the reset→identify
+          sequence. Org switches force a full reload elsewhere so we don't
+          need to include organizationId in the key. */}
+      <PostHogIdentity
+        key={user.id}
+        userId={user.id}
+        userEmail={user.email}
+        userName={user.name}
+        organizationId={organizationId}
+        organizationName={org?.name}
+      />
       <NavHeader />
       <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
         <Outlet />
