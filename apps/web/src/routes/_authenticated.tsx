@@ -39,8 +39,8 @@ export const Route = createFileRoute("/_authenticated")({
 })
 
 function ThemeToggle() {
-  const theme = useRootThemePreference()
-  const { setTheme } = useThemePreference(theme)
+  const initialTheme = useRootThemePreference()
+  const { theme, setTheme } = useThemePreference(initialTheme)
   const nextTheme = theme === "dark" ? "light" : "dark"
 
   return (
