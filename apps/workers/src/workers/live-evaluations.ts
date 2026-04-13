@@ -6,8 +6,8 @@ import {
 } from "@domain/evaluations"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
-import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { EvaluationRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { type ClickHouseClient, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { EvaluationRepositoryLive, type PostgresClient, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
 import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
@@ -25,6 +25,8 @@ interface EnqueuePayload {
 interface LiveEvaluationsDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
+  postgresClient?: PostgresClient
+  clickhouseClient?: ClickHouseClient
 }
 
 const buildEnqueueLogContext = (payload: EnqueuePayload) => ({
@@ -37,9 +39,14 @@ const buildEnqueueLogContext = (payload: EnqueuePayload) => ({
 
 // TODO(eval-sandbox): when implementing live evaluation execution, use the same extract-and-call
 // approach from executeEvaluationScript for MVP, then migrate to sandboxed JS runtime.
-export const createLiveEvaluationsWorker = ({ consumer, publisher }: LiveEvaluationsDeps) => {
-  const pgClient = getPostgresClient()
-  const chClient = getClickhouseClient()
+export const createLiveEvaluationsWorker = ({
+  consumer,
+  publisher,
+  postgresClient,
+  clickhouseClient,
+}: LiveEvaluationsDeps) => {
+  const pgClient = postgresClient ?? getPostgresClient()
+  const chClient = clickhouseClient ?? getClickhouseClient()
   const liveEvaluationQueuePublisher = {
     publishExecute: ({ organizationId, projectId, evaluationId, traceId, dedupeKey, debounceMs }) => {
       const publishOptions =

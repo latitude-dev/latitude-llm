@@ -135,7 +135,7 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 
 **Intent**: implement selection and task publication while keeping the upstream trace-end signal dormant.
 
-**Status**: in progress. `P13-PR2-1`, `P13-PR2-2`, `P13-PR2-3`, `P13-PR2-9`, `P13-PR2-4`, `P13-PR2-5`, `P13-PR2-6`, and `P13-PR2-7` are now landed on `phase-13-part-2`; remaining work is worker-level enqueue coverage and the explicit `turn = first` plus debounce behavior lock.
+**Status**: in progress. `P13-PR2-1`, `P13-PR2-2`, `P13-PR2-3`, `P13-PR2-9`, `P13-PR2-4`, `P13-PR2-5`, `P13-PR2-6`, `P13-PR2-7`, and `P13-PR2-8` are now landed on `phase-13-part-2`; remaining work is the explicit `turn = first` plus debounce behavior lock.
 
 **Responsibilities**:
 
@@ -150,6 +150,7 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 - `apps/workers/src/workers/live-evaluations.ts` now has a thin `enqueue` wrapper around `enqueueLiveEvaluationsUseCase`, while `execute` remains a stub
 - `packages/domain/evaluations/src/use-cases/live/enqueue-live-evaluations.ts` now reloads `TraceDetail`, paginates active evaluations, skips paused (`sampling = 0`) monitors, applies `filter -> sampling -> turn` in order, and publishes `live-evaluations:execute` with turn-aware trace-vs-scope dedupe/debounce options
 - `apps/workers/src/workers/live-evaluations.ts` now logs structured enqueue outcomes with queue/task metadata plus scan, skip, and publish counters from the domain summary
+- `apps/workers/src/workers/live-evaluations.test.ts` now covers matching, skip paths, deterministic sampling, session-vs-trace scope, `first` / `every` / `last` turn behavior, and the resulting execute publication options against in-memory Postgres and ClickHouse
 - `apps/workers/src/workers/domain-events.ts` already fans out `TraceEnded -> live-evaluations:enqueue`
 - `TraceEnded` currently carries only `organizationId`, `projectId`, and `traceId`, so enqueue must reload `TraceDetail` to recover `sessionId` before scope-aware turn logic
 - `EvaluationRepository.listByProjectId({ lifecycle: "active" })` is already the canonical project-wide active scan and excludes archived/deleted rows
@@ -186,7 +187,7 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 - [x] **P13-PR2-5**: Apply trigger evaluation order exactly as specified: `filter`, then `sampling`, then `turn` / `debounce`
 - [x] **P13-PR2-6**: Publish `live-evaluations:execute` once per matching `(evaluationId, traceId)` pair, including trace-scoped or scope-scoped dedupe/debounce where required by `first` / `every` / `last`
 - [x] **P13-PR2-7**: Add structured enqueue-path logging for active evaluations scanned, filter matches, sampling skips, turn/debounce skips, and execute tasks published
-- [ ] **P13-PR2-8**: Add worker-level tests for matching, skipping, deterministic sampling, session-vs-trace scope, turn semantics, and execute publication
+- [x] **P13-PR2-8**: Add worker-level tests for matching, skipping, deterministic sampling, session-vs-trace scope, turn semantics, and execute publication
 - [ ] **P13-PR2-10**: Lock the `turn = first` plus debounce behavior with explicit tests so it delays the first eligible execution without accidentally collapsing into `last`
 
 **Exit gate**:
