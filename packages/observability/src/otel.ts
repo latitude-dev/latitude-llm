@@ -29,7 +29,7 @@ export const startTracing = async ({
 
   // const apiKey = Effect.runSync(parseEnvOptional("LAT_LATITUDE_TELEMETRY_API_KEY", "string"))
   // const projectSlug = Effect.runSync(parseEnvOptional("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string"))
-  // const latitudeIngestBase = resolveLatitudeTelemetryIngestBaseUrl(environment).replace(/\/$/, "")
+  // const latitudeIngestBase = "https://ingest.latitude.so" // or staging-ingest / localhost when re-enabling LatitudeSpanProcessor
   const spanProcessors: SpanProcessor[] = [
     new BatchSpanProcessor(
       new OTLPTraceExporter({

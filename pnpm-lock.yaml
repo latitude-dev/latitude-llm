@@ -1048,9 +1048,6 @@ importers:
 
   packages/observability:
     dependencies:
-      '@latitude-data/telemetry':
-        specifier: 'catalog:'
-        version: 3.0.0-alpha.3(@opentelemetry/exporter-trace-otlp-proto@0.213.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.6.1(@opentelemetry/api@1.9.1))(hono@4.12.12)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rxjs@7.8.2)(tree-sitter@0.22.4)(typescript@5.9.3)(web-tree-sitter@0.24.7)(ws@8.20.0)(zod-to-json-schema@3.25.2(zod@4.3.6))(zod@4.3.6)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1
@@ -1066,12 +1063,6 @@ importers:
       '@opentelemetry/sdk-trace-base':
         specifier: ^2.6.0
         version: 2.6.1(@opentelemetry/api@1.9.1)
-      '@platform/env':
-        specifier: workspace:*
-        version: link:../platform/env
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0-beta.4
 
   packages/platform/ai:
     dependencies:

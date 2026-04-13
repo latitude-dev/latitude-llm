@@ -50,8 +50,6 @@ export const isObservabilityEnabled = () => parseBooleanEnv(process.env.LAT_OBSE
 export const getServiceName = (state: ObservabilityState, scope: string) =>
   state.serviceName || process.env.LAT_OBSERVABILITY_SERVICE_NAME || scope
 
-const normalizeTelemetryEnvironment = (value: string) => value.trim().toLowerCase()
-
 const defaultOtlpTracesEndpointFromAgentHost = (): string | undefined => {
   const host = process.env.DD_AGENT_HOST?.trim()
   if (!host) {
@@ -78,18 +76,4 @@ export const getTracesConfig = (): TracesConfig | undefined => {
       ...parseHeaders(process.env.LAT_OBSERVABILITY_OTLP_HEADERS),
     },
   }
-}
-
-/** Base URL for Latitude OTLP ingest (no `/v1/traces` suffix). */
-export const resolveLatitudeTelemetryIngestBaseUrl = (telemetryEnvironment: string): string => {
-  const normalized = normalizeTelemetryEnvironment(telemetryEnvironment)
-  if (normalized === "staging") {
-    return "https://staging-ingest.latitude.so"
-  }
-
-  if (normalized === "production") {
-    return "https://ingest.latitude.so"
-  }
-
-  return "http://localhost:3002"
 }
