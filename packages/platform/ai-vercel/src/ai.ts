@@ -173,6 +173,9 @@ export const AIGenerateLive = Layer.effect(
                   ...(input.stopSequences !== undefined ? { stopSequences: [...input.stopSequences] } : {}),
                   ...(input.seed !== undefined ? { seed: input.seed } : {}),
                   ...(providerOptions !== undefined ? { providerOptions } : {}),
+                  experimental_telemetry: {
+                    isEnabled: true,
+                  },
                 }
 
                 const result = await generateText(call)

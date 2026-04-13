@@ -150,6 +150,23 @@ export function createEcs(
     }`,
   })
 
+  new aws.iam.RolePolicy(`${name}-bedrock-policy`, {
+    role: taskRole.name,
+    policy: JSON.stringify({
+      Version: "2012-10-17",
+      Statement: [
+        {
+          Effect: "Allow",
+          Action: [
+            "bedrock:InvokeModel",
+            "bedrock:InvokeModelWithResponseStream",
+          ],
+          Resource: "*",
+        },
+      ],
+    }),
+  })
+
   const taskDefinitions: Record<string, EcsTaskDefinition> = {}
   const services: Record<string, EcsService> = {}
 
