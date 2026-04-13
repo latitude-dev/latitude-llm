@@ -42,4 +42,5 @@ export {
   persistDraftAnnotationInputSchema,
   type WriteDraftAnnotationInput as PersistDraftAnnotationInput,
   writeDraftAnnotationUseCase,
+  writePublishedAnnotationUseCase,
 } from "./use-cases/write-draft-annotation.ts"
