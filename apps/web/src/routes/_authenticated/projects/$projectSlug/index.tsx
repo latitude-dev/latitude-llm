@@ -127,6 +127,26 @@ function ProjectPage() {
     setRawFilters(serializeFilters(next) ?? "")
   }
 
+  const onTimeRangeSelect = useCallback((range: { from: string; to: string } | null) => {
+    setRawFilters((prev) => {
+      const current = parseFilters(prev || undefined)
+      const next = { ...current }
+      if (range) {
+        next.startTime = [
+          { op: "gte" as const, value: range.from },
+          { op: "lte" as const, value: range.to },
+        ]
+      } else {
+        delete next.startTime
+      }
+      return serializeFilters(next) ?? ""
+    })
+  }, [])
+
+  const clearFilters = () => {
+    setRawFilters("")
+  }
+
   const onActiveTraceChange = (traceId: string | undefined) => {
     setActiveTraceId(traceId ?? "")
   }
@@ -235,6 +255,11 @@ function ProjectPage() {
             >
               Toggle filters <HotkeyBadge hotkey="F" />
             </Tooltip>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Clear all
+              </Button>
+            )}
           </Layout.ActionRowItem>
           <Layout.ActionRowItem>
             <Tabs
@@ -281,7 +306,7 @@ function ProjectPage() {
       )}
 
       <div className="px-6">
-        <TraceAggregationsPanel projectId={project?.id ?? ""} filters={filters} />
+        <TraceAggregationsPanel projectId={project?.id ?? ""} filters={filters} onTimeRangeSelect={onTimeRangeSelect} />
       </div>
 
       {activeTab === "traces" ? (

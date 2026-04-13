@@ -2,7 +2,7 @@ import type { FilterSet } from "@domain/shared"
 import { denseTraceTimeHistogramBuckets } from "@domain/spans"
 import { BarChart, ChartSkeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
 
@@ -11,7 +11,14 @@ function formatBucketAxisLabel(iso: string): string {
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
 }
 
-export function Histogram({ projectId, filters }: { readonly projectId: string; readonly filters: FilterSet }) {
+interface HistogramProps {
+  readonly projectId: string
+  readonly filters: FilterSet
+  /** Called when user selects a time range via brush on the histogram. */
+  readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
+}
+
+export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps) {
   const {
     data: sparseBuckets,
     isLoading,
@@ -33,6 +40,24 @@ export function Histogram({ projectId, filters }: { readonly projectId: string; 
         value: b.traceCount,
       })),
     [denseBuckets],
+  )
+
+  const handleSelect = useCallback(
+    (range: { startIndex: number; endIndex: number } | null) => {
+      if (!onRangeSelect) return
+      if (!range) {
+        onRangeSelect(null)
+        return
+      }
+      const startBucket = denseBuckets[range.startIndex]
+      const endBucket = denseBuckets[range.endIndex]
+      if (!startBucket || !endBucket) return
+      const from = startBucket.bucketStart
+      const toEndMs = Date.parse(endBucket.bucketStart) + bucketSeconds * 1000
+      const to = new Date(toEndMs).toISOString()
+      onRangeSelect({ from, to })
+    },
+    [denseBuckets, bucketSeconds, onRangeSelect],
   )
 
   if (isLoading) {
@@ -67,6 +92,7 @@ export function Histogram({ projectId, filters }: { readonly projectId: string; 
         showYAxis={false}
         ariaLabel="Trace count by time bucket"
         formatTooltip={(category, value) => `${category}<br/><b>${formatCount(value)}</b> traces`}
+        onSelect={onRangeSelect ? handleSelect : undefined}
       />
     </div>
   )
