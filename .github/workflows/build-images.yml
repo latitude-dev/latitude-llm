@@ -40,6 +40,8 @@ jobs:
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
       registry: ${{ steps.meta.outputs.registry }}
+      git_repository_url: ${{ steps.meta.outputs.git_repository_url }}
+      git_commit_sha: ${{ steps.meta.outputs.git_commit_sha }}
 
     steps:
       - name: Checkout
@@ -55,10 +57,14 @@ jobs:
       - name: Compute image metadata
         id: meta
         run: |
+          GIT_REPOSITORY_URL=$(git config --get remote.origin.url)
+          GIT_COMMIT_SHA=$(git rev-parse HEAD)
           SHA=$(git rev-parse --short=8 HEAD)
           OWNER=$(printf '%s' "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           echo "image_tag=sha-${SHA}" >> "$GITHUB_OUTPUT"
           echo "registry=ghcr.io/${OWNER}" >> "$GITHUB_OUTPUT"
+          echo "git_repository_url=${GIT_REPOSITORY_URL}" >> "$GITHUB_OUTPUT"
+          echo "git_commit_sha=${GIT_COMMIT_SHA}" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build and push ${{ matrix.service }}
@@ -106,6 +112,8 @@ jobs:
           build-args: |
             VITE_LAT_API_URL=${{ vars.VITE_LAT_API_URL }}
             VITE_LAT_WEB_URL=${{ vars.VITE_LAT_WEB_URL }}
+            DD_GIT_REPOSITORY_URL=${{ needs.metadata.outputs.git_repository_url }}
+            DD_GIT_COMMIT_SHA=${{ needs.metadata.outputs.git_commit_sha }}
           cache-from: |
             type=registry,ref=${{ needs.metadata.outputs.registry }}/latitude-${{ inputs.environment }}-${{ matrix.service }}:latest
             type=gha,scope=${{ inputs.environment }}-${{ matrix.service }}

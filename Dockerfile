@@ -7,8 +7,8 @@ FROM node:25-slim AS base
 
 # Install pnpm using npm (corepack was removed from Node.js 25)
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates=202* curl && \
-    npm install -g pnpm@10.30.3 && \
-    rm -rf /var/lib/apt/lists/*
+  npm install -g pnpm@10.30.3 && \
+  rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -24,7 +24,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
 # Populate pnpm store from lockfile only for better cache reuse
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm fetch --frozen-lockfile --ignore-scripts
+  pnpm fetch --frozen-lockfile --ignore-scripts
 
 # ---------------------------------------------------------------------------
 # Source — full repo with deps installed
@@ -35,7 +35,7 @@ COPY . .
 
 # Skip postinstall scripts (chdb and other dev-only native deps)
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts --offline
+  pnpm install --frozen-lockfile --ignore-scripts --offline
 
 # ---------------------------------------------------------------------------
 # Build api — compile api app (turbo builds dependencies automatically)
@@ -81,20 +81,25 @@ RUN pnpm --filter @app/web build
 FROM source AS build-migrations
 
 RUN pnpm --filter @platform/db-postgres build && \
-    pnpm --filter @platform/db-clickhouse build && \
-    pnpm --filter @platform/db-weaviate build
+  pnpm --filter @platform/db-clickhouse build && \
+  pnpm --filter @platform/db-weaviate build
 
 # ---------------------------------------------------------------------------
 # Runtime base — shared runtime settings and cleanup helper
 # ---------------------------------------------------------------------------
 FROM base AS runtime
 
+ARG DD_GIT_REPOSITORY_URL
+ARG DD_GIT_COMMIT_SHA
+
 ENV NODE_ENV=production
+ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
+ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
 
 COPY packages/platform/db-postgres/global-bundle.pem /app/global-bundle.pem
 
 RUN groupadd -r latitude && useradd -r -g latitude -d /app -s /sbin/nologin latitude && \
-    chown -R latitude:latitude /app
+  chown -R latitude:latitude /app
 
 RUN cat <<'EOF' > /usr/local/bin/prune-workspace && chmod +x /usr/local/bin/prune-workspace
 #!/bin/bash
@@ -127,13 +132,13 @@ COPY --from=build-api /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build-api /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    install-prod-deps
+  install-prod-deps
 
 RUN prune-workspace
 USER latitude
 EXPOSE 8080
 
-CMD ["node", "apps/api/dist/server.cjs"]
+CMD ["node", "--enable-source-maps", "apps/api/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: ingest — minimal image with only ingest app
@@ -148,13 +153,13 @@ COPY --from=build-ingest /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build-ingest /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    install-prod-deps
+  install-prod-deps
 
 RUN prune-workspace
 USER latitude
 EXPOSE 8080
 
-CMD ["node", "apps/ingest/dist/server.cjs"]
+CMD ["node", "--enable-source-maps", "apps/ingest/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: workers — minimal image with only workers app
@@ -169,13 +174,13 @@ COPY --from=build-workers /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build-workers /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    install-prod-deps
+  install-prod-deps
 
 RUN prune-workspace
 USER latitude
 EXPOSE 8080
 
-CMD ["node", "apps/workers/dist/server.cjs"]
+CMD ["node", "--enable-source-maps", "apps/workers/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: workflows — Temporal worker (Temporal Cloud in AWS)
@@ -201,7 +206,7 @@ COPY --from=build-workflows /app/packages ./packages
 RUN cd packages/platform/op-gepa/python && uv sync --frozen --no-dev --no-install-project
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    install-prod-deps
+  install-prod-deps
 
 RUN prune-workspace
 
@@ -217,7 +222,7 @@ EXPOSE 8080
 ENV LAT_TEMPORAL_WORKFLOWS_PATH=/app/apps/workflows/src/workflows
 ENV LAT_GEPA_PYTHON_ROOT=/app/packages/platform/op-gepa/python
 
-CMD ["node", "apps/workflows/dist/server.cjs"]
+CMD ["node", "--enable-source-maps", "apps/workflows/dist/server.cjs"]
 
 # ---------------------------------------------------------------------------
 # Target: web — minimal image with only web app (TanStack Start SSR with Nitro)
@@ -232,7 +237,7 @@ COPY --from=build-web /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build-web /app/packages ./packages
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    install-prod-deps
+  install-prod-deps
 
 RUN prune-workspace
 USER latitude
@@ -242,7 +247,7 @@ EXPOSE 8080
 # The `debug` package (bundled in the SSR output) tries to access it and triggers:
 #   "Warning: `--localstorage-file` was provided without a valid path"
 # Disabling it is correct for a server environment — localStorage is a browser-only API.
-CMD ["node", "--no-experimental-webstorage", "apps/web/.output/server/index.mjs"]
+CMD ["node", "--enable-source-maps", "--no-experimental-webstorage", "apps/web/.output/server/index.mjs"]
 
 # ---------------------------------------------------------------------------
 # Target: migrations — minimal image with migration tools
@@ -251,18 +256,18 @@ FROM runtime AS migrations
 
 # Install curl and goose for ClickHouse migrations
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    GOOSE_VERSION=3.24.1 && \
-    ARCH=$(dpkg --print-architecture) && \
-    case "$ARCH" in \
-        amd64) GOOSE_ARCH="x86_64" ;; \
-        arm64) GOOSE_ARCH="aarch64" ;; \
-        *) GOOSE_ARCH="$ARCH" ;; \
-    esac && \
-    curl -fsSL "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_${GOOSE_ARCH}" \
-      -o /usr/local/bin/goose && \
-    chmod +x /usr/local/bin/goose && \
-    apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+  apt-get install -y --no-install-recommends curl && \
+  GOOSE_VERSION=3.24.1 && \
+  ARCH=$(dpkg --print-architecture) && \
+  case "$ARCH" in \
+  amd64) GOOSE_ARCH="x86_64" ;; \
+  arm64) GOOSE_ARCH="aarch64" ;; \
+  *) GOOSE_ARCH="$ARCH" ;; \
+  esac && \
+  curl -fsSL "https://github.com/pressly/goose/releases/download/v${GOOSE_VERSION}/goose_linux_${GOOSE_ARCH}" \
+  -o /usr/local/bin/goose && \
+  chmod +x /usr/local/bin/goose && \
+  apt-get purge -y curl && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build-migrations /app/packages ./packages
 COPY --from=build-migrations /app/apps/workflows ./apps/workflows
@@ -271,7 +276,7 @@ COPY --from=build-migrations /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build-migrations /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile --ignore-scripts
+  pnpm install --frozen-lockfile --ignore-scripts
 
 USER latitude
 
