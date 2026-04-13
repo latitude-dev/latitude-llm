@@ -1,5 +1,5 @@
 import { memberships } from '../schema/models/memberships'
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
@@ -12,7 +12,12 @@ export async function unsafelyFindMembershipByToken(
   const m = await db
     .select()
     .from(memberships)
-    .where(eq(memberships.invitationToken, token))
+    .where(
+      and(
+        eq(memberships.invitationToken, token),
+        isNull(memberships.confirmedAt),
+      ),
+    )
     .limit(1)
     .then((rows) => rows[0])
   if (!m) return Result.error(new NotFoundError('Membership not found'))

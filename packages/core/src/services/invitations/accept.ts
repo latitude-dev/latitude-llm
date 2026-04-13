@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+
 import { type Membership } from '../../schema/models/types/Membership'
 import { type User } from '../../schema/models/types/User'
 import Transaction from '../../lib/Transaction'
@@ -21,5 +23,9 @@ export async function acceptInvitation(
     )
   }
 
-  return await updateMembership(membership, { confirmedAt: date }, transaction)
+  return await updateMembership(
+    membership,
+    { confirmedAt: date, invitationToken: randomUUID() },
+    transaction,
+  )
 }
