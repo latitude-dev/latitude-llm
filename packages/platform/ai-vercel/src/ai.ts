@@ -68,7 +68,7 @@ const getRequiredApiKey = (
 
 const createBedrockProvider = (): Effect.Effect<ReturnType<typeof createAmazonBedrock>, AICredentialError> =>
   Effect.gen(function* () {
-    const region = yield* parseEnv("LAT_AWS_REGION", "string", "us-east-1").pipe(
+    const region = yield* parseEnv("LAT_AWS_REGION", "string", "eu-central-1").pipe(
       Effect.mapError(() => mapCredentialError("Amazon Bedrock is unavailable: set LAT_AWS_REGION.")),
     )
     const accessKeyId = yield* parseEnvOptional("LAT_AWS_ACCESS_KEY_ID", "string").pipe(
