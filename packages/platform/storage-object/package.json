@@ -26,6 +26,6 @@
     "@platform/env": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
-    "flydrive": "^1.2.0"
+    "flydrive": "^2.1.0"
   }
 }
