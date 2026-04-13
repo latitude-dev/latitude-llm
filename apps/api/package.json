@@ -33,6 +33,7 @@
     "@platform/queue-bullmq": "workspace:*",
     "@repo/observability": "workspace:*",
     "@repo/utils": "workspace:*",
+    "dd-trace": "catalog:",
     "effect": "catalog:",
     "hono": "catalog:",
     "tsx": "catalog:",

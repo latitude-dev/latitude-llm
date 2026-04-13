@@ -27,7 +27,7 @@
     "@opentelemetry/sdk-node": "^0.213.0",
     "@opentelemetry/sdk-trace-base": "^2.6.0",
     "@platform/env": "workspace:*",
-    "dd-trace": "^5.97.0",
+    "dd-trace": "catalog:",
     "effect": "catalog:"
   }
 }
