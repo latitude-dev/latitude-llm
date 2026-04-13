@@ -59,7 +59,7 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 ### Not Yet Implemented
 
 - `apps/workers/src/workers/live-traces.ts` is still a stub and does not publish `TraceEnded`
-- `apps/workers/src/workers/live-evaluations.ts` now wires `enqueue` through the new domain use case, but trigger evaluation, execute-task publication, and the `execute` handler are still not implemented
+- `apps/workers/src/workers/live-evaluations.ts` now wires `enqueue` through the new domain use case and publishes `live-evaluations:execute`, but the `execute` handler and the actual evaluation execution + score persistence path are still not implemented
 - `apps/workers/src/workers/live-annotation-queues.ts` is still a stub, which matters for rollout once `TraceEnded` becomes real
 
 ## Locked Decisions
