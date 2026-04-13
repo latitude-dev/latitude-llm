@@ -52,14 +52,28 @@ export const getServiceName = (state: ObservabilityState, scope: string) =>
 
 const normalizeTelemetryEnvironment = (value: string) => value.trim().toLowerCase()
 
+const defaultOtlpTracesEndpointFromAgentHost = (): string | undefined => {
+  const host = process.env.DD_AGENT_HOST?.trim()
+  if (!host) {
+    return undefined
+  }
+
+  // ECS Fargate + Datadog Agent sidecar: OTLP HTTP on 4318 (see infra/lib/ecs.ts).
+  // Task definitions from the dd-trace-only era omitted LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT;
+  // infer the same URL the agent exposes when DD_AGENT_HOST is set (always on our ECS tasks).
+  return `http://${host}:4318/v1/traces`
+}
+
 export const getTracesConfig = (): TracesConfig | undefined => {
   const explicitEndpoint =
     process.env.LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT || process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
 
-  if (!explicitEndpoint) return undefined
+  const endpoint = explicitEndpoint || defaultOtlpTracesEndpointFromAgentHost()
+
+  if (!endpoint) return undefined
 
   return {
-    endpoint: explicitEndpoint,
+    endpoint,
     headers: {
       ...parseHeaders(process.env.LAT_OBSERVABILITY_OTLP_HEADERS),
     },
