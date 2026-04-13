@@ -49,7 +49,7 @@
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "pg": "catalog:",
-    "stripe": "^20.4.0"
+    "stripe": "^22.0.1"
   },
   "devDependencies": {
     "@better-auth/cli": "^1.4.22",
