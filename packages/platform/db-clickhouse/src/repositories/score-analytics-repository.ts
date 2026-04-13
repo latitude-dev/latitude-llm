@@ -365,7 +365,8 @@ export const ScoreAnalyticsRepositoryLive = Layer.effect(
           })
           .pipe(Effect.map((rows) => rows.length > 0)),
 
-      // -- insert ------------------------------------------------------------
+      // TODO(repositories): rename insert -> save to keep repository write
+      // verbs consistent across append-only and upsert-backed stores.
       insert: (score: Score) =>
         chSqlClient.query(async (client) => {
           await client.insert({

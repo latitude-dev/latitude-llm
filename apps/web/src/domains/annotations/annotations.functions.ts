@@ -57,6 +57,9 @@ const toListResult = (page: ScoreListPage) => ({
 
 type AnnotationListResult = ReturnType<typeof toListResult>
 
+/** Annotations created from a queue must pass queue.id as sourceId; otherwise defaults to "UI". */
+const getSourceId = (queueId: string | undefined) => queueId ?? "UI"
+
 export const createAnnotation = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
@@ -64,6 +67,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
       traceId: z.string().length(32),
       spanId: z.string().optional(),
       sessionId: z.string().optional(),
+      queueId: z.string().optional(),
       value: z.number(),
       passed: z.boolean(),
       feedback: z.string().min(1),
@@ -83,7 +87,7 @@ export const createAnnotation = createServerFn({ method: "POST" })
       writeDraftAnnotationUseCase({
         organizationId: organizationId,
         projectId: ProjectId(data.projectId),
-        sourceId: "UI",
+        sourceId: getSourceId(data.queueId),
         traceId: data.traceId,
         spanId: data.spanId ?? null,
         sessionId: data.sessionId ?? null,
@@ -112,6 +116,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
       scoreId: z.string(),
       projectId: z.string(),
       traceId: z.string().length(32),
+      queueId: z.string().optional(),
       value: z.number(),
       passed: z.boolean(),
       feedback: z.string().min(1),
@@ -131,7 +136,7 @@ export const updateAnnotation = createServerFn({ method: "POST" })
         organizationId: organizationId,
         id: ScoreId(data.scoreId),
         projectId: ProjectId(data.projectId),
-        sourceId: "UI",
+        sourceId: getSourceId(data.queueId),
         traceId: data.traceId,
         issueId: data.issueId ?? null,
         value: data.value,

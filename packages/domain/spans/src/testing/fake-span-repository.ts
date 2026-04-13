@@ -7,6 +7,8 @@ export const createFakeSpanRepository = (overrides?: Partial<SpanRepositoryShape
   const inserted: SpanDetail[][] = []
 
   const repository: SpanRepositoryShape = {
+    // TODO(repositories): rename insert -> save to match the repository port
+    // once the public write verb cleanup lands.
     insert: (spans) => {
       inserted.push([...spans])
       return Effect.void

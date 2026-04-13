@@ -8,6 +8,8 @@ export interface DatasetRowRepositoryShape {
     readonly datasetId: DatasetId
     readonly traceIds: readonly TraceId[]
   }): Effect.Effect<ReadonlySet<TraceId>, RepositoryError>
+  // TODO(repositories): rename insertBatch -> saveBatch so repository write
+  // verbs converge on save/saveBatch instead of insert/insertBatch.
   insertBatch(args: {
     readonly datasetId: DatasetId
     readonly version: number

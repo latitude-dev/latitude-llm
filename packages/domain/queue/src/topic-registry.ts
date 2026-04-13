@@ -102,6 +102,11 @@ const _registry = {
       readonly projectId: string
       readonly scoreId: string
     }
+    markReviewStarted: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
+    }
   }>(),
 
   "live-evaluations": payloads<{
@@ -147,6 +152,22 @@ const _registry = {
     create: {
       readonly organizationId: string
       readonly name: string
+    }
+  }>(),
+
+  "annotation-queues": payloads<{
+    bulkImport: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly queueId: string
+      readonly selection:
+        | { readonly mode: "selected"; readonly traceIds: readonly string[] }
+        | { readonly mode: "all"; readonly filters?: Record<string, unknown> }
+        | {
+            readonly mode: "allExcept"
+            readonly traceIds: readonly string[]
+            readonly filters?: Record<string, unknown>
+          }
     }
   }>(),
 }

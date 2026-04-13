@@ -1,11 +1,12 @@
-import { Avatar, DropdownMenu, DropdownMenuTrigger, LatitudeLogo } from "@repo/ui"
+import { Avatar, Button, DropdownMenu, DropdownMenuTrigger, Icon, LatitudeLogo } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
-import { useState } from "react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
+import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
+import { useRootThemePreference } from "./-root-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: "data-only",
@@ -38,25 +39,23 @@ export const Route = createFileRoute("/_authenticated")({
 })
 
 function ThemeToggle() {
-  const [isDark, setIsDark] = useState(() =>
-    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false,
-  )
-
-  const toggle = () => {
-    const next = !isDark
-    document.documentElement.classList.toggle("dark", next)
-    document.documentElement.style.colorScheme = next ? "dark" : "light"
-    setIsDark(next)
-  }
+  const initialTheme = useRootThemePreference()
+  const { theme, setTheme } = useThemePreference(initialTheme)
+  const nextTheme = theme === "dark" ? "light" : "dark"
 
   return (
-    <button
+    <Button
       type="button"
-      onClick={toggle}
-      className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+      variant="ghost"
+      size="icon"
+      aria-label={`Switch to ${nextTheme} mode`}
+      title={`Switch to ${nextTheme} mode`}
+      aria-pressed={theme === "dark"}
+      className="h-8 w-8 group-hover:text-foreground"
+      onClick={() => setTheme(nextTheme)}
     >
-      {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-    </button>
+      <Icon icon={theme === "dark" ? Sun : Moon} size="sm" />
+    </Button>
   )
 }
 

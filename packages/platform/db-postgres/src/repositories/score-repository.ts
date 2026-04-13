@@ -117,6 +117,29 @@ export const ScoreRepositoryLive = Layer.effect(
         )
     }
 
+    const existsCanonicalEvaluationScore = (input: {
+      readonly projectId: ProjectId
+      readonly evaluationId: string
+      readonly whereClause: SQL<unknown>
+    }) =>
+      sqlClient
+        .query((db) =>
+          db
+            .select({ id: scores.id })
+            .from(scores)
+            .where(
+              and(
+                eq(scores.projectId, input.projectId),
+                eq(scores.source, "evaluation"),
+                eq(scores.sourceId, input.evaluationId),
+                isNull(scores.draftedAt),
+                input.whereClause,
+              ),
+            )
+            .limit(1),
+        )
+        .pipe(Effect.map((rows) => rows[0] !== undefined))
+
     return {
       findById: (id: ScoreId) =>
         sqlClient
@@ -177,6 +200,20 @@ export const ScoreRepositoryLive = Layer.effect(
           .pipe(Effect.map((rows) => rows.length > 0)),
 
       delete: (id: ScoreId) => sqlClient.query((db) => db.delete(scores).where(eq(scores.id, id))),
+
+      existsByEvaluationIdAndScope: ({ projectId, evaluationId, traceId, sessionId }) =>
+        existsCanonicalEvaluationScore({
+          projectId,
+          evaluationId,
+          whereClause: sessionId ? eq(scores.sessionId, sessionId as string) : eq(scores.traceId, traceId as string),
+        }),
+
+      existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
+        existsCanonicalEvaluationScore({
+          projectId,
+          evaluationId,
+          whereClause: eq(scores.traceId, traceId as string),
+        }),
 
       listByProjectId: ({
         projectId,

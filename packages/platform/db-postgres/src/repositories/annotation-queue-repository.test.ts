@@ -269,6 +269,95 @@ describe("AnnotationQueueRepositoryLive", () => {
     })
   })
 
+  describe("incrementCompletedItems", () => {
+    it("increments the counter by positive delta", async () => {
+      const before = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: makeId("q_old") })
+        }),
+      )
+      expect(before?.completedItems).toBe(3)
+
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          yield* repo.incrementCompletedItems({
+            projectId: PROJECT_ID,
+            queueId: makeId("q_old"),
+            delta: 2,
+          })
+        }),
+      )
+
+      const after = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: makeId("q_old") })
+        }),
+      )
+      expect(after?.completedItems).toBe(5)
+    })
+
+    it("decrements the counter by negative delta", async () => {
+      const before = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: makeId("q_mid") })
+        }),
+      )
+      expect(before?.completedItems).toBe(8)
+
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          yield* repo.incrementCompletedItems({
+            projectId: PROJECT_ID,
+            queueId: makeId("q_mid"),
+            delta: -3,
+          })
+        }),
+      )
+
+      const after = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: makeId("q_mid") })
+        }),
+      )
+      expect(after?.completedItems).toBe(5)
+    })
+
+    it("does not go below zero", async () => {
+      const before = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: makeId("q_new") })
+        }),
+      )
+      expect(before?.completedItems).toBe(0)
+
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          yield* repo.incrementCompletedItems({
+            projectId: PROJECT_ID,
+            queueId: makeId("q_new"),
+            delta: -5,
+          })
+        }),
+      )
+
+      const after = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: makeId("q_new") })
+        }),
+      )
+      expect(after?.completedItems).toBe(0)
+    })
+  })
+
   describe("cache eviction", () => {
     it("evicts the project system-queue cache after save", async () => {
       const deletedKeys: string[] = []

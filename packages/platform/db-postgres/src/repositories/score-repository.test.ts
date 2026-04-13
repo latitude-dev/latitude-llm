@@ -6,7 +6,7 @@ import {
   writeScoreUseCase,
 } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository } from "@domain/scores/testing"
-import { IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId, TraceId } from "@domain/shared"
+import { IssueId, NotFoundError, OrganizationId, ProjectId, ScoreId, SessionId, TraceId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect, Exit, Layer } from "effect"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
@@ -252,6 +252,180 @@ describe("ScoreRepositoryLive + score use cases", () => {
     }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId)))
 
     await expect(Effect.runPromise(program)).rejects.toBeInstanceOf(NotFoundError)
+  })
+
+  it("existsByEvaluationIdAndScope prefers session scope when sessionId is present", async () => {
+    const organizationId = "mmmmmmmmmmmmmmmmmmmmmmmm"
+    const sessionId = SessionId("live-session-1")
+    const storedTraceId = TraceId("11111111111111111111111111111111")
+    const laterTraceId = TraceId("22222222222222222222222222222222")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "evaluation",
+        sourceId: evaluationSourceId,
+        sessionId,
+        traceId: storedTraceId,
+        value: 0.91,
+        passed: true,
+        feedback: "Canonical evaluation score in the live session",
+        metadata: { evaluationHash: "eval-hash-v1" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const existsInSameSession = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.existsByEvaluationIdAndScope({
+          projectId: customProjectId,
+          evaluationId: evaluationSourceId,
+          sessionId,
+          traceId: laterTraceId,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const existsInDifferentSession = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.existsByEvaluationIdAndScope({
+          projectId: customProjectId,
+          evaluationId: evaluationSourceId,
+          sessionId: SessionId("live-session-2"),
+          traceId: storedTraceId,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(existsInSameSession).toBe(true)
+    expect(existsInDifferentSession).toBe(false)
+  })
+
+  it("existsByEvaluationIdAndScope falls back to trace scope when sessionId is absent", async () => {
+    const organizationId = "bbbbbbbbbbbbbbbbbbbbbbbb"
+    const traceId = TraceId("33333333333333333333333333333333")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "evaluation",
+        sourceId: evaluationSourceId,
+        traceId,
+        value: 0.74,
+        passed: true,
+        feedback: "Canonical evaluation score without session scope",
+        metadata: { evaluationHash: "eval-hash-v1" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const existsForSameTrace = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.existsByEvaluationIdAndScope({
+          projectId: customProjectId,
+          evaluationId: evaluationSourceId,
+          traceId,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const existsForDifferentTrace = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.existsByEvaluationIdAndScope({
+          projectId: customProjectId,
+          evaluationId: evaluationSourceId,
+          traceId: TraceId("44444444444444444444444444444444"),
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(existsForSameTrace).toBe(true)
+    expect(existsForDifferentTrace).toBe(false)
+  })
+
+  it("existsByEvaluationIdAndTraceId ignores draft and non-evaluation rows", async () => {
+    const organizationId = "cccccccccccccccccccccccc"
+    const matchingTraceId = TraceId("55555555555555555555555555555555")
+    const draftOnlyTraceId = TraceId("66666666666666666666666666666666")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "custom",
+        sourceId: evaluationSourceId,
+        traceId: matchingTraceId,
+        value: 0.32,
+        passed: false,
+        feedback: "Custom score should not count as an evaluation result",
+        metadata: { channel: "api" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "evaluation",
+        sourceId: evaluationSourceId,
+        traceId: draftOnlyTraceId,
+        value: 0.48,
+        passed: false,
+        feedback: "Draft evaluation score should not count yet",
+        metadata: { evaluationHash: "eval-hash-v1" },
+        draftedAt: new Date("2026-04-10T12:00:00.000Z"),
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "evaluation",
+        sourceId: evaluationSourceId,
+        traceId: matchingTraceId,
+        value: 0.95,
+        passed: true,
+        feedback: "Canonical evaluation result for duplicate prevention",
+        metadata: { evaluationHash: "eval-hash-v1" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    const matchingExists = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.existsByEvaluationIdAndTraceId({
+          projectId: customProjectId,
+          evaluationId: evaluationSourceId,
+          traceId: matchingTraceId,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const draftOnlyExists = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.existsByEvaluationIdAndTraceId({
+          projectId: customProjectId,
+          evaluationId: evaluationSourceId,
+          traceId: draftOnlyTraceId,
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    const missingExists = await Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* ScoreRepository
+        return yield* repository.existsByEvaluationIdAndTraceId({
+          projectId: customProjectId,
+          evaluationId: evaluationSourceId,
+          traceId: TraceId("77777777777777777777777777777777"),
+        })
+      }).pipe(withPostgres(ScoreRepositoryLive, database.appPostgresClient, OrganizationId(organizationId))),
+    )
+
+    expect(matchingExists).toBe(true)
+    expect(draftOnlyExists).toBe(false)
+    expect(missingExists).toBe(false)
   })
 
   it("excludes drafts by default and supports draft-aware project and source reads", async () => {

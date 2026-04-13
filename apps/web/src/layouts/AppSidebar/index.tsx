@@ -277,7 +277,9 @@ export function AppSidebar({
                 </Button>
               }
             >
-              {collapsed ? "Expand" : "Collapse"} <HotkeyBadge hotkey="Mod+B" />
+              <div className="flex items-center gap-1">
+                {collapsed ? "Expand" : "Collapse"} <HotkeyBadge hotkey="Mod+B" />
+              </div>
             </Tooltip>
           </div>
           {!collapsed && subtitle ? <div className="min-w-0">{subtitle}</div> : null}

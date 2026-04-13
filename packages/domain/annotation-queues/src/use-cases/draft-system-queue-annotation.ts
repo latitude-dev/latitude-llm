@@ -20,6 +20,7 @@ export interface DraftSystemQueueAnnotationOutput {
   readonly queueId: string
   readonly traceId: string
   readonly feedback: string
+  readonly traceCreatedAt: string
 }
 
 export type DraftSystemQueueAnnotationError = BadRequestError | RepositoryError | RunSystemQueueAnnotatorError
@@ -67,5 +68,6 @@ export const draftSystemQueueAnnotationUseCase = (input: SystemQueueAnnotateInpu
       queueId,
       traceId: parsedInput.traceId,
       feedback: annotatorResult.feedback,
+      traceCreatedAt: annotatorResult.traceCreatedAt,
     } as DraftSystemQueueAnnotationOutput
   })

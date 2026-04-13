@@ -49,7 +49,7 @@
     "drizzle-orm": "catalog:",
     "effect": "catalog:",
     "pg": "catalog:",
-    "stripe": "^20.4.0"
+    "stripe": "^22.0.1"
   },
   "devDependencies": {
     "@repo/vitest-config": "workspace:*",

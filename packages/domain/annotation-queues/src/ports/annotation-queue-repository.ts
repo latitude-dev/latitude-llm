@@ -50,6 +50,12 @@ export interface ListSystemQueuesInput {
   readonly projectId: ProjectId
 }
 
+export interface IncrementCompletedItemsInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly delta: number
+}
+
 export interface AnnotationQueueRepositoryShape {
   listByProject(input: ListAnnotationQueuesInput): Effect.Effect<AnnotationQueueListPage, RepositoryError>
   findByIdInProject(input: {
@@ -70,13 +76,17 @@ export interface AnnotationQueueRepositoryShape {
   insertIfNotExists(queue: AnnotationQueue): Effect.Effect<boolean, RepositoryError>
   /**
    * Atomically increment the totalItems counter for a queue by the given delta (defaults to 1).
-   * Returns the updated queue.
    */
   incrementTotalItems(input: {
     projectId: ProjectId
     queueId: string
     delta?: number
   }): Effect.Effect<AnnotationQueue, RepositoryError>
+  /**
+   * Adjust the completedItems counter by delta (positive to increment, negative to decrement).
+   * The counter is clamped to prevent going below zero.
+   */
+  incrementCompletedItems(input: IncrementCompletedItemsInput): Effect.Effect<void, RepositoryError>
 }
 
 export class AnnotationQueueRepository extends ServiceMap.Service<

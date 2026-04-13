@@ -1,7 +1,11 @@
-import { defineConfig } from "vitest/config"
+import base from "../../vitest.config.ts"
+import { defineConfig, mergeConfig } from "vitest/config"
 
-export default defineConfig({
-  test: {
-    onConsoleLog: () => false,
-  },
-})
+export default mergeConfig(
+  base,
+  defineConfig({
+    test: {
+      onConsoleLog: () => false,
+    },
+  }),
+)

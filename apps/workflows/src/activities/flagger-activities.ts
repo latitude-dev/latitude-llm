@@ -54,6 +54,7 @@ interface DraftAnnotateOutput {
   readonly queueId: string
   readonly traceId: string
   readonly feedback: string
+  readonly traceCreatedAt: string
 }
 
 export const draftAnnotate = async (input: {
@@ -92,6 +93,7 @@ export const persistAnnotation = async (input: {
   readonly queueSlug: string
   readonly queueId: string
   readonly feedback: string
+  readonly traceCreatedAt: string
 }): Promise<SystemQueueAnnotateOutput> =>
   Effect.runPromise(
     persistSystemQueueAnnotationUseCase(input).pipe(

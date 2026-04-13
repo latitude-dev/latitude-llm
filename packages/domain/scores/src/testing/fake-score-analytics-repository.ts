@@ -17,6 +17,8 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
 
   const repository: ScoreAnalyticsRepositoryShape = {
     existsById: (id) => Effect.succeed(inserted.includes(id)),
+    // TODO(repositories): rename insert -> save to match the repository port
+    // once the public write verb cleanup lands.
     insert: (score) => {
       inserted.push(score.id)
       return Effect.void

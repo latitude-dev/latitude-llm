@@ -44,6 +44,7 @@ export {
   matchesToolCallErrorsSystemQueue,
 } from "./helpers.ts"
 export {
+  type AdjacentItems,
   type AnnotationQueueItemListCursor,
   type AnnotationQueueItemListOptions,
   type AnnotationQueueItemListPage,
@@ -52,8 +53,14 @@ export {
   type AnnotationQueueItemRepositoryShape,
   type BulkInsertAnnotationQueueItemInput,
   type FindAnnotationQueueItemInput,
+  type GetAdjacentItemsInput,
+  type GetNextUncompletedItemInput,
+  type GetQueuePositionInput,
   type InsertAnnotationQueueItemInput,
   type ListAnnotationQueueItemsInput,
+  type ListByTraceIdInput,
+  type QueuePosition,
+  type UpdateAnnotationQueueItemInput,
 } from "./ports/annotation-queue-item-repository.ts"
 export {
   type AnnotationQueueListCursor,
@@ -64,11 +71,16 @@ export {
   type AnnotationQueueRepositoryShape,
   type FindBySlugInput,
   type FindSystemQueueBySlugInput,
+  type IncrementCompletedItemsInput,
   type ListAnnotationQueuesInput,
   type ListSystemQueuesInput,
 } from "./ports/annotation-queue-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
-export { type CreateQueueFromTracesError, createQueueFromTraces } from "./use-cases/create-queue-from-traces.ts"
+export {
+  type CompleteQueueItemError,
+  type CompleteQueueItemInput,
+  completeQueueItemUseCase,
+} from "./use-cases/complete-queue-item.ts"
 export {
   type DraftSystemQueueAnnotationError,
   type DraftSystemQueueAnnotationOutput,
@@ -83,6 +95,10 @@ export {
   type SystemQueueCacheEntry,
 } from "./use-cases/get-project-system-queues.ts"
 export {
+  type MarkReviewStartedInput,
+  markReviewStartedUseCase,
+} from "./use-cases/mark-review-started.ts"
+export {
   type PersistSystemQueueAnnotationError,
   type PersistSystemQueueAnnotationInput,
   persistSystemQueueAnnotationUseCase,
@@ -92,6 +108,11 @@ export {
   type ProvisionSystemQueuesInput,
   provisionSystemQueuesUseCase,
 } from "./use-cases/provision-system-queues.ts"
+export {
+  type RequestBulkQueueItemsError,
+  type RequestBulkQueueItemsInput,
+  requestBulkQueueItems,
+} from "./use-cases/request-bulk-queue-items.ts"
 export {
   type RunSystemQueueAnnotatorError,
   type RunSystemQueueAnnotatorInput,
@@ -113,3 +134,8 @@ export {
   systemQueueAnnotateOutputSchema,
   systemQueueAnnotatorOutputSchema,
 } from "./use-cases/system-queue-annotator-contracts.ts"
+export {
+  type UncompleteQueueItemError,
+  type UncompleteQueueItemInput,
+  uncompleteQueueItemUseCase,
+} from "./use-cases/uncomplete-queue-item.ts"

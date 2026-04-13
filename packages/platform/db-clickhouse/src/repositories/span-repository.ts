@@ -358,6 +358,8 @@ export const SpanRepositoryLive = Layer.effect(
         )
 
     return {
+      // TODO(repositories): rename insert -> save to keep repository write
+      // verbs consistent across append-only and upsert-backed stores.
       insert: (spans: readonly SpanDetail[]) =>
         chSqlClient
           .query(async (client) => {

@@ -1,16 +1,6 @@
 import { type PersistDraftAnnotationError, writeDraftAnnotationUseCase } from "@domain/annotations"
 import { ScoreRepository } from "@domain/scores"
-import {
-  BadRequestError,
-  generateId,
-  type NotFoundError,
-  OrganizationId,
-  ProjectId,
-  type RepositoryError,
-  SqlClient,
-  TraceId,
-} from "@domain/shared"
-import { TraceRepository } from "@domain/spans"
+import { BadRequestError, generateId, ProjectId, type RepositoryError, SqlClient, TraceId } from "@domain/shared"
 import { Effect } from "effect"
 import { z } from "zod"
 import { SYSTEM_QUEUE_DRAFT_DEFAULTS } from "../constants.ts"
@@ -37,13 +27,10 @@ const parseOrBadRequest = <T>(schema: z.ZodType<T>, input: unknown, message: str
 export interface PersistSystemQueueAnnotationInput extends SystemQueueAnnotateInput {
   readonly queueId: string
   readonly feedback: string
+  readonly traceCreatedAt: string
 }
 
-export type PersistSystemQueueAnnotationError =
-  | BadRequestError
-  | RepositoryError
-  | NotFoundError
-  | PersistDraftAnnotationError
+export type PersistSystemQueueAnnotationError = BadRequestError | RepositoryError | PersistDraftAnnotationError
 
 /**
  * Persists a system queue annotation by creating the queue item and draft annotation
@@ -65,7 +52,6 @@ export const persistSystemQueueAnnotationUseCase = (input: PersistSystemQueueAnn
       "Invalid system queue annotate input",
     )
 
-    const organizationId = OrganizationId(parsedInput.organizationId)
     const projectId = ProjectId(parsedInput.projectId)
     const traceId = TraceId(parsedInput.traceId)
     const queueId = input.queueId
@@ -73,14 +59,8 @@ export const persistSystemQueueAnnotationUseCase = (input: PersistSystemQueueAnn
     const sqlClient = yield* SqlClient
     const queueRepository = yield* AnnotationQueueRepository
     const scoreRepository = yield* ScoreRepository
-    const traceRepository = yield* TraceRepository
 
-    const trace = yield* traceRepository.findByTraceId({
-      organizationId,
-      projectId,
-      traceId,
-    })
-    const traceCreatedAt = trace.startTime
+    const traceCreatedAt = new Date(input.traceCreatedAt)
 
     const existingDraft = yield* scoreRepository.findQueueDraftByTraceId({
       projectId,

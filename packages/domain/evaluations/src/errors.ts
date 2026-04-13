@@ -22,3 +22,24 @@ export class EvaluationManualRealignmentRateLimitedError extends Data.TaggedErro
   readonly httpStatus = 429
   readonly httpMessage = "Manual evaluation realignment is temporarily rate limited"
 }
+
+export class EvaluationExecutionError extends Data.TaggedError("EvaluationExecutionError")<{
+  readonly message: string
+  readonly cause?: unknown
+}> {
+  readonly httpStatus = 422
+  get httpMessage() {
+    return this.message
+  }
+}
+
+export class LiveEvaluationExecutionError extends Data.TaggedError("LiveEvaluationExecutionError")<{
+  readonly evaluationId: string
+  readonly message: string
+  readonly cause?: unknown
+}> {
+  readonly httpStatus = 422
+  get httpMessage() {
+    return this.message
+  }
+}

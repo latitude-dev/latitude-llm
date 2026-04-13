@@ -7,6 +7,8 @@ const EMPTY_PAGE = { items: [], hasMore: false, limit: 50, offset: 0 } as const
 
 export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositoryShape>) => {
   const scores = new Map<string, Score>()
+  const isCanonicalEvaluationScore = (score: Score, evaluationId: string) =>
+    score.source === "evaluation" && score.sourceId === evaluationId && score.draftedAt === null
 
   const repository: ScoreRepositoryShape = {
     findById: (id) => {
@@ -35,6 +37,29 @@ export const createFakeScoreRepository = (overrides?: Partial<ScoreRepositorySha
       scores.delete(id)
       return Effect.void
     },
+    existsByEvaluationIdAndScope: ({ projectId, evaluationId, traceId, sessionId }) =>
+      Effect.succeed(
+        [...scores.values()].some((score) => {
+          if (score.projectId !== projectId || !isCanonicalEvaluationScore(score, evaluationId)) {
+            return false
+          }
+
+          if (sessionId) {
+            return score.sessionId === sessionId
+          }
+
+          return score.traceId === traceId
+        }),
+      ),
+    existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) =>
+      Effect.succeed(
+        [...scores.values()].some(
+          (score) =>
+            score.projectId === projectId &&
+            isCanonicalEvaluationScore(score, evaluationId) &&
+            score.traceId === traceId,
+        ),
+      ),
     listByProjectId: () => Effect.succeed(EMPTY_PAGE),
     listBySourceId: () => Effect.succeed(EMPTY_PAGE),
     listByTraceId: () => Effect.succeed(EMPTY_PAGE),

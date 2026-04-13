@@ -37,6 +37,26 @@ export interface ScoreRepositoryShape {
     readonly updatedAt: Date
   }): Effect.Effect<boolean, RepositoryError>
   delete(id: ScoreId): Effect.Effect<void, RepositoryError>
+  /**
+   * Checks whether a canonical persisted evaluation score already exists in the
+   * current live-monitoring turn scope. When `sessionId` is present the scope
+   * is session-based; otherwise it falls back to the specific trace id.
+   */
+  existsByEvaluationIdAndScope(input: {
+    readonly projectId: ProjectId
+    readonly evaluationId: string
+    readonly traceId: TraceId
+    readonly sessionId?: SessionId | null
+  }): Effect.Effect<boolean, RepositoryError>
+  /**
+   * Checks whether a canonical persisted evaluation score already exists for
+   * one concrete `(evaluationId, traceId)` pair.
+   */
+  existsByEvaluationIdAndTraceId(input: {
+    readonly projectId: ProjectId
+    readonly evaluationId: string
+    readonly traceId: TraceId
+  }): Effect.Effect<boolean, RepositoryError>
   listByProjectId(input: {
     readonly projectId: ProjectId
     readonly options?: ScoreListOptions

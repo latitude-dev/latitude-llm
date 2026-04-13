@@ -125,7 +125,8 @@ describe("Annotations Routes Integration", () => {
     const body = await response.json()
     expect(body.source).toBe("annotation")
     expect(body.sourceId).toBe("API")
-    expect(body.draftedAt).toBeNull()
+    expect(typeof body.draftedAt).toBe("string")
+    expect(Number.isNaN(Date.parse(body.draftedAt as string))).toBe(false)
     expect(body.metadata.rawFeedback).toBe("The model hallucinated a date")
     expect(body.feedback).toBe("The model hallucinated a date")
 
@@ -137,7 +138,8 @@ describe("Annotations Routes Integration", () => {
     expect(persistedScores).toHaveLength(1)
     expect(persistedScores[0]?.source).toBe("annotation")
     expect(persistedScores[0]?.sourceId).toBe("API")
-    expect(persistedScores[0]?.draftedAt).toBeNull()
+    expect(persistedScores[0]?.draftedAt).toBeInstanceOf(Date)
+    expect(persistedScores[0]?.draftedAt?.toISOString()).toBe(body.draftedAt)
   })
 
   it<ApiTestContext>("does not allow overriding sourceId; public API is always API", async ({

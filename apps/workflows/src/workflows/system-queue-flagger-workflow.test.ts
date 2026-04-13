@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+const TEST_TRACE_CREATED_AT = "2024-01-15T10:00:00.000Z"
+
 const { mockActivities } = vi.hoisted(() => {
   const mockActivities = {
     runFlagger: vi.fn(async () => ({ matched: false })),
@@ -7,6 +9,7 @@ const { mockActivities } = vi.hoisted(() => {
       queueId: "queue-1",
       traceId: "trace-1",
       feedback: "Test feedback",
+      traceCreatedAt: "2024-01-15T10:00:00.000Z",
     })),
     persistAnnotation: vi.fn(async () => ({
       queueId: "queue-1",
@@ -65,6 +68,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-123",
       traceId: "trace-1",
       feedback: "Generated feedback",
+      traceCreatedAt: TEST_TRACE_CREATED_AT,
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-123",
@@ -112,6 +116,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueSlug: "refusal",
       queueId: "queue-123",
       feedback: "Generated feedback",
+      traceCreatedAt: TEST_TRACE_CREATED_AT,
     })
   })
 
@@ -121,6 +126,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-123",
       traceId: "trace-1",
       feedback: "Generated feedback",
+      traceCreatedAt: TEST_TRACE_CREATED_AT,
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-123",
@@ -175,6 +181,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-123",
       traceId: "trace-1",
       feedback: "Generated feedback",
+      traceCreatedAt: TEST_TRACE_CREATED_AT,
     })
     mockActivities.persistAnnotation.mockRejectedValueOnce(new Error("Persist failed"))
 
@@ -198,6 +205,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueId: "queue-tool",
       traceId: "trace-1",
       feedback: "Tool call error feedback",
+      traceCreatedAt: TEST_TRACE_CREATED_AT,
     })
     mockActivities.persistAnnotation.mockResolvedValueOnce({
       queueId: "queue-tool",
@@ -232,6 +240,7 @@ describe("systemQueueFlaggerWorkflow", () => {
       queueSlug: "tool-call-errors",
       queueId: "queue-tool",
       feedback: "Tool call error feedback",
+      traceCreatedAt: TEST_TRACE_CREATED_AT,
     })
   })
 })

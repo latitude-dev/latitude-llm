@@ -28,6 +28,7 @@ export const colors = {
     destructive: "hover:border-destructive",
   },
   textColors: {
+    inherit: "text-inherit",
     white: "text-white",
     foreground: "text-foreground",
     background: "text-background",

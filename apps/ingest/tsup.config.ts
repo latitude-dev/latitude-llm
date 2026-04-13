@@ -6,6 +6,7 @@ export default defineConfig({
   target: "node25",
   outDir: "dist",
   platform: "node",
+  external: ["dd-trace"],
   noExternal: [/@(platform|domain|repo)\/.*/],
   splitting: false,
   sourcemap: true,

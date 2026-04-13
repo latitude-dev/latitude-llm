@@ -22,13 +22,14 @@ export {
   CardHeader,
   CardTitle,
 } from "./components/card/card.tsx"
-export { BarChart, type BarChartDataPoint, type BarChartProps } from "./components/charts/bar-chart.tsx"
+export type { BarChartDataPoint, BarChartProps } from "./components/charts/bar-chart.tsx"
 export {
   type ChartCssThemeColors,
   chartThemeFallback,
   readChartThemeFromCss,
 } from "./components/charts/chart-css-theme.ts"
 export { ChartSkeleton, type ChartSkeletonProps } from "./components/charts/chart-skeleton.tsx"
+export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { CodeBlock, type CodeBlockProps } from "./components/code-block/code-block.tsx"
 export { Container, type ContainerSize } from "./components/container/container.tsx"

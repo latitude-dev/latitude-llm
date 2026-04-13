@@ -3,19 +3,21 @@ import {
   type AnnotationQueueItemListOptions,
   type AnnotationQueueItemListSortBy,
   AnnotationQueueItemRepository,
-  addTracesToQueue,
-  createQueueFromTraces,
+  completeQueueItemUseCase,
+  requestBulkQueueItems,
   type TraceSelection,
+  uncompleteQueueItemUseCase,
 } from "@domain/annotation-queues"
 import { AnnotationQueueId, filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { ChSqlClientLive, TraceRepositoryLive } from "@platform/db-clickhouse"
 import { AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
 
 const itemListCursorSchema = z.object({
   sortValue: z.string(),
@@ -170,46 +172,44 @@ function toTraceSelection(sel: z.infer<typeof bulkSelectionSchema>): TraceSelect
   return { mode: sel.mode, traceIds: sel.rowIds.map(TraceId) }
 }
 
+const addTracesToQueueInputSchema = z
+  .object({
+    projectId: z.string(),
+    queueId: z.string().optional(),
+    newQueueName: z
+      .string()
+      .transform((s) => s.trim())
+      .pipe(z.string().min(1, "Queue name cannot be empty"))
+      .optional(),
+    selection: bulkSelectionSchema,
+  })
+  .refine((data) => Boolean(data.queueId) !== Boolean(data.newQueueName), {
+    message: "Provide either queueId or newQueueName, but not both",
+  })
+
 export const addTracesToQueueFunction = createServerFn({ method: "POST" })
-  .inputValidator(
-    z.object({
-      projectId: z.string(),
-      queueId: z.string().optional(),
-      newQueueName: z.string().optional(),
-      selection: bulkSelectionSchema,
-    }),
-  )
-  .handler(async ({ data }): Promise<{ queueId: string; insertedCount: number }> => {
+  .inputValidator(addTracesToQueueInputSchema)
+  .handler(async ({ data }): Promise<{ queueId: string }> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
     const projectId = ProjectId(data.projectId)
     const pg = getPostgresClient()
     const ch = getClickhouseClient()
+    const publisher = await getQueuePublisher()
 
-    const layer = Layer.mergeAll(
-      AnnotationQueueItemRepositoryLive,
-      AnnotationQueueRepositoryLive,
-      TraceRepositoryLive,
-    ).pipe(Layer.provideMerge(SqlClientLive(pg, orgId)), Layer.provideMerge(ChSqlClientLive(ch, orgId)))
+    const layer = Layer.mergeAll(AnnotationQueueRepositoryLive, QueuePublisherLive(publisher)).pipe(
+      Layer.provideMerge(SqlClientLive(pg, orgId)),
+      Layer.provideMerge(ChSqlClientLive(ch, orgId)),
+    )
 
     const selection = toTraceSelection(data.selection)
 
-    if (data.queueId) {
-      const queueId = AnnotationQueueId(data.queueId)
-      const result = await Effect.runPromise(
-        addTracesToQueue({ projectId, queueId, selection }).pipe(Effect.provide(layer)),
-      )
-      return { queueId: data.queueId, insertedCount: result.insertedCount }
-    }
+    const input = data.queueId
+      ? { projectId, queueId: AnnotationQueueId(data.queueId), selection }
+      : { projectId, newQueueName: data.newQueueName as string, selection }
 
-    if (data.newQueueName) {
-      const result = await Effect.runPromise(
-        createQueueFromTraces({ projectId, name: data.newQueueName, selection }).pipe(Effect.provide(layer)),
-      )
-      return { queueId: result.queueId as string, insertedCount: result.insertedCount }
-    }
-
-    throw new Error("Either queueId or newQueueName must be provided")
+    const result = await Effect.runPromise(requestBulkQueueItems(input).pipe(Effect.provide(layer)))
+    return { queueId: result.queueId as string }
   })
 
 export const getAnnotationQueueItemDetail = createServerFn({ method: "GET" })
@@ -259,6 +259,123 @@ export const getAnnotationQueueItemDetail = createServerFn({ method: "GET" })
           ...toItemRecord(item),
           traceDisplayName,
         }
+      }).pipe(Effect.provide(layer)),
+    )
+  })
+
+interface QueueItemNavigationResult {
+  readonly previousItemId: string | null
+  readonly nextItemId: string | null
+  readonly currentIndex: number
+  readonly totalItems: number
+}
+
+export const getQueueItemNavigation = createServerFn({ method: "GET" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      itemId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<QueueItemNavigationResult> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+
+    const layer = AnnotationQueueItemRepositoryLive.pipe(Layer.provideMerge(SqlClientLive(pg, orgId)))
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const itemRepo = yield* AnnotationQueueItemRepository
+
+        const [adjacent, position] = yield* Effect.all([
+          itemRepo.getAdjacentItems({
+            projectId,
+            queueId: data.queueId,
+            currentItemId: data.itemId,
+          }),
+          itemRepo.getQueuePosition({
+            projectId,
+            queueId: data.queueId,
+            currentItemId: data.itemId,
+          }),
+        ])
+
+        return {
+          previousItemId: adjacent.previousItemId,
+          nextItemId: adjacent.nextItemId,
+          currentIndex: position.currentIndex,
+          totalItems: position.totalItems,
+        }
+      }).pipe(Effect.provide(layer)),
+    )
+  })
+
+export const completeQueueItem = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      itemId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<{ nextItemId: string | null }> => {
+    const { organizationId, userId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+
+    const layer = Layer.mergeAll(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive).pipe(
+      Layer.provideMerge(SqlClientLive(pg, orgId)),
+    )
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const itemRepo = yield* AnnotationQueueItemRepository
+
+        yield* completeQueueItemUseCase({
+          projectId,
+          queueId: data.queueId,
+          itemId: data.itemId,
+          userId,
+        })
+
+        const nextItemId = yield* itemRepo.getNextUncompletedItem({
+          projectId,
+          queueId: data.queueId,
+          currentItemId: data.itemId,
+        })
+
+        return { nextItemId }
+      }).pipe(Effect.provide(layer)),
+    )
+  })
+
+export const uncompleteQueueItem = createServerFn({ method: "POST" })
+  .inputValidator(
+    z.object({
+      projectId: z.string(),
+      queueId: z.string(),
+      itemId: z.string(),
+    }),
+  )
+  .handler(async ({ data }): Promise<void> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
+    const pg = getPostgresClient()
+
+    const layer = Layer.mergeAll(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive).pipe(
+      Layer.provideMerge(SqlClientLive(pg, orgId)),
+    )
+
+    await Effect.runPromise(
+      uncompleteQueueItemUseCase({
+        projectId,
+        queueId: data.queueId,
+        itemId: data.itemId,
       }).pipe(Effect.provide(layer)),
     )
   })

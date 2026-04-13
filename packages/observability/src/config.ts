@@ -47,6 +47,16 @@ export const getEnvironment = () => process.env.LAT_OBSERVABILITY_ENVIRONMENT ||
 
 export const isObservabilityEnabled = () => parseBooleanEnv(process.env.LAT_OBSERVABILITY_ENABLED, false)
 
+export type ObservabilityTracingProvider = "otlp" | "datadog"
+
+export const getTracingProvider = (): ObservabilityTracingProvider => {
+  const raw = process.env.LAT_OBSERVABILITY_TRACING_PROVIDER?.trim().toLowerCase()
+  if (raw === "datadog" || raw === "dd-trace") {
+    return "datadog"
+  }
+  return "otlp"
+}
+
 export const getServiceName = (state: ObservabilityState, scope: string) =>
   state.serviceName || process.env.LAT_OBSERVABILITY_SERVICE_NAME || scope
 

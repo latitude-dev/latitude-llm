@@ -1,4 +1,4 @@
-import { EvaluationRepository, evaluationSchema, wrapPromptAsScript } from "@domain/evaluations"
+import { EvaluationRepository, evaluationSchema, wrapPromptAsEvaluationScript } from "@domain/evaluations"
 import { EvaluationId, IssueId, OrganizationId, ProjectId } from "@domain/shared"
 import { and, eq } from "drizzle-orm"
 import { Effect } from "effect"
@@ -26,7 +26,7 @@ const makeEvaluation = (
     issueId: issueId as string,
     name: "Secret Leakage Monitor",
     description: "Detects when the agent leaks secrets.",
-    script: wrapPromptAsScript("Check for secret leakage in the conversation."),
+    script: wrapPromptAsEvaluationScript("Check for secret leakage in the conversation."),
     trigger: {
       filter: {},
       turn: "every",

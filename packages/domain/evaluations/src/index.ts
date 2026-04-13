@@ -1,15 +1,8 @@
-export {
-  type EvaluationScriptExecution,
-  estimateEvaluationScriptCostMicrocents,
-  evaluateDraftAgainstExamplesUseCase,
-  executeEvaluationScript,
-} from "./alignment-execution.ts"
-export { evaluateOptimizationCandidate } from "./alignment-optimization.ts"
+export { generateBaselinePromptText } from "./alignment/baseline-prompt.ts"
 export type {
   BaselineEvaluationExampleResult,
   BaselineEvaluationResult,
   CollectedEvaluationAlignmentExamples,
-  EvaluationAlignmentConversationMessage,
   GeneratedEvaluationDetails,
   GeneratedEvaluationDraft,
   HydratedEvaluationAlignmentExample,
@@ -17,28 +10,7 @@ export type {
   LoadedEvaluationAlignmentState,
   PersistEvaluationAlignmentResult,
   WriteEvaluationAlignmentJobStatusInput,
-} from "./alignment-types.ts"
-export {
-  collectAlignmentExamplesUseCase,
-  evaluateBaselineDraftUseCase,
-  evaluateIncrementalDraftUseCase,
-  generateBaselineDraftUseCase,
-  loadAlignmentStateUseCase,
-  persistAlignmentResultUseCase,
-} from "./alignment-use-cases.ts"
-export {
-  CONVERSATION_PLACEHOLDER,
-  type ConversationMessage,
-  EVALUATION_SCRIPT_RUNTIME_MODEL,
-  EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-  type EvaluationScriptSchema,
-  evaluationRuntimeZod,
-  extractPromptFromScript,
-  formatConversationForPrompt,
-  generateBaselinePromptText,
-  validateEvaluationScript,
-  wrapPromptAsScript,
-} from "./baseline-generation.ts"
+} from "./alignment/types.ts"
 export {
   ALIGNMENT_CURATED_DATASET_MAX_ROWS,
   ALIGNMENT_CURATED_DATASET_MIN_ROWS,
@@ -82,8 +54,10 @@ export {
 } from "./entities/evaluation.ts"
 export {
   EvaluationDeletedError,
+  EvaluationExecutionError,
   EvaluationManualRealignmentRateLimitedError,
   EvaluationNotFoundError,
+  LiveEvaluationExecutionError,
 } from "./errors.ts"
 export {
   addConfusionMatrixObservation,
@@ -91,6 +65,8 @@ export {
   applyIssueResolutionToEvaluation,
   archiveEvaluation,
   buildEvaluationAlignmentJobStatus,
+  buildLiveEvaluationExecuteScopeDedupeKey,
+  buildLiveEvaluationExecuteTraceDedupeKey,
   type ConfusionMatrixObservation,
   calculateAccuracy,
   calculateF1,
@@ -104,13 +80,16 @@ export {
   type EvaluationAlignmentMetrics,
   emptyConfusionMatrix,
   evaluationAlignmentJobStatusKey,
+  getLiveEvaluationEligibility,
+  getLiveEvaluationTurnScope,
   hasMatthewsCorrelationCoefficientDropExceededTolerance,
   isArchivedEvaluation,
   isDeletedEvaluation,
   mergeConfusionMatrices,
   parseStoredEvaluationAlignmentJobStatus,
+  shouldSampleLiveEvaluation,
   softDeleteEvaluation,
-  toAlignmentConversationMessages,
+  toLiveEvaluationDebounceMs,
   totalConfusionMatrixObservations,
   truncateEvaluationName,
   unarchiveEvaluation,
@@ -139,3 +118,50 @@ export {
   type EvaluationRepositoryShape,
   evaluationListLifecycleSchema,
 } from "./ports/evaluation-repository.ts"
+export {
+  EVALUATION_CONVERSATION_PLACEHOLDER,
+  EVALUATION_SCRIPT_RUNTIME_MODEL,
+  EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
+  type EvaluationConversationMessage,
+  type EvaluationExecutionResult,
+  type EvaluationExecutionResultPayload,
+  type EvaluationIssueContext,
+  type EvaluationScriptExecution,
+  type EvaluationScriptSchema,
+  type ExecuteEvaluationScriptWithAIError,
+  estimateEvaluationScriptCostMicrocents,
+  evaluationExecutionResultPayloadSchema,
+  evaluationExecutionResultSchema,
+  evaluationIssueContextSchema,
+  evaluationRuntimeZod,
+  executeEvaluationScript,
+  executeEvaluationScriptWithAI,
+  extractPromptFromEvaluationScript,
+  formatEvaluationConversationForPrompt,
+  toEvaluationConversationMessages,
+  toEvaluationExecutionResult,
+  validateEvaluationScript,
+  wrapPromptAsEvaluationScript,
+} from "./runtime/evaluation-execution.ts"
+export { collectAlignmentExamplesUseCase } from "./use-cases/alignment/collect-alignment-examples.ts"
+export { evaluateBaselineDraftUseCase } from "./use-cases/alignment/evaluate-baseline-draft.ts"
+export { evaluateDraftAgainstExamplesUseCase } from "./use-cases/alignment/evaluate-draft-against-examples.ts"
+export { evaluateIncrementalDraftUseCase } from "./use-cases/alignment/evaluate-incremental-draft.ts"
+export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-baseline-draft.ts"
+export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
+export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
+export {
+  type ExecuteLiveEvaluationError,
+  executeLiveEvaluationUseCase,
+  type LiveEvaluationConversationInput,
+  type LiveEvaluationExecutionInput,
+  type LiveEvaluationExecutionResult,
+  type LiveEvaluationIssueContext,
+  type LiveEvaluationResultPayload,
+  liveEvaluationConversationInputSchema,
+  liveEvaluationExecutionInputSchema,
+  liveEvaluationExecutionResultSchema,
+  liveEvaluationIssueContextSchema,
+  liveEvaluationResultPayloadSchema,
+} from "./use-cases/live/execute-live-evaluation.ts"
+export { evaluateOptimizationCandidate } from "./use-cases/optimization/evaluate-optimization-candidate.ts"

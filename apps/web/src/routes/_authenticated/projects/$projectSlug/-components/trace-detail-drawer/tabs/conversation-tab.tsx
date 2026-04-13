@@ -19,6 +19,7 @@ function ConversationContent({
   isActive,
   scrollContainerRef,
   textSelectionPopoverControlsRef,
+  onPopoverClose,
 }: {
   readonly traceDetail: TraceDetailRecord
   readonly navigateToSpan?: ((spanId: string) => void) | undefined
@@ -26,6 +27,7 @@ function ConversationContent({
   readonly isActive: boolean
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
   readonly textSelectionPopoverControlsRef?: MutableRefObject<TextSelectionPopoverControls | null> | undefined
+  readonly onPopoverClose?: (() => void) | undefined
 }) {
   const internalScrollRef = useRef<HTMLDivElement>(null)
   const scrollRef = scrollContainerRef ?? internalScrollRef
@@ -122,6 +124,7 @@ function ConversationContent({
                 spanId={spanMaps?.messageSpanMap[messageIndex]}
                 annotations={data?.annotations ?? []}
                 annotators={data?.annotators ?? []}
+                onClose={onPopoverClose}
               />
             )
           }}
@@ -137,7 +140,10 @@ function ConversationContent({
           isUpdateLoading={isUpdatePending}
           onSave={createTextSelectionAnnotation}
           onUpdate={updateTextSelectionAnnotation}
-          onClose={closeAnnotationPopover}
+          onClose={() => {
+            closeAnnotationPopover()
+            onPopoverClose?.()
+          }}
         />
       </div>
       <div className="absolute top-4 right-4 z-10">
@@ -169,6 +175,7 @@ export function ConversationTab({
   isActive,
   scrollContainerRef,
   textSelectionPopoverControlsRef,
+  onPopoverClose,
 }: {
   readonly traceDetail: TraceDetailRecord | null | undefined
   readonly isDetailLoading: boolean
@@ -179,6 +186,8 @@ export function ConversationTab({
   /** Optional ref to the scroll container. Used for external scroll control (e.g., annotation navigation). */
   readonly scrollContainerRef?: RefObject<HTMLDivElement | null> | undefined
   readonly textSelectionPopoverControlsRef?: MutableRefObject<TextSelectionPopoverControls | null> | undefined
+  /** Optional callback when annotation popover closes. Used to clear selection state. */
+  readonly onPopoverClose?: (() => void) | undefined
 }) {
   if (isDetailLoading) {
     return (
@@ -206,6 +215,7 @@ export function ConversationTab({
       projectId={projectId}
       scrollContainerRef={scrollContainerRef}
       textSelectionPopoverControlsRef={textSelectionPopoverControlsRef}
+      onPopoverClose={onPopoverClose}
     />
   )
 }

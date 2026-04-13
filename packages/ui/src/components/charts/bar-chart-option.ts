@@ -17,13 +17,14 @@ export function buildBarChartOption(
   colors: ChartCssThemeColors,
   formatTooltip?: (category: string, value: number) => string,
   showYAxis = true,
+  enableBrush = false,
 ): EChartsCoreOption {
   const categoryLabelInterval =
     categories.length <= maxCategoryAxisLabels
       ? 0
       : Math.max(1, Math.ceil(categories.length / maxCategoryAxisLabels)) - 1
   const capBarWidth = categories.length > barMaxWidthCategoryThreshold
-  return {
+  const option: EChartsCoreOption = {
     backgroundColor: "transparent",
     grid: {
       left: showYAxis ? 48 : 8,
@@ -82,6 +83,7 @@ export function buildBarChartOption(
         data: [...values],
         ...(capBarWidth ? { barMaxWidth: barMaxWidthPx } : {}),
         barCategoryGap: "18%",
+        cursor: "default",
         itemStyle: {
           color: colors.primary,
           borderRadius: [4, 4, 0, 0],
@@ -95,4 +97,22 @@ export function buildBarChartOption(
       },
     ],
   }
+
+  if (enableBrush) {
+    option.brush = {
+      toolbox: [],
+      brushMode: "single",
+      transformable: false,
+      throttleType: "debounce",
+      throttleDelay: 50,
+      brushStyle: {
+        borderWidth: 0,
+        color: colors.primary,
+        opacity: 0.3,
+      },
+      xAxisIndex: 0,
+    }
+  }
+
+  return option
 }

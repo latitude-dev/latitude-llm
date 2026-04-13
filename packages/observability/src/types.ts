@@ -7,6 +7,8 @@ export interface ObservabilityState {
   environment?: string
   initialization?: Promise<void>
   shutdown?: () => Promise<void>
+  /** When set (Datadog native tracer), enriches logs if the OTEL active span is empty. */
+  resolveLogTraceContext?: () => Record<string, string>
 }
 
 export interface InitializeObservabilityOptions {

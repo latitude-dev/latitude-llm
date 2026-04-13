@@ -1,6 +1,4 @@
-import { type formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
-import { BadRequestError, type ResolvedSettings } from "@domain/shared"
-import type { EvaluationAlignmentConversationMessage } from "./alignment-types.ts"
+import { BadRequestError, deterministicSampling, type ResolvedSettings } from "@domain/shared"
 import {
   ALIGNMENT_MCC_TOLERANCE,
   EVALUATION_ALIGNMENT_JOB_KEY_PREFIX,
@@ -12,7 +10,7 @@ import type {
   EvaluationAlignmentJobError,
   EvaluationAlignmentJobStatus,
 } from "./entities/evaluation.ts"
-import { evaluationAlignmentJobStatusSchema } from "./entities/evaluation.ts"
+import { evaluationAlignmentJobStatusSchema, isPausedEvaluation } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 
 export type EvaluationAlignmentMetrics = {
@@ -37,6 +35,19 @@ type AlignmentRefreshDecision = {
   readonly nextMatthewsCorrelationCoefficient: number
   readonly matthewsCorrelationCoefficientDrop: number
 }
+
+type LiveEvaluationEligibility =
+  | { readonly eligible: true }
+  | { readonly eligible: false; readonly reason: "deleted" | "archived" | "paused" }
+
+type LiveEvaluationTurnScope = {
+  readonly kind: "trace" | "session"
+  readonly key: string
+  readonly traceId: string
+  readonly sessionId: string | null
+}
+
+const LIVE_EVALUATION_EXECUTE_KEY_PREFIX = "evaluations:live:execute"
 
 const safeDivide = (numerator: number, denominator: number): number => {
   if (denominator === 0) {
@@ -154,6 +165,85 @@ export const applyIssueIgnoreToEvaluation = (input: {
         },
   )
 }
+
+export const getLiveEvaluationEligibility = (
+  evaluation: Pick<Evaluation, "archivedAt" | "deletedAt" | "trigger">,
+): LiveEvaluationEligibility => {
+  if (isDeletedEvaluation(evaluation)) {
+    return { eligible: false, reason: "deleted" }
+  }
+
+  if (isArchivedEvaluation(evaluation)) {
+    return { eligible: false, reason: "archived" }
+  }
+
+  if (isPausedEvaluation(evaluation)) {
+    return { eligible: false, reason: "paused" }
+  }
+
+  return { eligible: true }
+}
+
+export const getLiveEvaluationTurnScope = (input: {
+  readonly traceId: string
+  readonly sessionId?: string | null | undefined
+}): LiveEvaluationTurnScope => {
+  const sessionId = input.sessionId ?? null
+
+  if (sessionId) {
+    return {
+      kind: "session",
+      key: `session:${sessionId}`,
+      traceId: input.traceId,
+      sessionId,
+    }
+  }
+
+  return {
+    kind: "trace",
+    key: `trace:${input.traceId}`,
+    traceId: input.traceId,
+    sessionId: null,
+  }
+}
+
+export const shouldSampleLiveEvaluation = async (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly evaluationId: string
+  readonly traceId: string
+  readonly sampling: number
+}): Promise<boolean> =>
+  deterministicSampling({
+    sampling: input.sampling,
+    keyParts: [input.organizationId, input.projectId, input.evaluationId, input.traceId],
+  })
+
+export const buildLiveEvaluationExecuteTraceDedupeKey = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly evaluationId: string
+  readonly traceId: string
+}): string =>
+  `${LIVE_EVALUATION_EXECUTE_KEY_PREFIX}:${input.organizationId}:${input.projectId}:${input.evaluationId}:trace:${input.traceId}`
+
+export const buildLiveEvaluationExecuteScopeDedupeKey = (input: {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly evaluationId: string
+  readonly traceId: string
+  readonly sessionId?: string | null
+}): string => {
+  const scope = getLiveEvaluationTurnScope({
+    traceId: input.traceId,
+    sessionId: input.sessionId,
+  })
+
+  return `${LIVE_EVALUATION_EXECUTE_KEY_PREFIX}:${input.organizationId}:${input.projectId}:${input.evaluationId}:${scope.key}`
+}
+
+export const toLiveEvaluationDebounceMs = (debounceSeconds: number): number | undefined =>
+  debounceSeconds > 0 ? debounceSeconds * 1000 : undefined
 
 export const emptyConfusionMatrix = (): ConfusionMatrix => ({
   truePositives: 0,
@@ -367,11 +457,3 @@ export const buildEvaluationAlignmentJobStatus = (input: {
 }
 
 export const truncateEvaluationName = (value: string): string => value.slice(0, EVALUATION_NAME_MAX_LENGTH).trimEnd()
-
-export const toAlignmentConversationMessages = (
-  allMessages: Parameters<typeof formatGenAIConversation>[0],
-): readonly EvaluationAlignmentConversationMessage[] =>
-  allMessages.map((message) => ({
-    role: message.role,
-    content: formatGenAIMessage(message),
-  }))
