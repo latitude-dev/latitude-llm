@@ -54,9 +54,6 @@ catalogs:
     bullmq:
       specifier: 5.28.2
       version: 5.28.2
-    dd-trace:
-      specifier: ^5.97.0
-      version: 5.97.0
     dotenv:
       specifier: 17.3.1
       version: 17.3.1
@@ -211,9 +208,6 @@ importers:
       '@repo/utils':
         specifier: workspace:*
         version: link:../../packages/utils
-      dd-trace:
-        specifier: 'catalog:'
-        version: 5.97.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -287,9 +281,6 @@ importers:
       '@repo/utils':
         specifier: workspace:*
         version: link:../../packages/utils
-      dd-trace:
-        specifier: 'catalog:'
-        version: 5.97.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -396,9 +387,6 @@ importers:
       better-auth:
         specifier: 'catalog:'
         version: 1.5.6(15c59a138307513b83fe611c51937253)
-      dd-trace:
-        specifier: 'catalog:'
-        version: 5.97.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -550,9 +538,6 @@ importers:
       '@temporalio/worker':
         specifier: 'catalog:'
         version: 1.16.0(esbuild@0.27.7)(tslib@2.8.1)
-      dd-trace:
-        specifier: 'catalog:'
-        version: 5.97.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -641,9 +626,6 @@ importers:
       '@temporalio/workflow':
         specifier: 'catalog:'
         version: 1.16.0
-      dd-trace:
-        specifier: 'catalog:'
-        version: 5.97.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       effect:
         specifier: 'catalog:'
         version: 4.0.0-beta.4
@@ -1088,7 +1070,7 @@ importers:
         specifier: workspace:*
         version: link:../platform/env
       dd-trace:
-        specifier: 'catalog:'
+        specifier: ^5.97.0
         version: 5.97.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       effect:
         specifier: 'catalog:'

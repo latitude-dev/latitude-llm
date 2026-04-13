@@ -37,7 +37,6 @@
     "@repo/utils": "workspace:*",
     "@temporalio/workflow": "catalog:",
     "@temporalio/worker": "catalog:",
-    "dd-trace": "catalog:",
     "effect": "catalog:",
     "tsx": "catalog:"
   },

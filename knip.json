@@ -3,26 +3,24 @@
   "workspaces": {
     ".": {},
     "apps/api": {
-      "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["dd-trace"]
+      "project": ["src/**/*.ts"]
     },
     "apps/ingest": {
-      "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["dd-trace"]
+      "project": ["src/**/*.ts"]
     },
     "apps/workers": {
       "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/worker", "dd-trace"]
+      "ignoreDependencies": ["@temporalio/worker"]
     },
     "apps/workflows": {
       "project": ["src/**/*.ts"],
       "ignore": ["src/workflows/**/*.ts"],
-      "ignoreDependencies": ["@temporalio/worker", "dd-trace"]
+      "ignoreDependencies": ["@temporalio/worker"]
     },
     "apps/web": {
       "entry": ["src/router.tsx", "src/start.ts", "src/routes/**/*.tsx"],
       "project": ["src/**/*.ts", "src/**/*.tsx"],
-      "ignoreDependencies": ["dd-trace"]
+      "ignoreDependencies": []
     },
     "infra": {
       "entry": [],
