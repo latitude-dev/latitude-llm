@@ -1,9 +1,17 @@
+import { ScoreRepository } from "@domain/scores"
+import { createFakeScoreRepository } from "@domain/scores/testing"
 import { ExternalUserId, OrganizationId, ProjectId, SessionId, SimulationId, SpanId, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
-import { defaultEvaluationTrigger, emptyEvaluationAlignment, evaluationSchema } from "../../entities/evaluation.ts"
+import {
+  defaultEvaluationTrigger,
+  type Evaluation,
+  emptyEvaluationAlignment,
+  evaluationSchema,
+} from "../../entities/evaluation.ts"
+import { shouldSampleLiveEvaluation } from "../../helpers.ts"
 import {
   type EvaluationListPage,
   EvaluationRepository,
@@ -57,7 +65,9 @@ function makeTraceDetail(): TraceDetail {
 function makeEvaluation(
   id: string,
   options?: {
+    readonly filter?: Evaluation["trigger"]["filter"]
     readonly sampling?: number
+    readonly turn?: Evaluation["trigger"]["turn"]
   },
 ) {
   const trigger = defaultEvaluationTrigger()
@@ -72,7 +82,9 @@ function makeEvaluation(
     script: "export default async function evaluate() { return { score: 1 } }",
     trigger: {
       ...trigger,
+      ...(options?.filter !== undefined ? { filter: options.filter } : {}),
       ...(options?.sampling !== undefined ? { sampling: options.sampling } : {}),
+      ...(options?.turn !== undefined ? { turn: options.turn } : {}),
     },
     alignment: emptyEvaluationAlignment("hash"),
     alignedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -98,20 +110,60 @@ function createEvaluationRepository(
   }
 }
 
+function createRepositoriesLayer(input: {
+  readonly traceRepository: ReturnType<typeof createFakeTraceRepository>["repository"]
+  readonly evaluationRepository: EvaluationRepositoryShape
+  readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"]
+}) {
+  return Layer.mergeAll(
+    Layer.succeed(TraceRepository, input.traceRepository),
+    Layer.succeed(EvaluationRepository, input.evaluationRepository),
+    Layer.succeed(ScoreRepository, input.scoreRepository ?? createFakeScoreRepository().repository),
+  )
+}
+
+async function findNonSampledEvaluationIds(count: number): Promise<string[]> {
+  const matches: string[] = []
+  const alphabet = "abcdefghijklmnopqrstuvwxyz"
+
+  for (const character of alphabet) {
+    if (matches.length === count) {
+      return matches
+    }
+
+    const evaluationId = character.repeat(24)
+    const shouldSample = await shouldSampleLiveEvaluation({
+      organizationId: INPUT.organizationId,
+      projectId: INPUT.projectId,
+      evaluationId,
+      traceId: INPUT.traceId,
+      sampling: 1,
+    })
+
+    if (!shouldSample) {
+      matches.push(evaluationId)
+    }
+  }
+
+  throw new Error(`Expected ${count} non-sampled evaluation ids for deterministic sampling tests`)
+}
+
 describe("enqueueLiveEvaluationsUseCase", () => {
   it("skips when the ended trace no longer exists", async () => {
     const { repository: traceRepository } = createFakeTraceRepository()
     const evaluationRepository = createEvaluationRepository(() =>
       Effect.die("Active evaluations should not be listed when the trace is missing"),
     )
+    const { repository: scoreRepository } = createFakeScoreRepository()
 
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          Layer.merge(
-            Layer.succeed(TraceRepository, traceRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-          ),
+          createRepositoriesLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+          }),
         ),
       ),
     )
@@ -124,9 +176,22 @@ describe("enqueueLiveEvaluationsUseCase", () => {
   })
 
   it("loads the trace and paginates active evaluations", async () => {
+    const recordedFilterCalls: Array<{
+      readonly traceId: string
+      readonly filterIds: readonly string[]
+    }> = []
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: ({ traceId, filterSets }) => {
+        recordedFilterCalls.push({
+          traceId,
+          filterIds: filterSets.map((filterSet) => filterSet.filterId),
+        })
+
+        return Effect.succeed(filterSets.map((filterSet) => filterSet.filterId))
+      },
     })
+    const { repository: scoreRepository } = createFakeScoreRepository()
 
     const recordedCalls: Array<{
       readonly projectId: string
@@ -139,7 +204,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
       [
         0,
         {
-          items: [makeEvaluation("e".repeat(24))],
+          items: [makeEvaluation("e".repeat(24), { sampling: 100 })],
           hasMore: true,
           limit: 100,
           offset: 0,
@@ -148,7 +213,7 @@ describe("enqueueLiveEvaluationsUseCase", () => {
       [
         100,
         {
-          items: [makeEvaluation("f".repeat(24))],
+          items: [makeEvaluation("f".repeat(24), { sampling: 100 })],
           hasMore: false,
           limit: 100,
           offset: 100,
@@ -175,10 +240,11 @@ describe("enqueueLiveEvaluationsUseCase", () => {
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          Layer.merge(
-            Layer.succeed(TraceRepository, traceRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-          ),
+          createRepositoriesLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+          }),
         ),
       ),
     )
@@ -197,13 +263,19 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         offset: 100,
       },
     ])
+    expect(recordedFilterCalls).toEqual([
+      {
+        traceId: INPUT.traceId,
+        filterIds: ["e".repeat(24), "f".repeat(24)],
+      },
+    ])
     expect(result).toEqual({
       action: "completed",
       summary: {
         traceId: INPUT.traceId,
         sessionId: "session",
         activeEvaluationsScanned: 2,
-        filterMatchedCount: 0,
+        filterMatchedCount: 2,
         skippedPausedCount: 0,
         skippedSamplingCount: 0,
         skippedTurnCount: 0,
@@ -215,11 +287,14 @@ describe("enqueueLiveEvaluationsUseCase", () => {
   it("counts sampling=0 evaluations as paused skips", async () => {
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: ({ filterSets }) =>
+        Effect.succeed(filterSets.map((filterSet) => filterSet.filterId)),
     })
+    const { repository: scoreRepository } = createFakeScoreRepository()
 
     const evaluationRepository = createEvaluationRepository(() =>
       Effect.succeed({
-        items: [makeEvaluation("e".repeat(24)), makeEvaluation("f".repeat(24), { sampling: 0 })],
+        items: [makeEvaluation("e".repeat(24), { sampling: 100 }), makeEvaluation("f".repeat(24), { sampling: 0 })],
         hasMore: false,
         limit: 100,
         offset: 0,
@@ -229,10 +304,11 @@ describe("enqueueLiveEvaluationsUseCase", () => {
     const result = await Effect.runPromise(
       enqueueLiveEvaluationsUseCase(INPUT).pipe(
         Effect.provide(
-          Layer.merge(
-            Layer.succeed(TraceRepository, traceRepository),
-            Layer.succeed(EvaluationRepository, evaluationRepository),
-          ),
+          createRepositoriesLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+          }),
         ),
       ),
     )
@@ -243,10 +319,129 @@ describe("enqueueLiveEvaluationsUseCase", () => {
         traceId: INPUT.traceId,
         sessionId: "session",
         activeEvaluationsScanned: 2,
-        filterMatchedCount: 0,
+        filterMatchedCount: 1,
         skippedPausedCount: 1,
         skippedSamplingCount: 0,
         skippedTurnCount: 0,
+        publishedExecuteCount: 0,
+      },
+    })
+  })
+
+  it("applies filters before sampling and turn checks", async () => {
+    const [matchingEvaluationId, nonMatchingEvaluationId] = await findNonSampledEvaluationIds(2)
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: () => Effect.succeed([matchingEvaluationId]),
+    })
+    const turnCheckCalls: Array<{
+      readonly evaluationId: string
+      readonly traceId: string
+      readonly sessionId: string | null | undefined
+    }> = []
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      existsByEvaluationIdAndScope: ({ evaluationId, traceId, sessionId }) => {
+        turnCheckCalls.push({ evaluationId, traceId, sessionId })
+        return Effect.succeed(true)
+      },
+    })
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [
+          makeEvaluation(matchingEvaluationId, { sampling: 1, turn: "first" }),
+          makeEvaluation(nonMatchingEvaluationId, { sampling: 1, turn: "first" }),
+        ],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+
+    const result = await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase(INPUT).pipe(
+        Effect.provide(
+          createRepositoriesLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(turnCheckCalls).toEqual([])
+    expect(result).toEqual({
+      action: "completed",
+      summary: {
+        traceId: INPUT.traceId,
+        sessionId: "session",
+        activeEvaluationsScanned: 2,
+        filterMatchedCount: 1,
+        skippedPausedCount: 0,
+        skippedSamplingCount: 1,
+        skippedTurnCount: 0,
+        publishedExecuteCount: 0,
+      },
+    })
+  })
+
+  it("applies first-turn scope checks after sampling", async () => {
+    const evaluationId = "g".repeat(24)
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(makeTraceDetail()),
+      listMatchingFilterIdsByTraceId: () => Effect.succeed([evaluationId]),
+    })
+    const turnCheckCalls: Array<{
+      readonly projectId: string
+      readonly evaluationId: string
+      readonly traceId: string
+      readonly sessionId: string | null | undefined
+    }> = []
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      existsByEvaluationIdAndScope: ({ projectId, evaluationId, traceId, sessionId }) => {
+        turnCheckCalls.push({ projectId, evaluationId, traceId, sessionId })
+        return Effect.succeed(true)
+      },
+    })
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed({
+        items: [makeEvaluation(evaluationId, { sampling: 100, turn: "first" })],
+        hasMore: false,
+        limit: 100,
+        offset: 0,
+      }),
+    )
+
+    const result = await Effect.runPromise(
+      enqueueLiveEvaluationsUseCase(INPUT).pipe(
+        Effect.provide(
+          createRepositoriesLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(turnCheckCalls).toEqual([
+      {
+        projectId: INPUT.projectId,
+        evaluationId,
+        traceId: INPUT.traceId,
+        sessionId: "session",
+      },
+    ])
+    expect(result).toEqual({
+      action: "completed",
+      summary: {
+        traceId: INPUT.traceId,
+        sessionId: "session",
+        activeEvaluationsScanned: 1,
+        filterMatchedCount: 1,
+        skippedPausedCount: 0,
+        skippedSamplingCount: 0,
+        skippedTurnCount: 1,
         publishedExecuteCount: 0,
       },
     })

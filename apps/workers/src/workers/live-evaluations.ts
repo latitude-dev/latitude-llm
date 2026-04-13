@@ -2,9 +2,9 @@ import { enqueueLiveEvaluationsUseCase } from "@domain/evaluations"
 import type { QueueConsumer } from "@domain/queue"
 import { OrganizationId } from "@domain/shared"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { EvaluationRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { EvaluationRepositoryLive, ScoreRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { createLogger } from "@repo/observability"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { getClickhouseClient, getPostgresClient } from "../clients.ts"
 
 const logger = createLogger("live-evaluations")
@@ -28,7 +28,11 @@ export const createLiveEvaluationsWorker = ({ consumer }: LiveEvaluationsDeps) =
   consumer.subscribe("live-evaluations", {
     enqueue: (payload: EnqueuePayload) =>
       enqueueLiveEvaluationsUseCase(payload).pipe(
-        withPostgres(EvaluationRepositoryLive, pgClient, OrganizationId(payload.organizationId)),
+        withPostgres(
+          Layer.mergeAll(EvaluationRepositoryLive, ScoreRepositoryLive),
+          pgClient,
+          OrganizationId(payload.organizationId),
+        ),
         withClickHouse(TraceRepositoryLive, chClient, OrganizationId(payload.organizationId)),
         Effect.tap((result) =>
           Effect.sync(() => {
@@ -45,7 +49,6 @@ export const createLiveEvaluationsWorker = ({ consumer }: LiveEvaluationsDeps) =
             logger.info("Live evaluation enqueue completed", {
               organizationId: payload.organizationId,
               projectId: payload.projectId,
-              traceId: payload.traceId,
               ...result.summary,
             })
           }),
