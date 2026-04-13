@@ -43,8 +43,8 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 ### Evaluation Runtime And Persistence
 
 - `packages/domain/evaluations/src/entities/evaluation.ts` already defines `trigger`, `alignment`, lifecycle timestamps, and helpers like `isActiveEvaluation()` and `isPausedEvaluation()`
-- `packages/domain/evaluations/src/alignment-execution.ts` already exposes `executeEvaluationScript()` for the MVP extract-and-call execution bridge
-- `packages/domain/evaluations/src/baseline-generation.ts` already fixes the MVP hosted model to Latitude-managed OpenAI `gpt-5.4`
+- `packages/domain/evaluations/src/runtime/evaluation-execution.ts` already exposes `executeEvaluationScript()` for the MVP extract-and-call execution bridge
+- `packages/domain/evaluations/src/runtime/evaluation-execution.ts` already fixes the MVP hosted model to Latitude-managed OpenAI `gpt-5.4`
 - `packages/platform/ai-vercel/src/ai.ts` already provides the hosted Vercel AI SDK adapter through `AIGenerateLive`
 - `packages/domain/scores/src/use-cases/write-score.ts` already performs canonical Postgres-first writes and immediate analytics sync for immutable scores
 - `packages/domain/scores/src/helpers.ts` already defines score immutability as:
@@ -227,8 +227,8 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 - `packages/domain/events/src/index.ts`
 - `packages/domain/queue/src/topic-registry.ts`
 - `packages/domain/evaluations/src/entities/evaluation.ts`
-- `packages/domain/evaluations/src/alignment-execution.ts`
-- `packages/domain/evaluations/src/baseline-generation.ts`
+- `packages/domain/evaluations/src/runtime/evaluation-execution.ts`
+- `packages/domain/evaluations/src/alignment/baseline-prompt.ts`
 - `packages/domain/scores/src/entities/score.ts`
 - `packages/domain/scores/src/use-cases/write-score.ts`
 - `packages/domain/scores/src/use-cases/save-score-analytics.ts`

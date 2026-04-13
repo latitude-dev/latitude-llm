@@ -1,6 +1,4 @@
-import { type formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
 import { BadRequestError, deterministicSampling, type ResolvedSettings } from "@domain/shared"
-import type { EvaluationAlignmentConversationMessage } from "./alignment-types.ts"
 import {
   ALIGNMENT_MCC_TOLERANCE,
   EVALUATION_ALIGNMENT_JOB_KEY_PREFIX,
@@ -460,10 +458,3 @@ export const buildEvaluationAlignmentJobStatus = (input: {
 
 export const truncateEvaluationName = (value: string): string => value.slice(0, EVALUATION_NAME_MAX_LENGTH).trimEnd()
 
-export const toAlignmentConversationMessages = (
-  allMessages: Parameters<typeof formatGenAIConversation>[0],
-): readonly EvaluationAlignmentConversationMessage[] =>
-  allMessages.map((message) => ({
-    role: message.role,
-    content: formatGenAIMessage(message),
-  }))

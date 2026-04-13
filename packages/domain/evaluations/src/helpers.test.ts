@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { wrapPromptAsScript } from "./baseline-generation.ts"
 import { type ConfusionMatrix, evaluationSchema } from "./entities/evaluation.ts"
+import { wrapPromptAsEvaluationScript } from "./runtime/evaluation-execution.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 import {
   addConfusionMatrixObservation,
@@ -41,7 +41,7 @@ const makeEvaluation = (overrides: Partial<ReturnType<typeof evaluationSchema.pa
     issueId: "i".repeat(24),
     name: "Secret Leakage Monitor",
     description: "Detects when the agent leaks secrets.",
-    script: wrapPromptAsScript("Check for secret leakage in the conversation."),
+    script: wrapPromptAsEvaluationScript("Check for secret leakage in the conversation."),
     trigger: {
       filter: {},
       turn: "every",

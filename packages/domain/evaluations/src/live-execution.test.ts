@@ -2,19 +2,20 @@ import { AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
-import { type EvaluationScriptExecution, estimateEvaluationScriptCostMicrocents } from "./alignment-execution.ts"
 import {
-  CONVERSATION_PLACEHOLDER,
+  EVALUATION_CONVERSATION_PLACEHOLDER,
   EVALUATION_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
-  wrapPromptAsScript,
-} from "./baseline-generation.ts"
+  type EvaluationScriptExecution,
+  estimateEvaluationScriptCostMicrocents,
+  wrapPromptAsEvaluationScript,
+} from "./runtime/evaluation-execution.ts"
 import type { LiveEvaluationExecutionError } from "./errors.ts"
 import {
   executeLiveEvaluationUseCase,
   liveEvaluationExecutionInputSchema,
   liveEvaluationExecutionResultSchema,
-} from "./live-execution.ts"
+} from "./use-cases/live/execute-live-evaluation.ts"
 
 const evaluationId = "eeeeeeeeeeeeeeeeeeeeeeee"
 
@@ -29,12 +30,12 @@ const allMessages = [
   },
 ] as const
 
-const validScript = wrapPromptAsScript(
+const validScript = wrapPromptAsEvaluationScript(
   [
     "Review the following conversation for the target issue.",
     "",
     "Conversation:",
-    CONVERSATION_PLACEHOLDER,
+    EVALUATION_CONVERSATION_PLACEHOLDER,
     "",
     "Set passed to true when the issue is absent.",
   ].join("\n"),
