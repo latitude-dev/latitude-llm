@@ -1,75 +1,76 @@
 {
   "$schema": "https://mintlify.com/schema.json",
+  "theme": "mint",
   "name": "Latitude Docs",
   "favicon": "/favicon.svg",
   "colors": {
     "primary": "#5B41C6",
     "light": "#8B7BD8",
-    "dark": "#5B41C6",
-    "anchors": {
-      "from": "#5B41C6",
-      "to": "#8B7BD8"
-    }
+    "dark": "#5B41C6"
   },
-  "navigation": [
-    {
-      "group": "Getting Started",
-      "pages": [
-        "v2/getting-started/introduction",
-        "v2/getting-started/quick-start-dev",
-        "v2/getting-started/quick-start-pm"
-      ]
-    },
-    {
-      "group": "Observability",
-      "pages": [
-        "v2/observability/overview",
-        "v2/observability/traces",
-        "v2/observability/sessions"
-      ]
-    },
-    {
-      "group": "Scores",
-      "pages": [
-        "v2/scores/overview",
-        "v2/scores/sources",
-        "v2/scores/analytics"
-      ]
-    },
-    {
-      "group": "Evaluations",
-      "pages": [
-        "v2/evaluations/overview",
-        "v2/evaluations/triggers",
-        "v2/evaluations/alignment"
-      ]
-    },
-    {
-      "group": "Issues",
-      "pages": [
-        "v2/issues/overview",
-        "v2/issues/management"
-      ]
-    },
-    {
-      "group": "Annotations",
-      "pages": [
-        "v2/annotations/overview",
-        "v2/annotations/annotation-queues",
-        "v2/annotations/inline-annotations"
-      ]
-    },
-    {
-      "group": "Simulations",
-      "pages": [
-        "v2/simulations/overview",
-        "v2/simulations/cli",
-        "v2/simulations/reporting"
-      ]
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "v2/getting-started/introduction",
+          "v2/getting-started/quick-start-dev",
+          "v2/getting-started/quick-start-pm"
+        ]
+      },
+      {
+        "group": "Observability",
+        "pages": [
+          "v2/observability/overview",
+          "v2/observability/traces",
+          "v2/observability/sessions"
+        ]
+      },
+      {
+        "group": "Scores",
+        "pages": [
+          "v2/scores/overview",
+          "v2/scores/sources",
+          "v2/scores/analytics"
+        ]
+      },
+      {
+        "group": "Evaluations",
+        "pages": [
+          "v2/evaluations/overview",
+          "v2/evaluations/triggers",
+          "v2/evaluations/alignment"
+        ]
+      },
+      {
+        "group": "Issues",
+        "pages": [
+          "v2/issues/overview",
+          "v2/issues/management"
+        ]
+      },
+      {
+        "group": "Annotations",
+        "pages": [
+          "v2/annotations/overview",
+          "v2/annotations/annotation-queues",
+          "v2/annotations/inline-annotations"
+        ]
+      },
+      {
+        "group": "Simulations",
+        "pages": [
+          "v2/simulations/overview",
+          "v2/simulations/cli",
+          "v2/simulations/reporting"
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/latitude-dev/latitude-llm",
+      "slack": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
     }
-  ],
-  "footerSocials": {
-    "github": "https://github.com/latitude-dev/latitude-llm",
-    "slack": "https://join.slack.com/t/trylatitude/shared_invite/zt-35wu2h9es-N419qlptPMhyOeIpj3vjzw"
   }
 }
