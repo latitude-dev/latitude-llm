@@ -135,7 +135,7 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 
 **Intent**: implement selection and task publication while keeping the upstream trace-end signal dormant.
 
-**Status**: in progress. `P13-PR2-1`, `P13-PR2-2`, and `P13-PR2-3` are now landed as a safe foundation on `phase-13-part-2`; remaining work is trigger evaluation, execute-task publication, and worker-level enqueue coverage.
+**Status**: in progress. `P13-PR2-1`, `P13-PR2-2`, `P13-PR2-3`, and `P13-PR2-9` are now landed as the foundation on `phase-13-part-2`; remaining work is trigger evaluation, execute-task publication, and worker-level enqueue coverage.
 
 **Responsibilities**:
 
@@ -153,7 +153,7 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 - `TraceEnded` currently carries only `organizationId`, `projectId`, and `traceId`, so enqueue must reload `TraceDetail` to recover `sessionId` before scope-aware turn logic
 - `EvaluationRepository.listByProjectId({ lifecycle: "active" })` is already the canonical project-wide active scan and excludes archived/deleted rows
 - `ScoreRepository.existsByEvaluationIdAndScope()` is already the canonical persisted-state read for `turn = first`
-- `TraceRepository.matchesFiltersByTraceId()` already exposes the canonical single-filter check, but PR 2 still needs the batched one-trace/many-filter variant for performance
+- `TraceRepository.matchesFiltersByTraceId()` already exposes the canonical single-filter check, and `TraceRepository.listMatchingFilterIdsByTraceId()` now provides the batched one-trace/many-filter variant for enqueue performance
 
 **Implementation notes**:
 
@@ -180,12 +180,12 @@ Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 - [x] **P13-PR2-1**: Replace the `enqueue` stub in `apps/workers/src/workers/live-evaluations.ts` by wiring a thin worker wrapper around the new enqueue use case
 - [x] **P13-PR2-2**: Load the ended trace detail with `TraceRepository.findByTraceId()` so trigger checks can use `sessionId` and current trace context
 - [x] **P13-PR2-3**: List active evaluations project-wide through `EvaluationRepository.listByProjectId({ lifecycle: "active" })` instead of manually re-implementing lifecycle filtering
+- [x] **P13-PR2-9**: Optimize trigger filter matching for one ended trace by adding a batched `TraceRepository` read that evaluates multiple independent evaluation `FilterSet`s in one query rather than one query per evaluation
 - [ ] **P13-PR2-4**: Treat `sampling = 0` as paused via the shared live-evaluation eligibility helpers and skip those evaluations before publication
 - [ ] **P13-PR2-5**: Apply trigger evaluation order exactly as specified: `filter`, then `sampling`, then `turn` / `debounce`
 - [ ] **P13-PR2-6**: Publish `live-evaluations:execute` once per matching `(evaluationId, traceId)` pair, including trace-scoped or scope-scoped dedupe/debounce where required by `first` / `every` / `last`
 - [ ] **P13-PR2-7**: Add structured enqueue-path logging for active evaluations scanned, filter matches, sampling skips, turn/debounce skips, and execute tasks published
 - [ ] **P13-PR2-8**: Add worker-level tests for matching, skipping, deterministic sampling, session-vs-trace scope, turn semantics, and execute publication
-- [ ] **P13-PR2-9**: Optimize trigger filter matching for one ended trace by adding a batched `TraceRepository` read that evaluates multiple independent evaluation `FilterSet`s in one query rather than one query per evaluation
 - [ ] **P13-PR2-10**: Lock the `turn = first` plus debounce behavior with explicit tests so it delays the first eligible execution without accidentally collapsing into `last`
 
 **Exit gate**:
