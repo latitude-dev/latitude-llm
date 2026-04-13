@@ -2,6 +2,8 @@ import type { AICredentialError, AIError } from "@domain/ai"
 import { type TraceDetail, traceDetailSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
+import { evaluationSchema } from "../../entities/evaluation.ts"
+import { LiveEvaluationExecutionError } from "../../errors.ts"
 import {
   type EvaluationExecutionResult,
   type EvaluationExecutionResultPayload,
@@ -10,12 +12,10 @@ import {
   evaluationExecutionResultSchema,
   evaluationIssueContextSchema,
   executeEvaluationScriptWithAI,
-  toEvaluationExecutionResult,
   toEvaluationConversationMessages,
+  toEvaluationExecutionResult,
   validateEvaluationScript,
 } from "../../runtime/evaluation-execution.ts"
-import { evaluationSchema } from "../../entities/evaluation.ts"
-import { LiveEvaluationExecutionError } from "../../errors.ts"
 
 export type ExecuteLiveEvaluationError = AIError | AICredentialError | LiveEvaluationExecutionError
 

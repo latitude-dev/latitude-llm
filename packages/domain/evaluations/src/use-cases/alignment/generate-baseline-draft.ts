@@ -1,7 +1,7 @@
 import { hashOptimizationCandidateText } from "@domain/optimizations"
 import { Effect } from "effect"
-import type { GeneratedEvaluationDraft } from "../../alignment/types.ts"
 import { generateBaselinePromptText } from "../../alignment/baseline-prompt.ts"
+import type { GeneratedEvaluationDraft } from "../../alignment/types.ts"
 import { defaultEvaluationTrigger } from "../../entities/evaluation.ts"
 import { wrapPromptAsEvaluationScript } from "../../runtime/evaluation-execution.ts"
 

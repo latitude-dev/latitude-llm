@@ -1,11 +1,7 @@
 import { BadRequestError, EvaluationId, generateId, IssueId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { PersistEvaluationAlignmentResult } from "../../alignment/types.ts"
-import {
-  type ConfusionMatrix,
-  type EvaluationTrigger,
-  evaluationSchema,
-} from "../../entities/evaluation.ts"
+import { type ConfusionMatrix, type EvaluationTrigger, evaluationSchema } from "../../entities/evaluation.ts"
 import { isDeletedEvaluation } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 

@@ -2,17 +2,14 @@ import { formatGenAIConversation } from "@domain/ai"
 import { BadRequestError, IssueId, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
-import type {
-  CollectedEvaluationAlignmentExamples,
-  HydratedEvaluationAlignmentExample,
-} from "../../alignment/types.ts"
+import type { CollectedEvaluationAlignmentExamples, HydratedEvaluationAlignmentExample } from "../../alignment/types.ts"
+import type { EvaluationAlignmentExample } from "../../ports/evaluation-alignment-examples-repository.ts"
+import { EvaluationAlignmentExamplesRepository } from "../../ports/evaluation-alignment-examples-repository.ts"
+import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import {
   type EvaluationConversationMessage,
   toEvaluationConversationMessages,
 } from "../../runtime/evaluation-execution.ts"
-import type { EvaluationAlignmentExample } from "../../ports/evaluation-alignment-examples-repository.ts"
-import { EvaluationAlignmentExamplesRepository } from "../../ports/evaluation-alignment-examples-repository.ts"
-import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 
 export const collectAlignmentExamplesUseCase = (input: {
   readonly organizationId: string
@@ -81,7 +78,9 @@ export const collectAlignmentExamplesUseCase = (input: {
         })
       }
 
-      const conversation: readonly EvaluationConversationMessage[] = toEvaluationConversationMessages(detail.allMessages)
+      const conversation: readonly EvaluationConversationMessage[] = toEvaluationConversationMessages(
+        detail.allMessages,
+      )
 
       return {
         ...example,

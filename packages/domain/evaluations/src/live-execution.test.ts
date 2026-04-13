@@ -2,6 +2,7 @@ import { AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import type { LiveEvaluationExecutionError } from "./errors.ts"
 import {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   EVALUATION_SCRIPT_RUNTIME_MODEL,
@@ -10,7 +11,6 @@ import {
   estimateEvaluationScriptCostMicrocents,
   wrapPromptAsEvaluationScript,
 } from "./runtime/evaluation-execution.ts"
-import type { LiveEvaluationExecutionError } from "./errors.ts"
 import {
   executeLiveEvaluationUseCase,
   liveEvaluationExecutionInputSchema,

@@ -73,9 +73,7 @@ describe("MVP script template helpers", () => {
 
     it("rejects a prompt with multiple different interpolations", () => {
       const otherPlaceholder = ["${", "other}"].join("")
-      const script = wrapPromptAsEvaluationScript(
-        `${EVALUATION_CONVERSATION_PLACEHOLDER} and ${otherPlaceholder}`,
-      )
+      const script = wrapPromptAsEvaluationScript(`${EVALUATION_CONVERSATION_PLACEHOLDER} and ${otherPlaceholder}`)
       expect(validateEvaluationScript(script)).toBe(false)
     })
   })

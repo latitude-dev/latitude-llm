@@ -706,8 +706,7 @@ describe("evaluation-alignment activities", () => {
   })
 
   it("runs the workflow optimization seam through the optimizer port", async () => {
-    const optimizedPrompt =
-      `Improved: detect leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`
+    const optimizedPrompt = `Improved: detect leaked tokens in the conversation.\n${EVALUATION_CONVERSATION_PLACEHOLDER}`
     const expectedOptimizedScript = wrapPromptAsEvaluationScript(optimizedPrompt)
     const baselineScript = wrapPromptAsEvaluationScript(
       `Check if the conversation contains leaked secrets:\n${EVALUATION_CONVERSATION_PLACEHOLDER}`,

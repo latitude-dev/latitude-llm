@@ -4,8 +4,8 @@ import type {
   BaselineEvaluationResult,
   HydratedEvaluationAlignmentExample,
 } from "../../alignment/types.ts"
-import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
 import { addConfusionMatrixObservation, deriveEvaluationAlignmentMetrics, emptyConfusionMatrix } from "../../helpers.ts"
+import { executeEvaluationScriptWithAI } from "../../runtime/evaluation-execution.ts"
 
 // TODO(eval-sandbox): when sandbox is available, executeEvaluationScript will run arbitrary JS;
 // this function delegates to it and its structure won't change.

@@ -2,8 +2,8 @@ import {
   AI,
   AICredentialError,
   AIError,
-  formatGenAIMessage,
   type formatGenAIConversation,
+  formatGenAIMessage,
   type GenerateResult,
 } from "@domain/ai"
 import { estimateCost } from "@domain/models"

@@ -4,9 +4,9 @@ import type {
   EvaluationAlignmentJobStatus,
   EvaluationTrigger,
 } from "../entities/evaluation.ts"
-import type { EvaluationConversationMessage } from "../runtime/evaluation-execution.ts"
 import type { EvaluationAlignmentMetrics } from "../helpers.ts"
 import type { EvaluationAlignmentExample } from "../ports/evaluation-alignment-examples-repository.ts"
+import type { EvaluationConversationMessage } from "../runtime/evaluation-execution.ts"
 
 export interface HydratedEvaluationAlignmentExample extends EvaluationAlignmentExample {
   readonly conversation: readonly EvaluationConversationMessage[]

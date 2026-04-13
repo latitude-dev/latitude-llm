@@ -457,4 +457,3 @@ export const buildEvaluationAlignmentJobStatus = (input: {
 }
 
 export const truncateEvaluationName = (value: string): string => value.slice(0, EVALUATION_NAME_MAX_LENGTH).trimEnd()
-

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest"
 import { type ConfusionMatrix, evaluationSchema } from "./entities/evaluation.ts"
-import { wrapPromptAsEvaluationScript } from "./runtime/evaluation-execution.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 import {
   addConfusionMatrixObservation,
@@ -32,6 +31,7 @@ import {
   totalConfusionMatrixObservations,
   unarchiveEvaluation,
 } from "./helpers.ts"
+import { wrapPromptAsEvaluationScript } from "./runtime/evaluation-execution.ts"
 
 const makeEvaluation = (overrides: Partial<ReturnType<typeof evaluationSchema.parse>> = {}) =>
   evaluationSchema.parse({
