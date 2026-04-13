@@ -100,6 +100,17 @@ function ProjectLayout() {
     [projectSlug],
   )
   const project: ProjectRecord = projectFromCollection ?? projectFromLoader
+  const pathname = useRouterState({ select: (state) => state.location.pathname.replace(/\/$/, "") || "/" })
+  const isOnboarding = pathname === `/projects/${projectSlug}/onboarding`
+
+  if (isOnboarding) {
+    return (
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
+        <Outlet />
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-full">
       <ProjectSidebar project={project} projectSlug={projectSlug} />

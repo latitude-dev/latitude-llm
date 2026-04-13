@@ -122,20 +122,20 @@ const PROVIDER_ENTRIES: ReadonlyArray<ProviderEntry> = [
   { id: "cohere", name: "Cohere", icon: "cohere" },
   { id: "togetherai", name: "Together AI", icon: "togetherai" },
   { id: "aiplatform", name: "Google AI Platform", icon: "google" },
-  { id: "langchain", name: "LangChain", icon: "openai" },
-  { id: "llamaindex", name: "LlamaIndex", icon: "openai" },
+  { id: "langchain", name: "LangChain", icon: "generic" },
+  { id: "llamaindex", name: "LlamaIndex", icon: "generic" },
   { id: "groq", name: "Groq", icon: "groq" },
   { id: "mistral", name: "Mistral", icon: "mistral" },
-  { id: "litellm", name: "LiteLLM", icon: "openai" },
+  { id: "litellm", name: "LiteLLM", icon: "generic" },
   { id: "ollama", name: "Ollama", icon: "llama" },
   { id: "replicate", name: "Replicate", icon: "huggingface" },
   { id: "sagemaker", name: "AWS SageMaker", icon: "amazon-bedrock" },
-  { id: "watsonx", name: "IBM watsonx.ai", icon: "openai" },
-  { id: "aleph-alpha", name: "Aleph Alpha", icon: "openai" },
+  { id: "watsonx", name: "IBM watsonx.ai", icon: "generic" },
+  { id: "aleph-alpha", name: "Aleph Alpha", icon: "generic" },
   { id: "transformers", name: "Hugging Face Transformers", icon: "huggingface" },
-  { id: "crewai", name: "CrewAI", icon: "openai" },
-  { id: "haystack", name: "Haystack", icon: "openai" },
-  { id: "dspy", name: "DSPy", icon: "openai" },
+  { id: "crewai", name: "CrewAI", icon: "generic" },
+  { id: "haystack", name: "Haystack", icon: "generic" },
+  { id: "dspy", name: "DSPy", icon: "generic" },
 ]
 
 function SdkIntegrationInstructions({
@@ -300,120 +300,124 @@ export function OnboardingFlow({
   }
 
   return (
-    <div className="h-full flex flex-row bg-background">
-      <div className="w-1/2 min-w-0 h-full flex flex-col items-center justify-between border-r border-border p-24">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-row overflow-hidden bg-background">
+      <div className="flex h-full min-h-0 w-1/2 min-w-0 flex-col overflow-y-auto overscroll-y-contain border-r border-border px-24 pt-24 pb-32">
         {step === "role" ? (
-          <div className="w-full max-w-[560px] flex flex-col gap-8">
-            <div className="flex flex-col gap-4">
-              <div className="h-8 w-8">
-                <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
+          <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
+            <div className="flex w-full flex-col gap-8">
+              <div className="flex flex-col gap-4">
+                <div className="h-8 w-8">
+                  <img src="/favicon.svg" alt="Latitude" className="h-8 w-8" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Text.H2 weight="medium">Tell us about yourself</Text.H2>
+                  <Text.H4 color="foregroundMuted">Help Latitude personalize your experience.</Text.H4>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <Text.H2 weight="medium">Tell us about yourself</Text.H2>
-                <Text.H4 color="foregroundMuted">Help Latitude personalize your experience.</Text.H4>
+              <div className="flex flex-col gap-3">
+                {ROLE_OPTIONS.map((option) => {
+                  const selected = role === option.id
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`w-full rounded-lg border p-4 flex flex-row items-start justify-between text-left ${selected ? "border-primary bg-accent/20" : "border-border"}`}
+                      onClick={() => setRole(option.id)}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <Text.H4 weight="medium">{option.title}</Text.H4>
+                        <Text.H5 color="foregroundMuted">{option.description}</Text.H5>
+                      </div>
+                      <div className="pt-1">
+                        <Checkbox checked={selected} />
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              <div>
+                <Button onClick={() => setStep("provider")}>Next</Button>
               </div>
             </div>
-            <div className="flex flex-col gap-3">
-              {ROLE_OPTIONS.map((option) => {
-                const selected = role === option.id
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={`w-full rounded-lg border p-4 flex flex-row items-start justify-between text-left ${selected ? "border-primary bg-accent/20" : "border-border"}`}
-                    onClick={() => setRole(option.id)}
-                  >
-                    <div className="flex flex-col gap-1">
-                      <Text.H4 weight="medium">{option.title}</Text.H4>
-                      <Text.H5 color="foregroundMuted">{option.description}</Text.H5>
-                    </div>
-                    <div className="pt-1">
-                      <Checkbox checked={selected} />
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-            <div>
-              <Button onClick={() => setStep("provider")}>Next</Button>
+
+            <div className="mt-auto flex w-full shrink-0 items-center justify-center gap-2 pt-8">
+              <div className="h-1.5 w-5 rounded-full bg-primary" />
+              <div className="h-1.5 w-1.5 rounded-full bg-border" />
             </div>
           </div>
         ) : (
-          <div className="w-full max-w-[560px] flex flex-col gap-6">
-            <div className="flex flex-col gap-4">
-              <div className="h-8 w-8 overflow-hidden rounded-md">
-                {isDotLottieReady ? (
-                  <DotLottieWc
-                    src="https://lottie.host/40f19b57-50b7-4419-afb3-a8bb2b8623c8/nr6mmYVplZ.lottie"
-                    autoplay
-                    loop
-                    style={{ width: "32px", height: "32px" }}
-                  />
-                ) : null}
+          <div className="mx-auto w-full max-w-[560px]">
+            <div className="flex w-full flex-col gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="h-8 w-8 overflow-hidden rounded-md">
+                  {isDotLottieReady ? (
+                    <DotLottieWc
+                      src="https://lottie.host/40f19b57-50b7-4419-afb3-a8bb2b8623c8/nr6mmYVplZ.lottie"
+                      autoplay
+                      loop
+                      style={{ width: "32px", height: "32px" }}
+                    />
+                  ) : null}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Text.H2 weight="medium">
+                    {traceReceived ? "Trace received. Redirecting…" : "Waiting for traces"}
+                  </Text.H2>
+                  <Text.H4 color="foregroundMuted">Set up Latitude in your project and start sending traces</Text.H4>
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <Text.H2 weight="medium">
-                  {traceReceived ? "Trace received. Redirecting…" : "Waiting for traces"}
-                </Text.H2>
-                <Text.H4 color="foregroundMuted">Set up Latitude in your project and start sending traces</Text.H4>
-              </div>
-            </div>
 
-            <div className="flex flex-col gap-3">
-              <Text.H5M>Select your LLM provider</Text.H5M>
-              <div className="flex flex-row flex-wrap gap-1">
-                {PROVIDER_ENTRIES.map((provider) => (
-                  <button
-                    key={provider.id}
-                    type="button"
-                    onClick={() => setSelectedProvider(provider)}
-                    className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
-                  >
-                    <ProviderIcon provider={provider.icon} size="xs" />
-                    <span>{provider.name}</span>
-                  </button>
-                ))}
+              <div className="flex flex-col gap-3">
+                <Text.H5M>Select your LLM provider</Text.H5M>
+                <div className="flex flex-row flex-wrap gap-1">
+                  {PROVIDER_ENTRIES.map((provider) => (
+                    <button
+                      key={provider.id}
+                      type="button"
+                      onClick={() => setSelectedProvider(provider)}
+                      className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
+                    >
+                      <ProviderIcon provider={provider.icon} size="xs" />
+                      <span>{provider.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <Tabs
-              options={integrationTabOptions}
-              active={integrationPanel}
-              onSelect={(id) => setIntegrationPanel(id as IntegrationPanel)}
-            />
-
-            {integrationPanel === "opentelemetry" ? (
-              <div className="flex flex-col gap-2">
-                <Text.H5M>Environment variables</Text.H5M>
-                <Text.H5 color="foregroundMuted">
-                  Use the Latitude SDK when possible. For an existing OpenTelemetry setup, add the Latitude span
-                  processor or point your OTLP exporter at Latitude ingest—see{" "}
-                  <code className="text-xs">packages/telemetry</code> on the main branch for patterns.
-                </Text.H5>
-                <CodeBlock value={getEnvBlock(selectedProvider.id, "opentelemetry", slugForSnippets)} copyable />
-              </div>
-            ) : (
-              <SdkIntegrationInstructions
-                selectedProviderId={selectedProvider.id}
-                lang={integrationPanel === "typescript" ? "typescript" : "python"}
-                slugForSnippets={slugForSnippets}
+              <Tabs
+                options={integrationTabOptions}
+                active={integrationPanel}
+                onSelect={(id) => setIntegrationPanel(id as IntegrationPanel)}
               />
-            )}
 
-            <Button variant="outline" onClick={() => setStep("role")}>
-              Back
-            </Button>
+              {integrationPanel === "opentelemetry" ? (
+                <div className="flex flex-col gap-2">
+                  <Text.H5M>Environment variables</Text.H5M>
+                  <Text.H5 color="foregroundMuted">
+                    Use the Latitude SDK when possible. For an existing OpenTelemetry setup, add the Latitude span
+                    processor or point your OTLP exporter at Latitude ingest—see{" "}
+                    <code className="text-xs">packages/telemetry</code> on the main branch for patterns.
+                  </Text.H5>
+                  <CodeBlock value={getEnvBlock(selectedProvider.id, "opentelemetry", slugForSnippets)} copyable />
+                </div>
+              ) : (
+                <SdkIntegrationInstructions
+                  selectedProviderId={selectedProvider.id}
+                  lang={integrationPanel === "typescript" ? "typescript" : "python"}
+                  slugForSnippets={slugForSnippets}
+                />
+              )}
+
+              <Button variant="outline" onClick={() => setStep("role")}>
+                Back
+              </Button>
+            </div>
           </div>
         )}
-
-        <div className="w-full flex items-center justify-center gap-2">
-          <div className={`h-1.5 rounded-full ${step === "role" ? "w-5 bg-primary" : "w-1.5 bg-border"}`} />
-          <div className={`h-1.5 rounded-full ${step === "provider" ? "w-5 bg-primary" : "w-1.5 bg-border"}`} />
-        </div>
       </div>
 
-      <div className="w-1/2 min-w-0 bg-secondary h-full overflow-hidden">
-        <div className="h-full w-full min-w-0 flex items-center justify-center overflow-hidden p-24">
+      <div className="flex h-full min-h-0 w-1/2 min-w-0 shrink-0 flex-col overflow-hidden bg-secondary">
+        <div className="flex min-h-0 flex-1 flex-col justify-center overflow-y-auto p-24">
           {step === "role" ? (
             <div className="h-fit w-full flex flex-col gap-0 justify-center items-start">
               <div className="max-w-[591px] flex flex-col gap-6">
