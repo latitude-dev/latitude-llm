@@ -1244,7 +1244,7 @@ importers:
         version: 1.6.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.1.8(zod@4.3.6))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0)
       '@better-auth/stripe':
         specifier: ^1.5.6
-        version: 1.6.1(@better-auth/core@1.6.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.1.8(zod@4.3.6))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0))(better-auth@1.5.6(4795d0ef2f2359254d46bedc478999f4))(better-call@1.1.8(zod@4.3.6))(stripe@20.4.1(@types/node@25.6.0))
+        version: 1.6.1(@better-auth/core@1.6.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.1.8(zod@4.3.6))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0))(better-auth@1.5.6(4795d0ef2f2359254d46bedc478999f4))(better-call@1.1.8(zod@4.3.6))(stripe@22.0.1(@types/node@25.6.0))
       '@domain/annotation-queues':
         specifier: workspace:*
         version: link:../../domain/annotation-queues
@@ -1306,8 +1306,8 @@ importers:
         specifier: 'catalog:'
         version: 8.16.0
       stripe:
-        specifier: ^20.4.0
-        version: 20.4.1(@types/node@25.6.0)
+        specifier: ^22.0.1
+        version: 22.0.1(@types/node@25.6.0)
     devDependencies:
       '@better-auth/cli':
         specifier: ^1.4.22
@@ -10029,11 +10029,11 @@ packages:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
 
-  stripe@20.4.1:
-    resolution: {integrity: sha512-axCguHItc8Sxt0HC6aSkdVRPffjYPV7EQqZRb2GkIa8FzWDycE7nHJM19C6xAIynH1Qp1/BHiopSi96jGBxT0w==}
-    engines: {node: '>=16'}
+  stripe@22.0.1:
+    resolution: {integrity: sha512-Yw764pZ6s8Xu4CtUZdD5uWOkw6gc9xzO9OKylCuj1gMhMDLbyGbDtaPNNSFE4mB6njYSHESYIVbF1iIzUfAl2g==}
+    engines: {node: '>=18'}
     peerDependencies:
-      '@types/node': '>=16'
+      '@types/node': '>=18'
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -12260,13 +12260,13 @@ snapshots:
     optionalDependencies:
       '@prisma/client': 5.22.0
 
-  '@better-auth/stripe@1.6.1(@better-auth/core@1.6.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.1.8(zod@4.3.6))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0))(better-auth@1.5.6(4795d0ef2f2359254d46bedc478999f4))(better-call@1.1.8(zod@4.3.6))(stripe@20.4.1(@types/node@25.6.0))':
+  '@better-auth/stripe@1.6.1(@better-auth/core@1.6.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.1.8(zod@4.3.6))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0))(better-auth@1.5.6(4795d0ef2f2359254d46bedc478999f4))(better-call@1.1.8(zod@4.3.6))(stripe@22.0.1(@types/node@25.6.0))':
     dependencies:
       '@better-auth/core': 1.6.1(@better-auth/utils@0.4.0)(@better-fetch/fetch@1.1.21)(@opentelemetry/api@1.9.1)(better-call@1.1.8(zod@4.3.6))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0)
       better-auth: 1.5.6(4795d0ef2f2359254d46bedc478999f4)
       better-call: 1.1.8(zod@4.3.6)
       defu: 6.1.7
-      stripe: 20.4.1(@types/node@25.6.0)
+      stripe: 22.0.1(@types/node@25.6.0)
       zod: 4.3.6
 
   '@better-auth/telemetry@1.4.22(@better-auth/core@1.4.22(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.8(zod@4.3.6))(jose@6.2.2)(kysely@0.28.15)(nanostores@1.2.0))':
@@ -20667,7 +20667,7 @@ snapshots:
 
   strip-json-comments@5.0.3: {}
 
-  stripe@20.4.1(@types/node@25.6.0):
+  stripe@22.0.1(@types/node@25.6.0):
     optionalDependencies:
       '@types/node': 25.6.0
 
