@@ -1,4 +1,4 @@
-import { type ComponentProps, Suspense, lazy } from "react"
+import { type ComponentProps, lazy, Suspense } from "react"
 
 import { ChartSkeleton } from "./chart-skeleton.tsx"
 
