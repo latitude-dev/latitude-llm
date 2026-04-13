@@ -22,7 +22,8 @@ export {
   CardHeader,
   CardTitle,
 } from "./components/card/card.tsx"
-export { BarChart, type BarChartDataPoint, type BarChartProps } from "./components/charts/bar-chart.tsx"
+export { type BarChartDataPoint, type BarChartProps } from "./components/charts/bar-chart.tsx"
+export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
 export {
   type ChartCssThemeColors,
   chartThemeFallback,
