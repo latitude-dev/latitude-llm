@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { CopyButton } from "../copy-button/index.tsx"
 import { Skeleton } from "../skeleton/skeleton.tsx"
 import { Text } from "../text/text.tsx"
@@ -5,17 +6,17 @@ import { Text } from "../text/text.tsx"
 export type DetailSummaryItem = {
   readonly label: string
   readonly isLoading?: boolean
-  readonly value: string | undefined
+  readonly value: ReactNode | undefined
   readonly copyable?: boolean
 }
 
 /** Trims display/copy text; API strings are normalized when read from ClickHouse. */
-function normalizeCopyableScalar(value: string | undefined): string {
+function normalizeCopyableScalar(value: ReactNode): string {
   if (typeof value !== "string") return ""
   return value.trim()
 }
 
-function hasCopyableDisplayValue(value: string | undefined): boolean {
+function hasCopyableDisplayValue(value: ReactNode): boolean {
   return normalizeCopyableScalar(value).length > 0
 }
 
@@ -24,12 +25,22 @@ function SummaryItemContent({
   isLoading,
   copyable,
 }: {
-  value: string | undefined
+  value: ReactNode
   isLoading: boolean
   copyable: boolean
 }) {
   if (isLoading) {
     return <Skeleton className="h-4 w-24 inline-block" />
+  }
+
+  // If value is null/undefined, show "-"
+  if (value === null || value === undefined) {
+    return <Text.H5 color="foreground">-</Text.H5>
+  }
+
+  // If value is a React element (not a string/number), render it wrapped in H5 for consistent styling
+  if (typeof value === "object") {
+    return <Text.H5 color="foreground">{value}</Text.H5>
   }
 
   const normalized = normalizeCopyableScalar(value)
@@ -47,12 +58,12 @@ function SummaryItemContent({
 }
 
 function SummaryItem({ label, value, isLoading, copyable }: DetailSummaryItem) {
-  if (!isLoading && copyable && !hasCopyableDisplayValue(value)) {
+  if (!isLoading && copyable && typeof value === "string" && !hasCopyableDisplayValue(value)) {
     return null
   }
 
   return (
-    <div className="flex flex-col gap-0.5 min-w-[120px]">
+    <div className="flex flex-col gap-0 min-w-[120px]">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       <SummaryItemContent value={value} isLoading={isLoading ?? false} copyable={copyable ?? false} />
     </div>

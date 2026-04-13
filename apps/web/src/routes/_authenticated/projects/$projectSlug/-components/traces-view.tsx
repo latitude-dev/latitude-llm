@@ -1,5 +1,8 @@
 import type { FilterSet } from "@domain/shared"
+import type { TraceCohortSummary } from "@domain/spans"
 import {
+  Badge,
+  type BadgeProps,
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableSorting,
@@ -9,7 +12,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, formatPrice, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { type RefObject, useCallback, useMemo, useState } from "react"
+import { type RefObject, useCallback, useMemo } from "react"
 import { useTraceMetrics, useTracesInfiniteScroll } from "../../../../../domains/traces/traces.collection.ts"
 import type { TraceRecord } from "../../../../../domains/traces/traces.functions.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
@@ -19,12 +22,17 @@ import { TableMetricSubheader } from "./table/metric-subheader.tsx"
 
 const DEFAULT_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
+type Baselines = TraceCohortSummary["baselines"]
+
 interface TracesViewProps {
   readonly projectId: string
   readonly filters: FilterSet
   readonly filtersOpen: boolean
   readonly activeTraceId: string | undefined
   readonly activeDrawerTab: string
+  readonly baselines?: Baselines | undefined
+  readonly sorting: InfiniteTableSorting
+  readonly onSortingChange: (sorting: InfiniteTableSorting) => void
   readonly selectionState: SelectionState<string>
   readonly onSelectionChange: (state: SelectionState<string>) => void
   readonly totalTraceCount: number
@@ -40,6 +48,9 @@ export function TracesView({
   filtersOpen,
   activeTraceId,
   activeDrawerTab,
+  baselines,
+  sorting,
+  onSortingChange,
   selectionState,
   onSelectionChange,
   totalTraceCount,
@@ -48,9 +59,31 @@ export function TracesView({
   onActiveTraceChange,
   traceIdsRef,
 }: TracesViewProps) {
-  const [sorting, setSorting] = useState<InfiniteTableSorting>(DEFAULT_SORTING)
-
   const hasActiveFilters = Object.keys(filters).length > 0
+
+  // Helper: get highest matching percentile level (p99 > p95 > p90)
+  function getPercentileLevel(
+    value: number,
+    baseline: Baselines[keyof Baselines] | undefined,
+  ): "p99" | "p95" | "p90" | undefined {
+    if (!baseline) return undefined
+    if (baseline.p99 !== null && value >= baseline.p99) return "p99"
+    if (baseline.p95 !== null && value >= baseline.p95) return "p95"
+    if (value >= baseline.p90) return "p90"
+    return undefined
+  }
+
+  // Helper: get badge variant for percentile level
+  function getPercentileBadgeVariant(level: "p99" | "p95" | "p90"): BadgeProps["variant"] {
+    switch (level) {
+      case "p99":
+        return "outlineDestructiveMuted"
+      case "p95":
+        return "outlineWarningMuted"
+      case "p90":
+        return "outlineAccent"
+    }
+  }
 
   const {
     data: traces,
@@ -97,8 +130,16 @@ export function TracesView({
         header: "Duration",
         align: "end",
         sortKey: "duration",
-        width: 120,
-        render: (t) => formatDuration(t.durationNs),
+        width: 140,
+        render: (t) => {
+          const level = getPercentileLevel(t.durationNs, baselines?.durationNs)
+          return (
+            <span className="flex items-center justify-end gap-1">
+              {level && <Badge variant={getPercentileBadgeVariant(level)}>{level}</Badge>}
+              {formatDuration(t.durationNs)}
+            </span>
+          )
+        },
         renderSubheader: () => (
           <TableMetricSubheader rollup={traceMetrics?.durationNs} format="duration" isLoading={metricsLoading} />
         ),
@@ -108,8 +149,16 @@ export function TracesView({
         header: "Time To First Token",
         align: "end",
         sortKey: "ttft",
-        width: 162,
-        render: (t) => (t.timeToFirstTokenNs > 0 ? formatDuration(t.timeToFirstTokenNs) : "-"),
+        width: 176,
+        render: (t) => {
+          const level = getPercentileLevel(t.timeToFirstTokenNs, baselines?.timeToFirstTokenNs)
+          return (
+            <span className="flex items-center justify-end gap-1">
+              {level && <Badge variant={getPercentileBadgeVariant(level)}>{level}</Badge>}
+              {t.timeToFirstTokenNs > 0 ? formatDuration(t.timeToFirstTokenNs) : "-"}
+            </span>
+          )
+        },
         renderSubheader: () => (
           <TableMetricSubheader
             rollup={
@@ -125,8 +174,16 @@ export function TracesView({
         header: "Cost",
         align: "end",
         sortKey: "cost",
-        width: 130,
-        render: (t) => formatPrice(t.costTotalMicrocents / 100_000_000),
+        width: 146,
+        render: (t) => {
+          const level = getPercentileLevel(t.costTotalMicrocents, baselines?.costTotalMicrocents)
+          return (
+            <span className="flex items-center justify-end gap-1">
+              {level && <Badge variant={getPercentileBadgeVariant(level)}>{level}</Badge>}
+              {formatPrice(t.costTotalMicrocents / 100_000_000)}
+            </span>
+          )
+        },
         renderSubheader: () => (
           <TableMetricSubheader rollup={traceMetrics?.costTotalMicrocents} format="price" isLoading={metricsLoading} />
         ),
@@ -183,7 +240,7 @@ export function TracesView({
         ),
       },
     ]
-  }, [traceMetrics, metricsLoading])
+  }, [baselines, metricsLoading, traceMetrics])
 
   const traceIds = useMemo(() => traces.map((t) => t.traceId), [traces])
 
@@ -258,7 +315,7 @@ export function TracesView({
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           defaultSorting={DEFAULT_SORTING}
-          onSortChange={setSorting}
+          onSortChange={onSortingChange}
           blankSlate={hasActiveFilters ? "No traces match the current filters" : "No traces found"}
         />
       </Layout.List>

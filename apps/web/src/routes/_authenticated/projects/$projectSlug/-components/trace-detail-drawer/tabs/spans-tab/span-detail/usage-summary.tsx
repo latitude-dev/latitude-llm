@@ -1,5 +1,6 @@
 import { SegmentBar, type SegmentBarItem, Text, Tooltip } from "@repo/ui"
 import { formatCount, formatPrice } from "@repo/utils"
+import type React from "react"
 import { useMemo } from "react"
 
 export interface UsageData {
@@ -108,16 +109,18 @@ function UsageRow({
   segments,
   formatValue,
   footer,
+  badges,
 }: {
   readonly label: string
   readonly formattedTotal: string
   readonly segments: readonly SegmentBarItem[]
   readonly formatValue: (value: number) => string
   readonly footer?: string
+  readonly badges?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-row items-center gap-3">
-      <div className="flex min-w-12">
+    <div className="flex min-h-8 flex-row items-center gap-3">
+      <div className="flex min-w-12 self-center">
         <Text.H6 color="foregroundMuted" noWrap>
           {label}
         </Text.H6>
@@ -125,7 +128,7 @@ function UsageRow({
 
       <Tooltip
         trigger={
-          <div className="min-w-0 w-full max-w-48">
+          <div className="flex min-w-0 w-full max-w-48 self-center items-center">
             <SegmentBar segments={segments} />
           </div>
         }
@@ -134,9 +137,12 @@ function UsageRow({
         <BreakdownRows segments={segments} formatValue={formatValue} {...(footer ? { footer } : {})} />
       </Tooltip>
 
-      <Text.H5 color="foreground" noWrap>
-        {formattedTotal}
-      </Text.H5>
+      <div className="flex items-center gap-2 self-center">
+        <Text.H5 color="foreground" noWrap>
+          {formattedTotal}
+        </Text.H5>
+        {badges}
+      </div>
     </div>
   )
 }
@@ -145,7 +151,13 @@ function microcentsToDollars(microcents: number): number {
   return microcents / 100_000_000
 }
 
-export function UsageSummary({ data }: { readonly data: UsageData }) {
+export function UsageSummary({
+  data,
+  costBadges,
+}: {
+  readonly data: UsageData
+  readonly costBadges?: React.ReactNode
+}) {
   const tokenSegments = useMemo(() => buildTokenSegments(data), [data])
   const costSegments = useMemo(() => buildCostSegments(data), [data])
 
@@ -173,6 +185,7 @@ export function UsageSummary({ data }: { readonly data: UsageData }) {
           segments={costSegments}
           formatValue={(v) => formatPrice(microcentsToDollars(v))}
           {...(data.costIsEstimated ? { footer: "Cost is estimated" } : {})}
+          badges={costBadges}
         />
       )}
     </div>

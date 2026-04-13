@@ -1,10 +1,12 @@
 import {
   draftSystemQueueAnnotationUseCase,
   persistSystemQueueAnnotationUseCase,
+  type RunSystemQueueFlaggerResult,
   runSystemQueueFlaggerUseCase,
   type SystemQueueAnnotateOutput,
 } from "@domain/annotation-queues"
 import { OrganizationId } from "@domain/shared"
+import type { TraceResourceOutlierReason } from "@domain/spans"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
 import {
@@ -32,7 +34,7 @@ export const runFlagger = async (input: {
   readonly projectId: string
   readonly traceId: string
   readonly queueSlug: string
-}): Promise<{ matched: boolean }> =>
+}): Promise<RunSystemQueueFlaggerResult> =>
   Effect.runPromise(
     runSystemQueueFlaggerUseCase(input).pipe(
       withClickHouse(TraceRepositoryLive, getClickhouseClient(), OrganizationId(input.organizationId)),
@@ -62,9 +64,13 @@ export const draftAnnotate = async (input: {
   readonly projectId: string
   readonly traceId: string
   readonly queueSlug: string
+  readonly matchReasons?: readonly TraceResourceOutlierReason[]
 }): Promise<DraftAnnotateOutput> =>
   Effect.runPromise(
-    draftSystemQueueAnnotationUseCase(input).pipe(
+    draftSystemQueueAnnotationUseCase({
+      ...input,
+      ...(input.matchReasons ? { matchReasons: [...input.matchReasons] } : {}),
+    }).pipe(
       withPostgres(AnnotationQueueRepositoryLive, getPostgresClient(), OrganizationId(input.organizationId)),
       withClickHouse(
         Layer.mergeAll(TraceRepositoryLive, SpanRepositoryLive, ScoreAnalyticsRepositoryLive),

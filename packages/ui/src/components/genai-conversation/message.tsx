@@ -21,7 +21,7 @@ function PartsRenderer({
   readonly messageIndex?: number | undefined
 }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
       {parts.map((part, partIndex) => {
         if (!part) return null
 
@@ -34,7 +34,7 @@ function PartsRenderer({
             key={partIndex}
             data-part-index={partIndex}
             data-content-type={part.type}
-            className={isSelectableTextPart ? "select-text" : undefined}
+            className={cn("min-w-0", { "select-text": isSelectableTextPart })}
           >
             <Part
               part={part}
@@ -82,7 +82,7 @@ function AssistantMessage({
   readonly onNavigate?: () => void
 }) {
   return (
-    <div className="relative flex flex-col gap-1">
+    <div className="relative flex min-w-0 max-w-full w-full flex-col gap-1">
       {onNavigate && (
         <div className="sticky top-0 h-0 overflow-visible z-10">
           <Tooltip

@@ -1,6 +1,11 @@
 import { AI, type AICredentialError, type AIError, formatGenAIConversation, formatGenAIMessage } from "@domain/ai"
 import { type NotFoundError, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
-import { type TraceDetail, TraceRepository } from "@domain/spans"
+import {
+  evaluateTraceResourceOutliersUseCase,
+  type TraceDetail,
+  TraceRepository,
+  type TraceResourceOutlierReason,
+} from "@domain/spans"
 import { Effect } from "effect"
 import Mustache from "mustache"
 import { z } from "zod"
@@ -27,19 +32,64 @@ export interface RunSystemQueueFlaggerInput {
 
 export interface RunSystemQueueFlaggerResult {
   readonly matched: boolean
+  readonly matchReasons?: readonly TraceResourceOutlierReason[]
 }
 
 export type RunSystemQueueFlaggerError = NotFoundError | RepositoryError | AIError | AICredentialError
 
-type DeterministicSystemQueueSlug = "empty-response" | "output-schema-validation" | "tool-call-errors"
+type DeterministicSystemQueueSlug =
+  | "empty-response"
+  | "output-schema-validation"
+  | "resource-outliers"
+  | "tool-call-errors"
 type LlmSystemQueueSlug = "jailbreaking" | "refusal" | "frustration" | "forgetting" | "laziness" | "nsfw" | "trashing"
 
-type SystemQueueMatcher = (trace: TraceDetail) => boolean
+// Effect-based matcher: loads trace via repository and returns full result with optional match reasons
+type SystemQueueMatcher = (
+  input: RunSystemQueueFlaggerInput,
+) => Effect.Effect<RunSystemQueueFlaggerResult, NotFoundError | RepositoryError, TraceRepository>
 
+// Effect-based matchers that load trace and apply domain logic
 const deterministicQueueMatchers: Record<DeterministicSystemQueueSlug, SystemQueueMatcher> = {
-  "empty-response": matchesEmptyResponseSystemQueue,
-  "output-schema-validation": matchesOutputSchemaValidationSystemQueue,
-  "tool-call-errors": matchesToolCallErrorsSystemQueue,
+  "empty-response": (input) =>
+    Effect.gen(function* () {
+      const traceRepository = yield* TraceRepository
+      const trace = yield* traceRepository.findByTraceId({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        traceId: TraceId(input.traceId),
+      })
+      return { matched: matchesEmptyResponseSystemQueue(trace) }
+    }),
+  "output-schema-validation": (input) =>
+    Effect.gen(function* () {
+      const traceRepository = yield* TraceRepository
+      const trace = yield* traceRepository.findByTraceId({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        traceId: TraceId(input.traceId),
+      })
+      return { matched: matchesOutputSchemaValidationSystemQueue(trace) }
+    }),
+  "resource-outliers": (input) =>
+    Effect.gen(function* () {
+      const evaluation = yield* evaluateTraceResourceOutliersUseCase({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        traceId: TraceId(input.traceId),
+      })
+      return { matched: evaluation.matched, matchReasons: evaluation.reasons }
+    }),
+  "tool-call-errors": (input) =>
+    Effect.gen(function* () {
+      const traceRepository = yield* TraceRepository
+      const trace = yield* traceRepository.findByTraceId({
+        organizationId: OrganizationId(input.organizationId),
+        projectId: ProjectId(input.projectId),
+        traceId: TraceId(input.traceId),
+      })
+      return { matched: matchesToolCallErrorsSystemQueue(trace) }
+    }),
 }
 
 const llmSystemQueueSlugs = [
@@ -244,10 +294,7 @@ export const runSystemQueueFlaggerUseCase = (input: RunSystemQueueFlaggerInput) 
     const deterministicMatcher = getSystemQueueMatcherBySlug(input.queueSlug)
 
     if (deterministicMatcher) {
-      const trace = yield* loadTraceDetail(input)
-      return {
-        matched: deterministicMatcher(trace),
-      }
+      return yield* deterministicMatcher(input)
     }
 
     if (!isLlmQueueSlug(input.queueSlug)) {

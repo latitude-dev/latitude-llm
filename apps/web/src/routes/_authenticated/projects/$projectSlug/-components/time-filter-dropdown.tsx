@@ -22,8 +22,8 @@ const TIME_PRESETS = [
 ] as const
 
 interface TimeFilterDropdownProps {
-  readonly startTimeFrom?: string
-  readonly startTimeTo?: string
+  readonly startTimeFrom?: string | undefined
+  readonly startTimeTo?: string | undefined
   readonly onChange: (from?: string, to?: string) => void
 }
 

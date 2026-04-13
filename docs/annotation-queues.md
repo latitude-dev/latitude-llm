@@ -81,13 +81,14 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
 
 1. **`runFlagger`**:
    - delegates to `runSystemQueueFlaggerUseCase` in `@domain/annotation-queues`
-   - loads the trace detail from the trace repository
+   - loads trace analytics context from the shared trace repository path
    - resolves the queue slug through a domain matcher map
-   - returns `{ matched: boolean }`
+   - returns `{ matched, matchReasons }` where `matchReasons` contains outlier threshold details for resource-outliers matches
 
 2. **`draftAnnotate`** (only when `matched: true`):
    - delegates to `draftSystemQueueAnnotationUseCase` in `@domain/annotation-queues`
-   - generates feedback using LLM with full conversation context
+   - receives `matchReasons` from the flagger result (when available) to provide context to the LLM annotator
+   - generates feedback using LLM with full conversation context and match reasons
    - non-transactional operation that can be retried independently
    - returns `{ queueId, traceId, feedback }`
 
@@ -111,7 +112,13 @@ The Temporal workflow orchestrates queue evaluation through a three-step process
   - `laziness`
   - `nsfw`
   - `trashing`
-  - `resource-outliers`
+
+- **Shared deterministic matcher implemented**:
+  - `resource-outliers`: evaluates duration, TTFT, token usage, and cost against project-scoped percentile and median-x3 baselines using the shared trace cohort evaluator in `@domain/spans`
+
+**Resource outliers: queue `matched` vs traces UI**
+
+The evaluator returns both `reasons` (every rule that fires) and `matched` (whether the trace should be enqueued by the `resource-outliers` system queue). `matched` is true only when at least one of these holds: **latency and cost** both at or above their p95 or p99 baselines, **any** single metric at or above **p99**, or **median×3** for a metric. Standalone single-metric **p95** hits can still appear in `reasons` (for example when browsing traces filtered by a p95 cohort and computing severity for sorting) but do **not** set `matched`, so they do not create queue items on their own.
 
 **Retry Policy**:
 - Initial interval: 1s
@@ -220,8 +227,8 @@ Every project starts with these system-created manual queues:
 
 ### Resource Outliers
 
-- description: the trace has unusually high latency, cost, or usage
-- instructions: use this queue when latency, token usage, or cost materially exceeds project norms. The queue definition and matcher entrypoint already exist, but the concrete outlier implementation is still pending.
+- description: the trace has unusually high latency, TTFT, token usage, or cost
+- instructions: use this queue when latency, time to first token, token usage, or cost materially exceeds project norms. The matcher uses the shared trace cohort evaluator and workflow-owned retry handling when the candidate trace has not materialized yet.
 
 ### Output Schema Validation
 
@@ -251,7 +258,7 @@ Every project starts with these system-created manual queues:
 - whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `system-annotation-queues:fanOut` for that trace
 - `system-annotation-queues:fanOut` lists the cached non-deleted `system = true` queues in that project, applies each queue's `settings.sampling`, and starts one `systemQueueFlaggerWorkflow` per sampled queue
 - queue evaluation is centralized in `runSystemQueueFlaggerUseCase`, which dispatches by `queueSlug` to the domain matcher map
-- the currently implemented deterministic matchers are `tool-call-errors`, `output-schema-validation`, and `empty-response`
+- the currently implemented deterministic matchers are `tool-call-errors`, `output-schema-validation`, `empty-response`, and `resource-outliers`
 - the remaining system queues already have matcher entrypoints, but they currently return `false` until their concrete classifiers are implemented
 - the workflow returns a boolean decision per queue; a trace may match none of the system-created queues, or several of them
 - positive workflow matches trigger `draftAnnotate` (LLM feedback generation) followed by `persistAnnotation` (transactional queue item + draft creation)

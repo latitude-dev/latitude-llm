@@ -1,9 +1,10 @@
 import { BadRequestError, ProjectId, type RepositoryError } from "@domain/shared"
+import type { TraceResourceOutlierReason } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
 import { AnnotationQueueRepository } from "../ports/annotation-queue-repository.ts"
 import { type RunSystemQueueAnnotatorError, runSystemQueueAnnotatorUseCase } from "./run-system-queue-annotator.ts"
-import { type SystemQueueAnnotateInput, systemQueueAnnotateInputSchema } from "./system-queue-annotator-contracts.ts"
+import { systemQueueAnnotateInputSchema } from "./system-queue-annotator-contracts.ts"
 
 const formatValidationError = (error: z.ZodError): string => error.issues.map((issue) => issue.message).join(", ")
 
@@ -23,6 +24,14 @@ export interface DraftSystemQueueAnnotationOutput {
   readonly traceCreatedAt: string
 }
 
+interface DraftSystemQueueAnnotationInput {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly queueSlug: string
+  readonly traceId: string
+  readonly matchReasons?: readonly TraceResourceOutlierReason[]
+}
+
 export type DraftSystemQueueAnnotationError = BadRequestError | RepositoryError | RunSystemQueueAnnotatorError
 
 /**
@@ -33,7 +42,7 @@ export type DraftSystemQueueAnnotationError = BadRequestError | RepositoryError 
  * This use case is idempotent - retrying with the same (queueId, traceId) will
  * regenerate the same feedback (or similar, since LLM output may vary slightly).
  */
-export const draftSystemQueueAnnotationUseCase = (input: SystemQueueAnnotateInput) =>
+export const draftSystemQueueAnnotationUseCase = (input: DraftSystemQueueAnnotationInput) =>
   Effect.gen(function* () {
     const parsedInput = yield* parseOrBadRequest(
       systemQueueAnnotateInputSchema,
@@ -62,6 +71,7 @@ export const draftSystemQueueAnnotationUseCase = (input: SystemQueueAnnotateInpu
       projectId: parsedInput.projectId,
       queueSlug: parsedInput.queueSlug,
       traceId: parsedInput.traceId,
+      ...(input.matchReasons ? { matchReasons: input.matchReasons } : {}),
     })
 
     return {

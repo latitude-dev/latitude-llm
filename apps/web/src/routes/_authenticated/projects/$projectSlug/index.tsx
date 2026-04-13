@@ -1,5 +1,5 @@
 import { type FilterSet, filterSetSchema } from "@domain/shared"
-import { Button, Icon, Input, Tabs, Tooltip } from "@repo/ui"
+import { Button, Icon, type InfiniteTableSorting, Input, type SortDirection, Tabs, Tooltip } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
 import { useHotkeys } from "@tanstack/react-hotkeys"
 import { createFileRoute } from "@tanstack/react-router"
@@ -16,7 +16,7 @@ import {
 import { useCallback, useMemo, useRef, useState } from "react"
 import { HotkeyBadge } from "../../../../components/hotkey-badge.tsx"
 import { useProjectsCollection } from "../../../../domains/projects/projects.collection.ts"
-import { useTracesCount } from "../../../../domains/traces/traces.collection.ts"
+import { useTraceCohortSummary, useTracesCount } from "../../../../domains/traces/traces.collection.ts"
 import { ListingLayout as Layout } from "../../../../layouts/ListingLayout/index.tsx"
 import { useParamState } from "../../../../lib/hooks/useParamState.ts"
 import { type BulkSelection, EMPTY_SELECTION, type SelectionState } from "../../../../lib/hooks/useSelectableRows.ts"
@@ -25,8 +25,11 @@ import { SessionsView } from "./-components/sessions-view.tsx"
 import { TimeFilterDropdown } from "./-components/time-filter-dropdown.tsx"
 import { TraceDetailDrawer } from "./-components/trace-detail-drawer.tsx"
 import { TracesView } from "./-components/traces-view.tsx"
+import { useRouteProject } from "./-route-data.ts"
 import { AddToQueueModal } from "./annotation-queues/-components/add-to-queue-modal.tsx"
 import { AddToDatasetModal } from "./datasets/-components/add-to-dataset-modal.tsx"
+
+const DEFAULT_TRACE_SORTING: InfiniteTableSorting = { column: "startTime", direction: "desc" }
 
 function parseFilters(raw?: string): FilterSet {
   if (!raw) return {}
@@ -88,16 +91,22 @@ export const Route = createFileRoute("/_authenticated/projects/$projectSlug/")({
 
 function ProjectPage() {
   const { projectSlug } = Route.useParams()
+  const routeProject = useRouteProject()
   const { data: project } = useProjectsCollection(
     (projects) => projects.where(({ project }) => eq(project.slug, projectSlug)).findOne(),
     [projectSlug],
   )
+  const currentProject = project ?? routeProject
   const [activeTab, setActiveTab] = useParamState("tab", "traces", {
     validate: (v): v is "traces" | "sessions" => v === "traces" || v === "sessions",
   })
   const [filtersOpen, setFiltersOpen] = useParamState("filtersOpen", false)
   const [activeTraceId, setActiveTraceId] = useParamState("traceId", "")
   const [rawFilters, setRawFilters] = useParamState("filters", "")
+  const [sortBy, setSortBy] = useParamState("sortBy", DEFAULT_TRACE_SORTING.column)
+  const [sortDirection, setSortDirection] = useParamState("sortDirection", DEFAULT_TRACE_SORTING.direction, {
+    validate: (v): v is SortDirection => v === "asc" || v === "desc",
+  })
 
   // Tracks which drawer tab is active so J/K knows when to defer to span navigation
   const [activeDrawerTab, setActiveDrawerTab] = useState<string>("trace")
@@ -109,18 +118,41 @@ function ProjectPage() {
   const hasActiveFilters = Object.keys(filters).length > 0
   const timeFrom = getTimeFilterValue(filters, "gte")
   const timeTo = getTimeFilterValue(filters, "lte")
+  const sorting: InfiniteTableSorting = { column: sortBy, direction: sortDirection }
 
   const [selectionState, setSelectionState] = useState<SelectionState<string>>(EMPTY_SELECTION)
   const [addToDatasetOpen, setAddToDatasetOpen] = useState(false)
   const [addToQueueOpen, setAddToQueueOpen] = useState(false)
 
   const { totalCount: totalTraceCount } = useTracesCount({
-    projectId: project?.id ?? "",
+    projectId: currentProject.id,
     ...(hasActiveFilters ? { filters } : {}),
+  })
+
+  // Cohort baselines use a fixed 2-week window for stability (not affected by user time filters)
+  const twoWeekBaselinesFilter = useMemo((): FilterSet => {
+    const now = new Date()
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+    return {
+      startTime: [
+        { op: "gte", value: twoWeeksAgo.toISOString() },
+        { op: "lte", value: now.toISOString() },
+      ],
+    }
+  }, [])
+
+  const { data: cohortSummary } = useTraceCohortSummary({
+    projectId: currentProject.id,
+    filters: twoWeekBaselinesFilter,
   })
 
   const selectedCount = getSelectedCount(selectionState, totalTraceCount)
   const bulkSelection = getBulkSelection(selectionState)
+
+  const onSortingChange = (next: InfiniteTableSorting) => {
+    setSortBy(next.column)
+    setSortDirection(next.direction)
+  }
 
   const onFiltersChange = (next: FilterSet) => {
     setFiltersOpen(true)
@@ -189,11 +221,14 @@ function ProjectPage() {
   ])
 
   const sharedViewProps = {
-    projectId: project?.id ?? "",
+    projectId: currentProject.id,
     filters,
     filtersOpen,
     activeTraceId: activeTraceId || undefined,
     activeDrawerTab,
+    baselines: cohortSummary?.baselines,
+    sorting,
+    onSortingChange,
     selectionState,
     onSelectionChange: setSelectionState,
     totalTraceCount,
@@ -306,7 +341,7 @@ function ProjectPage() {
       )}
 
       <div className="px-6">
-        <TraceAggregationsPanel projectId={project?.id ?? ""} filters={filters} onTimeRangeSelect={onTimeRangeSelect} />
+        <TraceAggregationsPanel projectId={currentProject.id} filters={filters} onTimeRangeSelect={onTimeRangeSelect} />
       </div>
 
       {activeTab === "traces" ? (
@@ -320,7 +355,10 @@ function ProjectPage() {
           <TraceDetailDrawer
             key={activeTraceId}
             traceId={activeTraceId}
-            projectId={project?.id ?? ""}
+            projectId={currentProject.id}
+            baselines={cohortSummary?.baselines}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
             onClose={() => setActiveTraceId("")}
             onNextTrace={onNextTrace}
             onPrevTrace={onPrevTrace}
@@ -336,7 +374,7 @@ function ProjectPage() {
           <AddToDatasetModal
             open={addToDatasetOpen}
             onOpenChange={setAddToDatasetOpen}
-            projectId={project?.id ?? ""}
+            projectId={currentProject.id}
             selection={bulkSelection}
             selectedCount={selectedCount}
             onSuccess={clearSelections}
@@ -344,7 +382,7 @@ function ProjectPage() {
           <AddToQueueModal
             open={addToQueueOpen}
             onOpenChange={setAddToQueueOpen}
-            projectId={project?.id ?? ""}
+            projectId={currentProject.id}
             projectSlug={projectSlug}
             selection={bulkSelection}
             selectedCount={selectedCount}

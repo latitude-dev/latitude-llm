@@ -180,18 +180,35 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(calls.generate[0].system).not.toContain("Jailbreaking")
   })
 
-  it("returns false for unsupported queue slugs without calling AI or loading the trace", async () => {
-    let traceLoads = 0
+  it("matches resource-outliers using cohort-based evaluation without calling AI", async () => {
+    // Create a trace with high duration/cost that will trigger p99 outlier detection
+    const highDurationTrace = {
+      ...makeTraceDetail([
+        { role: "user", parts: [{ type: "text", content: "Hello" }] },
+        { role: "assistant", parts: [{ type: "text", content: "Hi there!" }] },
+      ]),
+      durationNs: 10_000_000_000, // 10 seconds - high
+      costTotalMicrocents: 500_000, // High cost
+      tokensTotal: 5000,
+      timeToFirstTokenNs: 1_000_000_000, // 1 second TTFT
+    }
 
     const { repository } = createFakeTraceRepository({
-      findByTraceId: () => {
-        traceLoads += 1
-        return Effect.succeed(makeTraceDetail([]))
-      },
+      findByTraceId: () => Effect.succeed(highDurationTrace),
+      getCohortBaselineByProjectId: () =>
+        Effect.succeed({
+          traceCount: 1000,
+          metrics: {
+            durationNs: { sampleCount: 1000, p50: 1_000_000, p90: 5_000_000, p95: 8_000_000, p99: 9_000_000 },
+            costTotalMicrocents: { sampleCount: 1000, p50: 1000, p90: 5000, p95: 8000, p99: 9000 },
+            tokensTotal: { sampleCount: 1000, p50: 100, p90: 500, p95: 800, p99: 900 },
+            timeToFirstTokenNs: { sampleCount: 1000, p50: 100_000, p90: 500_000, p95: 800_000, p99: 900_000 },
+          },
+        }),
     })
 
     const { calls, layer: aiLayer } = createFakeAI({
-      generate: () => Effect.die("AI should not be called for unknown queue slugs"),
+      generate: () => Effect.die("AI should not be called for resource-outliers"),
     })
 
     const result = await Effect.runPromise(
@@ -200,8 +217,54 @@ describe("runSystemQueueFlaggerUseCase", () => {
       ),
     )
 
-    expect(result).toEqual({ matched: false })
-    expect(traceLoads).toBe(0)
+    // Both duration (10s > 9ms p99) and cost (500k > 9k p99) are above p99, so matched=true
+    expect(result.matched).toBe(true)
+    expect(result.matchReasons).toBeDefined()
+    expect(result.matchReasons?.length).toBeGreaterThan(0)
+    // Should include latency-and-cost-p99-plus and individual p99 reasons
+    expect(result.matchReasons?.some((r) => r.key === "latency-and-cost-p99-plus")).toBe(true)
+    expect(calls.generate).toHaveLength(0)
+  })
+
+  it("returns matched=false for resource-outliers when no thresholds are breached", async () => {
+    const normalTrace = {
+      ...makeTraceDetail([
+        { role: "user", parts: [{ type: "text", content: "Hello" }] },
+        { role: "assistant", parts: [{ type: "text", content: "Hi there!" }] },
+      ]),
+      durationNs: 1_000_000, // 1ms - normal
+      costTotalMicrocents: 100, // Normal cost
+      tokensTotal: 100,
+      timeToFirstTokenNs: 50_000, // Normal TTFT
+    }
+
+    const { repository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(normalTrace),
+      getCohortBaselineByProjectId: () =>
+        Effect.succeed({
+          traceCount: 1000,
+          metrics: {
+            durationNs: { sampleCount: 1000, p50: 500_000, p90: 2_000_000, p95: 5_000_000, p99: 8_000_000 },
+            costTotalMicrocents: { sampleCount: 1000, p50: 50, p90: 200, p95: 500, p99: 800 },
+            tokensTotal: { sampleCount: 1000, p50: 50, p90: 200, p95: 500, p99: 800 },
+            timeToFirstTokenNs: { sampleCount: 1000, p50: 30_000, p90: 100_000, p95: 500_000, p99: 700_000 },
+          },
+        }),
+    })
+
+    const { calls, layer: aiLayer } = createFakeAI({
+      generate: () => Effect.die("AI should not be called for resource-outliers"),
+    })
+
+    const result = await Effect.runPromise(
+      runSystemQueueFlaggerUseCase({ ...INPUT, queueSlug: "resource-outliers" }).pipe(
+        Effect.provide(Layer.merge(Layer.succeed(TraceRepository, repository), aiLayer)),
+      ),
+    )
+
+    // All metrics are below p95 thresholds, so no match
+    expect(result.matched).toBe(false)
+    expect(result.matchReasons).toEqual([])
     expect(calls.generate).toHaveLength(0)
   })
 

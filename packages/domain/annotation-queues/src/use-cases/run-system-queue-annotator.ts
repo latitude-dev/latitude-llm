@@ -1,5 +1,6 @@
 import { AI, type AICredentialError, type AIError, formatGenAIMessage } from "@domain/ai"
 import { OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import type { TraceResourceOutlierReason } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import {
@@ -16,6 +17,7 @@ export interface RunSystemQueueAnnotatorInput {
   readonly projectId: string
   readonly queueSlug: string
   readonly traceId: string
+  readonly matchReasons?: readonly TraceResourceOutlierReason[]
 }
 
 export interface RunSystemQueueAnnotatorResult {
@@ -72,6 +74,35 @@ const formatConversationForAnnotator = (messages: readonly { role: string; parts
   return blocks.join("\n\n---\n\n")
 }
 
+const formatMatchReasonsForAnnotator = (matchReasons: readonly TraceResourceOutlierReason[] | undefined): string => {
+  if (!matchReasons || matchReasons.length === 0) {
+    return "<no deterministic match reasons available>"
+  }
+
+  return matchReasons
+    .map((reason, index) => {
+      const values = Object.entries(reason.values)
+        .map(([metric, value]) => `${metric}=${value}`)
+        .join(", ")
+      const thresholds = Object.entries(reason.thresholds)
+        .map(([metric, value]) => `${metric}=${value}`)
+        .join(", ")
+      const medians = Object.entries(reason.medians)
+        .map(([metric, value]) => `${metric}=${value}`)
+        .join(", ")
+
+      return [
+        `[reason ${index}] key=${reason.key} metric=${reason.metric} mode=${reason.thresholdMode}`,
+        values ? `values: ${values}` : undefined,
+        thresholds ? `thresholds: ${thresholds}` : undefined,
+        medians ? `medians: ${medians}` : undefined,
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join("\n")
+    })
+    .join("\n\n")
+}
+
 const loadTraceDetail = (input: RunSystemQueueAnnotatorInput) =>
   Effect.gen(function* () {
     const traceRepository = yield* TraceRepository
@@ -96,7 +127,9 @@ export const runSystemQueueAnnotatorUseCase = (input: RunSystemQueueAnnotatorInp
         ? formatConversationForAnnotator(trace.allMessages)
         : "<no conversation messages available>"
 
-    const prompt = `Full conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
+    const matchReasonText = formatMatchReasonsForAnnotator(input.matchReasons)
+
+    const prompt = `Deterministic match context:\n\n${matchReasonText}\n\nFull conversation context:\n\n${conversationText}\n\nProvide your feedback analysis per the schema.`
 
     const result = yield* ai.generate({
       provider: SYSTEM_QUEUE_ANNOTATOR_PROVIDER,

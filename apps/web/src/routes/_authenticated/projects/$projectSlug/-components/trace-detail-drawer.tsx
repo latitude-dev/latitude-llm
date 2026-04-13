@@ -1,3 +1,5 @@
+import type { FilterSet } from "@domain/shared"
+import type { TraceCohortSummary } from "@domain/spans"
 import {
   Button,
   CopyableText,
@@ -61,6 +63,9 @@ export function TraceDetailDrawer({
   traceId,
   trace,
   projectId,
+  baselines,
+  filters,
+  onFiltersChange,
   onClose,
   onNextTrace,
   onPrevTrace,
@@ -71,6 +76,9 @@ export function TraceDetailDrawer({
   readonly traceId: string
   readonly trace?: TraceRecord | undefined
   readonly projectId: string
+  readonly baselines?: TraceCohortSummary["baselines"] | undefined
+  readonly filters?: FilterSet | undefined
+  readonly onFiltersChange?: (filters: FilterSet) => void
   readonly onClose: () => void
   readonly onNextTrace?: () => void
   readonly onPrevTrace?: () => void
@@ -246,6 +254,9 @@ export function TraceDetailDrawer({
             traceDetail={traceDetail}
             isRecordLoading={isRecordLoading}
             isDetailLoading={isDetailLoading}
+            baselines={baselines}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
           />
         )}
       </div>
