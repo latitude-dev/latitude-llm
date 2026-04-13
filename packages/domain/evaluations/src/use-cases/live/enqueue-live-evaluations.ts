@@ -108,13 +108,17 @@ const buildExecutePublication = (input: {
   }
 
   if (input.evaluation.trigger.turn === "last") {
+    if (debounceMs === undefined) {
+      throw new Error("`turn = last` requires `debounce > 0` before enqueue publication")
+    }
+
     return {
       organizationId: input.organizationId,
       projectId: input.projectId,
       evaluationId: input.evaluation.id,
       traceId: input.traceId,
       dedupeKey: scopeDedupeKey,
-      ...(debounceMs !== undefined ? { debounceMs } : {}),
+      debounceMs,
     }
   }
 
