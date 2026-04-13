@@ -1,12 +1,7 @@
-import { LatitudeSpanProcessor } from "@latitude-data/telemetry"
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node"
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http"
 import { NodeSDK } from "@opentelemetry/sdk-node"
 import { BatchSpanProcessor, type SpanProcessor } from "@opentelemetry/sdk-trace-base"
-import { parseEnvOptional } from "@platform/env"
-import { Effect } from "effect"
-
-import { resolveLatitudeTelemetryIngestBaseUrl } from "./config.ts"
 import type { TracesConfig } from "./types.ts"
 
 const appendResourceAttribute = (key: string, value: string) => {
@@ -32,9 +27,9 @@ export const startTracing = async ({
   appendResourceAttribute("service.name", serviceName)
   appendResourceAttribute("deployment.environment", environment)
 
-  const apiKey = Effect.runSync(parseEnvOptional("LAT_LATITUDE_TELEMETRY_API_KEY", "string"))
-  const projectSlug = Effect.runSync(parseEnvOptional("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string"))
-  const latitudeIngestBase = resolveLatitudeTelemetryIngestBaseUrl(environment).replace(/\/$/, "")
+  // const apiKey = Effect.runSync(parseEnvOptional("LAT_LATITUDE_TELEMETRY_API_KEY", "string"))
+  // const projectSlug = Effect.runSync(parseEnvOptional("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string"))
+  // const latitudeIngestBase = resolveLatitudeTelemetryIngestBaseUrl(environment).replace(/\/$/, "")
   const spanProcessors: SpanProcessor[] = [
     new BatchSpanProcessor(
       new OTLPTraceExporter({
@@ -44,22 +39,23 @@ export const startTracing = async ({
     ),
   ]
 
-  if (apiKey !== undefined && projectSlug !== undefined) {
-    spanProcessors.push(
-      new LatitudeSpanProcessor(apiKey, projectSlug, {
-        serviceName,
-        exporter: new OTLPTraceExporter({
-          url: `${latitudeIngestBase}/v1/traces`,
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "X-Latitude-Project": projectSlug,
-          },
-          timeoutMillis: 30_000,
-        }),
-      }),
-    )
-  }
+  // TODO: enable when we want to start tracing Latitude with Latitude
+  // if (apiKey !== undefined && projectSlug !== undefined) {
+  //   spanProcessors.push(
+  //     new LatitudeSpanProcessor(apiKey, projectSlug, {
+  //       serviceName,
+  //       exporter: new OTLPTraceExporter({
+  //         url: `${latitudeIngestBase}/v1/traces`,
+  //         headers: {
+  //           Authorization: `Bearer ${apiKey}`,
+  //           "Content-Type": "application/json",
+  //           "X-Latitude-Project": projectSlug,
+  //         },
+  //         timeoutMillis: 30_000,
+  //       }),
+  //     }),
+  //   )
+  // }
 
   const sdk = new NodeSDK({
     spanProcessors,
