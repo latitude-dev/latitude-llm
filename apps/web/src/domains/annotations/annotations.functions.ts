@@ -1,4 +1,5 @@
-import { deleteAnnotationUseCase, listTraceAnnotationsUseCase, writeAnnotationUseCase } from "@domain/annotations"
+import { deleteAnnotationUseCase, listTraceAnnotationsUseCase } from "@domain/annotations"
+import { writeDraftAnnotationUseCase } from "@domain/annotations/src/use-cases/write-draft-annotation.ts"
 import type { AnnotationScore, ScoreListPage } from "@domain/scores"
 import { annotationAnchorSchema, scoreDraftModeSchema } from "@domain/scores"
 import { ProjectId, ScoreId } from "@domain/shared"
@@ -79,7 +80,8 @@ export const createAnnotation = createServerFn({ method: "POST" })
     const repositoriesLayer = Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive, QueuePublisherLive(publisher))
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writeDraftAnnotationUseCase({
+        organizationId: organizationId,
         projectId: ProjectId(data.projectId),
         sourceId: "UI",
         traceId: data.traceId,
@@ -125,7 +127,8 @@ export const updateAnnotation = createServerFn({ method: "POST" })
     const repositoriesLayer = Layer.mergeAll(ScoreRepositoryLive, OutboxEventWriterLive, QueuePublisherLive(publisher))
 
     const score = await Effect.runPromise(
-      writeAnnotationUseCase({
+      writeDraftAnnotationUseCase({
+        organizationId: organizationId,
         id: ScoreId(data.scoreId),
         projectId: ProjectId(data.projectId),
         sourceId: "UI",

@@ -19,7 +19,7 @@ import { createFakeSpanRepository, createFakeTraceRepository, stubListSpan } fro
 import { Effect, Layer } from "effect"
 import type { GenAIMessage } from "rosetta-ai"
 import { describe, expect, it } from "vitest"
-import { writeDraftAnnotation } from "./write-draft-annotation.ts"
+import { writeDraftAnnotationUseCase } from "./write-draft-annotation.ts"
 
 const cuid = "a".repeat(24)
 const projectCuid = "b".repeat(24)
@@ -134,7 +134,7 @@ describe("persistDraftAnnotation", () => {
     const { store, events, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -172,7 +172,7 @@ describe("persistDraftAnnotation", () => {
     const { layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -195,7 +195,7 @@ describe("persistDraftAnnotation", () => {
     const providedSpanId = SpanId("p".repeat(16))
 
     const score = await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -222,7 +222,7 @@ describe("persistDraftAnnotation", () => {
     const { layer } = createTestLayers({ traceDetail: makeTraceDetail(allMessages) })
 
     const score = await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -248,7 +248,7 @@ describe("persistDraftAnnotation", () => {
     const { events, layer } = createTestLayers()
 
     await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -275,7 +275,7 @@ describe("persistDraftAnnotation", () => {
     const { store, events, layer } = createTestLayers()
 
     const first = await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,
@@ -287,7 +287,7 @@ describe("persistDraftAnnotation", () => {
     )
 
     const updated = await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         id: first.id,
         projectId: projectCuid,
         sourceId: queueId,
@@ -310,7 +310,7 @@ describe("persistDraftAnnotation", () => {
     const { store, events, layer } = createTestLayers()
 
     const score = await Effect.runPromise(
-      writeDraftAnnotation({
+      writeDraftAnnotationUseCase({
         projectId: projectCuid,
         sourceId: queueId,
         traceId: traceIdRaw,

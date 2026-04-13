@@ -23,11 +23,6 @@ const annotationDraftWriteCoreSchema = z.object({
   feedback: z.string().min(1),
 })
 
-/** HTTP / UI input: optional structured anchor. */
-export const annotationDraftWriteInputSchema = annotationDraftWriteCoreSchema.extend({
-  anchor: annotationAnchorSchema.optional(),
-})
-
 const persistDraftAnnotationAnchorFlatSchema = z.object({
   messageIndex: z.number().int().min(0).optional(),
   partIndex: z.number().int().min(0).optional(),

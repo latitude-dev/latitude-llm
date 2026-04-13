@@ -14,5 +14,5 @@ export type PersistDraftAnnotationError =
   | ScoreDraftUpdateConflictError
 
 /** Thin primitive: persist or update a **draft** annotation score (`draftedAt` set). */
-export const writeDraftAnnotation = (input: WriteDraftAnnotationInput & { organizationId: string }) =>
+export const writeDraftAnnotationUseCase = (input: WriteDraftAnnotationInput & { organizationId: string }) =>
   writeAnnotation(input, new Date())
