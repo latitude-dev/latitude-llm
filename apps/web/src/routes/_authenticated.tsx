@@ -1,5 +1,5 @@
 import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
-import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, redirect, useRouter, useRouterState } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, ShieldAlertIcon, Sun } from "lucide-react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
 import { getSession } from "../domains/sessions/session.functions.ts"
@@ -170,9 +170,11 @@ function AuthenticatedLayout() {
   const organizationId = Route.useLoaderData({ select: (data) => data.organizationId })
   const { data: allOrgs } = useOrganizationsCollection()
   const org = allOrgs?.find((o) => o.id === organizationId)
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const isProjectOnboarding = /\/projects\/[^/]+\/onboarding\/?$/.test(pathname.replace(/\/$/, "") || "/")
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden">
       <PostHogIdentity
         key={user.id}
         userId={user.id}
@@ -181,8 +183,14 @@ function AuthenticatedLayout() {
         organizationId={organizationId}
         organizationName={org?.name}
       />
-      <NavHeader />
-      <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
+      {isProjectOnboarding ? null : <NavHeader />}
+      <main
+        className={
+          isProjectOnboarding
+            ? "relative flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+            : "relative h-full min-h-0 w-full grow overflow-y-auto"
+        }
+      >
         <Outlet />
       </main>
     </div>

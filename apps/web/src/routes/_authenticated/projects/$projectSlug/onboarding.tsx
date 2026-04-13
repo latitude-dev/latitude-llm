@@ -11,12 +11,14 @@ function ProjectOnboardingPage() {
   const navigate = Route.useNavigate()
 
   return (
-    <OnboardingFlow
-      projectId={project.id}
-      onOpenProjectTraces={async (targetProjectId) => {
-        if (targetProjectId !== project.id) return
-        await navigate({ to: "/projects/$projectSlug", params: { projectSlug: project.slug } })
-      }}
-    />
+    <div className="flex min-h-0 flex-1 flex-col">
+      <OnboardingFlow
+        projectId={project.id}
+        onOpenProjectTraces={async (targetProjectId) => {
+          if (targetProjectId !== project.id) return
+          await navigate({ to: "/projects/$projectSlug", params: { projectSlug: project.slug } })
+        }}
+      />
+    </div>
   )
 }
