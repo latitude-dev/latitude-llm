@@ -128,31 +128,10 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to live-traces:end with dedupeKey and debounceMs", async () => {
+  it("routes SpanIngested to 3 targets with dedupeKey and debounceMs", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
-      projectId: "proj-1",
-      traceId: "trace-abc",
-    })
-
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
-
-    expect(published).toHaveLength(1)
-    expect(published[0]?.queue).toBe("live-traces")
-    expect(published[0]?.task).toBe("end")
-    expect(published[0]?.payload).toEqual({
-      projectId: "proj-1",
-      traceId: "trace-abc",
-    })
-    expect(published[0]?.options?.dedupeKey).toBe("traces:live:end:trace-abc")
-    expect(published[0]?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
-  })
-
-  it("routes TraceEnded to 3 targets", async () => {
-    const { consumer, published } = setupDispatcher()
-
-    const envelope = makeEnvelope("TraceEnded", {
       organizationId: "org-1",
       projectId: "proj-1",
       traceId: "trace-abc",
@@ -160,12 +139,75 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toHaveLength(3)
-    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
-      "live-annotation-queues:curate",
-      "live-evaluations:enqueue",
-      "system-annotation-queues:fanOut",
+    expect(published).toEqual([
+      {
+        queue: "live-evaluations",
+        task: "enqueue",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          traceId: "trace-abc",
+        },
+        options: {
+          dedupeKey: "evaluations:live:enqueue:trace-abc",
+          debounceMs: TRACE_END_DEBOUNCE_MS,
+        },
+      },
+      {
+        queue: "live-annotation-queues",
+        task: "curate",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          traceId: "trace-abc",
+        },
+        options: {
+          dedupeKey: "annotation-queues:live:curate:trace-abc",
+          debounceMs: TRACE_END_DEBOUNCE_MS,
+        },
+      },
+      {
+        queue: "system-annotation-queues",
+        task: "fanOut",
+        payload: {
+          organizationId: "org-1",
+          projectId: "proj-1",
+          traceId: "trace-abc",
+        },
+        options: {
+          dedupeKey: "annotation-queues:system:fan-out:trace-abc",
+          debounceMs: TRACE_END_DEBOUNCE_MS,
+        },
+      },
     ])
+  })
+
+  it("rejects legacy TraceEnded events", async () => {
+    const { consumer } = setupDispatcher()
+
+    const envelope = makeEnvelope("TraceEnded", {
+      organizationId: "org-1",
+      projectId: "proj-1",
+      traceId: "trace-abc",
+    })
+
+    const result = await Effect.runPromise(
+      consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope)).pipe(
+        Effect.match({
+          onFailure: (error) => ({
+            ok: false as const,
+            error: error as { _tag: string; name: string },
+          }),
+          onSuccess: () => ({ ok: true as const, error: null }),
+        }),
+      ),
+    )
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error._tag).toBe("UnhandledEventError")
+      expect(result.error.name).toBe("TraceEnded")
+    }
   })
 
   it("routes ProjectCreated to projects:provision", async () => {
