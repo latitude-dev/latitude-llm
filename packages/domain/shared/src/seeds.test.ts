@@ -65,7 +65,8 @@ describe("seed timeline helpers", () => {
     vi.setSystemTime(new Date("2026-04-10T11:23:45.000Z"))
     vi.resetModules()
 
-    const { SEED_ACCESS_ISSUE_ID, SEED_COMBINATION_ISSUE_ID, SEED_INSTALLATION_ISSUE_ID } = await import("./seeds.ts")
+    const { SEED_ACCESS_ISSUE_ID, SEED_COMBINATION_ISSUE_ID, SEED_INSTALLATION_ISSUE_ID, SEED_RETURNS_ISSUE_ID } =
+      await import("./seeds.ts")
     const { SEED_ADDITIONAL_ISSUE_OCCURRENCES, SEED_ISSUE_FIXTURES_BY_ID } = await import("./seed-content/issues.ts")
 
     const accessCounts = countIssueOccurrencesByDay(SEED_ACCESS_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
@@ -73,22 +74,50 @@ describe("seed timeline helpers", () => {
     expect([...accessCounts.values()].some((count) => count >= 20)).toBe(true)
     expect([...accessCounts.values()].some((count) => count > 0 && count < 20)).toBe(true)
 
-    const installationCounts = countIssueOccurrencesByDay(SEED_INSTALLATION_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
-    expect(installationCounts.get(0)).toBeGreaterThanOrEqual(20)
-    expect([...installationCounts.values()].some((count) => count >= 20)).toBe(true)
-    expect([...installationCounts.values()].some((count) => count > 0 && count < 20)).toBe(true)
-
     const combinationIssue = SEED_ISSUE_FIXTURES_BY_ID.get(SEED_COMBINATION_ISSUE_ID)
     expect(combinationIssue?.resolvedDaysAgo).not.toBeNull()
 
-    const resolvedDaysAgo = combinationIssue?.resolvedDaysAgo ?? 0
+    const combinationResolvedDaysAgo = combinationIssue?.resolvedDaysAgo ?? 0
     const combinationCounts = countIssueOccurrencesByDay(SEED_COMBINATION_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
 
     expect(
-      [...combinationCounts.keys()].some((daysAgo) => daysAgo > resolvedDaysAgo && daysAgo <= resolvedDaysAgo + 14),
+      [...combinationCounts.keys()].some(
+        (daysAgo) => daysAgo > combinationResolvedDaysAgo && daysAgo <= combinationResolvedDaysAgo + 14,
+      ),
     ).toBe(true)
-    expect([...combinationCounts.keys()].some((daysAgo) => daysAgo < resolvedDaysAgo)).toBe(true)
+    expect([...combinationCounts.keys()].some((daysAgo) => daysAgo < combinationResolvedDaysAgo)).toBe(true)
+    expect(combinationCounts.get(0)).toBeGreaterThanOrEqual(20)
     expect([...combinationCounts.values()].some((count) => count >= 20)).toBe(true)
     expect([...combinationCounts.values()].some((count) => count > 0 && count < 20)).toBe(true)
+
+    const returnsIssue = SEED_ISSUE_FIXTURES_BY_ID.get(SEED_RETURNS_ISSUE_ID)
+    expect(returnsIssue?.resolvedDaysAgo).not.toBeNull()
+
+    const returnsResolvedDaysAgo = returnsIssue?.resolvedDaysAgo ?? 0
+    const returnsCounts = countIssueOccurrencesByDay(SEED_RETURNS_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
+
+    expect(
+      [...returnsCounts.keys()].some(
+        (daysAgo) => daysAgo > returnsResolvedDaysAgo && daysAgo <= returnsResolvedDaysAgo + 14,
+      ),
+    ).toBe(true)
+    expect([...returnsCounts.keys()].some((daysAgo) => daysAgo < returnsResolvedDaysAgo)).toBe(true)
+    expect(returnsCounts.get(0) ?? 0).toBeLessThan(20)
+    expect(returnsCounts.has(1)).toBe(false)
+
+    const installationIssue = SEED_ISSUE_FIXTURES_BY_ID.get(SEED_INSTALLATION_ISSUE_ID)
+    expect(installationIssue?.resolvedDaysAgo).not.toBeNull()
+
+    const installationResolvedDaysAgo = installationIssue?.resolvedDaysAgo ?? 0
+    const installationCounts = countIssueOccurrencesByDay(SEED_INSTALLATION_ISSUE_ID, SEED_ADDITIONAL_ISSUE_OCCURRENCES)
+
+    expect(
+      [...installationCounts.keys()].some(
+        (daysAgo) => daysAgo > installationResolvedDaysAgo && daysAgo <= installationResolvedDaysAgo + 14,
+      ),
+    ).toBe(true)
+    expect([...installationCounts.keys()].some((daysAgo) => daysAgo < installationResolvedDaysAgo)).toBe(true)
+    expect(installationCounts.get(0) ?? 0).toBeLessThan(20)
+    expect(installationCounts.has(1)).toBe(false)
   })
 })
