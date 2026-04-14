@@ -1162,3 +1162,24 @@ OPENAI_API_KEY=sk-...`,
 # Use your existing OpenTelemetry TracerProvider and add LatitudeSpanProcessor, or
 # configure an OTLP exporter pointed at the Latitude ingest URL.`
 }
+
+/** Official docs for coding agents implementing Latitude telemetry. */
+const LATITUDE_DOCS_TELEMETRY_QUICK_START =
+  "https://docs.latitude.so/guides/getting-started/quick-start-dev"
+const LATITUDE_DOCS_TELEMETRY_INTRO =
+  "https://docs.latitude.so/guides/getting-started/introduction"
+
+/** Public Agent Skill repo for wiring Latitude telemetry via `npx skills add`. */
+const LATITUDE_TELEMETRY_SKILL_REPO = "latitude-dev/telemetry-skill"
+
+/**
+ * Short paste for coding agents: install the public telemetry skill, then wire the repo using it.
+ */
+export function getCodingAgentTelemetryPrompt(): string {
+  return [
+    `npx skills add ${LATITUDE_TELEMETRY_SKILL_REPO}`,
+    "Set up Latitude telemetry in this project using that skill.",
+    `Docs: ${LATITUDE_DOCS_TELEMETRY_INTRO}`,
+    `Quick start: ${LATITUDE_DOCS_TELEMETRY_QUICK_START}`,
+  ].join("\n")
+}
