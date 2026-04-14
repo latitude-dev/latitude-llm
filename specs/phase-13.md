@@ -200,7 +200,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 
 **Intent**: execute one live evaluation and persist one canonical score.
 
-**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result, hosted-execution, canonical score-persistence, direct issue assignment for failed non-errored live monitor results, errored-result persistence semantics, the worker `execute` wrapper, structured execute logging, and stable AI telemetry, while broader coverage is still pending.
+**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result, hosted-execution, canonical score-persistence, direct issue assignment for failed non-errored live monitor results, errored-result persistence semantics, the worker `execute` wrapper, structured execute logging, stable AI telemetry, and broader domain/worker coverage, while upstream activation is still pending in PR 4.
 
 **Responsibilities**:
 
@@ -256,7 +256,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 - [x] **P13-PR3-1**: Replace the `execute` stub in `apps/workers/src/workers/live-evaluations.ts` by wiring a thin worker wrapper around the new execute-and-persist use case
 - [x] **P13-PR3-9**: Add structured execute-path logging for evaluation id, trace id, session id when present, result kind, score id, issue assignment path, tokens, cost, and duration
 - [x] **P13-PR3-10**: Attach AI telemetry with a stable span name such as `evaluation.live.execute` and attributes including `evaluationId`, `projectId`, and `traceId`
-- [ ] **P13-PR3-11**: Add domain- and worker-level tests for duplicate skips, passed/failed/errored monitor results, direct issue assignment, and analytics save timing
+- [x] **P13-PR3-11**: Add domain- and worker-level tests for duplicate skips, passed/failed/errored monitor results, direct issue assignment, and analytics save timing
 
 **Exit gate**:
 

@@ -217,6 +217,70 @@ function createUseCaseLayer(input: {
   )
 }
 
+function createTrackedScoreWriteFixture() {
+  const operations: string[] = []
+  const outboxEvents: unknown[] = []
+
+  const scoreFixture = createFakeScoreRepository()
+  const { scores: persistedScores } = scoreFixture
+  const scoreRepository = {
+    ...scoreFixture.repository,
+    save: (score: Parameters<typeof scoreFixture.repository.save>[0]) =>
+      Effect.sync(() => {
+        operations.push("score-save")
+        persistedScores.set(score.id, score)
+      }),
+  }
+
+  const analyticsFixture = createFakeScoreAnalyticsRepository()
+  const { inserted } = analyticsFixture
+  const scoreAnalyticsRepository = {
+    ...analyticsFixture.repository,
+    existsById: (id: Parameters<typeof analyticsFixture.repository.existsById>[0]) =>
+      Effect.sync(() => {
+        operations.push("analytics-exists")
+        return inserted.includes(id)
+      }),
+    insert: (score: Parameters<typeof analyticsFixture.repository.insert>[0]) =>
+      Effect.sync(() => {
+        operations.push("analytics-insert")
+        inserted.push(score.id)
+      }),
+  }
+
+  const scoreWriteLayer = createScoreWriteLayer({
+    scoreRepository,
+    scoreAnalyticsRepository,
+    outboxEventWriter: {
+      write: (event) =>
+        Effect.sync(() => {
+          operations.push("outbox-write")
+          outboxEvents.push(event)
+        }),
+    },
+  })
+
+  return {
+    operations,
+    persistedScores,
+    inserted,
+    outboxEvents,
+    scoreWriteLayer,
+  }
+}
+
+function expectImmutableAnalyticsSyncOrder(operations: readonly string[]) {
+  const scoreSaveIndex = operations.indexOf("score-save")
+  const outboxWriteIndex = operations.indexOf("outbox-write")
+  const analyticsExistsIndex = operations.indexOf("analytics-exists")
+  const analyticsInsertIndex = operations.indexOf("analytics-insert")
+
+  expect(scoreSaveIndex).toBeGreaterThanOrEqual(0)
+  expect(outboxWriteIndex).toBeGreaterThan(scoreSaveIndex)
+  expect(analyticsExistsIndex).toBeGreaterThan(outboxWriteIndex)
+  expect(analyticsInsertIndex).toBeGreaterThan(analyticsExistsIndex)
+}
+
 describe("runLiveEvaluationUseCase", () => {
   it("skips when the evaluation no longer exists", async () => {
     let traceLoadCalls = 0
@@ -400,6 +464,7 @@ describe("runLiveEvaluationUseCase", () => {
   it("skips when a canonical result already exists for the evaluation and trace", async () => {
     let traceLoadCalls = 0
     let duplicateCheckCalls = 0
+    let issueLoadCalls = 0
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => {
         traceLoadCalls += 1
@@ -408,13 +473,51 @@ describe("runLiveEvaluationUseCase", () => {
     })
     const evaluation = makeEvaluation()
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
-    const { repository: scoreRepository } = createFakeScoreRepository({
+    const issueRepository = createIssueRepository(() => {
+      issueLoadCalls += 1
+      return Effect.die("Issue should not be loaded when a canonical result already exists")
+    })
+    const operations: string[] = []
+    const duplicateFixture = createFakeScoreRepository({
       existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) => {
         duplicateCheckCalls += 1
         expect(projectId).toEqual(ProjectId(INPUT.projectId))
         expect(evaluationId).toBe(evaluation.id)
         expect(traceId).toEqual(TraceId(INPUT.traceId))
         return Effect.succeed(true)
+      },
+    })
+    const scoreRepository = {
+      ...duplicateFixture.repository,
+      save: (score: Parameters<typeof duplicateFixture.repository.save>[0]) =>
+        Effect.sync(() => {
+          operations.push("score-save")
+          duplicateFixture.scores.set(score.id, score)
+        }),
+    }
+    const analyticsFixture = createFakeScoreAnalyticsRepository()
+    const scoreAnalyticsRepository = {
+      ...analyticsFixture.repository,
+      existsById: (id: Parameters<typeof analyticsFixture.repository.existsById>[0]) =>
+        Effect.sync(() => {
+          operations.push("analytics-exists")
+          return analyticsFixture.inserted.includes(id)
+        }),
+      insert: (score: Parameters<typeof analyticsFixture.repository.insert>[0]) =>
+        Effect.sync(() => {
+          operations.push("analytics-insert")
+          analyticsFixture.inserted.push(score.id)
+        }),
+    }
+    const { calls, layer: aiLayer } = createFakeAI()
+    const scoreWriteLayer = createScoreWriteLayer({
+      scoreRepository,
+      scoreAnalyticsRepository,
+      outboxEventWriter: {
+        write: () =>
+          Effect.sync(() => {
+            operations.push("outbox-write")
+          }),
       },
     })
 
@@ -424,7 +527,9 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
-            scoreRepository,
+            scoreWriteLayer,
+            issueRepository,
+            aiLayer,
           }),
         ),
       ),
@@ -438,6 +543,9 @@ describe("runLiveEvaluationUseCase", () => {
     })
     expect(duplicateCheckCalls).toBe(1)
     expect(traceLoadCalls).toBe(0)
+    expect(issueLoadCalls).toBe(0)
+    expect(calls.generate).toHaveLength(0)
+    expect(operations).toEqual([])
   })
 
   it("skips when the trace no longer exists", async () => {
@@ -511,9 +619,7 @@ describe("runLiveEvaluationUseCase", () => {
       expect(issueId).toEqual(IssueId(evaluation.issueId))
       return Effect.succeed(issue)
     })
-    const { repository: scoreRepository, scores: persistedScores } = createFakeScoreRepository()
-    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const outboxEvents: unknown[] = []
+    const { operations, persistedScores, inserted, outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
     const aiDuration = 456_000_000
     const aiTokens = 120
     const aiTokenUsage = {
@@ -532,16 +638,6 @@ describe("runLiveEvaluationUseCase", () => {
           duration: aiDuration,
           tokenUsage: aiTokenUsage,
         } satisfies GenerateResult<T>),
-    })
-    const scoreWriteLayer = createScoreWriteLayer({
-      scoreRepository,
-      scoreAnalyticsRepository,
-      outboxEventWriter: {
-        write: (event) =>
-          Effect.sync(() => {
-            outboxEvents.push(event)
-          }),
-      },
     })
 
     const result = await Effect.runPromise(
@@ -621,6 +717,7 @@ describe("runLiveEvaluationUseCase", () => {
     expect(inserted).toEqual([result.context.score.id])
     expect(outboxEvents).toHaveLength(1)
     expect(calls.generate).toHaveLength(1)
+    expectImmutableAnalyticsSyncOrder(operations)
     expect(calls.generate[0]?.telemetry).toMatchObject({
       spanName: "evaluation.live.execute",
       tags: ["evaluations", "live"],
@@ -649,9 +746,7 @@ describe("runLiveEvaluationUseCase", () => {
       expect(issueId).toEqual(IssueId(evaluation.issueId))
       return Effect.succeed(issue)
     })
-    const { repository: scoreRepository, scores: persistedScores } = createFakeScoreRepository()
-    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const outboxEvents: unknown[] = []
+    const { operations, persistedScores, inserted, outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
     const aiDuration = 321_000_000
     const aiTokens = 90
     const aiTokenUsage = {
@@ -670,16 +765,6 @@ describe("runLiveEvaluationUseCase", () => {
           duration: aiDuration,
           tokenUsage: aiTokenUsage,
         } satisfies GenerateResult<T>),
-    })
-    const scoreWriteLayer = createScoreWriteLayer({
-      scoreRepository,
-      scoreAnalyticsRepository,
-      outboxEventWriter: {
-        write: (event) =>
-          Effect.sync(() => {
-            outboxEvents.push(event)
-          }),
-      },
     })
 
     const result = await Effect.runPromise(
@@ -743,6 +828,7 @@ describe("runLiveEvaluationUseCase", () => {
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
     expect(outboxEvents).toHaveLength(1)
+    expectImmutableAnalyticsSyncOrder(operations)
   })
 
   it("persists an errored live evaluation score when execution fails", async () => {
@@ -761,9 +847,7 @@ describe("runLiveEvaluationUseCase", () => {
       expect(issueId).toEqual(IssueId(evaluation.issueId))
       return Effect.succeed(issue)
     })
-    const { repository: scoreRepository, scores: persistedScores } = createFakeScoreRepository()
-    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
-    const outboxEvents: unknown[] = []
+    const { operations, persistedScores, inserted, outboxEvents, scoreWriteLayer } = createTrackedScoreWriteFixture()
     const { layer: aiLayer, calls } = createFakeAI({
       generate: () =>
         Effect.fail(
@@ -771,16 +855,6 @@ describe("runLiveEvaluationUseCase", () => {
             message: "AI generation failed (openai/gpt-5.4): upstream timeout",
           }),
         ),
-    })
-    const scoreWriteLayer = createScoreWriteLayer({
-      scoreRepository,
-      scoreAnalyticsRepository,
-      outboxEventWriter: {
-        write: (event) =>
-          Effect.sync(() => {
-            outboxEvents.push(event)
-          }),
-      },
     })
 
     const result = await Effect.runPromise(
@@ -839,5 +913,6 @@ describe("runLiveEvaluationUseCase", () => {
     expect(inserted).toEqual([result.context.score.id])
     expect(outboxEvents).toHaveLength(1)
     expect(calls.generate).toHaveLength(1)
+    expectImmutableAnalyticsSyncOrder(operations)
   })
 })

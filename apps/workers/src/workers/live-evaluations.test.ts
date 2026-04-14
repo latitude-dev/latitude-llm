@@ -9,9 +9,13 @@ import {
   shouldSampleLiveEvaluation,
   toLiveEvaluationDebounceMs,
 } from "@domain/evaluations"
+import { createIssueCentroid } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { evaluationScoreSchema } from "@domain/scores"
+import type { RedisClient } from "@platform/cache-redis"
+import { queryClickhouse } from "@platform/db-clickhouse"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
+import { issues } from "@platform/db-postgres/schema/issues"
 import { scores } from "@platform/db-postgres/schema/scores"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { describe, expect, it, vi } from "vitest"
@@ -26,6 +30,7 @@ const ISSUE_ID = "i".repeat(24)
 const API_KEY_ID = "k".repeat(24)
 const TIMESTAMP = new Date("2026-04-10T12:00:00.000Z")
 const NON_SAMPLED_EVALUATION_ALPHABET = "klmnopqrstuvwxyz"
+const DUMMY_REDIS_CLIENT = {} as RedisClient
 
 const fill = (character: string, length: number) => character.repeat(length)
 
@@ -106,6 +111,7 @@ const makeEvaluationRow = (input: {
   readonly sampling?: number
   readonly turn?: EvaluationTurn
   readonly debounce?: number
+  readonly script?: string
 }) =>
   evaluationSchema.parse({
     id: input.id,
@@ -114,7 +120,7 @@ const makeEvaluationRow = (input: {
     issueId: ISSUE_ID,
     name: `evaluation-${input.id.slice(0, 6)}`,
     description: "Worker test live evaluation",
-    script: "export default async function evaluate() { return { value: 1 } }",
+    script: input.script ?? "export default async function evaluate() { return { value: 1 } }",
     trigger: {
       ...defaultEvaluationTrigger(),
       filter: input.filter ?? {},
@@ -129,6 +135,22 @@ const makeEvaluationRow = (input: {
     createdAt: TIMESTAMP,
     updatedAt: TIMESTAMP,
   })
+
+const makeIssueRow = (input: { readonly id?: string; readonly projectId: string }) => ({
+  id: input.id ?? ISSUE_ID,
+  uuid: "11111111-1111-4111-8111-111111111111",
+  organizationId: ORGANIZATION_ID,
+  projectId: input.projectId,
+  name: "Worker test issue",
+  description: "Worker test issue context",
+  centroid: createIssueCentroid(),
+  clusteredAt: TIMESTAMP,
+  escalatedAt: null,
+  resolvedAt: null,
+  ignoredAt: null,
+  createdAt: TIMESTAMP,
+  updatedAt: TIMESTAMP,
+})
 
 const makeScoreRow = (input: {
   readonly id: string
@@ -183,13 +205,35 @@ const insertEvaluations = async (rows: Array<ReturnType<typeof makeEvaluationRow
   await pg.db.insert(evaluations).values(rows)
 }
 
+const insertIssues = async (rows: Array<ReturnType<typeof makeIssueRow>>) => {
+  await pg.db.insert(issues).values(rows)
+}
+
 const insertScores = async (rows: Array<ReturnType<typeof makeScoreRow>>) => {
   await pg.db.insert(scores).values(rows)
 }
 
+const queryAnalyticsScores = (organizationId: string, scoreId: string) =>
+  Effect.runPromise(
+    queryClickhouse<{ id: string }>(
+      ch.client,
+      `SELECT id
+       FROM scores
+       WHERE organization_id = {organizationId:String}
+         AND id = {scoreId:FixedString(24)}`,
+      { organizationId, scoreId },
+    ),
+  ).then((rows) =>
+    rows.map((row) => ({
+      ...row,
+      id: row.id.replace(/\0+$/u, ""),
+    })),
+  )
+
 const setupWorker = (options?: {
   readonly runLiveEvaluation?: Parameters<typeof createLiveEvaluationsWorker>[0]["runLiveEvaluation"]
   readonly logger?: Parameters<typeof createLiveEvaluationsWorker>[0]["logger"]
+  readonly redisClient?: Parameters<typeof createLiveEvaluationsWorker>[0]["redisClient"]
 }) => {
   const consumer = new TestQueueConsumer()
   const { publisher, published } = createFakeQueuePublisher()
@@ -201,6 +245,7 @@ const setupWorker = (options?: {
     clickhouseClient: ch.client,
     ...(options?.runLiveEvaluation ? { runLiveEvaluation: options.runLiveEvaluation } : {}),
     ...(options?.logger ? { logger: options.logger } : {}),
+    ...(options?.redisClient ? { redisClient: options.redisClient } : {}),
   })
 
   return { consumer, published }
@@ -489,6 +534,155 @@ describe("createLiveEvaluationsWorker", () => {
 
     expect(handledPayloads).toEqual([payload])
     expect(published).toEqual([])
+  })
+
+  it("skips duplicate execute tasks through the default worker path before writing another score", async () => {
+    const projectId = fill("y", 24)
+    const traceId = fill("o", 32)
+    const evaluationId = fill("p", 24)
+    const existingScoreId = fill("q", 24)
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+    }
+
+    await insertEvaluations([
+      makeEvaluationRow({
+        id: evaluationId,
+        projectId,
+      }),
+    ])
+    await insertScores([
+      makeScoreRow({
+        id: existingScoreId,
+        projectId,
+        evaluationId,
+        traceId,
+        sessionId: "session-live-execute-duplicate",
+      }),
+    ])
+
+    const { consumer } = setupWorker({
+      logger,
+      redisClient: DUMMY_REDIS_CLIENT,
+    })
+
+    await consumer.dispatchTask("live-evaluations", "execute", {
+      organizationId: ORGANIZATION_ID,
+      projectId,
+      evaluationId,
+      traceId,
+    })
+
+    const persistedScores = (await pg.db.select().from(scores)).filter(
+      (score) => score.sourceId === evaluationId && score.traceId === traceId,
+    )
+
+    expect(persistedScores).toHaveLength(1)
+    expect(persistedScores[0]?.id).toBe(existingScoreId)
+    expect(await queryAnalyticsScores(ORGANIZATION_ID, existingScoreId)).toEqual([])
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith("Live evaluation execute skipped", {
+      queue: "live-evaluations",
+      task: "execute",
+      organizationId: ORGANIZATION_ID,
+      projectId,
+      evaluationId,
+      traceId,
+      outcome: "skipped",
+      resultKind: "skipped",
+      reason: "result-already-exists",
+    })
+  })
+
+  it("persists errored live evaluation scores and analytics through the default worker path", async () => {
+    const projectId = fill("z", 24)
+    const traceId = fill("p", 32)
+    const evaluationId = fill("q", 24)
+    const sessionId = "session-live-execute-invalid-script"
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+    }
+
+    await insertTraceRows([
+      makeTraceRow({
+        projectId,
+        traceId,
+        spanId: fill("p", 16),
+        sessionId,
+      }),
+    ])
+    await insertEvaluations([
+      makeEvaluationRow({
+        id: evaluationId,
+        projectId,
+        script: "const result = 'invalid runtime'",
+      }),
+    ])
+    await insertIssues([
+      makeIssueRow({
+        projectId,
+      }),
+    ])
+
+    const { consumer } = setupWorker({
+      logger,
+      redisClient: DUMMY_REDIS_CLIENT,
+    })
+
+    await consumer.dispatchTask("live-evaluations", "execute", {
+      organizationId: ORGANIZATION_ID,
+      projectId,
+      evaluationId,
+      traceId,
+    })
+
+    const persistedScores = (await pg.db.select().from(scores)).filter(
+      (score) => score.sourceId === evaluationId && score.traceId === traceId,
+    )
+
+    expect(persistedScores).toHaveLength(1)
+
+    const [persistedScore] = persistedScores
+    if (!persistedScore) throw new Error("Expected a persisted worker score")
+
+    expect(persistedScore).toMatchObject({
+      organizationId: ORGANIZATION_ID,
+      projectId,
+      sessionId,
+      traceId,
+      source: "evaluation",
+      sourceId: evaluationId,
+      issueId: null,
+      passed: false,
+      errored: true,
+      error: "Stored evaluation script is not executable by the MVP live evaluation runtime",
+      feedback: "Stored evaluation script is not executable by the MVP live evaluation runtime",
+      tokens: 0,
+      cost: 0,
+    })
+    expect(await queryAnalyticsScores(ORGANIZATION_ID, persistedScore.id)).toEqual([{ id: persistedScore.id }])
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith(
+      "Live evaluation execute completed",
+      expect.objectContaining({
+        queue: "live-evaluations",
+        task: "execute",
+        organizationId: ORGANIZATION_ID,
+        projectId,
+        evaluationId,
+        traceId,
+        outcome: "persisted",
+        resultKind: "errored",
+        scoreId: persistedScore.id,
+        issueAssignmentPath: "none",
+        sessionId,
+        tokens: 0,
+        cost: 0,
+        duration: expect.any(Number),
+      }),
+    )
   })
 
   it("publishes only matching eligible evaluations and skips paused, filter-mismatched, and non-sampled ones", async () => {
