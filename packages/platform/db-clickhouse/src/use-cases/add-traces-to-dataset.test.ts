@@ -24,7 +24,7 @@ import {
 import type { TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
-import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, OutboxEventWriterLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect, Layer } from "effect"
@@ -125,8 +125,9 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         Effect.provideService(DatasetRowRepository, services.rowRepo),
         Effect.provideService(TraceRepository, services.traceRepo),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
-        Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
-        withPostgres(OutboxEventWriterLive, pg.adminPostgresClient, ORG_ID),
+        Effect.provide(
+          Layer.mergeAll(ChSqlClientLive(ch.client, ORG_ID), SqlClientLive(pg.adminPostgresClient, ORG_ID)),
+        ),
       ),
     )
 
