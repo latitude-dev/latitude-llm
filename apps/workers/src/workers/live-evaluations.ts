@@ -3,9 +3,11 @@ import {
   LiveEvaluationQueuePublishError,
   LiveEvaluationQueuePublisher,
   type LiveEvaluationQueuePublisherShape,
+  type RunLiveEvaluationResult,
   runLiveEvaluationUseCase,
 } from "@domain/evaluations"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
+import type { EvaluationScore } from "@domain/scores"
 import { OrganizationId } from "@domain/shared"
 import { withAi } from "@platform/ai"
 import { AIGenerateLive } from "@platform/ai-vercel"
@@ -46,6 +48,8 @@ interface ExecutePayload {
   readonly traceId: string
 }
 
+type LiveEvaluationsLogger = Pick<ReturnType<typeof createLogger>, "info" | "error">
+
 interface LiveEvaluationsDeps {
   consumer: QueueConsumer
   publisher: QueuePublisherShape
@@ -53,6 +57,7 @@ interface LiveEvaluationsDeps {
   clickhouseClient?: ClickHouseClient
   redisClient?: RedisClient
   runLiveEvaluation?: typeof runLiveEvaluationUseCase
+  logger?: LiveEvaluationsLogger
 }
 
 const buildEnqueueLogContext = (payload: EnqueuePayload) => ({
@@ -72,6 +77,37 @@ const buildExecuteLogContext = (payload: ExecutePayload) => ({
   traceId: payload.traceId,
 })
 
+const getExecuteResultKind = (score: EvaluationScore) => {
+  if (score.errored) return "errored" as const
+  if (score.passed) return "passed" as const
+  return "failed" as const
+}
+
+const getIssueAssignmentPath = (score: EvaluationScore) => {
+  if (score.issueId !== null) return "direct" as const
+  if (score.errored || score.passed) return "none" as const
+  return "deferred" as const
+}
+
+const buildExecuteSkippedLogContext = (result: Extract<RunLiveEvaluationResult, { readonly action: "skipped" }>) => ({
+  outcome: result.action,
+  resultKind: "skipped" as const,
+  reason: result.reason,
+})
+
+const buildExecutePersistedLogContext = (
+  result: Extract<RunLiveEvaluationResult, { readonly action: "persisted" }>,
+) => ({
+  outcome: result.action,
+  resultKind: getExecuteResultKind(result.context.score),
+  scoreId: result.summary.scoreId,
+  issueAssignmentPath: getIssueAssignmentPath(result.context.score),
+  tokens: result.context.score.tokens,
+  cost: result.context.score.cost,
+  duration: result.context.score.duration,
+  ...(result.summary.sessionId ? { sessionId: result.summary.sessionId } : {}),
+})
+
 // TODO(eval-sandbox): when implementing live evaluation execution, use the same extract-and-call
 // approach from executeEvaluationScript for MVP, then migrate to sandboxed JS runtime.
 export const createLiveEvaluationsWorker = ({
@@ -81,9 +117,11 @@ export const createLiveEvaluationsWorker = ({
   clickhouseClient,
   redisClient,
   runLiveEvaluation,
+  logger: injectedLogger,
 }: LiveEvaluationsDeps) => {
   const pgClient = postgresClient ?? getPostgresClient()
   const chClient = clickhouseClient ?? getClickhouseClient()
+  const liveEvaluationsLogger = injectedLogger ?? logger
   const liveEvaluationQueuePublisher = {
     publishExecute: ({ organizationId, projectId, evaluationId, traceId, dedupeKey, debounceMs }) => {
       const publishOptions =
@@ -139,7 +177,7 @@ export const createLiveEvaluationsWorker = ({
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "skipped") {
-              logger.info("Live evaluation enqueue skipped", {
+              liveEvaluationsLogger.info("Live evaluation enqueue skipped", {
                 ...buildEnqueueLogContext(payload),
                 outcome: result.action,
                 reason: result.reason,
@@ -147,7 +185,7 @@ export const createLiveEvaluationsWorker = ({
               return
             }
 
-            logger.info("Live evaluation enqueue completed", {
+            liveEvaluationsLogger.info("Live evaluation enqueue completed", {
               ...buildEnqueueLogContext(payload),
               outcome: result.action,
               sessionId: result.summary.sessionId,
@@ -162,7 +200,7 @@ export const createLiveEvaluationsWorker = ({
         ),
         Effect.tapError((error) =>
           Effect.sync(() =>
-            logger.error("Live evaluation enqueue failed", {
+            liveEvaluationsLogger.error("Live evaluation enqueue failed", {
               ...buildEnqueueLogContext(payload),
               outcome: "failed",
               error,
@@ -187,23 +225,22 @@ export const createLiveEvaluationsWorker = ({
         Effect.tap((result) =>
           Effect.sync(() => {
             if (result.action === "skipped") {
-              logger.info("Live evaluation execute skipped", {
+              liveEvaluationsLogger.info("Live evaluation execute skipped", {
                 ...buildExecuteLogContext(payload),
-                outcome: result.action,
-                reason: result.reason,
+                ...buildExecuteSkippedLogContext(result),
               })
               return
             }
 
-            logger.info("Live evaluation execute completed", {
+            liveEvaluationsLogger.info("Live evaluation execute completed", {
               ...buildExecuteLogContext(payload),
-              outcome: result.action,
+              ...buildExecutePersistedLogContext(result),
             })
           }),
         ),
         Effect.tapError((error) =>
           Effect.sync(() =>
-            logger.error("Live evaluation execute failed", {
+            liveEvaluationsLogger.error("Live evaluation execute failed", {
               ...buildExecuteLogContext(payload),
               outcome: "failed",
               error,

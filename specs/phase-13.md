@@ -200,7 +200,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 
 **Intent**: execute one live evaluation and persist one canonical score.
 
-**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result, hosted-execution, canonical score-persistence, direct issue assignment for failed non-errored live monitor results, errored-result persistence semantics, and the worker `execute` wrapper, while structured execute logging, AI telemetry, and broader coverage are still pending.
+**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result, hosted-execution, canonical score-persistence, direct issue assignment for failed non-errored live monitor results, errored-result persistence semantics, the worker `execute` wrapper, and structured execute logging, while AI telemetry and broader coverage are still pending.
 
 **Responsibilities**:
 
@@ -254,7 +254,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 - [x] **P13-PR3-7**: Implement direct `issue_id` assignment at write time for failed, non-errored issue-linked monitor results so they become immutable immediately
 - [x] **P13-PR3-8**: Preserve correct `error -> errored` semantics plus persisted duration, token, and cost accounting for passed, failed, and errored monitor outputs
 - [x] **P13-PR3-1**: Replace the `execute` stub in `apps/workers/src/workers/live-evaluations.ts` by wiring a thin worker wrapper around the new execute-and-persist use case
-- [ ] **P13-PR3-9**: Add structured execute-path logging for evaluation id, trace id, session id when present, result kind, score id, issue assignment path, tokens, cost, and duration
+- [x] **P13-PR3-9**: Add structured execute-path logging for evaluation id, trace id, session id when present, result kind, score id, issue assignment path, tokens, cost, and duration
 - [ ] **P13-PR3-10**: Attach AI telemetry with a stable span name such as `evaluation.live.execute` and attributes including `evaluationId`, `projectId`, and `traceId`
 - [ ] **P13-PR3-11**: Add domain- and worker-level tests for duplicate skips, passed/failed/errored monitor results, direct issue assignment, and analytics save timing
 

@@ -5,15 +5,16 @@ import {
   type EvaluationTurn,
   emptyEvaluationAlignment,
   evaluationSchema,
+  type RunLiveEvaluationResult,
   shouldSampleLiveEvaluation,
   toLiveEvaluationDebounceMs,
 } from "@domain/evaluations"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
-import { scoreSchema } from "@domain/scores"
+import { evaluationScoreSchema } from "@domain/scores"
 import { evaluations } from "@platform/db-postgres/schema/evaluations"
 import { scores } from "@platform/db-postgres/schema/scores"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createLiveEvaluationsWorker } from "./live-evaluations.ts"
 
@@ -135,8 +136,16 @@ const makeScoreRow = (input: {
   readonly evaluationId: string
   readonly traceId: string
   readonly sessionId?: string | null
+  readonly issueId?: string | null
+  readonly passed?: boolean
+  readonly feedback?: string
+  readonly error?: string | null
+  readonly errored?: boolean
+  readonly duration?: number
+  readonly tokens?: number
+  readonly cost?: number
 }) =>
-  scoreSchema.parse({
+  evaluationScoreSchema.parse({
     id: input.id,
     organizationId: ORGANIZATION_ID,
     projectId: input.projectId,
@@ -146,16 +155,16 @@ const makeScoreRow = (input: {
     source: "evaluation",
     sourceId: input.evaluationId,
     simulationId: null,
-    issueId: null,
-    value: 0.95,
-    passed: true,
-    feedback: "already scored",
+    issueId: input.issueId ?? null,
+    value: input.passed === false ? 0 : 0.95,
+    passed: input.passed ?? true,
+    feedback: input.feedback ?? "already scored",
     metadata: { evaluationHash: "worker-test-hash" },
-    error: null,
-    errored: false,
-    duration: 1_000_000,
-    tokens: 200,
-    cost: 500,
+    error: input.error ?? null,
+    errored: input.errored ?? false,
+    duration: input.duration ?? 1_000_000,
+    tokens: input.tokens ?? 200,
+    cost: input.cost ?? 500,
     draftedAt: null,
     annotatorId: null,
     createdAt: TIMESTAMP,
@@ -180,6 +189,7 @@ const insertScores = async (rows: Array<ReturnType<typeof makeScoreRow>>) => {
 
 const setupWorker = (options?: {
   readonly runLiveEvaluation?: Parameters<typeof createLiveEvaluationsWorker>[0]["runLiveEvaluation"]
+  readonly logger?: Parameters<typeof createLiveEvaluationsWorker>[0]["logger"]
 }) => {
   const consumer = new TestQueueConsumer()
   const { publisher, published } = createFakeQueuePublisher()
@@ -190,9 +200,66 @@ const setupWorker = (options?: {
     postgresClient: pg.appPostgresClient,
     clickhouseClient: ch.client,
     ...(options?.runLiveEvaluation ? { runLiveEvaluation: options.runLiveEvaluation } : {}),
+    ...(options?.logger ? { logger: options.logger } : {}),
   })
 
   return { consumer, published }
+}
+
+const makePersistedExecuteResult = (input: {
+  readonly projectId: string
+  readonly evaluationId: string
+  readonly traceId: string
+  readonly scoreId: string
+  readonly sessionId?: string | null
+  readonly issueId?: string | null
+  readonly passed?: boolean
+  readonly feedback?: string
+  readonly error?: string | null
+  readonly errored?: boolean
+  readonly duration?: number
+  readonly tokens?: number
+  readonly cost?: number
+}): Extract<RunLiveEvaluationResult, { readonly action: "persisted" }> => {
+  const score = makeScoreRow({
+    id: input.scoreId,
+    projectId: input.projectId,
+    evaluationId: input.evaluationId,
+    traceId: input.traceId,
+    ...(input.sessionId !== undefined ? { sessionId: input.sessionId } : {}),
+    ...(input.issueId !== undefined ? { issueId: input.issueId } : {}),
+    ...(input.passed !== undefined ? { passed: input.passed } : {}),
+    ...(input.feedback !== undefined ? { feedback: input.feedback } : {}),
+    ...(input.error !== undefined ? { error: input.error } : {}),
+    ...(input.errored !== undefined ? { errored: input.errored } : {}),
+    ...(input.duration !== undefined ? { duration: input.duration } : {}),
+    ...(input.tokens !== undefined ? { tokens: input.tokens } : {}),
+    ...(input.cost !== undefined ? { cost: input.cost } : {}),
+  })
+
+  return {
+    action: "persisted",
+    summary: {
+      evaluationId: input.evaluationId,
+      issueId: ISSUE_ID,
+      traceId: input.traceId,
+      sessionId: input.sessionId ?? null,
+      scoreId: input.scoreId,
+    },
+    context: {
+      evaluation: makeEvaluationRow({
+        id: input.evaluationId,
+        projectId: input.projectId,
+      }),
+      traceDetail: {} as never,
+      issue: {
+        name: "Live evaluation issue",
+        description: "Worker test issue context",
+      },
+      execution: {} as never,
+      score,
+    },
+  }
 }
 
 async function findNonSampledEvaluationId(input: {
@@ -223,6 +290,175 @@ async function findNonSampledEvaluationId(input: {
 }
 
 describe("createLiveEvaluationsWorker", () => {
+  it("logs structured execute details for persisted result kinds", async () => {
+    const cases = [
+      {
+        name: "passed",
+        projectId: fill("u", 24),
+        traceId: fill("g", 32),
+        evaluationId: fill("j", 24),
+        scoreId: fill("s", 24),
+        sessionId: "session-passed",
+        passed: true,
+        errored: false,
+        issueId: null,
+        feedback: "Passed live monitor result",
+        error: null,
+        tokens: 120,
+        cost: 6_400,
+        duration: 456_000_000,
+        expected: {
+          resultKind: "passed",
+          issueAssignmentPath: "none",
+          hasSessionId: true,
+        },
+      },
+      {
+        name: "failed-direct",
+        projectId: fill("v", 24),
+        traceId: fill("h", 32),
+        evaluationId: fill("k", 24),
+        scoreId: fill("t", 24),
+        sessionId: "session-failed",
+        passed: false,
+        errored: false,
+        issueId: ISSUE_ID,
+        feedback: "Failed live monitor result",
+        error: null,
+        tokens: 140,
+        cost: 7_500,
+        duration: 512_000_000,
+        expected: {
+          resultKind: "failed",
+          issueAssignmentPath: "direct",
+          hasSessionId: true,
+        },
+      },
+      {
+        name: "errored",
+        projectId: fill("w", 24),
+        traceId: fill("i", 32),
+        evaluationId: fill("l", 24),
+        scoreId: fill("r", 24),
+        sessionId: null,
+        passed: false,
+        errored: true,
+        issueId: null,
+        feedback: "AI generation failed",
+        error: "AI generation failed",
+        tokens: 0,
+        cost: 0,
+        duration: 321_000_000,
+        expected: {
+          resultKind: "errored",
+          issueAssignmentPath: "none",
+          hasSessionId: false,
+        },
+      },
+    ] as const
+
+    for (const testCase of cases) {
+      const logger = {
+        info: vi.fn(),
+        error: vi.fn(),
+      }
+      const payload = {
+        organizationId: ORGANIZATION_ID,
+        projectId: testCase.projectId,
+        evaluationId: testCase.evaluationId,
+        traceId: testCase.traceId,
+      }
+      const result = makePersistedExecuteResult({
+        projectId: testCase.projectId,
+        evaluationId: testCase.evaluationId,
+        traceId: testCase.traceId,
+        scoreId: testCase.scoreId,
+        sessionId: testCase.sessionId,
+        issueId: testCase.issueId,
+        passed: testCase.passed,
+        feedback: testCase.feedback,
+        error: testCase.error ?? null,
+        errored: testCase.errored,
+        duration: testCase.duration,
+        tokens: testCase.tokens,
+        cost: testCase.cost,
+      })
+      const { consumer } = setupWorker({
+        logger,
+        runLiveEvaluation: () => Effect.succeed(result),
+      })
+
+      await consumer.dispatchTask("live-evaluations", "execute", payload)
+
+      expect(logger.error).not.toHaveBeenCalled()
+      expect(logger.info).toHaveBeenCalledTimes(1)
+
+      const [message, context] = logger.info.mock.calls[0] ?? []
+      expect(message).toBe("Live evaluation execute completed")
+      expect(context).toMatchObject({
+        queue: "live-evaluations",
+        task: "execute",
+        organizationId: ORGANIZATION_ID,
+        projectId: testCase.projectId,
+        evaluationId: testCase.evaluationId,
+        traceId: testCase.traceId,
+        outcome: "persisted",
+        resultKind: testCase.expected.resultKind,
+        scoreId: testCase.scoreId,
+        issueAssignmentPath: testCase.expected.issueAssignmentPath,
+        tokens: testCase.tokens,
+        cost: testCase.cost,
+        duration: testCase.duration,
+      })
+
+      if (testCase.expected.hasSessionId) {
+        expect(context).toMatchObject({ sessionId: testCase.sessionId })
+      } else {
+        expect(context).not.toHaveProperty("sessionId")
+      }
+    }
+  })
+
+  it("logs structured execute skip details", async () => {
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+    }
+    const projectId = fill("x", 24)
+    const traceId = fill("m", 32)
+    const evaluationId = fill("n", 24)
+    const { consumer } = setupWorker({
+      logger,
+      runLiveEvaluation: (input) =>
+        Effect.succeed({
+          action: "skipped",
+          reason: "result-already-exists",
+          evaluationId: input.evaluationId,
+          traceId: input.traceId,
+        }),
+    })
+
+    await consumer.dispatchTask("live-evaluations", "execute", {
+      organizationId: ORGANIZATION_ID,
+      projectId,
+      evaluationId,
+      traceId,
+    })
+
+    expect(logger.error).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith("Live evaluation execute skipped", {
+      queue: "live-evaluations",
+      task: "execute",
+      organizationId: ORGANIZATION_ID,
+      projectId,
+      evaluationId,
+      traceId,
+      outcome: "skipped",
+      resultKind: "skipped",
+      reason: "result-already-exists",
+    })
+  })
+
   it("routes execute tasks through runLiveEvaluationUseCase", async () => {
     const projectId = fill("u", 24)
     const traceId = fill("g", 32)
