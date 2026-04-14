@@ -134,7 +134,7 @@ const applyCommandToIssue = (input: {
   }
 }
 
-const shouldArchiveLinkedEvaluations = (input: {
+const shouldSoftDeleteLinkedEvaluations = (input: {
   readonly command: IssueLifecycleCommand
   readonly keepMonitoring: boolean | null
 }): boolean => {
@@ -186,8 +186,11 @@ export const applyIssueLifecycleCommandUseCase = (
           if (changed) {
             yield* issueRepository.save(nextIssue)
 
-            if (shouldArchiveLinkedEvaluations({ command: parsed.command, keepMonitoring })) {
-              yield* evaluationRepository.archiveByIssueId({
+            if (shouldSoftDeleteLinkedEvaluations({ command: parsed.command, keepMonitoring })) {
+              // Temporary until the evaluations dashboard exists: stopping issue-level monitoring
+              // should remove linked evaluations from the issue UI entirely, so we soft delete
+              // them instead of moving them into the archived/read-only state.
+              yield* evaluationRepository.softDeleteByIssueId({
                 projectId: parsed.projectId,
                 issueId,
               })

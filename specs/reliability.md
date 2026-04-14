@@ -370,6 +370,11 @@ Manual ignore behavior is separate from `keepMonitoring`:
 - when an issue is manually ignored, its linked evaluations are archived immediately
 - `keepMonitoring` only governs what happens on issue resolution, not on issue ignore
 
+> Temporary implementation note: until the evaluations dashboard exists, issue-driven
+> "stop monitoring" actions in the product UI and issue lifecycle flows soft delete
+> linked evaluations instead of moving them into the archived/read-only state. The
+> intended long-term behavior remains archival once that dashboard ships.
+
 ### Post-MVP Provider/Model Settings
 
 The original provider/model settings plan is intentionally retained for post-MVP work.
@@ -690,8 +695,8 @@ Archived and deleted are different states:
 - archived evaluations remain visible in the UI in read-only mode and do not run anymore
 - deleted evaluations are soft deleted, removed from management UI, and do not run anymore
 - deleted evaluations still count in historical aggregates and score analytics
-- issue-linked evaluations are archived immediately when the issue is manually ignored
-- issue-linked evaluations may also be archived when the issue is manually resolved, according to the confirmation-modal toggle defaulted from `keepMonitoring`
+- issue-linked evaluations are archived immediately when the issue is manually ignored in the target design; until the evaluations dashboard exists, the temporary implementation soft deletes them instead
+- issue-linked evaluations may also be archived when the issue is manually resolved, according to the confirmation-modal toggle defaulted from `keepMonitoring`; until the evaluations dashboard exists, the temporary implementation soft deletes them instead
 - `keepMonitoring` only applies to issue resolution; it does not affect the manual ignore path
 
 ### Evaluation Model
@@ -1863,8 +1868,8 @@ If monitoring continues after resolution and new failures appear, the issue beco
 
 Issue lifecycle effects on linked evaluations:
 
-- manual ignore archives linked evaluations immediately
-- manual resolution uses the confirmation-modal toggle, defaulted from `keepMonitoring`, to decide whether linked evaluations stay active or archive
+- manual ignore archives linked evaluations immediately in the target design; until the evaluations dashboard exists, the temporary implementation soft deletes them instead
+- manual resolution uses the confirmation-modal toggle, defaulted from `keepMonitoring`, to decide whether linked evaluations stay active or archive; until the evaluations dashboard exists, the temporary implementation soft deletes them when the user chooses not to keep monitoring
 
 ### Issue Model
 

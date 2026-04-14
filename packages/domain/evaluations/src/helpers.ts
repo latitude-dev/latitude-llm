@@ -124,7 +124,7 @@ export const softDeleteEvaluation = (input: {
 export const applyIssueResolutionToEvaluation = (input: {
   readonly evaluation: Evaluation
   readonly keepMonitoring: ResolvedSettings["keepMonitoring"]
-  readonly archivedAt?: Date
+  readonly deletedAt?: Date
 }): Evaluation => {
   if (isDeletedEvaluation(input.evaluation)) {
     return input.evaluation
@@ -134,11 +134,14 @@ export const applyIssueResolutionToEvaluation = (input: {
     return input.evaluation
   }
 
-  return archiveEvaluation(
-    input.archivedAt
+  // Temporary until the evaluations dashboard exists: issue-driven "stop monitoring"
+  // transitions soft delete the linked evaluation instead of archiving it into a
+  // read-only dashboard that users cannot access yet.
+  return softDeleteEvaluation(
+    input.deletedAt
       ? {
           evaluation: input.evaluation,
-          archivedAt: input.archivedAt,
+          deletedAt: input.deletedAt,
         }
       : {
           evaluation: input.evaluation,
@@ -148,17 +151,20 @@ export const applyIssueResolutionToEvaluation = (input: {
 
 export const applyIssueIgnoreToEvaluation = (input: {
   readonly evaluation: Evaluation
-  readonly archivedAt?: Date
+  readonly deletedAt?: Date
 }): Evaluation => {
   if (isDeletedEvaluation(input.evaluation)) {
     return input.evaluation
   }
 
-  return archiveEvaluation(
-    input.archivedAt
+  // Temporary until the evaluations dashboard exists: issue-driven "stop monitoring"
+  // transitions soft delete the linked evaluation instead of archiving it into a
+  // read-only dashboard that users cannot access yet.
+  return softDeleteEvaluation(
+    input.deletedAt
       ? {
           evaluation: input.evaluation,
-          archivedAt: input.archivedAt,
+          deletedAt: input.deletedAt,
         }
       : {
           evaluation: input.evaluation,

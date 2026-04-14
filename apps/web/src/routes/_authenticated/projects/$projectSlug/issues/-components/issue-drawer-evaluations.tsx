@@ -2,10 +2,10 @@ import { Button, CloseTrigger, Icon, Modal, Status, Text, Tooltip, useMountEffec
 import { BellPlusIcon, RotateCwIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useRef, useState } from "react"
 import {
-  archiveIssueEvaluation,
   type EvaluationAlignmentJobStatusRecord,
   type EvaluationSummaryRecord,
   getEvaluationAlignmentJobStatus,
+  softDeleteIssueEvaluation,
   startEvaluationAlignment,
   triggerManualEvaluationRealignment,
 } from "../../../../../../domains/evaluations/evaluation-alignment.functions.ts"
@@ -105,10 +105,12 @@ export function IssueDrawerEvaluations({
 }) {
   const { toast } = useToast()
   const [activeJob, setActiveJob] = useState<ActiveAlignmentJob | null>(null)
+  const [monitorModalOpen, setMonitorModalOpen] = useState(false)
   const [realignEvaluationId, setRealignEvaluationId] = useState<string | null>(null)
-  const [archiveEvaluationId, setArchiveEvaluationId] = useState<string | null>(null)
+  const [deleteEvaluationId, setDeleteEvaluationId] = useState<string | null>(null)
+  const [isStartingGenerate, setIsStartingGenerate] = useState(false)
   const [isStartingRealign, setIsStartingRealign] = useState(false)
-  const [isArchiving, setIsArchiving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const mountedRef = useRef(true)
 
   useMountEffect(() => {
@@ -154,6 +156,7 @@ export function IssueDrawerEvaluations({
   }
 
   const handleGenerate = async () => {
+    setIsStartingGenerate(true)
     try {
       const status = await startEvaluationAlignment({
         data: {
@@ -166,12 +169,15 @@ export function IssueDrawerEvaluations({
         status,
       }
       setActiveJob(job)
+      setMonitorModalOpen(false)
       void syncJobStatus(job)
     } catch (error) {
       toast({
         variant: "destructive",
         description: toUserMessage(error),
       })
+    } finally {
+      setIsStartingGenerate(false)
     }
   }
 
@@ -203,30 +209,30 @@ export function IssueDrawerEvaluations({
     }
   }
 
-  const handleArchive = async () => {
-    if (!archiveEvaluationId) {
+  const handleDelete = async () => {
+    if (!deleteEvaluationId) {
       return
     }
 
-    setIsArchiving(true)
+    setIsDeleting(true)
     try {
-      await archiveIssueEvaluation({
+      await softDeleteIssueEvaluation({
         data: {
           projectId,
           issueId,
-          evaluationId: archiveEvaluationId,
+          evaluationId: deleteEvaluationId,
         },
       })
       await invalidateIssueQueries(projectId, issueId)
-      toast({ description: "Evaluation archived." })
-      setArchiveEvaluationId(null)
+      toast({ description: "Evaluation removed." })
+      setDeleteEvaluationId(null)
     } catch (error) {
       toast({
         variant: "destructive",
         description: toUserMessage(error),
       })
     } finally {
-      setIsArchiving(false)
+      setIsDeleting(false)
     }
   }
 
@@ -236,35 +242,60 @@ export function IssueDrawerEvaluations({
   )
   const primaryEvaluation = visibleEvaluations[0] ?? null
   const hiddenEvaluationCount = Math.max(0, visibleEvaluations.length - 1)
-  const isActionPending = isBusy || isStartingRealign || isArchiving
+  const isActionPending = isBusy || isStartingGenerate || isStartingRealign || isDeleting
   const monitorBlockedByLifecycle = !canMonitorIssue
+  const isGenerating = isStartingGenerate || (activeJob?.kind === "initial" && isBusy)
+  const isPrimaryEvaluationRealigning =
+    primaryEvaluation !== null &&
+    activeJob?.kind === "realign" &&
+    activeJob.evaluationId === primaryEvaluation.id &&
+    !isTerminalStatus(activeJob.status.status)
 
   if (visibleEvaluations.length === 0) {
     const monitorButton = (
       <Button
-        onClick={handleGenerate}
+        onClick={() => setMonitorModalOpen(true)}
         disabled={isActionPending || monitorBlockedByLifecycle}
-        isLoading={activeJob?.kind === "initial" && isBusy}
+        isLoading={isGenerating}
       >
         <Icon icon={BellPlusIcon} size="sm" />
-        Monitor
+        {isGenerating ? "Generating" : "Monitor"}
       </Button>
     )
 
     return (
-      <div className="flex items-center justify-between gap-3 border border-dashed border-border rounded-lg px-5 py-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Text.H5M>No evaluations</Text.H5M>
-          <Text.H6 color="foregroundMuted">Generate an evaluation to monitor this issue</Text.H6>
+      <>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-border px-5 py-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <Text.H5M>No evaluations</Text.H5M>
+            <Text.H6 color="foregroundMuted">Generate an evaluation to monitor this issue</Text.H6>
+          </div>
+          {monitorBlockedByLifecycle ? (
+            <Tooltip asChild trigger={<span className="inline-flex">{monitorButton}</span>}>
+              <Text.H6 color="foregroundMuted">
+                Unresolve and unignore this issue first to be able to monitor it
+              </Text.H6>
+            </Tooltip>
+          ) : (
+            monitorButton
+          )}
         </div>
-        {monitorBlockedByLifecycle ? (
-          <Tooltip asChild trigger={<span className="inline-flex">{monitorButton}</span>}>
-            <Text.H6 color="foregroundMuted">Unresolve and unignore this issue first to be able to monitor it</Text.H6>
-          </Tooltip>
-        ) : (
-          monitorButton
-        )}
-      </div>
+        <Modal.Root open={monitorModalOpen} onOpenChange={setMonitorModalOpen}>
+          <Modal.Content dismissible>
+            <Modal.Header
+              title="Monitor issue"
+              description="We will use the latest traces and related human annotations to generate an evaluation aligned to monitor this issue. This may take some time"
+            />
+            <Modal.Footer>
+              <CloseTrigger />
+              <Button onClick={() => void handleGenerate()} disabled={isActionPending} isLoading={isStartingGenerate}>
+                <Icon icon={BellPlusIcon} size="sm" />
+                {isStartingGenerate ? "Generating" : "Monitor"}
+              </Button>
+            </Modal.Footer>
+          </Modal.Content>
+        </Modal.Root>
+      </>
     )
   }
 
@@ -315,7 +346,7 @@ export function IssueDrawerEvaluations({
               <Button
                 variant="ghost"
                 className="text-foreground group-hover:text-secondary-foreground/80"
-                onClick={() => setArchiveEvaluationId(primaryEvaluation.id)}
+                onClick={() => setDeleteEvaluationId(primaryEvaluation.id)}
                 disabled={isActionPending}
               >
                 <Icon icon={XIcon} size="sm" />
@@ -325,21 +356,17 @@ export function IssueDrawerEvaluations({
                 variant="outline"
                 onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
                 disabled={isActionPending}
-                isLoading={
-                  activeJob?.kind === "realign" &&
-                  activeJob.evaluationId === primaryEvaluation.id &&
-                  !isTerminalStatus(activeJob.status.status)
-                }
+                isLoading={isPrimaryEvaluationRealigning}
               >
                 <Icon icon={RotateCwIcon} size="sm" />
-                Realign
+                {isPrimaryEvaluationRealigning ? "Realigning" : "Realign"}
               </Button>
             </div>
           </div>
         ) : null}
         {hiddenEvaluationCount > 0 ? (
           <Text.H6 className="self-center text-center" color="foregroundMuted">
-            {hiddenEvaluationCount} more evaluation{hiddenEvaluationCount === 1 ? "" : "s"} hidden from this view
+            {hiddenEvaluationCount} other evaluation{hiddenEvaluationCount === 1 ? "" : "s"} hidden from this view
           </Text.H6>
         ) : null}
       </div>
@@ -361,24 +388,24 @@ export function IssueDrawerEvaluations({
               isLoading={isStartingRealign}
             >
               <Icon icon={RotateCwIcon} size="sm" />
-              Realign
+              {isStartingRealign ? "Realigning" : "Realign"}
             </Button>
           </Modal.Footer>
         </Modal.Content>
       </Modal.Root>
 
       <Modal.Root
-        open={archiveEvaluationId !== null}
-        onOpenChange={(open) => (!open ? setArchiveEvaluationId(null) : undefined)}
+        open={deleteEvaluationId !== null}
+        onOpenChange={(open) => (!open ? setDeleteEvaluationId(null) : undefined)}
       >
         <Modal.Content dismissible>
           <Modal.Header
             title="Unmonitor issue"
-            description="Are you sure you want to archive the evaluation monitoring this issue? You can generate a new evaluation at any time"
+            description="Are you sure you want to remove the evaluation monitoring this issue? You can generate a new evaluation at any time"
           />
           <Modal.Footer>
             <CloseTrigger />
-            <Button variant="destructive" onClick={() => void handleArchive()} disabled={isArchiving}>
+            <Button variant="destructive" onClick={() => void handleDelete()} disabled={isDeleting}>
               <Icon icon={XIcon} size="sm" />
               Unmonitor
             </Button>

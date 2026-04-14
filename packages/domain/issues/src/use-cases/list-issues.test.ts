@@ -114,7 +114,8 @@ const createEvaluationRepository = (seed: readonly Evaluation[] = []) => {
     archive: () => Effect.die("Unexpected EvaluationRepository.archive in listIssuesUseCase test"),
     unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in listIssuesUseCase test"),
     softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in listIssuesUseCase test"),
-    archiveByIssueId: () => Effect.die("Unexpected EvaluationRepository.archiveByIssueId in listIssuesUseCase test"),
+    softDeleteByIssueId: () =>
+      Effect.die("Unexpected EvaluationRepository.softDeleteByIssueId in listIssuesUseCase test"),
   }
 
   return { repository, listByIssueIdsCalls }

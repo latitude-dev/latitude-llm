@@ -87,7 +87,7 @@ function AnnotationQueuesPage() {
       },
       {
         key: "assignees",
-        header: "Assigned",
+        header: "Assignees",
         render: (q) => (
           <AvatarGroup
             items={assigneeItemsByQueueId.get(q.id) ?? []}

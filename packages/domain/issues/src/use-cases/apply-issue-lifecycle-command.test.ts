@@ -55,11 +55,11 @@ const makeEvaluation = (overrides: Partial<Evaluation> = {}): Evaluation => ({
 
 const createFakeEvaluationRepository = (seed: readonly Evaluation[] = []) => {
   const evaluations = new Map(seed.map((evaluation) => [evaluation.id, evaluation] as const))
-  const archiveByIssueIdCalls: Array<{ projectId: string; issueId: string }> = []
+  const softDeleteByIssueIdCalls: Array<{ projectId: string; issueId: string }> = []
 
   return {
     evaluations,
-    archiveByIssueIdCalls,
+    softDeleteByIssueIdCalls,
     repository: {
       findById: (id: string) =>
         Effect.sync(() => {
@@ -115,15 +115,15 @@ const createFakeEvaluationRepository = (seed: readonly Evaluation[] = []) => {
         }),
       unarchive: (_id: string) => Effect.void,
       softDelete: (_id: string) => Effect.void,
-      archiveByIssueId: ({ projectId, issueId }: { readonly projectId: string; readonly issueId: string }) =>
+      softDeleteByIssueId: ({ projectId, issueId }: { readonly projectId: string; readonly issueId: string }) =>
         Effect.sync(() => {
-          archiveByIssueIdCalls.push({ projectId, issueId })
+          softDeleteByIssueIdCalls.push({ projectId, issueId })
 
           for (const evaluation of evaluations.values()) {
             if (evaluation.projectId === projectId && evaluation.issueId === issueId && evaluation.deletedAt === null) {
               evaluations.set(EvaluationId(evaluation.id), {
                 ...evaluation,
-                archivedAt: new Date("2026-04-20T00:00:00.000Z"),
+                deletedAt: new Date("2026-04-20T00:00:00.000Z"),
                 updatedAt: new Date("2026-04-20T00:00:00.000Z"),
               })
             }
@@ -184,7 +184,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     const {
       repository: evaluationRepository,
       evaluations,
-      archiveByIssueIdCalls,
+      softDeleteByIssueIdCalls,
     } = createFakeEvaluationRepository([evaluation])
 
     const result = await Effect.runPromise(
@@ -216,11 +216,11 @@ describe("applyIssueLifecycleCommandUseCase", () => {
       },
     ])
     expect(issues.get(issue.id)?.resolvedAt).toEqual(now)
-    expect(archiveByIssueIdCalls).toEqual([])
-    expect(evaluations.get(evaluation.id)?.archivedAt).toBeNull()
+    expect(softDeleteByIssueIdCalls).toEqual([])
+    expect(evaluations.get(evaluation.id)?.deletedAt).toBeNull()
   })
 
-  it("archives linked evaluations when resolving with keepMonitoring=false", async () => {
+  it("soft deletes linked evaluations when resolving with keepMonitoring=false", async () => {
     const now = new Date("2026-04-11T09:00:00.000Z")
     const firstIssue = makeIssue({
       id: IssueId("aaaaaaaaaaaaaaaaaaaaaaaa"),
@@ -242,7 +242,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     const {
       repository: evaluationRepository,
       evaluations,
-      archiveByIssueIdCalls,
+      softDeleteByIssueIdCalls,
     } = createFakeEvaluationRepository([firstEvaluation, secondEvaluation])
 
     const result = await Effect.runPromise(
@@ -257,17 +257,17 @@ describe("applyIssueLifecycleCommandUseCase", () => {
 
     expect(result.keepMonitoring).toBe(false)
     expect(result.items).toHaveLength(2)
-    expect(archiveByIssueIdCalls).toEqual([
+    expect(softDeleteByIssueIdCalls).toEqual([
       { projectId, issueId: firstIssue.id },
       { projectId, issueId: secondIssue.id },
     ])
     expect(issues.get(firstIssue.id)?.resolvedAt).toEqual(now)
     expect(issues.get(secondIssue.id)?.resolvedAt).toEqual(now)
-    expect(evaluations.get(firstEvaluation.id)?.archivedAt).not.toBeNull()
-    expect(evaluations.get(secondEvaluation.id)?.archivedAt).not.toBeNull()
+    expect(evaluations.get(firstEvaluation.id)?.deletedAt).not.toBeNull()
+    expect(evaluations.get(secondEvaluation.id)?.deletedAt).not.toBeNull()
   })
 
-  it("archives linked evaluations immediately when ignoring an issue", async () => {
+  it("soft deletes linked evaluations immediately when ignoring an issue", async () => {
     const now = new Date("2026-04-12T09:00:00.000Z")
     const issue = makeIssue()
     const evaluation = makeEvaluation()
@@ -275,7 +275,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     const {
       repository: evaluationRepository,
       evaluations,
-      archiveByIssueIdCalls,
+      softDeleteByIssueIdCalls,
     } = createFakeEvaluationRepository([evaluation])
 
     const result = await Effect.runPromise(
@@ -297,8 +297,8 @@ describe("applyIssueLifecycleCommandUseCase", () => {
 
     expect(result.keepMonitoring).toBeNull()
     expect(issues.get(issue.id)?.ignoredAt).toEqual(now)
-    expect(archiveByIssueIdCalls).toEqual([{ projectId, issueId: issue.id }])
-    expect(evaluations.get(evaluation.id)?.archivedAt).not.toBeNull()
+    expect(softDeleteByIssueIdCalls).toEqual([{ projectId, issueId: issue.id }])
+    expect(evaluations.get(evaluation.id)?.deletedAt).not.toBeNull()
   })
 
   it("clears resolved and ignored flags without reactivating evaluations", async () => {
@@ -314,7 +314,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     const {
       repository: evaluationRepository,
       evaluations,
-      archiveByIssueIdCalls,
+      softDeleteByIssueIdCalls,
     } = createFakeEvaluationRepository([archivedEvaluation])
 
     await Effect.runPromise(
@@ -337,7 +337,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     expect(issues.get(issue.id)?.resolvedAt).toBeNull()
     expect(issues.get(issue.id)?.ignoredAt).toBeNull()
     expect(issues.get(issue.id)?.updatedAt).toEqual(now)
-    expect(archiveByIssueIdCalls).toEqual([])
+    expect(softDeleteByIssueIdCalls).toEqual([])
     expect(evaluations.get(archivedEvaluation.id)?.archivedAt).toEqual(new Date("2026-04-02T00:00:00.000Z"))
   })
 
@@ -347,7 +347,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
     })
     const evaluation = makeEvaluation()
     const { repository: issueRepository, issues } = createFakeIssueRepository([issue])
-    const { repository: evaluationRepository, archiveByIssueIdCalls } = createFakeEvaluationRepository([evaluation])
+    const { repository: evaluationRepository, softDeleteByIssueIdCalls } = createFakeEvaluationRepository([evaluation])
 
     const result = await Effect.runPromise(
       applyIssueLifecycleCommandUseCase({
@@ -360,7 +360,7 @@ describe("applyIssueLifecycleCommandUseCase", () => {
 
     expect(result.items[0]?.changed).toBe(false)
     expect(issues.get(issue.id)?.resolvedAt).toEqual(new Date("2026-04-01T00:00:00.000Z"))
-    expect(archiveByIssueIdCalls).toEqual([])
+    expect(softDeleteByIssueIdCalls).toEqual([])
   })
 
   it("rejects issues that do not belong to the requested project", async () => {

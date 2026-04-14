@@ -115,7 +115,7 @@ const createEvaluationRepository = (
   archive: () => Effect.die("Unexpected EvaluationRepository.archive in unit test"),
   unarchive: () => Effect.die("Unexpected EvaluationRepository.unarchive in unit test"),
   softDelete: () => Effect.die("Unexpected EvaluationRepository.softDelete in unit test"),
-  archiveByIssueId: () => Effect.die("Unexpected EvaluationRepository.archiveByIssueId in unit test"),
+  softDeleteByIssueId: () => Effect.die("Unexpected EvaluationRepository.softDeleteByIssueId in unit test"),
 })
 
 type AIGenerate = <T>(input: GenerateInput<T>) => Effect.Effect<GenerateResult<T>>

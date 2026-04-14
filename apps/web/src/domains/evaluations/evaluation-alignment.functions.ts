@@ -1,5 +1,4 @@
 import {
-  archiveEvaluation,
   buildEvaluationAlignmentJobStatus,
   deriveEvaluationAlignmentMetrics,
   EVALUATION_JOB_STATUS_TTL_SECONDS,
@@ -9,6 +8,7 @@ import {
   EvaluationRepository,
   evaluationAlignmentJobStatusKey,
   parseStoredEvaluationAlignmentJobStatus,
+  softDeleteEvaluation,
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
 import {
@@ -43,7 +43,7 @@ const manualRealignmentInputSchema = z.object({
   evaluationId: z.string(),
 })
 
-const archiveEvaluationInputSchema = z.object({
+const softDeleteEvaluationInputSchema = z.object({
   projectId: z.string(),
   issueId: z.string(),
   evaluationId: z.string(),
@@ -263,8 +263,8 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
     return pendingStatus
   })
 
-export const archiveIssueEvaluation = createServerFn({ method: "POST" })
-  .inputValidator(archiveEvaluationInputSchema)
+export const softDeleteIssueEvaluation = createServerFn({ method: "POST" })
+  .inputValidator(softDeleteEvaluationInputSchema)
   .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
     const { organizationId } = await requireSession()
     const client = getPostgresClient()
@@ -282,10 +282,14 @@ export const archiveIssueEvaluation = createServerFn({ method: "POST" })
           })
         }
 
-        const archivedEvaluation = archiveEvaluation({ evaluation })
-        yield* repository.save(archivedEvaluation)
+        // Temporary until the evaluations dashboard exists: unmonitoring from the
+        // issue drawer should remove the linked evaluation from current UI flows,
+        // so we soft delete it instead of archiving it into a dashboard users
+        // cannot reach yet.
+        const deletedEvaluation = softDeleteEvaluation({ evaluation })
+        yield* repository.save(deletedEvaluation)
 
-        return toEvaluationSummaryRecord(archivedEvaluation)
+        return toEvaluationSummaryRecord(deletedEvaluation)
       }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId))),
     )
   })

@@ -90,7 +90,7 @@ function AnnotationQueueItemsPage() {
       },
       {
         key: "completedBy",
-        header: "Completed by",
+        header: "Reviewed by",
         minWidth: 160,
         render: (row) => {
           const u = completerByItemId.get(row.id) ?? null

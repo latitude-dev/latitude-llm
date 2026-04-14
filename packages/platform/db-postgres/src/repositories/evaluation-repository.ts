@@ -220,12 +220,12 @@ export const EvaluationRepositoryLive = Layer.effect(
           )
           .pipe(Effect.asVoid),
 
-      archiveByIssueId: ({ projectId, issueId }: { readonly projectId: ProjectId; readonly issueId: IssueId }) =>
+      softDeleteByIssueId: ({ projectId, issueId }: { readonly projectId: ProjectId; readonly issueId: IssueId }) =>
         sqlClient
           .query((db) =>
             db
               .update(evaluations)
-              .set({ archivedAt: new Date(), updatedAt: new Date() })
+              .set({ deletedAt: new Date(), updatedAt: new Date() })
               .where(
                 and(
                   eq(evaluations.projectId, projectId),
