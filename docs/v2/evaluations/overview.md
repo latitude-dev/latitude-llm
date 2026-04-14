@@ -5,7 +5,7 @@ description: Understand how automated evaluations monitor your agent's quality i
 
 # Evaluations Overview
 
-Evaluations are automated scripts that continuously annotate your agent's interactions. They are the primary mechanism for detecting quality regressions, monitoring specific failure patterns, and providing quantitative feedback on every trace.
+Evaluations are automated scripts that continuously score your agent's interactions. They are the primary mechanism for detecting quality regressions, monitoring specific failure patterns, and providing quantitative feedback on every trace.
 
 ## What Is an Evaluation
 
@@ -24,8 +24,8 @@ Each evaluation consists of:
 2. Latitude checks the trace against each active evaluation's **trigger configuration**
 3. For each matching evaluation, the script runs with the trace's data as input
 4. The script returns a **result**: a numeric value (normalized to 0–1) and feedback text
-5. Latitude creates an **annotation** from the result, attached to the trace
-6. If the annotation fails, it feeds into **issue discovery**
+5. Latitude creates a **score** from the result, attached to the trace
+6. If the score fails, it feeds into **issue discovery**
 
 ## Evaluation Scripts
 
@@ -80,7 +80,7 @@ There are three ways to create evaluations:
 
 ### From Issues
 
-The most common path. When Latitude discovers an issue from failing annotations, you can click **"Generate Evaluation"** on the issue detail page. Latitude uses the issue's description and example failures to generate a monitoring script automatically.
+The most common path. When Latitude discovers an issue from failing scores, you can click **"Generate Evaluation"** on the issue detail page. Latitude uses the issue's description and example failures to generate a monitoring script automatically.
 
 ### From Templates
 

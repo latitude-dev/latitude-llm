@@ -1,11 +1,11 @@
 ---
 title: Developer Quick Start
-description: Connect your AI agent to Latitude V2 and see your first traces and annotations
+description: Connect your AI agent to Latitude V2 and see your first traces and scores
 ---
 
 # Developer Quick Start
 
-This guide walks you through connecting an existing AI agent to Latitude V2. By the end, you'll have live traces flowing into your project and understand how annotations work.
+This guide walks you through connecting an existing AI agent to Latitude V2. By the end, you'll have live traces flowing into your project and understand how scores and annotations work.
 
 ## Prerequisites
 
@@ -33,17 +33,17 @@ Each trace shows:
 - The full conversation between user and agent
 - Individual spans (LLM calls, tool calls, etc.)
 - Timing, token usage, and cost
-- Any annotations attached to the trace
+- Any scores attached to the trace
 
-## Step 4: Explore Annotations
+## Step 4: Explore Scores
 
-Annotations are the atomic facts of the reliability system. Every annotation is a normalized value between 0 and 1 with a **pass/fail** verdict and human-readable **feedback**.
+Scores are the fundamental measurement unit. Every score is a normalized value between 0 and 1 with a **pass/fail** verdict and human-readable **feedback**.
 
-Annotations come from three sources:
+Scores come from three sources:
 
 1. **Evaluations** — automated scripts that run on your traces
-2. **Human review** — verdicts from your team through annotation queues
-3. **Custom** — annotations you submit from your own code via the API
+2. **Annotations** — human review verdicts from your team
+3. **Custom** — scores you submit from your own code via the API
 
 Your project starts with default annotation queues that automatically flag common problems like jailbreaking, refusals, frustration, and tool call errors. Check the **Annotation Queues** page to see if any traces have been flagged for review.
 
@@ -63,7 +63,8 @@ Your annotations feed into issue discovery and evaluation alignment.
 ## What's Next
 
 - [Observability](../observability/overview) — Understand spans, traces, and sessions in depth
-- [Annotations](../annotations/overview) — Learn how annotations flow through the system
+- [Scores](../scores/overview) — Learn how the scoring system works
+- [Annotations](../annotations/overview) — Build human review workflows
 - [Evaluations](../evaluations/overview) — Set up automated monitoring
 - [Issues](../issues/overview) — Understand how failure patterns are discovered
 - [Simulations](../simulations/overview) — Test your agent before shipping

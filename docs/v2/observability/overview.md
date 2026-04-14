@@ -31,7 +31,7 @@ A **trace** is a complete interaction from start to finish, composed of one or m
 Traces are the primary unit that most reliability features operate on:
 
 - Evaluations run against traces
-- Annotations are attached to traces
+- Scores are attached to traces
 - Annotation queues contain traces
 - Issues group failures across traces
 
@@ -43,7 +43,7 @@ Sessions let you:
 
 - View the full conversation context across turns
 - Evaluate behavior at the session level (not just individual turns)
-- Aggregate annotations and analytics across a conversation
+- Aggregate scores and analytics across a conversation
 
 ## How Data Flows In
 
@@ -100,4 +100,4 @@ These same filters power evaluation triggers and live annotation queues — when
 
 - [Traces](./traces) — Understand the trace model and lifecycle in detail
 - [Sessions](./sessions) — Learn about session-level aggregation
-- [Annotations](../annotations/overview) — See how annotations attach to your telemetry
+- [Scores](../scores/overview) — See how scores attach to your telemetry

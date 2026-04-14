@@ -63,7 +63,7 @@ In CI mode, the CLI:
 
 - Returns a non-zero exit code if any evaluation fails
 - Outputs results in a CI-friendly format
-- Optionally uploads traces and annotations to Latitude for historical tracking
+- Optionally uploads traces and scores to Latitude for historical tracking
 
 ## Uploading Results
 
@@ -71,7 +71,7 @@ When you provide a Latitude API key, simulation results can be uploaded to your 
 
 - **Historical tracking** — See how simulation results change over time
 - **Trace inspection** — View full simulation traces in the Latitude UI
-- **Annotation integration** — Simulation annotations appear in your project's analytics
+- **Score integration** — Simulation scores appear in your project's analytics
 - **Regression detection** — Compare simulation results across commits
 
 ## Writing Scenarios

@@ -63,7 +63,7 @@ Evaluations can be configured to run:
 Triggers work in concert with annotation queues. A common pattern:
 
 1. An evaluation monitors traces with a broad trigger
-2. Failed annotations feed into issue discovery
+2. Failed scores feed into issue discovery
 3. A linked annotation queue surfaces failing traces for human review
 4. Human annotations measure alignment with the evaluation
 

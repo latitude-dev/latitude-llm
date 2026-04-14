@@ -25,10 +25,10 @@ Each issue has:
 
 ## How Issues Are Discovered
 
-Issue discovery uses **semantic clustering** of failed annotation feedback. Here's how it works:
+Issue discovery uses **semantic clustering** of failed score feedback. Here's how it works:
 
-1. An evaluation produces a **failing annotation** on a trace
-2. The annotation includes **feedback** text explaining why it failed
+1. An evaluation produces a **failing score** on a trace
+2. The score includes **feedback** text explaining why it failed
 3. Latitude analyzes the feedback alongside other recent failures
 4. Failures with **semantically similar feedback** are grouped together
 5. When a cluster reaches a threshold, Latitude creates a new **issue**
@@ -102,4 +102,4 @@ Each issue provides:
 
 - [Issue Management](./management) — Workflows for triaging and resolving issues
 - [Evaluations](../evaluations/overview) — How evaluations connect to issues
-- [Annotations](../annotations/overview) — How annotations feed into issue discovery
+- [Scores](../scores/overview) — How scores feed into issue discovery

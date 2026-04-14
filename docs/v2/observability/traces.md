@@ -53,7 +53,7 @@ Click on a trace to open the detail view, which shows:
 
 - **The full conversation** — All messages exchanged between user and agent
 - **The span tree** — A hierarchical view of every operation your agent performed
-- **Annotations** — Any evaluation, human, or custom annotations attached to this trace
+- **Scores** — Any evaluation, annotation, or custom scores attached to this trace
 - **Metadata** — Custom fields, timing details, and resource usage
 
 ## Filtering Traces
@@ -73,5 +73,5 @@ When your application provides a `session_id` with its telemetry, Latitude group
 ## Next Steps
 
 - [Sessions](./sessions) — Session-level conversations and aggregation
-- [Annotations](../annotations/overview) — How annotations attach to traces
+- [Scores](../scores/overview) — How scores attach to traces
 - [Annotations](../annotations/inline-annotations) — Annotating directly from trace views

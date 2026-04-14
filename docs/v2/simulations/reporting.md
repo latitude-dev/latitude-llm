@@ -26,7 +26,7 @@ For each scenario:
 
 - **Scenario name** — The test case identifier
 - **Status** — Pass (all evaluations passed) or fail (at least one evaluation failed)
-- **Evaluation results** — Each evaluation's annotation, pass/fail verdict, and feedback
+- **Evaluation results** — Each evaluation's score, pass/fail verdict, and feedback
 
 ### Per-Evaluation Summary
 
@@ -64,7 +64,7 @@ When results are uploaded, you can view them in the Latitude UI with:
 - Interactive drill-down into specific scenarios and evaluations
 - Full trace views for each scenario execution
 - Historical comparison across simulation runs
-- Annotation trends over time
+- Score trends over time
 
 ## Acting on Results
 

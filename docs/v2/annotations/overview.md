@@ -1,51 +1,15 @@
 ---
 title: Annotations Overview
-description: Understand how annotations work as the fundamental unit of measurement in Latitude V2
+description: Understand how human review workflows produce scores in Latitude V2
 ---
 
 # Annotations Overview
 
-Annotations are the fundamental unit of measurement in Latitude V2. Every verdict on your agent's interactions — whether from an automated evaluation, a human reviewer, or your own code — is an annotation.
+Annotations are the human review workflow in Latitude. When your team reviews a trace and provides feedback, that's an annotation. Each annotation produces a [score](../scores/overview) — the universal measurement unit that feeds into issues, alignment, and analytics.
 
 ## What Is an Annotation
 
-An annotation is a quantitative verdict attached to a trace. Every annotation has:
-
-| Field | Description |
-| --- | --- |
-| **Value** | A number between 0 and 1 (normalized from the source's raw output) |
-| **Pass / Fail** | A boolean derived from the value: `true` if ≥ 0.5, `false` otherwise |
-| **Feedback** | A human-readable string explaining the verdict |
-| **Source** | Where the annotation came from: `evaluation`, `human`, or `custom` |
-| **Trace** | The trace this annotation measures |
-
-Annotations are always associated with a **trace** (and through the trace, optionally a session). Annotations can also be associated with a specific **span** within a trace, allowing fine-grained measurement of individual operations.
-
-## Why Annotations Are Normalized
-
-Different sources produce values on different scales:
-
-- An evaluation script might return `true`/`false` or a number between 0 and 100
-- A human reviewer might give thumbs up (1) or thumbs down (0)
-- A custom annotation from your API might use any range
-
-Latitude normalizes all values to the 0–1 range so they can be compared, aggregated, and trended regardless of source. The **pass/fail** threshold at 0.5 provides a consistent binary signal for issue discovery.
-
-## Annotation Sources
-
-Annotations come from three sources:
-
-### Evaluations
-
-**Evaluation annotations** are produced by automated scripts that run on your traces. When a trace matches an evaluation's trigger configuration, the evaluation runs and produces an annotation.
-
-Evaluation annotations are the primary source for continuous monitoring — they run 24/7 on live traffic and catch issues in real time.
-
-### Human Review
-
-**Human annotations** come from your team reviewing traces. When someone reviews a trace — either through an [annotation queue](./annotation-queues) or [inline from the trace view](./inline-annotations) — their verdict becomes an annotation.
-
-Each human annotation includes:
+An annotation is a human reviewer's verdict on a trace. Each annotation includes:
 
 | Field | Description |
 | --- | --- |
@@ -56,52 +20,55 @@ Each human annotation includes:
 | **Issue link** | Optional link to an existing issue or creation of a new one |
 | **Reviewer** | The team member who created the annotation |
 
-Human annotations serve as **ground truth**. They represent what a human actually thinks about the agent's behavior, and they anchor [evaluation alignment](../evaluations/alignment) metrics.
+When published, an annotation becomes a score with `source = "annotation"` that enters the full reliability pipeline.
 
-#### Draft vs. Published
+## Why Annotations Matter
 
-Human annotations start as **drafts**. A draft annotation is visible only to its creator and doesn't affect analytics yet. This allows reviewers to:
+Automated evaluations can monitor thousands of traces per hour, but they can only be as good as the human judgment they're calibrated against. Annotations serve three critical functions:
+
+### Ground Truth for Alignment
+
+When both an evaluation and a human have scored the same trace, Latitude computes [alignment metrics](../evaluations/alignment) (MCC, confusion matrix, agreement rate). Without annotations, you have no way to know if your evaluations are actually correct.
+
+### Issue Validation
+
+When Latitude discovers an issue from evaluation failures, human annotations confirm whether the detection is accurate. Annotations on issue-linked traces tell you:
+
+- Are the automatically detected failures real problems?
+- Is the evaluation too strict or too lenient?
+- Are there nuances the evaluation is missing?
+
+### Rich Feedback
+
+Annotations capture *why* an interaction was good or bad in the reviewer's own words. This qualitative feedback is invaluable for:
+
+- Understanding failure modes that automated evaluations can't articulate
+- Training new team members on quality expectations
+- Informing evaluation script improvements
+
+## Draft vs. Published
+
+Annotations start as **drafts**. A draft annotation is visible only to its creator and doesn't produce a finalized score yet. This allows reviewers to:
 
 - Work through a queue at their own pace
 - Revise their assessment before finalizing
 - Start annotations and come back to them later
 
-When a reviewer publishes an annotation, it becomes visible to the team and enters the reliability pipeline.
+When a reviewer publishes an annotation, the underlying score is finalized — it becomes visible to the team and enters the reliability pipeline (analytics, issue discovery, alignment). Once finalized, the score is immutable.
 
-### Custom
+## Annotation Workflow
 
-**Custom annotations** are submitted by your own code through the Latitude API. Use custom annotations when you have domain-specific quality signals:
+The typical annotation workflow in Latitude:
 
-- **User satisfaction** — Converting thumbs-up/down or NPS into annotations
-- **Task completion** — Whether the agent accomplished the user's goal
-- **Business metrics** — Conversion rates, resolution rates, escalation rates
-- **Downstream validation** — Whether the agent's output was correct (verified after the fact)
-
-## How Sources Interact
-
-The three sources are complementary:
-
-1. **Evaluations** provide breadth — they run on every matching trace automatically
-2. **Human review** provides depth — high-confidence human judgment on sampled traces
-3. **Custom** provides domain context — connects agent quality to business outcomes
-
-The interplay between evaluations and human annotations is particularly powerful. Human annotations calibrate evaluations. When [alignment](../evaluations/alignment) drifts, you know to review and update your evaluation scripts.
-
-## How Annotations Flow Through the System
-
-Annotations feed forward into the reliability loop:
-
-1. **Issue Discovery**: When annotations fail, Latitude analyzes their feedback to find common patterns. Similar failures are grouped into [issues](../issues/overview) — named, trackable failure patterns.
-
-2. **Evaluation Generation**: Issues can generate monitoring evaluations. When you click "Generate Evaluation" on an issue, Latitude creates a script that watches for that failure pattern on live traffic.
-
-3. **Alignment Tracking**: Human annotations are compared against evaluation annotations for the same traces. This produces [alignment metrics](../evaluations/alignment) — MCC, confusion matrices, agreement rates — that tell you how well your automated evaluations match human judgment.
-
-4. **Analytics**: Annotations power time-series dashboards that show quality trends across your project.
+1. **Traces enter annotation queues** — Either automatically (through queue filters) or manually (through bulk selection)
+2. **Reviewers open queue items** — They see the full conversation and any existing scores
+3. **Reviewers create annotations** — They mark interactions as positive or negative with feedback
+4. **Annotations produce scores** — Published annotations become finalized scores
+5. **Scores feed the reliability loop** — They power analytics, issue discovery, and evaluation alignment
 
 ## Next Steps
 
-- [Annotation Queues](./annotation-queues) — Managed review backlogs for systematic human annotation
+- [Annotation Queues](./annotation-queues) — Managed review backlogs for systematic annotation
 - [Inline Annotations](./inline-annotations) — Annotating directly from trace views
-- [Analytics](./analytics) — Visualizing annotation trends and quality metrics
-- [Evaluations](../evaluations/overview) — How automated annotations work
+- [Scores](../scores/overview) — How the universal score model works
+- [Evaluation Alignment](../evaluations/alignment) — How annotations calibrate automated evaluations

@@ -54,17 +54,17 @@ Each evaluation's detail page shows alignment metrics when annotation data exist
 - Current MCC and trend over time
 - Confusion matrix for the selected time period
 - Agreement rate
-- Number of overlapping annotations (traces annotated by both evaluation and human reviewer)
+- Number of overlapping scores (traces scored by both evaluation and human reviewer)
 
 ## Building Alignment
 
-To get meaningful alignment metrics, you need overlapping annotations — traces that have been annotated by both an evaluation and a human reviewer. Here's how:
+To get meaningful alignment metrics, you need overlapping scores — traces that have been scored by both an evaluation and a human reviewer. Here's how:
 
 1. **Create an annotation queue** that surfaces traces the evaluation has scored
 2. **Have reviewers annotate** those traces independently
 3. **Compare results** on the evaluation's alignment dashboard
 
-The more overlapping annotations you accumulate, the more reliable your alignment metrics become. Latitude recommends at least 50 overlapping annotations before drawing conclusions from alignment data.
+The more overlapping scores you accumulate, the more reliable your alignment metrics become. Latitude recommends at least 50 overlapping scores before drawing conclusions from alignment data.
 
 ## Improving Alignment
 
