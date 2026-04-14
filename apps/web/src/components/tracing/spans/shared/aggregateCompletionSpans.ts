@@ -1,4 +1,5 @@
 import {
+  AssembledSpan,
   CompletionSpanMetadata,
   CompletionSpanTokens,
   SpanType,
@@ -20,6 +21,20 @@ import { FinishReason } from 'ai'
 import { useTrace } from '$/stores/traces'
 import { findSpanById } from '@latitude-data/core/services/tracing/spans/fetching/findSpanById'
 import { findLastSpanOfType } from '@latitude-data/core/services/tracing/spans/fetching/findLastSpanOfType'
+
+function cloneCompletionTokens(
+  tokens: CompletionSpanTokens | undefined,
+): CompletionSpanTokens {
+  if (!tokens) {
+    return { prompt: 0, cached: 0, reasoning: 0, completion: 0 }
+  }
+  return {
+    prompt: tokens.prompt,
+    cached: tokens.cached,
+    reasoning: tokens.reasoning,
+    completion: tokens.completion,
+  }
+}
 
 /**
  * Estimates the cost breakdown based on the token usage proportions.
@@ -182,6 +197,41 @@ type AggregatedEntry = {
   finishReason?: FinishReason
 }
 
+export function aggregateCompletionEntriesByModel(
+  completionSpans: AssembledSpan<SpanType.Completion>[],
+): AggregatedEntry[] {
+  if (!completionSpans.length) return []
+
+  return completionSpans.reduce<AggregatedEntry[]>((acc, span) => {
+    const model = span.metadata?.model ?? 'unknown'
+    const provider = (span.metadata?.provider ?? 'unknown') as Providers
+
+    const existing = acc.find(
+      (m) => m.model === model && m.provider === provider,
+    )
+
+    if (existing) {
+      existing.tokens.prompt += span.metadata?.tokens?.prompt ?? 0
+      existing.tokens.cached += span.metadata?.tokens?.cached ?? 0
+      existing.tokens.reasoning += span.metadata?.tokens?.reasoning ?? 0
+      existing.tokens.completion += span.metadata?.tokens?.completion ?? 0
+      existing.cost += span.metadata?.cost ?? 0
+      existing.finishReason =
+        span.metadata?.finishReason ?? existing.finishReason
+      return acc
+    }
+
+    acc.push({
+      model,
+      provider,
+      tokens: cloneCompletionTokens(span.metadata?.tokens),
+      cost: span.metadata?.cost ?? 0,
+      finishReason: span.metadata?.finishReason,
+    })
+    return acc
+  }, [])
+}
+
 export function useAggregatedCompletionSpans({
   traceId,
   spanId,
@@ -213,42 +263,7 @@ export function useAggregatedCompletionSpans({
       childSpans ?? [],
       SpanType.Completion,
     )
-
-    if (!completionSpans.length) return []
-
-    return completionSpans.reduce<AggregatedEntry[]>((acc, span) => {
-      const model = span.metadata?.model ?? 'unknown'
-      const provider = (span.metadata?.provider ?? 'unknown') as Providers
-
-      const existing = acc.find(
-        (m) => m.model === model && m.provider === provider,
-      )
-
-      if (existing) {
-        existing.tokens.prompt += span.metadata?.tokens?.prompt ?? 0
-        existing.tokens.cached += span.metadata?.tokens?.cached ?? 0
-        existing.tokens.reasoning += span.metadata?.tokens?.reasoning ?? 0
-        existing.tokens.completion += span.metadata?.tokens?.completion ?? 0
-        existing.cost += span.metadata?.cost ?? 0
-        existing.finishReason =
-          span.metadata?.finishReason ?? existing.finishReason
-        return acc
-      }
-
-      acc.push({
-        model,
-        provider,
-        tokens: span.metadata?.tokens ?? {
-          prompt: 0,
-          cached: 0,
-          reasoning: 0,
-          completion: 0,
-        },
-        cost: span.metadata?.cost ?? 0,
-        finishReason: span.metadata?.finishReason,
-      })
-      return acc
-    }, [])
+    return aggregateCompletionEntriesByModel(completionSpans)
   }, [childSpans])
 
   const totals = useMemo(() => {
