@@ -95,8 +95,10 @@ export function buildBarChartOption(
   }
 
   if (enableBrush) {
+    // `brush.toolbox: []` does not hide ECharts’ brush toolbox (see apache/echarts#20163).
+    // Hide the toolbox UI while keeping range selection via programmatic brush (BarChart).
+    option.toolbox = { show: false }
     option.brush = {
-      toolbox: [],
       brushMode: "single",
       transformable: false,
       throttleType: "debounce",
