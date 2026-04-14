@@ -121,6 +121,7 @@ export const getBetterAuth = () => {
           .filter(Boolean)
       : [webUrl]
 
+    const captchaSecretKey = Effect.runSync(parseEnvOptional("LAT_TURNSTILE_SECRET_KEY", "string"))
     const outboxWriter = getOutboxWriter()
 
     betterAuthInstance = createBetterAuth({
@@ -129,6 +130,7 @@ export const getBetterAuth = () => {
       baseUrl: webUrl,
       basePath: "/api/auth",
       trustedOrigins,
+      ...(captchaSecretKey ? { captchaSecretKey } : {}),
       extraPlugins: [tanstackStartCookies()],
       sendMagicLink: async ({ email, url }) => {
         const emailFlow = getEmailFlowFromMagicLinkUrl({ magicLinkUrl: url, webUrl })

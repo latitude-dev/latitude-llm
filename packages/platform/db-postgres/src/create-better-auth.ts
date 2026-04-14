@@ -4,7 +4,7 @@ import { generateId } from "@domain/shared"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { type BetterAuthOptions, betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { magicLink, organization as organizationPlugin } from "better-auth/plugins"
+import { captcha, magicLink, organization as organizationPlugin } from "better-auth/plugins"
 import { Effect } from "effect"
 import Stripe from "stripe"
 import type { PostgresClient } from "./client.ts"
@@ -53,6 +53,7 @@ export interface BetterAuthConfig {
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
   readonly trustedOrigins?: string[]
   readonly basePath?: string
+  readonly captchaSecretKey?: string
   readonly extraPlugins?: BetterAuthOptions["plugins"]
 }
 
@@ -168,6 +169,15 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
         expiresIn: 3600,
         allowedAttempts: 5,
       }),
+      ...(config.captchaSecretKey
+        ? [
+            captcha({
+              provider: "cloudflare-turnstile",
+              secretKey: config.captchaSecretKey,
+              endpoints: ["/sign-in/magic-link", "/sign-in/social"],
+            }),
+          ]
+        : []),
       ...(config.extraPlugins ?? []),
       ...(stripeClient && stripeWebhookSecret
         ? [
