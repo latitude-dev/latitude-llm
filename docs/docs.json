@@ -27,6 +27,46 @@
         ]
       },
       {
+        "group": "Telemetry",
+        "pages": [
+          "v2/telemetry/overview",
+          {
+            "group": "Providers",
+            "pages": [
+              "v2/telemetry/providers/openai",
+              "v2/telemetry/providers/anthropic",
+              "v2/telemetry/providers/gemini",
+              "v2/telemetry/providers/azure",
+              "v2/telemetry/providers/amazon-bedrock",
+              "v2/telemetry/providers/google-ai-platform",
+              "v2/telemetry/providers/vertex-ai",
+              "v2/telemetry/providers/groq",
+              "v2/telemetry/providers/mistral",
+              "v2/telemetry/providers/ollama",
+              "v2/telemetry/providers/cohere",
+              "v2/telemetry/providers/together-ai",
+              "v2/telemetry/providers/litellm",
+              "v2/telemetry/providers/replicate",
+              "v2/telemetry/providers/sagemaker",
+              "v2/telemetry/providers/watsonx",
+              "v2/telemetry/providers/aleph-alpha",
+              "v2/telemetry/providers/transformers"
+            ]
+          },
+          {
+            "group": "Frameworks",
+            "pages": [
+              "v2/telemetry/frameworks/vercel-ai-sdk",
+              "v2/telemetry/frameworks/langchain",
+              "v2/telemetry/frameworks/llamaindex",
+              "v2/telemetry/frameworks/crewai",
+              "v2/telemetry/frameworks/dspy",
+              "v2/telemetry/frameworks/haystack"
+            ]
+          }
+        ]
+      },
+      {
         "group": "Scores",
         "pages": [
           "v2/scores/overview",

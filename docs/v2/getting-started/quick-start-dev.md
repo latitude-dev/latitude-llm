@@ -20,7 +20,7 @@ Give your project a descriptive name that matches the agent or feature you're mo
 
 ## Step 2: Connect Telemetry
 
-Latitude captures your agent's interactions through OpenTelemetry-compatible telemetry. See the **Telemetry** section in the V1 docs for detailed setup instructions for your specific provider or framework.
+Latitude captures your agent's interactions through OpenTelemetry-compatible telemetry. See the [Telemetry](../telemetry/overview) section for detailed setup instructions for your specific provider or framework.
 
 Once telemetry is connected, every LLM call, tool invocation, and agent step your application makes will appear as **spans** in Latitude. Related spans are grouped into **traces** (single interactions) and **sessions** (multi-turn conversations).
 

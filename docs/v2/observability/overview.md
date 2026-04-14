@@ -47,7 +47,7 @@ Sessions let you:
 
 ## How Data Flows In
 
-Your application sends telemetry to Latitude using OpenTelemetry-compatible instrumentation. See the V1 **Telemetry** docs for setup instructions with your specific provider or framework.
+Your application sends telemetry to Latitude using OpenTelemetry-compatible instrumentation. See the [Telemetry](../telemetry/overview) docs for setup instructions with your specific provider or framework.
 
 Once connected:
 
