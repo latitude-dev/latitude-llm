@@ -77,7 +77,13 @@ describe("mapEventToPostHog", () => {
     const mapped = mapEventToPostHog({
       eventName: "DatasetCreated",
       organizationId: "org-1",
-      payload: { organizationId: "org-1", actorUserId: "u-1", projectId: "proj-1", datasetId: "d-1", name: "My Dataset" },
+      payload: {
+        organizationId: "org-1",
+        actorUserId: "u-1",
+        projectId: "proj-1",
+        datasetId: "d-1",
+        name: "My Dataset",
+      },
       occurredAt,
     })
 

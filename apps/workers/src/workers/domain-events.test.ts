@@ -342,6 +342,5 @@ describe("domain-events dispatcher", () => {
         },
       },
     ])
-
   })
 })
