@@ -19,14 +19,6 @@
         ]
       },
       {
-        "group": "Observability",
-        "pages": [
-          "v2/observability/overview",
-          "v2/observability/traces",
-          "v2/observability/sessions"
-        ]
-      },
-      {
         "group": "Telemetry",
         "pages": [
           "v2/telemetry/overview",
@@ -67,10 +59,11 @@
         ]
       },
       {
-        "group": "Scores",
+        "group": "Observability",
         "pages": [
-          "v2/scores/overview",
-          "v2/scores/analytics"
+          "v2/observability/overview",
+          "v2/observability/traces",
+          "v2/observability/sessions"
         ]
       },
       {
@@ -82,18 +75,25 @@
         ]
       },
       {
-        "group": "Issues",
-        "pages": [
-          "v2/issues/overview",
-          "v2/issues/management"
-        ]
-      },
-      {
         "group": "Annotations",
         "pages": [
           "v2/annotations/overview",
           "v2/annotations/annotation-queues",
           "v2/annotations/inline-annotations"
+        ]
+      },
+      {
+        "group": "Scores",
+        "pages": [
+          "v2/scores/overview",
+          "v2/scores/analytics"
+        ]
+      },
+      {
+        "group": "Issues",
+        "pages": [
+          "v2/issues/overview",
+          "v2/issues/management"
         ]
       },
       {
