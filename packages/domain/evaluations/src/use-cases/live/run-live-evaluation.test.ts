@@ -1,5 +1,6 @@
 import { type AI, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
+import { OutboxEventWriter, type OutboxEventWriterShape } from "@domain/events"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
@@ -34,10 +35,6 @@ import {
   wrapPromptAsEvaluationScript,
 } from "../../runtime/evaluation-execution.ts"
 import { runLiveEvaluationUseCase } from "./run-live-evaluation.ts"
-import {
-  ScoreWriteOutboxEventWriter,
-  type ScoreWriteOutboxEventWriterShape,
-} from "./score-write-outbox-event-writer.ts"
 
 const INPUT = {
   organizationId: "a".repeat(24),
@@ -164,20 +161,15 @@ function createIssueRepository(
 function createScoreWriteLayer(input?: {
   readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"] | undefined
   readonly scoreAnalyticsRepository?: ReturnType<typeof createFakeScoreAnalyticsRepository>["repository"] | undefined
-  readonly outboxEventWriter?: ScoreWriteOutboxEventWriterShape | undefined
-}): Layer.Layer<ScoreAnalyticsRepository | ScoreRepository | ScoreWriteOutboxEventWriter | SqlClient, never, never> {
+  readonly outboxEventWriter?: OutboxEventWriterShape | undefined
+}): Layer.Layer<ScoreAnalyticsRepository | ScoreRepository | OutboxEventWriter | SqlClient, never, never> {
   return Layer.mergeAll(
     Layer.succeed(ScoreRepository, input?.scoreRepository ?? createFakeScoreRepository().repository),
     Layer.succeed(
       ScoreAnalyticsRepository,
       input?.scoreAnalyticsRepository ?? createFakeScoreAnalyticsRepository().repository,
     ),
-    Layer.succeed(
-      ScoreWriteOutboxEventWriter,
-      input?.outboxEventWriter ?? {
-        write: () => Effect.void,
-      },
-    ),
+    Layer.succeed(OutboxEventWriter, input?.outboxEventWriter ?? { write: () => Effect.void }),
     Layer.succeed(
       SqlClient,
       createFakeSqlClient({
@@ -198,7 +190,7 @@ function createUseCaseLayer(input: {
   | AI
   | EvaluationIssueRepository
   | EvaluationRepository
-  | ScoreWriteOutboxEventWriter
+  | OutboxEventWriter
   | ScoreAnalyticsRepository
   | ScoreRepository
   | SqlClient
@@ -253,7 +245,7 @@ function createTrackedScoreWriteFixture() {
     scoreRepository,
     scoreAnalyticsRepository,
     outboxEventWriter: {
-      write: (event) =>
+      write: (event: Parameters<OutboxEventWriterShape["write"]>[0]) =>
         Effect.sync(() => {
           operations.push("outbox-write")
           outboxEvents.push(event)
@@ -615,7 +607,7 @@ describe("runLiveEvaluationUseCase", () => {
       scoreRepository,
       scoreAnalyticsRepository,
       outboxEventWriter: {
-        write: (event) =>
+        write: (event: Parameters<OutboxEventWriterShape["write"]>[0]) =>
           Effect.sync(() => {
             operations.push("outbox-write")
             outboxEvents.push(event)

@@ -1,4 +1,5 @@
 import type { AI, GenerateTelemetryCapture } from "@domain/ai"
+import type { OutboxEventWriter } from "@domain/events"
 import {
   type EvaluationScore,
   type ScoreAnalyticsRepository,
@@ -16,7 +17,7 @@ import {
   TraceId,
 } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
@@ -26,7 +27,6 @@ import {
   type LiveEvaluationExecutionResult,
   type LiveEvaluationIssueContext,
 } from "./execute-live-evaluation.ts"
-import type { ScoreWriteOutboxEventWriter } from "./score-write-outbox-event-writer.ts"
 
 export interface RunLiveEvaluationInput {
   readonly organizationId: string
@@ -95,6 +95,8 @@ export type RunLiveEvaluationResult =
 export type RunLiveEvaluationError = RepositoryError | WriteScoreError
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+const isRepositoryError = (error: unknown): error is RepositoryError =>
+  isRecord(error) && error._tag === "RepositoryError" && "cause" in error
 const isUniqueViolationCause = (cause: unknown): boolean => {
   if (!isRecord(cause)) return false
   if (cause.code === "23505") return true
@@ -228,45 +230,55 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     )
     const persistedIssueId =
       execution.kind === "completed" && execution.result.passed === false ? evaluation.issueId : null
-    const scoreResult = yield* writeScoreUseCase({
-      projectId: input.projectId,
-      source: "evaluation",
-      sourceId: evaluation.id,
-      sessionId: traceDetail.sessionId ?? null,
-      traceId: traceDetail.traceId,
-      spanId: traceDetail.rootSpanId,
-      simulationId: traceDetail.simulationId || null,
-      issueId: persistedIssueId,
-      value: execution.kind === "completed" ? execution.result.value : 0,
-      passed: execution.kind === "completed" ? execution.result.passed : false,
-      feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,
-      metadata: {
-        evaluationHash: evaluation.alignment.evaluationHash,
-      },
-      error: execution.kind === "errored" ? execution.error : null,
-      duration: execution.duration,
-      tokens: execution.tokens,
-      cost: execution.cost,
-    }).pipe(
-      Effect.map((score) => ({ kind: "persisted", score }) as const),
-      Effect.catchTag("RepositoryError", (error) =>
-        isUniqueViolationCause(error.cause)
-          ? scoreRepository
-              .existsByEvaluationIdAndTraceId({
-                projectId,
-                evaluationId: evaluation.id,
-                traceId: TraceId(input.traceId),
-              })
-              .pipe(
-                Effect.flatMap((resultNowExists) =>
-                  resultNowExists ? Effect.succeed({ kind: "skipped" } as const) : Effect.fail(error),
-                ),
-              )
-          : Effect.fail(error),
-      ),
+    const scoreWriteExit = yield* Effect.exit(
+      writeScoreUseCase({
+        projectId: input.projectId,
+        source: "evaluation",
+        sourceId: evaluation.id,
+        sessionId: traceDetail.sessionId ?? null,
+        traceId: traceDetail.traceId,
+        spanId: traceDetail.rootSpanId,
+        simulationId: traceDetail.simulationId || null,
+        issueId: persistedIssueId,
+        value: execution.kind === "completed" ? execution.result.value : 0,
+        passed: execution.kind === "completed" ? execution.result.passed : false,
+        feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,
+        metadata: {
+          evaluationHash: evaluation.alignment.evaluationHash,
+        },
+        error: execution.kind === "errored" ? execution.error : null,
+        duration: execution.duration,
+        tokens: execution.tokens,
+        cost: execution.cost,
+      }),
     )
 
-    if (scoreResult.kind === "skipped") {
+    let score: EvaluationScore | null = null
+    if (Exit.isSuccess(scoreWriteExit)) {
+      score = scoreWriteExit.value as EvaluationScore
+    } else {
+      const errorOption = Cause.findErrorOption(scoreWriteExit.cause)
+      const uniqueConflict =
+        errorOption._tag === "Some" &&
+        isRepositoryError(errorOption.value) &&
+        isUniqueViolationCause(errorOption.value.cause)
+
+      if (!uniqueConflict) {
+        return yield* scoreWriteExit
+      }
+
+      const resultNowExists = yield* scoreRepository.existsByEvaluationIdAndTraceId({
+        projectId,
+        evaluationId: evaluation.id,
+        traceId: TraceId(input.traceId),
+      })
+
+      if (!resultNowExists) {
+        return yield* scoreWriteExit
+      }
+    }
+
+    if (score === null) {
       return {
         action: "skipped",
         reason: "result-already-exists",
@@ -274,8 +286,6 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         traceId: input.traceId,
       } satisfies RunLiveEvaluationResult
     }
-
-    const score = scoreResult.score as EvaluationScore
 
     return {
       action: "persisted",
@@ -300,7 +310,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     | AI
     | EvaluationIssueRepository
     | EvaluationRepository
-    | ScoreWriteOutboxEventWriter
+    | OutboxEventWriter
     | ScoreAnalyticsRepository
     | ScoreRepository
     | SqlClient

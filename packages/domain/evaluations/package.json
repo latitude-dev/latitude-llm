@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@domain/ai": "workspace:*",
+    "@domain/events": "workspace:*",
     "@domain/models": "workspace:*",
     "@domain/optimizations": "workspace:*",
     "@domain/scores": "workspace:*",

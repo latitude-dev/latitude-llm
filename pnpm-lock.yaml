@@ -857,6 +857,9 @@ importers:
       '@domain/ai':
         specifier: workspace:*
         version: link:../ai
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/models':
         specifier: workspace:*
         version: link:../models
