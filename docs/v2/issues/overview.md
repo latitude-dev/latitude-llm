@@ -17,65 +17,67 @@ An issue represents a recurring problem with your agent. For example:
 
 Each issue has:
 
-- **A name** — A concise label for the failure pattern
-- **A description** — A longer explanation of what's going wrong and why it matters
+- **A name and description** — Generated from clustered score feedback and related context, focused on the underlying failure pattern rather than one specific conversation
 - **A lifecycle state** — Where the issue stands: New, Escalating, Resolved, Regressed, or Ignored
 - **Linked evaluations** — Automated monitors watching for this specific pattern
 - **Occurrence data** — How often the issue has been detected, trended over time
+- **A centroid** — A running weighted vector that represents the issue's semantic identity for discovery
 
 ## How Issues Are Discovered
 
-Issue discovery uses **semantic clustering** of failed score feedback. Here's how it works:
+Issue discovery uses **hybrid semantic search** to match new failures against existing issues or create new ones. Here's how it works:
 
-1. An evaluation produces a **failing score** on a trace
-2. The score includes **feedback** text explaining why it failed
-3. Latitude analyzes the feedback alongside other recent failures
-4. Failures with **semantically similar feedback** are grouped together
-5. When a cluster reaches a threshold, Latitude creates a new **issue**
+1. A score fails (non-draft, non-errored) and has no issue assignment yet
+2. If the score comes from an issue-linked evaluation, it assigns directly to that issue — no search needed
+3. Otherwise, the score's canonical **feedback** text is embedded using a vector model
+4. Latitude runs **hybrid search** in Weaviate — combining vector similarity with BM25 text matching — against existing issue centroids and descriptions
+5. Results are **reranked** using a dedicated reranking model
+6. Candidates that don't pass minimum similarity and relevance thresholds are filtered out
+7. If a matching issue is found, the score is assigned to it. If not, a **new issue** is created
+8. The issue's name and description are generated (or refreshed) from the accumulated evidence
 
-This means issues emerge naturally from your evaluation results. You don't need to predefine failure categories — Latitude finds them from the patterns in your data.
+This means a single failed score can create a new issue. You don't need to predefine failure categories — Latitude finds them from the patterns in your data.
+
+The canonical `feedback` text on each score is intentionally designed to be human/LLM-readable and clusterable — it describes the underlying failure pattern, which is what makes discovery work well.
 
 ## Issue Lifecycle
 
-Issues follow a state machine that models real-world incident response:
-
-```
-New → Escalating → Resolved → Regressed
-         ↓                        ↓
-       Ignored                 Escalating
-```
+Issues have lifecycle states that model real-world incident response. An issue can be in **multiple states simultaneously** — for example, both "new" and "escalating."
 
 ### New
 
-A freshly discovered issue. Your team hasn't reviewed it yet.
-
-**Actions available:**
-
-- Generate an evaluation to start monitoring
-- Acknowledge and begin investigating
-- Ignore if it's not worth tracking
+First discovered less than 7 days ago.
 
 ### Escalating
 
-The issue has been acknowledged and is being investigated. New occurrences continue to accumulate.
-
-**Actions available:**
-
-- Generate or refine linked evaluations
-- Create annotation queue items for deeper investigation
-- Resolve when a fix is deployed
+Occurrences in the last day are 33% greater than the average in the previous 7-day baseline. An issue can be both new and escalating.
 
 ### Resolved
 
-The issue has been addressed. When you resolve an issue, you can optionally set a **monitoring window** — Latitude continues watching for the pattern and will mark the issue as Regressed if it reappears.
+No occurrences in the last 14 days, or manually resolved by a user.
 
 ### Regressed
 
-A previously resolved issue has reappeared. This triggers re-escalation so your team knows a fix didn't hold.
+New occurrences appeared after the issue was previously resolved.
 
 ### Ignored
 
-The issue is not worth tracking. Ignored issues are hidden from default views but can be un-ignored later.
+Manually ignored by a user. Ignored issues are hidden from default views but can be un-ignored later. Ignoring an issue **immediately archives** its linked evaluations.
+
+Conceptually:
+
+- **Active** means not ignored and not resolved
+- **Archived** means ignored or resolved without regression
+
+## Creating Issues
+
+Issues can come from several sources:
+
+- **Automatic discovery** — Failed scores from evaluations, annotations, or custom sources that don't match any existing issue create new ones automatically
+- **From annotations** — When annotating a trace, reviewers can link their annotation to an existing issue directly, bypassing automatic discovery for that score
+- **From evaluations** — Failed scores from issue-linked evaluations assign directly to their linked issue without going through discovery
+
+Annotations are the primary signal. They carry the highest centroid weight and issues with linked annotations are always visible in the product.
 
 ## Generating Evaluations from Issues
 
@@ -83,11 +85,11 @@ One of the most powerful workflows in Latitude:
 
 1. An issue is discovered from clustered failures
 2. You click **"Generate Evaluation"** on the issue
-3. Latitude generates a monitoring script that watches for this specific failure pattern
+3. Latitude generates a monitoring script optimized to detect this specific failure pattern, running in the background
 4. The evaluation runs on live traffic going forward
-5. New failures are linked back to the issue, updating occurrence counts
+5. New failures from that evaluation are linked back to the issue directly, bypassing discovery
 
-This closes the loop from discovery to continuous monitoring. Instead of waiting for the next batch of failures to discover the issue again, you have an automated sentinel watching for it 24/7.
+Issues may have several linked evaluations. Each generation starts a background job — the frontend polls for completion status.
 
 ## Issue Analytics
 
@@ -95,8 +97,8 @@ Each issue provides:
 
 - **Occurrence trend** — A time-series chart showing how often the issue is detected
 - **Example traces** — Specific traces where the issue was found, so you can investigate root causes
-- **Linked evaluation performance** — How well the generated evaluation is catching this pattern
-- **Resolution history** — When the issue was resolved and whether it has regressed
+- **Linked evaluation performance** — How well generated evaluations are catching this pattern, including derived alignment (MCC)
+- **Seen at** — Recency and age information (e.g., "11d ago / 3y old")
 
 ## Next Steps
 

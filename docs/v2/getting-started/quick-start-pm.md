@@ -108,5 +108,4 @@ Scores appear throughout the product: on traces, in evaluation dashboards, in is
 - [Scores](../scores/overview) — Deep dive into how scores work
 - [Annotations](../annotations/overview) — Human review workflows
 - [Issues](../issues/overview) — Learn about issue lifecycle and management
-- [Annotations](../annotations/overview) — Build effective human review workflows
 - [Evaluations](../evaluations/overview) — Understand automated monitoring

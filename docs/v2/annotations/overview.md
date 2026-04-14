@@ -15,12 +15,12 @@ An annotation is a human reviewer's verdict on a trace. Each annotation includes
 | --- | --- |
 | **Verdict** | Positive (thumbs up) or negative (thumbs down) |
 | **Feedback** | Free-text explanation of the reviewer's assessment |
-| **Scope** | Conversation-level or message-level (attached to a specific message) |
-| **State** | Draft or published |
-| **Issue link** | Optional link to an existing issue or creation of a new one |
+| **Scope** | Conversation-level or message-level (attached to a specific message or text range) |
+| **State** | Draft or finalized |
+| **Issue link** | Optional link to an existing issue |
 | **Reviewer** | The team member who created the annotation |
 
-When published, an annotation becomes a score with `source = "annotation"` that feeds into analytics, issue discovery, and evaluation alignment.
+Annotations are stored as scores with `source = "annotation"`. When finalized, they feed into analytics, issue discovery, and evaluation alignment.
 
 ## Why Annotations Matter
 
@@ -28,7 +28,7 @@ Automated evaluations can monitor thousands of traces per hour, but they can onl
 
 ### Ground Truth for Alignment
 
-When both an evaluation and a human have scored the same trace, Latitude computes [alignment metrics](../evaluations/alignment) (MCC, confusion matrix, agreement rate). Without annotations, you have no way to know if your evaluations are actually correct.
+When both an evaluation and a human have scored the same trace, Latitude computes [alignment metrics](../evaluations/alignment) (MCC, confusion matrix). Without annotations, you have no way to know if your evaluations are actually correct.
 
 ### Issue Validation
 
@@ -40,30 +40,42 @@ When Latitude discovers an issue from evaluation failures, human annotations con
 
 ### Rich Feedback
 
-Annotations capture *why* an interaction was good or bad in the reviewer's own words. This qualitative feedback is invaluable for:
+Annotations capture *why* an interaction was good or bad in the reviewer's own words. This qualitative feedback is valuable for understanding failure modes and informing evaluation improvements.
 
-- Understanding failure modes that automated evaluations can't articulate
-- Training new team members on quality expectations
-- Informing evaluation script improvements
+Latitude enriches raw annotation feedback with surrounding conversation context before using it for issue discovery. The original human text is always preserved in metadata, while the enriched version becomes the canonical feedback used for clustering.
 
-## Draft vs. Published
+## Draft vs. Finalized
 
-Annotations start as **drafts**. A draft annotation is visible only to its creator and doesn't produce a finalized score yet. This allows reviewers to:
+Annotations start as **drafts**. A draft annotation:
 
-- Work through a queue at their own pace
-- Revise their assessment before finalizing
-- Start annotations and come back to them later
+- Is written to Postgres immediately so it persists across page refreshes
+- Is visible in draft-aware surfaces like queue review and in-progress editing
+- Does not participate in analytics, issue discovery, or evaluation alignment
+- Can be edited and revised while the draft is still active
 
-When a reviewer publishes an annotation, the underlying score is finalized — it becomes visible to the team and feeds into analytics, issue discovery, and alignment. Once finalized, the score is immutable.
+Draft finalization happens automatically after a debounced timeout — by default, 5 minutes after the last edit. This gives reviewers time to revise without requiring an explicit "publish" action.
+
+System-created queue drafts (proposed by Latitude's classification system) do not auto-finalize — they wait for explicit human review.
+
+Once finalized, a score becomes immutable. It can be deleted later but should not be edited.
+
+## Issue Intent
+
+When creating an annotation through Latitude's UI, the annotator can:
+
+- **Leave issue assignment automatic** — Let Latitude's discovery pipeline decide which issue the annotation belongs to (or create a new one)
+- **Link to an existing issue** — Explicitly associate the annotation with a known failure pattern, bypassing automatic discovery for that score
+
+Explicit link choices are human overrides that take effect when the draft is finalized.
 
 ## Annotation Workflow
 
 The typical annotation workflow in Latitude:
 
-1. **Traces enter annotation queues** — Either automatically (through queue filters) or manually (through bulk selection)
+1. **Traces enter annotation queues** — Either automatically (through queue filters or system classification) or manually (through bulk selection)
 2. **Reviewers open queue items** — They see the full conversation and any existing scores
 3. **Reviewers create annotations** — They mark interactions as positive or negative with feedback
-4. **Annotations produce scores** — Published annotations become finalized scores
+4. **Drafts finalize automatically** — After the debounce timeout, annotations become immutable scores
 5. **Scores drive improvements** — They power analytics, issue discovery, and evaluation alignment
 
 ## Next Steps

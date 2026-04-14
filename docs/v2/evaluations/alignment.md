@@ -19,7 +19,9 @@ Alignment gives you that signal. When alignment drops, it's time to review your 
 
 ## How Alignment Works
 
-Alignment is computed when both an **evaluation** and a **human annotation** have scored the same trace. Latitude compares their pass/fail verdicts and computes several metrics:
+Alignment is computed when both an **evaluation** and a **human annotation** have scored the same trace. Latitude compares their pass/fail verdicts and computes metrics from a stored **confusion matrix**.
+
+The only persisted alignment primitive is the confusion matrix — all derived metrics (MCC, accuracy, F1) are computed from those stored counts on read.
 
 ### Matthews Correlation Coefficient (MCC)
 
@@ -41,11 +43,7 @@ The confusion matrix breaks down agreement into four categories:
 - **False Positive** — Evaluation says "pass" but human says "fail" (evaluation is too lenient)
 - **False Negative** — Evaluation says "fail" but human says "pass" (evaluation is too strict)
 
-This tells you the *direction* of disagreement, not just the magnitude.
-
-### Agreement Rate
-
-The simple percentage of traces where evaluation and human agree. Less informative than MCC (it doesn't account for class imbalance) but easy to understand.
+This tells you the *direction* of disagreement, not just the magnitude. Accuracy and F1 are also derivable from the same counts.
 
 ## Viewing Alignment
 
@@ -53,18 +51,28 @@ Each evaluation's detail page shows alignment metrics when annotation data exist
 
 - Current MCC and trend over time
 - Confusion matrix for the selected time period
-- Agreement rate
-- Number of overlapping scores (traces scored by both evaluation and human reviewer)
+- Last aligned timestamp
+- A manual realignment button
 
-## Building Alignment
+## Alignment and Evaluation Generation
 
-To get meaningful alignment metrics, you need overlapping scores — traces that have been scored by both an evaluation and a human reviewer. Here's how:
+When you generate an evaluation from an issue, alignment is core to the generation process:
 
-1. **Create an annotation queue** that surfaces traces the evaluation has scored
-2. **Have reviewers annotate** those traces independently
-3. **Compare results** on the evaluation's alignment dashboard
+1. Latitude collects annotation-derived ground truth — at least one failed, non-draft, non-errored annotation linked to the issue (positive examples), plus available negative examples
+2. The optimizer generates candidate scripts and evaluates them against this ground truth
+3. The best script is selected based on ordered objectives: maximize MCC, then minimize cost, then minimize duration
+4. The confusion matrix is stored on the evaluation
 
-The more overlapping scores you accumulate, the more reliable your alignment metrics become. Latitude recommends at least 50 overlapping scores before drawing conclusions from alignment data.
+There is no minimum negative-example count. A monitor can be created from a single positive occurrence, and its alignment may be weak at first. As users add more annotations, automatic realignment improves the monitor over time.
+
+## Automatic Realignment
+
+Once an evaluation exists, Latitude keeps it calibrated:
+
+- **Incremental refresh** — When the script hash hasn't changed, new examples are evaluated and added to the existing confusion matrix
+- **Full re-optimization** — When alignment (MCC) degrades beyond a tolerance threshold, the optimizer runs a full pass
+- **Debounced scheduling** — Metric recomputation at most once per hour; full re-optimization at most once every eight hours
+- **Manual realignment** — Available from the evaluation dashboard, rate-limited
 
 ## Improving Alignment
 
@@ -72,8 +80,8 @@ When alignment is low:
 
 1. **Review the confusion matrix** — Is the evaluation too strict or too lenient?
 2. **Examine false positives and false negatives** — Look at specific traces where the evaluation and human disagree. What did the evaluation miss?
-3. **Update the evaluation script** — Adjust the logic, prompts, or thresholds based on what you learned
-4. **Re-annotate** — After updating the evaluation, have reviewers annotate new traces to verify alignment improved
+3. **Add more annotations** — More human-reviewed traces give the optimizer better signal for realignment
+4. **Trigger manual realignment** — After adding annotations, use the realignment button to refresh
 
 This iterative calibration process is how you keep automated evaluations trustworthy over time.
 

@@ -33,11 +33,12 @@ Each issue links to the traces where it was detected. Read through several examp
 
 ### Check Related Evaluations
 
-If the issue was discovered from a specific evaluation's failures, review that evaluation's configuration:
+If the issue has linked evaluations, review their configuration:
 
 - Is the evaluation too strict? (Flagging acceptable behavior)
 - Is it too lenient? (Missing obvious failures)
 - Does the trigger configuration need adjustment?
+- What does the alignment (MCC) look like?
 
 ### Gather Human Feedback
 
@@ -53,9 +54,14 @@ When your team has fixed the underlying problem:
 
 1. Navigate to the issue detail page
 2. Click **Resolve**
-3. Optionally set a **monitoring window** (e.g., 7 days)
+3. A confirmation modal appears with a **keep monitoring** toggle
 
-During the monitoring window, Latitude continues watching for the pattern. If it reappears, the issue automatically moves to **Regressed** state, alerting your team that the fix didn't hold.
+The keep monitoring toggle determines what happens to linked evaluations after resolution:
+
+- **Enabled** — Linked evaluations stay active so they can detect regressions. If the issue reappears, it moves to **Regressed** state.
+- **Disabled** — Linked evaluations are archived when the issue resolves.
+
+The toggle defaults from your project's `keepMonitoring` setting, falling back to the organization-level setting when the project doesn't have one set. You can override the default for each specific resolve action.
 
 ## Working with Regressed Issues
 
@@ -69,13 +75,21 @@ When an issue regresses:
 
 1. Review the new occurrence traces — are they the same failure pattern or something subtly different?
 2. Compare with the original resolution — what changed?
-3. Fix and re-resolve with a monitoring window
+3. Fix and re-resolve
+
+## Ignoring Issues
+
+Ignoring an issue is separate from resolving it:
+
+- Ignoring **immediately archives** all linked evaluations — the `keepMonitoring` setting does not apply
+- Ignored issues are hidden from default views but can be un-ignored later
+- Use ignore for issues that aren't worth tracking, not for issues that have been fixed
 
 ## Organizing Issues
 
 As your project matures, you'll accumulate many issues. Keep them manageable:
 
-- **Resolve fixed issues** rather than leaving them open — the monitoring window catches regressions
+- **Resolve fixed issues** rather than leaving them open — keep monitoring enabled catches regressions
 - **Ignore irrelevant issues** — Don't let noise drown out real problems
 - **Use issue descriptions** to communicate context — future team members will read them
 - **Link related evaluations** — Every meaningful issue should have an evaluation monitoring for it

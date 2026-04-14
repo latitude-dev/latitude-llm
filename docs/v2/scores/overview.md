@@ -16,11 +16,14 @@ A score is a quantitative verdict attached to a trace. Every score has:
 | Field | Description |
 | --- | --- |
 | **Value** | A number between 0 and 1 |
-| **Pass / Fail** | A boolean verdict — `true` if value ≥ 0.5, `false` otherwise |
-| **Feedback** | Human-readable text explaining the verdict |
+| **Pass / Fail** | A boolean verdict set by the score producer |
+| **Feedback** | Human-readable text explaining the verdict — intentionally phrased so similar failures cluster together cleanly |
 | **Source** | Where the score came from: `evaluation`, `annotation`, or `custom` |
+| **Error** | Canonical error text when the score represents a real execution failure (not a failed verdict) |
 
-Scores are always associated with a **trace**. They can optionally be associated with a specific **span** within a trace for fine-grained measurement, or with a **session** for conversation-level verdicts.
+Scores also carry resource usage fields: **duration** (in nanoseconds), **tokens**, and **cost** (in microcents).
+
+Scores are always associated with a **trace**. They can optionally be associated with a specific **span** within a trace, a **session** for conversation-level context, a **simulation** for test runs, or an **issue** for failure pattern tracking.
 
 ## Score Sources
 
@@ -47,33 +50,40 @@ Submitted by your own code through the Latitude API. Use custom scores for domai
 - Business KPIs (conversion rates, resolution rates)
 - Downstream validation (was the agent's output actually correct?)
 
-## Normalization
+## Score States
 
-Different sources produce values on different scales — an evaluation might return `true`/`false`, a human reviewer gives thumbs up/down, a custom score might use 0–100. Latitude normalizes everything to the 0–1 range so scores can be compared, aggregated, and trended regardless of source.
+A score progresses through a defined lifecycle:
 
-The **pass/fail** threshold at 0.5 provides a consistent binary signal across the entire system.
+- **Draft** — The score has `draftedAt` set. It is visible in draft-aware surfaces (like queue review and in-progress annotation editing) but excluded from analytics, issue discovery, and evaluation alignment.
+- **Passed final** — Not a draft, `passed = true`, not errored. Immutable and saved to analytics.
+- **Failed awaiting issue** — Not a draft, `passed = false`, not errored, no `issueId` yet. Lives only in Postgres until issue assignment completes.
+- **Failed final** — Not a draft, `passed = false`, not errored, `issueId` assigned. Immutable and saved to analytics.
+- **Errored** — Not a draft, `errored = true`. Represents a real execution failure. Excluded from issue discovery and evaluation alignment but still visible for observability.
 
-## How Scores Flow Through the System
-
-Scores feed forward into every part of Latitude:
-
-1. **Issue Discovery** — When scores fail, Latitude clusters similar failure feedback into [issues](../issues/overview) — named, trackable failure patterns.
-
-2. **Evaluation Generation** — Issues can generate monitoring evaluations. Latitude creates a script that watches for that failure pattern on live traffic, producing more scores.
-
-3. **Alignment** — Annotation scores are compared against evaluation scores for the same traces. This produces [alignment metrics](../evaluations/alignment) that tell you how well automated evaluations match human judgment.
-
-4. **Analytics** — Scores power time-series dashboards showing quality trends across your project.
+Once a score is finalized (no longer a draft), it becomes immutable — it may be deleted later but should not be edited.
 
 ## Draft Scores
 
 Scores from human annotations start as **drafts**. A draft score:
 
-- Is visible only to its creator
+- Is written to Postgres immediately so it persists across page refreshes
+- Is visible in draft-aware surfaces like annotation queue review and in-progress editing
 - Does not appear in analytics, issue discovery, or alignment metrics
-- Can be edited and revised freely
+- Can be edited and revised while `draftedAt` is still set
 
-When the reviewer publishes their annotation, the score is finalized — it becomes visible in analytics, issue discovery, and alignment metrics. Once finalized, a score becomes immutable.
+Human-created drafts are finalized automatically after a debounced timeout (default: 5 minutes after the last edit). System-created queue drafts wait for explicit human review before finalization.
+
+## How Scores Flow Through the System
+
+Scores feed forward into every part of Latitude:
+
+1. **Issue Discovery** — When scores fail (and are not drafts or errored), Latitude clusters similar failure feedback into [issues](../issues/overview) — named, trackable failure patterns.
+
+2. **Evaluation Generation** — Issues can generate monitoring evaluations. Latitude creates a script that watches for that failure pattern on live traffic, producing more scores.
+
+3. **Alignment** — Annotation scores are compared against evaluation scores for the same traces. This produces [alignment metrics](../evaluations/alignment) that tell you how well automated evaluations match human judgment.
+
+4. **Analytics** — Immutable scores are saved to ClickHouse for time-series dashboards showing quality trends across your project.
 
 ## Next Steps
 

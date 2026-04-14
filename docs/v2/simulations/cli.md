@@ -9,108 +9,93 @@ description: Use the Latitude CLI to run simulations locally or in CI
 
 # Running Simulations
 
-Simulations run through the **Latitude CLI**, a command-line tool that executes your agent against test scenarios and evaluates the results. The CLI is designed for both local development and CI/CD pipelines.
+Simulations run through the **Latitude CLI**, a performant JavaScript/TypeScript tool that executes your agent against test scenarios and evaluates the results. The CLI is designed for both local development and CI/CD pipelines.
 
-## Installation
+## How the CLI Works
 
-Install the Latitude CLI as a development dependency in your project:
+The CLI is **language-agnostic** and **local-first**:
 
-```bash
-npm install --save-dev @latitude-data/cli
+1. You write simulation entrypoints as `*.sim.*` files in your project
+2. You configure the command that runs those entrypoints through your chosen runtime/toolchain
+3. The CLI discovers `*.sim.*` files, invokes your configured command, and collects results
+4. A local HTTP bridge connects the CLI to a lightweight SDK in your test code
+5. Evaluation scripts run locally against the captured traces
+6. Results can optionally be uploaded to Latitude
+
+The CLI should be useful as a standalone simulation runner even without a Latitude account.
+
+## The SDK Entrypoint
+
+Each simulation file uses the SDK to define test scenarios:
+
+```typescript
+import { Simulation, Passed, Failed } from '@latitude-data/sdk'
+
+Simulation({
+  name: 'Customer support quality',
+  threshold: 90,
+  dataset: 'clxxxxxxxxxxxxxxxxxxxxxxxxx', // Latitude dataset CUID or custom loader
+  agent: async (scenario) => {
+    // Call your agent with the scenario inputs
+    const response = await yourAgent(scenario.input)
+    return response
+  },
+  evaluations: [
+    'issues', // Run all issue-linked evaluations
+    'clxxxxxxxxxxxxxxxxxxxxxxxxx', // Specific evaluation by ID
+    async ({ output, scenario, conversation, metadata }) => {
+      // Custom inline evaluation
+      if (output.includes('I don\'t know')) {
+        return Failed('Agent gave up instead of attempting the task')
+      }
+      return Passed('Agent provided a substantive response')
+    }
+  ]
+})
 ```
 
-Or run it directly with npx:
+Key details:
 
-```bash
-npx @latitude-data/cli simulate
-```
+- `Passed(score?, feedback)` and `Failed(score?, feedback)` always require feedback. Score defaults to 1 (passed) or 0 (failed) when omitted.
+- The `issues` selector downloads all issue-linked evaluation scripts and runs them locally.
+- Custom evaluations receive `output`, `scenario`, `conversation`, and `metadata`.
+- Custom evaluations can return one score or an array of scores.
 
-## Configuration
+## Dataset Sources
 
-Simulations are configured through a configuration file in your project. The configuration specifies:
+Scenarios can come from:
 
-- **Scenarios** — The test cases to run
-- **Evaluations** — Which evaluation scripts to apply
-- **Agent entry point** — How to invoke your agent
-- **Upload settings** — Whether to send results to Latitude
+- **A Latitude dataset** — Referenced by CUID. The CLI downloads the dataset rows as scenarios.
+- **A custom function** — A loader function that returns scenarios programmatically. Stored as `"CUSTOM"` in simulation metadata.
+
+Query-backed datasets are planned for a future release.
 
 ## Running Locally
 
-During development, run simulations locally to get quick feedback:
+During development, run simulations locally to get quick feedback. The CLI prints a testing-style summary to the terminal.
 
-```bash
-npx latitude simulate
-```
-
-The CLI will:
-
-1. Load your scenarios from the configuration
-2. Execute your agent against each scenario
-3. Run evaluation scripts on the results
-4. Print a summary report to the terminal
-
-Local runs are fast and don't require network access to Latitude (unless uploading results).
+Local runs are fast and don't require network access to Latitude unless you're downloading evaluations or uploading results.
 
 ## Running in CI
 
-Add simulations to your CI/CD pipeline to gate deployments on quality:
+Add simulations to your CI/CD pipeline to gate deployments on quality. The CLI returns CI-friendly exit codes:
 
-```yaml
-# Example: GitHub Actions
-- name: Run Latitude Simulations
-  run: npx latitude simulate --ci
-  env:
-    LATITUDE_API_KEY: ${{ secrets.LATITUDE_API_KEY }}
-```
-
-In CI mode, the CLI:
-
-- Returns a non-zero exit code if any evaluation fails
-- Outputs results in a CI-friendly format
-- Optionally uploads traces and scores to Latitude for historical tracking
+- **Exit code 0** — All evaluations passed (or pass rate exceeds the configured threshold)
+- **Non-zero exit code** — At least one evaluation failed below the threshold
 
 ## Uploading Results
 
-When you provide a Latitude API key, simulation results can be uploaded to your project. This gives you:
+When you provide a Latitude API key, simulation results can be uploaded to your project:
 
-- **Historical tracking** — See how simulation results change over time
-- **Trace inspection** — View full simulation traces in the Latitude UI
-- **Score integration** — Simulation scores appear in your project's analytics
-- **Regression detection** — Compare simulation results across commits
+- Score uploads use the same `POST /v1/organizations/:organizationId/projects/:projectId/scores` endpoint as other score sources
+- Custom evaluation results use the default custom-score contract
+- Latitude evaluation results include `_evaluation: true` with evaluation metadata and the evaluation CUID as `source_id`
 
-## Writing Scenarios
+This gives you historical tracking, trace inspection in the Latitude UI, and score integration with your project's analytics.
 
-Scenarios define the inputs your agent will receive. A simple scenario might be:
+## Additional Language SDKs
 
-```json
-{
-  "name": "Basic greeting",
-  "messages": [
-    { "role": "user", "content": "Hello, can you help me?" }
-  ]
-}
-```
-
-A multi-turn scenario:
-
-```json
-{
-  "name": "Context retention across turns",
-  "messages": [
-    { "role": "user", "content": "My name is Alice" },
-    { "role": "user", "content": "What's my name?" }
-  ]
-}
-```
-
-### Scenario Sources
-
-Build your scenario library from:
-
-- **Production traces** — Export real interactions that represent important use cases
-- **Issue reproductions** — Create scenarios that trigger known failure patterns
-- **Edge cases** — Hand-write scenarios for tricky inputs your agent should handle
-- **Regression tests** — When you fix a bug, add a scenario that would have caught it
+The CLI is JavaScript/TypeScript-native, but lightweight SDKs for other languages (Python, Ruby, PHP, Go) can provide the simulation entrypoint and bridge needed to connect to the CLI. The CLI itself remains agnostic to the language your agent is written in.
 
 ## Next Steps
 

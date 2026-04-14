@@ -17,9 +17,9 @@ An annotation queue is a collection of traces waiting for human review, with con
 
 - **Which traces enter the queue** — Filter criteria and curation rules
 - **Who reviews them** — Assigned reviewers from your team
-- **What reviewers see** — The review interface and context
+- **What reviewers see** — Queue-specific instructions and review context
 
-Each queue has a name, description, and configuration. Queues are scoped to a project.
+Each queue has a name, description, instructions for reviewers, and configuration. Queues are scoped to a project.
 
 ## Types of Annotation Queues
 
@@ -36,68 +36,82 @@ Every project starts with **default system queues** that automatically classify 
 - **Tool Call Errors** — Failed tool invocations
 - **Resource Outliers** — Unusually high latency or cost
 
-System queues use LLM-based classification to automatically detect traces that might have these problems. They provide an out-of-the-box quality signal without any configuration.
+System queues evaluate each incoming trace after it completes. A per-queue **sampling** check runs first — only sampled-in traces are evaluated further. Then:
+
+- **Tool Call Errors** and **Resource Outliers** use **deterministic rules** (no LLM needed)
+- The remaining queues use a lightweight LLM-based classifier with limited conversation context
+
+When a trace is flagged, a separate validation step using the full conversation context confirms the match and creates a draft annotation before the trace enters the queue.
+
+System queue names, descriptions, and instructions are read-only, but you can adjust sampling rates or delete system queues.
 
 ### Live Queues
 
 **Live queues** automatically add traces as they complete. You configure:
 
 - **Filters** — Which traces should enter the queue (using the shared filter system)
-- **Sample rate** — What percentage of matching traces to include
+- **Sample rate** — What percentage of matching traces to include (defaults to 10%)
 - **Reviewers** — Which team members should review this queue
 
-Live queues are ideal for continuous monitoring workflows:
-
-- "Review 10% of all production traces for general quality"
-- "Review all traces where the jailbreak evaluation fired"
-- "Review all traces with cost > $1.00"
+Filter matching runs first, then sampling. Live queues grow incrementally as new matching traces arrive.
 
 ### Manual Queues
 
-**Manual queues** are populated by your team selecting traces from the trace view and adding them to the queue. Use manual queues for:
+**Manual queues** are populated by your team selecting traces from the trace dashboard or sessions dashboard and adding them to the queue. Use manual queues for:
 
 - Ad-hoc investigations ("Review all traces from this customer's session")
 - Issue deep-dives ("Review traces where this specific issue was detected")
 - Targeted annotation campaigns ("Build training data for this new evaluation")
 
+When adding a session to a manual queue, Latitude resolves it to the session's newest trace.
+
 ## The Review Experience
 
-When a reviewer opens a queue, they see a focused review interface:
+When a reviewer opens a queue, they see a focused review interface with three sections:
 
-1. **Left panel** — Metadata, existing annotations, and issue links for the current trace
-2. **Center panel** — The full conversation between user and agent
-3. **Right panel** — Annotation creation area
+1. **Metadata** — Timestamp, duration, tokens, cost, and existing scores for the current trace grouped by source
+2. **Conversation** — The full message exchange, with support for message-level or text-range selection to create annotations. Persisted highlights show where annotations are anchored.
+3. **Annotations** — Queue name and instructions at the top, followed by the list of annotations for this trace and a button to create conversation-level annotations
 
 The reviewer works through the queue sequentially:
 
 1. Read the conversation
 2. Create one or more annotations (conversation-level or message-level)
-3. Optionally link annotations to issues
+3. Optionally link annotations to existing issues
 4. Mark the trace as "Fully Annotated" to move to the next item
+
+Clicking a persisted highlight in the conversation focuses the matching annotation card in the annotations panel.
+
+### Bottom Bar
+
+The bottom bar provides:
+
+- Add current trace to a dataset
+- Current position in the queue
+- Previous / next navigation
+- "Fully Annotated" action to mark the item complete
 
 ### Keyboard Shortcuts
 
-The review interface supports keyboard navigation for efficient annotation:
+The review interface supports keyboard navigation for efficient annotation.
 
-- Arrow keys or `j`/`k` to move between queue items
-- Quick-select shortcuts for common verdicts
+## Queue Progress
 
-## Queue Metrics
+Each queue tracks progress through:
 
-Each queue tracks:
+- **Total items** — How many traces are in the queue
+- **Completed items** — How many have been marked as fully annotated
+- **Completion percentage** — Derived from the two counters above
 
-- **Total items** — How many traces are waiting for review
-- **Reviewed items** — How many have been fully annotated
-- **Completion rate** — Percentage of the queue that's been reviewed
-- **Review velocity** — How quickly items are being reviewed
+Queue completion is tracked separately from annotation creation — creating annotations does not automatically mark a queue item complete.
 
 ## Queues and Evaluation Alignment
 
 A powerful pattern for improving evaluation alignment:
 
-1. Create a live queue filtered to traces where a specific evaluation has produced annotations
+1. Create a live queue filtered to traces where a specific evaluation has scored
 2. Have reviewers annotate those traces independently
-3. Check the evaluation's alignment dashboard — it now has overlapping human and machine annotations
+3. Check the evaluation's alignment dashboard — it now has overlapping human and machine scores
 4. Use the alignment metrics to identify where the evaluation needs improvement
 
 This systematic approach to generating alignment data ensures your evaluations stay calibrated over time.
