@@ -257,7 +257,12 @@ const SORT_COLUMNS: Record<string, SortColumn> = {
   spans: { expr: "span_count", chType: "UInt64", rowKey: "span_count" },
 }
 
-function buildTraceFilterClauses(filters: FilterSet | undefined): {
+function buildTraceFilterClauses(
+  filters: FilterSet | undefined,
+  options?: {
+    readonly paramPrefix?: string
+  },
+): {
   /** HAVING clauses for the trace GROUP BY. */
   havingClauses: string[]
   /** WHERE clauses to add before GROUP BY (e.g. score subquery). */
@@ -271,14 +276,23 @@ function buildTraceFilterClauses(filters: FilterSet | undefined): {
   const { telemetryFilters, scoreFilters } = splitScoreFilters(filters)
 
   const telemetry = telemetryFilters
-    ? buildClickHouseWhere(telemetryFilters, TRACE_FIELD_REGISTRY)
+    ? buildClickHouseWhere(
+        telemetryFilters,
+        TRACE_FIELD_REGISTRY,
+        options?.paramPrefix ? { paramPrefix: options.paramPrefix } : undefined,
+      )
     : { clauses: [], params: {} }
 
   let whereClauses: string[] = []
   let scoreParams: Record<string, unknown> = {}
 
   if (scoreFilters) {
-    const result = buildScoreRollupSubquery("trace_id", scoreFilters, false)
+    const result = buildScoreRollupSubquery(
+      "trace_id",
+      scoreFilters,
+      false,
+      options?.paramPrefix ? { paramPrefix: `${options.paramPrefix}_s` } : undefined,
+    )
     whereClauses = [result.subquery]
     scoreParams = result.params
   }
@@ -287,6 +301,22 @@ function buildTraceFilterClauses(filters: FilterSet | undefined): {
     havingClauses: telemetry.clauses,
     whereClauses,
     params: { ...telemetry.params, ...scoreParams },
+  }
+}
+
+function buildTraceFilterCondition(
+  filters: FilterSet | undefined,
+  paramPrefix: string,
+): {
+  condition: string
+  params: Record<string, unknown>
+} {
+  const { havingClauses, whereClauses, params } = buildTraceFilterClauses(filters, { paramPrefix })
+  const clauses = [...whereClauses, ...havingClauses]
+
+  return {
+    condition: clauses.length > 0 ? clauses.map((clause) => `(${clause})`).join(" AND ") : "1",
+    params,
   }
 }
 
@@ -314,20 +344,20 @@ export const TraceRepositoryLive = Layer.effect(
             query: `SELECT
                       count() AS trace_count,
                       countIf(duration_ns > 0) AS duration_ns_samples,
-                      quantileTDigest(0.5)(duration_ns) AS duration_ns_p50,
-                      quantileTDigest(0.9)(duration_ns) AS duration_ns_p90,
-                      quantileTDigest(0.95)(duration_ns) AS duration_ns_p95,
-                      quantileTDigest(0.99)(duration_ns) AS duration_ns_p99,
+                      quantileTDigestIf(0.5)(duration_ns, duration_ns > 0) AS duration_ns_p50,
+                      quantileTDigestIf(0.9)(duration_ns, duration_ns > 0) AS duration_ns_p90,
+                      quantileTDigestIf(0.95)(duration_ns, duration_ns > 0) AS duration_ns_p95,
+                      quantileTDigestIf(0.99)(duration_ns, duration_ns > 0) AS duration_ns_p99,
                       countIf(cost_total_microcents > 0) AS cost_total_microcents_samples,
-                      quantileTDigest(0.5)(cost_total_microcents) AS cost_total_microcents_p50,
-                      quantileTDigest(0.9)(cost_total_microcents) AS cost_total_microcents_p90,
-                      quantileTDigest(0.95)(cost_total_microcents) AS cost_total_microcents_p95,
-                      quantileTDigest(0.99)(cost_total_microcents) AS cost_total_microcents_p99,
+                      quantileTDigestIf(0.5)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p50,
+                      quantileTDigestIf(0.9)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p90,
+                      quantileTDigestIf(0.95)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p95,
+                      quantileTDigestIf(0.99)(cost_total_microcents, cost_total_microcents > 0) AS cost_total_microcents_p99,
                       countIf(tokens_total > 0) AS tokens_total_samples,
-                      quantileTDigest(0.5)(tokens_total) AS tokens_total_p50,
-                      quantileTDigest(0.9)(tokens_total) AS tokens_total_p90,
-                      quantileTDigest(0.95)(tokens_total) AS tokens_total_p95,
-                      quantileTDigest(0.99)(tokens_total) AS tokens_total_p99,
+                      quantileTDigestIf(0.5)(tokens_total, tokens_total > 0) AS tokens_total_p50,
+                      quantileTDigestIf(0.9)(tokens_total, tokens_total > 0) AS tokens_total_p90,
+                      quantileTDigestIf(0.95)(tokens_total, tokens_total > 0) AS tokens_total_p95,
+                      quantileTDigestIf(0.99)(tokens_total, tokens_total > 0) AS tokens_total_p99,
                       countIf(time_to_first_token_ns > 0) AS time_to_first_token_ns_samples,
                       quantileTDigestIf(0.5)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p50,
                       quantileTDigestIf(0.9)(time_to_first_token_ns, time_to_first_token_ns > 0) AS time_to_first_token_ns_p90,
@@ -537,9 +567,6 @@ export const TraceRepositoryLive = Layer.effect(
         )
     }
 
-    // TODO(phase-13): add a batched variant for checking one trace against
-    // multiple independent FilterSets in one query so enqueue can reuse the
-    // grouped trace row across many evaluation trigger checks.
     const matchesFiltersByTraceId: TraceRepositoryShape["matchesFiltersByTraceId"] = ({
       organizationId,
       projectId,
@@ -578,6 +605,61 @@ export const TraceRepositoryLive = Layer.effect(
         .pipe(
           Effect.map((rows) => Number(rows[0]?.total ?? 0) > 0),
           Effect.mapError((error) => toRepositoryError(error, "matchesFiltersByTraceId")),
+        )
+    }
+
+    const listMatchingFilterIdsByTraceId: TraceRepositoryShape["listMatchingFilterIdsByTraceId"] = ({
+      organizationId,
+      projectId,
+      traceId,
+      filterSets,
+    }) => {
+      if (filterSets.length === 0) {
+        return Effect.succeed([])
+      }
+
+      const queryParams: Record<string, unknown> = {
+        organizationId: organizationId as string,
+        projectId: projectId as string,
+        traceId,
+      }
+
+      const matchExpressions = filterSets.map(({ filterId, filters }, index) => {
+        const { condition, params } = buildTraceFilterCondition(filters, `batch_${index}`)
+        const filterIdParam = `filter_id_${index}`
+
+        Object.assign(queryParams, params, { [filterIdParam]: filterId })
+
+        return `if(${condition}, {${filterIdParam}:String}, '')`
+      })
+
+      return chSqlClient
+        .query(async (client) => {
+          const result = await client.query({
+            query: `SELECT matched_filter_id
+                    FROM (
+                      SELECT arrayJoin([
+                        ${matchExpressions.join(",\n                        ")}
+                      ]) AS matched_filter_id
+                      FROM (
+                        SELECT ${LIST_SELECT}
+                        FROM traces
+                        WHERE organization_id = {organizationId:String}
+                          AND project_id = {projectId:String}
+                          AND trace_id = {traceId:FixedString(32)}
+                        GROUP BY organization_id, project_id, trace_id
+                        LIMIT 1
+                      )
+                    )
+                    WHERE matched_filter_id != ''`,
+            query_params: queryParams,
+            format: "JSONEachRow",
+          })
+          return result.json<{ matched_filter_id: string }>()
+        })
+        .pipe(
+          Effect.map((rows) => rows.map((row) => row.matched_filter_id)),
+          Effect.mapError((error) => toRepositoryError(error, "listMatchingFilterIdsByTraceId")),
         )
     }
 
@@ -756,6 +838,8 @@ export const TraceRepositoryLive = Layer.effect(
           ),
 
       matchesFiltersByTraceId,
+
+      listMatchingFilterIdsByTraceId,
 
       listByTraceIds,
 

@@ -4,6 +4,7 @@ import {
   type AnnotationQueueItemListSortBy,
   AnnotationQueueItemRepository,
   completeQueueItemUseCase,
+  type NewQueueInput,
   requestBulkQueueItems,
   type TraceSelection,
   uncompleteQueueItemUseCase,
@@ -21,6 +22,7 @@ import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
+import { queueInputSchema } from "../../components/annotation-queues/queue-form-schema.ts"
 import { requireSession } from "../../server/auth.ts"
 import { getClickhouseClient, getPostgresClient, getQueuePublisher } from "../../server/clients.ts"
 
@@ -181,15 +183,11 @@ const addTracesToQueueInputSchema = z
   .object({
     projectId: z.string(),
     queueId: z.string().optional(),
-    newQueueName: z
-      .string()
-      .transform((s) => s.trim())
-      .pipe(z.string().min(1, "Queue name cannot be empty"))
-      .optional(),
+    newQueue: queueInputSchema.optional(),
     selection: bulkSelectionSchema,
   })
-  .refine((data) => Boolean(data.queueId) !== Boolean(data.newQueueName), {
-    message: "Provide either queueId or newQueueName, but not both",
+  .refine((data) => Boolean(data.queueId) !== Boolean(data.newQueue), {
+    message: "Provide either queueId or newQueue, but not both",
   })
 
 export const addTracesToQueueFunction = createServerFn({ method: "POST" })
@@ -211,7 +209,7 @@ export const addTracesToQueueFunction = createServerFn({ method: "POST" })
 
     const input = data.queueId
       ? { projectId, queueId: AnnotationQueueId(data.queueId), selection }
-      : { projectId, newQueueName: data.newQueueName as string, selection }
+      : { projectId, newQueue: data.newQueue as NewQueueInput, selection }
 
     const result = await Effect.runPromise(requestBulkQueueItems(input).pipe(Effect.provide(layer)))
     return { queueId: result.queueId as string }

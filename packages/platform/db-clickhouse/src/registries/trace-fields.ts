@@ -1,7 +1,10 @@
+import type { TraceFilterFieldName } from "@domain/shared"
 import type { ChFieldRegistry } from "../filter-builder.ts"
 import { mapDateTime64UtcQueryParam, mapStatusValue } from "./helpers.ts"
 
-export const TRACE_FIELD_REGISTRY: ChFieldRegistry = {
+type InternalField = "startTime"
+
+export const TRACE_FIELD_REGISTRY: ChFieldRegistry<TraceFilterFieldName | InternalField> = {
   status: { column: "overall_status", chType: "UInt8", mapValue: mapStatusValue },
   name: { column: "root_span_name", chType: "String" },
   sessionId: { column: "session_id", chType: "String" },
@@ -11,8 +14,9 @@ export const TRACE_FIELD_REGISTRY: ChFieldRegistry = {
   models: { column: "models", chType: "String", isArray: true },
   providers: { column: "providers", chType: "String", isArray: true },
   serviceNames: { column: "service_names", chType: "String", isArray: true },
-  cost: { column: "cost_total_microcents", chType: "UInt64" },
   duration: { column: "duration_ns", chType: "Int64" },
+  ttft: { column: "time_to_first_token_ns", chType: "Int64" },
+  cost: { column: "cost_total_microcents", chType: "UInt64" },
   spanCount: { column: "span_count", chType: "UInt64" },
   errorCount: { column: "error_count", chType: "UInt64" },
   tokensInput: { column: "tokens_input", chType: "UInt64" },

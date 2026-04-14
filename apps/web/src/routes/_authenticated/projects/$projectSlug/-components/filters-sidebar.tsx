@@ -1,57 +1,18 @@
-import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Button, Checkbox, Input, Skeleton, Text, Tooltip } from "@repo/ui"
-import { ChevronDown, ChevronUp, InfoIcon, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
+import { type FilterCondition, type FilterSet, STATUS_OPTIONS } from "@domain/shared"
+import { Button, Checkbox, Icon, Input, Text, Tooltip } from "@repo/ui"
+import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useDebounce } from "react-use"
-import { useSessionDistinctValues } from "../../../../../domains/sessions/sessions.collection.ts"
-import { useTraceDistinctValues } from "../../../../../domains/traces/traces.collection.ts"
+import {
+  getTextFieldsForMode,
+  MULTI_SELECT_FIELDS,
+  NUMBER_RANGE_FIELDS,
+} from "../../../../../components/filters-builder/constants.ts"
+import { MetadataFilter } from "../../../../../components/filters-builder/metadata-filter/metadata-filter.tsx"
+import { type FilterMode, MultiSelectFilter } from "../../../../../components/filters-builder/multi-select-filter.tsx"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 
-export type FilterMode = "traces" | "sessions"
-
-type DistinctColumn = "tags" | "models" | "providers" | "serviceNames"
-
-const STATUS_OPTIONS = ["ok", "error", "unset"] as const
-
-const MULTI_SELECT_FIELDS: readonly { label: string; field: DistinctColumn }[] = [
-  { label: "Tags", field: "tags" },
-  { label: "Models", field: "models" },
-  { label: "Providers", field: "providers" },
-  { label: "Services", field: "serviceNames" },
-]
-
-const NUMBER_RANGE_FIELDS = [
-  { label: "Duration (ns)", field: "duration" },
-  { label: "TTFT (ns)", field: "ttft", tooltip: "Time to first token, measured in nanoseconds." },
-  { label: "Cost (microcents)", field: "cost" },
-  { label: "Span Count", field: "spanCount" },
-  { label: "Error Count", field: "errorCount" },
-  { label: "Tokens Input", field: "tokensInput" },
-  { label: "Tokens Output", field: "tokensOutput" },
-]
-
-interface TextFilterField {
-  label: string
-  field: string
-  placeholder: string
-}
-
-const TRACES_TEXT_FIELDS: TextFilterField[] = [
-  { label: "Name", field: "name", placeholder: "Enter name..." },
-  { label: "Session ID", field: "sessionId", placeholder: "Filter by session..." },
-  { label: "Simulation ID", field: "simulationId", placeholder: "Filter by simulation..." },
-  { label: "User ID", field: "userId", placeholder: "Filter by user..." },
-]
-
-const SESSIONS_TEXT_FIELDS: TextFilterField[] = [
-  { label: "Session ID", field: "sessionId", placeholder: "Filter by session..." },
-  { label: "Simulation ID", field: "simulationId", placeholder: "Filter by simulation..." },
-  { label: "User ID", field: "userId", placeholder: "Filter by user..." },
-]
-
-function getTextFieldsForMode(mode: FilterMode): TextFilterField[] {
-  return mode === "sessions" ? SESSIONS_TEXT_FIELDS : TRACES_TEXT_FIELDS
-}
+export type { FilterMode }
 
 interface FiltersSidebarProps {
   readonly mode: FilterMode
@@ -176,129 +137,6 @@ function DebouncedInput({
   )
 }
 
-function useDistinctValues(mode: FilterMode, args: { projectId: string; column: DistinctColumn; search?: string }) {
-  const traceResult = useTraceDistinctValues(args)
-  const sessionResult = useSessionDistinctValues(args)
-
-  // Both hooks always run (React rules of hooks), but only the active mode's result is used.
-  // The inactive query still fires — the data is small and benefits from being pre-cached for tab switches.
-  return mode === "sessions" ? sessionResult : traceResult
-}
-
-function MultiSelectFilter({
-  mode,
-  projectId,
-  column,
-  selected,
-  onChange,
-}: {
-  readonly mode: FilterMode
-  readonly projectId: string
-  readonly column: DistinctColumn
-  readonly selected: readonly string[]
-  readonly onChange: (values: string[]) => void
-}) {
-  const [search, setSearch] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-
-  useDebounce(
-    () => {
-      setDebouncedSearch(search)
-    },
-    300,
-    [search],
-  )
-
-  const { data: initialOptions = [], isLoading: initialLoading } = useDistinctValues(mode, {
-    projectId,
-    column,
-  })
-  const needsServerSearch = initialOptions.length >= 50
-
-  const { data: searchedOptions, isLoading: searchLoading } = useDistinctValues(mode, {
-    projectId,
-    column,
-    ...(needsServerSearch && debouncedSearch ? { search: debouncedSearch } : {}),
-  })
-
-  const isLoading = initialLoading || (needsServerSearch && debouncedSearch ? searchLoading : false)
-
-  const displayOptions = useMemo(() => {
-    if (!search) return initialOptions
-    if (needsServerSearch) return searchedOptions ?? initialOptions
-    const lower = search.toLowerCase()
-    return initialOptions.filter((o) => o.toLowerCase().includes(lower))
-  }, [search, initialOptions, needsServerSearch, searchedOptions])
-
-  const toggle = useCallback(
-    (value: string) => {
-      const next = selected.includes(value) ? selected.filter((s) => s !== value) : [...selected, value]
-      onChange(next)
-    },
-    [selected, onChange],
-  )
-
-  const hasSelections = selected.length > 0
-
-  const handleClear = useCallback(() => {
-    onChange([])
-  }, [onChange])
-
-  return (
-    <div className="flex flex-col border rounded-md overflow-hidden">
-      <div className="flex items-center gap-2 border-b px-2 py-1.5">
-        <Search className="h-3.5 w-3.5 shrink-0 opacity-50" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search..."
-          className="flex h-6 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
-        />
-        {hasSelections && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
-            aria-label="Clear selections"
-            title="Clear selections"
-          >
-            <XIcon className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      <div className="max-h-40 overflow-y-auto p-1">
-        {isLoading ? (
-          <div className="flex flex-col gap-1 p-1">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-2 px-2 py-1">
-                <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
-                <Skeleton className="h-4 flex-1 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : displayOptions.length === 0 ? (
-          <div className="flex items-center justify-center py-2">
-            <Text.H6 color="foregroundMuted">{debouncedSearch ? "No matches" : "No values"}</Text.H6>
-          </div>
-        ) : (
-          displayOptions.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs hover:bg-accent cursor-pointer"
-              onClick={() => toggle(value)}
-            >
-              <Checkbox checked={selected.includes(value)} onCheckedChange={() => toggle(value)} />
-              <span className="truncate">{value}</span>
-            </button>
-          ))
-        )}
-      </div>
-    </div>
-  )
-}
-
 function NumberRangeFilter({
   minValue,
   maxValue,
@@ -401,87 +239,6 @@ function NumberRangeFilter({
   )
 }
 
-function MetadataFilter({
-  entries: committedEntries,
-  onChange,
-}: {
-  readonly entries: readonly { key: string; value: string }[]
-  readonly onChange: (entries: { key: string; value: string }[]) => void
-}) {
-  const [localEntries, setLocalEntries] = useState<{ key: string; value: string }[]>([...committedEntries])
-
-  // TODO(frontend-use-effect-policy): keep draft metadata rows in sync with externally-controlled filter updates.
-  useEffect(() => {
-    setLocalEntries([...committedEntries])
-  }, [committedEntries])
-
-  const propagate = useCallback(
-    (entries: { key: string; value: string }[]) => {
-      setLocalEntries(entries)
-      const valid = entries.filter((e) => e.key !== "" && e.value !== "")
-      onChange(valid)
-    },
-    [onChange],
-  )
-
-  const addEntry = useCallback(() => {
-    setLocalEntries((prev) => [...prev, { key: "", value: "" }])
-  }, [])
-
-  const removeEntry = useCallback(
-    (index: number) => {
-      propagate(localEntries.filter((_, i) => i !== index))
-    },
-    [localEntries, propagate],
-  )
-
-  const updateEntry = useCallback(
-    (index: number, field: "key" | "value", val: string) => {
-      propagate(localEntries.map((e, i) => (i === index ? { ...e, [field]: val } : e)))
-    },
-    [localEntries, propagate],
-  )
-
-  return (
-    <div className="flex flex-col gap-2">
-      {localEntries.map((entry, i) => (
-        <div key={i} className="flex items-center gap-1">
-          <input
-            type="text"
-            placeholder="Key"
-            value={entry.key}
-            onChange={(e) => updateEntry(i, "key", e.target.value)}
-            className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
-          />
-          <span className="text-xs text-muted-foreground">=</span>
-          <input
-            type="text"
-            placeholder="Value"
-            value={entry.value}
-            onChange={(e) => updateEntry(i, "value", e.target.value)}
-            className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
-          />
-          <button
-            type="button"
-            className="shrink-0 p-1 text-muted-foreground hover:text-foreground cursor-pointer"
-            onClick={() => removeEntry(i)}
-          >
-            <Trash2Icon className="h-3 w-3" />
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-        onClick={addEntry}
-      >
-        <PlusIcon className="h-3 w-3" />
-        Add condition
-      </button>
-    </div>
-  )
-}
-
 export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onClose }: FiltersSidebarProps) {
   const setField = useCallback(
     (field: string, conditions: FilterCondition[]) => {
@@ -551,8 +308,8 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
     <Layout.Sidebar>
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <Text.H5>Filters</Text.H5>
-        <Button variant="ghost" size="sm" onClick={onClose}>
-          <XIcon className="h-4 w-4" />
+        <Button variant="ghost" size="icon" onClick={onClose}>
+          <Icon icon={XIcon} size="sm" />
         </Button>
       </div>
 

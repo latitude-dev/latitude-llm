@@ -1,4 +1,4 @@
-import { DropdownMenu, DropdownMenuTrigger, Text } from "@repo/ui"
+import { DropdownMenu, Text } from "@repo/ui"
 import { extractLeadingEmoji } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useParams } from "@tanstack/react-router"
@@ -37,16 +37,14 @@ export function ProjectBreadcrumbSegment() {
         })) ?? []
       }
       trigger={() => (
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
-          >
-            {emoji && <span className="text-sm">{emoji}</span>}
-            <Text.H5M color="foregroundMuted">{title}</Text.H5M>
-            <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-          </button>
-        </DropdownMenuTrigger>
+        <button
+          type="button"
+          className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+        >
+          {emoji && <span className="text-sm">{emoji}</span>}
+          <Text.H5M color="foregroundMuted">{title}</Text.H5M>
+          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+        </button>
       )}
     />
   ) : (

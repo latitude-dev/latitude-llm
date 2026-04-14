@@ -59,6 +59,13 @@ export interface TraceRepositoryShape {
     readonly filters?: FilterSet
   }): Effect.Effect<boolean, RepositoryError>
 
+  listMatchingFilterIdsByTraceId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly traceId: TraceId
+    readonly filterSets: readonly TraceFilterSetMatchCandidate[]
+  }): Effect.Effect<readonly string[], RepositoryError>
+
   listByTraceIds(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -75,6 +82,11 @@ export interface TraceRepositoryShape {
 }
 
 export type TraceDistinctColumn = "tags" | "models" | "providers" | "serviceNames"
+
+export interface TraceFilterSetMatchCandidate {
+  readonly filterId: string
+  readonly filters?: FilterSet
+}
 
 export interface TraceListCursor {
   readonly sortValue: string

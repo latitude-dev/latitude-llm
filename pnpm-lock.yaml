@@ -475,6 +475,9 @@ importers:
       '@domain/email':
         specifier: workspace:*
         version: link:../../packages/domain/email
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../../packages/domain/evaluations
       '@domain/events':
         specifier: workspace:*
         version: link:../../packages/domain/events
@@ -851,6 +854,9 @@ importers:
       '@domain/optimizations':
         specifier: workspace:*
         version: link:../optimizations
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
@@ -1561,6 +1567,9 @@ importers:
 
   packages/ui:
     dependencies:
+      '@base-ui/react':
+        specifier: ^1.4.0
+        version: 1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@codemirror/commands':
         specifier: ^6.10.2
         version: 6.10.3
@@ -2239,6 +2248,29 @@ packages:
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
 
+  '@base-ui/react@1.4.0':
+    resolution: {integrity: sha512-QcqdVbr/+ba2/RAKJIV1PV6S02Q5+r6a4Eym8ndBw+ZbBILkkmQAyRxXCg/pArrHnkrGeU8goe26aw0h6eE8pg==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      '@date-fns/tz': ^1.2.0
+      '@types/react': ^17 || ^18 || ^19
+      date-fns: ^4.0.0
+      react: ^17 || ^18 || ^19
+      react-dom: ^17 || ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
+  '@base-ui/utils@0.2.7':
+    resolution: {integrity: sha512-nXYKhiL/0JafyJE8PfcflipGftOftlIwKd72rU15iZ1M5yqgg5J9P8NHU71GReDuXco5MJA/eVQqUT5WRqX9sA==}
+    peerDependencies:
+      '@types/react': ^17 || ^18 || ^19
+      react: ^17 || ^18 || ^19
+      react-dom: ^17 || ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
   '@better-auth/cli@1.4.22':
     resolution: {integrity: sha512-7azgrNiP1zJXMLqoLgCVj3KsZeYWLHeaGMapYlLblS6yU/o5n//sn1HBasRD2z4HBy2Etz/C7V483/mYvRHI2g==}
     hasBin: true
@@ -2504,6 +2536,9 @@ packages:
 
   '@datastructures-js/deque@1.0.8':
     resolution: {integrity: sha512-PSBhJ2/SmeRPRHuBv7i/fHWIdSC3JTyq56qb+Rq0wjOagi0/fdV5/B/3Md5zFZus/W6OkSPMaxMKKMNMrSmubg==}
+
+  '@date-fns/tz@1.4.1':
+    resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
 
   '@drizzle-team/brocli@0.11.0':
     resolution: {integrity: sha512-hD3pekGiPg0WPCCGAZmusBBJsDqGUR66Y452YgQsZOnkdQ7ViEPKuyP4huUGEZQefp8g34RRodXYmJ2TbCH+tg==}
@@ -7348,6 +7383,9 @@ packages:
     resolution: {integrity: sha512-23XHcCF+coGYevirZceTVD7NdJOqVn+49IHyxgszm+JIiHLoB2TkmPtsYkNWT1pvRSGkc35L6NHs0yHkN2SumA==}
     engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
 
+  date-fns@4.1.0:
+    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
+
   db0@0.3.4:
     resolution: {integrity: sha512-RiXXi4WaNzPTHEOu8UPQKMooIbqOEyqA1t7Z6MsdxSCeb8iUC9ko3LcmsLmeUt2SM5bctfArZKkRQggKZz7JNw==}
     peerDependencies:
@@ -9727,6 +9765,9 @@ packages:
   require-in-the-middle@8.0.1:
     resolution: {integrity: sha512-QT7FVMXfWOYFbeRBF6nu+I6tr2Tf3u0q8RIEjNob/heKY/nh7drD/k7eeMFmSQgnTtCzLDcCu/XEnpW2wk4xCQ==}
     engines: {node: '>=9.3.0 || >=8.10.0 <9.0.0'}
+
+  reselect@5.1.1:
+    resolution: {integrity: sha512-K/BG6eIky/SBpzfHZv/dd+9JBFiS4SWV7FIujVyJRux6e45+73RaUHXLmIR1f7WOMaQ0U1km6qwklRQxpJJY0w==}
 
   resize-observer-polyfill@1.5.1:
     resolution: {integrity: sha512-LwZrotdHOo12nQuZlHEmtuXdqGoOD0OhaxopaNFxWzInpEgaLWoVuAMbTzixuosCx2nEG58ngzW3vxdWoxIgdg==}
@@ -12164,6 +12205,31 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
+  '@base-ui/react@1.4.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@babel/runtime': 7.29.2
+      '@base-ui/utils': 0.2.7(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@date-fns/tz': 1.4.1
+      '@floating-ui/react-dom': 2.1.8(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@floating-ui/utils': 0.2.11
+      date-fns: 4.1.0
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      use-sync-external-store: 1.6.0(react@19.2.4)
+    optionalDependencies:
+      '@types/react': 19.2.14
+
+  '@base-ui/utils@0.2.7(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@babel/runtime': 7.29.2
+      '@floating-ui/utils': 0.2.11
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+      reselect: 5.1.1
+      use-sync-external-store: 1.6.0(react@19.2.4)
+    optionalDependencies:
+      '@types/react': 19.2.14
+
   '@better-auth/cli@1.4.22(@better-fetch/fetch@1.1.21)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.1)(@tanstack/react-start@1.167.16(crossws@0.4.4(srvx@0.11.15))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(webpack@5.106.0(esbuild@0.27.7)))(@types/mssql@9.1.11(@azure/core-client@1.10.1))(better-call@1.1.8(zod@4.3.6))(drizzle-kit@1.0.0-beta.15-859cf75)(jose@6.2.2)(kysely@0.28.15)(mssql@11.0.1(@azure/core-client@1.10.1))(nanostores@1.2.0)(next@16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.0(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(jsdom@29.0.2(@noble/hashes@2.2.0))(vite@8.0.5(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@types/node@25.6.0)(esbuild@0.27.7)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)))':
     dependencies:
       '@babel/core': 7.29.0
@@ -12484,6 +12550,8 @@ snapshots:
   '@csstools/css-tokenizer@4.0.0': {}
 
   '@datastructures-js/deque@1.0.8': {}
+
+  '@date-fns/tz@1.4.1': {}
 
   '@drizzle-team/brocli@0.11.0': {}
 
@@ -17541,6 +17609,8 @@ snapshots:
     transitivePeerDependencies:
       - '@noble/hashes'
 
+  date-fns@4.1.0: {}
+
   db0@0.3.4(@electric-sql/pglite@0.3.15)(better-sqlite3@12.8.0)(drizzle-orm@1.0.0-beta.15-859cf75(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.1)(@prisma/client@5.22.0)(@types/mssql@9.1.11(@azure/core-client@1.10.1))(@types/pg@8.16.0)(better-sqlite3@12.8.0)(mssql@11.0.1(@azure/core-client@1.10.1))(pg@8.20.0)(zod@4.3.6)):
     optionalDependencies:
       '@electric-sql/pglite': 0.3.15
@@ -20320,6 +20390,8 @@ snapshots:
       module-details-from-path: 1.0.4
     transitivePeerDependencies:
       - supports-color
+
+  reselect@5.1.1: {}
 
   resize-observer-polyfill@1.5.1: {}
 

@@ -460,6 +460,11 @@ describe("ScoreAnalyticsRepository", () => {
     })
 
     it("excludes simulations in trend queries", async () => {
+      const recentDate = daysAgoDateTime(1, 12)
+      await insertScores([
+        makeScoreRow({ simulation_id: simId, value: 0.5, passed: true, created_at: recentDate }),
+        makeScoreRow({ simulation_id: "", value: 0.9, passed: true, created_at: recentDate }),
+      ])
       const options: ScoreAnalyticsOptions = { excludeSimulations: true }
       const trend = await Effect.runPromise(
         repo.trendByProject({ organizationId: ORG_ID, projectId: PROJECT_ID, days: 30, options }),

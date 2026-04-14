@@ -17,6 +17,7 @@
     "@domain/api-keys": "workspace:*",
     "@domain/datasets": "workspace:*",
     "@domain/email": "workspace:*",
+    "@domain/evaluations": "workspace:*",
     "@domain/events": "workspace:*",
     "@domain/projects": "workspace:*",
     "@domain/issues": "workspace:*",

@@ -31,6 +31,8 @@ function getPercentileBadges(value: number, baselines: Baselines | undefined, me
   if (!baselines) return []
 
   const baseline = baselines[metricKey]
+  if (baseline.sampleCount === 0) return []
+
   const badges: string[] = []
 
   // Show highest matching percentile badge only (p99 > p95 > p90)
@@ -131,17 +133,24 @@ export function TraceTab({
     onFiltersChange(newFilters)
   }
 
-  const durationBadges = traceRecord ? getPercentileBadges(traceRecord.durationNs, baselines, "durationNs") : []
+  const durationBadges =
+    traceRecord && traceRecord.durationNs > 0
+      ? getPercentileBadges(traceRecord.durationNs, baselines, "durationNs")
+      : []
   const costBadges = traceRecord
-    ? getPercentileBadges(traceRecord.costTotalMicrocents, baselines, "costTotalMicrocents")
+    ? traceRecord.costTotalMicrocents > 0
+      ? getPercentileBadges(traceRecord.costTotalMicrocents, baselines, "costTotalMicrocents")
+      : []
     : []
   const ttftBadges = traceRecord
-    ? getPercentileBadges(traceRecord.timeToFirstTokenNs, baselines, "timeToFirstTokenNs")
+    ? traceRecord.timeToFirstTokenNs > 0
+      ? getPercentileBadges(traceRecord.timeToFirstTokenNs, baselines, "timeToFirstTokenNs")
+      : []
     : []
 
   const durationValue = traceRecord ? (
     <span className="flex items-center gap-1">
-      {formatDuration(traceRecord.durationNs)}
+      {traceRecord.durationNs > 0 ? formatDuration(traceRecord.durationNs) : "-"}
       {durationBadges.map((badge) => {
         const threshold = baselines ? getThresholdForBadge(badge, baselines, "durationNs") : null
         return (

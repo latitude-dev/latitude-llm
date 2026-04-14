@@ -4,13 +4,14 @@ import {
   InfiniteTable,
   type InfiniteTableColumn,
   type InfiniteTableSorting,
+  optionsColumn,
   Text,
   Tooltip,
 } from "@repo/ui"
 import { mapByEntityId, relativeTime } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import {
   ANNOTATION_QUEUES_DEFAULT_SORTING,
   useAnnotationQueuesInfiniteScroll,
@@ -21,7 +22,9 @@ import { pickUsersFromMembersMap } from "../../../../../domains/members/pick-use
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { ListingLayout as Layout } from "../../../../../layouts/ListingLayout/index.tsx"
 import { AqListBreadcrumb } from "./-components/aq-list-breadcrumb.tsx"
+import { DeleteQueueModal } from "./-components/delete-queue-modal.tsx"
 import { QueueBadge } from "./-components/queue-badge.tsx"
+import { QueueModal } from "./-components/queue-modal.tsx"
 
 export const Route = createFileRoute("/_authenticated/projects/$projectSlug/annotation-queues/")({
   staticData: {
@@ -39,6 +42,9 @@ function AnnotationQueuesPage() {
   )
 
   const [sorting, setSorting] = useState<InfiniteTableSorting>(ANNOTATION_QUEUES_DEFAULT_SORTING)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [editQueue, setEditQueue] = useState<AnnotationQueueRecord | null>(null)
+  const [deleteQueue, setDeleteQueue] = useState<AnnotationQueueRecord | null>(null)
 
   const projectId = project?.id ?? ""
   const {
@@ -55,6 +61,14 @@ function AnnotationQueuesPage() {
     () => mapByEntityId(queues, (q) => pickUsersFromMembersMap(memberByUserId, q.assignees)),
     [memberByUserId, queues],
   )
+
+  const openEditModal = useCallback((q: AnnotationQueueRecord) => {
+    setEditQueue(q)
+  }, [])
+
+  const openDeleteModal = useCallback((q: AnnotationQueueRecord) => {
+    setDeleteQueue(q)
+  }, [])
 
   const columns = useMemo((): InfiniteTableColumn<AnnotationQueueRecord>[] => {
     return [
@@ -120,8 +134,21 @@ function AnnotationQueuesPage() {
           </Text.H6>
         ),
       },
+      optionsColumn<AnnotationQueueRecord>({
+        getOptions: (q) => [
+          {
+            label: "Edit",
+            onClick: () => openEditModal(q),
+          },
+          {
+            label: "Delete",
+            type: "destructive",
+            onClick: () => openDeleteModal(q),
+          },
+        ],
+      }),
     ]
-  }, [assigneeItemsByQueueId])
+  }, [assigneeItemsByQueueId, openEditModal, openDeleteModal])
 
   const onRowClick = (q: AnnotationQueueRecord) => {
     const sel = window.getSelection()
@@ -135,13 +162,19 @@ function AnnotationQueuesPage() {
 
   const getRowAriaLabel = (q: AnnotationQueueRecord) => `Open queue ${q.name}`
 
+  const handleModalSuccess = useCallback(() => {
+    setCreateModalOpen(false)
+    setEditQueue(null)
+    setDeleteQueue(null)
+  }, [])
+
   return (
     <Layout>
       <Layout.Actions>
         <Layout.ActionsRow>
           <Layout.ActionRowItem />
           <Layout.ActionRowItem>
-            <Button type="button" size="sm">
+            <Button type="button" size="sm" onClick={() => setCreateModalOpen(true)}>
               New queue
             </Button>
           </Layout.ActionRowItem>
@@ -164,6 +197,35 @@ function AnnotationQueuesPage() {
           />
         </Layout.List>
       </Layout.Body>
+
+      {createModalOpen && (
+        <QueueModal
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          projectId={projectId}
+          onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {editQueue && (
+        <QueueModal
+          open={!!editQueue}
+          onOpenChange={(open) => !open && setEditQueue(null)}
+          projectId={projectId}
+          queue={editQueue}
+          onSuccess={handleModalSuccess}
+        />
+      )}
+
+      {deleteQueue && (
+        <DeleteQueueModal
+          open={!!deleteQueue}
+          onOpenChange={(open) => !open && setDeleteQueue(null)}
+          projectId={projectId}
+          queue={deleteQueue}
+          onSuccess={handleModalSuccess}
+        />
+      )}
     </Layout>
   )
 }

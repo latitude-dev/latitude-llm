@@ -1,4 +1,4 @@
-import { isHttpError, toHttpResponse } from "@repo/utils"
+import { isHttpError, LatitudeObservabilityTestError, toHttpResponse } from "@repo/utils"
 import type { ErrorHandler } from "hono"
 import { logger } from "../utils/logger.ts"
 
@@ -9,6 +9,10 @@ import { logger } from "../utils/logger.ts"
  * HTTP responses based on the error type.
  */
 export const honoErrorHandler: ErrorHandler = (err, c) => {
+  if (err instanceof LatitudeObservabilityTestError) {
+    return c.json({ name: err.name, message: err.message, service: err.service }, 500)
+  }
+
   // If it's an HTTP-aware error, use its status and message
   if (isHttpError(err)) {
     const { status, body } = toHttpResponse(err)

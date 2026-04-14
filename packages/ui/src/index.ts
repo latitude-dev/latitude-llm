@@ -31,7 +31,25 @@ export {
 export { ChartSkeleton, type ChartSkeletonProps } from "./components/charts/chart-skeleton.tsx"
 export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
+export { CheckboxInput, type CheckboxInputProps } from "./components/checkbox/checkbox-input.tsx"
 export { CodeBlock, type CodeBlockProps } from "./components/code-block/code-block.tsx"
+export {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxSeparator,
+  ComboboxTrigger,
+  ComboboxValue,
+} from "./components/combobox/combobox.tsx"
 export { Container, type ContainerSize } from "./components/container/container.tsx"
 export { CopyButton } from "./components/copy-button/index.tsx"
 export { CopyableText } from "./components/copyable-text/index.tsx"
@@ -66,6 +84,7 @@ export type { HighlightRange, TextSelectionAnchor } from "./components/genai-con
 export * from "./components/icons/custom-icons/index.tsx"
 export { Icon, type IconProps, type IconSize } from "./components/icons/icons.tsx"
 export { InfiniteTable } from "./components/infinite-table/infinite-table.tsx"
+export { type OptionsColumnConfig, optionsColumn } from "./components/infinite-table/options-column.tsx"
 export type {
   ExpandedRows,
   InfiniteTableColumn,

@@ -95,4 +95,16 @@ describe("buildScoreRollupSubquery", () => {
 
     expect(subquery).not.toContain("simulation_id = ''")
   })
+
+  it("uses a custom parameter prefix when requested", () => {
+    const scoreFilters: FilterSet = {
+      "score.source": [{ op: "eq", value: "evaluation" }],
+    }
+
+    const { params } = buildScoreRollupSubquery("trace_id", scoreFilters, false, {
+      paramPrefix: "batch_1_s",
+    })
+
+    expect(Object.keys(params)).toEqual(["batch_1_s_0"])
+  })
 })

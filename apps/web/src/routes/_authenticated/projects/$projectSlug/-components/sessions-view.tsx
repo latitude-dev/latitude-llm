@@ -254,7 +254,7 @@ export function SessionsView({
         width: 120,
         render: (row) => {
           if (row.kind === "session") return EMPTY_CELL
-          return formatDuration(row.trace.durationNs)
+          return row.trace.durationNs > 0 ? formatDuration(row.trace.durationNs) : "-"
         },
         renderSubheader: () => (
           <TableMetricSubheader
@@ -280,10 +280,17 @@ export function SessionsView({
         align: "end",
         sortKey: "cost",
         width: 130,
-        render: (row) => formatPrice(field(row, "costTotalMicrocents") / 100_000_000),
+        render: (row) => {
+          const costTotalMicrocents = field(row, "costTotalMicrocents")
+          return costTotalMicrocents > 0 ? formatPrice(costTotalMicrocents / 100_000_000) : "-"
+        },
         renderSubheader: () => (
           <TableMetricSubheader
-            rollup={sessionMetrics?.costTotalMicrocents}
+            rollup={
+              sessionMetrics && sessionMetrics.costTotalMicrocents.max > 0
+                ? sessionMetrics.costTotalMicrocents
+                : undefined
+            }
             format="price"
             isLoading={sessionMetricsLoading}
           />
