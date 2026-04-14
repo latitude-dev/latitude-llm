@@ -472,6 +472,9 @@ importers:
       '@domain/email':
         specifier: workspace:*
         version: link:../../packages/domain/email
+      '@domain/evaluations':
+        specifier: workspace:*
+        version: link:../../packages/domain/evaluations
       '@domain/events':
         specifier: workspace:*
         version: link:../../packages/domain/events
@@ -833,6 +836,9 @@ importers:
       '@domain/optimizations':
         specifier: workspace:*
         version: link:../optimizations
+      '@domain/scores':
+        specifier: workspace:*
+        version: link:../scores
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

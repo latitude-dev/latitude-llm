@@ -20,6 +20,7 @@
     "@domain/ai": "workspace:*",
     "@domain/models": "workspace:*",
     "@domain/optimizations": "workspace:*",
+    "@domain/scores": "workspace:*",
     "@domain/shared": "workspace:*",
     "@domain/spans": "workspace:*",
     "effect": "catalog:",

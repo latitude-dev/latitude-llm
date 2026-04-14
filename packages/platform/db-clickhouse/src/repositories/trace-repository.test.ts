@@ -10,6 +10,7 @@ import { TraceRepository, type TraceRepositoryShape } from "@domain/spans"
 import { setupTestClickHouse } from "@platform/testkit"
 import { Effect } from "effect"
 import { beforeAll, beforeEach, describe, expect, it } from "vitest"
+import { scoreSeeders } from "../seeds/scores/index.ts"
 import { fixedTraceSeeders } from "../seeds/spans/fixed-traces.ts"
 import type { SpanRow } from "../seeds/spans/span-builders.ts"
 import { insertJsonEachRow } from "../sql.ts"
@@ -19,8 +20,10 @@ import { TraceRepositoryLive } from "./trace-repository.ts"
 const ORG_ID = OrganizationId(SEED_ORG_ID)
 const PROJECT_ID = ProjectId(SEED_PROJECT_ID)
 const TRACE_ID = SEED_LIFECYCLE_TRACE_IDS[0] as TraceId
+const SCORED_TRACE_ID = SEED_LIFECYCLE_TRACE_IDS[3] as TraceId
 const firstFixedTraceSeeder = fixedTraceSeeders[0]
 const BASELINE_TEST_TAG = "baseline-missing-values"
+const firstScoreSeeder = scoreSeeders[0]
 
 if (firstFixedTraceSeeder === undefined) {
   throw new Error("Expected at least one fixed trace seeder")
@@ -100,6 +103,10 @@ function makeSpanRow({
   }
 }
 
+if (firstScoreSeeder === undefined) {
+  throw new Error("Expected at least one score seeder")
+}
+
 const ch = setupTestClickHouse()
 
 describe("TraceRepository", () => {
@@ -115,6 +122,7 @@ describe("TraceRepository", () => {
 
   beforeEach(async () => {
     await Effect.runPromise(firstFixedTraceSeeder.run({ client: ch.client }))
+    await Effect.runPromise(firstScoreSeeder.run({ client: ch.client }))
   })
 
   describe("matchesFiltersByTraceId", () => {
@@ -199,6 +207,87 @@ describe("TraceRepository", () => {
       expect(baseline.metrics.tokensTotal.sampleCount).toBe(1)
       expect(baseline.metrics.tokensTotal.p50).toBe(100)
       expect(baseline.metrics.tokensTotal.p90).toBe(100)
+    })
+  })
+
+  describe("listMatchingFilterIdsByTraceId", () => {
+    it("returns the filter ids that match one trace", async () => {
+      const filterIds = await Effect.runPromise(
+        repo.listMatchingFilterIdsByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: TRACE_ID,
+          filterSets: [
+            { filterId: "all", filters: {} },
+            {
+              filterId: "lifecycle-tag",
+              filters: {
+                tags: [{ op: "in", value: ["lifecycle"] }],
+              },
+            },
+            {
+              filterId: "annotation-tag",
+              filters: {
+                tags: [{ op: "in", value: ["annotation"] }],
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(filterIds).toEqual(["all", "lifecycle-tag"])
+    })
+
+    it("supports independent score-backed filters in the same batch", async () => {
+      const filterIds = await Effect.runPromise(
+        repo.listMatchingFilterIdsByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: SCORED_TRACE_ID,
+          filterSets: [
+            {
+              filterId: "errored-evaluation-score",
+              filters: {
+                "score.errored": [{ op: "eq", value: true }],
+                "score.source": [{ op: "eq", value: "evaluation" }],
+              },
+            },
+            {
+              filterId: "annotation-score",
+              filters: {
+                "score.source": [{ op: "eq", value: "annotation" }],
+              },
+            },
+            {
+              filterId: "passed-evaluation-score",
+              filters: {
+                "score.passed": [{ op: "eq", value: true }],
+                "score.source": [{ op: "eq", value: "evaluation" }],
+              },
+            },
+          ],
+        }),
+      )
+
+      expect(filterIds).toEqual(["errored-evaluation-score", "annotation-score"])
+    })
+
+    it("returns an empty list when the trace does not exist", async () => {
+      const filterIds = await Effect.runPromise(
+        repo.listMatchingFilterIdsByTraceId({
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          traceId: "ffffffffffffffffffffffffffffffff" as TraceId,
+          filterSets: [
+            {
+              filterId: "all",
+              filters: {},
+            },
+          ],
+        }),
+      )
+
+      expect(filterIds).toEqual([])
     })
   })
 })

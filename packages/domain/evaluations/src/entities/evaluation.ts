@@ -15,12 +15,31 @@ import {
 export const evaluationTurnSchema = z.enum(EVALUATION_TURNS)
 export type EvaluationTurn = z.infer<typeof evaluationTurnSchema>
 
-export const evaluationTriggerSchema = z.object({
-  filter: filterSetSchema, // trace/session filter over the shared trace field registry; `{}` matches all traces
-  turn: evaluationTurnSchema, // runs on the first, every, or last ingested trace/turn
-  debounce: z.number().int().nonnegative(), // debounce time in seconds
-  sampling: z.number().min(0).max(100), // percentage [0, 100]
-})
+function validateEvaluationTrigger(
+  trigger: {
+    readonly turn: EvaluationTurn
+    readonly debounce: number
+  },
+  ctx: z.core.$RefinementCtx<unknown>,
+) {
+  if (trigger.turn === "last" && trigger.debounce === 0) {
+    ctx.addIssue({
+      code: "custom",
+      message: "`turn = last` requires `debounce > 0`",
+      path: ["debounce"],
+      input: trigger.debounce,
+    })
+  }
+}
+
+export const evaluationTriggerSchema = z
+  .object({
+    filter: filterSetSchema, // trace/session filter over the shared trace field registry; `{}` matches all traces
+    turn: evaluationTurnSchema, // runs on the first, every, or last ingested trace/turn
+    debounce: z.number().int().nonnegative(), // debounce time in seconds
+    sampling: z.number().min(0).max(100), // percentage [0, 100]
+  })
+  .superRefine(validateEvaluationTrigger)
 
 export type EvaluationTrigger = z.infer<typeof evaluationTriggerSchema>
 

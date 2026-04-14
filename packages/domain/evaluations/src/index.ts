@@ -58,6 +58,7 @@ export {
   EvaluationManualRealignmentRateLimitedError,
   EvaluationNotFoundError,
   LiveEvaluationExecutionError,
+  LiveEvaluationQueuePublishError,
 } from "./errors.ts"
 export {
   addConfusionMatrixObservation,
@@ -119,6 +120,11 @@ export {
   evaluationListLifecycleSchema,
 } from "./ports/evaluation-repository.ts"
 export {
+  LiveEvaluationQueuePublisher,
+  type LiveEvaluationQueuePublisherShape,
+  type PublishLiveEvaluationExecuteInput,
+} from "./ports/live-evaluation-queue-publisher.ts"
+export {
   EVALUATION_CONVERSATION_PLACEHOLDER,
   EVALUATION_SCRIPT_RUNTIME_MODEL,
   EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
@@ -150,6 +156,13 @@ export { evaluateIncrementalDraftUseCase } from "./use-cases/alignment/evaluate-
 export { generateBaselineDraftUseCase } from "./use-cases/alignment/generate-baseline-draft.ts"
 export { loadAlignmentStateUseCase } from "./use-cases/alignment/load-alignment-state.ts"
 export { persistAlignmentResultUseCase } from "./use-cases/alignment/persist-alignment-result.ts"
+export {
+  type EnqueueLiveEvaluationsError,
+  type EnqueueLiveEvaluationsInput,
+  type EnqueueLiveEvaluationsResult,
+  type EnqueueLiveEvaluationsSummary,
+  enqueueLiveEvaluationsUseCase,
+} from "./use-cases/live/enqueue-live-evaluations.ts"
 export {
   type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,

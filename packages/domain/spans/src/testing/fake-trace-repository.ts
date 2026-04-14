@@ -20,6 +20,7 @@ export const createFakeTraceRepository = (overrides?: Partial<TraceRepositorySha
     histogramByProjectId: () => Effect.succeed([]),
     findByTraceId: () => Effect.fail(new NotFoundError({ entity: "Trace", id: "" })),
     matchesFiltersByTraceId: () => Effect.succeed(false),
+    listMatchingFilterIdsByTraceId: () => Effect.succeed([]),
     listByTraceIds: () => Effect.succeed([]),
     distinctFilterValues: () => Effect.succeed([]),
     ...overrides,
