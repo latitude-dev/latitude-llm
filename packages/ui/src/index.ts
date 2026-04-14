@@ -29,6 +29,7 @@ export {
   readChartThemeFromCss,
 } from "./components/charts/chart-css-theme.ts"
 export { ChartSkeleton, type ChartSkeletonProps } from "./components/charts/chart-skeleton.tsx"
+export { HistogramSkeleton, type HistogramSkeletonProps } from "./components/charts/histogram-skeleton.tsx"
 export { LazyBarChart as BarChart } from "./components/charts/lazy-bar-chart.tsx"
 export { Checkbox, type CheckedState } from "./components/checkbox/checkbox.tsx"
 export { CodeBlock, type CodeBlockProps } from "./components/code-block/code-block.tsx"

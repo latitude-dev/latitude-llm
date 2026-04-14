@@ -1,7 +1,6 @@
-import { BarChart, Skeleton, Text } from "@repo/ui"
+import { BarChart, HistogramSkeleton, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
-import { AnalyticsHistogramSkeleton } from "../../-components/aggregations/analytics-histogram-skeleton.tsx"
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
@@ -60,7 +59,7 @@ export function IssuesAnalyticsPanel({
 
       {isLoading ? (
         <div className="px-4 py-3">
-          <AnalyticsHistogramSkeleton />
+          <HistogramSkeleton height={160} />
         </div>
       ) : analytics.histogram.length === 0 || analytics.histogram.every((bucket) => bucket.count === 0) ? (
         <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">

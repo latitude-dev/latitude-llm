@@ -1,11 +1,10 @@
 import type { FilterSet } from "@domain/shared"
 import { denseTraceTimeHistogramBuckets } from "@domain/spans"
-import { BarChart, Text } from "@repo/ui"
+import { BarChart, HistogramSkeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import { useCallback, useMemo } from "react"
 
 import { useTraceTimeHistogram } from "../../../../../../domains/traces/traces.collection.ts"
-import { AnalyticsHistogramSkeleton } from "./analytics-histogram-skeleton.tsx"
 
 function formatBucketAxisLabel(iso: string): string {
   const d = new Date(iso)
@@ -64,7 +63,7 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
   if (isLoading) {
     return (
       <div className="px-4 py-3">
-        <AnalyticsHistogramSkeleton />
+        <HistogramSkeleton height={160} />
       </div>
     )
   }

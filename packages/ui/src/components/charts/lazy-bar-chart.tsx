@@ -1,6 +1,6 @@
 import { type ComponentProps, lazy, Suspense } from "react"
 
-import { ChartSkeleton } from "./chart-skeleton.tsx"
+import { HistogramSkeleton } from "./histogram-skeleton.tsx"
 
 const BarChartLazy = lazy(() => import("./bar-chart.tsx").then((m) => ({ default: m.BarChart })))
 
@@ -11,7 +11,7 @@ const BarChartLazy = lazy(() => import("./bar-chart.tsx").then((m) => ({ default
  */
 export function LazyBarChart(props: ComponentProps<typeof BarChartLazy>) {
   return (
-    <Suspense fallback={<ChartSkeleton minHeight={props.height ?? 200} className="border-0 bg-transparent p-0" />}>
+    <Suspense fallback={<HistogramSkeleton height={props.height ?? 200} />}>
       <BarChartLazy {...props} />
     </Suspense>
   )

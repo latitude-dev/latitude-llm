@@ -19,6 +19,7 @@ import {
   FormField,
   GitHubIcon,
   GoogleIcon,
+  HistogramSkeleton,
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
@@ -334,6 +335,10 @@ function DesignSystemShowcase({ theme }: { theme: "light" | "dark" }) {
           <div className="flex flex-col gap-2">
             <Text.H6 weight="semibold">ChartSkeleton</Text.H6>
             <ChartSkeleton minHeight={160} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Text.H6 weight="semibold">HistogramSkeleton</Text.H6>
+            <HistogramSkeleton height={160} />
           </div>
         </div>
       </ShowcaseSection>
