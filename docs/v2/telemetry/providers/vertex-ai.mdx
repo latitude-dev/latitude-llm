@@ -1,34 +1,24 @@
 ---
 title: Vertex AI
-description: Connect your Google Vertex AI-powered application to Latitude Telemetry for observability in Latitude.
+description: Connect your Vertex AI-powered application to Latitude for observability.
 ---
 
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **Google Vertex AI SDK**.
-
-After completing these steps:
-
-- Every Google Vertex AI call (e.g. `generateContent`) will appear as a trace in Latitude.
-- Traces are grouped inside a Latitude **project** and identified by a `path`.
-- You can inspect inputs/outputs, measure latency, score, and debug Google Vertex AI-powered features from the Latitude dashboard.
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Google Cloud Vertex AI**.
 
 <Check>
-  You'll keep calling Google Vertex AI exactly as you do today — Telemetry
-  simply observes and enriches those calls.
+  You'll keep calling Vertex AI exactly as you do today — Telemetry simply
+  observes and enriches those calls.
 </Check>
 
 ---
 
 ## Requirements
 
-Before you start, make sure you have:
-
 - A **Latitude account** and **API key**
-- A **Latitude project ID**
-- A Node.js or Python-based project that uses the **Google Vertex AI SDK**
-
-That's it — prompts do **not** need to be created ahead of time.
+- A **Latitude project slug**
+- A project that uses the **Vertex AI SDK**
 
 ---
 
@@ -36,14 +26,12 @@ That's it — prompts do **not** need to be created ahead of time.
 
 <Steps>
 
-  <Step title="Install requirements">
-    Add the Latitude Telemetry package to your project:
-
+  <Step title="Install">
     <Tabs>
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm add @latitude-data/telemetry
+          npm install @latitude-data/telemetry
           ```
 
           ```bash pnpm
@@ -75,119 +63,77 @@ That's it — prompts do **not** need to be created ahead of time.
         </CodeGroup>
       </Tab>
     </Tabs>
-
   </Step>
 
-  <Step title="Wrap your Google Vertex AI-powered feature">
-    Initialize Latitude Telemetry and wrap the code that calls Google Vertex AI using <code>telemetry.capture</code>.
-
+  <Step title="Initialize and use">
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as VertexAI from '@google-cloud/vertexai'
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { VertexAI } from "@google-cloud/vertexai"
 
-        const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          { instrumentations: { vertexai: VertexAI } }
-        )
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["vertexai"],
+        })
 
-        async function generateSupportReply(input: string) {
-          return telemetry.capture(
-            {
-              projectId: 123, // The ID of your project in Latitude
-              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
-            },
-            async () => {
-              const client = new VertexAI.VertexAI({
-                project: 'your-gcp-project',
-                location: 'us-central1',
-              })
-              const model = client.getGenerativeModel({ model: 'gemini-1.5-pro' })
-              const result = await model.generateContent(input)
-              return result.response
-            }
-          )
-        }
+        await latitude.ready
+
+        const vertexAI = new VertexAI({
+          project: process.env.GCP_PROJECT_ID!,
+          location: "us-central1",
+        })
+        const model = vertexAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+
+        await capture("generate-reply", async () => {
+          const result = await model.generateContent("Hello")
+          return result.response.candidates?.[0].content.parts[0].text
+        })
+
+        await latitude.shutdown()
         ```
       </Tab>
       <Tab title="Python">
-        You can use the `capture` method as a decorator (recommended) or as a context manager:
-
-        ```python Using decorator (recommended)
-        import os
+        ```python
+        from latitude_telemetry import init_latitude, capture
         import vertexai
         from vertexai.generative_models import GenerativeModel
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.VertexAI]),
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["vertexai"],
         )
 
-        @telemetry.capture(
-            project_id=123,  # The ID of your project in Latitude
-            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-        )
-        def generate_support_reply(input: str) -> str:
-            vertexai.init(project="your-gcp-project", location="us-central1")
-            model = GenerativeModel("gemini-1.5-pro")
-            response = model.generate_content(input)
+        vertexai.init(project="your-gcp-project", location="us-central1")
+        model = GenerativeModel("gemini-1.5-flash")
+
+        def generate_reply():
+            response = model.generate_content("Hello")
             return response.text
-        ```
 
-        ```python Using context manager
-        import os
-        import vertexai
-        from vertexai.generative_models import GenerativeModel
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+        capture("generate-reply", generate_reply)
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.VertexAI]),
-        )
-
-        def generate_support_reply(input: str) -> str:
-            with telemetry.capture(
-                project_id=123,  # The ID of your project in Latitude
-                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-            ):
-                vertexai.init(project="your-gcp-project", location="us-central1")
-                model = GenerativeModel("gemini-1.5-pro")
-                response = model.generate_content(input)
-                return response.text
+        latitude.shutdown()
         ```
       </Tab>
     </Tabs>
-
-    <Info>
-    The `path`:
-    - Identifies the prompt in Latitude
-    - Can be new or existing
-    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
-    </Info>
-
   </Step>
 
 </Steps>
 
 ---
 
-## Seeing your traces in Latitude
+## Seeing Your Traces
 
-Once your feature is wrapped, traces will appear automatically.
+Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
-2. Each execution will show:
-   - Input and output messages
-   - Model and token usage
-   - Latency and errors
-   - One trace per feature invocation
-
-Each Google Vertex AI call appears as a child span under the capture, giving you a full view of what happened.
+2. Each execution shows input/output messages, model, token usage, latency, and errors
 
 ---
 
-## That's it
+## That's It
 
-No changes to your Google Vertex AI calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.
+No changes to your Vertex AI calls — just initialize Latitude and your LLM calls are traced.

@@ -1,34 +1,24 @@
 ---
 title: Google AI Platform
-description: Connect your Google AI Platform-powered application to Latitude Telemetry for observability in Latitude.
+description: Connect your Google AI Platform-powered application to Latitude for observability.
 ---
 
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **Google AI Platform SDK**.
-
-After completing these steps:
-
-- Every Google AI Platform call (e.g. `predict`) will appear as a trace in Latitude.
-- Traces are grouped inside a Latitude **project** and identified by a `path`.
-- You can inspect inputs/outputs, measure latency, score, and debug Google AI Platform-powered features from the Latitude dashboard.
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **Google Cloud AI Platform**.
 
 <Check>
-  You'll keep calling Google AI Platform exactly as you do today — Telemetry
-  simply observes and enriches those calls.
+  You'll keep calling AI Platform exactly as you do today — Telemetry simply
+  observes and enriches those calls.
 </Check>
 
 ---
 
 ## Requirements
 
-Before you start, make sure you have:
-
 - A **Latitude account** and **API key**
-- A **Latitude project ID**
-- A Node.js or Python-based project that uses the **Google AI Platform SDK**
-
-That's it — prompts do **not** need to be created ahead of time.
+- A **Latitude project slug**
+- A project that uses the **Google Cloud AI Platform SDK**
 
 ---
 
@@ -36,14 +26,12 @@ That's it — prompts do **not** need to be created ahead of time.
 
 <Steps>
 
-  <Step title="Install requirements">
-    Add the Latitude Telemetry package to your project:
-
+  <Step title="Install">
     <Tabs>
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm add @latitude-data/telemetry
+          npm install @latitude-data/telemetry
           ```
 
           ```bash pnpm
@@ -75,116 +63,76 @@ That's it — prompts do **not** need to be created ahead of time.
         </CodeGroup>
       </Tab>
     </Tabs>
-
   </Step>
 
-  <Step title="Wrap your Google AI Platform-powered feature">
-    Initialize Latitude Telemetry and wrap the code that calls Google AI Platform using <code>telemetry.capture</code>.
-
+  <Step title="Initialize and use">
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as AIPlatform from '@google-cloud/aiplatform'
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { PredictionServiceClient } from "@google-cloud/aiplatform"
 
-        const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          { instrumentations: { aiplatform: AIPlatform } }
-        )
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["aiplatform"],
+        })
 
-        async function generateSupportReply(input: string) {
-          return telemetry.capture(
-            {
-              projectId: 123, // The ID of your project in Latitude
-              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
-            },
-            async () => {
-              const client = new AIPlatform.PredictionServiceClient()
-              const [response] = await client.predict({
-                endpoint: 'projects/.../locations/.../endpoints/...',
-                instances: [{ content: input }],
-              })
-              return response.predictions[0]
-            }
-          )
-        }
+        await latitude.ready
+
+        const client = new PredictionServiceClient()
+
+        await capture("generate-prediction", async () => {
+          const [response] = await client.predict({
+            endpoint: `projects/${process.env.GCP_PROJECT_ID}/locations/us-central1/publishers/google/models/text-bison`,
+            instances: [{ content: "Hello" }],
+            parameters: { temperature: 0.2, maxOutputTokens: 256 },
+          })
+          return response.predictions
+        })
+
+        await latitude.shutdown()
         ```
       </Tab>
       <Tab title="Python">
-        You can use the `capture` method as a decorator (recommended) or as a context manager:
-
-        ```python Using decorator (recommended)
-        import os
+        ```python
+        from latitude_telemetry import init_latitude, capture
         from google.cloud import aiplatform
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.VertexAI]),
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["aiplatform"],
         )
 
-        @telemetry.capture(
-            project_id=123,  # The ID of your project in Latitude
-            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-        )
-        def generate_support_reply(input: str) -> str:
-            aiplatform.init(project="your-gcp-project", location="us-central1")
-            endpoint = aiplatform.Endpoint("projects/.../locations/.../endpoints/...")
-            response = endpoint.predict(instances=[{"content": input}])
-            return response.predictions[0]
-        ```
+        aiplatform.init(project="your-gcp-project", location="us-central1")
 
-        ```python Using context manager
-        import os
-        from google.cloud import aiplatform
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+        def generate_prediction():
+            model = aiplatform.TextGenerationModel.from_pretrained("text-bison")
+            response = model.predict("Hello", temperature=0.2, max_output_tokens=256)
+            return response.text
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.VertexAI]),
-        )
+        capture("generate-prediction", generate_prediction)
 
-        def generate_support_reply(input: str) -> str:
-            with telemetry.capture(
-                project_id=123,  # The ID of your project in Latitude
-                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-            ):
-                aiplatform.init(project="your-gcp-project", location="us-central1")
-                endpoint = aiplatform.Endpoint("projects/.../locations/.../endpoints/...")
-                response = endpoint.predict(instances=[{"content": input}])
-                return response.predictions[0]
+        latitude.shutdown()
         ```
       </Tab>
     </Tabs>
-
-    <Info>
-    The `path`:
-    - Identifies the prompt in Latitude
-    - Can be new or existing
-    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
-    </Info>
-
   </Step>
 
 </Steps>
 
 ---
 
-## Seeing your traces in Latitude
+## Seeing Your Traces
 
-Once your feature is wrapped, traces will appear automatically.
+Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
-2. Each execution will show:
-   - Input and output messages
-   - Model and token usage
-   - Latency and errors
-   - One trace per feature invocation
-
-Each Google AI Platform call appears as a child span under the capture, giving you a full view of what happened.
+2. Each execution shows input/output messages, model, token usage, latency, and errors
 
 ---
 
-## That's it
+## That's It
 
-No changes to your Google AI Platform calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.
+No changes to your AI Platform calls — just initialize Latitude and your LLM calls are traced.

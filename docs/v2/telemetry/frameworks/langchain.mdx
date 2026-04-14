@@ -1,17 +1,11 @@
 ---
 title: LangChain
-description: Connect your LangChain-based application to Latitude Telemetry for observability in Latitude.
+description: Connect your LangChain-powered application to Latitude for observability.
 ---
 
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **LangChain SDK**.
-
-After completing these steps:
-
-- Every LangChain call (e.g. `invoke`) will appear as a trace in Latitude.
-- Traces are grouped inside a Latitude **project** and identified by a `path`.
-- You can inspect inputs/outputs, measure latency, score, and debug LangChain-powered features from the Latitude dashboard.
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses **LangChain**.
 
 <Check>
   You'll keep calling LangChain exactly as you do today — Telemetry simply
@@ -22,13 +16,9 @@ After completing these steps:
 
 ## Requirements
 
-Before you start, make sure you have:
-
 - A **Latitude account** and **API key**
-- A **Latitude project ID**
-- A Node.js or Python-based project that uses the **LangChain SDK**
-
-That's it — prompts do **not** need to be created ahead of time.
+- A **Latitude project slug**
+- A project that uses **LangChain**
 
 ---
 
@@ -36,14 +26,12 @@ That's it — prompts do **not** need to be created ahead of time.
 
 <Steps>
 
-  <Step title="Install requirements">
-    Add the Latitude Telemetry package to your project:
-
+  <Step title="Install">
     <Tabs>
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm add @latitude-data/telemetry
+          npm install @latitude-data/telemetry
           ```
 
           ```bash pnpm
@@ -75,121 +63,74 @@ That's it — prompts do **not** need to be created ahead of time.
         </CodeGroup>
       </Tab>
     </Tabs>
-
   </Step>
 
-  <Step title="Wrap your LangChain-powered feature">
-    Initialize Latitude Telemetry and wrap the code that calls LangChain using <code>telemetry.capture</code>.
-
+  <Step title="Initialize and use">
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import * as LangchainCallbacks from '@langchain/core/callbacks/manager'
-        import { ChatOpenAI } from '@langchain/openai'
-        import { HumanMessage } from '@langchain/core/messages'
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import { ChatOpenAI } from "@langchain/openai"
+        import { HumanMessage } from "@langchain/core/messages"
 
-        const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          {
-            instrumentations: {
-              langchain: { callbackManagerModule: LangchainCallbacks },
-            },
-          }
-        )
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["langchain"],
+        })
 
-        async function generateSupportReply(input: string) {
-          return telemetry.capture(
-            {
-              projectId: 123, // The ID of your project in Latitude
-              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
-            },
-            async () => {
-              const llm = new ChatOpenAI({ model: 'gpt-4o' })
-              const response = await llm.invoke([new HumanMessage(input)])
-              return response.content
-            }
-          )
-        }
+        await latitude.ready
+
+        const llm = new ChatOpenAI({ modelName: "gpt-4o" })
+
+        await capture("langchain-query", async () => {
+          const response = await llm.invoke([new HumanMessage("Hello")])
+          return response.content
+        })
+
+        await latitude.shutdown()
         ```
       </Tab>
       <Tab title="Python">
-        You can use the `capture` method as a decorator (recommended) or as a context manager:
-
-        ```python Using decorator (recommended)
-        import os
+        ```python
+        from latitude_telemetry import init_latitude, capture
         from langchain_openai import ChatOpenAI
         from langchain_core.messages import HumanMessage
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.LangChain]),
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["langchain"],
         )
 
-        @telemetry.capture(
-            project_id=123,  # The ID of your project in Latitude
-            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-        )
-        def generate_support_reply(input: str) -> str:
-            llm = ChatOpenAI(model="gpt-4o")
-            messages = [HumanMessage(content=input)]
-            response = llm.invoke(messages)
+        llm = ChatOpenAI(model="gpt-4o")
+
+        def langchain_query():
+            response = llm.invoke([HumanMessage(content="Hello")])
             return response.content
-        ```
 
-        ```python Using context manager
-        import os
-        from langchain_openai import ChatOpenAI
-        from langchain_core.messages import HumanMessage
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+        capture("langchain-query", langchain_query)
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.LangChain]),
-        )
-
-        def generate_support_reply(input: str) -> str:
-            with telemetry.capture(
-                project_id=123,  # The ID of your project in Latitude
-                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-            ):
-                llm = ChatOpenAI(model="gpt-4o")
-                messages = [HumanMessage(content=input)]
-                response = llm.invoke(messages)
-                return response.content
+        latitude.shutdown()
         ```
       </Tab>
     </Tabs>
-
-    <Info>
-    The `path`:
-    - Identifies the prompt in Latitude
-    - Can be new or existing
-    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
-    </Info>
-
   </Step>
 
 </Steps>
 
 ---
 
-## Seeing your traces in Latitude
+## Seeing Your Traces
 
-Once your feature is wrapped, traces will appear automatically.
+Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
-2. Each execution will show:
-   - Input and output messages
-   - Model and token usage
-   - Latency and errors
-   - One trace per feature invocation
-
-Each LangChain call appears as a child span under the capture, giving you a full view of what happened.
+2. Each execution shows input/output messages, model, token usage, latency, and errors
+3. LangChain chain steps appear as child spans
 
 ---
 
-## That's it
+## That's It
 
-No changes to your LangChain calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.
+No changes to your LangChain calls — just initialize Latitude and your LLM calls are traced.

@@ -1,34 +1,24 @@
 ---
 title: OpenAI
-description: Connect your OpenAI-powered application to Latitude Telemetry for observability in Latitude.
+description: Connect your OpenAI-powered application to Latitude for observability.
 ---
 
 ## Overview
 
-This guide shows you how to integrate **Latitude Telemetry** into an existing application that uses the official **OpenAI SDK**.
-
-After completing these steps:
-
-- Every OpenAI call (e.g. `chat.completions.create`) will appear as a trace in Latitude.
-- Traces are grouped inside a Latitude **project** and identified by a `path`.
-- You can inspect inputs/outputs, measure latency, score, and debug OpenAI-powered features from the Latitude dashboard.
+This guide shows you how to integrate **Latitude Telemetry** into an application that uses the **OpenAI** SDK.
 
 <Check>
-  You'll keep calling OpenAI exactly as you do today — Telemetry simply observes
-  and enriches those calls.
+  You'll keep calling OpenAI exactly as you do today — Telemetry simply
+  observes and enriches those calls.
 </Check>
 
 ---
 
 ## Requirements
 
-Before you start, make sure you have:
-
 - A **Latitude account** and **API key**
-- A **Latitude project ID**
-- A Node.js or Python-based project that uses the **OpenAI SDK**
-
-That's it — prompts do **not** need to be created ahead of time.
+- A **Latitude project slug**
+- A project that uses the **OpenAI SDK**
 
 ---
 
@@ -36,14 +26,12 @@ That's it — prompts do **not** need to be created ahead of time.
 
 <Steps>
 
-  <Step title="Install requirements">
-    Add the Latitude Telemetry package to your project:
-
+  <Step title="Install">
     <Tabs>
       <Tab title="TypeScript">
         <CodeGroup>
           ```bash npm
-          npm add @latitude-data/telemetry
+          npm install @latitude-data/telemetry
           ```
 
           ```bash pnpm
@@ -75,149 +63,93 @@ That's it — prompts do **not** need to be created ahead of time.
         </CodeGroup>
       </Tab>
     </Tabs>
-
   </Step>
 
-  <Step title="Wrap your OpenAI-powered feature">
-    Initialize Latitude Telemetry and wrap the code that calls OpenAI using <code>telemetry.capture</code>.
-
+  <Step title="Initialize and use">
     <Tabs>
       <Tab title="TypeScript">
         ```ts
-        import { LatitudeTelemetry } from '@latitude-data/telemetry'
-        import OpenAI from 'openai'
+        import { initLatitude, capture } from "@latitude-data/telemetry"
+        import OpenAI from "openai"
 
-        const telemetry = new LatitudeTelemetry(
-          process.env.LATITUDE_API_KEY,
-          { instrumentations: { openai: OpenAI } }
-        )
+        const latitude = initLatitude({
+          apiKey: process.env.LATITUDE_API_KEY!,
+          projectSlug: process.env.LATITUDE_PROJECT_SLUG!,
+          instrumentations: ["openai"],
+        })
 
-        async function generateSupportReply(input: string) {
-          return telemetry.capture(
-            {
-              projectId: 123, // The ID of your project in Latitude
-              path: 'generate-support-reply', // Add a path to identify this prompt in Latitude
-            },
-            async () => {
-              const client = new OpenAI()
-              const completion = await client.chat.completions.create({
-                model: 'gpt-4o',
-                messages: [{ role: 'user', content: input }],
-              })
-              return completion.choices[0].message.content
-            }
-          )
-        }
+        await latitude.ready
+
+        const openai = new OpenAI()
+
+        await capture("generate-support-reply", async () => {
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: "Hello" }],
+          })
+          return completion.choices[0].message.content
+        })
+
+        await latitude.shutdown()
         ```
       </Tab>
       <Tab title="Python">
-        You can use the `capture` method as a decorator (recommended) or as a context manager:
-
-        ```python Using decorator (recommended)
-        import os
+        ```python
+        from latitude_telemetry import init_latitude, capture
         from openai import OpenAI
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.OpenAI]),
+        latitude = init_latitude(
+            api_key="your-api-key",
+            project_slug="your-project-slug",
+            instrumentations=["openai"],
         )
 
-        @telemetry.capture(
-            project_id=123,  # The ID of your project in Latitude
-            path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-        )
-        def generate_support_reply(input: str) -> str:
-            client = OpenAI()
+        client = OpenAI()
+
+        def generate_support_reply():
             completion = client.chat.completions.create(
                 model="gpt-4o",
-                messages=[{"role": "user", "content": input}],
+                messages=[{"role": "user", "content": "Hello"}],
             )
             return completion.choices[0].message.content
-        ```
 
-        ```python Using context manager
-        import os
-        from openai import OpenAI
-        from latitude_telemetry import Telemetry, Instrumentors, TelemetryOptions
+        capture("generate-support-reply", generate_support_reply)
 
-        telemetry = Telemetry(
-            os.environ["LATITUDE_API_KEY"],
-            TelemetryOptions(instrumentors=[Instrumentors.OpenAI]),
-        )
-
-        def generate_support_reply(input: str) -> str:
-            with telemetry.capture(
-                project_id=123,  # The ID of your project in Latitude
-                path="generate-support-reply",  # Add a path to identify this prompt in Latitude
-            ):
-                client = OpenAI()
-                completion = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": input}],
-                )
-                return completion.choices[0].message.content
+        latitude.shutdown()
         ```
       </Tab>
     </Tabs>
-
-    <Info>
-    The `path`:
-    - Identifies the prompt in Latitude
-    - Can be new or existing
-    - Should not contain spaces or special characters (use letters, numbers, `- _ / .`)
-    </Info>
-
   </Step>
 
 </Steps>
 
 ---
 
-## Streaming responses
+## Streaming
 
-When using streaming (`stream: true`), consume the stream inside your capture block so the span covers the entire operation.
+When streaming, consume the stream inside `capture()` so the span covers the full operation:
 
 <Tabs>
   <Tab title="TypeScript">
-    **Consume the stream inside** your `capture()` callback. The span stays open until your callback completes:
+    ```ts
+    await capture("stream-reply", async () => {
+      const stream = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: input }],
+        stream: true,
+      })
 
-    ```typescript
-    async function streamSupportReply(input: string, res: Response) {
-      await telemetry.capture(
-        { projectId: 123, path: 'generate-support-reply' },
-        async () => {
-          const client = new OpenAI()
-          const stream = await client.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{ role: 'user', content: input }],
-            stream: true,
-          })
-
-          // Consume stream inside capture — span covers entire operation
-          for await (const chunk of stream) {
-            const content = chunk.choices[0]?.delta?.content
-            if (content) {
-              res.write(content)
-            }
-          }
-          res.end()
-        }
-      )
-    }
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content
+        if (content) res.write(content)
+      }
+      res.end()
+    })
     ```
-
-    <Info>
-      By consuming the stream inside capture, the span duration accurately reflects the total time of the operation, and all child spans from OpenAI instrumentation are properly nested.
-    </Info>
   </Tab>
   <Tab title="Python">
-    **Use a generator function** with the decorator. The SDK keeps the span open until all chunks are yielded:
-
     ```python
-    @telemetry.capture(project_id=123, path="generate-support-reply")
-    async def stream_support_reply(input: str):
-        client = OpenAI()
+    def stream_reply():
         stream = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": input}],
@@ -226,31 +158,23 @@ When using streaming (`stream: true`), consume the stream inside your capture bl
         for chunk in stream:
             if chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
-    ```
 
-    <Info>
-      The generator pattern is ideal for streaming — each `yield` sends a chunk to the caller while the span remains open. The span ends automatically when the generator is exhausted.
-    </Info>
+    capture("stream-reply", stream_reply)
+    ```
   </Tab>
 </Tabs>
 
 ---
 
-## Seeing your traces in Latitude
+## Seeing Your Traces
 
-Once your feature is wrapped, traces will appear automatically.
+Once connected, traces appear automatically in Latitude:
 
 1. Open your **project** in the Latitude dashboard
-2. Each execution will show:
-   - Input and output messages
-   - Model and token usage
-   - Latency and errors
-   - One trace per feature invocation
-
-Each OpenAI call appears as a child span under the capture, giving you a full view of what happened.
+2. Each execution shows input/output messages, model, token usage, latency, and errors
 
 ---
 
-## That's it
+## That's It
 
-No changes to your OpenAI calls, no special return values, and no extra plumbing — just wrap the feature you want to observe.
+No changes to your OpenAI calls — just initialize Latitude and your LLM calls are traced.
