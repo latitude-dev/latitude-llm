@@ -1,10 +1,11 @@
 import { Button, Checkbox, CodeBlock, ProviderIcon, Tabs, Text, useMountEffect } from "@repo/ui"
 import { eq } from "@tanstack/react-db"
-import { Braces, ChevronLeft, ChevronRight, FileCode2, Radio } from "lucide-react"
+import { Bot, Braces, ChevronLeft, ChevronRight, FileCode2, Radio, Terminal } from "lucide-react"
 import { type ElementType, type ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useProjectsCollection } from "../../../../../domains/projects/projects.collection.ts"
 import { countTracesByProject } from "../../../../../domains/traces/traces.functions.ts"
 import {
+  getCodingAgentTelemetryPrompt,
   getEnvBlock,
   getInstallLine,
   getOnboardingSnippet,
@@ -14,7 +15,13 @@ import {
 } from "./onboarding-integration-snippets.ts"
 
 type OnboardingRole = "engineer" | "data-ai-ml" | "product-manager" | "founder" | "other"
+type TelemetrySetupMode = "coding-agent" | "manual"
 type IntegrationPanel = "typescript" | "python" | "opentelemetry"
+
+const SETUP_MODE_TAB_OPTIONS = [
+  { id: "coding-agent" as const, label: "Coding agent", icon: <Bot className="h-4 w-4" /> },
+  { id: "manual" as const, label: "Manual", icon: <Terminal className="h-4 w-4" /> },
+] as const satisfies ReadonlyArray<{ id: TelemetrySetupMode; label: string; icon: ReactNode }>
 
 interface ProviderEntry {
   readonly id: OnboardingProviderId
@@ -195,6 +202,7 @@ export function OnboardingFlow({
   const [selectedProvider, setSelectedProvider] = useState<ProviderEntry>(
     PROVIDER_ENTRIES[0] ?? { id: "openai", name: "OpenAI", icon: "openai" },
   )
+  const [telemetrySetupMode, setTelemetrySetupMode] = useState<TelemetrySetupMode>("coding-agent")
   const [integrationPanel, setIntegrationPanel] = useState<IntegrationPanel>("typescript")
 
   const { data: project } = useProjectsCollection(
@@ -202,6 +210,8 @@ export function OnboardingFlow({
     [projectId],
   )
   const slugForSnippets = project?.slug?.trim() ? project.slug : "your-project-slug"
+
+  const codingAgentPrompt = getCodingAgentTelemetryPrompt()
 
   const integrationTabOptions = useMemo(() => {
     const cfg = ONBOARDING_PROVIDER_SNIPPET_CONFIG[selectedProvider.id]
@@ -368,44 +378,68 @@ export function OnboardingFlow({
               </div>
 
               <div className="flex flex-col gap-3">
-                <Text.H5M>Select your LLM provider</Text.H5M>
-                <div className="flex flex-row flex-wrap gap-1">
-                  {PROVIDER_ENTRIES.map((provider) => (
-                    <button
-                      key={provider.id}
-                      type="button"
-                      onClick={() => setSelectedProvider(provider)}
-                      className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
-                    >
-                      <ProviderIcon provider={provider.icon} size="xs" />
-                      <span>{provider.name}</span>
-                    </button>
-                  ))}
-                </div>
+                <Text.H5M>Set up telemetry</Text.H5M>
+                <Tabs
+                  options={SETUP_MODE_TAB_OPTIONS}
+                  active={telemetrySetupMode}
+                  onSelect={(id) => setTelemetrySetupMode(id)}
+                />
               </div>
 
-              <Tabs
-                options={integrationTabOptions}
-                active={integrationPanel}
-                onSelect={(id) => setIntegrationPanel(id as IntegrationPanel)}
-              />
-
-              {integrationPanel === "opentelemetry" ? (
+              {telemetrySetupMode === "coding-agent" ? (
                 <div className="flex flex-col gap-2">
-                  <Text.H5M>Environment variables</Text.H5M>
+                  <Text.H5M>Prompt</Text.H5M>
                   <Text.H5 color="foregroundMuted">
-                    Use the Latitude SDK when possible. For an existing OpenTelemetry setup, add the Latitude span
-                    processor or point your OTLP exporter at Latitude ingest—see{" "}
-                    <code className="text-xs">packages/telemetry</code> on the main branch for patterns.
+                    Run the first line in your project terminal, then paste both lines into your coding agent. Use{" "}
+                    <span className="font-medium text-foreground">Manual</span> for provider-specific snippets.
                   </Text.H5>
-                  <CodeBlock value={getEnvBlock(selectedProvider.id, "opentelemetry", slugForSnippets)} copyable />
+                  <CodeBlock value={codingAgentPrompt} copyable />
                 </div>
               ) : (
-                <SdkIntegrationInstructions
-                  selectedProviderId={selectedProvider.id}
-                  lang={integrationPanel === "typescript" ? "typescript" : "python"}
-                  slugForSnippets={slugForSnippets}
-                />
+                <>
+                  <div className="flex flex-col gap-3">
+                    <Text.H5M>Select your LLM provider</Text.H5M>
+                    <div className="flex flex-row flex-wrap gap-1">
+                      {PROVIDER_ENTRIES.map((provider) => (
+                        <button
+                          key={provider.id}
+                          type="button"
+                          onClick={() => setSelectedProvider(provider)}
+                          className={`h-6 px-2 rounded-md border text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer transition-colors ${selectedProvider.id === provider.id ? "bg-primary-muted text-primary border-primary/30" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
+                        >
+                          <ProviderIcon provider={provider.icon} size="xs" />
+                          <span>{provider.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <hr className="w-full border-0 border-t border-dashed border-border" />
+
+                  <Tabs
+                    options={integrationTabOptions}
+                    active={integrationPanel}
+                    onSelect={(id) => setIntegrationPanel(id as IntegrationPanel)}
+                  />
+
+                  {integrationPanel === "opentelemetry" ? (
+                    <div className="flex flex-col gap-2">
+                      <Text.H5M>Environment variables</Text.H5M>
+                      <Text.H5 color="foregroundMuted">
+                        Use the Latitude SDK when possible. For an existing OpenTelemetry setup, add the Latitude span
+                        processor or point your OTLP exporter at Latitude ingest—see{" "}
+                        <code className="text-xs">packages/telemetry</code> on the main branch for patterns.
+                      </Text.H5>
+                      <CodeBlock value={getEnvBlock(selectedProvider.id, "opentelemetry", slugForSnippets)} copyable />
+                    </div>
+                  ) : (
+                    <SdkIntegrationInstructions
+                      selectedProviderId={selectedProvider.id}
+                      lang={integrationPanel === "typescript" ? "typescript" : "python"}
+                      slugForSnippets={slugForSnippets}
+                    />
+                  )}
+                </>
               )}
 
               <Button variant="outline" onClick={() => setStep("role")}>
