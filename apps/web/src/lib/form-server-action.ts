@@ -38,8 +38,8 @@ export function createFormSubmitHandler<TFormValues, TResult>(
 
     try {
       const result = await action(value)
-      formApi.reset()
       await options.onSuccess?.(result)
+      formApi.reset()
     } catch (error) {
       const fieldErrors = extractFieldErrors(error)
       if (fieldErrors) {

@@ -51,6 +51,7 @@ function AnnotationQueuesPage() {
     data: queues,
     isLoading,
     infiniteScroll,
+    resetWindow,
   } = useAnnotationQueuesInfiniteScroll({
     projectId,
     sorting,
@@ -192,7 +193,10 @@ function AnnotationQueuesPage() {
             infiniteScroll={infiniteScroll}
             sorting={sorting}
             defaultSorting={ANNOTATION_QUEUES_DEFAULT_SORTING}
-            onSortChange={setSorting}
+            onSortChange={(next) => {
+              resetWindow()
+              setSorting(next)
+            }}
             blankSlate="No annotation queues yet"
           />
         </Layout.List>

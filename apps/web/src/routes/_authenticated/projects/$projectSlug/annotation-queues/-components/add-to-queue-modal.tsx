@@ -7,7 +7,10 @@ import { useCallback, useMemo, useRef, useState } from "react"
 import { QueueForm } from "../../../../../../components/annotation-queues/queue-form.tsx"
 import { queueFormValuesToSettings } from "../../../../../../components/annotation-queues/queue-form-schema.ts"
 import { addTracesToQueueFunction } from "../../../../../../domains/annotation-queue-items/annotation-queue-items.functions.ts"
-import { useAnnotationQueuesList } from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
+import {
+  annotationQueuesProjectQueryKey,
+  useAnnotationQueuesList,
+} from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
 import type { AnnotationQueueRecord } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import { getQueryClient } from "../../../../../../lib/data/query-client.tsx"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
@@ -124,8 +127,7 @@ export function AddToQueueModal({
         description: "Traces are being added in the background. Will appear in the queue shortly.",
       })
 
-      getQueryClient().invalidateQueries({ queryKey: ["annotation-queues", projectId] })
-      getQueryClient().invalidateQueries({ queryKey: ["annotation-queues-list", projectId] })
+      getQueryClient().invalidateQueries({ queryKey: annotationQueuesProjectQueryKey(projectId) })
       getQueryClient().invalidateQueries({ queryKey: ["annotation-queue-items", projectId, result.queueId] })
 
       onSuccess()

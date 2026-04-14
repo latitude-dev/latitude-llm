@@ -7,11 +7,12 @@ import { useRef } from "react"
 import { QueueForm } from "../../../../../../components/annotation-queues/queue-form.tsx"
 import { queueFormValuesToSettings } from "../../../../../../components/annotation-queues/queue-form-schema.ts"
 import { UserMultiSelect } from "../../../../../../components/user-multi-select.tsx"
-import type { AnnotationQueueRecord } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import {
-  createAnnotationQueue,
-  updateAnnotationQueue,
-} from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
+  annotationQueuesProjectQueryKey,
+  updateAnnotationQueueMutation,
+} from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
+import type { AnnotationQueueRecord } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
+import { createAnnotationQueue } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { useAppForm } from "../../../../../../lib/form-hook-factory.ts"
 import { createFormSubmitHandler } from "../../../../../../lib/form-server-action.ts"
@@ -73,16 +74,15 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
         const settings = isSystem ? { sampling: value.sampling } : queueFormValuesToSettings(value)
 
         if (isEdit) {
-          await updateAnnotationQueue({
-            data: {
-              projectId,
-              queueId: queue.id,
-              name: value.name.trim(),
-              description: value.description,
-              instructions: value.instructions,
-              assignees: value.assignees,
-              ...(Object.keys(settings).length > 0 ? { settings } : {}),
-            },
+          await updateAnnotationQueueMutation(projectId, queue.id, (draft) => {
+            draft.name = value.name.trim()
+            draft.description = value.description
+            draft.instructions = value.instructions
+            draft.assignees = value.assignees
+            if (Object.keys(settings).length > 0) {
+              draft.settings = { ...draft.settings, ...settings }
+            }
+            draft.updatedAt = new Date().toISOString()
           })
         } else {
           await createAnnotationQueue({
@@ -105,8 +105,9 @@ export function QueueModal({ open, onOpenChange, projectId, queue, onSuccess }: 
               ? "Annotation queue has been updated successfully."
               : "Annotation queue has been created successfully.",
           })
-          await queryClient.invalidateQueries({ queryKey: ["annotation-queues", projectId] })
-          await queryClient.invalidateQueries({ queryKey: ["annotation-queues-list", projectId] })
+          if (!isEdit) {
+            await queryClient.invalidateQueries({ queryKey: annotationQueuesProjectQueryKey(projectId) })
+          }
           onSuccess()
           onOpenChange(false)
         },

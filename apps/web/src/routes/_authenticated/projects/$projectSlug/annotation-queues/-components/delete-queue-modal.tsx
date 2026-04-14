@@ -1,8 +1,7 @@
 import { Alert, Button, CloseTrigger, Modal, Text, useToast } from "@repo/ui"
-import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useState } from "react"
+import { deleteAnnotationQueueMutation } from "../../../../../../domains/annotation-queues/annotation-queues.collection.ts"
 import type { AnnotationQueueRecord } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
-import { deleteAnnotationQueue } from "../../../../../../domains/annotation-queues/annotation-queues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 
 interface DeleteQueueModalProps {
@@ -16,27 +15,19 @@ interface DeleteQueueModalProps {
 export function DeleteQueueModal({ open, onOpenChange, projectId, queue, onSuccess }: DeleteQueueModalProps) {
   const [submitting, setSubmitting] = useState(false)
   const { toast } = useToast()
-  const queryClient = useQueryClient()
 
   const pendingItems = Math.max(0, queue.totalItems - queue.completedItems)
 
   const handleDelete = useCallback(async () => {
     setSubmitting(true)
     try {
-      await deleteAnnotationQueue({
-        data: {
-          projectId,
-          queueId: queue.id,
-        },
-      })
+      await deleteAnnotationQueueMutation(projectId, queue.id)
 
       toast({
         title: "Queue deleted",
         description: "Annotation queue has been deleted successfully.",
       })
 
-      await queryClient.invalidateQueries({ queryKey: ["annotation-queues", projectId] })
-      await queryClient.invalidateQueries({ queryKey: ["annotation-queues-list", projectId] })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
@@ -48,7 +39,7 @@ export function DeleteQueueModal({ open, onOpenChange, projectId, queue, onSucce
     } finally {
       setSubmitting(false)
     }
-  }, [projectId, queue.id, toast, queryClient, onSuccess, onOpenChange])
+  }, [projectId, queue.id, toast, onSuccess, onOpenChange])
 
   return (
     <Modal
