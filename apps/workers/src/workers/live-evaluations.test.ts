@@ -18,6 +18,7 @@ import { evaluations } from "@platform/db-postgres/schema/evaluations"
 import { issues } from "@platform/db-postgres/schema/issues"
 import { scores } from "@platform/db-postgres/schema/scores"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
+import { Effect } from "effect"
 import { describe, expect, it, vi } from "vitest"
 import { TestQueueConsumer } from "../testing/index.ts"
 import { createLiveEvaluationsWorker } from "./live-evaluations.ts"
@@ -223,8 +224,8 @@ const queryAnalyticsScores = (organizationId: string, scoreId: string) =>
          AND id = {scoreId:FixedString(24)}`,
       { organizationId, scoreId },
     ),
-  ).then((rows) =>
-    rows.map((row) => ({
+  ).then((rows: ReadonlyArray<{ id: string }>) =>
+    rows.map((row: { id: string }) => ({
       ...row,
       id: row.id.replace(/\0+$/u, ""),
     })),
