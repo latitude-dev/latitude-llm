@@ -3,6 +3,10 @@ title: Simulation Reports
 description: Understand and act on simulation results
 ---
 
+<Info>
+  **Coming Soon** — Simulations are under active development and not yet available. The design below reflects what's planned.
+</Info>
+
 # Simulation Reports
 
 After a simulation run, you get a report showing how your agent performed against each scenario and evaluation. Reports help you decide whether changes are safe to ship.

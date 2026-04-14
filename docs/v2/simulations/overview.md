@@ -3,6 +3,10 @@ title: Simulations Overview
 description: Test your agent against scenarios before shipping to production
 ---
 
+<Info>
+  **Coming Soon** — Simulations are under active development and not yet available. The design below reflects what's planned.
+</Info>
+
 # Simulations Overview
 
 Simulations let you run your agent against test scenarios and evaluate the results — before changes reach production. Think of them as CI/CD for agent quality: run your tests, check the report, and ship with confidence.
