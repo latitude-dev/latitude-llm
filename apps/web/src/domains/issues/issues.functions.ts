@@ -33,6 +33,7 @@ import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
 } from "../evaluations/evaluation-alignment.functions.ts"
+import { type TraceRecord, toTraceRecord } from "../traces/traces.functions.ts"
 import { buildIssuesTraceCountFilters, withIssuesTraceTotals } from "./issues-list-metrics.ts"
 
 const listIssuesInputSchema = z.object({
@@ -192,15 +193,9 @@ const toIssueDetailRecord = (input: {
 
 export type IssueDetailRecord = ReturnType<typeof toIssueDetailRecord>
 
-const toIssueTraceRecord = (trace: TraceDetail) => ({
-  traceId: trace.traceId,
-  projectId: trace.projectId,
-  rootSpanName: trace.rootSpanName,
-  startTime: trace.startTime.toISOString(),
-  durationNs: trace.durationNs,
-})
+const toIssueTraceRecord = (trace: TraceDetail): TraceRecord => toTraceRecord(trace)
 
-export type IssueTraceRecord = ReturnType<typeof toIssueTraceRecord>
+export type IssueTraceRecord = TraceRecord
 
 const withEmptyIssueProjection = Effect.provide(
   Layer.succeed(IssueProjectionRepository, {

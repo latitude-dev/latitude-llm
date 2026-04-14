@@ -162,7 +162,13 @@ export function InfiniteTable<T>({
                 )}
                 {columns.map((col, i) => {
                   const isSortable = !!col.sortKey && !!onSortChange
-                  const sortDir = sorting && sorting.column === col.sortKey ? sorting.direction : null
+                  const sortDir = col.sortKey
+                    ? sorting && sorting.column === col.sortKey
+                      ? sorting.direction
+                      : sorting === undefined && defaultSorting?.column === col.sortKey
+                        ? defaultSorting.direction
+                        : null
+                    : null
                   return (
                     <HeaderCell
                       key={col.key}
@@ -172,10 +178,10 @@ export function InfiniteTable<T>({
                       {...(col.width !== undefined ? { width: col.width } : {})}
                       showSubheaderSlot={hasSubheaderRow}
                       {...(hasSubheaderRow ? { subheader: col.renderSubheader?.(col, i) } : {})}
+                      {...(sortDir ? { sortDirection: sortDir } : {})}
                       {...(isSortable && col.sortKey
                         ? {
                             sortable: true,
-                            sortDirection: sortDir,
                             onSortClick: () => handleSortClick(col.sortKey as string),
                           }
                         : {})}

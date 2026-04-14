@@ -40,7 +40,7 @@ export interface TraceRecord {
   readonly rootSpanName: string
 }
 
-const serializeTrace = (trace: Trace): TraceRecord => ({
+export const toTraceRecord = (trace: Trace): TraceRecord => ({
   organizationId: trace.organizationId,
   projectId: trace.projectId,
   traceId: trace.traceId,
@@ -79,7 +79,7 @@ export interface TraceDetailRecord extends TraceRecord {
 }
 
 const serializeTraceDetail = (trace: TraceDetail): TraceDetailRecord => ({
-  ...serializeTrace(trace),
+  ...toTraceRecord(trace),
   systemInstructions: trace.systemInstructions,
   inputMessages: trace.inputMessages,
   outputMessages: trace.outputMessages,
@@ -130,10 +130,10 @@ export const listTracesByProject = createServerFn({ method: "GET" })
     )
 
     if (!page.nextCursor) {
-      return { traces: page.items.map(serializeTrace), hasMore: page.hasMore }
+      return { traces: page.items.map(toTraceRecord), hasMore: page.hasMore }
     }
     return {
-      traces: page.items.map(serializeTrace),
+      traces: page.items.map(toTraceRecord),
       hasMore: page.hasMore,
       nextCursor: page.nextCursor,
     }

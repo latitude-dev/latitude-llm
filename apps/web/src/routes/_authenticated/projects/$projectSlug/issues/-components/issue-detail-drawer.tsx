@@ -1,10 +1,9 @@
 import {
   Button,
+  CloseTrigger,
   DetailDrawer,
   DetailSection,
   Icon,
-  InfiniteTable,
-  type InfiniteTableColumn,
   Label,
   Modal,
   Skeleton,
@@ -13,8 +12,9 @@ import {
   Tooltip,
   useToast,
 } from "@repo/ui"
-import { formatCount, formatDuration, relativeTime } from "@repo/utils"
+import { formatCount } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
+import { useNavigate } from "@tanstack/react-router"
 import {
   ArrowDownIcon,
   ArrowDownRightIcon,
@@ -32,8 +32,13 @@ import {
   useIssueDetail,
   useIssueTracesInfiniteScroll,
 } from "../../../../../../domains/issues/issues.collection.ts"
-import { applyIssueLifecycleAction, type IssueTraceRecord } from "../../../../../../domains/issues/issues.functions.ts"
+import { applyIssueLifecycleAction } from "../../../../../../domains/issues/issues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import {
+  DEFAULT_TRACE_TABLE_SORTING,
+  ProjectTracesTable,
+  type TraceColumnId,
+} from "../../-components/project-traces-table.tsx"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
 import { formatSeenAgeParts } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
@@ -76,7 +81,41 @@ function SeenAtSummaryValue({
   )
 }
 
+type LifecycleConfirmationAction = "ignore" | "unignore" | "unresolve"
+
+const ISSUE_TRACE_COLUMN_IDS = ["startTime", "name", "tags", "duration"] as const satisfies readonly TraceColumnId[]
+
+function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
+  switch (action) {
+    case "ignore":
+      return {
+        title: "Ignore issue",
+        description: "Mark this issue as ignored. We won't alert you about new ocurrences of this issue anymore",
+        confirmLabel: "Ignore",
+        confirmIcon: DownloadIcon,
+        confirmVariant: "destructive" as const,
+      }
+    case "unignore":
+      return {
+        title: "Unignore issue",
+        description: "Stop ignoring this issue. New occurrences will surface it again",
+        confirmLabel: "Unignore",
+        confirmIcon: UploadIcon,
+        confirmVariant: undefined,
+      }
+    case "unresolve":
+      return {
+        title: "Unresolve issue",
+        description: "Reopen this issue. New occurrences won't mark this issue as regressed",
+        confirmLabel: "Unresolve",
+        confirmIcon: XIcon,
+        confirmVariant: "destructive" as const,
+      }
+  }
+}
+
 export function IssueDetailDrawer({
+  projectSlug,
   projectId,
   issueId,
   onClose,
@@ -85,6 +124,7 @@ export function IssueDetailDrawer({
   canNavigateNext,
   canNavigatePrev,
 }: {
+  readonly projectSlug: string
   readonly projectId: string
   readonly issueId: string
   readonly onClose: () => void
@@ -93,6 +133,7 @@ export function IssueDetailDrawer({
   readonly canNavigateNext: boolean
   readonly canNavigatePrev: boolean
 }) {
+  const navigate = useNavigate()
   const { toast } = useToast()
   const { data: issue, isLoading } = useIssueDetail({ projectId, issueId })
   const {
@@ -105,24 +146,28 @@ export function IssueDetailDrawer({
     enabled: issue !== null,
   })
   const [resolveModalOpen, setResolveModalOpen] = useState(false)
+  const [lifecycleConfirmAction, setLifecycleConfirmAction] = useState<LifecycleConfirmationAction | null>(null)
   const [keepMonitoring, setKeepMonitoring] = useState(true)
   const [isLifecycleLoading, setIsLifecycleLoading] = useState(false)
+  const hasActiveLinkedEvaluations =
+    issue?.evaluations.some((evaluation) => evaluation.archivedAt === null && evaluation.deletedAt === null) ?? false
+  const lifecycleConfirmation = lifecycleConfirmAction ? getLifecycleConfirmation(lifecycleConfirmAction) : null
 
-  const traceColumns: InfiniteTableColumn<IssueTraceRecord>[] = [
-    {
-      key: "timestamp",
-      header: "Timestamp",
-      minWidth: 180,
-      render: (trace) => relativeTime(new Date(trace.startTime)),
-    },
-    {
-      key: "duration",
-      header: "Duration",
-      minWidth: 120,
-      align: "end",
-      render: (trace) => formatDuration(trace.durationNs),
-    },
-  ]
+  const handleTraceClick = (traceId: string) => {
+    void navigate({
+      to: "/projects/$projectSlug",
+      params: { projectSlug },
+      search: {
+        tab: "traces",
+        traceId,
+      },
+    })
+  }
+
+  const getTraceRowAriaLabel = (input: { readonly traceId: string; readonly rootSpanName: string }) => {
+    const shortName = input.rootSpanName || input.traceId.slice(0, 8)
+    return `Open trace ${shortName} in traces dashboard`
+  }
 
   const runLifecycleCommand = async (command: "resolve" | "unresolve" | "ignore" | "unignore", override?: boolean) => {
     setIsLifecycleLoading(true)
@@ -147,6 +192,7 @@ export function IssueDetailDrawer({
                 : "Issue unignored.",
       })
       setResolveModalOpen(false)
+      setLifecycleConfirmAction(null)
     } catch (error) {
       toast({
         variant: "destructive",
@@ -226,7 +272,7 @@ export function IssueDetailDrawer({
               variant="ghost"
               className="text-foreground group-hover:text-secondary-foreground/80"
               disabled={issue === null || issue === undefined || isLifecycleLoading}
-              onClick={() => void runLifecycleCommand(issue?.ignoredAt ? "unignore" : "ignore")}
+              onClick={() => setLifecycleConfirmAction(issue?.ignoredAt ? "unignore" : "ignore")}
             >
               <Icon icon={issue?.ignoredAt ? UploadIcon : DownloadIcon} size="sm" />
               {issue?.ignoredAt ? "Unignore" : "Ignore"}
@@ -236,7 +282,7 @@ export function IssueDetailDrawer({
               disabled={issue === null || issue === undefined || isLifecycleLoading}
               onClick={() => {
                 if (issue?.resolvedAt) {
-                  void runLifecycleCommand("unresolve")
+                  setLifecycleConfirmAction("unresolve")
                   return
                 }
 
@@ -326,7 +372,12 @@ export function IssueDetailDrawer({
             contentClassName="pl-0 max-h-none overflow-visible"
           >
             {issue ? (
-              <IssueDrawerEvaluations projectId={projectId} issueId={issueId} evaluations={issue.evaluations} />
+              <IssueDrawerEvaluations
+                projectId={projectId}
+                issueId={issueId}
+                evaluations={issue.evaluations}
+                canMonitorIssue={issue.resolvedAt === null && issue.ignoredAt === null}
+              />
             ) : (
               <Skeleton className="h-24 w-full" />
             )}
@@ -339,11 +390,14 @@ export function IssueDetailDrawer({
             contentClassName="pl-0 max-h-none overflow-visible"
           >
             <div className="flex min-h-72 flex-col">
-              <InfiniteTable
+              <ProjectTracesTable
                 data={traces}
                 isLoading={tracesLoading}
-                columns={traceColumns}
-                getRowKey={(trace) => trace.traceId}
+                visibleColumnIds={ISSUE_TRACE_COLUMN_IDS}
+                defaultSorting={DEFAULT_TRACE_TABLE_SORTING}
+                onTraceClick={(trace) => handleTraceClick(trace.traceId)}
+                getTraceRowAriaLabel={getTraceRowAriaLabel}
+                rowInteractionRole="link"
                 infiniteScroll={infiniteScroll}
                 blankSlate="This issue has not been seen on any traces yet."
               />
@@ -358,25 +412,27 @@ export function IssueDetailDrawer({
             title="Resolve issue"
             description="Mark this issue as resolved. If this issue starts occurring again we will promote it as regressed"
           />
-          <Modal.Body>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-row items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="keep-monitoring-on-resolve">Keep monitoring this issue</Label>
-                  <Text.H6 color="foregroundMuted">
-                    Evaluations monitoring this issue will stay active to detect further regressions
-                  </Text.H6>
+          {hasActiveLinkedEvaluations ? (
+            <Modal.Body>
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-row items-center justify-between gap-4">
+                  <div className="flex flex-col gap-1">
+                    <Label htmlFor="keep-monitoring-on-resolve">Keep monitoring this issue</Label>
+                    <Text.H6 color="foregroundMuted">
+                      Evaluations monitoring this issue will stay active to detect further regressions
+                    </Text.H6>
+                  </div>
+                  <Switch
+                    id="keep-monitoring-on-resolve"
+                    checked={keepMonitoring}
+                    onCheckedChange={setKeepMonitoring}
+                    disabled={isLifecycleLoading}
+                    aria-label="Keep monitoring this issue"
+                  />
                 </div>
-                <Switch
-                  id="keep-monitoring-on-resolve"
-                  checked={keepMonitoring}
-                  onCheckedChange={setKeepMonitoring}
-                  disabled={isLifecycleLoading}
-                  aria-label="Keep monitoring this issue"
-                />
               </div>
-            </div>
-          </Modal.Body>
+            </Modal.Body>
+          ) : null}
           <Modal.Footer>
             <Button variant="outline" onClick={() => setResolveModalOpen(false)} disabled={isLifecycleLoading}>
               Cancel
@@ -384,6 +440,29 @@ export function IssueDetailDrawer({
             <Button onClick={() => void runLifecycleCommand("resolve", keepMonitoring)} disabled={isLifecycleLoading}>
               <Icon icon={CheckIcon} size="sm" />
               Resolve
+            </Button>
+          </Modal.Footer>
+        </Modal.Content>
+      </Modal.Root>
+
+      <Modal.Root
+        open={lifecycleConfirmAction !== null}
+        onOpenChange={(open) => (!open ? setLifecycleConfirmAction(null) : undefined)}
+      >
+        <Modal.Content dismissible>
+          <Modal.Header
+            title={lifecycleConfirmation?.title ?? "Confirm issue action"}
+            description={lifecycleConfirmation?.description ?? "Are you sure you want to continue?"}
+          />
+          <Modal.Footer>
+            <CloseTrigger />
+            <Button
+              {...(lifecycleConfirmation?.confirmVariant ? { variant: lifecycleConfirmation.confirmVariant } : {})}
+              onClick={() => (lifecycleConfirmAction ? void runLifecycleCommand(lifecycleConfirmAction) : undefined)}
+              disabled={lifecycleConfirmAction === null || isLifecycleLoading}
+            >
+              <Icon icon={lifecycleConfirmation?.confirmIcon ?? XIcon} size="sm" />
+              {lifecycleConfirmation?.confirmLabel ?? "Confirm"}
             </Button>
           </Modal.Footer>
         </Modal.Content>

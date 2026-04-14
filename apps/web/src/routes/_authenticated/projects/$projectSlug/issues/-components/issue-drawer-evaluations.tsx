@@ -96,10 +96,12 @@ export function IssueDrawerEvaluations({
   projectId,
   issueId,
   evaluations,
+  canMonitorIssue,
 }: {
   readonly projectId: string
   readonly issueId: string
   readonly evaluations: readonly EvaluationSummaryRecord[]
+  readonly canMonitorIssue: boolean
 }) {
   const { toast } = useToast()
   const [activeJob, setActiveJob] = useState<ActiveAlignmentJob | null>(null)
@@ -235,18 +237,33 @@ export function IssueDrawerEvaluations({
   const primaryEvaluation = visibleEvaluations[0] ?? null
   const hiddenEvaluationCount = Math.max(0, visibleEvaluations.length - 1)
   const isActionPending = isBusy || isStartingRealign || isArchiving
+  const monitorBlockedByLifecycle = !canMonitorIssue
 
   if (visibleEvaluations.length === 0) {
+    const monitorButton = (
+      <Button
+        onClick={handleGenerate}
+        disabled={isActionPending || monitorBlockedByLifecycle}
+        isLoading={activeJob?.kind === "initial" && isBusy}
+      >
+        <Icon icon={BellPlusIcon} size="sm" />
+        Monitor
+      </Button>
+    )
+
     return (
       <div className="flex items-center justify-between gap-3 border border-dashed border-border rounded-lg px-5 py-4">
         <div className="flex min-w-0 flex-col gap-1">
           <Text.H5M>No evaluations</Text.H5M>
           <Text.H6 color="foregroundMuted">Generate an evaluation to monitor this issue</Text.H6>
         </div>
-        <Button onClick={handleGenerate} disabled={isActionPending} isLoading={activeJob?.kind === "initial" && isBusy}>
-          <Icon icon={BellPlusIcon} size="sm" />
-          Monitor
-        </Button>
+        {monitorBlockedByLifecycle ? (
+          <Tooltip asChild trigger={<span className="inline-flex">{monitorButton}</span>}>
+            <Text.H6 color="foregroundMuted">Unresolve and unignore this issue first to be able to monitor it</Text.H6>
+          </Tooltip>
+        ) : (
+          monitorButton
+        )}
       </div>
     )
   }
