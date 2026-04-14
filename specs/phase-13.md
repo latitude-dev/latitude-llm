@@ -302,7 +302,7 @@ Active implementation work now starts with **PR 4**.
   - fan out `TraceEnded` to `live-annotation-queues:curate`
   - fan out `TraceEnded` to `system-annotation-queues:fanOut`
   - make the rollout explicit so activation does not double-run downstream work
-- [ ] **P13-PR4-5**: Add end-to-end tests for:
+- [x] **P13-PR4-5**: Add end-to-end tests for:
   - debounce reset behavior
   - `SpanIngested -> live-traces:end`
   - `live-traces:end -> TraceEnded`
