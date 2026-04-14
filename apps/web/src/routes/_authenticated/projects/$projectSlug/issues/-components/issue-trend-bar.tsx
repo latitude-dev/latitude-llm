@@ -10,17 +10,16 @@ const MINI_HISTOGRAM_GUIDE_LINE_COUNT = 5
 const MINI_HISTOGRAM_TOP_INSET_PX = 6
 const REGRESSED_BAR_CLASSES = "bg-rose-700 dark:bg-rose-400"
 const ESCALATING_BAR_CLASSES = "bg-yellow-500/75 dark:bg-yellow-300/85"
-const DEFAULT_MUTED_BAR_CLASSES = "bg-muted-foreground/60 dark:bg-muted-foreground/70"
+const DEFAULT_ROW_BAR_CLASSES = "bg-muted-foreground/60 dark:bg-muted-foreground/70"
 const DEFAULT_BACKGROUND_GUIDE_CLASSES = "border-border/60 dark:border-muted-foreground/30"
 const DEFAULT_MUTED_GUIDE_CLASSES = "border-muted-foreground/60 dark:border-muted-foreground/70"
-const DEFAULT_PRIMARY_BAR_CLASSES = "bg-primary"
 
 function toBucketEndMs(bucket: string): number {
   return new Date(`${bucket}T23:59:59.999Z`).getTime()
 }
 
 function resolveBarClasses(input: {
-  readonly barVariant: "muted" | "primary"
+  readonly barVariant: "row" | "details"
   readonly isRegressedBucket: boolean
   readonly isEscalatingBucket: boolean
   readonly hasLifecycleHighlight: boolean
@@ -34,10 +33,10 @@ function resolveBarClasses(input: {
   }
 
   if (input.hasLifecycleHighlight) {
-    return DEFAULT_MUTED_BAR_CLASSES
+    return DEFAULT_ROW_BAR_CLASSES
   }
 
-  return input.barVariant === "primary" ? DEFAULT_PRIMARY_BAR_CLASSES : DEFAULT_MUTED_BAR_CLASSES
+  return DEFAULT_ROW_BAR_CLASSES
 }
 
 function getVisibleBucketLabelIndices(totalBuckets: number, maxVisibleBucketLabels: number): ReadonlySet<number> {
@@ -71,7 +70,7 @@ export function IssueTrendBar({
   showLabels = true,
   labelLayout = "bucket",
   maxVisibleBucketLabels = DEFAULT_MAX_VISIBLE_BUCKET_LABELS,
-  barVariant = "muted",
+  barVariant = "row",
   states = [],
   resolvedAt = null,
   escalationOccurrenceThreshold = null,
@@ -84,7 +83,7 @@ export function IssueTrendBar({
   readonly showLabels?: boolean
   readonly labelLayout?: "bucket" | "floating"
   readonly maxVisibleBucketLabels?: number
-  readonly barVariant?: "muted" | "primary"
+  readonly barVariant?: "row" | "details"
   readonly states?: readonly string[]
   readonly resolvedAt?: string | null
   readonly escalationOccurrenceThreshold?: number | null
@@ -184,7 +183,7 @@ export function IssueTrendBar({
                       ) : null}
                       <span
                         className={`relative z-[1] w-full transition-[filter] group-hover/bucket:brightness-90 ${
-                          barVariant === "primary"
+                          barVariant === "details"
                             ? `rounded-t-sm ${resolveBarClasses({
                                 barVariant,
                                 isRegressedBucket: bucket.isRegressedBucket,

@@ -56,7 +56,8 @@ function AlignmentTooltipContent({ evaluation }: { readonly evaluation: Evaluati
   return (
     <div className="flex flex-col gap-2">
       <Text.H6 color="foregroundMuted">Alignment is computed as the Matthews Correlation Coefficient</Text.H6>
-      <div className="flex flex-col gap-1">
+      <Text.H6 color="foregroundMuted">Aligned at {new Date(evaluation.alignedAt).toLocaleString()}</Text.H6>
+      <div className="flex flex-col gap-1 pt-1">
         <div className="grid grid-cols-[auto_auto_auto]">
           <div aria-hidden className="border-b border-r border-border px-2 py-1" />
           <div className="border-b border-r border-border px-2 py-1">
@@ -252,7 +253,7 @@ export function IssueDrawerEvaluations({
 
   return (
     <>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 px-1 pt-2">
         {primaryEvaluation ? (
           <div className="flex flex-row flex-wrap items-end gap-8">
             <SummaryField
@@ -262,33 +263,12 @@ export function IssueDrawerEvaluations({
                   asChild
                   trigger={
                     <span className="inline-flex">
-                      <button
-                        type="button"
-                        className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
-                        onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
-                        disabled={isActionPending}
-                        aria-label={`Realign ${primaryEvaluation.name}`}
-                      >
-                        <Status
-                          variant={getAlignmentVariant(
-                            primaryEvaluation.alignment.metrics.matthewsCorrelationCoefficient,
-                          )}
-                          label={formatPercent(primaryEvaluation.alignment.metrics.matthewsCorrelationCoefficient)}
-                          indicator={
-                            <Icon
-                              icon={RotateCwIcon}
-                              size="xs"
-                              className={
-                                activeJob?.kind === "realign" &&
-                                activeJob.evaluationId === primaryEvaluation.id &&
-                                !isTerminalStatus(activeJob.status.status)
-                                  ? "shrink-0 animate-spin stroke-[2.5]"
-                                  : "shrink-0 stroke-[2.5]"
-                              }
-                            />
-                          }
-                        />
-                      </button>
+                      <Status
+                        variant={getAlignmentVariant(
+                          primaryEvaluation.alignment.metrics.matthewsCorrelationCoefficient,
+                        )}
+                        label={formatPercent(primaryEvaluation.alignment.metrics.matthewsCorrelationCoefficient)}
+                      />
                     </span>
                   }
                 >
@@ -298,9 +278,23 @@ export function IssueDrawerEvaluations({
             />
             <SummaryField
               label="Sampling"
-              value={<Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>}
+              value={
+                <Tooltip
+                  asChild
+                  trigger={
+                    <span className="inline-flex">
+                      <Text.H5 color="foreground">{formatPercent(primaryEvaluation.trigger.sampling / 100)}</Text.H5>
+                    </span>
+                  }
+                >
+                  <Text.H6 color="foregroundMuted">
+                    We monitor this issue on {formatPercent(primaryEvaluation.trigger.sampling / 100)} of the incoming
+                    traces
+                  </Text.H6>
+                </Tooltip>
+              }
             />
-            <div className="flex shrink-0 items-end">
+            <div className="flex min-w-0 flex-1 items-end justify-end gap-x-1">
               <Button
                 variant="ghost"
                 className="text-foreground group-hover:text-secondary-foreground/80"
@@ -309,6 +303,19 @@ export function IssueDrawerEvaluations({
               >
                 <Icon icon={XIcon} size="sm" />
                 Unmonitor
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setRealignEvaluationId(primaryEvaluation.id)}
+                disabled={isActionPending}
+                isLoading={
+                  activeJob?.kind === "realign" &&
+                  activeJob.evaluationId === primaryEvaluation.id &&
+                  !isTerminalStatus(activeJob.status.status)
+                }
+              >
+                <Icon icon={RotateCwIcon} size="sm" />
+                Realign
               </Button>
             </div>
           </div>
@@ -327,7 +334,7 @@ export function IssueDrawerEvaluations({
         <Modal.Content dismissible>
           <Modal.Header
             title="Realign evaluation"
-            description="We realign evaluations to the latest traces periodically to ensure they are up to date. You can realign this evaluation on demand. This may take some time."
+            description="We realign evaluations to the latest traces periodically to ensure they are up to date. You can realign this evaluation on demand. This may take some time"
           />
           <Modal.Footer>
             <CloseTrigger />
@@ -349,8 +356,8 @@ export function IssueDrawerEvaluations({
       >
         <Modal.Content dismissible>
           <Modal.Header
-            title="Unmonitor evaluation"
-            description="Are you sure you want to archive the evaluation monitoring this issue? You can generate a new evaluation to monitor this issue at any time."
+            title="Unmonitor issue"
+            description="Are you sure you want to archive the evaluation monitoring this issue? You can generate a new evaluation at any time"
           />
           <Modal.Footer>
             <CloseTrigger />

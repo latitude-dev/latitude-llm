@@ -1,13 +1,14 @@
 import {
   Button,
-  Checkbox,
   DetailDrawer,
   DetailSection,
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
+  Label,
   Modal,
   Skeleton,
+  Switch,
   Text,
   Tooltip,
   useToast,
@@ -308,7 +309,7 @@ export function IssueDetailDrawer({
                   isLoading={isLoading}
                   labelLayout="floating"
                   maxVisibleBucketLabels={4}
-                  barVariant="primary"
+                  barVariant="details"
                   states={issue?.states ?? []}
                   resolvedAt={issue?.resolvedAt ?? null}
                   escalationOccurrenceThreshold={issue?.escalationOccurrenceThreshold ?? null}
@@ -355,21 +356,25 @@ export function IssueDetailDrawer({
         <Modal.Content dismissible>
           <Modal.Header
             title="Resolve issue"
-            description="Choose whether linked evaluations should keep monitoring this issue after it is resolved."
+            description="Mark this issue as resolved. If this issue starts occurring again we will promote it as regressed"
           />
           <Modal.Body>
             <div className="flex flex-col gap-3">
-              <div className="flex flex-row items-center gap-2">
-                <Checkbox
+              <div className="flex flex-row items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="keep-monitoring-on-resolve">Keep monitoring this issue</Label>
+                  <Text.H6 color="foregroundMuted">
+                    Evaluations monitoring this issue will stay active to detect further regressions
+                  </Text.H6>
+                </div>
+                <Switch
+                  id="keep-monitoring-on-resolve"
                   checked={keepMonitoring}
-                  onCheckedChange={(checked) => setKeepMonitoring(checked === true)}
-                  aria-label="Keep linked evaluations monitoring this issue"
+                  onCheckedChange={setKeepMonitoring}
+                  disabled={isLifecycleLoading}
+                  aria-label="Keep monitoring this issue"
                 />
-                <Text.H6>Keep linked evaluations monitoring this issue</Text.H6>
               </div>
-              <Text.H6 color="foregroundMuted">
-                When disabled, resolving the issue will archive all linked evaluations immediately.
-              </Text.H6>
             </div>
           </Modal.Body>
           <Modal.Footer>
@@ -377,7 +382,8 @@ export function IssueDetailDrawer({
               Cancel
             </Button>
             <Button onClick={() => void runLifecycleCommand("resolve", keepMonitoring)} disabled={isLifecycleLoading}>
-              Resolve issue
+              <Icon icon={CheckIcon} size="sm" />
+              Resolve
             </Button>
           </Modal.Footer>
         </Modal.Content>
