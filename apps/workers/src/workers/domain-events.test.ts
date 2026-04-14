@@ -343,6 +343,5 @@ describe("domain-events dispatcher", () => {
       },
     ])
 
-    expect(published.some((p) => p.queue === "posthog-analytics")).toBe(true)
   })
 })

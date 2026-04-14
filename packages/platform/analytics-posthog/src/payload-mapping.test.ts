@@ -27,9 +27,9 @@ describe("mapEventToPostHog", () => {
 
   it("falls back to org distinctId and skips person profile when no user context", () => {
     const mapped = mapEventToPostHog({
-      eventName: "ScoreCreated",
+      eventName: "FirstTraceReceived",
       organizationId: "org-1",
-      payload: { organizationId: "org-1", projectId: "proj-1", scoreId: "s-1", issueId: null },
+      payload: { organizationId: "org-1", projectId: "proj-1", traceId: "t-1" },
       occurredAt,
     })
 
@@ -73,16 +73,16 @@ describe("mapEventToPostHog", () => {
     expect(mapped?.properties).toMatchObject({ projectId: "proj-1" })
   })
 
-  it("maps ScoreCreated", () => {
+  it("maps DatasetCreated", () => {
     const mapped = mapEventToPostHog({
-      eventName: "ScoreCreated",
+      eventName: "DatasetCreated",
       organizationId: "org-1",
-      payload: { organizationId: "org-1", projectId: "proj-1", scoreId: "s-1", issueId: null },
+      payload: { organizationId: "org-1", actorUserId: "u-1", projectId: "proj-1", datasetId: "d-1", name: "My Dataset" },
       occurredAt,
     })
 
-    expect(mapped?.event).toBe("ScoreCreated")
-    expect(mapped?.properties).toMatchObject({ scoreId: "s-1", issueId: null })
+    expect(mapped?.event).toBe("DatasetCreated")
+    expect(mapped?.properties).toMatchObject({ datasetId: "d-1", name: "My Dataset" })
   })
 
   it("returns null for events not in the whitelist (defense-in-depth)", () => {

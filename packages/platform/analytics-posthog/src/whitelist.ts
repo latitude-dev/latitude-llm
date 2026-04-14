@@ -10,7 +10,6 @@ export type TrackedEventName = keyof EventPayloads & string
 export const POSTHOG_TRACKED_EVENTS = new Set<TrackedEventName>([
   "OrganizationCreated",
   "ProjectCreated",
-  "ScoreCreated",
   "UserSignedUp",
   "MemberJoined",
   "MemberInvited",
