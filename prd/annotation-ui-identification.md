@@ -23,19 +23,21 @@ import { isCuid } from "@domain/shared"
 export const ANNOTATION_PROVENANCE = ["human", "agent", "api"] as const
 export type AnnotationProvenance = (typeof ANNOTATION_PROVENANCE)[number]
 
-export function getAnnotationProvenance(annotation: AnnotationScore): AnnotationProvenance {
+export function getAnnotationProvenance(annotation: AnnotationScore): AnnotationProvenance | null {
   const { sourceId, annotatorId } = annotation
 
-  // API annotations: sourceId = "API" (no annotatorId required)
+  // Human annotations: has an annotatorId (user who created it)
+  if (annotatorId !== null) return "human"
+
+  // API annotations: sourceId = "API" exactly (from public API endpoint)
   if (sourceId === "API") return "api"
 
   // System/agent annotations: sourceId is a CUID (annotation queue id) AND no annotatorId
   // These are created by system annotation queues (e.g., tool-call-errors, refusal)
-  if (isCuid(sourceId) && annotatorId === null) return "agent"
+  if (isCuid(sourceId)) return "agent"
 
-  // Human annotations: sourceId = "UI" OR sourceId is a CUID with annotatorId present
-  // (queue-based human annotations have queue CUID as sourceId but have annotatorId set)
-  return "human"
+  // Unknown provenance: don't show anything special
+  return null
 }
 ```
 
@@ -56,6 +58,7 @@ Replace the current avatar + name logic with provenance-aware rendering:
 | `human` | User avatar | User name | — | — |
 | `agent` | Latitude logo | "Latitude" | `(Agent)` variant="secondary" | "Created automatically by Latitude's {queueName} system queue" |
 | `api` | — | — | `API` variant="outline" | "Created via the public API" |
+| `null` | — | — | — | — |
 
 **Implementation details:**
 
@@ -96,12 +99,16 @@ function ProvenanceHeader({ annotation, memberByUserId }: { annotation: Annotati
     )
   }
 
-  // api
-  return (
-    <Tooltip asChild trigger={<Badge variant="outline" size="small">API</Badge>}>
-      Created via the public API
-    </Tooltip>
-  )
+  if (provenance === "api") {
+    return (
+      <Tooltip asChild trigger={<Badge variant="outline" size="small">API</Badge>}>
+        Created via the public API
+      </Tooltip>
+    )
+  }
+
+  // null / unknown: show nothing
+  return null
 }
 ```
 
@@ -121,7 +128,7 @@ System-created annotations store model-generated feedback in `metadata.rawFeedba
 
 ```tsx
 // In AnnotationCard
-const displayFeedback = provenance === "agent" 
+const displayFeedback = provenance === "agent"
   ? annotation.metadata?.rawFeedback ?? annotation.feedback
   : annotation.feedback
 
@@ -195,7 +202,7 @@ const handleClickOutside = (e: MouseEvent) => {
   if (el.closest("[data-selection-popover]") || el.closest('[role="dialog"]')) return
   const tagName = (e.target as Element)?.tagName?.toLowerCase()
   if (tagName === "textarea" || tagName === "input") return
-  
+
   // Clear selection only if click is truly outside the container
   if (containerRef.current && !containerRef.current.contains(el)) clearSelection()
 }
@@ -252,20 +259,20 @@ const isEditable = canUpdateAnnotation(annotation)
 
 const menuOptions: MenuOption[] = useMemo(() => {
   const options: MenuOption[] = []
-  
+
   if (isEditable) {
     options.push({
       label: "Edit",
       onClick: () => setIsEditing(true),
     })
   }
-  
+
   options.push({
     label: "Remove",
     type: "destructive",
     onClick: () => deleteMutation.mutate({ scoreId: annotation.id, projectId }, onDelete ? { onSuccess: onDelete } : undefined),
   })
-  
+
   return options
 }, [annotation.id, projectId, deleteMutation, onDelete, isEditable])
 ```
@@ -287,13 +294,21 @@ Create a rich seed trace with multiple annotation types to test the UI.
 
 ### 3.1 Seed Trace Requirements
 
-Create a single trace with ID `"11111111111111111111111111111111"` (the existing lifecycle trace) that has:
+Create a new dedicated trace with ID `"ann07a710ndem07race000000000000"` (mnemonic: "annotation demo trace") that has:
 
 - **Long conversation:** 10+ messages with tool calls to enable scroll testing
 - **9 annotations total:**
   - 3 from agent (system queues)
   - 2 from API
   - 4 from human (UI)
+
+**New seed constant:**
+
+```typescript
+// packages/domain/shared/src/seeds.ts
+export const SEED_ANNOTATION_DEMO_TRACE_ID = "ann07a710ndem07race000000000000"
+export const SEED_ANNOTATION_DEMO_SPAN_ID = "ann0dem0span0000"
+```
 
 ### 3.2 Annotation Distribution
 
@@ -323,7 +338,7 @@ const uiPolishAnnotationRows = [
     organizationId: SEED_ORG_ID,
     projectId: SEED_PROJECT_ID,
     sessionId: null,
-    traceId: requiredAt(SEED_LIFECYCLE_TRACE_IDS, 0), // "1111..."
+    traceId: SEED_ANNOTATION_DEMO_TRACE_ID,
     spanId: null,
     source: "annotation" as const,
     sourceId: SEED_ANNOTATION_QUEUE_SYSTEM_ID,
@@ -387,42 +402,40 @@ System annotation queues should have restricted editing and cannot be deleted.
 
 **File:** `apps/web/src/routes/_authenticated/projects/$projectSlug/annotation-queues/index.tsx`
 
-Modify the options column to handle system queues:
+Modify the options column to disable delete for system queues:
 
 ```tsx
 optionsColumn<AnnotationQueueRecord>({
-  getOptions: (q) => {
-    if (q.system) {
-      return [
-        {
-          label: "Edit assignees & sampling",
-          onClick: () => openEditModal(q),
-        },
-        {
-          label: "Delete",
-          type: "destructive",
-          disabled: true,
-          disabledReason: "System queues cannot be deleted",
-        },
-      ]
-    }
-    
-    return [
-      {
-        label: "Edit",
-        onClick: () => openEditModal(q),
-      },
-      {
-        label: "Delete",
-        type: "destructive",
-        onClick: () => openDeleteModal(q),
-      },
-    ]
-  },
+  getOptions: (q) => [
+    {
+      label: "Edit",
+      onClick: () => openEditModal(q),
+    },
+    {
+      label: "Delete",
+      type: "destructive",
+      disabled: q.system,
+      onClick: () => openDeleteModal(q),
+    },
+  ],
 }),
 ```
 
-### 4.2 Queue Detail Page Alert
+### 4.2 Sampling Slider Description
+
+**File:** `apps/web/src/routes/_authenticated/projects/$projectSlug/annotation-queues/-components/queue-modal.tsx`
+
+Update the sampling slider description for system queues to explain the 0% behavior:
+
+```tsx
+<SamplingSlider
+  value={field.state.value}
+  onChange={field.handleChange}
+  description="Percentage of flagged traces to include. Setting to 0% disables this queue."
+/>
+```
+
+### 4.3 Queue Detail Page Alert
 
 **File:** `apps/web/src/routes/_authenticated/projects/$projectSlug/annotation-queues/$queueId/index.tsx`
 
@@ -433,18 +446,15 @@ import { Alert } from "@repo/ui"
 
 // In the component, after loading queue details
 {queue?.system && (
-  <Alert variant="info" className="mb-4">
-    <Alert.Title>System Queue</Alert.Title>
-    <Alert.Description>
-      This queue is managed by Latitude and cannot be deleted or have its core settings edited. 
-      You can update assignees and sampling rate. To add more context or custom criteria, 
-      create a new annotation queue.
-    </Alert.Description>
-  </Alert>
+  <Alert
+    variant="info"
+    title="System Queue"
+    description="This queue is managed by Latitude and cannot be deleted or have its core settings edited. You can update assignees and sampling rate. To add more context or custom criteria, create a new annotation queue."
+  />
 )}
 ```
 
-### 4.3 Backend Enforcement
+### 4.4 Backend Enforcement
 
 **File:** `packages/domain/annotation-queues/src/use-cases/update-annotation-queue.ts`
 
@@ -454,8 +464,8 @@ Add validation to prevent editing restricted fields on system queues:
 if (existingQueue.system) {
   // System queues: only allow assignees and sampling updates
   if (input.name !== undefined || input.description !== undefined || input.instructions !== undefined || input.settings?.filter !== undefined) {
-    return Effect.fail(new ValidationError({ 
-      message: "System queues can only have assignees and sampling updated" 
+    return Effect.fail(new ValidationError({
+      message: "System queues can only have assignees and sampling updated"
     }))
   }
 }
@@ -467,33 +477,173 @@ Add validation to prevent deletion:
 
 ```typescript
 if (existingQueue.system) {
-  return Effect.fail(new ForbiddenError({ 
-    message: "System queues cannot be deleted" 
+  return Effect.fail(new ForbiddenError({
+    message: "System queues cannot be deleted"
   }))
 }
 ```
 
+### 4.5 Tests
+
+**File:** `packages/domain/annotation-queues/src/use-cases/update-annotation-queue.test.ts`
+
+Add test cases:
+
+```typescript
+describe("system queue restrictions", () => {
+  it("allows updating assignees on system queue", async () => {
+    // Create system queue, update assignees, expect success
+  })
+
+  it("allows updating sampling on system queue", async () => {
+    // Create system queue, update settings.sampling, expect success
+  })
+
+  it("rejects updating name on system queue", async () => {
+    // Create system queue, attempt to update name, expect ValidationError
+  })
+
+  it("rejects updating description on system queue", async () => {
+    // Create system queue, attempt to update description, expect ValidationError
+  })
+
+  it("rejects updating instructions on system queue", async () => {
+    // Create system queue, attempt to update instructions, expect ValidationError
+  })
+
+  it("rejects updating filter on system queue", async () => {
+    // Create system queue, attempt to update settings.filter, expect ValidationError
+  })
+})
+```
+
+**File:** `packages/domain/annotation-queues/src/use-cases/delete-annotation-queue.test.ts`
+
+Add test case:
+
+```typescript
+it("rejects deleting a system queue", async () => {
+  // Create system queue, attempt to delete, expect ForbiddenError
+})
+```
+
 ---
 
-## Goal 5: Approve/Reject for System Draft Annotations
+## Goal 5: Enable Annotations on Tool and System Messages
+
+Currently, text range selection and message-level annotations are blocked for tool messages and system messages. This should be enabled.
+
+### 5.1 Current Limitations
+
+**Tool messages (`role === "tool"`):**
+- `ToolMessage` component doesn't pass `messageIndex` to `PartsRenderer` → text selection doesn't work
+- `conversation-tab.tsx` line 116: `if (role === "tool") return null` → message annotation slot is blocked
+
+**System messages (`role === "system"`):**
+- `SystemMessage` component doesn't pass `messageIndex` to `PartsRenderer` → text selection doesn't work
+- No message annotation slot rendered (but not explicitly blocked)
+
+### 5.2 Fix: Pass messageIndex to All Message Types
+
+**File:** `packages/ui/src/components/genai-conversation/message.tsx`
+
+Update `SystemMessage` and `ToolMessage` to receive and pass `messageIndex`:
+
+```tsx
+function SystemMessage({
+  message,
+  messageIndex
+}: {
+  readonly message: GenAIMessage
+  readonly messageIndex?: number | undefined
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="border-l-2 border-accent bg-muted/50 rounded-r-lg px-4 py-3">
+        <PartsRenderer parts={message.parts} messageIndex={messageIndex} />
+      </div>
+    </div>
+  )
+}
+
+function ToolMessage({
+  message,
+  messageIndex
+}: {
+  readonly message: GenAIMessage
+  readonly messageIndex?: number | undefined
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="border border-dashed border-border rounded-lg px-4 py-3">
+        <PartsRenderer parts={message.parts} messageIndex={messageIndex} />
+      </div>
+    </div>
+  )
+}
+```
+
+Update the `Message` component switch statement to pass `messageIndex`:
+
+```tsx
+case "system":
+  return <SystemMessage message={message} messageIndex={messageIndex} />
+case "tool":
+  return <ToolMessage message={message} messageIndex={messageIndex} />
+```
+
+### 5.3 Fix: Remove Tool Message Annotation Slot Block
+
+**File:** `apps/web/src/routes/_authenticated/projects/$projectSlug/-components/trace-detail-drawer/tabs/conversation-tab.tsx`
+
+Remove the early return that blocks annotation slots on tool messages:
+
+```tsx
+// Before
+messageAnnotationSlot={(messageIndex, role) => {
+  if (role === "tool") return null  // ← Remove this line
+  const data = messageLevelAnnotations.get(messageIndex)
+  // ...
+}}
+
+// After
+messageAnnotationSlot={(messageIndex, role) => {
+  const data = messageLevelAnnotations.get(messageIndex)
+  // ...
+}}
+```
+
+### 5.4 Consideration: Absorbed Tool Messages
+
+Tool response messages are often "absorbed" into the preceding assistant message (their results shown inline with the tool call). These absorbed messages don't appear in `visibleMessages` and won't have annotation slots.
+
+This is acceptable because:
+- The tool call itself (in the assistant message) can be annotated
+- The inline result display provides context
+- Absorbed messages have no independent visual representation to annotate
+
+If annotation on absorbed tool responses is needed later, the `buildToolResultsMap` logic would need changes to preserve those messages.
+
+---
+
+## Goal 6: Approve/Reject for System Draft Annotations
 
 System annotation queues create draft annotations that require human review before publication.
 
-### 5.1 Current State
+### 6.1 Current State
 
 - System queues create annotations via `persistSystemQueueAnnotationUseCase`
 - These annotations have `draftedAt` set and `annotatorId = null`
 - They do NOT use the automatic debounced publication path
 - They wait for explicit human review
 
-### 5.2 UI: Approve/Reject Buttons
+### 6.2 UI: Approve/Reject Buttons
 
 **Location:** In `AnnotationCard` when viewing a system-created draft annotation
 
 **Conditions to show buttons:**
 - `annotation.draftedAt !== null` (is a draft)
-- `annotation.annotatorId === null` (system-created)
-- `getAnnotationProvenance(annotation) === "agent"`
+- `getAnnotationProvenance(annotation) === "agent"` (system-created, implies `annotatorId === null`)
 
 **UI Implementation:**
 
@@ -524,7 +674,7 @@ const isSystemDraft = provenance === "agent" && annotation.draftedAt !== null
 )}
 ```
 
-### 5.3 Backend: Approve Use Case
+### 6.3 Backend: Approve Use Case
 
 **File:** `packages/domain/annotations/src/use-cases/approve-system-annotation.ts`
 
@@ -556,8 +706,8 @@ export const approveSystemAnnotationUseCase = (input: ApproveSystemAnnotationInp
 
     // Verify it's a system-created annotation (no annotatorId)
     if (score.annotatorId !== null) {
-      return yield* Effect.fail(new ForbiddenError({ 
-        message: "Only system-created annotations can be approved via this flow" 
+      return yield* Effect.fail(new ForbiddenError({
+        message: "Only system-created annotations can be approved via this flow"
       }))
     }
 
@@ -575,7 +725,7 @@ export const approveSystemAnnotationUseCase = (input: ApproveSystemAnnotationInp
   })
 ```
 
-### 5.4 Backend: Reject Use Case
+### 6.4 Backend: Reject Use Case
 
 **File:** `packages/domain/annotations/src/use-cases/reject-system-annotation.ts`
 
@@ -608,8 +758,8 @@ export const rejectSystemAnnotationUseCase = (input: RejectSystemAnnotationInput
 
     // Verify it's a system-created annotation
     if (score.annotatorId !== null) {
-      return yield* Effect.fail(new ForbiddenError({ 
-        message: "Only system-created annotations can be rejected via this flow" 
+      return yield* Effect.fail(new ForbiddenError({
+        message: "Only system-created annotations can be rejected via this flow"
       }))
     }
 
@@ -620,31 +770,31 @@ export const rejectSystemAnnotationUseCase = (input: RejectSystemAnnotationInput
   })
 ```
 
-### 5.5 Server Functions
+### 6.5 Server Functions
 
 **File:** `apps/web/src/domains/annotations/annotations.functions.ts`
 
 ```typescript
 export async function approveSystemAnnotation(input: { scoreId: string; projectId: string }) {
   const { organizationId, projectId } = await requireProjectAccess(input.projectId)
-  return runEffect(approveSystemAnnotationUseCase({ 
-    scoreId: input.scoreId, 
-    organizationId, 
-    projectId 
+  return runEffect(approveSystemAnnotationUseCase({
+    scoreId: input.scoreId,
+    organizationId,
+    projectId
   }))
 }
 
 export async function rejectSystemAnnotation(input: { scoreId: string; projectId: string }) {
   const { organizationId, projectId } = await requireProjectAccess(input.projectId)
-  return runEffect(rejectSystemAnnotationUseCase({ 
-    scoreId: input.scoreId, 
-    organizationId, 
-    projectId 
+  return runEffect(rejectSystemAnnotationUseCase({
+    scoreId: input.scoreId,
+    organizationId,
+    projectId
   }))
 }
 ```
 
-### 5.6 Collection Hooks
+### 6.6 Collection Hooks
 
 **File:** `apps/web/src/domains/annotations/annotations.collection.ts`
 
@@ -672,43 +822,19 @@ export function useRejectSystemAnnotation() {
 
 ---
 
-## Open Questions
+## Resolved Questions
 
-### Domain / Architecture
-
-1. **Queue name resolution for agent tooltips:** Should we load the queue name from `sourceId` to show in the tooltip ("Created by Tool Call Errors queue"), or is a generic "Created by a Latitude system queue" sufficient? Loading queue names requires an additional query or pre-fetching queue data.
-
-2. **Human edits to agent annotations:** When a human edits a system-created draft annotation, should:
-   - The `annotatorId` be set to the editing user?
-   - The `sourceId` remain the queue CUID or change to `"UI"`?
-   - The provenance effectively become "human" after edit?
-
-3. **Enrichment on approve:** When a human approves a system annotation without editing, should the existing enriched `feedback` be used, or should we re-run enrichment? The current flow preserves `rawFeedback` and uses enriched `feedback` for clustering.
-
-4. **Delete permissions:** Should humans be allowed to delete published annotations (both human and API-created)? The current UI allows this but the PRD focuses on edit restrictions. Clarify the delete policy.
-
-### UI / UX
-
-5. **Approve with edits:** Should the Approve button also be available after the user edits the annotation (while still in draft), or should editing and approving be separate actions? Consider: Edit → Save (stays draft) → Approve, vs. Edit → Approve (save + publish).
-
-6. **Text range selection container ID:** The PRD mentions passing a `domId` to scope selection. Is the current `containerRef` approach sufficient, or do we need explicit DOM ID attributes? The current implementation already scopes to the ref.
-
-7. **Annotation card actions overflow:** With approve/reject buttons added, the card may become cluttered. Should these be in the dropdown menu instead of inline buttons? Or should we show them prominently for system drafts only?
-
-8. **Draft indicator placement:** Should the draft icon appear in the card header (as proposed) or somewhere else like a badge? Consider mobile/narrow viewport layouts.
-
-### Seed Data
-
-9. **Trace message count:** The PRD says "10+ messages" but what's the exact conversation structure needed? Should it include:
-   - User and assistant messages alternating?
-   - Multiple tool calls in sequence?
-   - A tool call error for the system queue annotation to reference?
-   - Enough text content in specific messages for text range testing?
-
-10. **Existing seed disruption:** Adding annotations to `SEED_LIFECYCLE_TRACE_IDS[0]` ("1111...") may affect existing tests or local development flows. Should we use a new dedicated trace ID instead?
-
-### System Queues
-
-11. **Sampling at 0%:** If a user sets a system queue's sampling to 0%, it effectively disables the queue. Should we show a warning or confirmation? Should 0% be prevented entirely?
-
-12. **Alert dismissability:** Should the system queue info alert be dismissable (remembered per user), or always shown? Persistent alerts may become noise for frequent users.
+| Question | Resolution |
+|----------|------------|
+| Queue name resolution for agent tooltips | Fetch queue name when tooltip renders. Important to know which queue produced the annotation. |
+| Human edits to agent annotations | No changes to `annotatorId` or `sourceId`. Provenance stays as agent. |
+| Enrichment on approve | No enrichment on approve. Just publish as-is. |
+| Delete permissions | Delete is allowed for all annotations (published and draft). |
+| Approve with edits | Approve button always visible. User can edit freely, then approve when ready. |
+| Text range selection scoping | Current `containerRef` approach is sufficient. |
+| Annotation card actions overflow | Keep inline buttons for now. Will iterate based on feedback. |
+| Draft indicator placement | Small pencil icon next to date with tooltip. |
+| Trace message count for seed | Mix of user/assistant messages, tool calls, enough content for text range testing. |
+| Seed trace ID | Use a new dedicated trace ID (not the existing lifecycle trace). |
+| Sampling at 0% | Allow 0%. Add slider description: "Setting sampling to 0% will disable this queue." |
+| Alert dismissability | Always visible, not dismissible. |
