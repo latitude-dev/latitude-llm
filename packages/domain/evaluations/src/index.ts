@@ -178,13 +178,16 @@ export {
   liveEvaluationResultPayloadSchema,
 } from "./use-cases/live/execute-live-evaluation.ts"
 export {
+  type RunLiveEvaluationCompletedExecution,
   type RunLiveEvaluationError,
+  type RunLiveEvaluationErroredExecution,
   type RunLiveEvaluationExecutedContext,
   type RunLiveEvaluationExecutedSummary,
   type RunLiveEvaluationInput,
   type RunLiveEvaluationLoadedContext,
   type RunLiveEvaluationLoadedSummary,
   type RunLiveEvaluationPersistedContext,
+  type RunLiveEvaluationPersistedExecution,
   type RunLiveEvaluationPersistedSummary,
   type RunLiveEvaluationResult,
   runLiveEvaluationUseCase,

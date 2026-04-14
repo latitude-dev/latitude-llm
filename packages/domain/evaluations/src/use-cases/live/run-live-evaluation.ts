@@ -22,7 +22,6 @@ import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 import {
-  type ExecuteLiveEvaluationError,
   executeLiveEvaluationUseCase,
   type LiveEvaluationExecutionResult,
   type LiveEvaluationIssueContext,
@@ -48,9 +47,25 @@ export interface RunLiveEvaluationPersistedContext {
   readonly evaluation: Evaluation
   readonly traceDetail: TraceDetail
   readonly issue: LiveEvaluationIssueContext
-  readonly execution: LiveEvaluationExecutionResult
+  readonly execution: RunLiveEvaluationPersistedExecution
   readonly score: EvaluationScore
 }
+
+export type RunLiveEvaluationCompletedExecution = {
+  readonly kind: "completed"
+} & LiveEvaluationExecutionResult
+
+export interface RunLiveEvaluationErroredExecution {
+  readonly kind: "errored"
+  readonly error: string
+  readonly duration: number
+  readonly tokens: number
+  readonly cost: number
+}
+
+export type RunLiveEvaluationPersistedExecution =
+  | RunLiveEvaluationCompletedExecution
+  | RunLiveEvaluationErroredExecution
 
 export type RunLiveEvaluationExecutedSummary = RunLiveEvaluationPersistedSummary
 export type RunLiveEvaluationExecutedContext = RunLiveEvaluationPersistedContext
@@ -77,7 +92,17 @@ export type RunLiveEvaluationResult =
       readonly context: RunLiveEvaluationPersistedContext
     }
 
-export type RunLiveEvaluationError = RepositoryError | ExecuteLiveEvaluationError | WriteScoreError
+export type RunLiveEvaluationError = RepositoryError | WriteScoreError
+
+const toElapsedNanoseconds = (startedAtMs: number) =>
+  Math.max(0, Math.round((performance.now() - startedAtMs) * 1_000_000))
+const toErroredExecution = (message: string, startedAtMs: number): RunLiveEvaluationErroredExecution => ({
+  kind: "errored",
+  error: message,
+  duration: toElapsedNanoseconds(startedAtMs),
+  tokens: 0,
+  cost: 0,
+})
 
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
@@ -163,13 +188,28 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       name: issue.name,
       description: issue.description,
     } satisfies LiveEvaluationIssueContext
+    const executionStartedAt = performance.now()
     const execution = yield* executeLiveEvaluationUseCase({
       evaluationId: evaluation.id,
       script: evaluation.script,
       issue: issueContext,
       conversation: traceDetail.allMessages,
-    })
-    const persistedIssueId = execution.result.passed ? null : evaluation.issueId
+    }).pipe(
+      Effect.map(
+        (result) =>
+          ({
+            kind: "completed",
+            ...result,
+          }) satisfies RunLiveEvaluationCompletedExecution,
+      ),
+      Effect.catchTags({
+        AIError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
+        AICredentialError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
+        LiveEvaluationExecutionError: (error) => Effect.succeed(toErroredExecution(error.message, executionStartedAt)),
+      }),
+    )
+    const persistedIssueId =
+      execution.kind === "completed" && execution.result.passed === false ? evaluation.issueId : null
     const score = (yield* writeScoreUseCase({
       projectId: input.projectId,
       source: "evaluation",
@@ -179,12 +219,13 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       spanId: traceDetail.rootSpanId,
       simulationId: traceDetail.simulationId || null,
       issueId: persistedIssueId,
-      value: execution.result.value,
-      passed: execution.result.passed,
-      feedback: execution.result.feedback,
+      value: execution.kind === "completed" ? execution.result.value : 0,
+      passed: execution.kind === "completed" ? execution.result.passed : false,
+      feedback: execution.kind === "completed" ? execution.result.feedback : execution.error,
       metadata: {
         evaluationHash: evaluation.alignment.evaluationHash,
       },
+      error: execution.kind === "errored" ? execution.error : null,
       duration: execution.duration,
       tokens: execution.tokens,
       cost: execution.cost,

@@ -1,4 +1,4 @@
-import type { AI, GenerateInput, GenerateResult } from "@domain/ai"
+import { type AI, AIError, type GenerateInput, type GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
 import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
 import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
@@ -576,6 +576,7 @@ describe("runLiveEvaluationUseCase", () => {
         description: issue.description,
       },
       execution: {
+        kind: "completed",
         result: {
           passed: true,
           value: 1,
@@ -715,8 +716,118 @@ describe("runLiveEvaluationUseCase", () => {
       draftedAt: null,
       annotatorId: null,
     })
+    expect(result.context.execution).toMatchObject({
+      kind: "completed",
+      result: {
+        passed: false,
+        value: 0,
+        feedback: "The conversation exhibits the linked issue.",
+      },
+      duration: aiDuration,
+      tokens: aiTokens,
+      cost: estimateEvaluationScriptCostMicrocents({
+        tokens: aiTokens,
+        tokenUsage: aiTokenUsage,
+      }),
+    })
     expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
     expect(inserted).toEqual([result.context.score.id])
     expect(outboxEvents).toHaveLength(1)
+  })
+
+  it("persists an errored live evaluation score when execution fails", async () => {
+    const evaluation = makeEvaluation({
+      script: VALID_SCRIPT,
+    })
+    const issue = makeIssue({
+      id: IssueId(evaluation.issueId),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository((issueId) => {
+      expect(issueId).toEqual(IssueId(evaluation.issueId))
+      return Effect.succeed(issue)
+    })
+    const { repository: scoreRepository, scores: persistedScores } = createFakeScoreRepository()
+    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
+    const outboxEvents: unknown[] = []
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: () =>
+        Effect.fail(
+          new AIError({
+            message: "AI generation failed (openai/gpt-5.4): upstream timeout",
+          }),
+        ),
+    })
+    const scoreWriteLayer = createScoreWriteLayer({
+      scoreRepository,
+      scoreAnalyticsRepository,
+      outboxEventWriter: {
+        write: (event) =>
+          Effect.sync(() => {
+            outboxEvents.push(event)
+          }),
+      },
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            issueRepository,
+            aiLayer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
+
+    expect(result.context.execution.kind).toBe("errored")
+    if (result.context.execution.kind !== "errored") throw new Error("Expected an errored execution result")
+
+    expect(result.context.execution).toMatchObject({
+      kind: "errored",
+      error: "AI generation failed (openai/gpt-5.4): upstream timeout",
+      tokens: 0,
+      cost: 0,
+    })
+    expect(result.context.execution.duration).toBeGreaterThanOrEqual(0)
+
+    expect(result.context.score).toMatchObject({
+      organizationId: INPUT.organizationId,
+      projectId: INPUT.projectId,
+      sessionId: traceDetail.sessionId,
+      traceId: traceDetail.traceId,
+      spanId: traceDetail.rootSpanId,
+      simulationId: null,
+      source: "evaluation",
+      sourceId: evaluation.id,
+      issueId: null,
+      value: 0,
+      passed: false,
+      feedback: "AI generation failed (openai/gpt-5.4): upstream timeout",
+      metadata: {
+        evaluationHash: evaluation.alignment.evaluationHash,
+      },
+      error: "AI generation failed (openai/gpt-5.4): upstream timeout",
+      errored: true,
+      duration: result.context.execution.duration,
+      tokens: 0,
+      cost: 0,
+      draftedAt: null,
+      annotatorId: null,
+    })
+    expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
+    expect(inserted).toEqual([result.context.score.id])
+    expect(outboxEvents).toHaveLength(1)
+    expect(calls.generate).toHaveLength(1)
   })
 })
