@@ -179,6 +179,8 @@ export {
 } from "./use-cases/live/execute-live-evaluation.ts"
 export {
   type RunLiveEvaluationError,
+  type RunLiveEvaluationExecutedContext,
+  type RunLiveEvaluationExecutedSummary,
   type RunLiveEvaluationInput,
   type RunLiveEvaluationLoadedContext,
   type RunLiveEvaluationLoadedSummary,

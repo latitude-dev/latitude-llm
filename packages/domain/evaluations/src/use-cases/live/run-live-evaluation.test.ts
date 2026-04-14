@@ -1,5 +1,10 @@
+import type { GenerateInput, GenerateResult } from "@domain/ai"
+import { createFakeAI } from "@domain/ai/testing"
+import { ScoreRepository } from "@domain/scores"
+import { createFakeScoreRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
+  IssueId,
   NotFoundError,
   OrganizationId,
   ProjectId,
@@ -8,8 +13,6 @@ import {
   SpanId,
   TraceId,
 } from "@domain/shared"
-import { ScoreRepository } from "@domain/scores"
-import { createFakeScoreRepository } from "@domain/scores/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -20,7 +23,13 @@ import {
   emptyEvaluationAlignment,
   evaluationSchema,
 } from "../../entities/evaluation.ts"
+import { type EvaluationIssue, EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository, type EvaluationRepositoryShape } from "../../ports/evaluation-repository.ts"
+import {
+  EVALUATION_CONVERSATION_PLACEHOLDER,
+  estimateEvaluationScriptCostMicrocents,
+  wrapPromptAsEvaluationScript,
+} from "../../runtime/evaluation-execution.ts"
 import { runLiveEvaluationUseCase } from "./run-live-evaluation.ts"
 
 const INPUT = {
@@ -30,7 +39,20 @@ const INPUT = {
   traceId: "d".repeat(32),
 } as const
 
-function makeTraceDetail(overrides?: Partial<Pick<TraceDetail, "projectId" | "traceId" | "sessionId">>): TraceDetail {
+const VALID_SCRIPT = wrapPromptAsEvaluationScript(
+  [
+    "Review the conversation for the linked issue.",
+    "",
+    "Conversation:",
+    EVALUATION_CONVERSATION_PLACEHOLDER,
+    "",
+    "Set passed to true when the issue is absent.",
+  ].join("\n"),
+)
+
+function makeTraceDetail(
+  overrides?: Partial<Pick<TraceDetail, "projectId" | "traceId" | "sessionId" | "allMessages">>,
+): TraceDetail {
   return {
     organizationId: OrganizationId(INPUT.organizationId),
     projectId: overrides?.projectId ?? ProjectId(INPUT.projectId),
@@ -63,13 +85,25 @@ function makeTraceDetail(overrides?: Partial<Pick<TraceDetail, "projectId" | "tr
     systemInstructions: [{ type: "text", text: "You are a careful assistant." }],
     inputMessages: [],
     outputMessages: [],
-    allMessages: [],
+    allMessages: overrides?.allMessages ?? [
+      {
+        role: "user",
+        parts: [{ type: "text", content: "Please summarize the deployment checklist." }],
+      },
+      {
+        role: "assistant",
+        parts: [{ type: "text", content: "Verify migrations, rollback steps, and dashboards after deploy." }],
+      },
+    ],
   }
 }
 
 function makeEvaluation(
   overrides?: Partial<
-    Pick<Evaluation, "id" | "organizationId" | "projectId" | "issueId" | "trigger" | "archivedAt" | "deletedAt">
+    Pick<
+      Evaluation,
+      "id" | "organizationId" | "projectId" | "issueId" | "script" | "trigger" | "archivedAt" | "deletedAt"
+    >
   >,
 ) {
   return evaluationSchema.parse({
@@ -79,7 +113,7 @@ function makeEvaluation(
     issueId: overrides?.issueId ?? "i".repeat(24),
     name: "Live evaluation",
     description: "Detects the linked issue on live traces.",
-    script: "const result = true",
+    script: overrides?.script ?? "const result = true",
     trigger: overrides?.trigger ?? defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("hash"),
     alignedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -88,6 +122,15 @@ function makeEvaluation(
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   })
+}
+
+function makeIssue(overrides?: Partial<Pick<EvaluationIssue, "id" | "projectId" | "name" | "description">>) {
+  return {
+    id: overrides?.id ?? IssueId("i".repeat(24)),
+    projectId: overrides?.projectId ?? INPUT.projectId,
+    name: overrides?.name ?? "Deployment checklist omission",
+    description: overrides?.description ?? "The assistant fails to mention key deployment steps.",
+  } satisfies EvaluationIssue
 }
 
 function createEvaluationRepository(findById: EvaluationRepositoryShape["findById"]): EvaluationRepositoryShape {
@@ -103,15 +146,30 @@ function createEvaluationRepository(findById: EvaluationRepositoryShape["findByI
   }
 }
 
+function createIssueRepository(
+  findById: (id: ReturnType<typeof IssueId>) => Effect.Effect<EvaluationIssue, NotFoundError>,
+) {
+  return {
+    findById,
+  }
+}
+
 function createUseCaseLayer(input: {
   readonly traceRepository: ReturnType<typeof createFakeTraceRepository>["repository"]
   readonly evaluationRepository: EvaluationRepositoryShape
   readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"]
+  readonly issueRepository?: ReturnType<typeof createIssueRepository>
+  readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"]
 }) {
   return Layer.mergeAll(
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
     Layer.succeed(ScoreRepository, input.scoreRepository ?? createFakeScoreRepository().repository),
+    Layer.succeed(
+      EvaluationIssueRepository,
+      input.issueRepository ?? createIssueRepository(() => Effect.die("Issue should not be loaded in this scenario")),
+    ),
+    input.aiLayer ?? createFakeAI().layer,
   )
 }
 
@@ -362,13 +420,16 @@ describe("runLiveEvaluationUseCase", () => {
     })
   })
 
-  it("loads the evaluation and trace context for later execution steps", async () => {
+  it("skips when the linked issue no longer exists", async () => {
     const evaluation = makeEvaluation()
     const traceDetail = makeTraceDetail()
     const { repository: traceRepository } = createFakeTraceRepository({
       findByTraceId: () => Effect.succeed(traceDetail),
     })
     const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository(() =>
+      Effect.fail(new NotFoundError({ entity: "Issue", id: evaluation.issueId })),
+    )
 
     const result = await Effect.runPromise(
       runLiveEvaluationUseCase(INPUT).pipe(
@@ -376,13 +437,71 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
+            issueRepository,
           }),
         ),
       ),
     )
 
     expect(result).toEqual({
-      action: "loaded",
+      action: "skipped",
+      reason: "issue-not-found",
+      evaluationId: evaluation.id,
+      traceId: traceDetail.traceId,
+    })
+  })
+
+  it("executes the live evaluation through the shared AI service after loading context", async () => {
+    const evaluation = makeEvaluation({
+      script: VALID_SCRIPT,
+    })
+    const issue = makeIssue({
+      id: IssueId(evaluation.issueId),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository((issueId) => {
+      expect(issueId).toEqual(IssueId(evaluation.issueId))
+      return Effect.succeed(issue)
+    })
+    const aiDuration = 456_000_000
+    const aiTokens = 120
+    const aiTokenUsage = {
+      input: 40,
+      output: aiTokens - 40,
+    }
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) =>
+        Effect.succeed({
+          object: input.schema.parse({
+            passed: true,
+            value: 1,
+            feedback: "The conversation does not exhibit the linked issue.",
+          }),
+          tokens: aiTokens,
+          duration: aiDuration,
+          tokenUsage: aiTokenUsage,
+        } satisfies GenerateResult<T>),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            issueRepository,
+            aiLayer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "executed",
       summary: {
         evaluationId: evaluation.id,
         issueId: evaluation.issueId,
@@ -392,7 +511,25 @@ describe("runLiveEvaluationUseCase", () => {
       context: {
         evaluation,
         traceDetail,
+        issue: {
+          name: issue.name,
+          description: issue.description,
+        },
+        execution: {
+          result: {
+            passed: true,
+            value: 1,
+            feedback: "The conversation does not exhibit the linked issue.",
+          },
+          duration: aiDuration,
+          tokens: aiTokens,
+          cost: estimateEvaluationScriptCostMicrocents({
+            tokens: aiTokens,
+            tokenUsage: aiTokenUsage,
+          }),
+        },
       },
     })
+    expect(calls.generate).toHaveLength(1)
   })
 })

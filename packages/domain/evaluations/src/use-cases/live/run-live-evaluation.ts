@@ -1,10 +1,17 @@
-import { EvaluationId, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { ScoreRepository } from "@domain/scores"
+import { EvaluationId, IssueId, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
 import { getLiveEvaluationEligibility } from "../../helpers.ts"
+import { EvaluationIssueRepository } from "../../ports/evaluation-issue-repository.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
+import {
+  type ExecuteLiveEvaluationError,
+  executeLiveEvaluationUseCase,
+  type LiveEvaluationExecutionResult,
+  type LiveEvaluationIssueContext,
+} from "./execute-live-evaluation.ts"
 
 export interface RunLiveEvaluationInput {
   readonly organizationId: string
@@ -13,23 +20,29 @@ export interface RunLiveEvaluationInput {
   readonly traceId: string
 }
 
-export interface RunLiveEvaluationLoadedSummary {
+export interface RunLiveEvaluationExecutedSummary {
   readonly evaluationId: string
   readonly issueId: string
   readonly traceId: string
   readonly sessionId: string | null
 }
 
-export interface RunLiveEvaluationLoadedContext {
+export interface RunLiveEvaluationExecutedContext {
   readonly evaluation: Evaluation
   readonly traceDetail: TraceDetail
+  readonly issue: LiveEvaluationIssueContext
+  readonly execution: LiveEvaluationExecutionResult
 }
+
+export type RunLiveEvaluationLoadedSummary = RunLiveEvaluationExecutedSummary
+export type RunLiveEvaluationLoadedContext = RunLiveEvaluationExecutedContext
 
 export type RunLiveEvaluationResult =
   | {
       readonly action: "skipped"
       readonly reason:
         | "evaluation-not-found"
+        | "issue-not-found"
         | "trace-not-found"
         | "deleted"
         | "archived"
@@ -39,12 +52,12 @@ export type RunLiveEvaluationResult =
       readonly traceId: string
     }
   | {
-      readonly action: "loaded"
-      readonly summary: RunLiveEvaluationLoadedSummary
-      readonly context: RunLiveEvaluationLoadedContext
+      readonly action: "executed"
+      readonly summary: RunLiveEvaluationExecutedSummary
+      readonly context: RunLiveEvaluationExecutedContext
     }
 
-export type RunLiveEvaluationError = RepositoryError
+export type RunLiveEvaluationError = RepositoryError | ExecuteLiveEvaluationError
 
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
@@ -112,8 +125,33 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
+    const issueRepository = yield* EvaluationIssueRepository
+    const issue = yield* issueRepository
+      .findById(IssueId(evaluation.issueId))
+      .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(null)))
+
+    if (issue === null || issue.projectId !== input.projectId) {
+      return {
+        action: "skipped",
+        reason: "issue-not-found",
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
+    const issueContext = {
+      name: issue.name,
+      description: issue.description,
+    } satisfies LiveEvaluationIssueContext
+    const execution = yield* executeLiveEvaluationUseCase({
+      evaluationId: evaluation.id,
+      script: evaluation.script,
+      issue: issueContext,
+      conversation: traceDetail.allMessages,
+    })
+
     return {
-      action: "loaded",
+      action: "executed",
       summary: {
         evaluationId: evaluation.id,
         issueId: evaluation.issueId,
@@ -123,6 +161,12 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       context: {
         evaluation,
         traceDetail,
+        issue: issueContext,
+        execution,
       },
     } satisfies RunLiveEvaluationResult
-  }) as Effect.Effect<RunLiveEvaluationResult, RunLiveEvaluationError, EvaluationRepository | ScoreRepository | TraceRepository>
+  }) as Effect.Effect<
+    RunLiveEvaluationResult,
+    RunLiveEvaluationError,
+    EvaluationIssueRepository | EvaluationRepository | ScoreRepository | TraceRepository
+  >
