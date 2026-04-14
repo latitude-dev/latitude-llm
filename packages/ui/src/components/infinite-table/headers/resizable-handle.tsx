@@ -88,7 +88,10 @@ export function ResizableHandle({
       onPointerLeave={() => setHovered(false)}
       onClick={(e) => e.stopPropagation()}
       onKeyDown={(e) => e.stopPropagation()}
-      className={cn("absolute right-0 top-1.5 bottom-1.5 z-10 w-2 select-none", !disabled && "cursor-col-resize")}
+      className={cn(
+        "absolute right-0 top-1.5 bottom-1.5 z-10 w-2 overflow-hidden select-none",
+        !disabled && "cursor-col-resize",
+      )}
     >
       <svg
         className={cn(
