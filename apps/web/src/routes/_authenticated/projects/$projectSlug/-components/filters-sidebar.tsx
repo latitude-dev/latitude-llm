@@ -1,5 +1,5 @@
-import { type FilterCondition, type FilterSet, STATUS_OPTIONS } from "@domain/shared"
-import { Button, Checkbox, Icon, Input, Text, Tooltip } from "@repo/ui"
+import type { FilterCondition, FilterSet } from "@domain/shared"
+import { Button, Icon, Input, Text, Tooltip } from "@repo/ui"
 import { ChevronDown, ChevronUp, InfoIcon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useDebounce } from "react-use"
@@ -247,15 +247,6 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
     [filters, onFiltersChange],
   )
 
-  const toggleInValue = useCallback(
-    (field: string, value: string) => {
-      const current = [...getInValues(filters, field)]
-      const next = current.includes(value) ? current.filter((s) => s !== value) : [...current, value]
-      setField(field, next.length > 0 ? [{ op: "in", value: next }] : [])
-    },
-    [filters, setField],
-  )
-
   const setContainsFilter = useCallback(
     (field: string, value: string) => {
       setField(field, value ? [{ op: "contains", value }] : [])
@@ -273,7 +264,6 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
     [setField],
   )
 
-  const statusValues = getInValues(filters, "status")
   const textFields = getTextFieldsForMode(mode)
 
   const metadataEntries = useMemo(() => {
@@ -314,44 +304,6 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
       </div>
 
       <div className="flex flex-col px-4 overflow-y-auto flex-1">
-        <CollapsibleSection
-          label={
-            <div className="flex items-center justify-between w-full pr-2">
-              <span>Status</span>
-              {statusValues.length > 0 && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setField("status", [])
-                  }}
-                  className="text-muted-foreground hover:text-foreground cursor-pointer"
-                  aria-label="Clear status filter"
-                  title="Clear status filter"
-                >
-                  <XIcon className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          }
-          defaultOpen={statusValues.length > 0}
-        >
-          {STATUS_OPTIONS.map((status) => (
-            <button
-              key={status}
-              type="button"
-              className="flex items-center gap-2 cursor-pointer"
-              onClick={() => toggleInValue("status", status)}
-            >
-              <Checkbox
-                checked={statusValues.includes(status)}
-                onCheckedChange={() => toggleInValue("status", status)}
-              />
-              <Text.H5 color="foregroundMuted">{status.toUpperCase()}</Text.H5>
-            </button>
-          ))}
-        </CollapsibleSection>
-
         {textFields.map(({ label, field, placeholder }) => {
           const value = getTextFilterValue(filters, field)
           return (
