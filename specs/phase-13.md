@@ -288,7 +288,7 @@ Active implementation work now starts with **PR 4**.
 - [x] **P13-PR4-1**: Replace the `live-traces:end` stub in `apps/workers/src/workers/live-traces.ts`
   - add `TraceEnded` to the typed domain-event payload contract in `packages/domain/events`
   - keep the worker orchestration-only
-- [ ] **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses
+- [x] **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses
   - keep the emitted payload trace-scoped: `{ organizationId, projectId, traceId }`
   - rely on the upstream `live-traces:end` debounce window rather than introducing a second timer
 - [ ] **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
