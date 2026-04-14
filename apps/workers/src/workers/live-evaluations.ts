@@ -105,7 +105,7 @@ const buildExecutePersistedLogContext = (
   tokens: result.context.score.tokens,
   cost: result.context.score.cost,
   duration: result.context.score.duration,
-  ...(result.summary.sessionId ? { sessionId: result.summary.sessionId } : {}),
+  ...(result.summary.sessionId !== null ? { sessionId: result.summary.sessionId } : {}),
 })
 
 // TODO(eval-sandbox): when implementing live evaluation execution, use the same extract-and-call

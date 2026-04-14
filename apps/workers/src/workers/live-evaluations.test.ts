@@ -400,6 +400,27 @@ describe("createLiveEvaluationsWorker", () => {
           hasSessionId: false,
         },
       },
+      {
+        name: "passed-empty-session-id",
+        projectId: fill("y", 24),
+        traceId: fill("j", 32),
+        evaluationId: fill("m", 24),
+        scoreId: fill("q", 24),
+        sessionId: "",
+        passed: true,
+        errored: false,
+        issueId: null,
+        feedback: "Passed live monitor result with empty session id",
+        error: null,
+        tokens: 160,
+        cost: 8_100,
+        duration: 612_000_000,
+        expected: {
+          resultKind: "passed",
+          issueAssignmentPath: "none",
+          hasSessionId: true,
+        },
+      },
     ] as const
 
     for (const testCase of cases) {
