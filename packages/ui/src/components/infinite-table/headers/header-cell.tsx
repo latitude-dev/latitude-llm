@@ -55,13 +55,18 @@ export function HeaderCell({
   const textProps = sortable ? { type: "button" as const, onClick: onSortClick } : {}
   const thRef = useRef<HTMLTableCellElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
+  const subheaderMeasureRef = useRef<HTMLDivElement>(null)
   const headerMinWidth = useRef(minWidth)
 
   useLayoutEffect(() => {
-    const el = measureRef.current
-    if (!el) return
-    headerMinWidth.current = Math.max(minWidth, el.offsetWidth + TH_HORIZONTAL_PADDING)
-  }, [minWidth, children, subheader, showSubheaderSlot])
+    const titleW = measureRef.current?.offsetWidth ?? 0
+    const subW =
+      showSubheaderSlot && subheader != null && subheaderMeasureRef.current
+        ? subheaderMeasureRef.current.offsetWidth
+        : 0
+    const contentW = Math.max(titleW, subW)
+    headerMinWidth.current = Math.max(minWidth, contentW + TH_HORIZONTAL_PADDING)
+  }, [minWidth, children, subheader, showSubheaderSlot, align])
 
   const headerLabel =
     typeof children === "string" ? (
@@ -111,7 +116,16 @@ export function HeaderCell({
       </div>
       {showSubheaderSlot && (
         <div className={cn("flex w-full min-w-0 shrink-0 items-center", align === "end" && "justify-end")}>
-          {subheader ?? <span className="block w-full shrink-0" aria-hidden />}
+          {subheader != null ? (
+            <div
+              ref={subheaderMeasureRef}
+              className={cn("max-w-full shrink-0", align === "end" ? "ml-auto w-max" : "w-max")}
+            >
+              {subheader}
+            </div>
+          ) : (
+            <span className="block w-full shrink-0" aria-hidden />
+          )}
         </div>
       )}
     </div>

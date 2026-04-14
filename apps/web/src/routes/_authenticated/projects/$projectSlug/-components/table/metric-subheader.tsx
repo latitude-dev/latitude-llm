@@ -9,7 +9,7 @@ const KIND_LABELS: Record<(typeof KINDS)[number], string> = {
   min: "MIN",
   max: "MAX",
   avg: "AVG",
-  median: "MEDIAN",
+  median: "MED",
   sum: "SUM",
 }
 
@@ -47,7 +47,7 @@ export function TableMetricSubheader({
 
   if (isLoading) {
     return (
-      <Text.H6 color="foregroundMuted" className="tabular-nums truncate">
+      <Text.H6 color="foregroundMuted" className="px-1 tabular-nums truncate">
         …
       </Text.H6>
     )
@@ -55,7 +55,7 @@ export function TableMetricSubheader({
 
   if (!rollup) {
     return (
-      <Text.H6 color="foregroundMuted" className="truncate">
+      <Text.H6 color="foregroundMuted" className="px-1 truncate">
         —
       </Text.H6>
     )
@@ -67,7 +67,7 @@ export function TableMetricSubheader({
     <div className="flex min-w-0 w-full items-center justify-end gap-0.5">
       <Button
         variant="ghost"
-        className="py-0"
+        className="px-1 py-0"
         onClick={(e) => {
           e.stopPropagation()
           bump(1)
