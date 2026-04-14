@@ -130,6 +130,17 @@ describe("executeLiveEvaluationUseCase", () => {
   })
 
   it("executes the MVP script bridge through the shared AI service", async () => {
+    const telemetry = liveEvaluationExecutionInputSchema.pick({ telemetry: true }).parse({
+      telemetry: {
+        spanName: "evaluation.live.execute",
+        tags: ["evaluations", "live"],
+        metadata: {
+          evaluationId,
+          projectId: "p".repeat(24),
+          traceId: "t".repeat(32),
+        },
+      },
+    }).telemetry
     const execution = {
       result: {
         passed: true,
@@ -146,6 +157,7 @@ describe("executeLiveEvaluationUseCase", () => {
     const result = await Effect.runPromise(
       executeLiveEvaluationUseCase({
         ...validInput,
+        telemetry,
       }).pipe(Effect.provide(layer)),
     )
 
@@ -168,6 +180,7 @@ describe("executeLiveEvaluationUseCase", () => {
     expect(calls.generate[0]?.model).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.model)
     expect(calls.generate[0]?.reasoning).toBe(EVALUATION_SCRIPT_RUNTIME_MODEL.reasoning)
     expect(calls.generate[0]?.system).toBe(EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT)
+    expect(calls.generate[0]?.telemetry).toEqual(telemetry)
     expect(calls.generate[0]?.prompt).toContain("[user] Please summarize the deployment checklist.")
     expect(calls.generate[0]?.prompt).toContain(
       "[assistant] Verify migrations, rollback steps, and dashboards after deploy.",

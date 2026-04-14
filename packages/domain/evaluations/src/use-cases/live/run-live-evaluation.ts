@@ -1,4 +1,4 @@
-import type { AI } from "@domain/ai"
+import type { AI, GenerateTelemetryCapture } from "@domain/ai"
 import {
   type EvaluationScore,
   type ScoreAnalyticsRepository,
@@ -103,6 +103,16 @@ const toErroredExecution = (message: string, startedAtMs: number): RunLiveEvalua
   tokens: 0,
   cost: 0,
 })
+const buildLiveEvaluationExecutionTelemetry = (input: RunLiveEvaluationInput): GenerateTelemetryCapture => ({
+  spanName: "evaluation.live.execute",
+  tags: ["evaluations", "live"],
+  metadata: {
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    evaluationId: input.evaluationId,
+    traceId: input.traceId,
+  },
+})
 
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
@@ -194,6 +204,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       script: evaluation.script,
       issue: issueContext,
       conversation: traceDetail.allMessages,
+      telemetry: buildLiveEvaluationExecutionTelemetry(input),
     }).pipe(
       Effect.map(
         (result) =>

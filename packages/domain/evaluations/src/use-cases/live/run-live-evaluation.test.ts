@@ -621,6 +621,16 @@ describe("runLiveEvaluationUseCase", () => {
     expect(inserted).toEqual([result.context.score.id])
     expect(outboxEvents).toHaveLength(1)
     expect(calls.generate).toHaveLength(1)
+    expect(calls.generate[0]?.telemetry).toMatchObject({
+      spanName: "evaluation.live.execute",
+      tags: ["evaluations", "live"],
+      metadata: {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        evaluationId: INPUT.evaluationId,
+        traceId: INPUT.traceId,
+      },
+    })
   })
 
   it("assigns the linked issue immediately for failed live evaluation results", async () => {

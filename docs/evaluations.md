@@ -267,6 +267,7 @@ Live evaluation triggering is incremental:
 - trigger checks run against the incoming trace rather than rescanning historical traces on each read
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
 - when an evaluation passes those trigger checks, `live-evaluations:enqueue` publishes one `live-evaluations:execute` task for that `(evaluationId, traceId)` pair; that task later runs the evaluation, writes the resulting score, keeps passed results unowned, immediately claims `scores.issue_id` for failed non-errored issue-linked monitor results, and persists execution failures as canonical errored evaluation scores
+- the hosted AI call inside `live-evaluations:execute` runs inside a stable telemetry capture span named `evaluation.live.execute` with queued identity metadata including `organizationId`, `projectId`, `evaluationId`, and `traceId`
 - `live-evaluations:enqueue` is separate from `live-annotation-queues:curate`
 - trigger filters participate in the same live incremental model through the shared trace-filter semantics defined in `docs/filters.md`
 

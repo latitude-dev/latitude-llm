@@ -1,4 +1,4 @@
-import type { AI, AICredentialError, AIError } from "@domain/ai"
+import type { AI, AICredentialError, AIError, GenerateTelemetryCapture } from "@domain/ai"
 import { type TraceDetail, traceDetailSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -31,16 +31,35 @@ export type LiveEvaluationConversationInput = TraceDetail["allMessages"]
 export const liveEvaluationResultPayloadSchema = evaluationExecutionResultPayloadSchema
 export type LiveEvaluationResultPayload = EvaluationExecutionResultPayload
 
+const liveEvaluationExecutionTelemetrySchema = z.object({
+  spanName: z.string().min(1),
+  tags: z.array(z.string()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+})
+
 export const liveEvaluationExecutionInputSchema = z.object({
   evaluationId: evaluationSchema.shape.id,
   script: evaluationSchema.shape.script,
   issue: liveEvaluationIssueContextSchema,
   conversation: liveEvaluationConversationInputSchema,
+  telemetry: liveEvaluationExecutionTelemetrySchema.optional(),
 })
 export type LiveEvaluationExecutionInput = z.infer<typeof liveEvaluationExecutionInputSchema>
 
 export const liveEvaluationExecutionResultSchema = evaluationExecutionResultSchema
 export type LiveEvaluationExecutionResult = EvaluationExecutionResult
+
+const toGenerateTelemetryCapture = (
+  telemetry: LiveEvaluationExecutionInput["telemetry"],
+): GenerateTelemetryCapture | undefined => {
+  if (!telemetry) return undefined
+
+  return {
+    spanName: telemetry.spanName,
+    ...(telemetry.tags ? { tags: [...telemetry.tags] } : {}),
+    ...(telemetry.metadata ? { metadata: { ...telemetry.metadata } } : {}),
+  }
+}
 
 export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput) =>
   Effect.gen(function* () {
@@ -52,11 +71,13 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
     }
 
     const conversation = toEvaluationConversationMessages(input.conversation)
+    const telemetry = toGenerateTelemetryCapture(input.telemetry)
 
     const execution = yield* executeEvaluationScriptWithAI({
       script: input.script,
       conversation,
       issue: input.issue,
+      ...(telemetry ? { telemetry } : {}),
     }).pipe(
       Effect.catchTag("EvaluationExecutionError", (error) =>
         Effect.fail(
