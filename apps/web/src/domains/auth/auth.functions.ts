@@ -10,18 +10,25 @@ const sendMagicLinkInputSchema = z.object({
   email: z.email(),
   callbackURL: z.string().optional(),
   newUserCallbackURL: z.string().optional(),
+  captchaToken: z.string().optional(),
 })
 
 export const sendMagicLink = createServerFn({ method: "POST" })
   .inputValidator(sendMagicLinkInputSchema)
   .handler(async ({ data }) => {
+    const requestHeaders = await getRequestHeaders()
+    const headers = new Headers(requestHeaders)
+    if (data.captchaToken) {
+      headers.set("x-captcha-response", data.captchaToken)
+    }
+
     await getBetterAuth().api.signInMagicLink({
       body: {
         email: data.email,
         callbackURL: data.callbackURL ?? "/",
         newUserCallbackURL: data.newUserCallbackURL ?? "/welcome",
       },
-      headers: await getRequestHeaders(),
+      headers,
     })
   })
 

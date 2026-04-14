@@ -336,6 +336,7 @@ function createTaskDefinition(
       secrets["datadog-site"].arn,
       secrets["latitude-telemetry-api-key"].arn,
       secrets["latitude-telemetry-project-slug"].arn,
+      secrets["turnstile-secret-key"].arn,
       secrets["posthog-api-key"].arn,
       s3Bucket.id,
     ])
@@ -369,6 +370,7 @@ function createTaskDefinition(
         datadogSiteArn,
         latitudeTelemetryApiKeyArn,
         latitudeTelemetryProjectSlugArn,
+        turnstileSecretKeyArn,
         posthogApiKeyArn,
         s3BucketName,
       ]) => {
@@ -428,8 +430,8 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
           { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
           { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
-          { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn },
-          { name: "VITE_LAT_POSTHOG_KEY", valueFrom: posthogApiKeyArn },
+          { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
+          { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn }
         ]
 
         // Service-specific environment variables
