@@ -1,12 +1,13 @@
 import asyncio
 import sys
-import traceback
 from collections.abc import Sequence
 from typing import Any, Awaitable, Callable
 
 from pydantic import ValidationError
 
 from op_gepa_engine.rpc.protocol import (
+    create_error_response,
+    create_remote_error_exception,
     JsonRpcEmptyResponse,
     JsonRpcError,
     JsonRpcRequest,
@@ -263,14 +264,7 @@ class RpcServer:
                 await self._write(serialize_message(response))
         except Exception as error:
             if request.id is not None:
-                response = JsonRpcResponse(
-                    id=request.id,
-                    error=JsonRpcError(
-                        code=RpcErrorCode.INTERNAL_ERROR,
-                        message=str(error),
-                        data={"traceback": traceback.format_exc()},
-                    ),
-                )
+                response = create_error_response(request.id, error)
                 await self._write(serialize_message(response))
 
     def _handle_response(self, response: JsonRpcResponse) -> None:
@@ -284,7 +278,7 @@ class RpcServer:
             return
 
         if response.error is not None:
-            future.set_exception(RuntimeError(f"RPC error {response.error.code}: {response.error.message}"))
+            future.set_exception(create_remote_error_exception(response.error))
         else:
             future.set_result(response.result)
 

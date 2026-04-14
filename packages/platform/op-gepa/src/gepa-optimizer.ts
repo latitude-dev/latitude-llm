@@ -11,6 +11,7 @@ import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { GepaClient } from "./client.ts"
 import { GEPA_MAX_TIME, GEPA_MAX_TOKENS, GEPA_RPC_METHODS } from "./constants.ts"
+import { JsonRpcResponseError } from "./protocol.ts"
 
 const componentSchema = z.string().min(1)
 const scriptSchema = z.string().min(1)
@@ -229,10 +230,15 @@ export const GepaOptimizerLive = Layer.succeed(Optimizer, {
         catch: (cause: unknown) =>
           cause instanceof OptimizationAbortedError || cause instanceof OptimizationProtocolError
             ? cause
-            : new OptimizationTransportError({
-                operation: "optimize",
-                cause,
-              }),
+            : cause instanceof JsonRpcResponseError
+              ? new OptimizationProtocolError({
+                  message: cause.strippedMessage,
+                  cause: cause.remoteCause ?? cause,
+                })
+              : new OptimizationTransportError({
+                  operation: "optimize",
+                  cause,
+                }),
       }).pipe(Effect.ensuring(stopClient))
 
       return {

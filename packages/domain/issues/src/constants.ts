@@ -82,8 +82,8 @@ export const ISSUE_DISCOVERY_RERANK_MODEL = "rerank-2.5"
 /** Language model used to generate stable issue names/descriptions. */
 export const ISSUE_DETAILS_GENERATION_MODEL = {
   provider: "amazon-bedrock",
-  model: "anthropic.claude-opus-4-6-v1",
-  reasoning: "medium",
+  model: "anthropic.claude-sonnet-4-6",
+  reasoning: "high",
 } as const
 
 /** Maximum recent assigned issue occurrences used when regenerating existing issue details. */

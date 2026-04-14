@@ -17,13 +17,13 @@ export const GEPA_RPC_METHODS = {
 } as const
 
 export const GEPA_PROPOSER_MODEL = {
-  provider: "openai",
-  model: "gpt-5.4",
-  reasoning: "xhigh",
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-opus-4-6-v1",
+  reasoning: "high",
 } as const
 
 export const GEPA_DETAILS_GENERATOR_MODEL = {
-  provider: "openai",
-  model: "gpt-5.4",
+  provider: "amazon-bedrock",
+  model: "anthropic.claude-sonnet-4-6",
   reasoning: "low",
 } as const
