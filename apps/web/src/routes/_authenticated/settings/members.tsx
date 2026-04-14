@@ -214,11 +214,11 @@ function MembersTable({
   const invitationStatus = (member: MemberRecord) => {
     if (member.status === "invited") {
       if (member.expiresAt && isExpired(member.expiresAt)) {
-        return { variant: "expired" as const, label: "Expired" }
+        return { variant: "destructive" as const, label: "Expired" }
       }
-      return { variant: "pending" as const, label: "Pending" }
+      return { variant: "warning" as const, label: "Pending" }
     }
-    return { variant: "accepted" as const, label: "Accepted" }
+    return { variant: "success" as const, label: "Accepted" }
   }
 
   const canChangeRole = (member: MemberRecord) => {
@@ -315,7 +315,7 @@ function MembersTable({
                   </DropdownMenuRoot>
                 </TableCell>
                 <TableCell>
-                  <Status variant={inv.variant} label={inv.label} />
+                  <Status variant={inv.variant}>{inv.label}</Status>
                 </TableCell>
                 {isAdmin ? (
                   <TableCell align="right" className="w-14 max-w-none min-w-14 shrink-0">
