@@ -14,7 +14,7 @@ import { runWithAiTelemetry } from "@platform/ai-latitude"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { generateText, Output } from "ai"
 import { Effect, Layer } from "effect"
-import { resolveAmazonNovaBedrockModelId } from "./bedrock-nova-inference-model-id.ts"
+import { resolveAmazonBedrockModelId } from "./bedrock-nova-inference-model-id.ts"
 
 type GenerateTextCall = Parameters<typeof generateText>[0]
 type ProviderOptions = NonNullable<GenerateTextCall["providerOptions"]>
@@ -138,7 +138,7 @@ export const createProviderModel = (
     default:
       if (isSupportedBedrockProvider(provider)) {
         return createBedrockProvider().pipe(
-          Effect.map(({ bedrock, region }) => bedrock(resolveAmazonNovaBedrockModelId(model, region))),
+          Effect.map(({ bedrock, region }) => bedrock(resolveAmazonBedrockModelId(model, region))),
         )
       }
 
