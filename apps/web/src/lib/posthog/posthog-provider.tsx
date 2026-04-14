@@ -18,12 +18,10 @@ interface PostHogIdentityProps {
   readonly userId: string
   readonly userEmail: string
   readonly userName?: string | null | undefined
-  readonly organizationId: string
-  readonly organizationName?: string | null | undefined
 }
 
 /**
- * Identifies the current user + org to PostHog exactly once per mount.
+ * Identifies the current user to PostHog exactly once per mount.
  *
  * The parent MUST key this component by userId (e.g. `<PostHogIdentity key={user.id} ... />`)
  * so that when the logged-in user changes, the component remounts and the
@@ -31,13 +29,7 @@ interface PostHogIdentityProps {
  * session can end (explicit logout, session expiry, admin revocation, deleteCurrentUser)
  * because the route tree rerenders with a new user.id.
  */
-export function PostHogIdentity({
-  userId,
-  userEmail,
-  userName,
-  organizationId,
-  organizationName,
-}: PostHogIdentityProps) {
+export function PostHogIdentity({ userId, userEmail, userName }: PostHogIdentityProps) {
   useMountEffect(() => {
     void (async () => {
       // Reset first so the previous identity on the same device doesn't bleed
@@ -48,11 +40,28 @@ export function PostHogIdentity({
         email: userEmail,
         ...(userName != null ? { name: userName } : {}),
       })
-      await identifyOrganization({
-        id: organizationId,
-        ...(organizationName != null ? { name: organizationName } : {}),
-      })
     })()
+  })
+  return null
+}
+
+interface PostHogOrgGroupProps {
+  readonly organizationId: string
+  readonly organizationName: string
+}
+
+/**
+ * Sends the PostHog group-identify for the active organization. Rendered
+ * separately from PostHogIdentity so it can be conditionally mounted only
+ * once the org collection has loaded (organizationName is available). This
+ * avoids the issue where useMountEffect fires once with undefined name and
+ * never retries.
+ *
+ * Key by `organizationId` so it remounts on org switch.
+ */
+export function PostHogOrgGroup({ organizationId, organizationName }: PostHogOrgGroupProps) {
+  useMountEffect(() => {
+    void identifyOrganization({ id: organizationId, name: organizationName })
   })
   return null
 }

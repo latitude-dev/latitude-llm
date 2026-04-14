@@ -34,18 +34,25 @@ const loadInstance = (): Promise<PostHog | null> => {
 
   if (instancePromise) return instancePromise
 
-  const promise: Promise<PostHog | null> = import("posthog-js").then((mod) => {
-    const posthog = mod.posthog
-    posthog.init(env.apiKey, {
-      api_host: env.host,
-      // Per product decision: session recordings + autocapture + pageview.
-      // Masking uses PostHog defaults (passwords + [data-ph-mask]).
-      capture_pageview: true,
-      autocapture: true,
-      disable_session_recording: false,
+  const promise: Promise<PostHog | null> = import("posthog-js")
+    .then((mod) => {
+      const posthog = mod.posthog
+      posthog.init(env.apiKey, {
+        api_host: env.host,
+        // Per product decision: session recordings + autocapture + pageview.
+        // Masking uses PostHog defaults (passwords + [data-ph-mask]).
+        capture_pageview: true,
+        autocapture: true,
+        disable_session_recording: false,
+      })
+      return posthog
     })
-    return posthog
-  })
+    .catch(() => {
+      // Reset so the next call retries (e.g. transient chunk load failure
+      // during a deploy). Silently return null so callers no-op.
+      instancePromise = null
+      return null
+    })
   instancePromise = promise
   return promise
 }

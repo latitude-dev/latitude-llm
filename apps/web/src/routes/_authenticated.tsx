@@ -6,7 +6,7 @@ import { useOrganizationsCollection } from "../domains/organizations/organizatio
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { resetPostHog } from "../lib/posthog/posthog-client.ts"
-import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
+import { PostHogIdentity, PostHogOrgGroup } from "../lib/posthog/posthog-provider.tsx"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
 
 export const Route = createFileRoute("/_authenticated")({
@@ -135,14 +135,13 @@ function NavHeader() {
               label: "Log out",
               type: "destructive",
               onClick: () => {
-                // Flush/reset PostHog before revoking so the final events
-                // still carry the right identity, then the next user on this
-                // device starts anonymous.
-                void resetPostHog().finally(() =>
-                  authClient.signOut().then(() => {
-                    void router.navigate({ to: "/login" })
-                  }),
-                )
+                void authClient.signOut().then(async () => {
+                  // Reset PostHog AFTER sign-out so events captured during the
+                  // logout flow stay attributed. The next user starts anonymous
+                  // until PostHogIdentity remounts with a new key.
+                  await resetPostHog()
+                  void router.navigate({ to: "/login" })
+                })
               },
             },
           ]}
@@ -171,18 +170,13 @@ function AuthenticatedLayout() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Keyed by userId so switching users (rare, but possible on the same
-          device) remounts the component and re-runs the reset→identify
-          sequence. Org switches force a full reload elsewhere so we don't
-          need to include organizationId in the key. */}
-      <PostHogIdentity
-        key={user.id}
-        userId={user.id}
-        userEmail={user.email}
-        userName={user.name}
-        organizationId={organizationId}
-        organizationName={org?.name}
-      />
+      {/* Keyed by userId so switching users remounts and re-runs reset→identify. */}
+      <PostHogIdentity key={user.id} userId={user.id} userEmail={user.email} userName={user.name} />
+      {/* Rendered only once org collection loads so the name is available.
+          Keyed by organizationId so org-switch (full reload) remounts. */}
+      {org ? (
+        <PostHogOrgGroup key={organizationId} organizationId={organizationId} organizationName={org.name} />
+      ) : null}
       <NavHeader />
       <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
         <Outlet />
