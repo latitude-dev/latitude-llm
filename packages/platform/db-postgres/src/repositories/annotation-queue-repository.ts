@@ -322,7 +322,7 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             db
               .insert(annotationQueues)
               .values({
-                id: queue.id,
+                ...(queue.id !== undefined ? { id: queue.id } : {}),
                 organizationId,
                 projectId: queue.projectId,
                 system: queue.system,
@@ -352,11 +352,13 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
                   deletedAt: queue.deletedAt,
                   updatedAt: queue.updatedAt,
                 },
-              }),
+              })
+              .returning(),
           )
           .pipe(
+            Effect.map((rows) => toDomainQueue(rows[0])),
             Effect.mapError((cause) => new RepositoryError({ operation: "save", cause })),
-            Effect.tap(() => evictSystemQueueCache(queue)),
+            Effect.tap((saved) => evictSystemQueueCache(saved)),
           ),
 
       insertIfNotExists: (queue) =>

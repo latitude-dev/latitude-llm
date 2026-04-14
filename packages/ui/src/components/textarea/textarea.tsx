@@ -3,14 +3,14 @@ import TextareaAutosize from "react-textarea-autosize"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
-import { FormField } from "../form-field/form-field.tsx"
+import { FormField, type FormFieldProps } from "../form-field/form-field.tsx"
 
 export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "className" | "style"> {
   ref?: Ref<HTMLTextAreaElement>
   label?: ReactNode
   description?: ReactNode
   info?: string | undefined
-  errors?: string[] | undefined
+  errors?: FormFieldProps["errors"]
   inline?: boolean | undefined
   className?: string
   minRows?: number

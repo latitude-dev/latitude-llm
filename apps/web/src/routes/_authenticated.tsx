@@ -1,4 +1,4 @@
-import { Avatar, Button, DropdownMenu, DropdownMenuTrigger, Icon, LatitudeLogo } from "@repo/ui"
+import { Avatar, Button, DropdownMenu, Icon, LatitudeLogo } from "@repo/ui"
 import { createFileRoute, Link, Outlet, redirect, useRouter } from "@tanstack/react-router"
 import { ChevronsUpDown, Moon, Sun } from "lucide-react"
 import { useOrganizationsCollection } from "../domains/organizations/organizations.collection.ts"
@@ -95,15 +95,13 @@ function NavHeader() {
               })) ?? []
             }
             trigger={() => (
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <span className="text-sm font-medium text-foreground">{org.name}</span>
-                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </DropdownMenuTrigger>
+              <button
+                type="button"
+                className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted transition-colors cursor-pointer"
+              >
+                <span className="text-sm font-medium text-foreground">{org.name}</span>
+                <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+              </button>
             )}
           />
         ) : (
@@ -139,15 +137,9 @@ function NavHeader() {
             },
           ]}
           trigger={() => (
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="cursor-pointer">
-                <Avatar
-                  name={user.name?.trim() ? user.name : user.email}
-                  size="sm"
-                  imageSrc={user.image ?? undefined}
-                />
-              </button>
-            </DropdownMenuTrigger>
+            <button type="button" className="cursor-pointer">
+              <Avatar name={user.name?.trim() ? user.name : user.email} size="sm" imageSrc={user.image ?? undefined} />
+            </button>
           )}
         />
       </div>

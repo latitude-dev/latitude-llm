@@ -74,6 +74,7 @@ export {
   type IncrementCompletedItemsInput,
   type ListAnnotationQueuesInput,
   type ListSystemQueuesInput,
+  type SaveQueueInput,
 } from "./ports/annotation-queue-repository.ts"
 export { type AddTracesToQueueError, addTracesToQueue } from "./use-cases/add-traces-to-queue.ts"
 export {
@@ -81,6 +82,19 @@ export {
   type CompleteQueueItemInput,
   completeQueueItemUseCase,
 } from "./use-cases/complete-queue-item.ts"
+export {
+  type CreateQueueError,
+  type CreateQueueInput,
+  type CreateQueueResult,
+  createQueueUseCase,
+} from "./use-cases/create-queue.ts"
+export {
+  type DeleteQueueError,
+  type DeleteQueueInput,
+  DeleteQueueNotFoundError,
+  type DeleteQueueResult,
+  deleteQueueUseCase,
+} from "./use-cases/delete-queue.ts"
 export {
   type DraftSystemQueueAnnotationError,
   type DraftSystemQueueAnnotationOutput,
@@ -109,6 +123,7 @@ export {
   provisionSystemQueuesUseCase,
 } from "./use-cases/provision-system-queues.ts"
 export {
+  type NewQueueInput,
   type RequestBulkQueueItemsError,
   type RequestBulkQueueItemsInput,
   requestBulkQueueItems,
@@ -139,3 +154,10 @@ export {
   type UncompleteQueueItemInput,
   uncompleteQueueItemUseCase,
 } from "./use-cases/uncomplete-queue-item.ts"
+export {
+  QueueNotFoundError,
+  type UpdateQueueError,
+  type UpdateQueueInput,
+  type UpdateQueueResult,
+  updateQueueUseCase,
+} from "./use-cases/update-queue.ts"
