@@ -131,6 +131,24 @@ export function mergeTraceHistogramTimeFilters(
   return next
 }
 
+export function resolveTraceCohortFilters(
+  filters: FilterSet | undefined,
+  nowMs: number,
+): {
+  readonly effectiveRangeStartIso: string
+  readonly effectiveRangeEndIso: string
+  readonly effectiveFilters: FilterSet
+} {
+  const nextFilters = filters ?? {}
+  const { rangeStartIso, rangeEndIso } = resolveTraceHistogramRangeIso(nextFilters, nowMs)
+
+  return {
+    effectiveRangeStartIso: rangeStartIso,
+    effectiveRangeEndIso: rangeEndIso,
+    effectiveFilters: mergeTraceHistogramTimeFilters(nextFilters, rangeStartIso, rangeEndIso),
+  }
+}
+
 /**
  * Aligns a Unix timestamp (seconds) to a histogram bucket start, matching ClickHouse
  * `intDiv(toUnixTimestamp(ts), bucketSeconds) * bucketSeconds`.

@@ -1,6 +1,18 @@
 import { filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
-import type { Trace, TraceDetail, TraceDistinctColumn, TraceMetrics, TraceTimeHistogramBucket } from "@domain/spans"
-import { mergeTraceHistogramTimeFilters, TraceRepository } from "@domain/spans"
+import type {
+  Trace,
+  TraceCohortSummary,
+  TraceDetail,
+  TraceDistinctColumn,
+  TraceMetrics,
+  TraceTimeHistogramBucket,
+} from "@domain/spans"
+import {
+  getTraceCohortSummaryUseCase,
+  mergeTraceHistogramTimeFilters,
+  resolveTraceCohortFilters,
+  TraceRepository,
+} from "@domain/spans"
 import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
@@ -129,11 +141,13 @@ export const listTracesByProject = createServerFn({ method: "GET" })
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )
 
+    const traces = page.items.map(serializeTrace)
+
     if (!page.nextCursor) {
-      return { traces: page.items.map(serializeTrace), hasMore: page.hasMore }
+      return { traces, hasMore: page.hasMore }
     }
     return {
-      traces: page.items.map(serializeTrace),
+      traces,
       hasMore: page.hasMore,
       nextCursor: page.nextCursor,
     }
@@ -171,6 +185,28 @@ export const getTraceMetricsByProject = createServerFn({ method: "GET" })
           projectId: ProjectId(data.projectId),
           ...(data.filters ? { filters: data.filters } : {}),
         })
+      }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
+    )
+  })
+
+export const getTraceCohortSummaryByProject = createServerFn({ method: "GET" })
+  .inputValidator(z.object({ projectId: z.string(), filters: filterSetSchema.optional() }))
+  .handler(async ({ data }): Promise<TraceCohortSummary> => {
+    const { organizationId } = await requireSession()
+    const orgId = OrganizationId(organizationId)
+
+    const { effectiveRangeStartIso, effectiveRangeEndIso, effectiveFilters } = resolveTraceCohortFilters(
+      data.filters,
+      Date.now(),
+    )
+
+    return Effect.runPromise(
+      getTraceCohortSummaryUseCase({
+        organizationId: orgId,
+        projectId: ProjectId(data.projectId),
+        filters: effectiveFilters,
+        effectiveRangeStartIso,
+        effectiveRangeEndIso,
       }).pipe(withClickHouse(TraceRepositoryLive, getClickhouseClient(), orgId)),
     )
   })

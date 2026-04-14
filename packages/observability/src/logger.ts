@@ -2,17 +2,17 @@ import { context, trace } from "@opentelemetry/api"
 import { getEnvironment, getServiceName } from "./config.ts"
 import type { LogLevel, ObservabilityState } from "./types.ts"
 
-const getTraceContext = (state: ObservabilityState) => {
+const getTraceContext = () => {
   const activeSpan = trace.getSpan(context.active())
-  if (activeSpan) {
-    const spanContext = activeSpan.spanContext()
-    return {
-      trace_id: spanContext.traceId,
-      span_id: spanContext.spanId,
-    }
+  if (!activeSpan) {
+    return {}
   }
 
-  return state.resolveLogTraceContext?.() ?? {}
+  const spanContext = activeSpan.spanContext()
+  return {
+    trace_id: spanContext.traceId,
+    span_id: spanContext.spanId,
+  }
 }
 
 const toSerializable = (value: unknown): unknown => {
@@ -59,7 +59,7 @@ export const emitLog = (state: ObservabilityState, level: LogLevel, scope: strin
     ddtags: `env:${environment},service:${service},scope:${scope}`,
     message,
     args: values,
-    ...getTraceContext(state),
+    ...getTraceContext(),
   }
 
   const line = JSON.stringify(payload)

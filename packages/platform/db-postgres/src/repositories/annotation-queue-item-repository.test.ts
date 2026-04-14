@@ -125,7 +125,8 @@ describe("AnnotationQueueItemRepositoryLive", () => {
         projectId: PROJECT_ID,
         queueId: QUEUE_ID,
         traceId: makeTrace("pend1"),
-        traceCreatedAt: new Date("2025-03-30T09:00:00.000Z"),
+        // traceCreatedAt is NEWER but createdAt is OLDER - tests that we sort by traceCreatedAt
+        traceCreatedAt: new Date("2025-03-30T12:00:00.000Z"),
         completedAt: null,
         completedBy: null,
         reviewStartedAt: null,
@@ -138,7 +139,8 @@ describe("AnnotationQueueItemRepositoryLive", () => {
         projectId: PROJECT_ID,
         queueId: QUEUE_ID,
         traceId: makeTrace("pend2"),
-        traceCreatedAt: new Date("2025-03-30T12:00:00.000Z"),
+        // traceCreatedAt is OLDER but createdAt is NEWER - tests that we sort by traceCreatedAt
+        traceCreatedAt: new Date("2025-03-30T09:00:00.000Z"),
         completedAt: null,
         completedBy: null,
         reviewStartedAt: null,
@@ -181,9 +183,9 @@ describe("AnnotationQueueItemRepositoryLive", () => {
 
       const ranks = page.items.map((i) => annotationQueueItemStatusRankFromTimestamps(i.completedAt, i.reviewStartedAt))
       expect(ranks).toEqual([0, 0, 1, 2])
-      // Within rank 0: createdAt desc, so newer pending before older
-      expect(page.items[0].traceId).toEqual(TraceId(makeTrace("pend2")))
-      expect(page.items[1].traceId).toEqual(TraceId(makeTrace("pend1")))
+      // Within rank 0: traceCreatedAt desc - pend1 has newer traceCreatedAt (12:00) than pend2 (09:00)
+      expect(page.items[0].traceId).toEqual(TraceId(makeTrace("pend1")))
+      expect(page.items[1].traceId).toEqual(TraceId(makeTrace("pend2")))
       expect(page.items[2].traceId).toEqual(TraceId(makeTrace("prog")))
       expect(page.items[3].traceId).toEqual(TraceId(makeTrace("done")))
     })
@@ -272,7 +274,10 @@ describe("AnnotationQueueItemRepositoryLive", () => {
                 sortBy: "status",
                 sortDirection: "asc",
                 limit: 5,
-                cursor: { sortValue: new Date().toISOString(), id: makeId("it_pend_new") },
+                cursor: {
+                  sortValue: new Date().toISOString(),
+                  id: makeId("it_pend_new"),
+                },
               },
             })
           }).pipe(withPostgres(AnnotationQueueItemRepositoryLive, pg.adminPostgresClient, ORG_ID)),
@@ -343,13 +348,34 @@ describe("AnnotationQueueItemRepositoryLive", () => {
     it("first insert creates one queue item and returns true", async () => {
       const traceId = TraceId(makeTrace("new_item"))
       const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
+      const TEST_QUEUE_ID = makeId("insert_test_q1")
+
+      const db = pg.db
+      const base = new Date()
+      await db.insert(annotationQueues).values({
+        id: TEST_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Insert test queue 1",
+        slug: "insert-test-queue-1",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
 
       const wasInserted = await runWithLive(
         Effect.gen(function* () {
           const repo = yield* AnnotationQueueItemRepository
           return yield* repo.insertIfNotExists({
             projectId: PROJECT_ID,
-            queueId: QUEUE_ID,
+            queueId: TEST_QUEUE_ID,
             traceId,
             traceCreatedAt,
           })
@@ -363,7 +389,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
           const repo = yield* AnnotationQueueItemRepository
           const page = yield* repo.listByQueue({
             projectId: PROJECT_ID,
-            queueId: QUEUE_ID,
+            queueId: TEST_QUEUE_ID,
             options: { limit: 100 },
           })
           return page.items.find((i) => i.traceId === traceId)
@@ -371,7 +397,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
       )
 
       expect(item).toBeDefined()
-      expect(item?.queueId).toBe(QUEUE_ID)
+      expect(item?.queueId).toBe(TEST_QUEUE_ID)
       expect(item?.traceId).toBe(traceId)
       expect(item?.completedAt).toBeNull()
       expect(item?.completedBy).toBeNull()
@@ -381,13 +407,34 @@ describe("AnnotationQueueItemRepositoryLive", () => {
     it("duplicate insert is idempotent and returns false", async () => {
       const traceId = TraceId(makeTrace("dup_item"))
       const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
+      const TEST_QUEUE_ID = makeId("insert_test_q2")
+
+      const db = pg.db
+      const base = new Date()
+      await db.insert(annotationQueues).values({
+        id: TEST_QUEUE_ID,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Insert test queue 2",
+        slug: "insert-test-queue-2",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 0,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
 
       const firstInsert = await runWithLive(
         Effect.gen(function* () {
           const repo = yield* AnnotationQueueItemRepository
           return yield* repo.insertIfNotExists({
             projectId: PROJECT_ID,
-            queueId: QUEUE_ID,
+            queueId: TEST_QUEUE_ID,
             traceId,
             traceCreatedAt,
           })
@@ -400,7 +447,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
           const repo = yield* AnnotationQueueItemRepository
           return yield* repo.insertIfNotExists({
             projectId: PROJECT_ID,
-            queueId: QUEUE_ID,
+            queueId: TEST_QUEUE_ID,
             traceId,
             traceCreatedAt,
           })
@@ -413,7 +460,7 @@ describe("AnnotationQueueItemRepositoryLive", () => {
           const repo = yield* AnnotationQueueItemRepository
           return yield* repo.listByQueue({
             projectId: PROJECT_ID,
-            queueId: QUEUE_ID,
+            queueId: TEST_QUEUE_ID,
             options: { limit: 100 },
           })
         }),
@@ -900,6 +947,302 @@ describe("AnnotationQueueItemRepositoryLive", () => {
         }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
       )
       expect(finalQueue?.totalItems).toBe(4)
+    })
+  })
+
+  describe("getAdjacentItems", () => {
+    it("returns prev and next for item in middle of list", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getAdjacentItems({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("it_pend_new"),
+          })
+        }),
+      )
+
+      // Order is by traceCreatedAt DESC: it_pend_old (12:00) → it_pend_new (09:00) → it_prog → it_done
+      expect(result.previousItemId).toBe(makeId("it_pend_old"))
+      expect(result.nextItemId).toBe(makeId("it_prog"))
+    })
+
+    it("returns null for prev when on first item in list order", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getAdjacentItems({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("it_pend_old"),
+          })
+        }),
+      )
+
+      // it_pend_old has newer traceCreatedAt so it's first
+      expect(result.previousItemId).toBeNull()
+      expect(result.nextItemId).toBe(makeId("it_pend_new"))
+    })
+
+    it("returns null for next when on last item in list order", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getAdjacentItems({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("it_done"),
+          })
+        }),
+      )
+
+      expect(result.previousItemId).toBe(makeId("it_prog"))
+      expect(result.nextItemId).toBeNull()
+    })
+
+    it("returns null for both when item not found", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getAdjacentItems({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("nonexistent"),
+          })
+        }),
+      )
+
+      expect(result.previousItemId).toBeNull()
+      expect(result.nextItemId).toBeNull()
+    })
+  })
+
+  describe("getQueuePosition", () => {
+    it("returns position 1 for first item in list order", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getQueuePosition({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            // it_pend_old has newer traceCreatedAt so it's first
+            currentItemId: makeId("it_pend_old"),
+          })
+        }),
+      )
+
+      expect(result.currentIndex).toBe(1)
+      expect(result.totalItems).toBe(4)
+    })
+
+    it("returns correct position for middle item", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getQueuePosition({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("it_prog"),
+          })
+        }),
+      )
+
+      expect(result.currentIndex).toBe(3)
+      expect(result.totalItems).toBe(4)
+    })
+
+    it("returns position 4 for last item", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getQueuePosition({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("it_done"),
+          })
+        }),
+      )
+
+      expect(result.currentIndex).toBe(4)
+      expect(result.totalItems).toBe(4)
+    })
+
+    it("returns 0 index when item not found", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getQueuePosition({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("nonexistent"),
+          })
+        }),
+      )
+
+      expect(result.currentIndex).toBe(0)
+      expect(result.totalItems).toBe(4)
+    })
+  })
+
+  describe("getNextUncompletedItem", () => {
+    it("returns first uncompleted item in list order", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getNextUncompletedItem({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("it_done"),
+          })
+        }),
+      )
+
+      // it_pend_old has newer traceCreatedAt so it's first uncompleted
+      expect(result).toBe(makeId("it_pend_old"))
+    })
+
+    it("returns first uncompleted even when called from uncompleted item", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getNextUncompletedItem({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("it_pend_new"),
+          })
+        }),
+      )
+
+      // it_pend_old has newer traceCreatedAt so it's first uncompleted
+      expect(result).toBe(makeId("it_pend_old"))
+    })
+
+    it("returns first uncompleted when current item not found", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.getNextUncompletedItem({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            currentItemId: makeId("nonexistent"),
+          })
+        }),
+      )
+
+      // it_pend_old has newer traceCreatedAt so it's first uncompleted
+      expect(result).toBe(makeId("it_pend_old"))
+    })
+  })
+
+  describe("update", () => {
+    it("updates completedAt and completedBy", async () => {
+      const userId = makeId("uu_updater")
+      const completedAt = new Date("2025-05-01T00:00:00.000Z")
+
+      const updated = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.update({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            itemId: makeId("it_prog"),
+            completedAt,
+            completedBy: userId,
+          })
+        }),
+      )
+
+      expect(updated.completedAt).toEqual(completedAt)
+      expect(updated.completedBy).toBe(userId)
+    })
+
+    it("clears completedAt and completedBy when set to null", async () => {
+      const updated = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.update({
+            projectId: PROJECT_ID,
+            queueId: QUEUE_ID,
+            itemId: makeId("it_done"),
+            completedAt: null,
+            completedBy: null,
+          })
+        }),
+      )
+
+      expect(updated.completedAt).toBeNull()
+      expect(updated.completedBy).toBeNull()
+    })
+
+    it("fails with NotFoundError for non-existent item", async () => {
+      const err = await Effect.runPromise(
+        Effect.match(
+          Effect.gen(function* () {
+            const repo = yield* AnnotationQueueItemRepository
+            return yield* repo.update({
+              projectId: PROJECT_ID,
+              queueId: QUEUE_ID,
+              itemId: makeId("nonexistent"),
+              completedAt: new Date(),
+              completedBy: makeId("uu_user"),
+            })
+          }).pipe(withPostgres(AnnotationQueueItemRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+          {
+            onFailure: (e) => e,
+            onSuccess: () => {
+              throw new Error("expected failure")
+            },
+          },
+        ),
+      )
+
+      expect(err._tag).toBe("NotFoundError")
+    })
+  })
+
+  describe("listByTraceId", () => {
+    it("returns items matching the traceId", async () => {
+      const items = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.listByTraceId({
+            projectId: PROJECT_ID,
+            traceId: makeTrace("pend1"),
+          })
+        }),
+      )
+
+      expect(items.length).toBe(1)
+      expect(items[0]?.traceId).toBe(makeTrace("pend1"))
+    })
+
+    it("returns empty array when no items match the traceId", async () => {
+      const items = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.listByTraceId({
+            projectId: PROJECT_ID,
+            traceId: makeTrace("nonexistent"),
+          })
+        }),
+      )
+
+      expect(items.length).toBe(0)
+    })
+
+    it("respects projectId scoping", async () => {
+      const items = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.listByTraceId({
+            projectId: OTHER_PROJECT_ID,
+            traceId: makeTrace("pend2"),
+          })
+        }),
+      )
+
+      expect(items.length).toBe(0)
     })
   })
 })

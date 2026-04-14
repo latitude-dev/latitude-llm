@@ -55,22 +55,19 @@ export const createDomainEventsWorker = ({
       }),
 
     SpanIngested: (event) =>
-      pub.publish("live-traces", "end", event.payload, {
-        dedupeKey: `traces:live:end:${event.payload.traceId}`,
-        debounceMs: TRACE_END_DEBOUNCE_MS,
-      }),
-
-    TraceEnded: (event) =>
       Effect.all(
         [
           pub.publish("live-evaluations", "enqueue", event.payload, {
             dedupeKey: `evaluations:live:enqueue:${event.payload.traceId}`,
+            debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
           pub.publish("live-annotation-queues", "curate", event.payload, {
             dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
+            debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
           pub.publish("system-annotation-queues", "fanOut", event.payload, {
             dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
+            debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
         ],
         { concurrency: "unbounded" },
@@ -83,6 +80,9 @@ export const createDomainEventsWorker = ({
         }),
         pub.publish("annotation-scores", "publishHumanAnnotation", event.payload, {
           debounceMs: SCORE_PUBLICATION_DEBOUNCE, // 5 minutes
+        }),
+        pub.publish("annotation-scores", "markReviewStarted", event.payload, {
+          dedupeKey: `annotation-scores:mark-review-started:${event.payload.scoreId}`,
         }),
       ]),
 

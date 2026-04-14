@@ -1,6 +1,6 @@
 import type { FilterCondition, FilterSet } from "@domain/shared"
-import { Button, Checkbox, Input, Skeleton, Text } from "@repo/ui"
-import { ChevronDown, ChevronUp, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
+import { Button, Checkbox, Input, Skeleton, Text, Tooltip } from "@repo/ui"
+import { ChevronDown, ChevronUp, InfoIcon, PlusIcon, Search, Trash2Icon, XIcon } from "lucide-react"
 import { type ComponentProps, type ReactNode, useCallback, useEffect, useMemo, useState } from "react"
 import { useDebounce } from "react-use"
 import { useSessionDistinctValues } from "../../../../../domains/sessions/sessions.collection.ts"
@@ -21,6 +21,8 @@ const MULTI_SELECT_FIELDS: readonly { label: string; field: DistinctColumn }[] =
 ]
 
 const NUMBER_RANGE_FIELDS = [
+  { label: "Duration (ns)", field: "duration" },
+  { label: "TTFT (ns)", field: "ttft", tooltip: "Time to first token, measured in nanoseconds." },
   { label: "Cost (microcents)", field: "cost" },
   { label: "Span Count", field: "spanCount" },
   { label: "Error Count", field: "errorCount" },
@@ -92,11 +94,17 @@ function CollapsibleSection({
   defaultOpen = false,
   children,
 }: {
-  readonly label: string
+  readonly label: ReactNode
   readonly defaultOpen?: boolean
   readonly children: ReactNode
 }) {
   const [open, setOpen] = useState(defaultOpen)
+
+  // TODO(frontend-use-effect-policy): keep section openness in sync with externally-controlled active filters.
+  useEffect(() => {
+    setOpen(defaultOpen)
+  }, [defaultOpen])
+
   const ChevronIcon = open ? ChevronUp : ChevronDown
 
   return (
@@ -106,7 +114,7 @@ function CollapsibleSection({
         className="flex items-center justify-between py-2 cursor-pointer"
         onClick={() => setOpen(!open)}
       >
-        <Text.H5>{label}</Text.H5>
+        <Text.H5 className="w-full">{label}</Text.H5>
         <ChevronIcon className="h-4 w-4 text-muted-foreground" />
       </button>
       {open && <div className="flex flex-col gap-2 pb-2">{children}</div>}
@@ -230,6 +238,12 @@ function MultiSelectFilter({
     [selected, onChange],
   )
 
+  const hasSelections = selected.length > 0
+
+  const handleClear = useCallback(() => {
+    onChange([])
+  }, [onChange])
+
   return (
     <div className="flex flex-col border rounded-md overflow-hidden">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
@@ -241,6 +255,17 @@ function MultiSelectFilter({
           placeholder="Search..."
           className="flex h-6 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground"
         />
+        {hasSelections && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
+            aria-label="Clear selections"
+            title="Clear selections"
+          >
+            <XIcon className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
       <div className="max-h-40 overflow-y-auto p-1">
         {isLoading ? (
@@ -323,6 +348,15 @@ function NumberRangeFilter({
     setPendingMax(null)
   }, [maxValue])
 
+  const hasValue = minValue !== undefined || maxValue !== undefined
+
+  const handleClear = useCallback(() => {
+    setLocalMin("")
+    setLocalMax("")
+    setPendingMin(undefined)
+    setPendingMax(undefined)
+  }, [])
+
   return (
     <div className="flex items-center gap-2">
       <input
@@ -350,6 +384,19 @@ function NumberRangeFilter({
         }}
         className="flex h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground"
       />
+      {hasValue && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={handleClear}
+          className="h-7 w-7 shrink-0"
+          aria-label="Clear filter"
+          title="Clear filter"
+        >
+          <XIcon className="h-3.5 w-3.5" />
+        </Button>
+      )}
     </div>
   )
 }
@@ -510,7 +557,28 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
       </div>
 
       <div className="flex flex-col px-4 overflow-y-auto flex-1">
-        <CollapsibleSection label="Status" defaultOpen={statusValues.length > 0}>
+        <CollapsibleSection
+          label={
+            <div className="flex items-center justify-between w-full pr-2">
+              <span>Status</span>
+              {statusValues.length > 0 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setField("status", [])
+                  }}
+                  className="text-muted-foreground hover:text-foreground cursor-pointer"
+                  aria-label="Clear status filter"
+                  title="Clear status filter"
+                >
+                  <XIcon className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          }
+          defaultOpen={statusValues.length > 0}
+        >
           {STATUS_OPTIONS.map((status) => (
             <button
               key={status}
@@ -556,10 +624,32 @@ export function FiltersSidebar({ mode, projectId, filters, onFiltersChange, onCl
           )
         })}
 
-        {NUMBER_RANGE_FIELDS.map(({ label, field }) => {
+        {NUMBER_RANGE_FIELDS.map(({ label, field, tooltip }) => {
           const range = getRangeValues(filters, field)
           return (
-            <CollapsibleSection key={field} label={label} defaultOpen={!!filters[field]}>
+            <CollapsibleSection
+              key={field}
+              label={
+                tooltip ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span>{label}</span>
+                    <Tooltip
+                      asChild
+                      trigger={
+                        <span className="inline-flex items-center text-muted-foreground">
+                          <InfoIcon className="h-3.5 w-3.5" />
+                        </span>
+                      }
+                    >
+                      {tooltip}
+                    </Tooltip>
+                  </span>
+                ) : (
+                  label
+                )
+              }
+              defaultOpen={!!filters[field]}
+            >
               <NumberRangeFilter
                 minValue={range.min}
                 maxValue={range.max}

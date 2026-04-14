@@ -23,7 +23,6 @@ const hostedZoneId = config.get("hostedZoneId") ?? defaults.hostedZoneId
 const domainName = config.get("domainName") ?? defaults.domainName
 const githubOwner = config.get("githubOwner") ?? "latitude-dev"
 const githubRepo = config.get("githubRepo") ?? "latitude"
-const gitRepositoryUrl = `https://github.com/${githubOwner}/${githubRepo}`
 
 const temporalCloudAddress = config.get("temporalCloudAddress") ?? `${envConfig.region}.aws.api.temporal.io:7233`
 const temporalCloudNamespace = config.get("temporalCloudNamespace") ?? ""
@@ -92,7 +91,6 @@ const ecs = createEcs(
     namespace: temporalCloudNamespace,
     taskQueue: temporalTaskQueue,
   },
-  gitRepositoryUrl,
 )
 
 const githubActions = createGithubActionsOidc(name, environment, githubOwner, githubRepo)

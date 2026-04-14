@@ -102,6 +102,11 @@ const _registry = {
       readonly projectId: string
       readonly scoreId: string
     }
+    markReviewStarted: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly scoreId: string
+    }
   }>(),
 
   "live-evaluations": payloads<{

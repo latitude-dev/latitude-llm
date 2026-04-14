@@ -22,11 +22,6 @@ const bundleAnalyze = Effect.runSync(parseEnv("LAT_WEB_BUNDLE_ANALYZE", "boolean
 
 export default defineConfig({
   plugins: [tanstackStart(), nitro(), tailwindcss(), react()],
-  // @repo/observability pulls dd-trace for LAT_OBSERVABILITY_TRACING_PROVIDER=datadog. Bundling it
-  // for SSR pulls optional @datadog/* peers and breaks Rolldown (missing @openfeature/server-sdk exports).
-  ssr: {
-    external: ["dd-trace"],
-  },
   resolve: {
     alias: {
       // tslib's CJS UMD sets __esModule: true without providing a default
@@ -70,8 +65,6 @@ export default defineConfig({
       },
     },
     rollupOptions: {
-      // Nitro's server bundle pass must not try to bundle dd-trace (optional peers / native); keep as runtime require.
-      external: ["dd-trace"],
       plugins: bundleAnalyze
         ? [
             visualizer({

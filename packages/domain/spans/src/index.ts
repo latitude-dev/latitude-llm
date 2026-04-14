@@ -17,7 +17,7 @@ export {
 } from "./entities/span.ts"
 export type { Trace, TraceDetail } from "./entities/trace.ts"
 export { traceDetailSchema, traceSchema } from "./entities/trace.ts"
-export { SpanDecodingError } from "./errors.ts"
+export { SpanDecodingError, TraceCohortUnavailableError } from "./errors.ts"
 export {
   isLlmCompletionOperation,
   resolveLastLlmCompletionSpanId,
@@ -28,6 +28,7 @@ export {
   mergeTraceHistogramTimeFilters,
   parseStartTimeBoundsFromFilters,
   pickTraceHistogramBucketSeconds,
+  resolveTraceCohortFilters,
   resolveTraceHistogramRangeIso,
 } from "./helpers.ts"
 export type {
@@ -52,6 +53,48 @@ export type {
   TraceTimeHistogramBucket,
 } from "./ports/trace-repository.ts"
 export { emptyTraceMetrics, TraceRepository } from "./ports/trace-repository.ts"
+export {
+  buildTraceCohortListingSpec,
+  buildTraceCohortSummaryEntries,
+  buildTraceMetricBaseline,
+  buildTraceMetricBaselines,
+  emptyTraceCohortSummaryEntry,
+  evaluateTraceResourceOutliers,
+  getTraceCohortMetricValue,
+  isTraceCohortKeyAvailable,
+  isTraceCohortMetricEligible,
+  TRACE_COHORT_MEDIAN_X3_MIN_SAMPLES,
+  TRACE_COHORT_P95_MIN_SAMPLES,
+  TRACE_COHORT_P99_MIN_SAMPLES,
+  TRACE_RESOURCE_OUTLIER_MULTIPLIER,
+  type TraceCohortBaselineData,
+  type TraceCohortKey,
+  type TraceCohortListingSpec,
+  type TraceCohortMetric,
+  type TraceCohortSummary,
+  type TraceCohortSummaryEntry,
+  type TraceCohortThresholdMode,
+  type TraceCohortUnavailableReason,
+  type TraceMetricBaseline,
+  type TraceMetricPercentiles,
+  type TraceResourceOutlierEvaluation,
+  type TraceResourceOutlierReason,
+  traceCohortKeys,
+  traceCohortMetrics,
+  traceResourceOutlierSeverityRank,
+} from "./trace-cohorts.ts"
+export type {
+  BuildTraceCohortListingSpecError,
+  BuildTraceCohortListingSpecInput,
+} from "./use-cases/build-trace-cohort-listing-spec.ts"
+export { buildTraceCohortListingSpecUseCase } from "./use-cases/build-trace-cohort-listing-spec.ts"
+export type {
+  EvaluateTraceResourceOutliersError,
+  EvaluateTraceResourceOutliersInput,
+} from "./use-cases/evaluate-trace-resource-outliers.ts"
+export { evaluateTraceResourceOutliersUseCase } from "./use-cases/evaluate-trace-resource-outliers.ts"
+export type { GetTraceCohortSummaryInput } from "./use-cases/get-trace-cohort-summary.ts"
+export { getTraceCohortSummaryUseCase } from "./use-cases/get-trace-cohort-summary.ts"
 export type { IngestSpansInput } from "./use-cases/ingest-spans.ts"
 export { ingestSpansUseCase } from "./use-cases/ingest-spans.ts"
 export { buildConversationSpanMaps } from "./use-cases/map-conversation-to-spans.ts"

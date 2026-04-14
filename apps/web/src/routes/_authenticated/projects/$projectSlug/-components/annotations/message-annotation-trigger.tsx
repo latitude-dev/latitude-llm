@@ -18,6 +18,7 @@ export function MessageAnnotationTrigger({
   spanId,
   annotations,
   annotators,
+  onClose,
 }: {
   readonly messageIndex: number
   readonly projectId: string
@@ -25,8 +26,16 @@ export function MessageAnnotationTrigger({
   readonly spanId?: string | undefined
   readonly annotations: readonly AnnotationRecord[]
   readonly annotators: readonly Annotator[]
+  readonly onClose?: (() => void) | undefined
 }) {
   const [open, setOpen] = useState(false)
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      onClose?.()
+    }
+  }
   const { createAnnotation, updateAnnotation, isCreatePending, isUpdatePending } = useTraceAnnotationsData({
     projectId,
     traceId,
@@ -45,7 +54,7 @@ export function MessageAnnotationTrigger({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
           type="button"

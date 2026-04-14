@@ -184,6 +184,11 @@ namespace Text {
   })
   H6B.displayName = "Text.H6B"
 
+  export const H7 = forwardRef<HTMLHeadingElement, Common>(function H7(props, ref) {
+    return <TextAtom ref={ref as React.Ref<HTMLElement>} size="h7" {...props} />
+  })
+  H7.displayName = "Text.H7"
+
   export type MonoProps = {
     children: ReactNode
     color?: TextColor
@@ -198,6 +203,7 @@ namespace Text {
     textTransform?: "none" | "uppercase" | "lowercase"
     whiteSpace?: WhiteSpace
     wordBreak?: WordBreak
+    asChild?: boolean
   }
 
   export const Mono = forwardRef<HTMLSpanElement, MonoProps>(function MonoFont(
@@ -215,13 +221,15 @@ namespace Text {
       weight = "normal",
       ellipsis = false,
       display = "inline",
+      asChild = false,
     },
     ref,
   ) {
     const sizeClass = font.size[size]
+    const Comp = asChild ? Slot : "span"
 
     return (
-      <span
+      <Comp
         ref={ref}
         className={cn(
           sizeClass,
@@ -242,7 +250,7 @@ namespace Text {
         )}
       >
         {children}
-      </span>
+      </Comp>
     )
   })
   Mono.displayName = "Text.Mono"

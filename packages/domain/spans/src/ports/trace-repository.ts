@@ -1,6 +1,7 @@
 import type { FilterSet, NotFoundError, OrganizationId, ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { Trace, TraceDetail } from "../entities/trace.ts"
+import type { TraceCohortBaselineData, TraceCohortListingSpec } from "../trace-cohorts.ts"
 
 /**
  * Repository port for traces (ClickHouse materialized view).
@@ -9,6 +10,13 @@ import type { Trace, TraceDetail } from "../entities/trace.ts"
  * by a materialized view on each insert into spans.
  */
 export interface TraceRepositoryShape {
+  getCohortBaselineByProjectId(input: {
+    readonly organizationId: OrganizationId
+    readonly projectId: ProjectId
+    readonly filters?: FilterSet
+    readonly excludeTraceId?: TraceId
+  }): Effect.Effect<TraceCohortBaselineData, RepositoryError>
+
   listByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
@@ -19,12 +27,14 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
+    readonly cohort?: TraceCohortListingSpec
   }): Effect.Effect<number, RepositoryError>
 
   aggregateMetricsByProjectId(input: {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
+    readonly cohort?: TraceCohortListingSpec
   }): Effect.Effect<TraceMetrics, RepositoryError>
 
   /** Per-bucket trace counts over `start_time`, using the same filter semantics as list/count. */
@@ -32,6 +42,7 @@ export interface TraceRepositoryShape {
     readonly organizationId: OrganizationId
     readonly projectId: ProjectId
     readonly filters?: FilterSet
+    readonly cohort?: TraceCohortListingSpec
     readonly bucketSeconds: number
   }): Effect.Effect<readonly TraceTimeHistogramBucket[], RepositoryError>
 
@@ -76,6 +87,7 @@ export interface TraceListOptions {
   readonly sortBy?: string
   readonly sortDirection?: "asc" | "desc"
   readonly filters?: FilterSet
+  readonly cohort?: TraceCohortListingSpec
 }
 
 export interface TraceListPage {

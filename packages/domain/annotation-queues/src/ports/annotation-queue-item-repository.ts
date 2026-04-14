@@ -1,4 +1,4 @@
-import type { ProjectId, RepositoryError, TraceId } from "@domain/shared"
+import type { NotFoundError, ProjectId, RepositoryError, TraceId } from "@domain/shared"
 import { type Effect, ServiceMap } from "effect"
 import type { AnnotationQueueItem } from "../entities/annotation-queue-items.ts"
 
@@ -53,6 +53,48 @@ export interface BulkInsertAnnotationQueueItemInput {
   readonly items: ReadonlyArray<{ readonly traceId: TraceId; readonly traceCreatedAt: Date }>
 }
 
+export interface GetAdjacentItemsInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly currentItemId: string
+}
+
+export interface AdjacentItems {
+  readonly previousItemId: string | null
+  readonly nextItemId: string | null
+}
+
+export interface GetQueuePositionInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly currentItemId: string
+}
+
+export interface QueuePosition {
+  readonly currentIndex: number
+  readonly totalItems: number
+}
+
+export interface UpdateAnnotationQueueItemInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly itemId: string
+  readonly completedAt?: Date | null
+  readonly completedBy?: string | null
+  readonly reviewStartedAt?: Date | null
+}
+
+export interface GetNextUncompletedItemInput {
+  readonly projectId: ProjectId
+  readonly queueId: string
+  readonly currentItemId: string
+}
+
+export interface ListByTraceIdInput {
+  readonly projectId: ProjectId
+  readonly traceId: string
+}
+
 export interface AnnotationQueueItemRepositoryShape {
   listByQueue(input: ListAnnotationQueueItemsInput): Effect.Effect<AnnotationQueueItemListPage, RepositoryError>
   findById(input: FindAnnotationQueueItemInput): Effect.Effect<AnnotationQueueItem | null, RepositoryError>
@@ -70,6 +112,15 @@ export interface AnnotationQueueItemRepositoryShape {
   bulkInsertIfNotExists(
     input: BulkInsertAnnotationQueueItemInput,
   ): Effect.Effect<{ insertedCount: number }, RepositoryError>
+  listByTraceId(input: ListByTraceIdInput): Effect.Effect<readonly AnnotationQueueItem[], RepositoryError>
+  getAdjacentItems(input: GetAdjacentItemsInput): Effect.Effect<AdjacentItems, RepositoryError>
+  getQueuePosition(input: GetQueuePositionInput): Effect.Effect<QueuePosition, RepositoryError>
+  update(input: UpdateAnnotationQueueItemInput): Effect.Effect<AnnotationQueueItem, RepositoryError | NotFoundError>
+  /**
+   * Finds the first uncompleted item in the queue ordered by `traceCreatedAt DESC`.
+   * Returns null if all items in the queue are completed.
+   */
+  getNextUncompletedItem(input: GetNextUncompletedItemInput): Effect.Effect<string | null, RepositoryError>
 }
 
 export class AnnotationQueueItemRepository extends ServiceMap.Service<

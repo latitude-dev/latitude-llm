@@ -47,45 +47,33 @@ export const getEnvironment = () => process.env.LAT_OBSERVABILITY_ENVIRONMENT ||
 
 export const isObservabilityEnabled = () => parseBooleanEnv(process.env.LAT_OBSERVABILITY_ENABLED, false)
 
-export type ObservabilityTracingProvider = "otlp" | "datadog"
-
-export const getTracingProvider = (): ObservabilityTracingProvider => {
-  const raw = process.env.LAT_OBSERVABILITY_TRACING_PROVIDER?.trim().toLowerCase()
-  if (raw === "datadog" || raw === "dd-trace") {
-    return "datadog"
-  }
-  return "otlp"
-}
-
 export const getServiceName = (state: ObservabilityState, scope: string) =>
   state.serviceName || process.env.LAT_OBSERVABILITY_SERVICE_NAME || scope
 
-const normalizeTelemetryEnvironment = (value: string) => value.trim().toLowerCase()
+const defaultOtlpTracesEndpointFromAgentHost = (): string | undefined => {
+  const host = process.env.DD_AGENT_HOST?.trim()
+  if (!host) {
+    return undefined
+  }
+
+  // ECS Fargate + Datadog Agent sidecar: OTLP HTTP on 4318 (see infra/lib/ecs.ts).
+  // Task definitions from the dd-trace-only era omitted LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT;
+  // infer the same URL the agent exposes when DD_AGENT_HOST is set (always on our ECS tasks).
+  return `http://${host}:4318/v1/traces`
+}
 
 export const getTracesConfig = (): TracesConfig | undefined => {
   const explicitEndpoint =
     process.env.LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT || process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
 
-  if (!explicitEndpoint) return undefined
+  const endpoint = explicitEndpoint || defaultOtlpTracesEndpointFromAgentHost()
+
+  if (!endpoint) return undefined
 
   return {
-    endpoint: explicitEndpoint,
+    endpoint,
     headers: {
       ...parseHeaders(process.env.LAT_OBSERVABILITY_OTLP_HEADERS),
     },
   }
-}
-
-/** Base URL for Latitude OTLP ingest (no `/v1/traces` suffix). */
-export const resolveLatitudeTelemetryIngestBaseUrl = (telemetryEnvironment: string): string => {
-  const normalized = normalizeTelemetryEnvironment(telemetryEnvironment)
-  if (normalized === "staging") {
-    return "https://staging-ingest.latitude.so"
-  }
-
-  if (normalized === "production") {
-    return "https://ingest.latitude.so"
-  }
-
-  return "http://localhost:3002"
 }

@@ -42,16 +42,19 @@ export function ToolCallBlock({
 
   return (
     <div
-      className={cn("flex flex-col rounded-lg overflow-hidden border max-w-[600px]", {
+      className={cn("flex min-w-0 max-w-full flex-col overflow-hidden rounded-lg border sm:max-w-[600px]", {
         "border-border": !isError,
         "border-destructive": isError,
       })}
     >
       {/* biome-ignore lint/a11y/noStaticElementInteractions: row is a pointer-only hit target; chevron Button handles keyboard disclosure */}
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: same — toggle is available via the chevron control */}
-      <div className="flex flex-row items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50" onClick={toggleOpen}>
+      <div
+        className="flex min-w-0 flex-row items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50"
+        onClick={toggleOpen}
+      >
         <WrenchIcon className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="flex-1 text-left">
+        <span className="min-w-0 flex-1 text-left">
           <Text.Mono size="h6">{call.name}</Text.Mono>
         </span>
         <ToolCallStatusIcon result={result} />
@@ -91,12 +94,14 @@ export function ToolCallBlock({
         </Button>
       </div>
 
-      <div id={panelId} className={cn("flex flex-col", !open && "hidden")}>
-        <pre className="overflow-auto border-y border-border bg-muted p-3 text-xs">{formatJson(call.arguments)}</pre>
+      <div id={panelId} className={cn("flex min-w-0 flex-col", !open && "hidden")}>
+        <pre className="max-w-full overflow-auto border-y border-border bg-muted p-3 text-xs">
+          {formatJson(call.arguments)}
+        </pre>
         {result && (
-          <div className="flex flex-col p-3">
+          <div className="flex min-w-0 flex-col p-3">
             <pre
-              className={cn("overflow-auto rounded-lg p-3 text-xs", {
+              className={cn("max-w-full overflow-auto rounded-lg p-3 text-xs", {
                 "bg-muted": !isError,
                 "bg-destructive-muted": isError,
               })}
