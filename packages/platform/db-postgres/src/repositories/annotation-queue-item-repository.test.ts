@@ -950,6 +950,279 @@ describe("AnnotationQueueItemRepositoryLive", () => {
     })
   })
 
+  describe("insertManyAcrossQueues", () => {
+    it("inserts one trace into multiple queues and returns inserted queue IDs", async () => {
+      const QUEUE_A = makeId("cross_queue_a")
+      const QUEUE_B = makeId("cross_queue_b")
+      const QUEUE_C = makeId("cross_queue_c")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values([
+        {
+          id: QUEUE_A,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Cross queue A",
+          slug: "cross-queue-a",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 0,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+        {
+          id: QUEUE_B,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Cross queue B",
+          slug: "cross-queue-b",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 0,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+        {
+          id: QUEUE_C,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Cross queue C",
+          slug: "cross-queue-c",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 0,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+      ])
+
+      const traceId = TraceId(makeTrace("cross_trace"))
+      const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
+
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.insertManyAcrossQueues({
+            projectId: PROJECT_ID,
+            traceId,
+            traceCreatedAt,
+            queueIds: [QUEUE_A, QUEUE_B, QUEUE_C],
+          })
+        }),
+      )
+
+      expect(result.insertedQueueIds).toHaveLength(3)
+      expect(new Set(result.insertedQueueIds)).toEqual(new Set([QUEUE_A, QUEUE_B, QUEUE_C]))
+
+      // Verify items were created in each queue
+      for (const queueId of [QUEUE_A, QUEUE_B, QUEUE_C]) {
+        const page = await runWithLive(
+          Effect.gen(function* () {
+            const repo = yield* AnnotationQueueItemRepository
+            return yield* repo.listByQueue({
+              projectId: PROJECT_ID,
+              queueId,
+              options: { limit: 100 },
+            })
+          }),
+        )
+        expect(page.items).toHaveLength(1)
+        expect(page.items[0]?.traceId).toBe(traceId)
+      }
+    })
+
+    it("returns empty array when given empty queueIds", async () => {
+      const result = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.insertManyAcrossQueues({
+            projectId: PROJECT_ID,
+            traceId: TraceId(makeTrace("empty_test")),
+            traceCreatedAt: new Date(),
+            queueIds: [],
+          })
+        }),
+      )
+
+      expect(result.insertedQueueIds).toHaveLength(0)
+    })
+
+    it("skips queues where trace already exists and returns only new inserts", async () => {
+      const QUEUE_D = makeId("cross_queue_d")
+      const QUEUE_E = makeId("cross_queue_e")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values([
+        {
+          id: QUEUE_D,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Cross queue D",
+          slug: "cross-queue-d",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 0,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+        {
+          id: QUEUE_E,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Cross queue E",
+          slug: "cross-queue-e",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 0,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+      ])
+
+      const traceId = TraceId(makeTrace("partial_trace"))
+      const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
+
+      // First insert into QUEUE_D only
+      const firstResult = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.insertManyAcrossQueues({
+            projectId: PROJECT_ID,
+            traceId,
+            traceCreatedAt,
+            queueIds: [QUEUE_D],
+          })
+        }),
+      )
+      expect(firstResult.insertedQueueIds).toEqual([QUEUE_D])
+
+      // Second insert into both - should only insert into QUEUE_E
+      const secondResult = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueItemRepository
+          return yield* repo.insertManyAcrossQueues({
+            projectId: PROJECT_ID,
+            traceId,
+            traceCreatedAt,
+            queueIds: [QUEUE_D, QUEUE_E],
+          })
+        }),
+      )
+
+      expect(secondResult.insertedQueueIds).toHaveLength(1)
+      expect(secondResult.insertedQueueIds).toEqual([QUEUE_E])
+    })
+
+    it("works correctly with incrementTotalItemsMany for batch counter updates", async () => {
+      const QUEUE_F = makeId("cross_queue_f")
+      const QUEUE_G = makeId("cross_queue_g")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values([
+        {
+          id: QUEUE_F,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Cross queue F",
+          slug: "cross-queue-f",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 5,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+        {
+          id: QUEUE_G,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Cross queue G",
+          slug: "cross-queue-g",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 3,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+      ])
+
+      const traceId = TraceId(makeTrace("batch_counter"))
+      const traceCreatedAt = new Date("2025-04-01T10:00:00.000Z")
+
+      await runWithBothLive(
+        Effect.gen(function* () {
+          const itemsRepo = yield* AnnotationQueueItemRepository
+          const queuesRepo = yield* AnnotationQueueRepository
+
+          const { insertedQueueIds } = yield* itemsRepo.insertManyAcrossQueues({
+            projectId: PROJECT_ID,
+            traceId,
+            traceCreatedAt,
+            queueIds: [QUEUE_F, QUEUE_G],
+          })
+
+          yield* queuesRepo.incrementTotalItemsMany({
+            projectId: PROJECT_ID,
+            queueIds: insertedQueueIds,
+          })
+        }),
+      )
+
+      const queueF = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: QUEUE_F })
+        }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      )
+      const queueG = await Effect.runPromise(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: QUEUE_G })
+        }).pipe(withPostgres(AnnotationQueueRepositoryLive, pg.adminPostgresClient, ORG_ID)),
+      )
+
+      expect(queueF?.totalItems).toBe(6) // 5 + 1
+      expect(queueG?.totalItems).toBe(4) // 3 + 1
+    })
+  })
+
   describe("getAdjacentItems", () => {
     it("returns prev and next for item in middle of list", async () => {
       const result = await runWithLive(

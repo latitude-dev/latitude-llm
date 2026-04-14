@@ -1,5 +1,6 @@
 import { AnnotationQueueRepository } from "@domain/annotation-queues"
 import { CacheStore, generateId, OrganizationId, ProjectId, RepositoryError } from "@domain/shared"
+import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { beforeAll, describe, expect, it } from "vitest"
 import { annotationQueues } from "../schema/annotation-queues.ts"
@@ -430,6 +431,201 @@ describe("AnnotationQueueRepositoryLive", () => {
 
       expect(wasInserted).toBe(true)
       expect(deletedKeys).toEqual([`org:${ORG_ID}:projects:${PROJECT_ID}:system-queues`])
+    })
+  })
+
+  describe("incrementTotalItemsMany", () => {
+    it("increments totalItems for multiple queues in a single operation", async () => {
+      const QUEUE_M1 = makeId("inc_many_q1")
+      const QUEUE_M2 = makeId("inc_many_q2")
+      const QUEUE_M3 = makeId("inc_many_q3")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values([
+        {
+          id: QUEUE_M1,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Inc many queue 1",
+          slug: "inc-many-queue-1",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 10,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+        {
+          id: QUEUE_M2,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Inc many queue 2",
+          slug: "inc-many-queue-2",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 5,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+        {
+          id: QUEUE_M3,
+          organizationId: ORG_ID,
+          projectId: PROJECT_ID,
+          system: false,
+          name: "Inc many queue 3",
+          slug: "inc-many-queue-3",
+          description: "",
+          instructions: "",
+          settings: emptySettings,
+          assignees: [],
+          totalItems: 0,
+          completedItems: 0,
+          deletedAt: null,
+          createdAt: base,
+          updatedAt: base,
+        },
+      ])
+
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          yield* repo.incrementTotalItemsMany({
+            projectId: PROJECT_ID,
+            queueIds: [QUEUE_M1, QUEUE_M2, QUEUE_M3],
+          })
+        }),
+      )
+
+      const q1 = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: QUEUE_M1 })
+        }),
+      )
+      const q2 = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: QUEUE_M2 })
+        }),
+      )
+      const q3 = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: QUEUE_M3 })
+        }),
+      )
+
+      expect(q1?.totalItems).toBe(11) // 10 + 1
+      expect(q2?.totalItems).toBe(6) // 5 + 1
+      expect(q3?.totalItems).toBe(1) // 0 + 1
+    })
+
+    it("does nothing when given empty queueIds array", async () => {
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          yield* repo.incrementTotalItemsMany({
+            projectId: PROJECT_ID,
+            queueIds: [],
+          })
+        }),
+      )
+
+      // No error thrown - operation completes successfully
+    })
+
+    it("only increments queues that exist and match projectId", async () => {
+      const QUEUE_EXISTS = makeId("inc_exists")
+      const QUEUE_NONEXISTENT = makeId("inc_noexist")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values({
+        id: QUEUE_EXISTS,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Exists queue",
+        slug: "exists-queue",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 7,
+        completedItems: 0,
+        deletedAt: null,
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      // Include both existing and non-existing queue IDs
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          yield* repo.incrementTotalItemsMany({
+            projectId: PROJECT_ID,
+            queueIds: [QUEUE_EXISTS, QUEUE_NONEXISTENT],
+          })
+        }),
+      )
+
+      const existingQueue = await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          return yield* repo.findByIdInProject({ projectId: PROJECT_ID, queueId: QUEUE_EXISTS })
+        }),
+      )
+
+      expect(existingQueue?.totalItems).toBe(8) // 7 + 1
+    })
+
+    it("does not increment deleted queues", async () => {
+      const QUEUE_DELETED = makeId("inc_deleted")
+      const db = pg.db
+      const base = new Date()
+
+      await db.insert(annotationQueues).values({
+        id: QUEUE_DELETED,
+        organizationId: ORG_ID,
+        projectId: PROJECT_ID,
+        system: false,
+        name: "Deleted queue for inc",
+        slug: "deleted-queue-for-inc",
+        description: "",
+        instructions: "",
+        settings: emptySettings,
+        assignees: [],
+        totalItems: 5,
+        completedItems: 0,
+        deletedAt: new Date("2025-01-01T00:00:00.000Z"),
+        createdAt: base,
+        updatedAt: base,
+      })
+
+      await runWithLive(
+        Effect.gen(function* () {
+          const repo = yield* AnnotationQueueRepository
+          yield* repo.incrementTotalItemsMany({
+            projectId: PROJECT_ID,
+            queueIds: [QUEUE_DELETED],
+          })
+        }),
+      )
+
+      // Query directly since findByIdInProject excludes deleted queues
+      const rows = await db.select().from(annotationQueues).where(eq(annotationQueues.id, QUEUE_DELETED))
+
+      expect(rows[0]?.totalItems).toBe(5) // Unchanged
     })
   })
 })

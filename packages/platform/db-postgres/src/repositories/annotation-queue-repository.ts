@@ -7,7 +7,7 @@ import {
   evictProjectSystemQueuesUseCase,
 } from "@domain/annotation-queues"
 import { ProjectId, RepositoryError, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, asc, desc, eq, gt, isNull, lt, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { annotationQueues } from "../schema/annotation-queues.ts"
@@ -286,6 +286,33 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             ),
           ),
 
+      listLiveQueuesByProject: ({ projectId }) =>
+        sqlClient
+          .query((db, organizationId) =>
+            db
+              .select()
+              .from(annotationQueues)
+              .where(
+                and(
+                  eq(annotationQueues.organizationId, organizationId),
+                  eq(annotationQueues.projectId, projectId),
+                  isNull(annotationQueues.deletedAt),
+                  sql`${annotationQueues.settings}->'filter' IS NOT NULL`,
+                ),
+              )
+              .orderBy(annotationQueues.createdAt),
+          )
+          .pipe(
+            Effect.map((rows) => rows.map(toDomainQueue)),
+            Effect.mapError(
+              (cause) =>
+                new RepositoryError({
+                  operation: "listLiveQueuesByProject",
+                  cause,
+                }),
+            ),
+          ),
+
       findSystemQueueBySlugInProject: ({ projectId, queueSlug }) =>
         sqlClient
           .query((db, organizationId) =>
@@ -441,6 +468,38 @@ export const AnnotationQueueRepositoryLive = Layer.effect(
             ),
             Effect.tap((queue) => evictSystemQueueCache(queue)),
           ),
+
+      incrementTotalItemsMany: ({ projectId, queueIds }) =>
+        queueIds.length === 0
+          ? Effect.void
+          : sqlClient
+              .query((db, organizationId) =>
+                db
+                  .update(annotationQueues)
+                  .set({
+                    totalItems: sql`${annotationQueues.totalItems} + 1`,
+                    updatedAt: new Date(),
+                  })
+                  .where(
+                    and(
+                      eq(annotationQueues.organizationId, organizationId),
+                      eq(annotationQueues.projectId, projectId),
+                      inArray(annotationQueues.id, [...queueIds]),
+                      isNull(annotationQueues.deletedAt),
+                    ),
+                  ),
+              )
+              .pipe(
+                Effect.asVoid,
+                Effect.mapError(
+                  (cause) =>
+                    new RepositoryError({
+                      operation: "incrementTotalItemsMany",
+                      cause,
+                    }),
+                ),
+              ),
+
       incrementCompletedItems: ({ projectId, queueId, delta }) =>
         sqlClient
           .query((db, organizationId) =>

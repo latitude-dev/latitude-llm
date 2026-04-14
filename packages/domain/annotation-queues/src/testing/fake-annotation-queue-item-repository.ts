@@ -120,6 +120,34 @@ export const createFakeAnnotationQueueItemRepository = (
       return Effect.succeed({ insertedCount })
     },
 
+    insertManyAcrossQueues: ({ projectId, traceId, traceCreatedAt, queueIds }) => {
+      const insertedQueueIds: string[] = []
+      for (const queueId of queueIds) {
+        const exists = [...items.values()].some(
+          (i) => i.projectId === projectId && i.queueId === queueId && i.traceId === traceId,
+        )
+        if (exists) continue
+
+        const now = new Date()
+        const newItem: AnnotationQueueItem = {
+          id: AnnotationQueueItemId(generateId()),
+          organizationId: "",
+          projectId,
+          queueId: AnnotationQueueId(queueId),
+          traceId,
+          traceCreatedAt,
+          completedAt: null,
+          completedBy: null,
+          reviewStartedAt: null,
+          createdAt: now,
+          updatedAt: now,
+        }
+        items.set(newItem.id, newItem)
+        insertedQueueIds.push(queueId)
+      }
+      return Effect.succeed({ insertedQueueIds })
+    },
+
     ...overrides,
   }
 
