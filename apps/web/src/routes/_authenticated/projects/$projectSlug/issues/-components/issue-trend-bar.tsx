@@ -2,7 +2,7 @@ import { ChartSkeleton, Text, TooltipContent, TooltipProvider, TooltipRoot, Tool
 import { formatCount } from "@repo/utils"
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
-const MAX_VISIBLE_BUCKET_LABELS = 6
+const DEFAULT_MAX_VISIBLE_BUCKET_LABELS = 6
 const MIN_VISIBLE_BAR_HEIGHT_PERCENT = 12
 const MAX_VISIBLE_BAR_HEIGHT_PERCENT = 88
 const BAR_TOP_HEADROOM_PERCENT = 100 - MAX_VISIBLE_BAR_HEIGHT_PERCENT
@@ -40,13 +40,19 @@ function resolveBarClasses(input: {
   return input.barVariant === "primary" ? DEFAULT_PRIMARY_BAR_CLASSES : DEFAULT_MUTED_BAR_CLASSES
 }
 
-function shouldShowBucketLabel(index: number, totalBuckets: number) {
-  if (totalBuckets <= MAX_VISIBLE_BUCKET_LABELS) {
-    return true
+function getVisibleBucketLabelIndices(totalBuckets: number, maxVisibleBucketLabels: number): ReadonlySet<number> {
+  if (totalBuckets <= 0) {
+    return new Set()
   }
 
-  const interval = Math.max(1, Math.ceil(totalBuckets / MAX_VISIBLE_BUCKET_LABELS))
-  return index % interval === 0 || index === totalBuckets - 1
+  if (totalBuckets <= maxVisibleBucketLabels) {
+    return new Set(Array.from({ length: totalBuckets }, (_, index) => index))
+  }
+
+  const labelCount = Math.max(2, maxVisibleBucketLabels)
+  return new Set(
+    Array.from({ length: labelCount }, (_, index) => Math.round((index * (totalBuckets - 1)) / (labelCount - 1))),
+  )
 }
 
 function toVisibleHeightPercent(count: number, maxCount: number): number {
@@ -63,6 +69,8 @@ export function IssueTrendBar({
   isLoading = false,
   emptyLabel = "No issue occurrences",
   showLabels = true,
+  labelLayout = "bucket",
+  maxVisibleBucketLabels = DEFAULT_MAX_VISIBLE_BUCKET_LABELS,
   barVariant = "muted",
   states = [],
   resolvedAt = null,
@@ -74,6 +82,8 @@ export function IssueTrendBar({
   readonly isLoading?: boolean
   readonly emptyLabel?: string
   readonly showLabels?: boolean
+  readonly labelLayout?: "bucket" | "floating"
+  readonly maxVisibleBucketLabels?: number
   readonly barVariant?: "muted" | "primary"
   readonly states?: readonly string[]
   readonly resolvedAt?: string | null
@@ -98,6 +108,7 @@ export function IssueTrendBar({
     tooltipLabel: formatDayBucketTooltipLabel(bucket.bucket),
     count: bucket.count,
   }))
+  const visibleBucketLabelIndices = getVisibleBucketLabelIndices(chartBuckets.length, maxVisibleBucketLabels)
   const maxCount = Math.max(...chartBuckets.map((bucket) => bucket.count), 1)
   const resolvedAtMs = resolvedAt ? new Date(resolvedAt).getTime() : null
   const resolvedDayBucketKey = resolvedAt ? resolvedAt.slice(0, 10) : null
@@ -219,19 +230,35 @@ export function IssueTrendBar({
         </div>
       </TooltipProvider>
       {showLabels ? (
-        <div className="flex min-w-0 items-start gap-1 pt-1">
-          {chartBuckets.map((bucket, index) => (
-            <div key={bucket.key} className="min-w-0 flex-1 text-center">
-              {shouldShowBucketLabel(index, chartBuckets.length) ? (
-                <Text.H6 className="truncate" color="foregroundMuted">
-                  {bucket.label}
-                </Text.H6>
-              ) : (
-                <span aria-hidden className="block h-4" />
-              )}
-            </div>
-          ))}
-        </div>
+        labelLayout === "floating" ? (
+          <div className="flex min-w-0 items-start gap-1 overflow-visible pt-1">
+            {chartBuckets.map((bucket, index) => (
+              <div key={bucket.key} className="relative h-5 min-w-0 flex-1 overflow-visible">
+                {visibleBucketLabelIndices.has(index) ? (
+                  <div className="absolute left-1/2 top-0 -translate-x-1/2 whitespace-nowrap">
+                    <Text.H6 color="foregroundMuted" noWrap>
+                      {bucket.label}
+                    </Text.H6>
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex min-w-0 items-start gap-1 pt-1">
+            {chartBuckets.map((bucket, index) => (
+              <div key={bucket.key} className="min-w-0 flex-1 text-center">
+                {visibleBucketLabelIndices.has(index) ? (
+                  <Text.H6 className="truncate" color="foregroundMuted" noWrap>
+                    {bucket.label}
+                  </Text.H6>
+                ) : (
+                  <span aria-hidden className="block h-4" />
+                )}
+              </div>
+            ))}
+          </div>
+        )
       ) : null}
     </div>
   )

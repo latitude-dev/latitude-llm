@@ -374,7 +374,7 @@ export const getIssueDetail = createServerFn({ method: "GET" })
             projectId,
             issueId: issue.id,
             options: {
-              lifecycle: "all",
+              lifecycle: "active",
               limit: 1000,
             },
           }),

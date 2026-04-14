@@ -14,7 +14,16 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowDownRightIcon, ArrowUpIcon, CheckIcon, TextAlignStartIcon } from "lucide-react"
+import {
+  ArrowDownIcon,
+  ArrowDownRightIcon,
+  ArrowUpIcon,
+  CheckIcon,
+  DownloadIcon,
+  TextAlignStartIcon,
+  UploadIcon,
+  XIcon,
+} from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import {
@@ -213,13 +222,16 @@ export function IssueDetailDrawer({
         rightActions={
           <>
             <Button
-              variant="outline"
+              variant="ghost"
+              className="text-foreground group-hover:text-secondary-foreground/80"
               disabled={issue === null || issue === undefined || isLifecycleLoading}
               onClick={() => void runLifecycleCommand(issue?.ignoredAt ? "unignore" : "ignore")}
             >
+              <Icon icon={issue?.ignoredAt ? UploadIcon : DownloadIcon} size="sm" />
               {issue?.ignoredAt ? "Unignore" : "Ignore"}
             </Button>
             <Button
+              variant="outline"
               disabled={issue === null || issue === undefined || isLifecycleLoading}
               onClick={() => {
                 if (issue?.resolvedAt) {
@@ -231,6 +243,7 @@ export function IssueDetailDrawer({
                 setResolveModalOpen(true)
               }}
             >
+              <Icon icon={issue?.resolvedAt ? XIcon : CheckIcon} size="sm" />
               {issue?.resolvedAt ? "Unresolve" : "Resolve"}
             </Button>
           </>
@@ -293,6 +306,8 @@ export function IssueDetailDrawer({
                   buckets={issue?.trend ?? []}
                   height={120}
                   isLoading={isLoading}
+                  labelLayout="floating"
+                  maxVisibleBucketLabels={4}
                   barVariant="primary"
                   states={issue?.states ?? []}
                   resolvedAt={issue?.resolvedAt ?? null}

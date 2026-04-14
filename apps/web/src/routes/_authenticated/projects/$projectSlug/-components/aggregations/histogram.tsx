@@ -71,7 +71,7 @@ export function Histogram({ projectId, filters, onRangeSelect }: HistogramProps)
   if (isError) {
     return (
       <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">
-        <Text.H6 color="destructive">Could not load histogram</Text.H6>
+        <Text.H6 color="destructive">Could not load analytics</Text.H6>
       </div>
     )
   }

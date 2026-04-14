@@ -226,10 +226,12 @@ export function AppSidebar({
   title,
   subtitle,
   children,
+  footer,
 }: {
   title: string
   subtitle?: ReactNode
   children: (props: { collapsed: boolean }) => ReactNode
+  footer?: (props: { collapsed: boolean }) => ReactNode
 }) {
   const autoCollapse = useShouldCollapseSidebar()
   const { value: collapsedPreference, setValue: setCollapsedPreference } = useLocalStorage<boolean | null>({
@@ -247,9 +249,9 @@ export function AppSidebar({
         "w-[280px]": !collapsed,
       })}
     >
-      <div className="flex flex-col shrink-0">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div
-          className={cn("flex flex-col gap-2 border-b border-border p-4", {
+          className={cn("flex shrink-0 flex-col gap-2 border-b border-border p-4", {
             "items-center": collapsed,
           })}
         >
@@ -285,13 +287,24 @@ export function AppSidebar({
           {!collapsed && subtitle ? <div className="min-w-0">{subtitle}</div> : null}
         </div>
 
-        <nav
-          className={cn("flex flex-col gap-1 p-4", {
-            "items-center": collapsed,
-          })}
-        >
-          {children({ collapsed })}
-        </nav>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <nav
+            className={cn("flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4 custom-scrollbar", {
+              "items-center": collapsed,
+            })}
+          >
+            {children({ collapsed })}
+          </nav>
+          {footer ? (
+            <nav
+              className={cn("flex shrink-0 flex-col gap-1 px-4 pb-4", {
+                "items-center": collapsed,
+              })}
+            >
+              {footer({ collapsed })}
+            </nav>
+          ) : null}
+        </div>
       </div>
     </aside>
   )

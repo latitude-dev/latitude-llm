@@ -44,6 +44,15 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
     <AppSidebar
       title={project.name}
       subtitle={<CopyableText value={project.slug} size="sm" tooltip="Copy project slug" />}
+      footer={({ collapsed }) => (
+        <NavItem
+          icon={SettingsIcon}
+          label="Settings"
+          to={`/projects/${projectSlug}/settings`}
+          active={isSettingsActive}
+          collapsed={collapsed}
+        />
+      )}
     >
       {({ collapsed }) => (
         <>
@@ -73,13 +82,6 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
             label="Datasets"
             to={`/projects/${projectSlug}/datasets`}
             active={isDatasetsActive}
-            collapsed={collapsed}
-          />
-          <NavItem
-            icon={SettingsIcon}
-            label="Settings"
-            to={`/projects/${projectSlug}/settings`}
-            active={isSettingsActive}
             collapsed={collapsed}
           />
         </>

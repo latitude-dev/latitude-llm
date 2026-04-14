@@ -452,7 +452,7 @@ export const listIssuesUseCase = (
             projectId: parsed.projectId,
             issueIds: pageIssueIds,
             options: {
-              lifecycle: "all",
+              lifecycle: "active",
               limit: 1000,
             },
           }),

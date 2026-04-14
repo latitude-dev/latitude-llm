@@ -125,7 +125,7 @@ export function InfiniteTable<T>({
   const lastRow = virtualRows[virtualRows.length - 1]
   const paddingBottom = lastRow ? virtualizer.getTotalSize() - lastRow.end : 0
   const showBlankSlate = !isLoading && data.length === 0
-  const blankSlateText = blankSlate && blankSlate === "string" ? blankSlate : "No data found."
+  const blankSlateText = blankSlate && blankSlate === "string" ? blankSlate : "No data"
   const blankSlateContent =
     showBlankSlate && blankSlate !== undefined ? (
       typeof blankSlate === "string" ? (

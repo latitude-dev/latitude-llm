@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority"
-import type { ComponentPropsWithRef } from "react"
+import type { ComponentPropsWithRef, ReactNode } from "react"
 
 import { cn } from "../../utils/cn.ts"
 
@@ -39,12 +39,13 @@ const statusDotVariants = cva("size-1.5 shrink-0 rounded-full", {
 export type StatusProps = Omit<ComponentPropsWithRef<"div">, "children"> &
   VariantProps<typeof statusVariants> & {
     readonly label: string
+    readonly indicator?: ReactNode | false
   }
 
-function Status({ ref, className, variant, label, ...props }: StatusProps) {
+function Status({ ref, className, variant, label, indicator, ...props }: StatusProps) {
   return (
     <div ref={ref} className={cn(statusVariants({ variant }), className)} {...props}>
-      <span className={cn(statusDotVariants({ variant }))} aria-hidden />
+      {indicator === false ? null : (indicator ?? <span className={cn(statusDotVariants({ variant }))} aria-hidden />)}
       <span className="min-w-0 truncate">{label}</span>
     </div>
   )

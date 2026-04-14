@@ -86,13 +86,28 @@ const createEvaluationRepository = (seed: readonly Evaluation[] = []) => {
     save: () => Effect.die("Unexpected EvaluationRepository.save in listIssuesUseCase test"),
     listByProjectId: () => Effect.die("Unexpected EvaluationRepository.listByProjectId in listIssuesUseCase test"),
     listByIssueId: () => Effect.die("Unexpected EvaluationRepository.listByIssueId in listIssuesUseCase test"),
-    listByIssueIds: ({ issueIds }) =>
+    listByIssueIds: ({ issueIds, options }) =>
       Effect.sync(() => {
         listByIssueIdsCalls.push(issueIds)
+        const filteredSeed = seed.filter((evaluation) => {
+          if (!issueIds.some((issueId) => issueId === evaluation.issueId)) {
+            return false
+          }
+
+          switch (options?.lifecycle) {
+            case "archived":
+              return evaluation.deletedAt === null && evaluation.archivedAt !== null
+            case "all":
+              return evaluation.deletedAt === null
+            default:
+              return evaluation.deletedAt === null && evaluation.archivedAt === null
+          }
+        })
+
         return {
-          items: seed.filter((evaluation) => issueIds.some((issueId) => issueId === evaluation.issueId)),
+          items: filteredSeed,
           hasMore: false,
-          limit: seed.length,
+          limit: filteredSeed.length,
           offset: 0,
         }
       }),
@@ -348,6 +363,12 @@ describe("listIssuesUseCase", () => {
         id: EvaluationId("1".repeat(24)),
         issueId: activeIssue.id,
         name: "Active monitor",
+      }),
+      makeEvaluation({
+        id: EvaluationId("9".repeat(24)),
+        issueId: activeIssue.id,
+        name: "Archived monitor for active issue",
+        archivedAt: new Date("2026-04-09T00:00:00.000Z"),
       }),
       makeEvaluation({
         id: EvaluationId("2".repeat(24)),
