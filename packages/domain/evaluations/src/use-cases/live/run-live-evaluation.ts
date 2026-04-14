@@ -2,6 +2,7 @@ import { EvaluationId, OrganizationId, ProjectId, type RepositoryError, TraceId 
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
+import { getLiveEvaluationEligibility } from "../../helpers.ts"
 import { EvaluationRepository } from "../../ports/evaluation-repository.ts"
 
 export interface RunLiveEvaluationInput {
@@ -26,7 +27,7 @@ export interface RunLiveEvaluationLoadedContext {
 export type RunLiveEvaluationResult =
   | {
       readonly action: "skipped"
-      readonly reason: "evaluation-not-found" | "trace-not-found"
+      readonly reason: "evaluation-not-found" | "trace-not-found" | "deleted" | "archived" | "paused"
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -41,7 +42,6 @@ export type RunLiveEvaluationError = RepositoryError
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
     const evaluationRepository = yield* EvaluationRepository
-    const traceRepository = yield* TraceRepository
     const projectId = ProjectId(input.projectId)
     const evaluation = yield* evaluationRepository
       .findById(EvaluationId(input.evaluationId))
@@ -60,6 +60,18 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       } satisfies RunLiveEvaluationResult
     }
 
+    const liveEvaluationEligibility = getLiveEvaluationEligibility(evaluation)
+
+    if (!liveEvaluationEligibility.eligible) {
+      return {
+        action: "skipped",
+        reason: liveEvaluationEligibility.reason,
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
+    const traceRepository = yield* TraceRepository
     const traceDetail = yield* traceRepository
       .findByTraceId({
         organizationId: OrganizationId(input.organizationId),

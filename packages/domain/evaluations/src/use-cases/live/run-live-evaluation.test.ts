@@ -65,7 +65,11 @@ function makeTraceDetail(overrides?: Partial<Pick<TraceDetail, "projectId" | "tr
   }
 }
 
-function makeEvaluation(overrides?: Partial<Pick<Evaluation, "id" | "organizationId" | "projectId" | "issueId">>) {
+function makeEvaluation(
+  overrides?: Partial<
+    Pick<Evaluation, "id" | "organizationId" | "projectId" | "issueId" | "trigger" | "archivedAt" | "deletedAt">
+  >,
+) {
   return evaluationSchema.parse({
     id: overrides?.id ?? INPUT.evaluationId,
     organizationId: overrides?.organizationId ?? INPUT.organizationId,
@@ -74,11 +78,11 @@ function makeEvaluation(overrides?: Partial<Pick<Evaluation, "id" | "organizatio
     name: "Live evaluation",
     description: "Detects the linked issue on live traces.",
     script: "const result = true",
-    trigger: defaultEvaluationTrigger(),
+    trigger: overrides?.trigger ?? defaultEvaluationTrigger(),
     alignment: emptyEvaluationAlignment("hash"),
     alignedAt: new Date("2026-01-01T00:00:00.000Z"),
-    archivedAt: null,
-    deletedAt: null,
+    archivedAt: overrides?.archivedAt ?? null,
+    deletedAt: overrides?.deletedAt ?? null,
     createdAt: new Date("2026-01-01T00:00:00.000Z"),
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   })
@@ -170,6 +174,117 @@ describe("runLiveEvaluationUseCase", () => {
     expect(result).toEqual({
       action: "skipped",
       reason: "evaluation-not-found",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(traceLoadCalls).toBe(0)
+  })
+
+  it("skips paused evaluations before loading trace context", async () => {
+    let traceLoadCalls = 0
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => {
+        traceLoadCalls += 1
+        return Effect.die("Trace should not be loaded for a paused evaluation")
+      },
+    })
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed(
+        makeEvaluation({
+          trigger: {
+            ...defaultEvaluationTrigger(),
+            sampling: 0,
+          },
+        }),
+      ),
+    )
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "paused",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(traceLoadCalls).toBe(0)
+  })
+
+  it("skips archived evaluations before loading trace context", async () => {
+    let traceLoadCalls = 0
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => {
+        traceLoadCalls += 1
+        return Effect.die("Trace should not be loaded for an archived evaluation")
+      },
+    })
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed(
+        makeEvaluation({
+          archivedAt: new Date("2026-04-02T00:00:00.000Z"),
+        }),
+      ),
+    )
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "archived",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(traceLoadCalls).toBe(0)
+  })
+
+  it("skips deleted evaluations before loading trace context", async () => {
+    let traceLoadCalls = 0
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => {
+        traceLoadCalls += 1
+        return Effect.die("Trace should not be loaded for a deleted evaluation")
+      },
+    })
+    const evaluationRepository = createEvaluationRepository(() =>
+      Effect.succeed(
+        makeEvaluation({
+          deletedAt: new Date("2026-04-03T00:00:00.000Z"),
+        }),
+      ),
+    )
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "deleted",
       evaluationId: INPUT.evaluationId,
       traceId: INPUT.traceId,
     })
