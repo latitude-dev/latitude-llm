@@ -1,5 +1,5 @@
 ---
-title: Simulation Reports
+title: Simulation Reporting
 description: Understand and act on simulation results
 ---
 
@@ -7,7 +7,7 @@ description: Understand and act on simulation results
   **Coming Soon** — Simulations are under active development and not yet available. The design below reflects what's planned.
 </Info>
 
-# Simulation Reports
+# Simulation Reporting
 
 After a simulation run, you get a report showing how your agent performed against each scenario and evaluation. Reports help you decide whether changes are safe to ship.
 

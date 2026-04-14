@@ -1,9 +1,9 @@
 ---
-title: Scores
+title: Scores Overview
 description: Understand how scores work as the universal measurement unit in Latitude
 ---
 
-# Scores
+# Scores Overview
 
 Scores are the universal measurement unit in Latitude. Every verdict on your agent's interactions — whether from an automated evaluation, a human annotation, or your own code — is stored as a score.
 

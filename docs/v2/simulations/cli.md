@@ -1,5 +1,5 @@
 ---
-title: Running Simulations
+title: Simulation CLI
 description: Use the Latitude CLI to run simulations locally or in CI
 ---
 
@@ -7,7 +7,7 @@ description: Use the Latitude CLI to run simulations locally or in CI
   **Coming Soon** — Simulations are under active development and not yet available. The design below reflects what's planned.
 </Info>
 
-# Running Simulations
+# Simulation CLI
 
 Simulations run through the **Latitude CLI**, a performant JavaScript/TypeScript tool that executes your agent against test scenarios and evaluates the results. The CLI is designed for both local development and CI/CD pipelines.
 
