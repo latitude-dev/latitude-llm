@@ -404,6 +404,7 @@ function createTaskDefinition(
           { name: "LAT_WEB_URL", value: webUrl },
           { name: "LAT_API_URL", value: apiUrl },
           { name: "LAT_INGEST_URL", value: ingestUrl },
+          { name: "LAT_LATITUDE_TELEMETRY_INGEST_URL", value: ingestUrl },
           { name: "LAT_BETTER_AUTH_URL", value: apiUrl },
           { name: "LAT_TRUSTED_ORIGINS", value: trustedOrigins },
           { name: "LAT_CORS_ALLOWED_ORIGINS", value: webUrl },
@@ -639,6 +640,7 @@ function createMigrationTaskDefinition(
 ): EcsTaskDefinition {
   const owner = process.env.GHCR_OWNER ?? "latitude-dev"
   const taskFamily = `${name}-migrations`
+  const latitudeTelemetryIngestUrl = `https://${config.domains.ingest}`
 
   const containerDefinitions = pulumi
     .all([
@@ -684,7 +686,10 @@ function createMigrationTaskDefinition(
               "awslogs-stream-prefix": "migrations",
             },
           },
-          environment: [{ name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" }],
+          environment: [
+            { name: "NODE_ENV", value: config.name === "production" ? "production" : "staging" },
+            { name: "LAT_LATITUDE_TELEMETRY_INGEST_URL", value: latitudeTelemetryIngestUrl },
+          ],
           secrets: [
             { name: "LAT_ADMIN_DATABASE_URL", valueFrom: dbSecretArn },
             { name: "CLICKHOUSE_MIGRATION_URL", valueFrom: clickhouseMigrationUrlArn },
