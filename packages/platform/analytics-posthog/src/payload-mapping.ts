@@ -27,6 +27,18 @@ export interface TrackedEventInput {
  * For system-initiated events without a user context (FirstTraceReceived,
  * SpanIngested, etc.) we fall back to an org-scoped pseudo-id.
  */
+/**
+ * Returns true when the event has a real user behind it — either via
+ * `actorUserId` (explicit) or `userId` (UserSignedUp / MemberJoined).
+ */
+const hasUserContext = (input: TrackedEventInput): boolean => {
+  const actorUserId = input.payload.actorUserId
+  if (typeof actorUserId === "string" && actorUserId.length > 0) return true
+  const userId = input.payload.userId
+  if (typeof userId === "string" && userId.length > 0) return true
+  return false
+}
+
 const resolveDistinctId = (input: TrackedEventInput): string => {
   const actorUserId = input.payload.actorUserId
   if (typeof actorUserId === "string" && actorUserId.length > 0) {
@@ -56,7 +68,13 @@ export const mapEventToPostHog = (input: TrackedEventInput): PostHogCaptureInput
     // Pass the original payload verbatim as properties. PostHog accepts
     // arbitrary JSON-serializable values; downstream analyses can project
     // whichever fields they care about.
-    properties: { ...input.payload },
+    properties: {
+      ...input.payload,
+      // System-initiated events (no user context) are captured as anonymous
+      // so PostHog doesn't create phantom person records for org pseudo-ids.
+      // Also up to 4x cheaper per PostHog's pricing model.
+      ...(!hasUserContext(input) ? { $process_person_profile: false } : {}),
+    },
     groups: { [POSTHOG_ORGANIZATION_GROUP]: input.organizationId },
     // CRITICAL: pass occurredAt through as `timestamp` so queue delays or
     // retries don't skew time-series analyses in PostHog.

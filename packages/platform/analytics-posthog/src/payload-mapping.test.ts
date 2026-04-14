@@ -25,7 +25,7 @@ describe("mapEventToPostHog", () => {
     expect(mapped.timestamp?.toISOString()).toBe(occurredAt)
   })
 
-  it("falls back to org distinctId when no actorUserId", () => {
+  it("falls back to org distinctId and skips person profile when no user context", () => {
     const mapped = mapEventToPostHog({
       eventName: "ScoreCreated",
       organizationId: "org-1",
@@ -34,6 +34,19 @@ describe("mapEventToPostHog", () => {
     })
 
     expect(mapped?.distinctId).toBe("org_org-1")
+    expect(mapped?.properties?.$process_person_profile).toBe(false)
+  })
+
+  it("does NOT set $process_person_profile for user-attributed events", () => {
+    const mapped = mapEventToPostHog({
+      eventName: "ApiKeyCreated",
+      organizationId: "org-1",
+      payload: { organizationId: "org-1", actorUserId: "user-1", apiKeyId: "k-1", name: "test" },
+      occurredAt,
+    })
+
+    expect(mapped?.distinctId).toBe("user-1")
+    expect(mapped?.properties?.$process_person_profile).toBeUndefined()
   })
 
   it("uses userId for UserSignedUp events", () => {
