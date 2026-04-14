@@ -150,6 +150,10 @@ export function createEcs(
     }`,
   })
 
+  // Cross-region inference profiles (e.g. eu.amazon.nova-lite-v1:0) and direct foundation
+  // model IDs both require InvokeModel on inference-profile and foundation-model ARNs.
+  // Read actions are required for inference profile discovery per AWS Bedrock docs.
+  // @see https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-prereq.html
   new aws.iam.RolePolicy(`${name}-bedrock-policy`, {
     role: taskRole.name,
     policy: JSON.stringify({
@@ -158,7 +162,16 @@ export function createEcs(
         {
           Effect: "Allow",
           Action: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
-          Resource: "*",
+          Resource: [
+            "arn:aws:bedrock:*::foundation-model/*",
+            "arn:aws:bedrock:*:*:inference-profile/*",
+            "arn:aws:bedrock:*:*:application-inference-profile/*",
+          ],
+        },
+        {
+          Effect: "Allow",
+          Action: ["bedrock:GetInferenceProfile", "bedrock:ListInferenceProfiles"],
+          Resource: ["arn:aws:bedrock:*:*:inference-profile/*", "arn:aws:bedrock:*:*:application-inference-profile/*"],
         },
       ],
     }),

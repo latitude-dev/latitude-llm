@@ -11,9 +11,10 @@ import {
   type GenerateResult,
 } from "@domain/ai"
 import { runWithAiTelemetry } from "@platform/ai-latitude"
-import { parseEnv, parseEnvOptional } from "@platform/env"
+import { parseEnvOptional } from "@platform/env"
 import { generateText, Output } from "ai"
 import { Effect, Layer } from "effect"
+import { resolveAmazonNovaBedrockModelId } from "./bedrock-nova-inference-model-id.ts"
 
 type GenerateTextCall = Parameters<typeof generateText>[0]
 type ProviderOptions = NonNullable<GenerateTextCall["providerOptions"]>
@@ -66,11 +67,20 @@ const getRequiredApiKey = (
     }),
   )
 
-const createBedrockProvider = (): Effect.Effect<ReturnType<typeof createAmazonBedrock>, AICredentialError> =>
+const createBedrockProvider = (): Effect.Effect<
+  { bedrock: ReturnType<typeof createAmazonBedrock>; region: string },
+  AICredentialError
+> =>
   Effect.gen(function* () {
-    const region = yield* parseEnv("LAT_AWS_REGION", "string", "eu-central-1").pipe(
-      Effect.mapError(() => mapCredentialError("Amazon Bedrock is unavailable: set LAT_AWS_REGION.")),
+    const latRegion = yield* parseEnvOptional("LAT_AWS_REGION", "string").pipe(
+      Effect.mapError(() =>
+        mapCredentialError("Amazon Bedrock credentials are invalid: LAT_AWS_REGION must be a string."),
+      ),
     )
+    const awsRegion = yield* parseEnvOptional("AWS_REGION", "string").pipe(
+      Effect.mapError(() => mapCredentialError("Amazon Bedrock credentials are invalid: AWS_REGION must be a string.")),
+    )
+    const region = latRegion ?? awsRegion ?? "eu-central-1"
     const accessKeyId = yield* parseEnvOptional("LAT_AWS_ACCESS_KEY_ID", "string").pipe(
       Effect.mapError(() =>
         mapCredentialError("Amazon Bedrock credentials are invalid: LAT_AWS_ACCESS_KEY_ID must be a string."),
@@ -94,7 +104,7 @@ const createBedrockProvider = (): Effect.Effect<ReturnType<typeof createAmazonBe
     const shouldUseCredentialProviderChain =
       apiKey === undefined && accessKeyId === undefined && secretAccessKey === undefined && sessionToken === undefined
 
-    return createAmazonBedrock({
+    const bedrock = createAmazonBedrock({
       region,
       ...(apiKey !== undefined ? { apiKey } : {}),
       ...(accessKeyId !== undefined && secretAccessKey !== undefined
@@ -110,6 +120,8 @@ const createBedrockProvider = (): Effect.Effect<ReturnType<typeof createAmazonBe
           }
         : {}),
     })
+
+    return { bedrock, region }
   })
 
 /**
@@ -131,7 +143,9 @@ export const createProviderModel = (
       )
     default:
       if (isSupportedBedrockProvider(provider)) {
-        return createBedrockProvider().pipe(Effect.map((bedrock) => bedrock(model)))
+        return createBedrockProvider().pipe(
+          Effect.map(({ bedrock, region }) => bedrock(resolveAmazonNovaBedrockModelId(model, region))),
+        )
       }
 
       return Effect.fail(
