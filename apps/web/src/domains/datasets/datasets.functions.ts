@@ -33,19 +33,13 @@ import {
   UnauthorizedError,
 } from "@domain/shared"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import {
-  getClickhouseClient,
-  getOutboxWriter,
-  getPostgresClient,
-  getQueuePublisher,
-  getStorageDisk,
-} from "../../server/clients.ts"
+import { getClickhouseClient, getPostgresClient, getQueuePublisher, getStorageDisk } from "../../server/clients.ts"
 import { applyMapping } from "./column-mapping.ts"
 
 const rowSelectionSchema = z.discriminatedUnion("mode", [
@@ -422,27 +416,11 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
         ...(data.id ? { id: DatasetId(data.id) } : {}),
         projectId: ProjectId(data.projectId),
         name: data.name,
+        actorUserId: userId,
       }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
-    )
-
-    const outboxWriter = getOutboxWriter()
-    await Effect.runPromise(
-      outboxWriter.write({
-        eventName: "DatasetCreated",
-        aggregateType: "dataset",
-        aggregateId: dataset.id,
-        organizationId,
-        payload: {
-          organizationId,
-          actorUserId: userId,
-          projectId: data.projectId,
-          datasetId: dataset.id,
-          name: dataset.name,
-        },
-      }),
     )
 
     return toDatasetRecord(dataset)
@@ -685,7 +663,7 @@ export const createDatasetFromTracesFunction = createServerFn({
           name: data.name,
           selection: toTraceSelection(data.selection),
         }).pipe(
-          withPostgres(DatasetRepositoryLive, pgClient, orgId),
+          withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
           withClickHouse(TraceRepositoryLive, chClient, orgId),
         ),

@@ -5,7 +5,7 @@ import { useOrganizationsCollection } from "../domains/organizations/organizatio
 import { getSession } from "../domains/sessions/session.functions.ts"
 import { authClient } from "../lib/auth-client.ts"
 import { resetPostHog } from "../lib/posthog/posthog-client.ts"
-import { PostHogIdentity, PostHogOrgGroup } from "../lib/posthog/posthog-provider.tsx"
+import { PostHogIdentity } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { BreadcrumbTrail } from "./_authenticated/-components/breadcrumb-trail.tsx"
 import { useRootThemePreference } from "./-root-route-data.ts"
@@ -169,13 +169,14 @@ function AuthenticatedLayout() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      {/* Keyed by userId so switching users remounts and re-runs reset→identify. */}
-      <PostHogIdentity key={user.id} userId={user.id} userEmail={user.email} userName={user.name} />
-      {/* Rendered only once org collection loads so the name is available.
-          Keyed by organizationId so org-switch (full reload) remounts. */}
-      {org ? (
-        <PostHogOrgGroup key={organizationId} organizationId={organizationId} organizationName={org.name} />
-      ) : null}
+      <PostHogIdentity
+        key={user.id}
+        userId={user.id}
+        userEmail={user.email}
+        userName={user.name}
+        organizationId={organizationId}
+        organizationName={org?.name}
+      />
       <NavHeader />
       <main className="w-full grow min-h-0 h-full relative overflow-y-auto">
         <Outlet />

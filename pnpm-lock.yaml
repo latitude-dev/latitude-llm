@@ -786,6 +786,9 @@ importers:
 
   packages/domain/datasets:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared
