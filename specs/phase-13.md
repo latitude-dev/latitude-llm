@@ -91,7 +91,7 @@ Implementation started with **PR 1**, and **PR 1 is now complete**.
 
 PR 1 is the semantic foundation for the rest of the phase: it locks the trigger rules, the idempotency model, and the execution seam so PR 2, PR 3, and PR 4 can implement workers without guessing.
 
-Active implementation work now starts with **PR 3** on `phase-13-part-3`.
+Active implementation work now starts with **PR 4**.
 
 ## Implementation Plan
 
@@ -269,18 +269,43 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 
 **Intent**: turn on the real trace completion signal and prove the whole pipeline end to end.
 
+**Status**: pending. PR 4 is now the active implementation work. It restores the spec default `live-traces:end` debounce of `5 minutes`, activates `TraceEnded`, moves the sibling fan-out behind that event, and closes the phase with end-to-end coverage plus docs reconciliation.
+
 **Responsibilities**:
 
+- restore the trace-end debounce default to `5 minutes`
 - activate `TraceEnded` publication from the debounced `live-traces:end` worker
 - own the rollout behavior for the sibling `TraceEnded` consumers that wake up at the same time
 - add end-to-end coverage for the live-monitoring pipeline
 - reconcile docs with the final Phase 13 behavior
-- **P13-PR4-1**: Replace the `live-traces:end` stub in `apps/workers/src/workers/live-traces.ts`
-- **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses
-- **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
-- **P13-PR4-4**: Decide and implement the rollout behavior for sibling `TraceEnded` consumers, especially `live-annotation-queues:curate`, so Phase 13 does not accidentally ship partial unrelated behavior
-- **P13-PR4-5**: Add end-to-end tests for:
+
+**To-Do**:
+
+- [ ] **P13-PR4-0**: Restore the trace-end debounce default to `5 minutes`
+  - update the named constant in `packages/domain/spans`
+  - update any worker/test expectations that currently assume `30 seconds`
+  - make the activated path match `specs/reliability.md`
+- [ ] **P13-PR4-1**: Replace the `live-traces:end` stub in `apps/workers/src/workers/live-traces.ts`
+  - add `TraceEnded` to the typed domain-event payload contract in `packages/domain/events`
+  - keep the worker orchestration-only
+- [ ] **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses
+  - keep the emitted payload trace-scoped: `{ organizationId, projectId, traceId }`
+  - rely on the upstream `live-traces:end` debounce window rather than introducing a second timer
+- [ ] **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
+  - pass `eventsPublisher` into `createLiveTracesWorker`
+  - keep the worker composition root thin
+- [ ] **P13-PR4-4**: Decide and implement the rollout behavior for sibling `TraceEnded` consumers, especially `live-annotation-queues:curate`, so Phase 13 does not accidentally ship partial unrelated behavior
+  - change `SpanIngested` handling in `apps/workers/src/workers/domain-events.ts` to publish debounced `live-traces:end`
+  - keep `projects:checkFirstTrace` on `SpanIngested`
+  - stop directly waking `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut` from `SpanIngested`
+  - fan out `TraceEnded` to `live-evaluations:enqueue`
+  - fan out `TraceEnded` to `live-annotation-queues:curate`
+  - fan out `TraceEnded` to `system-annotation-queues:fanOut`
+  - make the rollout explicit so activation does not double-run downstream work
+- [ ] **P13-PR4-5**: Add end-to-end tests for:
   - debounce reset behavior
+  - `SpanIngested -> live-traces:end`
+  - `live-traces:end -> TraceEnded`
   - `TraceEnded -> enqueue`
   - downstream execute behavior
   - turn selection
@@ -288,8 +313,12 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
   - direct issue assignment
   - analytics save timing
   - persisted duration, token, and cost accounting
-- **P13-PR4-6**: Reconcile docs drift around issue-linked monitor failures versus direct write-time issue assignment
-- **P13-PR4-7**: Mark this tracker with the final rollout behavior, final trigger semantics, and final docs updated once activation lands
+- [ ] **P13-PR4-6**: Reconcile docs drift around:
+  - the restored `5 minutes` debounce default
+  - `TraceEnded` as the activation and fan-out seam
+  - `system-annotation-queues:fanOut` naming
+  - issue-linked monitor failures versus direct write-time issue assignment
+- [ ] **P13-PR4-7**: Mark this tracker with the final rollout behavior, final trigger semantics, final debounce default, and final docs updated once activation lands
 
 **Exit gate**:
 
@@ -325,4 +354,3 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 - `apps/workers/src/workers/live-evaluations*.test.ts`
 - `packages/domain/evaluations/src/*.test.ts`
 - `packages/domain/scores/src/*.test.ts`
-
