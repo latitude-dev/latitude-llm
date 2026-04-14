@@ -3,6 +3,7 @@ import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
+import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
 
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -118,7 +119,14 @@ describe("domain-events dispatcher", () => {
     ])
 
     const firstTrace = published.find((p) => p.task === "checkFirstTrace")
+    const liveEvaluations = published.find((p) => p.queue === "live-evaluations")
+    const liveAnnotationQueues = published.find((p) => p.queue === "live-annotation-queues")
+    const systemAnnotationQueues = published.find((p) => p.queue === "system-annotation-queues")
+
     expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
+    expect(liveEvaluations?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
+    expect(liveAnnotationQueues?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
+    expect(systemAnnotationQueues?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
   })
 
   it("rejects legacy TraceEnded events", async () => {

@@ -281,7 +281,7 @@ Active implementation work now starts with **PR 4**.
 
 **To-Do**:
 
-- [ ] **P13-PR4-0**: Restore the trace-end debounce default to `5 minutes`
+- [x] **P13-PR4-0**: Restore the trace-end debounce default to `5 minutes`
   - update the named constant in `packages/domain/spans`
   - update any worker/test expectations that currently assume `30 seconds`
   - make the activated path match `specs/reliability.md`
