@@ -14,7 +14,7 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowDownRightIcon, ArrowUpIcon, RadarIcon, TextAlignStartIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowDownRightIcon, ArrowUpIcon, CheckIcon, TextAlignStartIcon } from "lucide-react"
 import { type ReactNode, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import {
@@ -25,7 +25,7 @@ import {
 import { applyIssueLifecycleAction, type IssueTraceRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
-import { formatSeenAge } from "./issue-formatters.ts"
+import { formatSeenAgeParts } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
 
@@ -35,6 +35,34 @@ function SummaryField({ label, value }: { readonly label: string; readonly value
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
       {value}
     </div>
+  )
+}
+
+function SeenAtSummaryValue({
+  lastSeenAtIso,
+  firstSeenAtIso,
+}: {
+  readonly lastSeenAtIso: string
+  readonly firstSeenAtIso: string
+}) {
+  const { lastSeenLabel, firstSeenLabel } = formatSeenAgeParts(lastSeenAtIso, firstSeenAtIso)
+
+  return (
+    <Text.H5 color="foreground" className="flex min-w-0 items-center gap-1 whitespace-nowrap">
+      <Tooltip asChild trigger={<span className="truncate">{lastSeenLabel}</span>}>
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="foregroundMuted">Last seen at</Text.H6>
+          <Text.H6B>{new Date(lastSeenAtIso).toLocaleString()}</Text.H6B>
+        </div>
+      </Tooltip>
+      <span className="text-muted-foreground">/</span>
+      <Tooltip asChild trigger={<span className="truncate">{firstSeenLabel}</span>}>
+        <div className="flex flex-col gap-0.5">
+          <Text.H6 color="foregroundMuted">First seen at</Text.H6>
+          <Text.H6B>{new Date(firstSeenAtIso).toLocaleString()}</Text.H6B>
+        </div>
+      </Tooltip>
+    </Text.H5>
   )
 }
 
@@ -233,10 +261,10 @@ export function IssueDetailDrawer({
                 value={
                   isLoading ? (
                     <Skeleton className="h-5 w-32" />
+                  ) : issue ? (
+                    <SeenAtSummaryValue lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />
                   ) : (
-                    <Text.H5 color="foreground">
-                      {issue ? formatSeenAge(issue.lastSeenAt, issue.firstSeenAt) : "-"}
-                    </Text.H5>
+                    "-"
                   )
                 }
               />
@@ -276,7 +304,7 @@ export function IssueDetailDrawer({
           </DetailSection>
 
           <DetailSection
-            icon={<Icon icon={RadarIcon} size="sm" />}
+            icon={<Icon icon={CheckIcon} size="sm" />}
             label="Evaluations"
             defaultOpen
             contentClassName="pl-0 max-h-none overflow-visible"
