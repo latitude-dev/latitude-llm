@@ -1,44 +1,14 @@
 import { DEFAULT_API_KEY_NAME } from "@domain/api-keys"
 import type { EventEnvelope } from "@domain/events"
 import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
-import type { QueueConsumer, QueueName, TaskHandlers } from "@domain/queue"
 import { createFakeQueuePublisher } from "@domain/queue/testing"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 
 import { hash } from "@repo/utils"
 import { Effect } from "effect"
 import { describe, expect, it } from "vitest"
+import { TestQueueConsumer } from "../testing/index.ts"
 import { createDomainEventsWorker } from "./domain-events.ts"
-
-type AnyTaskHandlers = Record<string, (payload: unknown) => Effect.Effect<void, unknown>>
-
-class TestQueueConsumer implements QueueConsumer {
-  handlers: AnyTaskHandlers | null = null
-
-  start() {
-    return Effect.void
-  }
-
-  stop() {
-    return Effect.void
-  }
-
-  subscribe<T extends QueueName>(_queue: T, handlers: TaskHandlers<T>) {
-    this.handlers = handlers as unknown as AnyTaskHandlers
-  }
-
-  async dispatchTask(task: string, payload: unknown): Promise<void> {
-    const handler = this.handlers?.[task]
-    if (!handler) throw new Error(`No handler for task ${task}`)
-    await Effect.runPromise(handler(payload))
-  }
-
-  dispatchTaskEffect(task: string, payload: unknown): Effect.Effect<void, unknown> {
-    const handler = this.handlers?.[task]
-    if (!handler) throw new Error(`No handler for task ${task}`)
-    return handler(payload)
-  }
-}
 
 const makeEnvelope = (name: string, payload: Record<string, unknown>, organizationId = "org-1"): EventEnvelope => ({
   id: `evt-${Date.now()}`,
@@ -73,7 +43,7 @@ describe("domain-events dispatcher", () => {
       organizationId: "org-1",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("magic-link-email")
@@ -96,7 +66,7 @@ describe("domain-events dispatcher", () => {
       "org-new",
     )
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     const apiKeysPublish = published.find((p) => p.queue === "api-keys")
     expect(apiKeysPublish?.task).toBe("create")
@@ -117,7 +87,7 @@ describe("domain-events dispatcher", () => {
       userId: "u-1",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("user-deletion")
@@ -138,7 +108,7 @@ describe("domain-events dispatcher", () => {
       traceId: "trace-abc",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
       "live-annotation-queues:curate",
@@ -161,7 +131,7 @@ describe("domain-events dispatcher", () => {
     })
 
     const result = await Effect.runPromise(
-      consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope)).pipe(
+      consumer.dispatchTaskEffect("domain-events", "dispatch", envelopeToDispatchPayload(envelope)).pipe(
         Effect.match({
           onFailure: (error) => ({
             ok: false as const,
@@ -188,7 +158,7 @@ describe("domain-events dispatcher", () => {
       "org-1",
     )
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     const projectsPublish = published.find((p) => p.queue === "projects")
     expect(projectsPublish?.task).toBe("provision")
@@ -207,7 +177,7 @@ describe("domain-events dispatcher", () => {
     const { consumer } = setupDispatcher()
 
     const envelope = makeEnvelope("UnknownEvent", { foo: "bar" })
-    const effect = consumer.dispatchTaskEffect("dispatch", envelopeToDispatchPayload(envelope))
+    const effect = consumer.dispatchTaskEffect("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     const result = await Effect.runPromise(
       effect.pipe(
@@ -237,7 +207,7 @@ describe("domain-events dispatcher", () => {
       issueId: "issue-42",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published).toHaveLength(1)
     expect(published[0]?.queue).toBe("issues")
@@ -256,7 +226,7 @@ describe("domain-events dispatcher", () => {
 
     const envelope = makeEnvelope("OrganizationCreated", { organizationId: "org-ph", name: "PH", slug: "ph" }, "org-ph")
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     // One to the primary handler (api-keys:create) and one to posthog-analytics.
     const byQueue = published.map((p) => `${p.queue}:${p.task}`).sort()
@@ -281,7 +251,7 @@ describe("domain-events dispatcher", () => {
       traceId: "trace-x",
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     expect(published.some((p) => p.queue === "posthog-analytics")).toBe(false)
   })
@@ -296,7 +266,7 @@ describe("domain-events dispatcher", () => {
       issueId: null,
     })
 
-    await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
+    await consumer.dispatchTask("domain-events", "dispatch", envelopeToDispatchPayload(envelope))
 
     // Primary handler publishes to issues + annotation-scores; ScoreCreated is
     // also in the PostHog whitelist so a third publish goes to posthog-analytics.

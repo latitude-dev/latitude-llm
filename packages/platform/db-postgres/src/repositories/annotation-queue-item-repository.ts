@@ -7,7 +7,6 @@ import {
   annotationQueueItemStatusRankFromTimestamps,
 } from "@domain/annotation-queues"
 import { NotFoundError, RepositoryError, SqlClient, type SqlClientShape, TraceId } from "@domain/shared"
-import { createId } from "@paralleldrive/cuid2"
 import { and, asc, desc, eq, gt, lt, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
@@ -223,7 +222,6 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
             db
               .insert(annotationQueueItems)
               .values({
-                id: createId(),
                 organizationId,
                 projectId,
                 queueId,
@@ -259,7 +257,6 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
               .insert(annotationQueueItems)
               .values(
                 items.map((item) => ({
-                  id: createId(),
                   organizationId,
                   projectId,
                   queueId,
@@ -283,6 +280,42 @@ export const AnnotationQueueItemRepositoryLive = Layer.effect(
 
           return { insertedCount: result.length }
         }).pipe(Effect.mapError((cause) => new RepositoryError({ operation: "bulkInsertIfNotExists", cause }))),
+
+      insertManyAcrossQueues: ({ projectId, traceId, traceCreatedAt, queueIds }) =>
+        Effect.gen(function* () {
+          if (queueIds.length === 0) {
+            return { insertedQueueIds: [] as readonly string[] }
+          }
+
+          const result = yield* sqlClient.query((db, organizationId) =>
+            db
+              .insert(annotationQueueItems)
+              .values(
+                queueIds.map((queueId) => ({
+                  organizationId,
+                  projectId,
+                  queueId,
+                  traceId,
+                  traceCreatedAt,
+                  completedAt: null,
+                  completedBy: null,
+                  reviewStartedAt: null,
+                })),
+              )
+              .onConflictDoNothing({
+                target: [
+                  annotationQueueItems.organizationId,
+                  annotationQueueItems.projectId,
+                  annotationQueueItems.queueId,
+                  annotationQueueItems.traceId,
+                ],
+              })
+              .returning({ queueId: annotationQueueItems.queueId }),
+          )
+
+          return { insertedQueueIds: result.map((r) => r.queueId) }
+        }).pipe(Effect.mapError((cause) => new RepositoryError({ operation: "insertManyAcrossQueues", cause }))),
+
       listByTraceId: ({ projectId, traceId }) =>
         sqlClient
           .query((db, organizationId) =>

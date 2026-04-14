@@ -50,6 +50,10 @@ export interface ListSystemQueuesInput {
   readonly projectId: ProjectId
 }
 
+export interface ListLiveQueuesInput {
+  readonly projectId: ProjectId
+}
+
 export interface IncrementCompletedItemsInput {
   readonly projectId: ProjectId
   readonly queueId: string
@@ -66,6 +70,10 @@ export interface AnnotationQueueRepositoryShape {
   }): Effect.Effect<AnnotationQueue | null, RepositoryError>
   findBySlugInProject(input: FindBySlugInput): Effect.Effect<AnnotationQueue | null, RepositoryError>
   listSystemQueuesByProject(input: ListSystemQueuesInput): Effect.Effect<readonly AnnotationQueue[], RepositoryError>
+  /**
+   * List all non-deleted live queues (queues with `settings.filter` present) for a project.
+   */
+  listLiveQueuesByProject(input: ListLiveQueuesInput): Effect.Effect<readonly AnnotationQueue[], RepositoryError>
   findSystemQueueBySlugInProject(
     input: FindSystemQueueBySlugInput,
   ): Effect.Effect<AnnotationQueue | null, RepositoryError>
@@ -84,6 +92,14 @@ export interface AnnotationQueueRepositoryShape {
     queueId: string
     delta?: number
   }): Effect.Effect<AnnotationQueue, RepositoryError>
+  /**
+   * Atomically increment the totalItems counter for multiple queues by 1 each.
+   * Uses a single UPDATE statement with WHERE id = ANY(...).
+   */
+  incrementTotalItemsMany(input: {
+    projectId: ProjectId
+    queueIds: readonly string[]
+  }): Effect.Effect<void, RepositoryError>
   /**
    * Adjust the completedItems counter by delta (positive to increment, negative to decrement).
    * The counter is clamped to prevent going below zero.

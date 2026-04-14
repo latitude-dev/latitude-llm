@@ -53,6 +53,13 @@ export interface BulkInsertAnnotationQueueItemInput {
   readonly items: ReadonlyArray<{ readonly traceId: TraceId; readonly traceCreatedAt: Date }>
 }
 
+export interface InsertManyAcrossQueuesInput {
+  readonly projectId: ProjectId
+  readonly traceId: TraceId
+  readonly traceCreatedAt: Date
+  readonly queueIds: readonly string[]
+}
+
 export interface GetAdjacentItemsInput {
   readonly projectId: ProjectId
   readonly queueId: string
@@ -112,6 +119,14 @@ export interface AnnotationQueueItemRepositoryShape {
   bulkInsertIfNotExists(
     input: BulkInsertAnnotationQueueItemInput,
   ): Effect.Effect<{ insertedCount: number }, RepositoryError>
+  /**
+   * Insert one trace into multiple queues in a single batch operation.
+   * Uses INSERT ... ON CONFLICT DO NOTHING and returns the queue IDs that had actual inserts.
+   * This is idempotent and safe for concurrent use.
+   */
+  insertManyAcrossQueues(
+    input: InsertManyAcrossQueuesInput,
+  ): Effect.Effect<{ insertedQueueIds: readonly string[] }, RepositoryError>
   listByTraceId(input: ListByTraceIdInput): Effect.Effect<readonly AnnotationQueueItem[], RepositoryError>
   getAdjacentItems(input: GetAdjacentItemsInput): Effect.Effect<AdjacentItems, RepositoryError>
   getQueuePosition(input: GetQueuePositionInput): Effect.Effect<QueuePosition, RepositoryError>

@@ -26,6 +26,13 @@ export const createFakeAnnotationQueueRepository = (
     listSystemQueuesByProject: ({ projectId }) =>
       Effect.sync(() => [...queues.values()].filter((q) => q.projectId === projectId && q.system && !q.deletedAt)),
 
+    listLiveQueuesByProject: ({ projectId }) =>
+      Effect.sync(() =>
+        [...queues.values()].filter(
+          (q) => q.projectId === projectId && q.settings.filter !== undefined && !q.deletedAt,
+        ),
+      ),
+
     findByIdInProject: ({ projectId, queueId }) =>
       Effect.sync(() => {
         const queue = queues.get(queueId)
@@ -93,6 +100,20 @@ export const createFakeAnnotationQueueRepository = (
         deletedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
+      }),
+
+    incrementTotalItemsMany: ({ queueIds }) =>
+      Effect.sync(() => {
+        for (const queueId of queueIds) {
+          const queue = queues.get(queueId)
+          if (queue) {
+            queues.set(queueId, {
+              ...queue,
+              totalItems: queue.totalItems + 1,
+              updatedAt: new Date(),
+            })
+          }
+        }
       }),
 
     ...overrides,
