@@ -23,26 +23,9 @@ Latitude V2 gives you a closed-loop system for monitoring, evaluating, and impro
 
 Every feature in Latitude feeds the next. Observability captures interactions. Evaluations score them. Failed scores surface issues. Issues generate new evaluations. Human annotations keep evaluations calibrated. Simulations prevent regressions before they reach production.
 
-```mermaid
-graph LR
-    T["🔭 Telemetry"] --> O["📊 Observability"]
-    O --> E["⚙️ Evaluations"]
-    E --> S["📏 Scores"]
-    S --> I["🚨 Issues"]
-    I -->|generate| E
-    S --> A["✍️ Annotations"]
-    A -->|calibrate| E
-    E --> Sim["🧪 Simulations"]
-    Sim -->|prevent regressions| T
-
-    style T fill:#0080FF,color:#fff,stroke:none
-    style O fill:#0066CC,color:#fff,stroke:none
-    style E fill:#3399FF,color:#fff,stroke:none
-    style S fill:#0080FF,color:#fff,stroke:none
-    style I fill:#E63948,color:#fff,stroke:none
-    style A fill:#FEC61A,color:#071324,stroke:none
-    style Sim fill:#0066CC,color:#fff,stroke:none
-```
+<Frame>
+  <img src="/images/getting-started/how-latitude-works.png" alt="How Latitude Works — the continuous improvement cycle for AI agent reliability" />
+</Frame>
 
 The result is a continuous improvement cycle where your agents get better with every interaction.
 
