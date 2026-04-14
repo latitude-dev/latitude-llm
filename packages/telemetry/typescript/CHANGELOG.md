@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.4] - 2026-04-14
+
+### Fixed
+
+- **Provider SDK version coupling** — moved provider SDK packages (`openai`, `@anthropic-ai/sdk`, etc.) from `optionalDependencies` to `devDependencies` so they are no longer installed alongside `@latitude-data/telemetry`. Users can now use any compatible version of their provider SDK without conflicts.
+- **Bumped all Traceloop instrumentations to `^0.25.0`** — notably extends OpenAI support from `>=4 <6` to `>=4 <7`, fixing auto-instrumentation for users on `openai@6.x`.
+
 ## [3.0.0-alpha.3] - 2026-04-07
 
 ### Added
