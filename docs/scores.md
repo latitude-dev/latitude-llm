@@ -20,7 +20,7 @@ Scores use an intentional Postgres + ClickHouse split:
 This split exists because mutable score lifecycle does not fit ClickHouse well:
 
 - score rows can start as drafts
-- failed non-errored scores only become immutable after `issue_id` is assigned
+- most failed non-errored scores only become immutable after `issue_id` is assigned
 - human annotation edits should update one canonical row instead of creating replacement duplicates
 - score-table reads need immediate consistency, while aggregate analytics can tolerate ClickHouse lag
 
@@ -114,7 +114,7 @@ All score producers reuse one canonical Postgres-first write path:
 - clients that upload locally executed Latitude evaluation results reuse the same `/scores` route with `_evaluation: true`, evaluation-score metadata, and the evaluation CUID as `source_id`
 - custom scores written through `/scores` always stay unowned at write time and use issue discovery when they are eligible
 - evaluation scores written through `/scores` always stay unowned at write time; later centralized issue handling may resolve an already linked evaluation issue before similarity search starts
-- internal live evaluation execution writes passed monitor results unowned and writes failed non-errored issue-linked monitor results with `issueId = evaluation.issueId` immediately
+- internal live evaluation execution writes passed monitor results unowned, writes failed non-errored issue-linked monitor results with `issueId = evaluation.issueId` immediately, and writes errored monitor results as unowned immutable evaluation scores with `error != null`
 - annotation ingestion stays on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though annotations still persist canonical score rows
 - internal evaluation and simulation writers reuse the same score-validation and persistence path rather than maintaining a second storage model
 - source-specific metadata is validated exactly before persistence, so evaluation, annotation, and custom writers cannot drift into incompatible payload shapes
@@ -209,6 +209,7 @@ Publication rules:
 - non-draft passed or errored scores are saved to ClickHouse analytics immediately because they are already immutable
 - most non-draft failed non-errored scores stay only in Postgres until `issue_id` is assigned
 - failed non-errored issue-linked live monitor scores may already carry `issue_id` at the initial canonical write and then sync ClickHouse analytics immediately
+- errored live monitor scores stay unowned but still sync ClickHouse analytics immediately because `error != null` makes them immutable
 - other unowned non-draft failed non-errored scores request centralized issue handling through the transactional `ScoreCreated` outbox event, optionally carrying a selected `issueId` for published annotations
 - when an unowned failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - ClickHouse analytics save must be retry-safe and preserve at-most-one row per score id

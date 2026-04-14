@@ -241,7 +241,7 @@ For the initial reliability events, `SpanIngested` and `TraceEnded` publish dire
 - evaluations generated from issues are created from the issue surfaces when the user asks for them, rather than as an automatic issue-discovery side effect
 - issue-generated evaluation creation returns a `jobId` immediately and completes in the background; the frontend polls a Redis-backed status endpoint for that alignment job
 - issues may have several linked evaluations; explicit generation is not limited to a single linked monitor
-- live evaluation triggering is incremental on `TraceEnded`; the `domain-events` dispatcher publishes `live-evaluations:enqueue`, that task checks active evaluations project-wide, applies the shared `FilterSet` first, sampling second, then turn/debounce, and publishes `live-evaluations:execute` tasks for matches
+- live evaluation triggering is incremental on `TraceEnded`; the `domain-events` dispatcher publishes `live-evaluations:enqueue`, that task checks active evaluations project-wide, applies the shared `FilterSet` first, sampling second, then turn/debounce, and publishes `live-evaluations:execute` tasks for matches; the downstream execute path persists passed, failed, and errored evaluation-originated scores through the canonical score writer
 - initial issue-linked evaluation generation requires at least one failed, non-errored, non-draft human annotation linked to that issue and does not require any negative examples
 - sparse first-pass monitors may be weakly aligned at first, but annotation-driven realignment should improve them as more evidence accumulates
 - evaluations are script-native, GEPA-backed artifacts that run through a portable runtime shared with simulations

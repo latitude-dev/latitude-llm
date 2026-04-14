@@ -178,7 +178,9 @@ const insertScores = async (rows: Array<ReturnType<typeof makeScoreRow>>) => {
   await pg.db.insert(scores).values(rows)
 }
 
-const setupWorker = () => {
+const setupWorker = (options?: {
+  readonly runLiveEvaluation?: Parameters<typeof createLiveEvaluationsWorker>[0]["runLiveEvaluation"]
+}) => {
   const consumer = new TestQueueConsumer()
   const { publisher, published } = createFakeQueuePublisher()
 
@@ -187,6 +189,7 @@ const setupWorker = () => {
     publisher,
     postgresClient: pg.appPostgresClient,
     clickhouseClient: ch.client,
+    ...(options?.runLiveEvaluation ? { runLiveEvaluation: options.runLiveEvaluation } : {}),
   })
 
   return { consumer, published }
@@ -220,6 +223,38 @@ async function findNonSampledEvaluationId(input: {
 }
 
 describe("createLiveEvaluationsWorker", () => {
+  it("routes execute tasks through runLiveEvaluationUseCase", async () => {
+    const projectId = fill("u", 24)
+    const traceId = fill("g", 32)
+    const evaluationId = fill("j", 24)
+    const payload = {
+      organizationId: ORGANIZATION_ID,
+      projectId,
+      evaluationId,
+      traceId,
+    }
+    const handledPayloads: unknown[] = []
+    const { consumer, published } = setupWorker({
+      runLiveEvaluation: (input) =>
+        Effect.sync(() => {
+          handledPayloads.push(input)
+          return {
+            action: "skipped" as const,
+            reason: "result-already-exists" as const,
+            evaluationId: input.evaluationId,
+            traceId: input.traceId,
+          }
+        }),
+    })
+
+    await consumer.dispatchTask("live-evaluations", "execute", {
+      ...payload,
+    })
+
+    expect(handledPayloads).toEqual([payload])
+    expect(published).toEqual([])
+  })
+
   it("publishes only matching eligible evaluations and skips paused, filter-mismatched, and non-sampled ones", async () => {
     const projectId = fill("p", 24)
     const traceId = fill("a", 32)

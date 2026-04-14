@@ -266,7 +266,7 @@ Live evaluation triggering is incremental:
 - whenever a `TraceEnded` domain event is observed for a project, the `domain-events` dispatcher publishes `live-evaluations:enqueue` for that trace, and that task lists all active evaluations in the project, meaning rows with `archivedAt = null` and `deletedAt = null`
 - trigger checks run against the incoming trace rather than rescanning historical traces on each read
 - trigger evaluation order is `filter` first, `sampling` second, then `turn` / `debounce`
-- when an evaluation passes those trigger checks, `live-evaluations:enqueue` publishes one `live-evaluations:execute` task for that `(evaluationId, traceId)` pair; that task later runs the evaluation, writes the resulting score, keeps passed results unowned, and immediately claims `scores.issue_id` for failed non-errored issue-linked monitor results
+- when an evaluation passes those trigger checks, `live-evaluations:enqueue` publishes one `live-evaluations:execute` task for that `(evaluationId, traceId)` pair; that task later runs the evaluation, writes the resulting score, keeps passed results unowned, immediately claims `scores.issue_id` for failed non-errored issue-linked monitor results, and persists execution failures as canonical errored evaluation scores
 - `live-evaluations:enqueue` is separate from `live-annotation-queues:curate`
 - trigger filters participate in the same live incremental model through the shared trace-filter semantics defined in `docs/filters.md`
 
@@ -279,7 +279,7 @@ Live evaluation triggering is incremental:
 - if an issue is manually resolved, the confirmation-modal toggle defaulted from `keepMonitoring` decides whether linked evaluations remain active or archive
 - when project-level `keepMonitoring` is unset, the toggle default falls back to the organization-level `keepMonitoring`
 - deleted evaluations are soft-deleted from management UI but remain represented in historical analytics
-- issue-linked live monitor failures claim `scores.issue_id` during the canonical score write so the failed score is immutable immediately; other evaluation-originated failed scores that stay unowned may still flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts
+- issue-linked live monitor failures claim `scores.issue_id` during the canonical score write so the failed score is immutable immediately; errored live monitor scores stay unowned with `error != null` and `errored = true`, so they are also immutable immediately; other evaluation-originated failed scores that stay unowned may still flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts
 
 ## Product Surface
 

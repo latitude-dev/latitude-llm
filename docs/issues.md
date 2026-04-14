@@ -298,8 +298,9 @@ Issue-linked evaluation creation is explicit:
 
 Once an issue-linked evaluation exists:
 
-- failed, non-errored monitor scores do not re-enter discovery
-- they flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts and then claims `scores.issue_id`
+- failed, non-errored monitor scores that already carried `scores.issue_id` at write time do not re-enter discovery
+- failed, non-errored monitor scores that stayed unowned still flow through the centralized `issues:discovery` task, which resolves the linked issue before similarity search starts and then claims `scores.issue_id`
+- errored monitor scores stay out of discovery entirely because `errored = true` makes them ineligible
 - they can move a resolved issue into `regressed`
 
 ## Weaviate Projection
