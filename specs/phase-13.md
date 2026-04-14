@@ -313,7 +313,7 @@ Active implementation work now starts with **PR 4**.
   - direct issue assignment
   - analytics save timing
   - persisted duration, token, and cost accounting
-- [ ] **P13-PR4-6**: Reconcile docs drift around:
+- [x] **P13-PR4-6**: Reconcile docs drift around:
   - the restored `5 minutes` debounce default
   - `TraceEnded` as the activation and fan-out seam
   - `system-annotation-queues:fanOut` naming

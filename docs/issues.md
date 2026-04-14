@@ -42,10 +42,10 @@ The main contracts are:
 
 Rules:
 
-- eligible non-draft failed non-errored scores write `IssueDiscoveryRequested` through the transactional outbox after commit, and the `domain-events` dispatcher publishes `issues:discovery` from that event
+- canonical score writes emit `ScoreCreated` through the transactional outbox after commit, and the `domain-events` dispatcher publishes `issues:discovery` from that score event; the payload may carry a selected `issueId` for a published annotation
 - workflow inputs carry ids only; activities re-fetch current score/issue state before acting
 - debounced issue refresh relies on the `issues:refresh` queue task with logical dedupe/debounce, not on implicit BullMQ delayed/repeat jobs or persisted due-work scans
-- `IssueRefreshRequested` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour debounce window
+- `ScoreAssignedToIssue` is the trigger for later existing-issue detail regeneration; the dispatcher publishes `issues:refresh` keyed by the canonical issue id with the configured eight-hour debounce window
 - durable ownership and idempotency stay in Postgres via `scores.issue_id`, not in BullMQ or workflow history
 - issue-generated evaluation creation is also asynchronous: kickoff returns a `jobId`, and the frontend polls a status endpoint backed by a Redis job-status key for that alignment run
 
@@ -114,7 +114,7 @@ For explicit link actions:
 
 - while the annotation is still drafted, keep the selected issue only as editable draft intent
 - skip similarity-based candidate selection for that annotation score once the draft is published
-- publication writes `IssueDiscoveryRequested` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write, and projection/analytics sync
+- publication clears `draftedAt`, emits `ScoreCreated` with the selected `issueId`, and the centralized `issues:discovery` task performs the canonical ownership claim, centroid mutation, refresh event write when needed, and projection/analytics sync
 - treat the issue as annotation-backed evidence immediately after publication
 
 ## Discovery Pipeline
@@ -122,7 +122,7 @@ For explicit link actions:
 Issue discovery should follow the original proposal closely:
 
 1. observe a non-draft failed, non-errored canonical score in Postgres
-2. publish `IssueDiscoveryRequested` after the canonical Postgres write commits
+2. emit `ScoreCreated` after the canonical Postgres write commits; that payload may carry a selected `issueId` for published annotations
 3. let the deduped `issues:discovery` task recheck canonical eligibility and decide whether a selected issue or issue-linked evaluation should be assigned directly before any similarity search runs
 4. enrich annotation-originated feedback first when needed
 5. embed canonical feedback with `voyage-4-large` at `2048` dimensions
@@ -136,10 +136,10 @@ Issue discovery should follow the original proposal closely:
 13. match an existing issue or create a new issue when the centralized gate did not already route to a known issue
 14. if the final selected candidate is stale, delete its projection object asynchronously
 15. write `scores.issue_id` in Postgres
-16. if the score was added to an existing issue, write `IssueRefreshRequested` transactionally so later issue-details regeneration can debounce safely
+16. if the score was added to an existing issue, write `ScoreAssignedToIssue` transactionally so later issue-details regeneration can debounce safely
 17. after the create or assign transaction commits, run `syncIssueProjectionsUseCase` directly so the Weaviate issue projection reflects the latest centroid and details
 18. after the same transaction commits, run `syncScoreAnalyticsUseCase` directly so the immutable score reaches ClickHouse without waiting for another async hop
-19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `IssueRefreshRequested`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
+19. refresh issue name/description asynchronously on debounce only for the existing-issue path that requested `ScoreAssignedToIssue`, reusing the shared issue-details generation use case against the last `25` assigned occurrences plus the previous persisted details as the stabilization baseline
 
 Execution rules:
 
