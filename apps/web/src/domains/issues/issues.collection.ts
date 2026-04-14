@@ -15,6 +15,7 @@ import { getIssue, getIssueDetail, listIssues, listIssueTraces } from "./issues.
 const queryClient = getQueryClient()
 const DEFAULT_ISSUES_BATCH_SIZE = 50
 const ISSUE_TRACE_BATCH_SIZE = 25
+const ISSUES_QUERY_STALE_TIME_MS = 30_000
 const EMPTY_ISSUES_ANALYTICS: IssuesListResultRecord["analytics"] = {
   counts: {
     newIssues: 0,
@@ -125,16 +126,16 @@ export function useIssues(input: {
 
   const fetchPage = async (offset: number): Promise<IssuesListResultRecord> => {
     const offsetKey = getIssuesOffsetQueryKey(keyInput, offset)
-    const cached = queryClient.getQueryData<IssuesListResultRecord>(offsetKey)
-    if (cached) {
-      return cached
-    }
-
-    const result = await listIssues({
-      data: buildListIssuesRequest(keyInput, offset),
+    // Use the per-page query cache, but still refetch when invalidated instead of
+    // short-circuiting to stale data via getQueryData().
+    const result = await queryClient.fetchQuery({
+      queryKey: offsetKey,
+      queryFn: () =>
+        listIssues({
+          data: buildListIssuesRequest(keyInput, offset),
+        }),
+      staleTime: ISSUES_QUERY_STALE_TIME_MS,
     })
-
-    queryClient.setQueryData(offsetKey, result)
 
     if (result.hasMore) {
       const nextOffset = result.offset + result.limit
@@ -144,7 +145,7 @@ export function useIssues(input: {
           listIssues({
             data: buildListIssuesRequest(keyInput, nextOffset),
           }),
-        staleTime: 30_000,
+        staleTime: ISSUES_QUERY_STALE_TIME_MS,
       })
     }
 
@@ -162,7 +163,7 @@ export function useIssues(input: {
     queryFn: ({ pageParam }) => fetchPage(pageParam),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
-    staleTime: 30_000,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
     enabled: (input.enabled ?? true) && input.projectId.length > 0,
   })
 
@@ -239,20 +240,19 @@ export function useIssueTracesInfiniteScroll({
     queryKey: getIssueTracesQueryKey(projectId, issueId),
     queryFn: async ({ pageParam }): Promise<IssueTracePageRecord> => {
       const pageKey = getIssueTracesPageKey(projectId, issueId, pageParam)
-      const cached = queryClient.getQueryData<IssueTracePageRecord>(pageKey)
-      if (cached) {
-        return cached
-      }
-
-      const result = await listIssueTraces({
-        data: {
-          projectId,
-          issueId,
-          limit: ISSUE_TRACE_BATCH_SIZE,
-          offset: pageParam,
-        },
+      const result = await queryClient.fetchQuery({
+        queryKey: pageKey,
+        queryFn: () =>
+          listIssueTraces({
+            data: {
+              projectId,
+              issueId,
+              limit: ISSUE_TRACE_BATCH_SIZE,
+              offset: pageParam,
+            },
+          }),
+        staleTime: ISSUES_QUERY_STALE_TIME_MS,
       })
-      queryClient.setQueryData(pageKey, result)
 
       if (result.hasMore) {
         const nextOffset = result.offset + result.limit
@@ -267,7 +267,7 @@ export function useIssueTracesInfiniteScroll({
                 offset: nextOffset,
               },
             }),
-          staleTime: 30_000,
+          staleTime: ISSUES_QUERY_STALE_TIME_MS,
         })
       }
 
@@ -275,7 +275,7 @@ export function useIssueTracesInfiniteScroll({
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.offset + lastPage.limit : undefined),
-    staleTime: 30_000,
+    staleTime: ISSUES_QUERY_STALE_TIME_MS,
     enabled: enabled && projectId.length > 0 && issueId.length > 0,
   })
 
