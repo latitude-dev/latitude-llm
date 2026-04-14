@@ -7,6 +7,7 @@ import { lazy, Suspense } from "react"
 import { getThemePreference } from "../domains/theme/theme.functions.ts"
 import { ErrorFallback } from "../lib/client-error-reporting.tsx"
 import { AppQueryProvider } from "../lib/data/query-client.tsx"
+import { PostHogProvider } from "../lib/posthog/posthog-provider.tsx"
 import { useThemePreference } from "../lib/theme.ts"
 import { useRootThemePreference } from "./-root-route-data.ts"
 
@@ -72,6 +73,7 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
         <HeadContent />
       </head>
       <body>
+        <PostHogProvider />
         <AppQueryProvider>
           <HotkeysProvider>{children}</HotkeysProvider>
           <Toaster />

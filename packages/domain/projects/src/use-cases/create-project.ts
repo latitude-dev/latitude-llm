@@ -16,6 +16,7 @@ import { ProjectRepository } from "../ports/project-repository.ts"
 export interface CreateProjectInput {
   readonly id?: ProjectId
   readonly name: string
+  readonly actorUserId?: string
 }
 
 export type CreateProjectError = RepositoryError | ValidationError | ConflictError | InvalidProjectNameError
@@ -97,6 +98,7 @@ export const createProjectUseCase = (input: CreateProjectInput) =>
             organizationId: project.organizationId,
             payload: {
               organizationId: project.organizationId,
+              actorUserId: input.actorUserId ?? "",
               projectId: project.id,
               name: project.name,
               slug: project.slug,

@@ -146,6 +146,11 @@ const _registry = {
       readonly name: string
       readonly slug: string
     }
+    checkFirstTrace: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+    }
   }>(),
 
   "api-keys": payloads<{
@@ -168,6 +173,15 @@ const _registry = {
             readonly traceIds: readonly string[]
             readonly filters?: Record<string, unknown>
           }
+    }
+  }>(),
+
+  "posthog-analytics": payloads<{
+    track: {
+      readonly eventName: string
+      readonly organizationId: string
+      readonly payload: Record<string, unknown>
+      readonly occurredAt: string
     }
   }>(),
 }

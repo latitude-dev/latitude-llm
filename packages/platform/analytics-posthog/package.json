@@ -1,14 +1,10 @@
 {
-  "name": "@domain/annotation-queues",
+  "name": "@platform/analytics-posthog",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
-  "exports": {
-    ".": "./src/index.ts",
-    "./testing": "./src/testing/index.ts"
-  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "biome check src",
@@ -17,19 +13,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@domain/ai": "workspace:*",
-    "@domain/annotations": "workspace:*",
     "@domain/events": "workspace:*",
-    "@domain/queue": "workspace:*",
-    "@domain/scores": "workspace:*",
-    "@domain/shared": "workspace:*",
-    "@domain/spans": "workspace:*",
-    "@repo/utils": "workspace:*",
+    "@platform/env": "workspace:*",
     "effect": "catalog:",
-    "mustache": "^4.2.0",
-    "zod": "catalog:"
+    "posthog-node": "^5.9.2"
   },
   "devDependencies": {
-    "@types/mustache": "^4.2.6"
+    "@repo/vitest-config": "workspace:*",
+    "vitest": "catalog:"
   }
 }

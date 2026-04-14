@@ -29,7 +29,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
+import { getOutboxWriter, getPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
 
 const evaluationAlignmentJobInputSchema = z.object({
   projectId: z.string(),
@@ -118,7 +118,7 @@ export type EvaluationSummaryRecord = ReturnType<typeof toEvaluationSummaryRecor
 export const startEvaluationAlignment = createServerFn({ method: "POST" })
   .inputValidator(evaluationAlignmentJobInputSchema)
   .handler(async ({ data }): Promise<EvaluationAlignmentJobStatusRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
     const workflowStarter = await getWorkflowStarter()
     const projectId = ProjectId(data.projectId)
@@ -167,6 +167,23 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
       })
       throw error
     }
+
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter.write({
+        eventName: "EvaluationConfigured",
+        aggregateType: "evaluation",
+        aggregateId: jobId,
+        organizationId,
+        payload: {
+          organizationId,
+          actorUserId: userId,
+          projectId: data.projectId,
+          evaluationId: jobId,
+          issueId: data.issueId,
+        },
+      }),
+    )
 
     return pendingStatus
   })

@@ -1,8 +1,8 @@
 import { type ApiKey, ApiKeyRepository, generateApiKeyUseCase, updateApiKeyUseCase } from "@domain/api-keys"
 import { ApiKeyId, isValidId } from "@domain/shared"
-import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
 import { getPostgresClient } from "../../server/clients.ts"
@@ -54,14 +54,15 @@ export const createApiKey = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({
         ...(data.id ? { id: ApiKeyId(data.id) } : {}),
         name: data.name,
-      }).pipe(withPostgres(ApiKeyRepositoryLive, client, organizationId)),
+        actorUserId: userId,
+      }).pipe(withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive), client, organizationId)),
     )
 
     return toRecord(apiKey)

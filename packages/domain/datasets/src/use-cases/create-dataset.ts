@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import type { DatasetId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import { DatasetRepository } from "../ports/dataset-repository.ts"
@@ -9,6 +10,7 @@ export function createDataset(args: {
   readonly name: string
   readonly description?: string
   readonly fileKey?: string
+  readonly actorUserId?: string
 }) {
   return Effect.gen(function* () {
     const repo = yield* DatasetRepository
@@ -16,6 +18,23 @@ export function createDataset(args: {
       projectId: args.projectId,
       name: args.name,
     })
-    return yield* repo.create({ ...args, name })
+    const dataset = yield* repo.create({ ...args, name })
+
+    const outboxEventWriter = yield* OutboxEventWriter
+    yield* outboxEventWriter.write({
+      eventName: "DatasetCreated",
+      aggregateType: "dataset",
+      aggregateId: dataset.id,
+      organizationId: dataset.organizationId,
+      payload: {
+        organizationId: dataset.organizationId,
+        actorUserId: args.actorUserId ?? "",
+        projectId: dataset.projectId,
+        datasetId: dataset.id,
+        name: dataset.name,
+      },
+    })
+
+    return dataset
   })
 }

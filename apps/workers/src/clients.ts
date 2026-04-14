@@ -1,5 +1,6 @@
 import type { WorkflowStarterShape } from "@domain/queue"
 import type { StorageDiskPort } from "@domain/shared"
+import { createPostHogClient, loadPostHogConfig, type PostHogClientShape } from "@platform/analytics-posthog"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, type ClickhouseConfig, createClickhouseClient } from "@platform/db-clickhouse"
 import { createPostgresClient, type PostgresClient } from "@platform/db-postgres"
@@ -16,6 +17,7 @@ let weaviateInstancePromise: Promise<WeaviateClient> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let redisInstance: RedisClient | undefined
 let workflowStarterPromise: Promise<WorkflowStarterShape> | undefined
+let posthogClientInstance: PostHogClientShape | undefined
 
 export const getPostgresClient = (maxConnections?: number): PostgresClient => {
   if (!pgClientInstance) {
@@ -67,6 +69,15 @@ export const getRedisClient = (): RedisClient => {
   }
 
   return redisInstance
+}
+
+export const getPostHogClient = (): PostHogClientShape => {
+  if (!posthogClientInstance) {
+    const config = Effect.runSync(loadPostHogConfig)
+    posthogClientInstance = createPostHogClient(config)
+  }
+
+  return posthogClientInstance
 }
 
 export function getWorkflowStarter(): Promise<WorkflowStarterShape> {
