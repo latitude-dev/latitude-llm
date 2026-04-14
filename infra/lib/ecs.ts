@@ -157,10 +157,7 @@ export function createEcs(
       Statement: [
         {
           Effect: "Allow",
-          Action: [
-            "bedrock:InvokeModel",
-            "bedrock:InvokeModelWithResponseStream",
-          ],
+          Action: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
           Resource: "*",
         },
       ],
@@ -409,7 +406,6 @@ function createTaskDefinition(
           { name: "LAT_OBSERVABILITY_ENABLED", value: "true" },
           { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
           { name: "LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
-          { name: "VITE_LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
@@ -431,7 +427,7 @@ function createTaskDefinition(
           { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
           { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
-          { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn }
+          { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn },
         ]
 
         // Service-specific environment variables
