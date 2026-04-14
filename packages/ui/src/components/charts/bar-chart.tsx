@@ -37,8 +37,7 @@ export type BarChartProps = Omit<HTMLAttributes<HTMLDivElement>, "children" | "o
   readonly onSelect?: ((range: { startIndex: number; endIndex: number } | null) => void) | undefined
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type EChartsEventHandler = (params: any) => void
+type EChartsEventHandler = (params: unknown) => void
 
 type EChartsReactBridgeProps = {
   readonly echarts: typeof echarts
@@ -93,8 +92,8 @@ function BarChart({
     if (!hasBrush) return undefined
     return {
       brushEnd: (params: unknown) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const areas = (params as any)?.areas as Array<{ coordRange?: [number, number] }> | undefined
+        const p = params as { areas?: Array<{ coordRange?: [number, number] }> } | undefined
+        const areas = p?.areas
         if (!areas || areas.length === 0) return
         const coordRange = areas[0]?.coordRange
         if (!coordRange) return

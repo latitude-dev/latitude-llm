@@ -132,6 +132,32 @@ export const getBetterAuth = () => {
       trustedOrigins,
       ...(captchaSecretKey ? { captchaSecretKey } : {}),
       extraPlugins: [tanstackStartCookies()],
+      onUserCreated: async (user) => {
+        await Effect.runPromise(
+          outboxWriter.write({
+            eventName: "UserSignedUp",
+            aggregateType: "user",
+            aggregateId: user.id,
+            organizationId: "system",
+            payload: { userId: user.id, email: user.email },
+          }),
+        )
+      },
+      onMemberCreated: async (member) => {
+        await Effect.runPromise(
+          outboxWriter.write({
+            eventName: "MemberJoined",
+            aggregateType: "member",
+            aggregateId: member.userId,
+            organizationId: member.organizationId,
+            payload: {
+              organizationId: member.organizationId,
+              userId: member.userId,
+              role: member.role,
+            },
+          }),
+        )
+      },
       sendMagicLink: async ({ email, url }) => {
         const emailFlow = getEmailFlowFromMagicLinkUrl({ magicLinkUrl: url, webUrl })
 
@@ -169,6 +195,20 @@ export const getBetterAuth = () => {
               inviterName,
             },
             occurredAt: new Date(),
+          }),
+        )
+        await Effect.runPromise(
+          outboxWriter.write({
+            eventName: "MemberInvited",
+            aggregateType: "invitation",
+            aggregateId: data.id,
+            organizationId: "system",
+            payload: {
+              organizationId: "system",
+              actorUserId: data.inviter.user.id,
+              email: data.email,
+              role: data.role,
+            },
           }),
         )
       },

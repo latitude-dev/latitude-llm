@@ -1,7 +1,7 @@
-import { AnnotationQueueId, OrganizationId, ProjectId } from "@domain/shared"
+import { AnnotationQueueId, generateId, OrganizationId, ProjectId } from "@domain/shared"
 import { Effect } from "effect"
 import type { AnnotationQueue } from "../entities/annotation-queue.ts"
-import type { AnnotationQueueRepositoryShape } from "../ports/annotation-queue-repository.ts"
+import type { AnnotationQueueRepositoryShape, SaveQueueInput } from "../ports/annotation-queue-repository.ts"
 
 export const createFakeAnnotationQueueRepository = (
   seedOrOverrides?: readonly AnnotationQueue[] | Partial<AnnotationQueueRepositoryShape>,
@@ -49,9 +49,12 @@ export const createFakeAnnotationQueueRepository = (
         return queue ?? null
       }),
 
-    save: (queue) =>
+    save: (input: SaveQueueInput) =>
       Effect.sync(() => {
-        queues.set(queue.id, queue)
+        const id = input.id !== undefined ? AnnotationQueueId(input.id) : AnnotationQueueId(generateId())
+        const queue: AnnotationQueue = { ...input, id }
+        queues.set(id, queue)
+        return queue
       }),
 
     insertIfNotExists: (queue) =>
@@ -97,9 +100,14 @@ export const createFakeAnnotationQueueRepository = (
 
   let lastSavedQueue: AnnotationQueue | null = null
   const originalSave = repository.save
-  repository.save = (queue) => {
-    lastSavedQueue = queue
-    return originalSave(queue)
+  repository.save = (input: SaveQueueInput) => {
+    return originalSave(input).pipe(
+      Effect.tap((queue) =>
+        Effect.sync(() => {
+          lastSavedQueue = queue
+        }),
+      ),
+    )
   }
 
   const getLastSavedQueue = () => lastSavedQueue

@@ -46,11 +46,12 @@ export interface BetterAuthConfig {
       email: string
       role: string
       organization: { name: string }
-      inviter: { user: { name?: string | null; email: string } }
+      inviter: { user: { id: string; name?: string | null; email: string } }
     },
     request?: Request,
   ) => Promise<void>
   readonly onUserCreated?: (user: { id: string; email: string; name?: string }) => Promise<void>
+  readonly onMemberCreated?: (member: { organizationId: string; userId: string; role: string }) => Promise<void>
   readonly trustedOrigins?: string[]
   readonly basePath?: string
   readonly captchaSecretKey?: string
@@ -110,6 +111,26 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
     basePath,
     secret,
     trustedOrigins: config.trustedOrigins ?? [],
+    databaseHooks: {
+      user: {
+        create: {
+          after: async (user) => {
+            await config.onUserCreated?.({ id: user.id, email: user.email, name: user.name })
+          },
+        },
+      },
+      member: {
+        create: {
+          after: async (member: { organizationId: string; userId: string; role: string }) => {
+            await config.onMemberCreated?.({
+              organizationId: member.organizationId,
+              userId: member.userId,
+              role: member.role,
+            })
+          },
+        },
+      },
+    },
     socialProviders: {
       ...(googleClientId &&
         googleClientSecret && {
@@ -153,6 +174,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
               organization: { name: data.organization.name },
               inviter: {
                 user: {
+                  id: data.inviter.user.id,
                   name: data.inviter.user.name,
                   email: data.inviter.user.email,
                 },

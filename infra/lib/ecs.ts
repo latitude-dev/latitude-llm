@@ -337,6 +337,7 @@ function createTaskDefinition(
       secrets["latitude-telemetry-api-key"].arn,
       secrets["latitude-telemetry-project-slug"].arn,
       secrets["turnstile-secret-key"].arn,
+      secrets["posthog-api-key"].arn,
       s3Bucket.id,
     ])
     .apply(
@@ -370,6 +371,7 @@ function createTaskDefinition(
         latitudeTelemetryApiKeyArn,
         latitudeTelemetryProjectSlugArn,
         turnstileSecretKeyArn,
+        posthogApiKeyArn,
         s3BucketName,
       ]) => {
         const baseEnvironment: { name: string; value: string }[] = [
@@ -406,6 +408,8 @@ function createTaskDefinition(
           { name: "DD_AGENT_HOST", value: "localhost" },
           { name: "LAT_OBSERVABILITY_ENABLED", value: "true" },
           { name: "LAT_OBSERVABILITY_OTLP_TRACES_ENDPOINT", value: "http://localhost:4318/v1/traces" },
+          { name: "LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
+          { name: "VITE_LAT_POSTHOG_HOST", value: "https://eu.i.posthog.com" },
         ]
 
         const baseSecrets: { name: string; valueFrom: string }[] = [
@@ -427,6 +431,7 @@ function createTaskDefinition(
           { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
           { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
           { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
+          { name: "LAT_POSTHOG_API_KEY", valueFrom: posthogApiKeyArn }
         ]
 
         // Service-specific environment variables

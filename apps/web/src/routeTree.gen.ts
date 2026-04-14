@@ -21,7 +21,9 @@ import { Route as DesignSystemButtonRouteImport } from './routes/design-system/b
 import { Route as AuthInviteRouteImport } from './routes/auth/invite'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as ApiObservabilityTestIndexRouteImport } from './routes/api/observability-test/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
+import { Route as ApiObservabilityTestErrorRouteImport } from './routes/api/observability-test/error'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthenticatedSettingsOrganizationRouteImport } from './routes/_authenticated/settings/organization'
 import { Route as AuthenticatedSettingsMembersRouteImport } from './routes/_authenticated/settings/members'
@@ -98,11 +100,23 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const ApiObservabilityTestIndexRoute =
+  ApiObservabilityTestIndexRouteImport.update({
+    id: '/api/observability-test/',
+    path: '/api/observability-test/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedSettingsIndexRoute =
   AuthenticatedSettingsIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
+const ApiObservabilityTestErrorRoute =
+  ApiObservabilityTestErrorRouteImport.update({
+    id: '/api/observability-test/error',
+    path: '/api/observability-test/error',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -225,7 +239,9 @@ export interface FileRoutesByFullPath {
   '/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
@@ -252,7 +268,9 @@ export interface FileRoutesByTo {
   '/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
+  '/api/observability-test': typeof ApiObservabilityTestIndexRoute
   '/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/projects/$projectSlug': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/projects/$projectSlug/datasets/$datasetId': typeof AuthenticatedProjectsProjectSlugDatasetsDatasetIdRoute
@@ -283,7 +301,9 @@ export interface FileRoutesById {
   '/_authenticated/settings/members': typeof AuthenticatedSettingsMembersRoute
   '/_authenticated/settings/organization': typeof AuthenticatedSettingsOrganizationRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/observability-test/error': typeof ApiObservabilityTestErrorRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/api/observability-test/': typeof ApiObservabilityTestIndexRoute
   '/_authenticated/projects/$projectSlug/settings': typeof AuthenticatedProjectsProjectSlugSettingsRoute
   '/_authenticated/projects/$projectSlug/': typeof AuthenticatedProjectsProjectSlugIndexRoute
   '/_authenticated/projects/$projectSlug/annotation-queues/$queueId': typeof AuthenticatedProjectsProjectSlugAnnotationQueuesQueueIdRouteWithChildren
@@ -315,7 +335,9 @@ export interface FileRouteTypes {
     | '/settings/members'
     | '/settings/organization'
     | '/api/auth/$'
+    | '/api/observability-test/error'
     | '/settings/'
+    | '/api/observability-test/'
     | '/projects/$projectSlug/settings'
     | '/projects/$projectSlug/'
     | '/projects/$projectSlug/annotation-queues/$queueId'
@@ -342,7 +364,9 @@ export interface FileRouteTypes {
     | '/settings/members'
     | '/settings/organization'
     | '/api/auth/$'
+    | '/api/observability-test/error'
     | '/settings'
+    | '/api/observability-test'
     | '/projects/$projectSlug/settings'
     | '/projects/$projectSlug'
     | '/projects/$projectSlug/datasets/$datasetId'
@@ -372,7 +396,9 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/members'
     | '/_authenticated/settings/organization'
     | '/api/auth/$'
+    | '/api/observability-test/error'
     | '/_authenticated/settings/'
+    | '/api/observability-test/'
     | '/_authenticated/projects/$projectSlug/settings'
     | '/_authenticated/projects/$projectSlug/'
     | '/_authenticated/projects/$projectSlug/annotation-queues/$queueId'
@@ -393,6 +419,8 @@ export interface RootRouteChildren {
   DownloadsExportRoute: typeof DownloadsExportRoute
   WelcomeIndexRoute: typeof WelcomeIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiObservabilityTestErrorRoute: typeof ApiObservabilityTestErrorRoute
+  ApiObservabilityTestIndexRoute: typeof ApiObservabilityTestIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -481,12 +509,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/api/observability-test/': {
+      id: '/api/observability-test/'
+      path: '/api/observability-test'
+      fullPath: '/api/observability-test/'
+      preLoaderRoute: typeof ApiObservabilityTestIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/settings/': {
       id: '/_authenticated/settings/'
       path: '/'
       fullPath: '/settings/'
       preLoaderRoute: typeof AuthenticatedSettingsIndexRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
+    }
+    '/api/observability-test/error': {
+      id: '/api/observability-test/error'
+      path: '/api/observability-test/error'
+      fullPath: '/api/observability-test/error'
+      preLoaderRoute: typeof ApiObservabilityTestErrorRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -719,6 +761,8 @@ const rootRouteChildren: RootRouteChildren = {
   DownloadsExportRoute: DownloadsExportRoute,
   WelcomeIndexRoute: WelcomeIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiObservabilityTestErrorRoute: ApiObservabilityTestErrorRoute,
+  ApiObservabilityTestIndexRoute: ApiObservabilityTestIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

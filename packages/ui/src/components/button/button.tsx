@@ -1,6 +1,6 @@
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { type ButtonHTMLAttributes, forwardRef } from "react"
+import type { ButtonHTMLAttributes, Ref } from "react"
 
 import { font } from "../../tokens/font.ts"
 import { cn } from "../../utils/cn.ts"
@@ -63,6 +63,7 @@ const buttonVariantsConfig = cva(
         sm: "h-8 rounded-lg px-3 text-xs",
         lg: "h-10 rounded-lg px-8",
         icon: "h-8 w-8 p-0",
+        "icon-xs": "h-5 w-5 p-0 rounded-md",
         full: "min-h-8 w-full px-3 py-buttonDefaultVertical",
       },
     },
@@ -78,62 +79,70 @@ export interface ButtonProps
     VariantProps<typeof buttonVariantsConfig> {
   asChild?: boolean
   isLoading?: boolean
+  ref?: Ref<HTMLButtonElement>
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, isLoading = false, children, disabled, ...props }, ref) => {
-    const effectiveVariant = variant ?? "default"
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  isLoading = false,
+  children,
+  disabled,
+  ref,
+  ...props
+}: ButtonProps) {
+  const effectiveVariant = variant ?? "default"
 
-    if (asChild) {
-      return (
-        <Slot
-          ref={ref}
-          className={cn(
-            buttonContainerVariants({ variant }),
-            buttonVariantsConfig({ variant, size }),
-            className,
-            isLoading && "animate-pulse",
-          )}
-          {...props}
-        >
-          {children}
-        </Slot>
-      )
-    }
-
+  if (asChild) {
     return (
-      <button
+      <Slot
         ref={ref}
-        {...props}
-        className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
-        disabled={disabled || isLoading}
-        aria-busy={isLoading ? "true" : undefined}
-      >
-        {effectiveVariant !== "outline" && effectiveVariant !== "ghost" && effectiveVariant !== "link" && (
-          <div
-            className={cn(
-              "pointer-events-none absolute -inset-1 z-0 scale-95 rounded-xl opacity-0 transition-all duration-200 ease-out group-hover:scale-100 group-hover:opacity-100 group-active:-inset-0.5",
-              effectiveVariant === "destructive"
-                ? "bg-destructive/30"
-                : effectiveVariant === "default"
-                  ? "bg-primary/20"
-                  : "bg-foreground/10",
-            )}
-            aria-hidden
-          />
+        className={cn(
+          buttonContainerVariants({ variant }),
+          buttonVariantsConfig({ variant, size }),
+          className,
+          isLoading && "animate-pulse",
         )}
-        <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
-          <div className="flex max-w-full flex-row items-center gap-x-1.5">
-            {isLoading && (
-              <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            )}
-            {children}
-          </div>
-        </div>
-      </button>
+        {...props}
+      >
+        {children}
+      </Slot>
     )
-  },
-)
-Button.displayName = "Button"
+  }
+
+  return (
+    <button
+      ref={ref}
+      {...props}
+      className={cn(buttonContainerVariants({ variant }), isLoading && "animate-pulse")}
+      disabled={disabled || isLoading}
+      aria-busy={isLoading ? "true" : undefined}
+    >
+      {effectiveVariant !== "outline" && effectiveVariant !== "ghost" && effectiveVariant !== "link" && (
+        <div
+          className={cn(
+            "pointer-events-none absolute -inset-1 z-0 scale-95 rounded-xl opacity-0 transition-all duration-200 ease-out group-hover:scale-100 group-hover:opacity-100 group-active:-inset-0.5",
+            effectiveVariant === "destructive"
+              ? "bg-destructive/30"
+              : effectiveVariant === "default"
+                ? "bg-primary/20"
+                : "bg-foreground/10",
+          )}
+          aria-hidden
+        />
+      )}
+      <div className={cn(buttonVariantsConfig({ variant, size }), "relative z-[1]", className)}>
+        <div className="flex max-w-full flex-row items-center gap-x-1.5">
+          {isLoading && (
+            <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+          )}
+          {children}
+        </div>
+      </div>
+    </button>
+  )
+}
 
 export { Button, buttonVariantsConfig }

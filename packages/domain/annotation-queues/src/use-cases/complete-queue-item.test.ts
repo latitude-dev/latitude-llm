@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import {
   AnnotationQueueId,
   AnnotationQueueItemId,
@@ -84,6 +85,7 @@ describe("completeQueueItemUseCase", () => {
         Effect.provideService(AnnotationQueueItemRepository, itemRepo),
         Effect.provideService(AnnotationQueueRepository, queueRepo),
         Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
       ),
     )
 
@@ -108,6 +110,7 @@ describe("completeQueueItemUseCase", () => {
         Effect.provideService(AnnotationQueueItemRepository, itemRepo),
         Effect.provideService(AnnotationQueueRepository, queueRepo),
         Effect.provideService(SqlClient, createPassthroughSqlClient()),
+        Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
       ),
     )
 
@@ -130,6 +133,7 @@ describe("completeQueueItemUseCase", () => {
           Effect.provideService(AnnotationQueueItemRepository, itemRepo),
           Effect.provideService(AnnotationQueueRepository, queueRepo),
           Effect.provideService(SqlClient, createPassthroughSqlClient()),
+          Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         ),
         {
           onFailure: (e) => e,
@@ -163,6 +167,7 @@ describe("completeQueueItemUseCase", () => {
           Effect.provideService(AnnotationQueueItemRepository, itemRepo),
           Effect.provideService(AnnotationQueueRepository, queueRepo),
           Effect.provideService(SqlClient, createPassthroughSqlClient()),
+          Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
         ),
         {
           onFailure: (e) => e,

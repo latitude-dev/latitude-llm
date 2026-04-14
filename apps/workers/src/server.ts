@@ -7,10 +7,17 @@ import {
   createEventsPublisher,
   loadBullMqConfig,
 } from "@platform/queue-bullmq"
-import { createLogger, initializeObservability, shutdownObservability } from "@repo/observability"
+import {
+  createLogger,
+  initializeObservability,
+  recordSpanExceptionForDatadog,
+  shutdownObservability,
+  trace,
+} from "@repo/observability"
+import { LatitudeObservabilityTestError } from "@repo/utils"
 import { loadDevelopmentEnvironments } from "@repo/utils/env"
 import { Effect } from "effect"
-import { getClickhouseClient, getPostgresClient, getWorkflowStarter } from "./clients.ts"
+import { getClickhouseClient, getPostgresClient, getPostHogClient, getWorkflowStarter } from "./clients.ts"
 import { createAnnotationQueuesWorker } from "./workers/annotation-queues.ts"
 import { createAnnotationScoresWorker } from "./workers/annotation-scores.ts"
 import { createApiKeysWorker } from "./workers/api-keys.ts"
@@ -24,6 +31,7 @@ import { createIssuesWorker } from "./workers/issues.ts"
 import { createLiveAnnotationQueuesWorker } from "./workers/live-annotation-queues.ts"
 import { createLiveEvaluationsWorker } from "./workers/live-evaluations.ts"
 import { createLiveTracesWorker } from "./workers/live-traces.ts"
+import { createPostHogAnalyticsWorker } from "./workers/posthog-analytics.ts"
 import { createProjectsWorker } from "./workers/projects.ts"
 import { createSpanIngestionWorker } from "./workers/span-ingestion.ts"
 import { createSystemAnnotationQueuesWorker } from "./workers/system-annotation-queues.ts"
@@ -43,7 +51,27 @@ const bootstrap = async () => {
 
   const healthPort = Effect.runSync(parseEnv("LAT_WORKERS_HEALTH_PORT", "number", 9090))
   const healthServer = createServer((req, res) => {
-    if (req.url === "/health" && req.method === "GET") {
+    const pathname = new URL(req.url ?? "/", "http://127.0.0.1").pathname
+
+    if (pathname === "/health/observability-test" && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ service: "workers", observabilityTest: "armed" }))
+      return
+    }
+
+    if (pathname === "/health/observability-test/error" && req.method === "GET") {
+      const err = new LatitudeObservabilityTestError("workers")
+      logger.error(err)
+      const span = trace.getActiveSpan()
+      if (span) {
+        recordSpanExceptionForDatadog(span, err)
+      }
+      res.writeHead(500, { "Content-Type": "application/json" })
+      res.end(JSON.stringify({ name: err.name, message: err.message }))
+      return
+    }
+
+    if (pathname === "/health" && req.method === "GET") {
       const status = ready ? 200 : 503
       res.writeHead(status, { "Content-Type": "application/json" })
       res.end(JSON.stringify({ status: ready ? "ok" : "starting" }))
@@ -114,6 +142,7 @@ const bootstrap = async () => {
     createLiveAnnotationQueuesWorker(ctx)
     createSystemAnnotationQueuesWorker(ctx)
     createProjectsWorker(ctx)
+    createPostHogAnalyticsWorker(ctx)
 
     await Effect.runPromise(outboxConsumer.start())
     await Effect.runPromise(queueConsumer.start())
@@ -140,6 +169,11 @@ const bootstrap = async () => {
       await Effect.runPromise(consumers.outboxConsumer.stop())
       await Effect.runPromise(consumers.queueConsumer.stop())
       await Effect.runPromise(queuePublisher.close())
+      // Flush in-flight PostHog events before process exit. No-op when the
+      // integration isn't configured.
+      await getPostHogClient()
+        .shutdown()
+        .catch((error) => logger.warn("PostHog shutdown failed", error))
     } catch (error) {
       logger.error("Error during shutdown (workers may not have started)", error)
     }

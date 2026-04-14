@@ -33,9 +33,9 @@ import {
   UnauthorizedError,
 } from "@domain/shared"
 import { DatasetRowRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
-import { DatasetRepositoryLive, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { createServerFn } from "@tanstack/react-start"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
@@ -408,7 +408,7 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<DatasetRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
     const dataset = await Effect.runPromise(
@@ -416,8 +416,9 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
         ...(data.id ? { id: DatasetId(data.id) } : {}),
         projectId: ProjectId(data.projectId),
         name: data.name,
+        actorUserId: userId,
       }).pipe(
-        withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
+        withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
     )
@@ -662,7 +663,7 @@ export const createDatasetFromTracesFunction = createServerFn({
           name: data.name,
           selection: toTraceSelection(data.selection),
         }).pipe(
-          withPostgres(DatasetRepositoryLive, pgClient, orgId),
+          withPostgres(Layer.mergeAll(DatasetRepositoryLive, OutboxEventWriterLive), pgClient, orgId),
           withClickHouse(DatasetRowRepositoryLive, chClient, orgId),
           withClickHouse(TraceRepositoryLive, chClient, orgId),
         ),

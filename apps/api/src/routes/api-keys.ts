@@ -8,8 +8,8 @@ import {
 import { ApiKeyId } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import type { RedisClient } from "@platform/cache-redis"
-import { ApiKeyRepositoryLive, withPostgres } from "@platform/db-postgres"
-import { Effect } from "effect"
+import { ApiKeyRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
+import { Effect, Layer } from "effect"
 import {
   errorResponse,
   jsonBody,
@@ -137,7 +137,11 @@ export const createApiKeysRoutes = () => {
 
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({ name }).pipe(
-        withPostgres(ApiKeyRepositoryLive, c.var.postgresClient, c.var.organization.id),
+        withPostgres(
+          Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive),
+          c.var.postgresClient,
+          c.var.organization.id,
+        ),
       ),
     )
     return c.json(toResponse(apiKey), 201)

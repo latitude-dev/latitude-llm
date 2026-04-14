@@ -83,6 +83,7 @@ type Props = ContentProps & {
   options: MenuOption[]
   onOpenChange?: (open: boolean) => void
   controlledOpen?: boolean
+  modal?: boolean
 }
 
 function DropdownMenu({
@@ -97,6 +98,7 @@ function DropdownMenu({
   onOpenChange,
   controlledOpen,
   width = "normal",
+  modal = false,
 }: Props) {
   const [open, setOpen] = useState(false)
   const closeDropdown = useCallback(() => {
@@ -105,6 +107,7 @@ function DropdownMenu({
 
   return (
     <DropdownMenuRoot
+      modal={modal}
       onOpenChange={(newOpen: boolean) => {
         onOpenChange?.(newOpen)
         setOpen(newOpen)
@@ -114,7 +117,7 @@ function DropdownMenu({
       {triggerButtonProps ? (
         <TriggerButton {...triggerButtonProps} />
       ) : trigger ? (
-        trigger({ open, setOpen })
+        <DropdownMenuTrigger asChild>{trigger({ open, setOpen })}</DropdownMenuTrigger>
       ) : (
         <TriggerButton />
       )}

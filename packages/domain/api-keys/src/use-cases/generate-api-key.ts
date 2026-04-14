@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import { type ApiKeyId, type RepositoryError, SqlClient, type ValidationError } from "@domain/shared"
 import { type CryptoError, hash } from "@repo/utils"
 import { Effect } from "effect"
@@ -8,6 +9,7 @@ import { ApiKeyRepository } from "../ports/api-key-repository.ts"
 export interface GenerateApiKeyInput {
   readonly id?: ApiKeyId
   readonly name: string
+  readonly actorUserId?: string
 }
 
 export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError | CryptoError
@@ -36,6 +38,20 @@ export const generateApiKeyUseCase = (input: GenerateApiKeyInput) =>
 
     const repo = yield* ApiKeyRepository
     yield* repo.save(apiKey)
+
+    const outboxEventWriter = yield* OutboxEventWriter
+    yield* outboxEventWriter.write({
+      eventName: "ApiKeyCreated",
+      aggregateType: "api_key",
+      aggregateId: apiKey.id,
+      organizationId,
+      payload: {
+        organizationId,
+        actorUserId: input.actorUserId ?? "",
+        apiKeyId: apiKey.id,
+        name: apiKey.name,
+      },
+    })
 
     return apiKey
   })

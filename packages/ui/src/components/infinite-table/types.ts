@@ -16,6 +16,8 @@ export interface InfiniteTableColumn<T> {
   sortKey?: string
   /** Optional second header row cell; use for summaries. Keep controls `stopPropagation` if the column is sortable. */
   renderSubheader?: (column: InfiniteTableColumn<T>, columnIndex: number) => ReactNode
+  /** Whether to apply text ellipsis overflow on the cell. Defaults to `true`. */
+  ellipsis?: boolean
 }
 
 export interface InfiniteTableSelection {

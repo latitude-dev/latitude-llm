@@ -1,3 +1,4 @@
+import { OutboxEventWriter } from "@domain/events"
 import { type ProjectId, type RepositoryError, SqlClient } from "@domain/shared"
 import { Effect } from "effect"
 import { QueueItemAlreadyCompletedError, QueueItemNotFoundError } from "../errors.ts"
@@ -47,6 +48,21 @@ export const completeQueueItemUseCase = (input: CompleteQueueItemInput) =>
           projectId: input.projectId,
           queueId: input.queueId,
           delta: 1,
+        })
+
+        const outboxEventWriter = yield* OutboxEventWriter
+        yield* outboxEventWriter.write({
+          eventName: "AnnotationQueueItemCompleted",
+          aggregateType: "annotation_queue_item",
+          aggregateId: input.itemId,
+          organizationId: sqlClient.organizationId,
+          payload: {
+            organizationId: sqlClient.organizationId,
+            actorUserId: input.userId,
+            projectId: input.projectId,
+            queueId: input.queueId,
+            itemId: input.itemId,
+          },
         })
 
         return updated

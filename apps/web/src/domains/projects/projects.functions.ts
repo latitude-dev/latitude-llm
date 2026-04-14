@@ -15,7 +15,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 
 const logger = createLogger("project-stats")
 
@@ -77,13 +77,14 @@ export const createProject = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<ProjectRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
       createProjectUseCase({
         ...(data.id ? { id: ProjectId(data.id) } : {}),
         name: data.name,
+        actorUserId: userId,
       }).pipe(withPostgres(Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive), client, organizationId)),
     )
 
@@ -118,7 +119,7 @@ export const updateProject = createServerFn({ method: "POST" })
 export const deleteProject = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     await Effect.runPromise(
@@ -126,6 +127,21 @@ export const deleteProject = createServerFn({ method: "POST" })
         const repo = yield* ProjectRepository
         return yield* repo.softDelete(ProjectId(data.id))
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+    )
+
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter.write({
+        eventName: "ProjectDeleted",
+        aggregateType: "project",
+        aggregateId: data.id,
+        organizationId,
+        payload: {
+          organizationId,
+          actorUserId: userId,
+          projectId: data.id,
+        },
+      }),
     )
   })
 

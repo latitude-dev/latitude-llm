@@ -4,6 +4,7 @@ import { ISSUE_REFRESH_DEBOUNCE_MS } from "@domain/issues"
 import type { QueueConsumer, QueuePublisherShape } from "@domain/queue"
 import { SCORE_PUBLICATION_DEBOUNCE } from "@domain/scores"
 import { TRACE_END_DEBOUNCE_MS } from "@domain/spans"
+import { isPostHogTracked } from "@platform/analytics-posthog"
 import { EventEnvelopeSchema } from "@platform/queue-bullmq"
 import { createLogger } from "@repo/observability"
 import { hash } from "@repo/utils"
@@ -68,6 +69,16 @@ export const createDomainEventsWorker = ({
             dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
             debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
+          pub.publish(
+            "projects",
+            "checkFirstTrace",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              traceId: event.payload.traceId,
+            },
+            { dedupeKey: `projects:first-trace:${event.payload.projectId}` },
+          ),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
@@ -108,6 +119,16 @@ export const createDomainEventsWorker = ({
       pub.publish("projects", "provision", event.payload, {
         dedupeKey: `projects:provision:${event.payload.projectId}`,
       }),
+
+    UserSignedUp: () => Effect.void,
+    MemberJoined: () => Effect.void,
+    MemberInvited: () => Effect.void,
+    ApiKeyCreated: () => Effect.void,
+    DatasetCreated: () => Effect.void,
+    EvaluationConfigured: () => Effect.void,
+    AnnotationQueueItemCompleted: () => Effect.void,
+    ProjectDeleted: () => Effect.void,
+    FirstTraceReceived: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {
@@ -133,7 +154,34 @@ export const createDomainEventsWorker = ({
       }
 
       const handler = maybeHandler as EventHandlerFn
-      return handler(event)
+      const primary = handler(event)
+
+      if (!isPostHogTracked(event.name)) {
+        return primary
+      }
+
+      // PostHog fan-out is fire-and-forget: its failure must never propagate
+      // through Effect.all and cause the primary handler to be retried (which
+      // would double-run effects like api-key creation or project provisioning).
+      const analytics = pub
+        .publish(
+          "posthog-analytics",
+          "track",
+          {
+            eventName: event.name,
+            organizationId: event.organizationId,
+            payload: event.payload,
+            occurredAt: envelope.occurredAt.toISOString(),
+          },
+          { dedupeKey: `posthog:${envelope.id}` },
+        )
+        .pipe(
+          Effect.catch((e: unknown) =>
+            Effect.sync(() => logger.warn(`posthog fan-out publish failed for ${event.name}`, e)),
+          ),
+        )
+
+      return Effect.all([primary, analytics], { concurrency: "unbounded" }).pipe(Effect.asVoid)
     },
   })
 }
