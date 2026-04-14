@@ -103,6 +103,7 @@ export function InfiniteTable<T>({
     hasSelection: !!selection,
     hasExpansion,
     hasSubheaderRow,
+    containerRef: scrollContainerRef,
   })
 
   useLayoutEffect(() => {

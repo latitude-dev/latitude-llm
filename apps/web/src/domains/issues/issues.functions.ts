@@ -33,6 +33,7 @@ import {
   type EvaluationSummaryRecord,
   toEvaluationSummaryRecord,
 } from "../evaluations/evaluation-alignment.functions.ts"
+import { buildIssuesTraceCountFilters, withIssuesTraceTotals } from "./issues-list-metrics.ts"
 
 const listIssuesInputSchema = z.object({
   projectId: z.string(),
@@ -235,16 +236,19 @@ export const listIssues = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<IssuesListResultRecord> => {
     const { organizationId } = await requireSession()
     const orgId = OrganizationId(organizationId)
+    const projectId = ProjectId(data.projectId)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
     const redisClient = getRedisClient()
     const trimmedSearchQuery = data.searchQuery?.trim() || undefined
+    const traceCountFilters = buildIssuesTraceCountFilters(data.timeRange)
     const provideIssueProjection = trimmedSearchQuery
       ? withWeaviate(IssueProjectionRepositoryLive, await getWeaviateClient(), orgId)
       : withEmptyIssueProjection
 
     const result = await Effect.runPromise(
       Effect.gen(function* () {
+        const traceRepository = yield* TraceRepository
         const search = trimmedSearchQuery
           ? yield* embedIssueSearchQueryUseCase({
               organizationId,
@@ -261,26 +265,35 @@ export const listIssues = createServerFn({ method: "GET" })
               }
             : undefined
 
-        return yield* listIssuesUseCase({
-          organizationId,
-          projectId: data.projectId,
-          ...(data.limit !== undefined ? { limit: data.limit } : {}),
-          ...(data.offset !== undefined ? { offset: data.offset } : {}),
-          ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
-          ...(data.sort ? { sort: data.sort } : {}),
-          ...(timeRange ? { timeRange } : {}),
-          ...(search
-            ? {
-                search: {
-                  query: search.query,
-                  normalizedEmbedding: search.normalizedEmbedding,
-                },
-              }
-            : {}),
-        })
+        const [issues, totalTraces] = yield* Effect.all([
+          listIssuesUseCase({
+            organizationId,
+            projectId: data.projectId,
+            ...(data.limit !== undefined ? { limit: data.limit } : {}),
+            ...(data.offset !== undefined ? { offset: data.offset } : {}),
+            ...(data.lifecycleGroup ? { lifecycleGroup: data.lifecycleGroup } : {}),
+            ...(data.sort ? { sort: data.sort } : {}),
+            ...(timeRange ? { timeRange } : {}),
+            ...(search
+              ? {
+                  search: {
+                    query: search.query,
+                    normalizedEmbedding: search.normalizedEmbedding,
+                  },
+                }
+              : {}),
+          }),
+          traceRepository.countByProjectId({
+            organizationId: orgId,
+            projectId,
+            ...(traceCountFilters ? { filters: traceCountFilters } : {}),
+          }),
+        ])
+
+        return withIssuesTraceTotals(issues, totalTraces)
       }).pipe(
         withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
-        withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+        withClickHouse(Layer.mergeAll(ScoreAnalyticsRepositoryLive, TraceRepositoryLive), chClient, orgId),
         provideIssueProjection,
         withAi(AIEmbedLive, redisClient),
       ),

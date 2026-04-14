@@ -3,7 +3,6 @@ import {
   Checkbox,
   DetailDrawer,
   DetailSection,
-  DetailSummary,
   Icon,
   InfiniteTable,
   type InfiniteTableColumn,
@@ -15,8 +14,8 @@ import {
 } from "@repo/ui"
 import { formatCount, formatDuration, relativeTime } from "@repo/utils"
 import { useHotkeys } from "@tanstack/react-hotkeys"
-import { ArrowDownIcon, ArrowDownRightIcon, ArrowUpIcon, MessageSquareTextIcon, RadarIcon } from "lucide-react"
-import { useState } from "react"
+import { ArrowDownIcon, ArrowDownRightIcon, ArrowUpIcon, RadarIcon, TextAlignStartIcon } from "lucide-react"
+import { type ReactNode, useState } from "react"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import {
   invalidateIssueQueries,
@@ -27,8 +26,17 @@ import { applyIssueLifecycleAction, type IssueTraceRecord } from "../../../../..
 import { toUserMessage } from "../../../../../../lib/errors.ts"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
 import { formatSeenAge } from "./issue-formatters.ts"
-import { IssueLifecycleBadges } from "./issue-lifecycle-badges.tsx"
+import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
 import { IssueTrendBar } from "./issue-trend-bar.tsx"
+
+function SummaryField({ label, value }: { readonly label: string; readonly value: ReactNode }) {
+  return (
+    <div className="flex shrink-0 flex-col gap-0.5">
+      <Text.H6 color="foregroundMuted">{label}</Text.H6>
+      {value}
+    </div>
+  )
+}
 
 export function IssueDetailDrawer({
   projectId,
@@ -124,23 +132,6 @@ export function IssueDetailDrawer({
     },
   ])
 
-  const summaryItems =
-    issue === null || issue === undefined
-      ? [
-          { label: "Seen at", isLoading: isLoading, value: undefined },
-          { label: "Occurrences", isLoading: isLoading, value: undefined },
-        ]
-      : [
-          {
-            label: "Seen at",
-            value: formatSeenAge(issue.lastSeenAt, issue.firstSeenAt),
-          },
-          {
-            label: "Occurrences",
-            value: formatCount(issue.totalOccurrences),
-          },
-        ]
-
   return (
     <>
       <DetailDrawer
@@ -231,11 +222,35 @@ export function IssueDetailDrawer({
       >
         <div className="flex flex-col flex-1 overflow-y-auto p-6 gap-6">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-              <Text.H6 color="foregroundMuted">Issue status</Text.H6>
-              {isLoading ? <Skeleton className="h-5 w-48" /> : <IssueLifecycleBadges states={issue?.states ?? []} />}
+            <div className="flex flex-row items-start gap-8">
+              {isLoading ? (
+                <SummaryField label="Status" value={<Skeleton className="h-5 w-24" />} />
+              ) : issue && issue.states.length > 0 ? (
+                <SummaryField label="Status" value={<IssueLifecycleStatuses states={issue.states} wrap={false} />} />
+              ) : null}
+              <SummaryField
+                label="Seen at"
+                value={
+                  isLoading ? (
+                    <Skeleton className="h-5 w-32" />
+                  ) : (
+                    <Text.H5 color="foreground">
+                      {issue ? formatSeenAge(issue.lastSeenAt, issue.firstSeenAt) : "-"}
+                    </Text.H5>
+                  )
+                }
+              />
+              <SummaryField
+                label="Occurrences"
+                value={
+                  isLoading ? (
+                    <Skeleton className="h-5 w-16" />
+                  ) : (
+                    <Text.H5 color="foreground">{issue ? formatCount(issue.totalOccurrences) : "-"}</Text.H5>
+                  )
+                }
+              />
             </div>
-            <DetailSummary items={summaryItems} />
           </div>
 
           <DetailSection
@@ -274,7 +289,7 @@ export function IssueDetailDrawer({
           </DetailSection>
 
           <DetailSection
-            icon={<Icon icon={MessageSquareTextIcon} size="sm" />}
+            icon={<Icon icon={TextAlignStartIcon} size="sm" />}
             label="Traces"
             defaultOpen
             contentClassName="pl-0 max-h-none overflow-visible"

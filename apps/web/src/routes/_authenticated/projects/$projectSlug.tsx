@@ -1,6 +1,6 @@
 import { CopyableText } from "@repo/ui"
 import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router"
-import { CircleAlertIcon, DatabaseIcon, LayersIcon, MessageSquareTextIcon, SettingsIcon } from "lucide-react"
+import { CircleAlertIcon, DatabaseIcon, LayersIcon, SettingsIcon, TextAlignStartIcon } from "lucide-react"
 import { getProjectBySlug, type ProjectRecord } from "../../../domains/projects/projects.functions.ts"
 import { AppSidebar, NavItem } from "../../../layouts/AppSidebar/index.tsx"
 import { ProjectBreadcrumbSegment } from "../-components/project-breadcrumb-segment.tsx"
@@ -48,7 +48,7 @@ function ProjectSidebar({ project, projectSlug }: { project: ProjectRecord; proj
       {({ collapsed }) => (
         <>
           <NavItem
-            icon={MessageSquareTextIcon}
+            icon={TextAlignStartIcon}
             label="Traces"
             to={`/projects/${projectSlug}`}
             active={isTracesActive}

@@ -158,7 +158,7 @@ export function IssuesView({
       key: "trend",
       header: "Trend",
       width: 176,
-      minWidth: 160,
+      minWidth: 176,
       render: (issue) => (
         <IssueTrendBar
           buckets={issue.trend}
@@ -175,16 +175,16 @@ export function IssuesView({
     {
       key: "seenAt",
       header: "Seen at",
-      width: 156,
-      minWidth: 140,
+      width: 114,
+      minWidth: 114,
       sortKey: "lastSeen",
       render: (issue) => <SeenAtCell lastSeenAtIso={issue.lastSeenAt} firstSeenAtIso={issue.firstSeenAt} />,
     },
     {
       key: "occurrences",
       header: "Occurrences",
-      width: 112,
-      minWidth: 112,
+      width: 84,
+      minWidth: 84,
       align: "end",
       sortKey: "occurrences",
       render: (issue) => formatCount(issue.occurrences),
@@ -200,8 +200,8 @@ export function IssuesView({
     {
       key: "affectedTraces",
       header: "Affected traces",
-      width: 118,
-      minWidth: 118,
+      width: 89,
+      minWidth: 89,
       align: "end",
       render: (issue) => formatPercent(issue.affectedTracesPercent),
       renderSubheader: () => (
