@@ -7,7 +7,6 @@ import {
   type DatasetRowRepositoryShape,
 } from "@domain/datasets"
 import { OutboxEventWriter } from "@domain/events"
-import type { SqlClient } from "@domain/shared"
 import {
   type ChSqlClient,
   DatasetId,
@@ -24,7 +23,7 @@ import {
 import type { TraceDetail } from "@domain/spans"
 import { TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
-import { DatasetRepositoryLive, OutboxEventWriterLive, SqlClientLive, withPostgres } from "@platform/db-postgres"
+import { DatasetRepositoryLive, OutboxEventWriterLive, withPostgres } from "@platform/db-postgres"
 import { datasets } from "@platform/db-postgres/schema/datasets"
 import { setupTestClickHouse, setupTestPostgres } from "@platform/testkit"
 import { Effect, Layer } from "effect"
@@ -52,7 +51,7 @@ const runWithLive = <A, E>(
   effect: Effect.Effect<
     A,
     E,
-    DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter | SqlClient
+    DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter
   >,
 ) =>
   Effect.runPromise(
@@ -111,7 +110,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
     effect: Effect.Effect<
       A,
       E,
-      DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter | SqlClient
+      DatasetRepository | DatasetRowRepository | TraceRepository | ChSqlClient | OutboxEventWriter
     >,
     services: {
       datasetRepo: (typeof DatasetRepository)["Service"]
@@ -125,9 +124,7 @@ describe("addTracesToDataset and createDatasetFromTraces", () => {
         Effect.provideService(DatasetRowRepository, services.rowRepo),
         Effect.provideService(TraceRepository, services.traceRepo),
         Effect.provideService(OutboxEventWriter, { write: () => Effect.void }),
-        Effect.provide(
-          Layer.mergeAll(ChSqlClientLive(ch.client, ORG_ID), SqlClientLive(pg.adminPostgresClient, ORG_ID)),
-        ),
+        Effect.provide(ChSqlClientLive(ch.client, ORG_ID)),
       ),
     )
 
