@@ -18,7 +18,7 @@ A **span** is the smallest unit of work: a single LLM call, a tool invocation, a
 Each span captures:
 
 - Input and output content
-- Timing (start, end, duration)
+- Latency (start, end, duration)
 - Token usage and cost
 - Model and provider information
 - Status (success or error)

@@ -20,7 +20,7 @@ An annotation is a human reviewer's verdict on a trace. Each annotation includes
 | **Issue link** | Optional link to an existing issue or creation of a new one |
 | **Reviewer** | The team member who created the annotation |
 
-When published, an annotation becomes a score with `source = "annotation"` that enters the full reliability pipeline.
+When published, an annotation becomes a score with `source = "annotation"` that feeds into analytics, issue discovery, and evaluation alignment.
 
 ## Why Annotations Matter
 
@@ -54,7 +54,7 @@ Annotations start as **drafts**. A draft annotation is visible only to its creat
 - Revise their assessment before finalizing
 - Start annotations and come back to them later
 
-When a reviewer publishes an annotation, the underlying score is finalized — it becomes visible to the team and enters the reliability pipeline (analytics, issue discovery, alignment). Once finalized, the score is immutable.
+When a reviewer publishes an annotation, the underlying score is finalized — it becomes visible to the team and feeds into analytics, issue discovery, and alignment. Once finalized, the score is immutable.
 
 ## Annotation Workflow
 
@@ -64,7 +64,7 @@ The typical annotation workflow in Latitude:
 2. **Reviewers open queue items** — They see the full conversation and any existing scores
 3. **Reviewers create annotations** — They mark interactions as positive or negative with feedback
 4. **Annotations produce scores** — Published annotations become finalized scores
-5. **Scores feed the reliability loop** — They power analytics, issue discovery, and evaluation alignment
+5. **Scores drive improvements** — They power analytics, issue discovery, and evaluation alignment
 
 ## Next Steps
 

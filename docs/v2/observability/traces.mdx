@@ -5,7 +5,7 @@ description: Understand the trace model, lifecycle, and how to work with traces 
 
 # Traces
 
-A trace represents one complete interaction between a user and your agent. It's the primary unit that reliability features operate on — evaluations, annotations, issues, and simulations all reference traces.
+A trace represents one complete interaction between a user and your agent. It's the primary unit that Latitude's reliability features operate on — evaluations, annotations, issues, and simulations all reference traces.
 
 ## What's in a Trace
 
@@ -39,7 +39,7 @@ Each new span arrival resets the debounce timer. This handles common scenarios:
 - Parallel operations that complete at different times
 - Retries and fallback logic
 
-Once a trace is complete, Latitude triggers downstream reliability processes:
+Once a trace is complete, Latitude triggers downstream processes:
 
 - **Evaluation triggers** check if any active evaluations should run against this trace
 - **Live annotation queues** check if the trace matches any queue filters

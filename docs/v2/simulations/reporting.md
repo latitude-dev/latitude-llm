@@ -120,5 +120,5 @@ Over time, your simulation suite becomes a comprehensive safety net that gives y
 ## Next Steps
 
 - [Running Simulations](./cli) — CLI setup and configuration
-- [Simulations Overview](./overview) — The role of simulations in the reliability loop
+- [Simulations Overview](./overview) — Why simulations matter
 - [Issues](../issues/overview) — Turning production failures into simulation scenarios

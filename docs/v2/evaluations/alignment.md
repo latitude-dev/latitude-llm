@@ -75,7 +75,7 @@ When alignment is low:
 3. **Update the evaluation script** — Adjust the logic, prompts, or thresholds based on what you learned
 4. **Re-annotate** — After updating the evaluation, have reviewers annotate new traces to verify alignment improved
 
-This is the "Align" step of the reliability loop in action.
+This iterative calibration process is how you keep automated evaluations trustworthy over time.
 
 ## Next Steps
 

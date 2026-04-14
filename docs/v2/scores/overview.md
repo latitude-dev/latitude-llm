@@ -7,7 +7,7 @@ description: Understand how scores work as the universal measurement unit in Lat
 
 Scores are the universal measurement unit in Latitude. Every verdict on your agent's interactions — whether from an automated evaluation, a human annotation, or your own code — is stored as a score.
 
-Everything in the reliability system is built on top of scores: issues, evaluation dashboards, annotation workflows, simulations, and long-term analytics.
+Everything in Latitude's reliability system is built on top of scores: issues, evaluation dashboards, annotation workflows, simulations, and long-term analytics.
 
 ## What Is a Score
 
@@ -55,7 +55,7 @@ The **pass/fail** threshold at 0.5 provides a consistent binary signal across th
 
 ## How Scores Flow Through the System
 
-Scores feed forward into the reliability loop:
+Scores feed forward into every part of Latitude:
 
 1. **Issue Discovery** — When scores fail, Latitude clusters similar failure feedback into [issues](../issues/overview) — named, trackable failure patterns.
 
@@ -73,7 +73,7 @@ Scores from human annotations start as **drafts**. A draft score:
 - Does not appear in analytics, issue discovery, or alignment metrics
 - Can be edited and revised freely
 
-When the reviewer publishes their annotation, the score is finalized and enters the full reliability pipeline. Once finalized, a score becomes immutable.
+When the reviewer publishes their annotation, the score is finalized — it becomes visible in analytics, issue discovery, and alignment metrics. Once finalized, a score becomes immutable.
 
 ## Next Steps
 

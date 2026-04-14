@@ -19,15 +19,11 @@ Latitude V2 gives you a closed-loop system for monitoring, evaluating, and impro
 - **Simulate** — Before shipping changes, run your agent against test scenarios locally or in CI. Reuse the same evaluation scripts that monitor production.
 - **Improve** — Use everything you've learned to make your agents better, then repeat.
 
-## The Reliability Loop
+## How It All Connects
 
-The reliability loop is the organizing principle behind Latitude V2. Every feature connects back to this cycle:
+Every feature in Latitude feeds the next. Observability captures interactions. Evaluations score them. Failed scores surface issues. Issues generate new evaluations. Human annotations keep evaluations calibrated. Simulations prevent regressions before they reach production.
 
-```
-Observe → Score → Discover → Evaluate → Align → Simulate → Improve → Observe
-```
-
-Each step feeds the next. Annotations improve evaluation alignment. Better evaluations catch more issues. Issues generate monitors. Monitors validate simulations. Simulations prevent regressions before they reach production.
+The result is a continuous improvement cycle where your agents get better with every interaction.
 
 ## Key Concepts
 

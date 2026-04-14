@@ -44,5 +44,5 @@ This makes inline annotations a discovery mechanism: as you browse traces, you c
 ## Next Steps
 
 - [Annotation Queues](./annotation-queues) — Systematic review workflows
-- [Annotations Overview](./overview) — How annotations fit into the reliability loop
+- [Annotations Overview](./overview) — How the annotation system works
 - [Issues](../issues/overview) — How annotations connect to issue tracking
