@@ -385,7 +385,7 @@ jobs:
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/server \
             --service web \
             --release-version "$RELEASE" \
-            --minified-path-prefix "file:///app/apps/web/.output/server"
+            --minified-path-prefix "/app/apps/web/.output/server"
           for SERVICE in api ingest workers workflows; do
             pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
               --service "$SERVICE" \
@@ -760,7 +760,7 @@ jobs:
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/server \
             --service web \
             --release-version "$RELEASE" \
-            --minified-path-prefix "file:///app/apps/web/.output/server"
+            --minified-path-prefix "/app/apps/web/.output/server"
           for SERVICE in api ingest workers workflows; do
             pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
               --service "$SERVICE" \
