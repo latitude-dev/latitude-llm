@@ -5,7 +5,10 @@ import type { SortDirection } from "../../../utils/filtersHelpers.ts"
 import { Text } from "../../text/text.tsx"
 import { ResizableHandle } from "./resizable-handle.tsx"
 
+/** Horizontal inset for label + resize affordance (must match Tailwind padding sum). */
 const TH_HORIZONTAL_PADDING = 32
+/** Resizable `<th>`: same total width as `px-4`, shifted toward `pr` so the grab strip does not crowd the label. */
+const RESIZABLE_HEADER_PADDING = "pl-3 pr-5" as const
 
 function SortIcon({ direction }: { direction: SortDirection | null }) {
   const cls = "h-3.5 w-3.5 shrink-0"
@@ -52,17 +55,22 @@ export function HeaderCell({
   const textProps = sortable ? { type: "button" as const, onClick: onSortClick } : {}
   const thRef = useRef<HTMLTableCellElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
+  const subheaderMeasureRef = useRef<HTMLDivElement>(null)
   const headerMinWidth = useRef(minWidth)
 
   useLayoutEffect(() => {
-    const el = measureRef.current
-    if (!el) return
-    headerMinWidth.current = Math.max(minWidth, el.offsetWidth + TH_HORIZONTAL_PADDING)
-  }, [minWidth, children, subheader, showSubheaderSlot])
+    const titleW = measureRef.current?.offsetWidth ?? 0
+    const subW =
+      showSubheaderSlot && subheader != null && subheaderMeasureRef.current
+        ? subheaderMeasureRef.current.offsetWidth
+        : 0
+    const contentW = Math.max(titleW, subW)
+    headerMinWidth.current = Math.max(minWidth, contentW + TH_HORIZONTAL_PADDING)
+  }, [minWidth, children, subheader, showSubheaderSlot, align])
 
   const headerLabel =
     typeof children === "string" ? (
-      <Text.H6 weight="medium" color="foregroundMuted">
+      <Text.H6 weight="medium" color="foregroundMuted" noWrap>
         {children}
       </Text.H6>
     ) : (
@@ -79,46 +87,64 @@ export function HeaderCell({
         ? ({ minWidth } as const)
         : undefined
 
+  const headerBody = (
+    <div className="flex min-h-0 w-full min-w-0 flex-col gap-0">
+      <div
+        className={cn(
+          "flex min-w-min items-center",
+          showSubheaderSlot ? "shrink-0" : sortable ? "h-full" : "",
+          align === "end" && "justify-end",
+          align === "end" && sortable && "w-full",
+          align === "end" && !sortable && "self-end",
+          align === "start" && !sortable && "self-start",
+        )}
+      >
+        <TextComp
+          {...textProps}
+          className={cn("flex items-center whitespace-nowrap", {
+            "w-max max-w-full": !sortable,
+            "w-full min-w-0 justify-end": align === "end" && sortable,
+            "bg-transparent border-none rounded-sm p-0 cursor-pointer select-none transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring":
+              sortable,
+          })}
+        >
+          <span ref={measureRef} className="inline-flex w-max shrink-0 items-center gap-1 whitespace-nowrap">
+            {sortable && <SortIcon direction={sortDirection ?? null} />}
+            {headerLabel}
+          </span>
+        </TextComp>
+      </div>
+      {showSubheaderSlot && (
+        <div className={cn("flex w-full min-w-0 shrink-0 items-center", align === "end" && "justify-end")}>
+          {subheader != null ? (
+            <div
+              ref={subheaderMeasureRef}
+              className={cn("max-w-full shrink-0", align === "end" ? "ml-auto w-max" : "w-max")}
+            >
+              {subheader}
+            </div>
+          ) : (
+            <span className="block w-full shrink-0" aria-hidden />
+          )}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <th
       ref={thRef}
       className={cn(
-        "relative overflow-hidden px-4", // matches TH_HORIZONTAL_PADDING
+        "relative overflow-hidden",
+        resizable ? RESIZABLE_HEADER_PADDING : "px-4",
         showSubheaderSlot ? "py-1.5 align-top" : "h-12 align-middle",
         className,
       )}
       style={thStyle}
       aria-sort={sortable ? ariaSort(sortDirection) : undefined}
     >
-      <div className="flex min-h-0 w-full min-w-0 flex-col gap-0">
-        <div
-          className={cn(
-            "flex min-w-0 items-center",
-            showSubheaderSlot ? "shrink-0" : "h-full",
-            align === "end" && "justify-end",
-          )}
-        >
-          <TextComp
-            {...textProps}
-            className={cn("flex min-w-0 items-center truncate", {
-              "w-full justify-end": align === "end",
-              "bg-transparent border-none rounded-sm p-0 cursor-pointer select-none transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring":
-                sortable,
-            })}
-          >
-            <span ref={measureRef} className="inline-flex w-fit min-w-0 items-center gap-1">
-              {sortable && <SortIcon direction={sortDirection ?? null} />}
-              {headerLabel}
-            </span>
-          </TextComp>
-        </div>
-        {showSubheaderSlot && (
-          <div className={cn("flex w-full min-w-0 shrink-0 items-center", align === "end" && "justify-end")}>
-            {subheader ?? <span className="block w-full shrink-0" aria-hidden />}
-          </div>
-        )}
-      </div>
-      <ResizableHandle minWidth={headerMinWidth} thRef={thRef} disabled={!resizable} />
+      {headerBody}
+      {resizable ? <ResizableHandle minWidth={headerMinWidth} thRef={thRef} disabled={false} /> : null}
     </th>
   )
 }
