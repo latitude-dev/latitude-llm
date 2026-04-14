@@ -3,10 +3,40 @@
   "theme": "mint",
   "name": "Latitude Docs",
   "favicon": "/favicon.svg",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://latitude.so"
+  },
   "colors": {
-    "primary": "#5B41C6",
-    "light": "#8B7BD8",
-    "dark": "#5B41C6"
+    "primary": "#0080FF",
+    "light": "#3399FF",
+    "dark": "#0066CC"
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "fonts": {
+    "family": "Inter",
+    "heading": {
+      "family": "Inter",
+      "weight": 600
+    }
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "background": {
+    "decoration": "gradient"
+  },
+  "styling": {
+    "eyebrow": "breadcrumbs",
+    "codeblocks": {
+      "theme": {
+        "light": "github-light",
+        "dark": "github-dark"
+      }
+    }
   },
   "navigation": {
     "groups": [
