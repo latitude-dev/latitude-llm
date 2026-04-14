@@ -1,7 +1,7 @@
-import type { GenerateInput, GenerateResult } from "@domain/ai"
+import type { AI, GenerateInput, GenerateResult } from "@domain/ai"
 import { createFakeAI } from "@domain/ai/testing"
-import { ScoreRepository } from "@domain/scores"
-import { createFakeScoreRepository } from "@domain/scores/testing"
+import { ScoreAnalyticsRepository, ScoreRepository } from "@domain/scores"
+import { createFakeScoreAnalyticsRepository, createFakeScoreRepository } from "@domain/scores/testing"
 import {
   ExternalUserId,
   IssueId,
@@ -11,8 +11,10 @@ import {
   SessionId,
   SimulationId,
   SpanId,
+  SqlClient,
   TraceId,
 } from "@domain/shared"
+import { createFakeSqlClient } from "@domain/shared/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -31,6 +33,10 @@ import {
   wrapPromptAsEvaluationScript,
 } from "../../runtime/evaluation-execution.ts"
 import { runLiveEvaluationUseCase } from "./run-live-evaluation.ts"
+import {
+  ScoreWriteOutboxEventWriter,
+  type ScoreWriteOutboxEventWriterShape,
+} from "./score-write-outbox-event-writer.ts"
 
 const INPUT = {
   organizationId: "a".repeat(24),
@@ -154,17 +160,55 @@ function createIssueRepository(
   }
 }
 
+function createScoreWriteLayer(input?: {
+  readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"] | undefined
+  readonly scoreAnalyticsRepository?: ReturnType<typeof createFakeScoreAnalyticsRepository>["repository"] | undefined
+  readonly outboxEventWriter?: ScoreWriteOutboxEventWriterShape | undefined
+}): Layer.Layer<ScoreAnalyticsRepository | ScoreRepository | ScoreWriteOutboxEventWriter | SqlClient, never, never> {
+  return Layer.mergeAll(
+    Layer.succeed(ScoreRepository, input?.scoreRepository ?? createFakeScoreRepository().repository),
+    Layer.succeed(
+      ScoreAnalyticsRepository,
+      input?.scoreAnalyticsRepository ?? createFakeScoreAnalyticsRepository().repository,
+    ),
+    Layer.succeed(
+      ScoreWriteOutboxEventWriter,
+      input?.outboxEventWriter ?? {
+        write: () => Effect.void,
+      },
+    ),
+    Layer.succeed(
+      SqlClient,
+      createFakeSqlClient({
+        organizationId: OrganizationId(INPUT.organizationId),
+      }),
+    ),
+  )
+}
+
 function createUseCaseLayer(input: {
   readonly traceRepository: ReturnType<typeof createFakeTraceRepository>["repository"]
   readonly evaluationRepository: EvaluationRepositoryShape
-  readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"]
-  readonly issueRepository?: ReturnType<typeof createIssueRepository>
-  readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"]
-}) {
+  readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"] | undefined
+  readonly scoreWriteLayer?: ReturnType<typeof createScoreWriteLayer> | undefined
+  readonly issueRepository?: ReturnType<typeof createIssueRepository> | undefined
+  readonly aiLayer?: ReturnType<typeof createFakeAI>["layer"] | undefined
+}): Layer.Layer<
+  | AI
+  | EvaluationIssueRepository
+  | EvaluationRepository
+  | ScoreWriteOutboxEventWriter
+  | ScoreAnalyticsRepository
+  | ScoreRepository
+  | SqlClient
+  | TraceRepository,
+  never,
+  never
+> {
   return Layer.mergeAll(
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
-    Layer.succeed(ScoreRepository, input.scoreRepository ?? createFakeScoreRepository().repository),
+    input.scoreWriteLayer ?? createScoreWriteLayer({ scoreRepository: input.scoreRepository }),
     Layer.succeed(
       EvaluationIssueRepository,
       input.issueRepository ?? createIssueRepository(() => Effect.die("Issue should not be loaded in this scenario")),
@@ -451,7 +495,7 @@ describe("runLiveEvaluationUseCase", () => {
     })
   })
 
-  it("executes the live evaluation through the shared AI service after loading context", async () => {
+  it("persists the live evaluation result through the canonical score write path after hosted execution", async () => {
     const evaluation = makeEvaluation({
       script: VALID_SCRIPT,
     })
@@ -467,6 +511,9 @@ describe("runLiveEvaluationUseCase", () => {
       expect(issueId).toEqual(IssueId(evaluation.issueId))
       return Effect.succeed(issue)
     })
+    const { repository: scoreRepository, scores: persistedScores } = createFakeScoreRepository()
+    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
+    const outboxEvents: unknown[] = []
     const aiDuration = 456_000_000
     const aiTokens = 120
     const aiTokenUsage = {
@@ -486,6 +533,16 @@ describe("runLiveEvaluationUseCase", () => {
           tokenUsage: aiTokenUsage,
         } satisfies GenerateResult<T>),
     })
+    const scoreWriteLayer = createScoreWriteLayer({
+      scoreRepository,
+      scoreAnalyticsRepository,
+      outboxEventWriter: {
+        write: (event) =>
+          Effect.sync(() => {
+            outboxEvents.push(event)
+          }),
+      },
+    })
 
     const result = await Effect.runPromise(
       runLiveEvaluationUseCase(INPUT).pipe(
@@ -493,6 +550,7 @@ describe("runLiveEvaluationUseCase", () => {
           createUseCaseLayer({
             traceRepository,
             evaluationRepository,
+            scoreWriteLayer,
             issueRepository,
             aiLayer,
           }),
@@ -500,36 +558,67 @@ describe("runLiveEvaluationUseCase", () => {
       ),
     )
 
-    expect(result).toEqual({
-      action: "executed",
-      summary: {
-        evaluationId: evaluation.id,
-        issueId: evaluation.issueId,
-        traceId: traceDetail.traceId,
-        sessionId: traceDetail.sessionId,
+    expect(result.action).toBe("persisted")
+    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
+
+    expect(result.summary).toEqual({
+      evaluationId: evaluation.id,
+      issueId: evaluation.issueId,
+      traceId: traceDetail.traceId,
+      sessionId: traceDetail.sessionId,
+      scoreId: result.context.score.id,
+    })
+    expect(result.context).toMatchObject({
+      evaluation,
+      traceDetail,
+      issue: {
+        name: issue.name,
+        description: issue.description,
       },
-      context: {
-        evaluation,
-        traceDetail,
-        issue: {
-          name: issue.name,
-          description: issue.description,
+      execution: {
+        result: {
+          passed: true,
+          value: 1,
+          feedback: "The conversation does not exhibit the linked issue.",
         },
-        execution: {
-          result: {
-            passed: true,
-            value: 1,
-            feedback: "The conversation does not exhibit the linked issue.",
-          },
-          duration: aiDuration,
+        duration: aiDuration,
+        tokens: aiTokens,
+        cost: estimateEvaluationScriptCostMicrocents({
           tokens: aiTokens,
-          cost: estimateEvaluationScriptCostMicrocents({
-            tokens: aiTokens,
-            tokenUsage: aiTokenUsage,
-          }),
+          tokenUsage: aiTokenUsage,
+        }),
+      },
+      score: {
+        organizationId: INPUT.organizationId,
+        projectId: INPUT.projectId,
+        sessionId: traceDetail.sessionId,
+        traceId: traceDetail.traceId,
+        spanId: traceDetail.rootSpanId,
+        simulationId: null,
+        source: "evaluation",
+        sourceId: evaluation.id,
+        issueId: null,
+        value: 1,
+        passed: true,
+        feedback: "The conversation does not exhibit the linked issue.",
+        metadata: {
+          evaluationHash: evaluation.alignment.evaluationHash,
         },
+        error: null,
+        errored: false,
+        duration: aiDuration,
+        tokens: aiTokens,
+        cost: estimateEvaluationScriptCostMicrocents({
+          tokens: aiTokens,
+          tokenUsage: aiTokenUsage,
+        }),
+        draftedAt: null,
+        annotatorId: null,
       },
     })
+    expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
+    expect(inserted).toEqual([result.context.score.id])
+    expect(outboxEvents).toHaveLength(1)
     expect(calls.generate).toHaveLength(1)
   })
 })

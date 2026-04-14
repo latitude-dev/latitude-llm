@@ -226,4 +226,4 @@ export const executeEvaluationScriptWithAI = (input: {
         })
       },
     })
-  }) as Effect.Effect<EvaluationScriptExecution, ExecuteEvaluationScriptWithAIError>
+  }) as Effect.Effect<EvaluationScriptExecution, ExecuteEvaluationScriptWithAIError, AI>

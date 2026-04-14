@@ -1,5 +1,20 @@
-import { ScoreRepository } from "@domain/scores"
-import { EvaluationId, IssueId, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import type { AI } from "@domain/ai"
+import {
+  type EvaluationScore,
+  type ScoreAnalyticsRepository,
+  ScoreRepository,
+  type WriteScoreError,
+  writeScoreUseCase,
+} from "@domain/scores"
+import {
+  EvaluationId,
+  IssueId,
+  OrganizationId,
+  ProjectId,
+  type RepositoryError,
+  type SqlClient,
+  TraceId,
+} from "@domain/shared"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
@@ -12,6 +27,7 @@ import {
   type LiveEvaluationExecutionResult,
   type LiveEvaluationIssueContext,
 } from "./execute-live-evaluation.ts"
+import type { ScoreWriteOutboxEventWriter } from "./score-write-outbox-event-writer.ts"
 
 export interface RunLiveEvaluationInput {
   readonly organizationId: string
@@ -20,22 +36,26 @@ export interface RunLiveEvaluationInput {
   readonly traceId: string
 }
 
-export interface RunLiveEvaluationExecutedSummary {
+export interface RunLiveEvaluationPersistedSummary {
   readonly evaluationId: string
   readonly issueId: string
   readonly traceId: string
   readonly sessionId: string | null
+  readonly scoreId: string
 }
 
-export interface RunLiveEvaluationExecutedContext {
+export interface RunLiveEvaluationPersistedContext {
   readonly evaluation: Evaluation
   readonly traceDetail: TraceDetail
   readonly issue: LiveEvaluationIssueContext
   readonly execution: LiveEvaluationExecutionResult
+  readonly score: EvaluationScore
 }
 
-export type RunLiveEvaluationLoadedSummary = RunLiveEvaluationExecutedSummary
-export type RunLiveEvaluationLoadedContext = RunLiveEvaluationExecutedContext
+export type RunLiveEvaluationExecutedSummary = RunLiveEvaluationPersistedSummary
+export type RunLiveEvaluationExecutedContext = RunLiveEvaluationPersistedContext
+export type RunLiveEvaluationLoadedSummary = RunLiveEvaluationPersistedSummary
+export type RunLiveEvaluationLoadedContext = RunLiveEvaluationPersistedContext
 
 export type RunLiveEvaluationResult =
   | {
@@ -52,12 +72,12 @@ export type RunLiveEvaluationResult =
       readonly traceId: string
     }
   | {
-      readonly action: "executed"
-      readonly summary: RunLiveEvaluationExecutedSummary
-      readonly context: RunLiveEvaluationExecutedContext
+      readonly action: "persisted"
+      readonly summary: RunLiveEvaluationPersistedSummary
+      readonly context: RunLiveEvaluationPersistedContext
     }
 
-export type RunLiveEvaluationError = RepositoryError | ExecuteLiveEvaluationError
+export type RunLiveEvaluationError = RepositoryError | ExecuteLiveEvaluationError | WriteScoreError
 
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
@@ -149,24 +169,51 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       issue: issueContext,
       conversation: traceDetail.allMessages,
     })
+    const score = (yield* writeScoreUseCase({
+      projectId: input.projectId,
+      source: "evaluation",
+      sourceId: evaluation.id,
+      sessionId: traceDetail.sessionId ?? null,
+      traceId: traceDetail.traceId,
+      spanId: traceDetail.rootSpanId,
+      simulationId: traceDetail.simulationId || null,
+      value: execution.result.value,
+      passed: execution.result.passed,
+      feedback: execution.result.feedback,
+      metadata: {
+        evaluationHash: evaluation.alignment.evaluationHash,
+      },
+      duration: execution.duration,
+      tokens: execution.tokens,
+      cost: execution.cost,
+    })) as EvaluationScore
 
     return {
-      action: "executed",
+      action: "persisted",
       summary: {
         evaluationId: evaluation.id,
         issueId: evaluation.issueId,
         traceId: traceDetail.traceId,
         sessionId: traceDetail.sessionId ?? null,
+        scoreId: score.id,
       },
       context: {
         evaluation,
         traceDetail,
         issue: issueContext,
         execution,
+        score,
       },
     } satisfies RunLiveEvaluationResult
   }) as Effect.Effect<
     RunLiveEvaluationResult,
     RunLiveEvaluationError,
-    EvaluationIssueRepository | EvaluationRepository | ScoreRepository | TraceRepository
+    | AI
+    | EvaluationIssueRepository
+    | EvaluationRepository
+    | ScoreWriteOutboxEventWriter
+    | ScoreAnalyticsRepository
+    | ScoreRepository
+    | SqlClient
+    | TraceRepository
   >

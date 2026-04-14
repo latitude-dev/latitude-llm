@@ -1,4 +1,4 @@
-import type { AICredentialError, AIError } from "@domain/ai"
+import type { AI, AICredentialError, AIError } from "@domain/ai"
 import { type TraceDetail, traceDetailSchema } from "@domain/spans"
 import { Effect } from "effect"
 import { z } from "zod"
@@ -78,4 +78,4 @@ export const executeLiveEvaluationUseCase = (input: LiveEvaluationExecutionInput
           cause: error,
         }),
     })
-  }) as Effect.Effect<LiveEvaluationExecutionResult, ExecuteLiveEvaluationError>
+  }) as Effect.Effect<LiveEvaluationExecutionResult, ExecuteLiveEvaluationError, AI>

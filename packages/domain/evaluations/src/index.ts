@@ -184,6 +184,8 @@ export {
   type RunLiveEvaluationInput,
   type RunLiveEvaluationLoadedContext,
   type RunLiveEvaluationLoadedSummary,
+  type RunLiveEvaluationPersistedContext,
+  type RunLiveEvaluationPersistedSummary,
   type RunLiveEvaluationResult,
   runLiveEvaluationUseCase,
 } from "./use-cases/live/run-live-evaluation.ts"
