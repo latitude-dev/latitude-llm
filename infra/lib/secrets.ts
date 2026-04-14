@@ -306,6 +306,17 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["datadog-site"] = datadogSite.secret
   secretVersions["datadog-site"] = datadogSite.secretVersion
 
+  const posthogApiKey = createSingleSecret(
+    baseName,
+    "posthog-api-key",
+    "PostHog project API key (phc_...) for product analytics",
+    process.env.LAT_POSTHOG_API_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["posthog-api-key"] = posthogApiKey.secret
+  secretVersions["posthog-api-key"] = posthogApiKey.secretVersion
+
   const latitudeTelemetryApiKey = createSingleSecret(
     baseName,
     "latitude-telemetry-api-key",
