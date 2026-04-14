@@ -8,6 +8,7 @@ import {
   NotFoundError,
   OrganizationId,
   ProjectId,
+  RepositoryError,
   SessionId,
   SimulationId,
   SpanId,
@@ -546,6 +547,122 @@ describe("runLiveEvaluationUseCase", () => {
     expect(issueLoadCalls).toBe(0)
     expect(calls.generate).toHaveLength(0)
     expect(operations).toEqual([])
+  })
+
+  it("skips when another worker wins the canonical write race after execution", async () => {
+    let duplicateCheckCalls = 0
+    let duplicateCommitted = false
+    const evaluation = makeEvaluation({
+      script: VALID_SCRIPT,
+    })
+    const issue = makeIssue({
+      id: IssueId(evaluation.issueId),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository((issueId) => {
+      expect(issueId).toEqual(IssueId(evaluation.issueId))
+      return Effect.succeed(issue)
+    })
+    const operations: string[] = []
+    const duplicateFixture = createFakeScoreRepository({
+      existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) => {
+        duplicateCheckCalls += 1
+        expect(projectId).toEqual(ProjectId(INPUT.projectId))
+        expect(evaluationId).toBe(evaluation.id)
+        expect(traceId).toEqual(TraceId(INPUT.traceId))
+        return Effect.succeed(duplicateCommitted)
+      },
+    })
+    const scoreRepository = {
+      ...duplicateFixture.repository,
+      save: () =>
+        Effect.sync(() => {
+          operations.push("score-save")
+          duplicateCommitted = true
+        }).pipe(
+          Effect.flatMap(() =>
+            Effect.fail(
+              new RepositoryError({
+                operation: "save",
+                cause: {
+                  code: "23505",
+                  constraint: "scores_canonical_evaluation_trace_idx",
+                },
+              }),
+            ),
+          ),
+        ),
+    }
+    const analyticsFixture = createFakeScoreAnalyticsRepository()
+    const scoreAnalyticsRepository = {
+      ...analyticsFixture.repository,
+      existsById: () =>
+        Effect.sync(() => {
+          operations.push("analytics-exists")
+          return false
+        }),
+      insert: () =>
+        Effect.sync(() => {
+          operations.push("analytics-insert")
+        }),
+    }
+    const outboxEvents: unknown[] = []
+    const scoreWriteLayer = createScoreWriteLayer({
+      scoreRepository,
+      scoreAnalyticsRepository,
+      outboxEventWriter: {
+        write: (event) =>
+          Effect.sync(() => {
+            operations.push("outbox-write")
+            outboxEvents.push(event)
+          }),
+      },
+    })
+    const { layer: aiLayer, calls } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) =>
+        Effect.succeed({
+          object: input.schema.parse({
+            passed: true,
+            value: 1,
+            feedback: "The conversation does not exhibit the linked issue.",
+          }),
+          tokens: 120,
+          duration: 456_000_000,
+          tokenUsage: {
+            input: 40,
+            output: 80,
+          },
+        } satisfies GenerateResult<T>),
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            issueRepository,
+            aiLayer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "result-already-exists",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(duplicateCheckCalls).toBe(2)
+    expect(calls.generate).toHaveLength(1)
+    expect(outboxEvents).toEqual([])
+    expect(operations).toEqual(["score-save"])
   })
 
   it("skips when the trace no longer exists", async () => {

@@ -115,6 +115,7 @@ All score producers reuse one canonical Postgres-first write path:
 - custom scores written through `/scores` always stay unowned at write time and use issue discovery when they are eligible
 - evaluation scores written through `/scores` always stay unowned at write time; later centralized issue handling may resolve an already linked evaluation issue before similarity search starts
 - internal live evaluation execution writes passed monitor results unowned, writes failed non-errored issue-linked monitor results with `issueId = evaluation.issueId` immediately, and writes errored monitor results as unowned immutable evaluation scores with `error != null`
+- non-draft evaluation scores with a `trace_id` are unique per `(organization_id, project_id, source_id, trace_id)` in Postgres, so canonical evaluation persistence stays idempotent even when concurrent workers race past an earlier duplicate precheck
 - annotation ingestion stays on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though annotations still persist canonical score rows
 - internal evaluation and simulation writers reuse the same score-validation and persistence path rather than maintaining a second storage model
 - source-specific metadata is validated exactly before persistence, so evaluation, annotation, and custom writers cannot drift into incompatible payload shapes

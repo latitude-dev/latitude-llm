@@ -94,6 +94,13 @@ export type RunLiveEvaluationResult =
 
 export type RunLiveEvaluationError = RepositoryError | WriteScoreError
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+const isUniqueViolationCause = (cause: unknown): boolean => {
+  if (!isRecord(cause)) return false
+  if (cause.code === "23505") return true
+  return "cause" in cause && isUniqueViolationCause(cause.cause)
+}
+
 const toElapsedNanoseconds = (startedAtMs: number) =>
   Math.max(0, Math.round((performance.now() - startedAtMs) * 1_000_000))
 const toErroredExecution = (message: string, startedAtMs: number): RunLiveEvaluationErroredExecution => ({
@@ -221,7 +228,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
     )
     const persistedIssueId =
       execution.kind === "completed" && execution.result.passed === false ? evaluation.issueId : null
-    const score = (yield* writeScoreUseCase({
+    const scoreResult = yield* writeScoreUseCase({
       projectId: input.projectId,
       source: "evaluation",
       sourceId: evaluation.id,
@@ -240,7 +247,35 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       duration: execution.duration,
       tokens: execution.tokens,
       cost: execution.cost,
-    })) as EvaluationScore
+    }).pipe(
+      Effect.map((score) => ({ kind: "persisted", score }) as const),
+      Effect.catchTag("RepositoryError", (error) =>
+        isUniqueViolationCause(error.cause)
+          ? scoreRepository
+              .existsByEvaluationIdAndTraceId({
+                projectId,
+                evaluationId: evaluation.id,
+                traceId: TraceId(input.traceId),
+              })
+              .pipe(
+                Effect.flatMap((resultNowExists) =>
+                  resultNowExists ? Effect.succeed({ kind: "skipped" } as const) : Effect.fail(error),
+                ),
+              )
+          : Effect.fail(error),
+      ),
+    )
+
+    if (scoreResult.kind === "skipped") {
+      return {
+        action: "skipped",
+        reason: "result-already-exists",
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
+    const score = scoreResult.score as EvaluationScore
 
     return {
       action: "persisted",
