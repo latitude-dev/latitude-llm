@@ -141,7 +141,7 @@ export function AnnotationInput({
           minRows={2}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Leave a note about AI performance"
+          placeholder="Leave feedback on how the AI did"
           disabled={isLoading}
         />
       </div>

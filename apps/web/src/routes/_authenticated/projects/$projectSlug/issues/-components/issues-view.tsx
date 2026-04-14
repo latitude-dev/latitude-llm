@@ -71,7 +71,6 @@ export function IssuesView({
   infiniteScroll,
   sorting,
   occurrencesSum,
-  totalTraces,
   visibleColumnIds,
   activeIssueId,
   onSortChange,
@@ -83,7 +82,6 @@ export function IssuesView({
   readonly infiniteScroll: InfiniteTableInfiniteScroll
   readonly sorting: IssuesTableSorting
   readonly occurrencesSum: number
-  readonly totalTraces: number
   readonly visibleColumnIds: readonly IssuesColumnId[]
   readonly activeIssueId: string | undefined
   readonly onSortChange: (sorting: IssuesTableSorting) => void
@@ -204,14 +202,6 @@ export function IssuesView({
       minWidth: 89,
       align: "end",
       render: (issue) => formatPercent(issue.affectedTracesPercent),
-      renderSubheader: () => (
-        <div className="flex min-w-0 w-full items-center justify-end gap-0.5">
-          <Text.H6 color="foregroundMuted" className="min-w-0 truncate text-center tabular-nums">
-            COUNT
-          </Text.H6>
-          <Text.H6B color="foreground">{formatCount(totalTraces)}</Text.H6B>
-        </div>
-      ),
     },
   ]
 

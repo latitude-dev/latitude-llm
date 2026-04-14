@@ -1,6 +1,7 @@
-import { BarChart, ChartSkeleton, Text } from "@repo/ui"
+import { BarChart, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
+import { AnalyticsHistogramSkeleton } from "../../-components/aggregations/analytics-histogram-skeleton.tsx"
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
 const COUNT_CARDS = [
@@ -11,13 +12,27 @@ const COUNT_CARDS = [
   { key: "seenOccurrences", label: "Seen occurrences" },
 ] as const
 
-function AggregationItem({ label, value }: { readonly label: string; readonly value: string }) {
+function AggregationItem({
+  label,
+  value,
+  isLoading,
+  skeletonWidthClassName = "w-16",
+}: {
+  readonly label: string
+  readonly value: string
+  readonly isLoading?: boolean
+  readonly skeletonWidthClassName?: string
+}) {
   return (
     <div className="flex basis-[176px] min-w-[176px] shrink-0 flex-col gap-2">
       <Text.H6 color="foregroundMuted">{label}</Text.H6>
-      <Text.H5 color="foreground" className="tabular-nums">
-        {value}
-      </Text.H5>
+      {isLoading ? (
+        <Skeleton className={`h-5 ${skeletonWidthClassName}`} />
+      ) : (
+        <Text.H5 color="foreground" className="tabular-nums">
+          {value}
+        </Text.H5>
+      )}
     </div>
   )
 }
@@ -36,14 +51,16 @@ export function IssuesAnalyticsPanel({
           <AggregationItem
             key={card.key}
             label={card.label}
-            value={isLoading ? "..." : formatCount(analytics.counts[card.key])}
+            value={formatCount(analytics.counts[card.key])}
+            isLoading={isLoading}
+            skeletonWidthClassName={card.key === "seenOccurrences" ? "w-20" : "w-16"}
           />
         ))}
       </div>
 
       {isLoading ? (
         <div className="px-4 py-3">
-          <ChartSkeleton minHeight={160} className="border-0 bg-transparent p-0" />
+          <AnalyticsHistogramSkeleton />
         </div>
       ) : analytics.histogram.length === 0 || analytics.histogram.every((bucket) => bucket.count === 0) ? (
         <div className="flex w-full min-h-[80px] items-center justify-center px-4 py-3">

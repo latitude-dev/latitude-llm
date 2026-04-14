@@ -158,7 +158,6 @@ function IssuesPage() {
           infiniteScroll={infiniteScroll}
           sorting={sorting}
           occurrencesSum={occurrencesSum}
-          totalTraces={analytics.totalTraces}
           visibleColumnIds={visibleColumnIds}
           activeIssueId={activeIssueId || undefined}
           onSortChange={setSorting}
