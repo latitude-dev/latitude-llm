@@ -112,6 +112,9 @@ const buildExecutePublication = (input: {
       throw new Error("`turn = last` requires `debounce > 0` before enqueue publication")
     }
 
+    // TODO(live-evals-last-trace): `turn = last` should identify the last trace in a
+    // session, which needs a session-level signal separate from the current trace-end
+    // debounce that only identifies the last span of one trace.
     return {
       organizationId: input.organizationId,
       projectId: input.projectId,

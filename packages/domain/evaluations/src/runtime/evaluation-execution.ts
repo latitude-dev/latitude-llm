@@ -5,6 +5,7 @@ import {
   type formatGenAIConversation,
   formatGenAIMessage,
   type GenerateResult,
+  type GenerateTelemetryCapture,
 } from "@domain/ai"
 import { estimateCost } from "@domain/models"
 import { Effect } from "effect"
@@ -191,6 +192,7 @@ export const executeEvaluationScriptWithAI = (input: {
   readonly script: string
   readonly conversation: readonly EvaluationConversationMessage[]
   readonly issue: EvaluationIssueContext
+  readonly telemetry?: GenerateTelemetryCapture
 }) =>
   Effect.gen(function* () {
     const ai = yield* AI
@@ -212,6 +214,7 @@ export const executeEvaluationScriptWithAI = (input: {
                 system: EVALUATION_SCRIPT_RUNTIME_SYSTEM_PROMPT,
                 prompt: llmInput.prompt,
                 schema: llmInput.schema,
+                ...(input.telemetry ? { telemetry: input.telemetry } : {}),
               }),
             ),
         }),
@@ -226,4 +229,4 @@ export const executeEvaluationScriptWithAI = (input: {
         })
       },
     })
-  }) as Effect.Effect<EvaluationScriptExecution, ExecuteEvaluationScriptWithAIError>
+  }) as Effect.Effect<EvaluationScriptExecution, ExecuteEvaluationScriptWithAIError, AI>

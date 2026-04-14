@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "scores_canonical_evaluation_trace_idx" ON "latitude"."scores" ("organization_id","project_id","source_id","trace_id") WHERE "source" = 'evaluation' AND "drafted_at" IS NULL AND "trace_id" IS NOT NULL;

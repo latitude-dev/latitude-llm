@@ -428,6 +428,56 @@ describe("ScoreRepositoryLive + score use cases", () => {
     expect(missingExists).toBe(false)
   })
 
+  it("rejects a second canonical evaluation score for the same trace", async () => {
+    const organizationId = "dddddddddddddddddddddddd"
+    const matchingTraceId = TraceId("88888888888888888888888888888888")
+
+    await Effect.runPromise(
+      writeScoreUseCase({
+        projectId: customProjectId,
+        source: "evaluation",
+        sourceId: evaluationSourceId,
+        traceId: matchingTraceId,
+        value: 0.95,
+        passed: true,
+        feedback: "Canonical evaluation result for duplicate prevention",
+        metadata: { evaluationHash: "eval-hash-v1" },
+      }).pipe(createWriteProvider(database, organizationId)),
+    )
+
+    await expect(
+      Effect.runPromise(
+        writeScoreUseCase({
+          projectId: customProjectId,
+          source: "evaluation",
+          sourceId: evaluationSourceId,
+          traceId: matchingTraceId,
+          value: 0.12,
+          passed: false,
+          feedback: "A racing worker should not create a second canonical score",
+          metadata: { evaluationHash: "eval-hash-v1" },
+        }).pipe(createWriteProvider(database, organizationId)),
+      ),
+    ).rejects.toMatchObject({
+      _tag: "RepositoryError",
+    })
+
+    const rows = await database.db
+      .select({ id: scoresTable.id })
+      .from(scoresTable)
+      .where(
+        and(
+          eq(scoresTable.organizationId, organizationId),
+          eq(scoresTable.projectId, customProjectId),
+          eq(scoresTable.source, "evaluation"),
+          eq(scoresTable.sourceId, evaluationSourceId),
+          eq(scoresTable.traceId, matchingTraceId),
+        ),
+      )
+
+    expect(rows).toHaveLength(1)
+  })
+
   it("excludes drafts by default and supports draft-aware project and source reads", async () => {
     const organizationId = "llllllllllllllllllllllll"
 
