@@ -32,11 +32,14 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 ### Already Implemented
 
 - `packages/domain/spans/src/use-cases/process-ingested-spans.ts` already publishes `SpanIngested` after durable span writes
-- `apps/workers/src/workers/domain-events.ts` currently reacts to `SpanIngested` by publishing downstream tasks with trace-scoped `dedupeKey + debounceMs`, effectively debouncing the queue work rather than the `SpanIngested` event itself:
+- `apps/workers/src/workers/domain-events.ts` now reacts to `SpanIngested` by publishing debounced `live-traces:end` keyed by `(organizationId, projectId, traceId)` while keeping `projects:checkFirstTrace` on the original event
+- `apps/workers/src/workers/live-traces.ts` now publishes `TraceEnded` through `createEventsPublisher(queuePublisher)` when the trace-end debounce window elapses
+- `apps/workers/src/workers/domain-events.ts` now reacts to `TraceEnded` by publishing:
   - `live-evaluations:enqueue`
   - `live-annotation-queues:curate`
   - `system-annotation-queues:fanOut`
-- `apps/workers/src/workers/domain-events.test.ts` currently rejects legacy `TraceEnded`, so the live-monitoring path on `main` does not yet depend on that event shape
+- the downstream `TraceEnded` fan-out keeps trace-scoped `dedupeKey` values and does not add a second debounce window after `live-traces:end`
+- `apps/workers/src/workers/live-traces.test.ts` and `apps/workers/src/workers/domain-events.test.ts` now lock the activated `TraceEnded` contract
 - `packages/domain/queue/src/topic-registry.ts` already defines `live-traces:end`, `live-evaluations:enqueue`, and `live-evaluations:execute`
 - `packages/platform/queue-bullmq/src/adapter.ts` already supports logical `dedupeKey` plus `debounceMs`
 
@@ -56,11 +59,11 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 - `packages/platform/db-clickhouse/src/registries/trace-fields.ts` already defines the field registry live evaluation triggers are expected to reuse
 - `packages/domain/spans/src/entities/trace.ts` already provides `TraceDetail.allMessages`, which is the current best MVP conversation input for execution
 
-### Not Yet Implemented
+### Phase 13 Closeout State
 
-- `apps/workers/src/workers/live-traces.ts` is still a stub and does not publish `TraceEnded`
-- `apps/workers/src/workers/live-evaluations.ts` now wires `enqueue` through the new domain use case and publishes `live-evaluations:execute`, but the `execute` handler and the actual evaluation execution + score persistence path are still not implemented
-- `apps/workers/src/workers/live-annotation-queues.ts` is still a stub, which matters both for the current downstream debounce path sourced from `SpanIngested` and for any later `TraceEnded` activation rollout
+- `apps/workers/src/workers/live-evaluations.ts` now implements both `enqueue` and `execute` through the domain live-monitoring use cases and persists canonical evaluation scores through `writeScoreUseCase`
+- `apps/workers/src/workers/live-monitoring.test.ts` now covers debounce reset behavior, the full `SpanIngested -> live-traces:end -> TraceEnded -> live-evaluations:enqueue -> live-evaluations:execute` path, turn selection, pause/archive/delete skips, direct issue assignment, and immediate analytics sync for immutable monitor scores
+- the final docs/spec reconciliation now matches the shipped activation path across `specs/reliability.md`, `docs/spans.md`, `docs/issues.md`, `docs/annotations.md`, and `docs/scores.md`
 
 ## Locked Decisions
 
@@ -87,11 +90,11 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 
 ## Start Here
 
-Implementation started with **PR 1**, and **PR 1 is now complete**.
+Implementation shipped through **PR 4**.
 
-PR 1 is the semantic foundation for the rest of the phase: it locks the trigger rules, the idempotency model, and the execution seam so PR 2, PR 3, and PR 4 can implement workers without guessing.
+PR 1 locked the trigger rules, idempotency model, and execution seam; PR 2 and PR 3 landed the enqueue/execute runtime; PR 4 activated the real trace-end path and reconciled the docs.
 
-Active implementation work now starts with **PR 4**.
+This tracker now records the final shipped behavior for the live-monitoring pipeline, including the restored `5 minutes` trace-end debounce and the `SpanIngested -> live-traces:end -> TraceEnded -> ...` activation flow.
 
 ## Implementation Plan
 
@@ -200,7 +203,7 @@ Active implementation work now starts with **PR 4**.
 
 **Intent**: execute one live evaluation and persist one canonical score.
 
-**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result, hosted-execution, canonical score-persistence, direct issue assignment for failed non-errored live monitor results, errored-result persistence semantics, the worker `execute` wrapper, structured execute logging, stable AI telemetry, and broader domain/worker coverage, while upstream activation is still pending in PR 4.
+**Status**: complete. PR 3 landed the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result prevention, hosted execution, canonical score persistence, direct issue assignment for failed non-errored live monitor results, errored-result persistence semantics, the worker `execute` wrapper, structured execute logging, stable AI telemetry, and broader domain/worker coverage. PR 4 has now activated that path through the real trace-end flow.
 
 **Responsibilities**:
 
@@ -218,7 +221,7 @@ Active implementation work now starts with **PR 4**.
 - `packages/domain/scores/src/use-cases/write-score.ts` already performs canonical Postgres-first writes, emits `ScoreCreated`, and immediately syncs immutable scores to ClickHouse analytics
 - `ScoreRepository.existsByEvaluationIdAndTraceId()` already exposes the canonical non-draft duplicate-result recheck for one `(evaluationId, traceId)` pair
 - `IssueRepositoryLive` already satisfies `EvaluationIssueRepository`, so PR 3 can load issue name/description without introducing a new evaluation-specific adapter
-- current `main` still publishes debounced `live-evaluations:enqueue` tasks from `SpanIngested`, so PR 3 should not depend on PR 4's eventual `TraceEnded` activation shape
+- the upstream activation seam is now `SpanIngested -> live-traces:end -> TraceEnded -> live-evaluations:enqueue`, so PR 3's execute path now runs behind the final trace-end trigger flow
 
 **Implementation notes**:
 
@@ -263,13 +266,13 @@ Active implementation work now starts with **PR 4**.
 - `live-evaluations:execute` writes canonical scores correctly
 - issue-linked failures become immutable immediately
 - duplicate `(evaluationId, traceId)` results are prevented by canonical-state rechecks
-- no upstream activation has happened yet
+- upstream activation now happens through `TraceEnded`, and PR 4 covers that end-to-end path
 
 ### PR 4 - `live-traces:end` Activation And End-To-End Coverage
 
 **Intent**: turn on the real trace completion signal and prove the whole pipeline end to end.
 
-**Status**: pending. PR 4 is now the active implementation work. It restores the spec default `live-traces:end` debounce of `5 minutes`, activates `TraceEnded`, moves the sibling fan-out behind that event, and closes the phase with end-to-end coverage plus docs reconciliation.
+**Status**: complete. PR 4 restored the spec default `live-traces:end` debounce of `5 minutes`, activated `TraceEnded`, moved the sibling fan-out behind that event, added end-to-end coverage, and reconciled the docs/specs to the final shipped behavior.
 
 **Responsibilities**:
 
@@ -318,7 +321,11 @@ Active implementation work now starts with **PR 4**.
   - `TraceEnded` as the activation and fan-out seam
   - `system-annotation-queues:fanOut` naming
   - issue-linked monitor failures versus direct write-time issue assignment
-- [ ] **P13-PR4-7**: Mark this tracker with the final rollout behavior, final trigger semantics, final debounce default, and final docs updated once activation lands
+- [x] **P13-PR4-7**: Mark this tracker with the final rollout behavior, final trigger semantics, final debounce default, and final docs updated once activation lands
+  - final rollout behavior: `SpanIngested` now publishes debounced `live-traces:end` plus `projects:checkFirstTrace`, and `TraceEnded` owns the downstream fan-out
+  - final trigger semantics: live evaluation enqueue now wakes only after the trace-end debounce elapses, while the downstream `TraceEnded` fan-out keeps `dedupeKey` values and does not add a second debounce layer
+  - final debounce default: the named trace-end debounce constant is back to `5 minutes`
+  - final docs updated: `specs/reliability.md`, `docs/spans.md`, `docs/issues.md`, `docs/annotations.md`, and `docs/scores.md` now match the shipped activation path
 
 **Exit gate**:
 
