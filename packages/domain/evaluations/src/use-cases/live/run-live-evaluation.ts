@@ -169,6 +169,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       issue: issueContext,
       conversation: traceDetail.allMessages,
     })
+    const persistedIssueId = execution.result.passed ? null : evaluation.issueId
     const score = (yield* writeScoreUseCase({
       projectId: input.projectId,
       source: "evaluation",
@@ -177,6 +178,7 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       traceId: traceDetail.traceId,
       spanId: traceDetail.rootSpanId,
       simulationId: traceDetail.simulationId || null,
+      issueId: persistedIssueId,
       value: execution.result.value,
       passed: execution.result.passed,
       feedback: execution.result.feedback,

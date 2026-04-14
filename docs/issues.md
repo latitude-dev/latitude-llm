@@ -144,6 +144,7 @@ Issue discovery should follow the original proposal closely:
 Execution rules:
 
 - `issues:discovery` runs first after an eligible non-draft failed non-errored score write commits
+- scores already written with `issue_id`, including direct-owned live issue-linked monitor failures, short-circuit before retrieval/rerank; retries through `issues:discovery` may still replay projection and analytics sync idempotently
 - `issue-discovery` runs only when that centralized gate still needs retrieval/rerank work
 - `issues:refresh` runs after the configured debounce window elapses for an existing issue
 - both the workflow and the debounced task must re-check current ownership/lifecycle state before doing expensive work
@@ -162,7 +163,7 @@ Concrete v1 mechanics worth carrying forward:
 - hybrid search used the same canonical feedback as both the keyword query and the embedding source
 - the proven v1 defaults were `alpha = 0.75`, minimum similarity `0.8`, minimum BM25 matches `1`, initial candidate limit `1000`, rerank limit `20`, and minimum rerank relevance `0.3`
 - even a single candidate still went through reranking so the threshold could reject it
-- once an evaluation is linked to an issue, later failures from that evaluation still flow through `issues:discovery`, but that centralized gate resolves the linked issue directly before similarity search starts
+- once an evaluation is linked to an issue, live monitor failures may already be written with `scores.issue_id` claimed at creation time; unowned evaluation-originated failures that still reach `issues:discovery` should have the centralized gate resolve the linked issue directly before similarity search starts
 
 Current v2 starting defaults layered on top of those v1 learnings:
 

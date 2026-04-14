@@ -621,4 +621,102 @@ describe("runLiveEvaluationUseCase", () => {
     expect(outboxEvents).toHaveLength(1)
     expect(calls.generate).toHaveLength(1)
   })
+
+  it("assigns the linked issue immediately for failed live evaluation results", async () => {
+    const evaluation = makeEvaluation({
+      script: VALID_SCRIPT,
+    })
+    const issue = makeIssue({
+      id: IssueId(evaluation.issueId),
+    })
+    const traceDetail = makeTraceDetail()
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => Effect.succeed(traceDetail),
+    })
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const issueRepository = createIssueRepository((issueId) => {
+      expect(issueId).toEqual(IssueId(evaluation.issueId))
+      return Effect.succeed(issue)
+    })
+    const { repository: scoreRepository, scores: persistedScores } = createFakeScoreRepository()
+    const { repository: scoreAnalyticsRepository, inserted } = createFakeScoreAnalyticsRepository()
+    const outboxEvents: unknown[] = []
+    const aiDuration = 321_000_000
+    const aiTokens = 90
+    const aiTokenUsage = {
+      input: 30,
+      output: aiTokens - 30,
+    }
+    const { layer: aiLayer } = createFakeAI({
+      generate: <T>(input: GenerateInput<T>) =>
+        Effect.succeed({
+          object: input.schema.parse({
+            passed: false,
+            value: 0,
+            feedback: "The conversation exhibits the linked issue.",
+          }),
+          tokens: aiTokens,
+          duration: aiDuration,
+          tokenUsage: aiTokenUsage,
+        } satisfies GenerateResult<T>),
+    })
+    const scoreWriteLayer = createScoreWriteLayer({
+      scoreRepository,
+      scoreAnalyticsRepository,
+      outboxEventWriter: {
+        write: (event) =>
+          Effect.sync(() => {
+            outboxEvents.push(event)
+          }),
+      },
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreWriteLayer,
+            issueRepository,
+            aiLayer,
+          }),
+        ),
+      ),
+    )
+
+    expect(result.action).toBe("persisted")
+    if (result.action !== "persisted") throw new Error("Expected a persisted live evaluation result")
+
+    expect(result.context.score).toMatchObject({
+      organizationId: INPUT.organizationId,
+      projectId: INPUT.projectId,
+      sessionId: traceDetail.sessionId,
+      traceId: traceDetail.traceId,
+      spanId: traceDetail.rootSpanId,
+      simulationId: null,
+      source: "evaluation",
+      sourceId: evaluation.id,
+      issueId: evaluation.issueId,
+      value: 0,
+      passed: false,
+      feedback: "The conversation exhibits the linked issue.",
+      metadata: {
+        evaluationHash: evaluation.alignment.evaluationHash,
+      },
+      error: null,
+      errored: false,
+      duration: aiDuration,
+      tokens: aiTokens,
+      cost: estimateEvaluationScriptCostMicrocents({
+        tokens: aiTokens,
+        tokenUsage: aiTokenUsage,
+      }),
+      draftedAt: null,
+      annotatorId: null,
+    })
+    expect(persistedScores.get(result.context.score.id)).toEqual(result.context.score)
+    expect(inserted).toEqual([result.context.score.id])
+    expect(outboxEvents).toHaveLength(1)
+  })
 })

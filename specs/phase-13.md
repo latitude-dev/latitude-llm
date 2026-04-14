@@ -200,7 +200,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 
 **Intent**: execute one live evaluation and persist one canonical score.
 
-**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result, hosted-execution, and canonical score-persistence gates, while direct issue assignment for failed monitor results, errored-result persistence semantics, and the worker `execute` wrapper are still pending.
+**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility, duplicate-result, hosted-execution, canonical score-persistence, and direct issue assignment for failed non-errored live monitor results, while errored-result persistence semantics and the worker `execute` wrapper are still pending.
 
 **Responsibilities**:
 
@@ -213,7 +213,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 **Starting point**:
 
 - `apps/workers/src/workers/live-evaluations.ts` still treats `execute` as a stub, while `enqueue` already publishes the concrete `(evaluationId, traceId)` tasks this PR needs to consume
-- `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` now loads one queued live evaluation, rechecks deleted/archived/paused eligibility plus canonical duplicate state before trace lookup, loads the linked issue context, executes through the shared AI seam, persists successful results through `writeScoreUseCase` with evaluation source metadata, and returns a structured `persisted` vs stale-task `skipped` outcome for the later PR 3 steps
+- `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` now loads one queued live evaluation, rechecks deleted/archived/paused eligibility plus canonical duplicate state before trace lookup, loads the linked issue context, executes through the shared AI seam, persists results through `writeScoreUseCase` with evaluation source metadata, writes `issueId = evaluation.issueId` immediately for failed non-errored issue-linked monitor results, and returns a structured `persisted` vs stale-task `skipped` outcome for the later PR 3 steps
 - `packages/domain/evaluations/src/use-cases/live/execute-live-evaluation.ts` already validates the stored script, converts `TraceDetail.allMessages` into the MVP conversation input, calls the shared AI service, and returns the canonical result payload plus duration, tokens, and cost
 - `packages/domain/scores/src/use-cases/write-score.ts` already performs canonical Postgres-first writes, emits `ScoreCreated`, and immediately syncs immutable scores to ClickHouse analytics
 - `ScoreRepository.existsByEvaluationIdAndTraceId()` already exposes the canonical non-draft duplicate-result recheck for one `(evaluationId, traceId)` pair
@@ -237,7 +237,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 1. add the domain execute-and-persist use case and structured result shape
 2. load evaluation and trace detail, then add execute-time lifecycle/eligibility and duplicate rechecks before hosted execution
 3. load issue context and call the existing `executeLiveEvaluationUseCase`
-4. map successful results into `writeScoreUseCase` with evaluation source metadata, then extend failed and errored persistence with direct `issue_id` assignment and usage accounting
+4. map successful results into `writeScoreUseCase` with evaluation source metadata, then extend failed non-errored issue-linked persistence with direct `issue_id` assignment and finish errored persistence with usage accounting
 5. replace the worker `execute` stub with a thin wrapper around the new domain use case, wire AI/repository dependencies, and add structured execute logs
 6. add AI telemetry and final worker-level execute coverage once the path is stable
 
@@ -251,7 +251,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
   - `source = "evaluation"`
   - `sourceId = evaluation.id`
   - `metadata.evaluationHash = evaluation.alignment.evaluationHash`
-- [ ] **P13-PR3-7**: Implement direct `issue_id` assignment at write time for failed, non-errored issue-linked monitor results so they become immutable immediately
+- [x] **P13-PR3-7**: Implement direct `issue_id` assignment at write time for failed, non-errored issue-linked monitor results so they become immutable immediately
 - [ ] **P13-PR3-8**: Preserve correct `error -> errored` semantics plus persisted duration, token, and cost accounting for passed, failed, and errored monitor outputs
 - [ ] **P13-PR3-1**: Replace the `execute` stub in `apps/workers/src/workers/live-evaluations.ts` by wiring a thin worker wrapper around the new execute-and-persist use case
 - [ ] **P13-PR3-9**: Add structured execute-path logging for evaluation id, trace id, session id when present, result kind, score id, issue assignment path, tokens, cost, and duration

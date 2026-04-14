@@ -100,7 +100,7 @@ Relationship fields:
 `issue_id` remains part of the canonical logical model:
 
 - public `/scores` ingestion does not accept caller-supplied `issueId`; canonical ownership comes from internal evaluation lookup, annotation publication, or discovery
-- issue-linked evaluation failures still write an unowned score row first, then let the centralized `issues:discovery` task resolve the linked issue and claim canonical ownership
+- internal live issue-linked monitor failures may write `issueId` immediately at canonical score creation so the failed score is immutable as soon as it is persisted
 - draft annotations may carry it as editable issue intent while `draftedAt != null`
 - discovered failed scores can fill it later once they match or create an issue
 - helper materializations are allowed for performance, but the logical `score.issue_id` contract must remain
@@ -114,6 +114,7 @@ All score producers reuse one canonical Postgres-first write path:
 - clients that upload locally executed Latitude evaluation results reuse the same `/scores` route with `_evaluation: true`, evaluation-score metadata, and the evaluation CUID as `source_id`
 - custom scores written through `/scores` always stay unowned at write time and use issue discovery when they are eligible
 - evaluation scores written through `/scores` always stay unowned at write time; later centralized issue handling may resolve an already linked evaluation issue before similarity search starts
+- internal live evaluation execution writes passed monitor results unowned and writes failed non-errored issue-linked monitor results with `issueId = evaluation.issueId` immediately
 - annotation ingestion stays on `POST /v1/organizations/:organizationId/projects/:projectId/annotations` even though annotations still persist canonical score rows
 - internal evaluation and simulation writers reuse the same score-validation and persistence path rather than maintaining a second storage model
 - source-specific metadata is validated exactly before persistence, so evaluation, annotation, and custom writers cannot drift into incompatible payload shapes
@@ -206,12 +207,13 @@ Publication rules:
 
 - drafts are never saved to ClickHouse
 - non-draft passed or errored scores are saved to ClickHouse analytics immediately because they are already immutable
-- non-draft failed non-errored scores stay only in Postgres until `issue_id` is assigned
-- non-draft failed non-errored scores request centralized issue handling through the transactional `IssueDiscoveryRequested` outbox event, optionally carrying a selected `issueId` for published annotations
-- when a failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
+- most non-draft failed non-errored scores stay only in Postgres until `issue_id` is assigned
+- failed non-errored issue-linked live monitor scores may already carry `issue_id` at the initial canonical write and then sync ClickHouse analytics immediately
+- other unowned non-draft failed non-errored scores request centralized issue handling through the transactional `ScoreCreated` outbox event, optionally carrying a selected `issueId` for published annotations
+- when an unowned failed non-errored score finally receives `issue_id`, it becomes immutable and is then written to ClickHouse analytics
 - ClickHouse analytics save must be retry-safe and preserve at-most-one row per score id
 - the canonical Postgres write transaction must never talk to ClickHouse directly; after commit, the caller runs `syncScoreAnalyticsUseCase`, which re-fetches the canonical score row and inserts into ClickHouse analytics only if the row is still immutable and not already present in analytics
-- for failed non-errored scores, the centralized `issues:discovery` task runs `syncScoreAnalyticsUseCase` after direct known-issue assignment, and the Temporal `issue-discovery` workflow runs the same sync after create-or-match assignment when similarity search was needed
+- for failed non-errored scores that were not already immutable at initial write, the centralized `issues:discovery` task runs `syncScoreAnalyticsUseCase` after direct known-issue assignment, and the Temporal `issue-discovery` workflow runs the same sync after create-or-match assignment when similarity search was needed
 - when an immutable score lands on an existing issue, the same Postgres transaction writes `IssueRefreshRequested` to the outbox so debounced issue-details regeneration still remains atomic with the canonical ownership change
 - this differs from direct-publication reliability events such as `SpanIngested` and `TraceEnded`: immutable score analytics save stays synchronous-after-commit for freshness, while only the slower debounced issue-details refresh remains event-driven
 
