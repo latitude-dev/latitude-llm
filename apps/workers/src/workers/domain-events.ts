@@ -69,6 +69,18 @@ export const createDomainEventsWorker = ({
             dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
             debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
+          // Milestone check: per-projectId dedupe collapses the per-span flood
+          // into at most one check per project per BullMQ dedupe TTL window.
+          pub.publish(
+            "projects",
+            "checkFirstTrace",
+            {
+              organizationId: event.payload.organizationId,
+              projectId: event.payload.projectId,
+              traceId: event.payload.traceId,
+            },
+            { dedupeKey: `projects:first-trace:${event.payload.projectId}` },
+          ),
         ],
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
@@ -109,6 +121,19 @@ export const createDomainEventsWorker = ({
       pub.publish("projects", "provision", event.payload, {
         dedupeKey: `projects:provision:${event.payload.projectId}`,
       }),
+
+    // Analytics-only events: no downstream processing beyond PostHog fan-out.
+    // No-op handlers satisfy the dispatcher's "all events must have a handler"
+    // contract; the PostHog fan-out runs at the dispatch level via isPostHogTracked.
+    UserSignedUp: () => Effect.void,
+    MemberJoined: () => Effect.void,
+    MemberInvited: () => Effect.void,
+    ApiKeyCreated: () => Effect.void,
+    DatasetCreated: () => Effect.void,
+    EvaluationConfigured: () => Effect.void,
+    AnnotationQueueItemCompleted: () => Effect.void,
+    ProjectDeleted: () => Effect.void,
+    FirstTraceReceived: () => Effect.void,
   }
 
   consumer.subscribe("domain-events", {

@@ -39,7 +39,13 @@ import { Effect } from "effect"
 import { z } from "zod"
 import { ensureSession } from "../../domains/sessions/session.functions.ts"
 import { getSessionOrganizationId, requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient, getQueuePublisher, getStorageDisk } from "../../server/clients.ts"
+import {
+  getClickhouseClient,
+  getOutboxWriter,
+  getPostgresClient,
+  getQueuePublisher,
+  getStorageDisk,
+} from "../../server/clients.ts"
 import { applyMapping } from "./column-mapping.ts"
 
 const rowSelectionSchema = z.discriminatedUnion("mode", [
@@ -420,6 +426,22 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
         withPostgres(DatasetRepositoryLive, getPostgresClient(), orgId),
         withClickHouse(DatasetRowRepositoryLive, getClickhouseClient(), orgId),
       ),
+    )
+
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter.write({
+        eventName: "DatasetCreated",
+        aggregateType: "dataset",
+        aggregateId: dataset.id,
+        organizationId,
+        payload: {
+          organizationId,
+          projectId: data.projectId,
+          datasetId: dataset.id,
+          name: dataset.name,
+        },
+      }),
     )
 
     return toDatasetRecord(dataset)

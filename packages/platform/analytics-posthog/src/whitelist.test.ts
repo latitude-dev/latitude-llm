@@ -2,10 +2,19 @@ import { describe, expect, it } from "vitest"
 import { isPostHogTracked, POSTHOG_TRACKED_EVENTS } from "./whitelist.ts"
 
 describe("PostHog whitelist", () => {
-  it("includes the v1 lifecycle events", () => {
+  it("includes lifecycle and adoption events", () => {
     expect(POSTHOG_TRACKED_EVENTS.has("OrganizationCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("ProjectCreated")).toBe(true)
     expect(POSTHOG_TRACKED_EVENTS.has("ScoreCreated")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("UserSignedUp")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("MemberJoined")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("MemberInvited")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("ApiKeyCreated")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("DatasetCreated")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("EvaluationConfigured")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("AnnotationQueueItemCompleted")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("ProjectDeleted")).toBe(true)
+    expect(POSTHOG_TRACKED_EVENTS.has("FirstTraceReceived")).toBe(true)
   })
 
   it("explicitly excludes high-volume events", () => {

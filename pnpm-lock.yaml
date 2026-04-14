@@ -481,6 +481,9 @@ importers:
       '@domain/issues':
         specifier: workspace:*
         version: link:../../packages/domain/issues
+      '@domain/projects':
+        specifier: workspace:*
+        version: link:../../packages/domain/projects
       '@domain/queue':
         specifier: workspace:*
         version: link:../../packages/domain/queue
@@ -694,6 +697,9 @@ importers:
       '@domain/annotations':
         specifier: workspace:*
         version: link:../annotations
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/queue':
         specifier: workspace:*
         version: link:../queue
@@ -762,6 +768,9 @@ importers:
 
   packages/domain/api-keys:
     dependencies:
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../events
       '@domain/shared':
         specifier: workspace:*
         version: link:../shared

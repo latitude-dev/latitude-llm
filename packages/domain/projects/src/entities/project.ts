@@ -15,6 +15,7 @@ export const projectSchema = z.object({
   name: z.string().min(1),
   slug: z.string().min(1),
   settings: projectSettingsSchema.nullable(),
+  firstTraceAt: z.date().nullable(),
   deletedAt: z.date().nullable(),
   lastEditedAt: z.date(),
   createdAt: z.date(),
@@ -29,6 +30,7 @@ export const createProject = (params: {
   name: string
   slug: string
   settings?: ProjectSettings | null
+  firstTraceAt?: Date
   deletedAt?: Date
   lastEditedAt?: Date
   createdAt?: Date
@@ -41,6 +43,7 @@ export const createProject = (params: {
     name: params.name,
     slug: params.slug,
     settings: params.settings ?? null,
+    firstTraceAt: params.firstTraceAt ?? null,
     deletedAt: params.deletedAt ?? null,
     lastEditedAt: params.lastEditedAt ?? now,
     createdAt: params.createdAt ?? now,

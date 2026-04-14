@@ -11,7 +11,12 @@ import {
 import { AnnotationQueueId, filterSetSchema, OrganizationId, ProjectId, TraceId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
 import { ChSqlClientLive, TraceRepositoryLive } from "@platform/db-clickhouse"
-import { AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive, SqlClientLive } from "@platform/db-postgres"
+import {
+  AnnotationQueueItemRepositoryLive,
+  AnnotationQueueRepositoryLive,
+  OutboxEventWriterLive,
+  SqlClientLive,
+} from "@platform/db-postgres"
 import { QueuePublisherLive } from "@platform/queue-bullmq"
 import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
@@ -327,9 +332,11 @@ export const completeQueueItem = createServerFn({ method: "POST" })
     const projectId = ProjectId(data.projectId)
     const pg = getPostgresClient()
 
-    const layer = Layer.mergeAll(AnnotationQueueItemRepositoryLive, AnnotationQueueRepositoryLive).pipe(
-      Layer.provideMerge(SqlClientLive(pg, orgId)),
-    )
+    const layer = Layer.mergeAll(
+      AnnotationQueueItemRepositoryLive,
+      AnnotationQueueRepositoryLive,
+      OutboxEventWriterLive,
+    ).pipe(Layer.provideMerge(SqlClientLive(pg, orgId)))
 
     return Effect.runPromise(
       Effect.gen(function* () {

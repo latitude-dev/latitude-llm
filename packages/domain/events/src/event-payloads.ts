@@ -43,4 +43,50 @@ export interface EventPayloads {
     readonly name: string
     readonly slug: string
   }
+  ProjectDeleted: {
+    readonly organizationId: string
+    readonly projectId: string
+  }
+  UserSignedUp: {
+    readonly userId: string
+    readonly email: string
+  }
+  MemberJoined: {
+    readonly organizationId: string
+    readonly userId: string
+    readonly role: string
+  }
+  MemberInvited: {
+    readonly organizationId: string
+    readonly email: string
+    readonly role: string
+  }
+  ApiKeyCreated: {
+    readonly organizationId: string
+    readonly apiKeyId: string
+    readonly name: string
+  }
+  DatasetCreated: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly datasetId: string
+    readonly name: string
+  }
+  EvaluationConfigured: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly evaluationId: string
+    readonly issueId: string
+  }
+  AnnotationQueueItemCompleted: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly queueId: string
+    readonly itemId: string
+  }
+  FirstTraceReceived: {
+    readonly organizationId: string
+    readonly projectId: string
+    readonly traceId: string
+  }
 }

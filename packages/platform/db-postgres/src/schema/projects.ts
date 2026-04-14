@@ -10,6 +10,7 @@ export const projects = latitudeSchema.table(
     name: varchar("name", { length: 256 }).notNull(),
     slug: varchar("slug", { length: 256 }).notNull(),
     settings: jsonb("settings").$type<ProjectSettings>(),
+    firstTraceAt: tzTimestamp("first_trace_at"),
     deletedAt: tzTimestamp("deleted_at"),
     lastEditedAt: tzTimestamp("last_edited_at").notNull().defaultNow(),
     ...timestamps(),

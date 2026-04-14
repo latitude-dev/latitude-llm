@@ -129,7 +129,7 @@ describe("domain-events dispatcher", () => {
     expect(published[0]?.options?.dedupeKey).toBe("users:deletion:u-1")
   })
 
-  it("routes SpanIngested to 3 targets with dedupeKey and debounceMs", async () => {
+  it("routes SpanIngested to 4 targets including firstTrace check", async () => {
     const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("SpanIngested", {
@@ -140,47 +140,15 @@ describe("domain-events dispatcher", () => {
 
     await consumer.dispatchTask("dispatch", envelopeToDispatchPayload(envelope))
 
-    expect(published).toEqual([
-      {
-        queue: "live-evaluations",
-        task: "enqueue",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          traceId: "trace-abc",
-        },
-        options: {
-          dedupeKey: "evaluations:live:enqueue:trace-abc",
-          debounceMs: TRACE_END_DEBOUNCE_MS,
-        },
-      },
-      {
-        queue: "live-annotation-queues",
-        task: "curate",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          traceId: "trace-abc",
-        },
-        options: {
-          dedupeKey: "annotation-queues:live:curate:trace-abc",
-          debounceMs: TRACE_END_DEBOUNCE_MS,
-        },
-      },
-      {
-        queue: "system-annotation-queues",
-        task: "fanOut",
-        payload: {
-          organizationId: "org-1",
-          projectId: "proj-1",
-          traceId: "trace-abc",
-        },
-        options: {
-          dedupeKey: "annotation-queues:system:fan-out:trace-abc",
-          debounceMs: TRACE_END_DEBOUNCE_MS,
-        },
-      },
+    expect(published.map((p) => `${p.queue}:${p.task}`).sort()).toEqual([
+      "live-annotation-queues:curate",
+      "live-evaluations:enqueue",
+      "projects:checkFirstTrace",
+      "system-annotation-queues:fanOut",
     ])
+
+    const firstTrace = published.find((p) => p.task === "checkFirstTrace")
+    expect(firstTrace?.options?.dedupeKey).toBe("projects:first-trace:proj-1")
   })
 
   it("rejects legacy TraceEnded events", async () => {

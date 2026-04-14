@@ -146,6 +146,11 @@ const _registry = {
       readonly name: string
       readonly slug: string
     }
+    checkFirstTrace: {
+      readonly organizationId: string
+      readonly projectId: string
+      readonly traceId: string
+    }
   }>(),
 
   "api-keys": payloads<{

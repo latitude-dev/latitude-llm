@@ -29,7 +29,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
+import { getOutboxWriter, getPostgresClient, getRedisClient, getWorkflowStarter } from "../../server/clients.ts"
 
 const evaluationAlignmentJobInputSchema = z.object({
   projectId: z.string(),
@@ -167,6 +167,22 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
       })
       throw error
     }
+
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter.write({
+        eventName: "EvaluationConfigured",
+        aggregateType: "evaluation",
+        aggregateId: jobId,
+        organizationId,
+        payload: {
+          organizationId,
+          projectId: data.projectId,
+          evaluationId: jobId,
+          issueId: data.issueId,
+        },
+      }),
+    )
 
     return pendingStatus
   })

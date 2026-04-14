@@ -15,7 +15,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { Effect, Layer } from "effect"
 import { z } from "zod"
 import { requireSession } from "../../server/auth.ts"
-import { getClickhouseClient, getPostgresClient } from "../../server/clients.ts"
+import { getClickhouseClient, getOutboxWriter, getPostgresClient } from "../../server/clients.ts"
 
 const logger = createLogger("project-stats")
 
@@ -126,6 +126,20 @@ export const deleteProject = createServerFn({ method: "POST" })
         const repo = yield* ProjectRepository
         return yield* repo.softDelete(ProjectId(data.id))
       }).pipe(withPostgres(ProjectRepositoryLive, client, organizationId)),
+    )
+
+    const outboxWriter = getOutboxWriter()
+    await Effect.runPromise(
+      outboxWriter.write({
+        eventName: "ProjectDeleted",
+        aggregateType: "project",
+        aggregateId: data.id,
+        organizationId,
+        payload: {
+          organizationId,
+          projectId: data.id,
+        },
+      }),
     )
   })
 

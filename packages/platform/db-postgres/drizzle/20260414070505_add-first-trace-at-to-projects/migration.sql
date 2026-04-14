@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."projects" ADD COLUMN "first_trace_at" timestamp with time zone;
