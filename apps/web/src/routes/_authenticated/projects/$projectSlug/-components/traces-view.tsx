@@ -132,11 +132,12 @@ export function TracesView({
         sortKey: "duration",
         width: 140,
         render: (t) => {
-          const level = getPercentileLevel(t.durationNs, baselines?.durationNs)
+          const hasDuration = t.durationNs > 0
+          const level = hasDuration ? getPercentileLevel(t.durationNs, baselines?.durationNs) : undefined
           return (
             <span className="flex items-center justify-end gap-1">
               {level && <Badge variant={getPercentileBadgeVariant(level)}>{level}</Badge>}
-              {formatDuration(t.durationNs)}
+              {hasDuration ? formatDuration(t.durationNs) : "-"}
             </span>
           )
         },

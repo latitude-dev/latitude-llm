@@ -254,7 +254,7 @@ export function SessionsView({
         width: 120,
         render: (row) => {
           if (row.kind === "session") return EMPTY_CELL
-          return formatDuration(row.trace.durationNs)
+          return row.trace.durationNs > 0 ? formatDuration(row.trace.durationNs) : "-"
         },
         renderSubheader: () => (
           <TableMetricSubheader
