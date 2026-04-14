@@ -177,4 +177,12 @@ export {
   liveEvaluationIssueContextSchema,
   liveEvaluationResultPayloadSchema,
 } from "./use-cases/live/execute-live-evaluation.ts"
+export {
+  type RunLiveEvaluationError,
+  type RunLiveEvaluationInput,
+  type RunLiveEvaluationLoadedContext,
+  type RunLiveEvaluationLoadedSummary,
+  type RunLiveEvaluationResult,
+  runLiveEvaluationUseCase,
+} from "./use-cases/live/run-live-evaluation.ts"
 export { evaluateOptimizationCandidate } from "./use-cases/optimization/evaluate-optimization-candidate.ts"
