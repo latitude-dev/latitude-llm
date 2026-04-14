@@ -1,7 +1,7 @@
 import type { ListIssuesResult } from "@domain/issues"
 import type { FilterSet } from "@domain/shared"
 
-export interface IssuesListTimeRangeInput {
+interface IssuesListTimeRangeInput {
   readonly fromIso?: string | undefined
   readonly toIso?: string | undefined
 }

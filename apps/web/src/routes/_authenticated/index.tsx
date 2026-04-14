@@ -4,6 +4,7 @@ import {
   Container,
   DropdownMenu,
   FormWrapper,
+  Icon,
   Input,
   Modal,
   Table,
@@ -18,10 +19,11 @@ import {
   Text,
   useToast,
 } from "@repo/ui"
-import { extractLeadingEmoji } from "@repo/utils"
+import { extractLeadingEmoji, formatCount } from "@repo/utils"
 import { eq } from "@tanstack/react-db"
 import { useForm } from "@tanstack/react-form"
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router"
+import { DatabaseIcon, FrownIcon, PlusIcon, TextAlignStartIcon } from "lucide-react"
 import { useState } from "react"
 import { useOrganizationsCollection } from "../../domains/organizations/organizations.collection.ts"
 import {
@@ -106,7 +108,7 @@ function ProjectsTable({
   isLoadingStats,
 }: {
   projects: ProjectRecord[]
-  statsByProjectId: Map<string, { datasetCount: number; tracesLast7Days: number }>
+  statsByProjectId: Map<string, { activeIssueCount: number; datasetCount: number; traceCount: number }>
   isLoadingStats: boolean
 }) {
   const [projectToRename, setProjectToRename] = useState<ProjectRecord | null>(null)
@@ -119,9 +121,24 @@ function ProjectsTable({
         <TableHeader>
           <TableRow verticalPadding>
             <TableHead>Name</TableHead>
-            <TableHead className="w-44">Issues</TableHead>
-            <TableHead className="w-44">Datasets</TableHead>
-            <TableHead className="w-44">Traces (7D)</TableHead>
+            <TableHead className="w-44">
+              <div className="flex items-center gap-1.5">
+                <Icon icon={FrownIcon} size="sm" color="foregroundMuted" />
+                <span>Issues</span>
+              </div>
+            </TableHead>
+            <TableHead className="w-44">
+              <div className="flex items-center gap-1.5">
+                <Icon icon={DatabaseIcon} size="sm" color="foregroundMuted" />
+                <span>Datasets</span>
+              </div>
+            </TableHead>
+            <TableHead className="w-44">
+              <div className="flex items-center gap-1.5">
+                <Icon icon={TextAlignStartIcon} size="sm" color="foregroundMuted" />
+                <span>Traces</span>
+              </div>
+            </TableHead>
             <TableHead />
           </TableRow>
         </TableHeader>
@@ -141,7 +158,11 @@ function ProjectsTable({
                   <ProjectTitle name={project.name} projectSlug={project.slug} />
                 </TableCell>
                 <TableCell className="w-44">
-                  <Text.H5 color="foregroundMuted">—</Text.H5>
+                  {isLoadingStats ? (
+                    <div className="h-4 w-8 bg-muted rounded animate-pulse" />
+                  ) : (
+                    <Text.H5 color="foregroundMuted">{stats?.activeIssueCount ?? 0}</Text.H5>
+                  )}
                 </TableCell>
                 <TableCell className="w-44">
                   {isLoadingStats ? (
@@ -154,7 +175,7 @@ function ProjectsTable({
                   {isLoadingStats ? (
                     <div className="h-4 w-8 bg-muted rounded animate-pulse" />
                   ) : (
-                    <Text.H5 color="foregroundMuted">{stats?.tracesLast7Days ?? 0}</Text.H5>
+                    <Text.H5 color="foregroundMuted">{formatCount(stats?.traceCount ?? 0)}</Text.H5>
                   )}
                 </TableCell>
                 <TableCell preventDefault>
@@ -349,7 +370,12 @@ function DashboardPageContent() {
             </Text.H4>
           </span>
         }
-        actions={<TableWithHeader.Button onClick={() => setCreateOpen(true)}>New project</TableWithHeader.Button>}
+        actions={
+          <TableWithHeader.Button onClick={() => setCreateOpen(true)}>
+            <Icon icon={PlusIcon} size="sm" />
+            Project
+          </TableWithHeader.Button>
+        }
         table={
           isLoadingProjects ? (
             <TableSkeleton cols={5} rows={3} />

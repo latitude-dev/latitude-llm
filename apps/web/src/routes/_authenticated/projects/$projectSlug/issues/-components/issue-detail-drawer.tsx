@@ -20,12 +20,17 @@ import {
   ArrowDownRightIcon,
   ArrowUpIcon,
   CheckIcon,
-  DownloadIcon,
+  PauseIcon,
+  PlayIcon,
   TextAlignStartIcon,
-  UploadIcon,
   XIcon,
 } from "lucide-react"
 import { type ReactNode, useState } from "react"
+import {
+  DEFAULT_TRACE_TABLE_SORTING,
+  ProjectTracesTable,
+  type TraceColumnId,
+} from "../../-components/project-traces-table.tsx"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import {
   invalidateIssueQueries,
@@ -34,11 +39,6 @@ import {
 } from "../../../../../../domains/issues/issues.collection.ts"
 import { applyIssueLifecycleAction } from "../../../../../../domains/issues/issues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
-import {
-  DEFAULT_TRACE_TABLE_SORTING,
-  ProjectTracesTable,
-  type TraceColumnId,
-} from "../../-components/project-traces-table.tsx"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
 import { formatSeenAgeParts } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
@@ -92,7 +92,7 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
         title: "Ignore issue",
         description: "Mark this issue as ignored. We won't alert you about new ocurrences of this issue anymore",
         confirmLabel: "Ignore",
-        confirmIcon: DownloadIcon,
+        confirmIcon: PauseIcon,
         confirmVariant: "destructive" as const,
       }
     case "unignore":
@@ -100,7 +100,7 @@ function getLifecycleConfirmation(action: LifecycleConfirmationAction) {
         title: "Unignore issue",
         description: "Stop ignoring this issue. New occurrences will surface it again",
         confirmLabel: "Unignore",
-        confirmIcon: UploadIcon,
+        confirmIcon: PlayIcon,
         confirmVariant: undefined,
       }
     case "unresolve":
@@ -274,7 +274,7 @@ export function IssueDetailDrawer({
               disabled={issue === null || issue === undefined || isLifecycleLoading}
               onClick={() => setLifecycleConfirmAction(issue?.ignoredAt ? "unignore" : "ignore")}
             >
-              <Icon icon={issue?.ignoredAt ? UploadIcon : DownloadIcon} size="sm" />
+              <Icon icon={issue?.ignoredAt ? PlayIcon : PauseIcon} size="sm" />
               {issue?.ignoredAt ? "Unignore" : "Ignore"}
             </Button>
             <Button

@@ -216,7 +216,7 @@ export function IssueTrendBar({
           </div>
           {escalationGuideCount !== null && escalationGuideBottomPercent !== null ? (
             <div
-              className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-[2]"
               style={{ top: MINI_HISTOGRAM_TOP_INSET_PX }}
               aria-hidden
             >

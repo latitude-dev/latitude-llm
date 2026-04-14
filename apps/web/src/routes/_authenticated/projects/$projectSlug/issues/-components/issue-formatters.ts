@@ -37,12 +37,6 @@ export function formatSeenAgeParts(lastSeenAtIso: string, firstSeenAtIso: string
   }
 }
 
-export function formatSeenAge(lastSeenAtIso: string, firstSeenAtIso: string): string {
-  const { lastSeenLabel, firstSeenLabel } = formatSeenAgeParts(lastSeenAtIso, firstSeenAtIso)
-
-  return `${lastSeenLabel} / ${firstSeenLabel}`
-}
-
 export function formatPercent(value: number): string {
   const percent = Math.max(0, value) * 100
 

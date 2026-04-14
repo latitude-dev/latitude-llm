@@ -1,11 +1,14 @@
 import { DatasetRepository } from "@domain/datasets"
+import { IssueProjectionRepository, listIssuesUseCase } from "@domain/issues"
 import type { Project } from "@domain/projects"
 import { createProjectUseCase, ProjectRepository, updateProjectUseCase } from "@domain/projects"
 import { isValidId, OrganizationId, ProjectId } from "@domain/shared"
 import { TraceRepository } from "@domain/spans"
-import { TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
+import { ScoreAnalyticsRepositoryLive, TraceRepositoryLive, withClickHouse } from "@platform/db-clickhouse"
 import {
   DatasetRepositoryLive,
+  EvaluationRepositoryLive,
+  IssueRepositoryLive,
   OutboxEventWriterLive,
   ProjectRepositoryLive,
   withPostgres,
@@ -130,8 +133,9 @@ export const deleteProject = createServerFn({ method: "POST" })
   })
 
 export interface ProjectStats {
+  readonly activeIssueCount: number
   readonly datasetCount: number
-  readonly tracesLast7Days: number
+  readonly traceCount: number
 }
 
 export const getProjectStats = createServerFn({ method: "GET" })
@@ -142,10 +146,6 @@ export const getProjectStats = createServerFn({ method: "GET" })
     const projectId = ProjectId(data.projectId)
     const pgClient = getPostgresClient()
     const chClient = getClickhouseClient()
-
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 19)
 
     const datasetEffect = Effect.gen(function* () {
       const repo = yield* DatasetRepository
@@ -165,9 +165,6 @@ export const getProjectStats = createServerFn({ method: "GET" })
       return yield* repo.countByProjectId({
         organizationId: orgId,
         projectId,
-        filters: {
-          startTime: [{ op: "gte", value: sevenDaysAgoStr }],
-        },
       })
     }).pipe(
       withClickHouse(TraceRepositoryLive, chClient, orgId),
@@ -175,7 +172,33 @@ export const getProjectStats = createServerFn({ method: "GET" })
       Effect.orElseSucceed(() => 0),
     )
 
-    const [datasetCount, tracesLast7Days] = await Effect.runPromise(Effect.all([datasetEffect, traceEffect]))
+    const issueEffect = Effect.gen(function* () {
+      const issues = yield* listIssuesUseCase({
+        organizationId,
+        projectId: data.projectId,
+        lifecycleGroup: "active",
+        limit: 1,
+        offset: 0,
+      })
 
-    return { datasetCount, tracesLast7Days }
+      return issues.totalCount
+    }).pipe(
+      withPostgres(Layer.mergeAll(IssueRepositoryLive, EvaluationRepositoryLive), pgClient, orgId),
+      withClickHouse(ScoreAnalyticsRepositoryLive, chClient, orgId),
+      Effect.provide(
+        Layer.succeed(IssueProjectionRepository, {
+          upsert: () => Effect.void,
+          delete: () => Effect.void,
+          hybridSearch: () => Effect.succeed([]),
+        }),
+      ),
+      Effect.tapError((error) => Effect.sync(() => logger.error({ error, operation: "countActiveIssues" }))),
+      Effect.orElseSucceed(() => 0),
+    )
+
+    const [activeIssueCount, datasetCount, traceCount] = await Effect.runPromise(
+      Effect.all([issueEffect, datasetEffect, traceEffect]),
+    )
+
+    return { activeIssueCount, datasetCount, traceCount }
   })
