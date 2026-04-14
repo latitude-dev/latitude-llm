@@ -8,6 +8,8 @@ import {
   SpanId,
   TraceId,
 } from "@domain/shared"
+import { ScoreRepository } from "@domain/scores"
+import { createFakeScoreRepository } from "@domain/scores/testing"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Effect, Layer } from "effect"
@@ -104,10 +106,12 @@ function createEvaluationRepository(findById: EvaluationRepositoryShape["findByI
 function createUseCaseLayer(input: {
   readonly traceRepository: ReturnType<typeof createFakeTraceRepository>["repository"]
   readonly evaluationRepository: EvaluationRepositoryShape
+  readonly scoreRepository?: ReturnType<typeof createFakeScoreRepository>["repository"]
 }) {
   return Layer.mergeAll(
     Layer.succeed(TraceRepository, input.traceRepository),
     Layer.succeed(EvaluationRepository, input.evaluationRepository),
+    Layer.succeed(ScoreRepository, input.scoreRepository ?? createFakeScoreRepository().repository),
   )
 }
 
@@ -288,6 +292,49 @@ describe("runLiveEvaluationUseCase", () => {
       evaluationId: INPUT.evaluationId,
       traceId: INPUT.traceId,
     })
+    expect(traceLoadCalls).toBe(0)
+  })
+
+  it("skips when a canonical result already exists for the evaluation and trace", async () => {
+    let traceLoadCalls = 0
+    let duplicateCheckCalls = 0
+    const { repository: traceRepository } = createFakeTraceRepository({
+      findByTraceId: () => {
+        traceLoadCalls += 1
+        return Effect.die("Trace should not be loaded when a canonical result already exists")
+      },
+    })
+    const evaluation = makeEvaluation()
+    const evaluationRepository = createEvaluationRepository(() => Effect.succeed(evaluation))
+    const { repository: scoreRepository } = createFakeScoreRepository({
+      existsByEvaluationIdAndTraceId: ({ projectId, evaluationId, traceId }) => {
+        duplicateCheckCalls += 1
+        expect(projectId).toEqual(ProjectId(INPUT.projectId))
+        expect(evaluationId).toBe(evaluation.id)
+        expect(traceId).toEqual(TraceId(INPUT.traceId))
+        return Effect.succeed(true)
+      },
+    })
+
+    const result = await Effect.runPromise(
+      runLiveEvaluationUseCase(INPUT).pipe(
+        Effect.provide(
+          createUseCaseLayer({
+            traceRepository,
+            evaluationRepository,
+            scoreRepository,
+          }),
+        ),
+      ),
+    )
+
+    expect(result).toEqual({
+      action: "skipped",
+      reason: "result-already-exists",
+      evaluationId: INPUT.evaluationId,
+      traceId: INPUT.traceId,
+    })
+    expect(duplicateCheckCalls).toBe(1)
     expect(traceLoadCalls).toBe(0)
   })
 

@@ -1,4 +1,5 @@
 import { EvaluationId, OrganizationId, ProjectId, type RepositoryError, TraceId } from "@domain/shared"
+import { ScoreRepository } from "@domain/scores"
 import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { Effect } from "effect"
 import type { Evaluation } from "../../entities/evaluation.ts"
@@ -27,7 +28,13 @@ export interface RunLiveEvaluationLoadedContext {
 export type RunLiveEvaluationResult =
   | {
       readonly action: "skipped"
-      readonly reason: "evaluation-not-found" | "trace-not-found" | "deleted" | "archived" | "paused"
+      readonly reason:
+        | "evaluation-not-found"
+        | "trace-not-found"
+        | "deleted"
+        | "archived"
+        | "paused"
+        | "result-already-exists"
       readonly evaluationId: string
       readonly traceId: string
     }
@@ -42,6 +49,7 @@ export type RunLiveEvaluationError = RepositoryError
 export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
   Effect.gen(function* () {
     const evaluationRepository = yield* EvaluationRepository
+    const scoreRepository = yield* ScoreRepository
     const projectId = ProjectId(input.projectId)
     const evaluation = yield* evaluationRepository
       .findById(EvaluationId(input.evaluationId))
@@ -66,6 +74,21 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
       return {
         action: "skipped",
         reason: liveEvaluationEligibility.reason,
+        evaluationId: input.evaluationId,
+        traceId: input.traceId,
+      } satisfies RunLiveEvaluationResult
+    }
+
+    const resultAlreadyExists = yield* scoreRepository.existsByEvaluationIdAndTraceId({
+      projectId,
+      evaluationId: evaluation.id,
+      traceId: TraceId(input.traceId),
+    })
+
+    if (resultAlreadyExists) {
+      return {
+        action: "skipped",
+        reason: "result-already-exists",
         evaluationId: input.evaluationId,
         traceId: input.traceId,
       } satisfies RunLiveEvaluationResult
@@ -102,4 +125,4 @@ export const runLiveEvaluationUseCase = (input: RunLiveEvaluationInput) =>
         traceDetail,
       },
     } satisfies RunLiveEvaluationResult
-  }) as Effect.Effect<RunLiveEvaluationResult, RunLiveEvaluationError, EvaluationRepository | TraceRepository>
+  }) as Effect.Effect<RunLiveEvaluationResult, RunLiveEvaluationError, EvaluationRepository | ScoreRepository | TraceRepository>

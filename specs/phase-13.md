@@ -200,7 +200,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 
 **Intent**: execute one live evaluation and persist one canonical score.
 
-**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility gates, while duplicate-prevention, hosted execution, and score persistence are still pending.
+**Status**: pending. PR 3 now has the domain execute-and-persist seam plus execute-time lifecycle/eligibility and duplicate-result gates, while hosted execution and score persistence are still pending.
 
 **Responsibilities**:
 
@@ -213,7 +213,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 **Starting point**:
 
 - `apps/workers/src/workers/live-evaluations.ts` still treats `execute` as a stub, while `enqueue` already publishes the concrete `(evaluationId, traceId)` tasks this PR needs to consume
-- `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` now loads one queued live evaluation, rechecks deleted/archived/paused eligibility before trace lookup, and returns a structured `loaded` vs stale-task `skipped` outcome for the later PR 3 steps
+- `packages/domain/evaluations/src/use-cases/live/run-live-evaluation.ts` now loads one queued live evaluation, rechecks deleted/archived/paused eligibility plus canonical duplicate state before trace lookup, and returns a structured `loaded` vs stale-task `skipped` outcome for the later PR 3 steps
 - `packages/domain/evaluations/src/use-cases/live/execute-live-evaluation.ts` already validates the stored script, converts `TraceDetail.allMessages` into the MVP conversation input, calls the shared AI service, and returns the canonical result payload plus duration, tokens, and cost
 - `packages/domain/scores/src/use-cases/write-score.ts` already performs canonical Postgres-first writes, emits `ScoreCreated`, and immediately syncs immutable scores to ClickHouse analytics
 - `ScoreRepository.existsByEvaluationIdAndTraceId()` already exposes the canonical non-draft duplicate-result recheck for one `(evaluationId, traceId)` pair
@@ -245,7 +245,7 @@ Active implementation work now starts with **PR 3** on `phase-13-part-3`.
 
 - [x] **P13-PR3-3**: Introduce a domain execute-and-persist use case under `@domain/evaluations` that loads the evaluation and trace context for one live run and returns a structured execute outcome for worker logging and tests
 - [x] **P13-PR3-4**: Recheck evaluation lifecycle and live eligibility at execute time so archived, deleted, or paused evaluations never spend hosted AI work after delayed tasks wake up
-- [ ] **P13-PR3-5**: Recheck canonical state before execution so retries or duplicate tasks cannot create a second result for the same `(evaluationId, traceId)`
+- [x] **P13-PR3-5**: Recheck canonical state before execution so retries or duplicate tasks cannot create a second result for the same `(evaluationId, traceId)`
 - [ ] **P13-PR3-2**: Wire hosted execution through `withAi(AIGenerateLive, ...)` while preserving the existing domain executor seam from PR 1
 - [ ] **P13-PR3-6**: Persist results through `writeScoreUseCase` with:
   - `source = "evaluation"`
