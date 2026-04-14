@@ -294,7 +294,7 @@ Active implementation work now starts with **PR 4**.
 - [x] **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
   - pass `eventsPublisher` into `createLiveTracesWorker`
   - keep the worker composition root thin
-- [ ] **P13-PR4-4**: Decide and implement the rollout behavior for sibling `TraceEnded` consumers, especially `live-annotation-queues:curate`, so Phase 13 does not accidentally ship partial unrelated behavior
+- [x] **P13-PR4-4**: Decide and implement the rollout behavior for sibling `TraceEnded` consumers, especially `live-annotation-queues:curate`, so Phase 13 does not accidentally ship partial unrelated behavior
   - change `SpanIngested` handling in `apps/workers/src/workers/domain-events.ts` to publish debounced `live-traces:end`
   - keep `projects:checkFirstTrace` on `SpanIngested`
   - stop directly waking `live-evaluations:enqueue`, `live-annotation-queues:curate`, and `system-annotation-queues:fanOut` from `SpanIngested`

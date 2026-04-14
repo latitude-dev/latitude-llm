@@ -30,6 +30,22 @@ export const createDomainEventsWorker = ({
   consumer: QueueConsumer
   publisher: QueuePublisherShape
 }) => {
+  const publishTraceEndedFanOut = (payload: EventPayloads["TraceEnded"]) =>
+    Effect.all(
+      [
+        pub.publish("live-evaluations", "enqueue", payload, {
+          dedupeKey: `evaluations:live:enqueue:${payload.traceId}`,
+        }),
+        pub.publish("live-annotation-queues", "curate", payload, {
+          dedupeKey: `annotation-queues:live:curate:${payload.traceId}`,
+        }),
+        pub.publish("system-annotation-queues", "fanOut", payload, {
+          dedupeKey: `annotation-queues:system:fan-out:${payload.traceId}`,
+        }),
+      ],
+      { concurrency: "unbounded" },
+    ).pipe(Effect.asVoid)
+
   const handlers: EventHandlerMap = {
     MagicLinkEmailRequested: (event) =>
       hash(event.payload.magicLinkUrl).pipe(
@@ -57,16 +73,8 @@ export const createDomainEventsWorker = ({
     SpanIngested: (event) =>
       Effect.all(
         [
-          pub.publish("live-evaluations", "enqueue", event.payload, {
-            dedupeKey: `evaluations:live:enqueue:${event.payload.traceId}`,
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("live-annotation-queues", "curate", event.payload, {
-            dedupeKey: `annotation-queues:live:curate:${event.payload.traceId}`,
-            debounceMs: TRACE_END_DEBOUNCE_MS,
-          }),
-          pub.publish("system-annotation-queues", "fanOut", event.payload, {
-            dedupeKey: `annotation-queues:system:fan-out:${event.payload.traceId}`,
+          pub.publish("live-traces", "end", event.payload, {
+            dedupeKey: `live-traces:end:${event.payload.organizationId}:${event.payload.projectId}:${event.payload.traceId}`,
             debounceMs: TRACE_END_DEBOUNCE_MS,
           }),
           pub.publish(
@@ -83,9 +91,7 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
-    // PR 4 activates the `TraceEnded` contract before the sibling consumer
-    // rollout moves fan-out off `SpanIngested`.
-    TraceEnded: () => Effect.void,
+    TraceEnded: (event) => publishTraceEndedFanOut(event.payload),
 
     ScoreCreated: (event) =>
       Effect.all([
