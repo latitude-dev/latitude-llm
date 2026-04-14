@@ -44,6 +44,7 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 
 - `packages/domain/evaluations/src/entities/evaluation.ts` already defines `trigger`, `alignment`, lifecycle timestamps, and helpers like `isActiveEvaluation()` and `isPausedEvaluation()`
 - `packages/domain/evaluations/src/runtime/evaluation-execution.ts` already exposes `executeEvaluationScript()` for the MVP extract-and-call execution bridge
+- `packages/domain/evaluations/src/use-cases/live/enqueue-live-evaluations.ts` already exposes the enqueue domain seam that reloads one ended trace, scans active evaluations, and returns a structured summary for worker logging and tests
 - `packages/domain/evaluations/src/runtime/evaluation-execution.ts` already fixes the MVP hosted model to Latitude-managed OpenAI `gpt-5.4`
 - `packages/platform/ai-vercel/src/ai.ts` already provides the hosted Vercel AI SDK adapter through `AIGenerateLive`
 - `packages/domain/scores/src/use-cases/write-score.ts` already performs canonical Postgres-first writes and immediate analytics sync for immutable scores
@@ -58,7 +59,7 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 ### Not Yet Implemented
 
 - `apps/workers/src/workers/live-traces.ts` is still a stub and does not publish `TraceEnded`
-- `apps/workers/src/workers/live-evaluations.ts` is still a stub and does not implement `enqueue` or `execute`
+- `apps/workers/src/workers/live-evaluations.ts` now wires `enqueue` through the new domain use case and publishes `live-evaluations:execute`, but the `execute` handler and the actual evaluation execution + score persistence path are still not implemented
 - `apps/workers/src/workers/live-annotation-queues.ts` is still a stub, which matters for rollout once `TraceEnded` becomes real
 
 ## Locked Decisions
@@ -86,9 +87,11 @@ Make issue-linked evaluations execute on live traffic after trace completion and
 
 ## Start Here
 
-Implementation starts with **PR 1**.
+Implementation started with **PR 1**, and **PR 1 is now complete**.
 
 PR 1 is the semantic foundation for the rest of the phase: it locks the trigger rules, the idempotency model, and the execution seam so PR 2, PR 3, and PR 4 can implement workers without guessing.
+
+Active implementation work now starts with **PR 2** on `phase-13-part-2`.
 
 ## Implementation Plan
 
@@ -132,21 +135,61 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 
 **Intent**: implement selection and task publication while keeping the upstream trace-end signal dormant.
 
+**Status**: complete. `live-evaluations:enqueue` now has the full PR 2 selection, publication, logging, worker coverage, and explicit `turn = first` plus debounce behavior lock landed on `phase-13-part-2`.
+
 **Responsibilities**:
 
 - own the project-scoped evaluation scan for one ended trace
+- keep worker code orchestration-only by moving enqueue decision logic into `@domain/evaluations`
 - apply trigger evaluation in the required order: `filter`, then `sampling`, then `turn` / `debounce`
 - publish the correct `live-evaluations:execute` tasks and no others
 - add the enqueue-path logs and worker-level tests
-- **P13-PR2-1**: Replace the `enqueue` stub in `apps/workers/src/workers/live-evaluations.ts`
-- **P13-PR2-2**: Load the ended trace detail needed for trigger checks
-- **P13-PR2-3**: List active evaluations project-wide and skip archived or deleted rows
-- **P13-PR2-4**: Treat `sampling = 0` as paused and skip those evaluations
-- **P13-PR2-5**: Apply trigger evaluation order exactly as specified: `filter`, then `sampling`, then `turn` / `debounce`
-- **P13-PR2-6**: Publish `live-evaluations:execute` once per matching `(evaluationId, traceId)` pair, including dedupe/debounce where required
-- **P13-PR2-7**: Add structured enqueue-path logging for active evaluations scanned, filter matches, sampling skips, turn/debounce skips, and execute tasks published
-- **P13-PR2-8**: Add worker-level tests for matching, skipping, deterministic sampling, turn semantics, and execute publication
-- **P13-PR2-9**: Optimize trigger filter matching for one ended trace by adding a batched trace-repository read that evaluates multiple independent evaluation FilterSets in one query rather than one query per evaluation
+
+**Starting point**:
+
+- `apps/workers/src/workers/live-evaluations.ts` now has a thin `enqueue` wrapper around `enqueueLiveEvaluationsUseCase`, while `execute` remains a stub
+- `packages/domain/evaluations/src/use-cases/live/enqueue-live-evaluations.ts` now reloads `TraceDetail`, paginates active evaluations, skips paused (`sampling = 0`) monitors, applies `filter -> sampling -> turn` in order, and publishes `live-evaluations:execute` with turn-aware trace-vs-scope dedupe/debounce options
+- `packages/domain/evaluations/src/use-cases/live/enqueue-live-evaluations.test.ts` now explicitly locks `turn = first` plus debounce as a delayed trace-scoped publication, so repeated eligible traces do not accidentally collapse into `last`-style scope coalescing before a canonical score exists
+- `apps/workers/src/workers/live-evaluations.ts` now logs structured enqueue outcomes with queue/task metadata plus scan, skip, and publish counters from the domain summary
+- `apps/workers/src/workers/live-evaluations.test.ts` now covers matching, skip paths, deterministic sampling, session-vs-trace scope, `first` / `every` / `last` turn behavior, and the resulting execute publication options against in-memory Postgres and ClickHouse
+- `apps/workers/src/workers/domain-events.ts` already fans out `TraceEnded -> live-evaluations:enqueue`
+- `TraceEnded` currently carries only `organizationId`, `projectId`, and `traceId`, so enqueue must reload `TraceDetail` to recover `sessionId` before scope-aware turn logic
+- `EvaluationRepository.listByProjectId({ lifecycle: "active" })` is already the canonical project-wide active scan and excludes archived/deleted rows
+- `ScoreRepository.existsByEvaluationIdAndScope()` is already the canonical persisted-state read for `turn = first`
+- `TraceRepository.matchesFiltersByTraceId()` already exposes the canonical single-filter check, and `TraceRepository.listMatchingFilterIdsByTraceId()` now provides the batched one-trace/many-filter variant for enqueue performance
+
+**Implementation notes**:
+
+- introduce `enqueueLiveEvaluationsUseCase` under `packages/domain/evaluations/src/use-cases/live/` so trigger selection and publication rules do not live in the worker
+- keep `apps/workers/src/workers/live-evaluations.ts` as the composition root for `QueuePublisher`, `EvaluationRepositoryLive`, `ScoreRepositoryLive`, `TraceRepositoryLive`, logging, and queue subscription
+- the first PR 2 increment may land a safe foundation that only reloads the trace, scans active evaluations, and returns a structured summary before the real trigger-selection and publication logic is added
+- delegate all trigger filter semantics to `TraceRepository`; neither the domain helper layer nor the worker may re-implement `FilterSet` matching
+- apply trigger gates in exact order: `filter`, then `sampling`, then `turn` / `debounce`
+- `turn = first` checks `ScoreRepository.existsByEvaluationIdAndScope()` only after the trace has passed filter and sampling
+- `turn = every` without debounce publishes a trace-scoped execute task; `turn = every` with debounce coalesces by scope so the latest eligible trace wins after inactivity
+- `turn = last` always publishes a scope-scoped debounced execute task so the latest eligible trace in that scope wins after inactivity
+- `turn = first` with debounce still publishes a delayed trace-scoped execute task after the scope check; repeated eligible traces stay trace-scoped until a canonical score exists rather than coalescing into `last`-style scope debounce
+- PR 2 stops at selection, task publication, logging, and tests; it does not wire AI services or persist scores
+
+**Suggested implementation order**:
+
+1. extend `TraceRepository` with the batched one-trace/many-filter read and add the ClickHouse adapter tests first
+2. add `enqueueLiveEvaluationsUseCase` in `@domain/evaluations`, returning a structured summary that worker logs and tests can assert against
+3. wire `apps/workers/src/workers/live-evaluations.ts` to the new use case with Postgres and ClickHouse layers plus `QueuePublisher`
+4. add worker-level enqueue tests covering matching, skipping, turn semantics, and `live-evaluations:execute` publication
+
+**To-Do**:
+
+- [x] **P13-PR2-1**: Replace the `enqueue` stub in `apps/workers/src/workers/live-evaluations.ts` by wiring a thin worker wrapper around the new enqueue use case
+- [x] **P13-PR2-2**: Load the ended trace detail with `TraceRepository.findByTraceId()` so trigger checks can use `sessionId` and current trace context
+- [x] **P13-PR2-3**: List active evaluations project-wide through `EvaluationRepository.listByProjectId({ lifecycle: "active" })` instead of manually re-implementing lifecycle filtering
+- [x] **P13-PR2-9**: Optimize trigger filter matching for one ended trace by adding a batched `TraceRepository` read that evaluates multiple independent evaluation `FilterSet`s in one query rather than one query per evaluation
+- [x] **P13-PR2-4**: Treat `sampling = 0` as paused via the shared live-evaluation eligibility helpers and skip those evaluations before publication
+- [x] **P13-PR2-5**: Apply trigger evaluation order exactly as specified: `filter`, then `sampling`, then `turn` / `debounce`
+- [x] **P13-PR2-6**: Publish `live-evaluations:execute` once per matching `(evaluationId, traceId)` pair, including trace-scoped or scope-scoped dedupe/debounce where required by `first` / `every` / `last`
+- [x] **P13-PR2-7**: Add structured enqueue-path logging for active evaluations scanned, filter matches, sampling skips, turn/debounce skips, and execute tasks published
+- [x] **P13-PR2-8**: Add worker-level tests for matching, skipping, deterministic sampling, session-vs-trace scope, turn semantics, and execute publication
+- [x] **P13-PR2-10**: Lock the `turn = first` plus debounce behavior with explicit tests so it delays the first eligible execution without accidentally collapsing into `last`
 
 **Exit gate**:
 
@@ -163,20 +206,20 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 - wire the hosted AI adapter without breaking the domain execution seam from PR 1
 - enforce duplicate-result prevention for `(evaluationId, traceId)`
 - own execution logging, AI telemetry, and result-persistence tests
-- **P13-PR3-1**: Replace the `execute` stub in `apps/workers/src/workers/live-evaluations.ts`
-- **P13-PR3-2**: Wire hosted execution through `withAi(AIGenerateLive, ...)` while preserving the domain executor seam
-- **P13-PR3-3**: Load the evaluation, trace detail, and issue context needed for one live run
-- **P13-PR3-4**: Convert `TraceDetail.allMessages` into the MVP conversation input used by the hosted evaluator
-- **P13-PR3-5**: Recheck canonical state before execution so retries or duplicate tasks cannot create a second result for the same `(evaluationId, traceId)`
-- **P13-PR3-6**: Persist results through `writeScoreUseCase` with:
+- [ ] **P13-PR3-1**: Replace the `execute` stub in `apps/workers/src/workers/live-evaluations.ts`
+- [ ] **P13-PR3-2**: Wire hosted execution through `withAi(AIGenerateLive, ...)` while preserving the domain executor seam
+- [ ] **P13-PR3-3**: Load the evaluation, trace detail, and issue context needed for one live run
+- [ ] **P13-PR3-4**: Convert `TraceDetail.allMessages` into the MVP conversation input used by the hosted evaluator
+- [ ] **P13-PR3-5**: Recheck canonical state before execution so retries or duplicate tasks cannot create a second result for the same `(evaluationId, traceId)`
+- [ ] **P13-PR3-6**: Persist results through `writeScoreUseCase` with:
   - `source = "evaluation"`
   - `sourceId = evaluation.id`
   - `metadata.evaluationHash = evaluation.alignment.evaluationHash`
-- **P13-PR3-7**: Implement direct `issue_id` assignment at write time for issue-linked monitor failures
-- **P13-PR3-8**: Preserve correct `error -> errored` semantics plus persisted duration, token, and cost accounting
-- **P13-PR3-9**: Add structured execute-path logging for evaluation id, trace id, session id when present, result kind, score id, issue assignment path, tokens, cost, and duration
-- **P13-PR3-10**: Attach AI telemetry with a stable span name such as `evaluation.live.execute` and attributes including `evaluationId`, `projectId`, and `traceId`
-- **P13-PR3-11**: Add tests for passed, failed, and errored monitor results plus analytics save timing
+- [ ] **P13-PR3-7**: Implement direct `issue_id` assignment at write time for issue-linked monitor failures
+- [ ] **P13-PR3-8**: Preserve correct `error -> errored` semantics plus persisted duration, token, and cost accounting
+- [ ] **P13-PR3-9**: Add structured execute-path logging for evaluation id, trace id, session id when present, result kind, score id, issue assignment path, tokens, cost, and duration
+- [ ] **P13-PR3-10**: Attach AI telemetry with a stable span name such as `evaluation.live.execute` and attributes including `evaluationId`, `projectId`, and `traceId`
+- [ ] **P13-PR3-11**: Add tests for passed, failed, and errored monitor results plus analytics save timing
 
 **Exit gate**:
 
@@ -195,11 +238,11 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
 - own the rollout behavior for the sibling `TraceEnded` consumers that wake up at the same time
 - add end-to-end coverage for the live-monitoring pipeline
 - reconcile docs with the final Phase 13 behavior
-- **P13-PR4-1**: Replace the `live-traces:end` stub in `apps/workers/src/workers/live-traces.ts`
-- **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses
-- **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
-- **P13-PR4-4**: Decide and implement the rollout behavior for sibling `TraceEnded` consumers, especially `live-annotation-queues:curate`, so Phase 13 does not accidentally ship partial unrelated behavior
-- **P13-PR4-5**: Add end-to-end tests for:
+- [ ] **P13-PR4-1**: Replace the `live-traces:end` stub in `apps/workers/src/workers/live-traces.ts`
+- [ ] **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses
+- [ ] **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
+- [ ] **P13-PR4-4**: Decide and implement the rollout behavior for sibling `TraceEnded` consumers, especially `live-annotation-queues:curate`, so Phase 13 does not accidentally ship partial unrelated behavior
+- [ ] **P13-PR4-5**: Add end-to-end tests for:
   - debounce reset behavior
   - `TraceEnded -> enqueue`
   - downstream execute behavior
@@ -208,8 +251,8 @@ PR 1 is the semantic foundation for the rest of the phase: it locks the trigger 
   - direct issue assignment
   - analytics save timing
   - persisted duration, token, and cost accounting
-- **P13-PR4-6**: Reconcile docs drift around issue-linked monitor failures versus direct write-time issue assignment
-- **P13-PR4-7**: Mark this tracker with the final rollout behavior, final trigger semantics, and final docs updated once activation lands
+- [ ] **P13-PR4-6**: Reconcile docs drift around issue-linked monitor failures versus direct write-time issue assignment
+- [ ] **P13-PR4-7**: Mark this tracker with the final rollout behavior, final trigger semantics, and final docs updated once activation lands
 
 **Exit gate**:
 

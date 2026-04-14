@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { type ConfusionMatrix, evaluationSchema } from "./entities/evaluation.ts"
+import { type ConfusionMatrix, evaluationSchema, evaluationTriggerSchema } from "./entities/evaluation.ts"
 import { EvaluationDeletedError } from "./errors.ts"
 import {
   addConfusionMatrixObservation,
@@ -147,6 +147,29 @@ describe("evaluation lifecycle helpers", () => {
 })
 
 describe("live evaluation trigger helpers", () => {
+  it("requires a positive debounce for last-turn evaluations", () => {
+    const result = evaluationTriggerSchema.safeParse({
+      filter: {},
+      turn: "last",
+      debounce: 0,
+      sampling: 10,
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) {
+      throw new Error("Expected `turn = last` with `debounce = 0` to be rejected")
+    }
+
+    expect(result.error.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: "`turn = last` requires `debounce > 0`",
+          path: ["debounce"],
+        }),
+      ]),
+    )
+  })
+
   it("marks an active non-paused evaluation as eligible for live execution", () => {
     expect(getLiveEvaluationEligibility(makeEvaluation())).toEqual({ eligible: true })
   })

@@ -47,11 +47,16 @@ export function buildScoreRollupSubquery(
   groupColumn: "trace_id" | "session_id",
   scoreFilters: FilterSet,
   excludeSimulations: boolean,
+  options?: {
+    readonly paramPrefix?: string
+  },
 ): {
   subquery: string
   params: Record<string, unknown>
 } {
-  const { clauses, params } = buildClickHouseWhere(scoreFilters, SCORE_FIELD_REGISTRY, { paramPrefix: "s" })
+  const { clauses, params } = buildClickHouseWhere(scoreFilters, SCORE_FIELD_REGISTRY, {
+    paramPrefix: options?.paramPrefix ?? "s",
+  })
 
   const simClause = excludeSimulations ? " AND simulation_id = ''" : ""
   const scoreWhere = clauses.length > 0 ? ` AND ${clauses.join(" AND ")}` : ""
