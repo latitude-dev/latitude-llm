@@ -73,12 +73,7 @@ export const resolveWriteAnnotationTraceContext = (input: {
         traceId: input.traceId,
       })
       const resolvedSpanId = resolveLastLlmCompletionSpanId(spans)
-      if (resolvedSpanId === undefined) {
-        return yield* new BadRequestError({
-          message: "No LLM completion span found for this trace (expected a chat or text_completion span)",
-        })
-      }
-      spanId = resolvedSpanId
+      if (resolvedSpanId) spanId = resolvedSpanId
     }
 
     return { sessionId, spanId }
