@@ -150,7 +150,14 @@ function IssuesPage() {
           </Layout.ActionsRow>
         </Layout.Actions>
         <div className="px-6">
-          <IssuesAnalyticsPanel analytics={analytics} isLoading={isLoading && issues.length === 0} />
+          <IssuesAnalyticsPanel
+            analytics={analytics}
+            isLoading={isLoading && issues.length === 0}
+            onRangeSelect={(range) => {
+              setTimeFrom(range?.from ?? "")
+              setTimeTo(range?.to ?? "")
+            }}
+          />
         </div>
         <IssuesView
           issues={issues}

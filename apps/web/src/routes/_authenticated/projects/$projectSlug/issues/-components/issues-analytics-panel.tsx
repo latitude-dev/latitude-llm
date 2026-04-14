@@ -1,5 +1,6 @@
 import { BarChart, HistogramSkeleton, Skeleton, Text } from "@repo/ui"
 import { formatCount } from "@repo/utils"
+import { useCallback } from "react"
 import type { IssuesListResultRecord } from "../../../../../../domains/issues/issues.functions.ts"
 import { formatDayBucketLabel, formatDayBucketTooltipLabel } from "./issue-formatters.ts"
 
@@ -10,6 +11,7 @@ const COUNT_CARDS = [
   { key: "resolvedIssues", label: "Resolved issues" },
   { key: "seenOccurrences", label: "Seen occurrences" },
 ] as const
+const ISSUE_HISTOGRAM_BUCKET_MS = 24 * 60 * 60 * 1000
 
 function AggregationItem({
   label,
@@ -39,10 +41,33 @@ function AggregationItem({
 export function IssuesAnalyticsPanel({
   analytics,
   isLoading,
+  onRangeSelect,
 }: {
   readonly analytics: IssuesListResultRecord["analytics"]
   readonly isLoading: boolean
+  readonly onRangeSelect?: ((range: { from: string; to: string } | null) => void) | undefined
 }) {
+  const handleSelect = useCallback(
+    (range: { startIndex: number; endIndex: number } | null) => {
+      if (!onRangeSelect) return
+
+      if (!range) {
+        onRangeSelect(null)
+        return
+      }
+
+      const startBucket = analytics.histogram[range.startIndex]
+      const endBucket = analytics.histogram[range.endIndex]
+      if (!startBucket || !endBucket) return
+
+      const from = `${startBucket.bucket}T00:00:00.000Z`
+      const to = new Date(Date.parse(`${endBucket.bucket}T00:00:00.000Z`) + ISSUE_HISTOGRAM_BUCKET_MS - 1).toISOString()
+
+      onRangeSelect({ from, to })
+    },
+    [analytics.histogram, onRangeSelect],
+  )
+
   return (
     <div className="flex flex-col rounded-lg bg-secondary p-2">
       <div className="flex flex-row flex-wrap gap-3 p-4">
@@ -78,6 +103,7 @@ export function IssuesAnalyticsPanel({
             xAxisLabelFontSize={10}
             ariaLabel="Issue occurrences by day"
             formatTooltip={(category, value) => `${category}<br/><b>${formatCount(value)}</b> occurrences`}
+            onSelect={onRangeSelect ? handleSelect : undefined}
           />
         </div>
       )}

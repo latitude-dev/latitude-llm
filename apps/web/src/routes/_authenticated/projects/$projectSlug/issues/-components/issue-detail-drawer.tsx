@@ -26,11 +26,6 @@ import {
   XIcon,
 } from "lucide-react"
 import { type ReactNode, useState } from "react"
-import {
-  DEFAULT_TRACE_TABLE_SORTING,
-  ProjectTracesTable,
-  type TraceColumnId,
-} from "../../-components/project-traces-table.tsx"
 import { HotkeyBadge } from "../../../../../../components/hotkey-badge.tsx"
 import {
   invalidateIssueQueries,
@@ -39,6 +34,11 @@ import {
 } from "../../../../../../domains/issues/issues.collection.ts"
 import { applyIssueLifecycleAction } from "../../../../../../domains/issues/issues.functions.ts"
 import { toUserMessage } from "../../../../../../lib/errors.ts"
+import {
+  DEFAULT_TRACE_TABLE_SORTING,
+  ProjectTracesTable,
+  type TraceColumnId,
+} from "../../-components/project-traces-table.tsx"
 import { IssueDrawerEvaluations } from "./issue-drawer-evaluations.tsx"
 import { formatSeenAgeParts } from "./issue-formatters.ts"
 import { IssueLifecycleStatuses } from "./issue-lifecycle-statuses.tsx"
