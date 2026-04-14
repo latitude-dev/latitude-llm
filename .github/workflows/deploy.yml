@@ -376,11 +376,16 @@ jobs:
 
       - name: Upload sourcemaps to Datadog
         run: |
-          RELEASE=${{ needs.staging-build.outputs.image_tag }}
+          # Full git SHA matches DD_VERSION / DD_GIT_COMMIT_SHA in container images (Datadog requires a long release id).
+          RELEASE="${{ github.sha }}"
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
             --service web \
             --release-version "$RELEASE" \
-            --minified-path-prefix ${{ vars.VITE_LAT_WEB_URL }}
+            --minified-path-prefix "${{ vars.VITE_LAT_WEB_URL }}"
+          pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/server \
+            --service web \
+            --release-version "$RELEASE" \
+            --minified-path-prefix "file:///app/apps/web/.output/server"
           for SERVICE in api ingest workers workflows; do
             pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
               --service "$SERVICE" \
@@ -747,11 +752,15 @@ jobs:
 
       - name: Upload sourcemaps to Datadog
         run: |
-          RELEASE=${{ needs.production-build.outputs.image_tag }}
+          RELEASE="${{ github.sha }}"
           pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/public \
             --service web \
             --release-version "$RELEASE" \
-            --minified-path-prefix ${{ vars.VITE_LAT_WEB_URL }}
+            --minified-path-prefix "${{ vars.VITE_LAT_WEB_URL }}"
+          pnpm dlx @datadog/datadog-ci sourcemaps upload apps/web/.output/server \
+            --service web \
+            --release-version "$RELEASE" \
+            --minified-path-prefix "file:///app/apps/web/.output/server"
           for SERVICE in api ingest workers workflows; do
             pnpm dlx @datadog/datadog-ci sourcemaps upload "apps/${SERVICE}/dist" \
               --service "$SERVICE" \

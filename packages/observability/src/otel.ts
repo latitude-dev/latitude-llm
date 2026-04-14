@@ -30,6 +30,11 @@ export const startTracing = async ({
   appendResourceAttribute("service.name", serviceName)
   appendResourceAttribute("deployment.environment", environment)
 
+  const serviceVersion = process.env.DD_VERSION?.trim() || process.env.DD_GIT_COMMIT_SHA?.trim()
+  if (serviceVersion) {
+    appendResourceAttribute("service.version", serviceVersion)
+  }
+
   const apiKey = Effect.runSync(parseEnv("LAT_LATITUDE_TELEMETRY_API_KEY", "string", ""))
   const projectSlug = Effect.runSync(parseEnv("LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", "string", ""))
   const latitudeIngestBase = Effect.runSync(

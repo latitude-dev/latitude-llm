@@ -21,7 +21,8 @@ const webPortNumber = Effect.runSync(parseEnv("LAT_WEB_PORT", "number", 3000))
 const bundleAnalyze = Effect.runSync(parseEnv("LAT_WEB_BUNDLE_ANALYZE", "boolean", false))
 
 export default defineConfig({
-  plugins: [tanstackStart(), nitro(), tailwindcss(), react()],
+  // Nitro server bundle uses its own sourcemap flag (Vite `build.sourcemap` is client-only).
+  plugins: [tanstackStart(), nitro({ sourcemap: true }), tailwindcss(), react()],
   resolve: {
     alias: {
       // tslib's CJS UMD sets __esModule: true without providing a default

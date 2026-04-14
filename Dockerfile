@@ -98,6 +98,8 @@ ARG DD_GIT_COMMIT_SHA
 ENV NODE_ENV=production
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL}
 ENV DD_GIT_COMMIT_SHA=${DD_GIT_COMMIT_SHA}
+# Datadog Error Tracking / source maps correlate on `version` (maps to OTLP `service.version`).
+ENV DD_VERSION=${DD_GIT_COMMIT_SHA}
 
 COPY packages/platform/db-postgres/global-bundle.pem /app/global-bundle.pem
 
