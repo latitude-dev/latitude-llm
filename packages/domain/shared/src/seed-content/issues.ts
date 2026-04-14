@@ -69,7 +69,7 @@ const baseIssueFixtures = [
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
     escalatedDaysAgo: 0,
-    resolvedDaysAgo: 20,
+    resolvedDaysAgo: 8,
     ignoredDaysAgo: null,
   },
   {
@@ -97,10 +97,10 @@ const baseIssueFixtures = [
       "that still require inspection, are outside the return window, or carry restocking requirements. The pattern " +
       "usually appears when customers insist on urgent refunds for partially used or damaged products.",
     createdDaysAgo: 58,
-    clusteredDaysAgo: 22,
-    updatedDaysAgo: 18,
+    clusteredDaysAgo: 2,
+    updatedDaysAgo: 2,
     escalatedDaysAgo: 45,
-    resolvedDaysAgo: 18,
+    resolvedDaysAgo: 9,
     ignoredDaysAgo: null,
   },
   {
@@ -129,7 +129,7 @@ const baseIssueFixtures = [
     createdDaysAgo: 34,
     clusteredDaysAgo: 0,
     updatedDaysAgo: 0,
-    escalatedDaysAgo: null,
+    escalatedDaysAgo: 0,
     resolvedDaysAgo: null,
     ignoredDaysAgo: null,
   },
@@ -142,15 +142,15 @@ const baseIssueFixtures = [
       "compliance inspection paperwork for products that are shipped self-service only. The hallucination often mixes " +
       "real reseller setup programs with nonexistent Acme-operated installation teams.",
     createdDaysAgo: 83,
-    clusteredDaysAgo: 35,
-    updatedDaysAgo: 35,
-    escalatedDaysAgo: 76,
-    resolvedDaysAgo: null,
+    clusteredDaysAgo: 2,
+    updatedDaysAgo: 2,
+    escalatedDaysAgo: null,
+    resolvedDaysAgo: 7,
     ignoredDaysAgo: null,
   },
 ]
 
-const extraIssueBlueprints = [
+const curatedExtraIssueBlueprints = [
   {
     name: "Agent invents enterprise SLAs for standard support plans",
     description:
@@ -351,7 +351,178 @@ const extraIssueBlueprints = [
   },
 ] as const
 
-const extraIssueFixtures = extraIssueBlueprints.map((issue, index) => ({
+const generatedIssueDomains = [
+  {
+    titlePrefix: "billing",
+    label: "billing workflows",
+    reviewTeam: "finance operations",
+    workflow: "billing adjustment review",
+    failurePattern: "quotes account-specific credits or reversals as already approved",
+  },
+  {
+    titlePrefix: "export-control",
+    label: "export-control workflows",
+    reviewTeam: "trade compliance",
+    workflow: "export clearance review",
+    failurePattern: "treats restricted shipments as already cleared for release",
+  },
+  {
+    titlePrefix: "identity-recovery",
+    label: "identity-recovery workflows",
+    reviewTeam: "account security",
+    workflow: "ownership verification",
+    failurePattern: "treats weak customer proof as enough to unlock recovery steps",
+  },
+  {
+    titlePrefix: "procurement",
+    label: "procurement workflows",
+    reviewTeam: "vendor operations",
+    workflow: "supplier onboarding review",
+    failurePattern: "claims buyers or vendors already passed procurement review",
+  },
+  {
+    titlePrefix: "warehouse",
+    label: "warehouse workflows",
+    reviewTeam: "fulfillment operations",
+    workflow: "inventory hold confirmation",
+    failurePattern: "presents stock reservations as already locked in the warehouse",
+  },
+  {
+    titlePrefix: "legal-review",
+    label: "legal-review workflows",
+    reviewTeam: "commercial legal",
+    workflow: "terms and language review",
+    failurePattern: "states custom clauses or translated policies are already approved",
+  },
+  {
+    titlePrefix: "contract-renewal",
+    label: "contract-renewal workflows",
+    reviewTeam: "account management",
+    workflow: "commercial renewal review",
+    failurePattern: "guarantees commercial protections that still require account approval",
+  },
+  {
+    titlePrefix: "hazmat-shipping",
+    label: "hazardous-goods workflows",
+    reviewTeam: "hazardous-goods operations",
+    workflow: "special handling review",
+    failurePattern: "waves away packaging, route, or storage restrictions",
+  },
+  {
+    titlePrefix: "privacy",
+    label: "privacy workflows",
+    reviewTeam: "privacy operations",
+    workflow: "retention request processing",
+    failurePattern: "says deletion or redaction tasks already finished",
+  },
+  {
+    titlePrefix: "platform-capacity",
+    label: "platform-capacity workflows",
+    reviewTeam: "platform operations",
+    workflow: "quota and capacity review",
+    failurePattern: "declares limits or burst allowances already lifted",
+  },
+  {
+    titlePrefix: "field-service",
+    label: "field-service workflows",
+    reviewTeam: "field operations",
+    workflow: "onsite dispatch approval",
+    failurePattern: "implies technicians or crews are already scheduled",
+  },
+] as const
+
+const generatedIssueCommitments = [
+  {
+    title: "approval waivers",
+    descriptionObject: "approval waivers",
+    consequence: "skipping the documented approval gate",
+  },
+  {
+    title: "priority escalations",
+    descriptionObject: "priority escalations",
+    consequence: "promoting ordinary requests into emergency handling",
+  },
+  {
+    title: "retroactive credits",
+    descriptionObject: "retroactive credits",
+    consequence: "minting compensation without a case note",
+  },
+  {
+    title: "reservation holds",
+    descriptionObject: "reservation holds",
+    consequence: "claiming stock, time, or capacity is already reserved",
+  },
+  {
+    title: "sign-off confirmations",
+    descriptionObject: "sign-off confirmations",
+    consequence: "treating draft review notes as final approval",
+  },
+  {
+    title: "exception overrides",
+    descriptionObject: "exception overrides",
+    consequence: "inventing a special-case exemption that does not exist",
+  },
+  {
+    title: "quota boosts",
+    descriptionObject: "quota boosts",
+    consequence: "declaring higher limits before capacity review",
+  },
+  {
+    title: "compliance clearances",
+    descriptionObject: "compliance clearances",
+    consequence: "stating restricted actions are already approved",
+  },
+  {
+    title: "renewal protections",
+    descriptionObject: "renewal protections",
+    consequence: "freezing commercial terms without contract review",
+  },
+  {
+    title: "closure confirmations",
+    descriptionObject: "closure confirmations",
+    consequence: "closing workflows that are still in review",
+  },
+] as const
+
+const generatedIssueVerbs = ["invents", "fabricates", "promises", "overstates"] as const
+
+const TARGET_SEEDED_ISSUE_COUNT = 128
+const GENERATED_EXTRA_ISSUE_COUNT =
+  TARGET_SEEDED_ISSUE_COUNT - baseIssueFixtures.length - curatedExtraIssueBlueprints.length
+
+if (GENERATED_EXTRA_ISSUE_COUNT <= 0) {
+  throw new Error("Seed issue target count must exceed the curated base issue set.")
+}
+
+function buildGeneratedExtraIssueBlueprint(index: number): Omit<SeedIssueFixture, "id" | "uuid"> {
+  const domain = generatedIssueDomains[index % generatedIssueDomains.length]
+  const commitment =
+    generatedIssueCommitments[Math.floor(index / generatedIssueDomains.length) % generatedIssueCommitments.length]
+  const verb = generatedIssueVerbs[index % generatedIssueVerbs.length]
+  const createdDaysAgo = 88 - (index % 84)
+  const clusteredDaysAgo = Math.max(0, createdDaysAgo - (2 + (index % 18)))
+  const updatedDaysAgo = Math.max(0, clusteredDaysAgo - (index % 6))
+  const escalatedDaysAgo = index % 3 === 0 ? Math.max(0, updatedDaysAgo - (index % 2)) : null
+
+  return {
+    name: `Agent ${verb} ${domain.titlePrefix} ${commitment.title}`,
+    description:
+      `The support agent ${verb} ${commitment.descriptionObject} in ${domain.label} before ${domain.reviewTeam} completes the documented ${domain.workflow}. ` +
+      `The failure pattern usually involves ${commitment.consequence}, and the model ${domain.failurePattern}.`,
+    createdDaysAgo,
+    clusteredDaysAgo,
+    updatedDaysAgo,
+    escalatedDaysAgo,
+    resolvedDaysAgo: null,
+    ignoredDaysAgo: null,
+  }
+}
+
+const generatedExtraIssueBlueprints = Array.from({ length: GENERATED_EXTRA_ISSUE_COUNT }, (_, index) =>
+  buildGeneratedExtraIssueBlueprint(index),
+)
+
+const extraIssueFixtures = [...curatedExtraIssueBlueprints, ...generatedExtraIssueBlueprints].map((issue, index) => ({
   id:
     SEED_EXTRA_ISSUE_IDS[index] ??
     (() => {
@@ -370,6 +541,10 @@ export const SEED_ISSUE_FIXTURES: readonly SeedIssueFixture[] = [...baseIssueFix
 export const SEED_ISSUE_FIXTURES_BY_ID = new Map(SEED_ISSUE_FIXTURES.map((issue) => [issue.id, issue] as const))
 
 export const SEED_ISSUE_COUNT = SEED_ISSUE_FIXTURES.length
+
+if (SEED_ISSUE_COUNT < 100) {
+  throw new Error("Seed issue fixtures must stay large enough to exercise issues infinite scroll.")
+}
 
 export const ISSUE_1_TRACE_DAYS_AGO = [82, 78, 74, 69, 63, 56, 50, 43, 37, 29, 21, 15, 10, 6, 1, 0] as const
 
@@ -426,6 +601,41 @@ export type SeedIssueOccurrenceFixture = {
   readonly duration: number
   readonly tokens: number
   readonly cost: number
+}
+
+type SeedIssueOccurrenceBurstInput = Omit<SeedIssueOccurrenceFixture, "hour" | "minute" | "feedback" | "metadata"> & {
+  readonly count: number
+  readonly startHour: number
+  readonly startMinute?: number
+  readonly minuteStep?: number
+  readonly feedbackBase: string
+  readonly metadata: Record<string, unknown>
+}
+
+function buildOccurrenceBurstRows({
+  count,
+  startHour,
+  startMinute = 0,
+  minuteStep = 2,
+  feedbackBase,
+  metadata,
+  ...base
+}: SeedIssueOccurrenceBurstInput): readonly SeedIssueOccurrenceFixture[] {
+  return Array.from({ length: count }, (_, occurrenceIndex) => {
+    const totalMinutes = startHour * 60 + startMinute + occurrenceIndex * minuteStep
+
+    return {
+      ...base,
+      hour: Math.floor(totalMinutes / 60) % 24,
+      minute: totalMinutes % 60,
+      feedback: `${feedbackBase} Sample ${occurrenceIndex + 1} of ${count}.`,
+      metadata: {
+        ...metadata,
+        burstCount: count,
+        burstIndex: occurrenceIndex + 1,
+      },
+    }
+  })
 }
 
 const curatedIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = [
@@ -1101,6 +1311,723 @@ const curatedIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = [
   },
 ]
 
+const curatedIssueOccurrenceBurstRows: readonly SeedIssueOccurrenceFixture[] = [
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ACCESS_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_ACCESS_EVALUATION_ID,
+    idPrefix: "ax",
+    evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+    daysAgo: 11,
+    count: 22,
+    startHour: 8,
+    startMinute: 8,
+    minuteStep: 2,
+    value: 0.06,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Access monitor kept catching the assistant treating weak identity proof as sufficient for account recovery escalation.",
+    metadata: {
+      evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+      scenario: "weak-proof-escalation-spike",
+      severity: "critical",
+      burstLabel: "access-spike-prethreshold",
+    },
+    duration: 812_000_000,
+    tokens: 1_910,
+    cost: 269_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ACCESS_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_ACCESS_EVALUATION_ID,
+    idPrefix: "ax",
+    evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+    daysAgo: 9,
+    count: 8,
+    startHour: 9,
+    startMinute: 12,
+    minuteStep: 3,
+    value: 0.05,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Access monitor observed another cluster of unsafe recovery replies that skipped required ownership verification.",
+    metadata: {
+      evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+      scenario: "ownership-check-skipped",
+      severity: "high",
+      burstLabel: "access-baseline-ramp",
+    },
+    duration: 798_000_000,
+    tokens: 1_820,
+    cost: 257_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ACCESS_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_ACCESS_EVALUATION_ID,
+    idPrefix: "ax",
+    evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+    daysAgo: 7,
+    count: 6,
+    startHour: 10,
+    startMinute: 5,
+    minuteStep: 4,
+    value: 0.05,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Access monitor found repeated replies that exposed recovery steps before the customer finished verification.",
+    metadata: {
+      evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+      scenario: "premature-recovery-steps",
+      severity: "medium",
+      burstLabel: "access-midweek-drift",
+    },
+    duration: 776_000_000,
+    tokens: 1_740,
+    cost: 246_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ACCESS_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_ACCESS_EVALUATION_ID,
+    idPrefix: "ax",
+    evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+    daysAgo: 5,
+    count: 14,
+    startHour: 11,
+    startMinute: 6,
+    minuteStep: 2,
+    value: 0.06,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Access monitor saw a larger burst of recovery conversations where the assistant bypassed the mandatory proof checklist.",
+    metadata: {
+      evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+      scenario: "proof-checklist-bypass",
+      severity: "high",
+      burstLabel: "access-large-baseline-burst",
+    },
+    duration: 818_000_000,
+    tokens: 1_900,
+    cost: 268_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ACCESS_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_ACCESS_EVALUATION_ID,
+    idPrefix: "ax",
+    evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+    daysAgo: 2,
+    count: 12,
+    startHour: 13,
+    startMinute: 4,
+    minuteStep: 2,
+    value: 0.07,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Access monitor captured another run of responses that offered reset help after only partial account matching.",
+    metadata: {
+      evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+      scenario: "partial-match-reset-help",
+      severity: "high",
+      burstLabel: "access-late-baseline-burst",
+    },
+    duration: 824_000_000,
+    tokens: 1_940,
+    cost: 274_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_ACCESS_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_ACCESS_EVALUATION_ID,
+    idPrefix: "ax",
+    evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+    daysAgo: 0,
+    count: 24,
+    startHour: 7,
+    startMinute: 0,
+    minuteStep: 2,
+    value: 0.08,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Access monitor is seeing a same-day spike of unsafe account recovery answers that skip proof and ownership checks.",
+    metadata: {
+      evaluationHash: SEED_ACCESS_EVALUATION_HASH,
+      scenario: "same-day-recovery-spike",
+      severity: "critical",
+      burstLabel: "access-recent-escalation",
+    },
+    duration: 836_000_000,
+    tokens: 1_980,
+    cost: 281_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 13,
+    count: 6,
+    startHour: 9,
+    startMinute: 14,
+    minuteStep: 4,
+    value: 0.05,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor logged pre-resolution evidence where the assistant still framed risky pairings as approved by policy.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "pre-resolution-unsafe-pairing",
+      severity: "medium",
+      burstLabel: "combination-before-resolution-1",
+    },
+    duration: 772_000_000,
+    tokens: 1_560,
+    cost: 226_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 11,
+    count: 9,
+    startHour: 10,
+    startMinute: 6,
+    minuteStep: 3,
+    value: 0.05,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor saw another pre-resolution cluster of unsafe bundle advice before the issue was marked resolved.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "pre-resolution-bundle-cluster",
+      severity: "high",
+      burstLabel: "combination-before-resolution-2",
+    },
+    duration: 784_000_000,
+    tokens: 1_620,
+    cost: 234_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 10,
+    count: 13,
+    startHour: 11,
+    startMinute: 2,
+    minuteStep: 2,
+    value: 0.06,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor recorded a heavier pre-resolution burst where the assistant normalized dangerous product pairings.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "pre-resolution-heavy-cluster",
+      severity: "high",
+      burstLabel: "combination-before-resolution-3",
+    },
+    duration: 798_000_000,
+    tokens: 1_700,
+    cost: 243_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 9,
+    count: 7,
+    startHour: 12,
+    startMinute: 8,
+    minuteStep: 3,
+    value: 0.05,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor still found pre-resolution unsafe recommendations right before the issue was considered resolved.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "pre-resolution-tail",
+      severity: "medium",
+      burstLabel: "combination-before-resolution-4",
+    },
+    duration: 764_000_000,
+    tokens: 1_540,
+    cost: 223_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 5,
+    count: 9,
+    startHour: 10,
+    startMinute: 10,
+    minuteStep: 3,
+    value: 0.07,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor caught the regression reopening with a noticeable spike of unsafe pairing approvals after resolution.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "post-resolution-rebound",
+      severity: "critical",
+      burstLabel: "combination-after-resolution-1",
+    },
+    duration: 808_000_000,
+    tokens: 1_730,
+    cost: 249_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 4,
+    count: 13,
+    startHour: 11,
+    startMinute: 12,
+    minuteStep: 2,
+    value: 0.08,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor saw the post-resolution regression deepen as the assistant kept endorsing dangerous bundles.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "post-resolution-deeper-regression",
+      severity: "critical",
+      burstLabel: "combination-after-resolution-2",
+    },
+    duration: 822_000_000,
+    tokens: 1_780,
+    cost: 255_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 2,
+    count: 5,
+    startHour: 13,
+    startMinute: 8,
+    minuteStep: 4,
+    value: 0.06,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor kept observing unsafe post-resolution advice even after the larger regression spike cooled down.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "post-resolution-tail",
+      severity: "high",
+      burstLabel: "combination-after-resolution-3",
+    },
+    duration: 796_000_000,
+    tokens: 1_670,
+    cost: 239_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_COMBINATION_ISSUE_ID,
+    source: "evaluation",
+    sourceId: SEED_COMBINATION_EVALUATION_ID,
+    idPrefix: "cx",
+    evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+    daysAgo: 0,
+    count: 23,
+    startHour: 7,
+    startMinute: 4,
+    minuteStep: 2,
+    value: 0.08,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Combination monitor is seeing a same-day regression spike with repeated dangerous combination endorsements.",
+    metadata: {
+      evaluationHash: SEED_COMBINATION_EVALUATION_HASH,
+      scenario: "same-day-regression-spike",
+      severity: "critical",
+      burstLabel: "combination-after-resolution-4",
+    },
+    duration: 834_000_000,
+    tokens: 1_840,
+    cost: 264_000,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_RETURNS_ISSUE_ID,
+    source: "custom",
+    sourceId: "returns-audit",
+    idPrefix: "rx",
+    evaluationHash: null,
+    daysAgo: 13,
+    count: 5,
+    startHour: 8,
+    startMinute: 20,
+    minuteStep: 4,
+    value: 0.08,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Returns audit logged more pre-resolution claims that customers qualified for immediate refunds before inspection.",
+    metadata: {
+      importName: "returns-audit",
+      reviewer: "ops-triage",
+      batch: "returns-policy-q2",
+      severity: "medium",
+      burstLabel: "returns-before-resolution-1",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_RETURNS_ISSUE_ID,
+    source: "custom",
+    sourceId: "returns-audit",
+    idPrefix: "rx",
+    evaluationHash: null,
+    daysAgo: 11,
+    count: 8,
+    startHour: 9,
+    startMinute: 14,
+    minuteStep: 3,
+    value: 0.09,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Returns audit saw a larger pre-resolution cluster of instant-refund promises that still skipped inspection requirements.",
+    metadata: {
+      importName: "returns-audit",
+      reviewer: "ops-triage",
+      batch: "returns-policy-q2",
+      severity: "high",
+      burstLabel: "returns-before-resolution-2",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_RETURNS_ISSUE_ID,
+    source: "custom",
+    sourceId: "returns-audit",
+    idPrefix: "rx",
+    evaluationHash: null,
+    daysAgo: 10,
+    count: 4,
+    startHour: 10,
+    startMinute: 8,
+    minuteStep: 5,
+    value: 0.07,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Returns audit still captured a smaller trickle of pre-resolution conversations promising no-questions-asked returns.",
+    metadata: {
+      importName: "returns-audit",
+      reviewer: "ops-triage",
+      batch: "returns-policy-q2",
+      severity: "medium",
+      burstLabel: "returns-before-resolution-3",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_RETURNS_ISSUE_ID,
+    source: "custom",
+    sourceId: "returns-audit",
+    idPrefix: "rx",
+    evaluationHash: null,
+    daysAgo: 7,
+    count: 7,
+    startHour: 11,
+    startMinute: 6,
+    minuteStep: 4,
+    value: 0.09,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Returns audit confirmed the issue regressed after resolution with renewed promises of immediate refunds.",
+    metadata: {
+      importName: "returns-audit",
+      reviewer: "ops-triage",
+      batch: "returns-policy-q2",
+      severity: "high",
+      burstLabel: "returns-after-resolution-1",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_RETURNS_ISSUE_ID,
+    source: "custom",
+    sourceId: "returns-audit",
+    idPrefix: "rx",
+    evaluationHash: null,
+    daysAgo: 5,
+    count: 6,
+    startHour: 12,
+    startMinute: 10,
+    minuteStep: 4,
+    value: 0.1,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Returns audit kept seeing post-resolution instant-refund advice, but at a lower volume than the main pre-resolution clusters.",
+    metadata: {
+      importName: "returns-audit",
+      reviewer: "ops-triage",
+      batch: "returns-policy-q2",
+      severity: "medium",
+      burstLabel: "returns-after-resolution-2",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_RETURNS_ISSUE_ID,
+    source: "custom",
+    sourceId: "returns-audit",
+    idPrefix: "rx",
+    evaluationHash: null,
+    daysAgo: 2,
+    count: 3,
+    startHour: 13,
+    startMinute: 12,
+    minuteStep: 6,
+    value: 0.08,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Returns audit still found a small post-resolution tail of unsupported refund promises, keeping the issue regressed without a fresh escalation spike.",
+    metadata: {
+      importName: "returns-audit",
+      reviewer: "ops-triage",
+      batch: "returns-policy-q2",
+      severity: "medium",
+      burstLabel: "returns-after-resolution-3",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_INSTALLATION_ISSUE_ID,
+    source: "custom",
+    sourceId: "field-audit",
+    idPrefix: "ix",
+    evaluationHash: null,
+    daysAgo: 13,
+    count: 5,
+    startHour: 8,
+    startMinute: 18,
+    minuteStep: 5,
+    value: 0.09,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Field audit opened a new wave of installation-certification evidence before the issue crossed the escalation threshold.",
+    metadata: {
+      importName: "field-audit",
+      reviewer: "ops-compliance",
+      batch: "installation-certs-q2",
+      severity: "medium",
+      burstLabel: "installation-ramp-1",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_INSTALLATION_ISSUE_ID,
+    source: "custom",
+    sourceId: "field-audit",
+    idPrefix: "ix",
+    evaluationHash: null,
+    daysAgo: 10,
+    count: 21,
+    startHour: 9,
+    startMinute: 10,
+    minuteStep: 2,
+    value: 0.1,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Field audit detected a large burst of fabricated Acme-run installation certification promises across multiple recent cases.",
+    metadata: {
+      importName: "field-audit",
+      reviewer: "ops-compliance",
+      batch: "installation-certs-q2",
+      severity: "high",
+      burstLabel: "installation-threshold-spike",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_INSTALLATION_ISSUE_ID,
+    source: "custom",
+    sourceId: "field-audit",
+    idPrefix: "ix",
+    evaluationHash: null,
+    daysAgo: 8,
+    count: 11,
+    startHour: 10,
+    startMinute: 12,
+    minuteStep: 3,
+    value: 0.09,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Field audit still found a final pre-resolution cluster of partner-installation hallucinations before the issue was marked resolved.",
+    metadata: {
+      importName: "field-audit",
+      reviewer: "ops-compliance",
+      batch: "installation-certs-q2",
+      severity: "medium",
+      burstLabel: "installation-before-resolution-3",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_INSTALLATION_ISSUE_ID,
+    source: "custom",
+    sourceId: "field-audit",
+    idPrefix: "ix",
+    evaluationHash: null,
+    daysAgo: 6,
+    count: 9,
+    startHour: 11,
+    startMinute: 8,
+    minuteStep: 2,
+    value: 0.11,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Field audit confirmed the issue regressed after resolution with a renewed burst of unsupported installation-certification claims.",
+    metadata: {
+      importName: "field-audit",
+      reviewer: "ops-compliance",
+      batch: "installation-certs-q2",
+      severity: "high",
+      burstLabel: "installation-after-resolution-1",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_INSTALLATION_ISSUE_ID,
+    source: "custom",
+    sourceId: "field-audit",
+    idPrefix: "ix",
+    evaluationHash: null,
+    daysAgo: 4,
+    count: 7,
+    startHour: 12,
+    startMinute: 6,
+    minuteStep: 3,
+    value: 0.1,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Field audit kept seeing post-resolution fabricated installation-certification promises, but not at escalation volume.",
+    metadata: {
+      importName: "field-audit",
+      reviewer: "ops-compliance",
+      batch: "installation-certs-q2",
+      severity: "medium",
+      burstLabel: "installation-after-resolution-2",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+  ...buildOccurrenceBurstRows({
+    issueId: SEED_INSTALLATION_ISSUE_ID,
+    source: "custom",
+    sourceId: "field-audit",
+    idPrefix: "ix",
+    evaluationHash: null,
+    daysAgo: 2,
+    count: 4,
+    startHour: 13,
+    startMinute: 4,
+    minuteStep: 4,
+    value: 0.09,
+    passed: false,
+    errored: false,
+    error: null,
+    feedbackBase:
+      "Field audit still found a low-volume post-resolution tail of unsupported installation promises, keeping the issue regressed only.",
+    metadata: {
+      importName: "field-audit",
+      reviewer: "ops-compliance",
+      batch: "installation-certs-q2",
+      severity: "medium",
+      burstLabel: "installation-after-resolution-3",
+    },
+    duration: 0,
+    tokens: 0,
+    cost: 0,
+  }),
+]
+
 function buildExtraOccurrenceDays(issue: SeedIssueFixture, index: number): readonly number[] {
   const count = index % 3 === 0 ? 2 : 4
   const terminalDaysAgo =
@@ -1152,5 +2079,6 @@ const extraIssueOccurrenceRows: readonly SeedIssueOccurrenceFixture[] = extraIss
 
 export const SEED_ADDITIONAL_ISSUE_OCCURRENCES: readonly SeedIssueOccurrenceFixture[] = [
   ...curatedIssueOccurrenceRows,
+  ...curatedIssueOccurrenceBurstRows,
   ...extraIssueOccurrenceRows,
 ] as const

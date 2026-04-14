@@ -1,10 +1,11 @@
 import { Avatar, Badge, Button, DropdownMenu, Icon, type MenuOption, Text, Tooltip } from "@repo/ui"
 import { relativeTime } from "@repo/utils"
+import { useNavigate, useParams } from "@tanstack/react-router"
 import { EllipsisIcon, GlobeIcon, HashIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useDeleteAnnotation } from "../../../../../../domains/annotations/annotations.collection.ts"
 import type { AnnotationRecord } from "../../../../../../domains/annotations/annotations.functions.ts"
-import { useIssuesCollection } from "../../../../../../domains/issues/issues.collection.ts"
+import { useIssue } from "../../../../../../domains/issues/issues.collection.ts"
 import { useMemberByUserIdMap } from "../../../../../../domains/members/members.collection.ts"
 import { pickUserFromMembersMap } from "../../../../../../domains/members/pick-users-from-members.ts"
 import { AnnotationInput } from "./annotation-input.tsx"
@@ -26,13 +27,19 @@ export function AnnotationCard({
   onUpdate,
   onDelete,
 }: AnnotationCardProps) {
+  const navigate = useNavigate()
+  const { projectSlug } = useParams({ strict: false })
   const [isEditing, setIsEditing] = useState(false)
   const memberByUserId = useMemberByUserIdMap()
   const annotator = pickUserFromMembersMap(memberByUserId, annotation.annotatorId)
   const deleteMutation = useDeleteAnnotation()
+  const { data: linkedIssue } = useIssue({
+    projectId,
+    issueId: annotation.issueId ?? "",
+    enabled: annotation.issueId !== null,
+  })
 
-  const { data: issues = [] } = useIssuesCollection(projectId)
-  const linkedIssueName = annotation.issueId ? issues.find((i) => i.id === annotation.issueId)?.name : null
+  const linkedIssueName = linkedIssue?.name ?? null
 
   const menuOptions: MenuOption[] = useMemo(
     () => [
@@ -53,6 +60,22 @@ export function AnnotationCard({
   function handleSave(data: { passed: boolean; comment: string; issueId: string | null }) {
     onUpdate(data)
     setIsEditing(false)
+  }
+
+  function openLinkedIssue(event: { stopPropagation: () => void; preventDefault?: () => void }) {
+    if (!annotation.issueId || !projectSlug) {
+      return
+    }
+
+    event.stopPropagation()
+    event.preventDefault?.()
+    void navigate({
+      to: "/projects/$projectSlug/issues",
+      params: { projectSlug },
+      search: {
+        issueId: annotation.issueId,
+      },
+    })
   }
 
   if (isEditing) {
@@ -90,7 +113,7 @@ export function AnnotationCard({
             <Tooltip
               asChild
               trigger={
-                <div className="flex h-8 w-8 items-center justify-center rounded-md transition-colors bg-muted">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md transition-colors">
                   <Icon icon={GlobeIcon} size="xs" color="foregroundMuted" />
                 </div>
               }
@@ -126,7 +149,17 @@ export function AnnotationCard({
             variant="outline"
             size="small"
             ellipsis
+            role="button"
+            tabIndex={0}
+            aria-label={`Open issue ${linkedIssueName}`}
+            className="cursor-pointer hover:bg-muted"
             iconProps={{ icon: HashIcon, color: "foregroundMuted", placement: "start" }}
+            onClick={openLinkedIssue}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                openLinkedIssue(event)
+              }
+            }}
           >
             {linkedIssueName}
           </Badge>

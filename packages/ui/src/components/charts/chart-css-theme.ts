@@ -1,4 +1,5 @@
 export type ChartCssThemeColors = {
+  readonly isDark: boolean
   readonly foreground: string
   readonly mutedForeground: string
   readonly border: string
@@ -9,6 +10,7 @@ export type ChartCssThemeColors = {
 }
 
 const FALLBACK_LIGHT: ChartCssThemeColors = {
+  isDark: false,
   foreground: "hsl(224 71.5% 4%)",
   mutedForeground: "hsl(211 11% 45%)",
   border: "hsl(0 0% 89.8%)",
@@ -18,6 +20,7 @@ const FALLBACK_LIGHT: ChartCssThemeColors = {
 }
 
 const FALLBACK_DARK: ChartCssThemeColors = {
+  isDark: true,
   foreground: "hsl(0 0% 98%)",
   mutedForeground: "hsl(0 0% 63.9%)",
   border: "hsl(231 9% 12.9%)",
@@ -43,6 +46,7 @@ export function readChartThemeFromCss(): ChartCssThemeColors {
   const fb = isDark ? FALLBACK_DARK : FALLBACK_LIGHT
   const style = getComputedStyle(root)
   return {
+    isDark,
     foreground: hslVar(style, "--foreground", fb.foreground),
     mutedForeground: hslVar(style, "--muted-foreground", fb.mutedForeground),
     border: hslVar(style, "--border", fb.border),
@@ -53,7 +57,7 @@ export function readChartThemeFromCss(): ChartCssThemeColors {
 }
 
 function chartThemeFingerprint(colors: ChartCssThemeColors): string {
-  return `${colors.foreground}\0${colors.mutedForeground}\0${colors.border}\0${colors.primary}\0${colors.tooltipBackground}\0${colors.tooltipBorder}`
+  return `${colors.isDark}\0${colors.foreground}\0${colors.mutedForeground}\0${colors.border}\0${colors.primary}\0${colors.tooltipBackground}\0${colors.tooltipBorder}`
 }
 
 let stableThemeCache: ChartCssThemeColors | undefined

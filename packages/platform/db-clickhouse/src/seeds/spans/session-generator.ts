@@ -3,7 +3,9 @@ import { generateTraceByPattern } from "./pattern-generators.ts"
 import {
   addMs,
   assistantTextMessage,
+  clampSpansToWindowEnd,
   type Message,
+  parseClickhouseTime,
   pick,
   pickByWeight,
   randInt,
@@ -24,7 +26,6 @@ export function generateSessionTraces(config: TraceConfig, agent: AgentProfile, 
   const conversationHistory: Message[] = []
   const topic = agent.topics ? pick(agent.topics) : undefined
   const sessionId = `session-${randomHex(8)}`
-  const modelConfig = pick(agent.models)
   const userId = Math.random() < agent.userIdProbability && agent.userIdPool.length > 0 ? pick(agent.userIdPool) : ""
   const environment = pick(agent.environments)
   const tags = [agent.tag, environment]
@@ -34,6 +35,10 @@ export function generateSessionTraces(config: TraceConfig, agent: AgentProfile, 
   let sessionCursor = randomTimeInWindow(config.timeWindow.from, config.timeWindow.to)
 
   for (let turn = 0; turn < sessionSize; turn++) {
+    if (sessionCursor.getTime() >= config.timeWindow.to.getTime()) {
+      break
+    }
+
     const isFirstTurn = turn === 0
 
     const userPrompt = pickUserPrompt(agent, topic, isFirstTurn)
@@ -56,18 +61,21 @@ export function generateSessionTraces(config: TraceConfig, agent: AgentProfile, 
     const pattern = isError ? "error" : topic ? topic.dominantPattern : pickByWeight(agent.patternWeights).pattern
 
     const assistantReply = pickAssistantReply(agent, topic, isFirstTurn)
-    const spans = generateTraceByPattern(ctx, agent, pattern, [...conversationHistory], assistantReply)
+    const spans = clampSpansToWindowEnd(
+      generateTraceByPattern(ctx, agent, pattern, [...conversationHistory], assistantReply),
+      config.timeWindow.to,
+    )
     allSpans.push(...spans)
 
     if (!isError) {
       conversationHistory.push(assistantTextMessage(assistantReply))
     }
 
-    const lastSpan = spans[spans.length - 1]
-    const traceDuration = lastSpan
-      ? new Date(`${lastSpan.end_time.replace(" ", "T")}Z`).getTime() - sessionCursor.getTime()
-      : modelConfig.latencyRange[1]
-    sessionCursor = addMs(sessionCursor, traceDuration + randInt(5_000, 300_000))
+    const latestEndTime = spans.reduce((latest, span) => {
+      const endTime = parseClickhouseTime(span.end_time)
+      return endTime.getTime() > latest.getTime() ? endTime : latest
+    }, sessionCursor)
+    sessionCursor = addMs(latestEndTime, randInt(5_000, 300_000))
   }
 
   return allSpans

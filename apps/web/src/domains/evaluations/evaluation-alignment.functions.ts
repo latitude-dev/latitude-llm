@@ -8,6 +8,7 @@ import {
   EvaluationRepository,
   evaluationAlignmentJobStatusKey,
   parseStoredEvaluationAlignmentJobStatus,
+  softDeleteEvaluation,
 } from "@domain/evaluations"
 import { IssueRepository } from "@domain/issues"
 import {
@@ -37,6 +38,12 @@ const evaluationAlignmentJobInputSchema = z.object({
 })
 
 const manualRealignmentInputSchema = z.object({
+  projectId: z.string(),
+  issueId: z.string(),
+  evaluationId: z.string(),
+})
+
+const softDeleteEvaluationInputSchema = z.object({
   projectId: z.string(),
   issueId: z.string(),
   evaluationId: z.string(),
@@ -271,4 +278,35 @@ export const triggerManualEvaluationRealignment = createServerFn({ method: "POST
     }
 
     return pendingStatus
+  })
+
+export const softDeleteIssueEvaluation = createServerFn({ method: "POST" })
+  .inputValidator(softDeleteEvaluationInputSchema)
+  .handler(async ({ data }): Promise<EvaluationSummaryRecord> => {
+    const { organizationId } = await requireSession()
+    const client = getPostgresClient()
+    const projectId = ProjectId(data.projectId)
+    const issueId = IssueId(data.issueId)
+
+    return Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* EvaluationRepository
+        const evaluation = yield* repository.findById(EvaluationId(data.evaluationId))
+
+        if (evaluation.projectId !== projectId || evaluation.issueId !== issueId) {
+          return yield* new BadRequestError({
+            message: `Evaluation ${evaluation.id} does not match the requested issue or project`,
+          })
+        }
+
+        // Temporary until the evaluations dashboard exists: unmonitoring from the
+        // issue drawer should remove the linked evaluation from current UI flows,
+        // so we soft delete it instead of archiving it into a dashboard users
+        // cannot reach yet.
+        const deletedEvaluation = softDeleteEvaluation({ evaluation })
+        yield* repository.save(deletedEvaluation)
+
+        return toEvaluationSummaryRecord(deletedEvaluation)
+      }).pipe(withPostgres(EvaluationRepositoryLive, client, OrganizationId(organizationId))),
+    )
   })

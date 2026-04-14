@@ -27,7 +27,7 @@ const SelectTrigger = React.forwardRef<React.ComponentRef<typeof SelectPrimitive
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Radix Trigger uses asChild and merges combobox role, aria-*, and keyboard behavior onto this div.
         tabIndex={0}
         className={cn(
-          "flex w-full min-w-0 cursor-pointer items-center justify-between rounded-md border border-input bg-transparent",
+          "flex w-full min-w-0 cursor-pointer items-center justify-between rounded-md border border-input bg-transparent text-left",
           "px-3 shadow-sm ring-offset-background placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring",
           "data-disabled:cursor-not-allowed data-disabled:opacity-50 [&>span]:line-clamp-1",
           font.size.h5,
@@ -76,7 +76,7 @@ function SelectValue({ selected, options, placeholder, placeholderIcon }: Select
   const match = options.find((o) => String(o.value) === String(selected))
   if (!match) {
     return (
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-muted-foreground">
+      <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-hidden text-left text-muted-foreground">
         {placeholderIcon ? <span className="shrink-0">{placeholderIcon}</span> : null}
         <Text.H5 color="foregroundMuted" noWrap ellipsis>
           {placeholder ?? "Select an option"}
@@ -85,7 +85,7 @@ function SelectValue({ selected, options, placeholder, placeholderIcon }: Select
     )
   }
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+    <div className="flex min-w-0 flex-1 items-center justify-start gap-2 overflow-hidden text-left">
       {match.icon ? <span className="shrink-0">{match.icon}</span> : null}
       <Text.H5 display="block" noWrap ellipsis>
         {match.label}
@@ -141,19 +141,21 @@ const SelectItem = React.forwardRef<React.ComponentRef<typeof SelectPrimitive.It
     <SelectPrimitive.Item
       ref={ref}
       className={cn(
-        "relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+        "relative flex w-full cursor-default select-none items-center justify-start rounded-md py-1.5 pl-3 pr-8 text-left text-sm outline-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...(disabled ? { disabled: true } : {})}
       {...props}
     >
-      <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+      <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <Check className="h-4 w-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
       {icon && <span className="pr-2">{icon}</span>}
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      <span className="flex-1 text-left">
+        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      </span>
     </SelectPrimitive.Item>
   ),
 )

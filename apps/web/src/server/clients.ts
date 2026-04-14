@@ -3,6 +3,7 @@ import { generateId, type StorageDiskPort } from "@domain/shared"
 import { createRedisClient, createRedisConnection, type RedisClient } from "@platform/cache-redis"
 import { type ClickHouseClient, createClickhouseClient } from "@platform/db-clickhouse"
 import { createBetterAuth, createOutboxWriter, createPostgresClient, type PostgresClient } from "@platform/db-postgres"
+import { createWeaviateClient, type WeaviateClient } from "@platform/db-weaviate"
 import { parseEnv, parseEnvOptional } from "@platform/env"
 import { createBullMqQueuePublisher, loadBullMqConfig } from "@platform/queue-bullmq"
 import { createStorageDisk } from "@platform/storage-object"
@@ -13,6 +14,7 @@ import { Effect } from "effect"
 let postgresClientInstance: PostgresClient | undefined
 let adminPostgresClientInstance: PostgresClient | undefined
 let clickhouseClientInstance: ClickHouseClient | undefined
+let weaviateClientInstancePromise: Promise<WeaviateClient> | undefined
 let betterAuthInstance: ReturnType<typeof createBetterAuth> | undefined
 let storageDiskInstance: StorageDiskPort | undefined
 let queuePublisher: Promise<QueuePublisherShape> | undefined
@@ -63,6 +65,13 @@ export const getClickhouseClient = (): ClickHouseClient => {
     clickhouseClientInstance = createClickhouseClient()
   }
   return clickhouseClientInstance
+}
+
+export const getWeaviateClient = (): Promise<WeaviateClient> => {
+  if (!weaviateClientInstancePromise) {
+    weaviateClientInstancePromise = createWeaviateClient()
+  }
+  return weaviateClientInstancePromise
 }
 
 export const getStorageDisk = (): StorageDiskPort => {

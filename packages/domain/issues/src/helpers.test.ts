@@ -6,6 +6,7 @@ import { type Issue, type IssueCentroid, IssueState } from "./entities/issue.ts"
 import {
   createIssueCentroid,
   deriveIssueLifecycleStates,
+  getEscalationOccurrenceThreshold,
   normalizeEmbedding,
   normalizeIssueCentroid,
   updateIssueCentroid,
@@ -197,7 +198,15 @@ describe("issue centroid helpers", () => {
 describe("issue lifecycle helpers", () => {
   const now = new Date("2026-04-10T00:00:00.000Z")
 
-  it("derives new and escalating states from issue occurrences", () => {
+  it("computes the minimum integer occurrences needed to cross the escalation threshold", () => {
+    expect(getEscalationOccurrenceThreshold(0)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(1)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(2)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(2.5)).toBe(20)
+    expect(getEscalationOccurrenceThreshold(16)).toBe(22)
+  })
+
+  it("does not mark new issues as escalating even when they exceed the escalation threshold", () => {
     const states = deriveIssueLifecycleStates({
       issue: makeIssue({
         createdAt: new Date("2026-04-05T08:00:00.000Z"),
@@ -207,13 +216,32 @@ describe("issue lifecycle helpers", () => {
       occurrence: makeOccurrence({
         firstSeenAt: new Date("2026-04-05T08:00:00.000Z"),
         lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
-        recentOccurrences: 4,
+        recentOccurrences: 20,
         baselineAvgOccurrences: 2,
       }),
       now,
     })
 
-    expect(states).toEqual([IssueState.New, IssueState.Escalating])
+    expect(states).toEqual([IssueState.New])
+  })
+
+  it("marks older issues as escalating when they exceed the escalation threshold", () => {
+    const states = deriveIssueLifecycleStates({
+      issue: makeIssue({
+        createdAt: new Date("2026-03-20T08:00:00.000Z"),
+        updatedAt: new Date("2026-03-20T08:00:00.000Z"),
+        clusteredAt: new Date("2026-03-20T08:00:00.000Z"),
+      }),
+      occurrence: makeOccurrence({
+        firstSeenAt: new Date("2026-03-20T08:00:00.000Z"),
+        lastSeenAt: new Date("2026-04-09T20:00:00.000Z"),
+        recentOccurrences: 20,
+        baselineAvgOccurrences: 2,
+      }),
+      now,
+    })
+
+    expect(states).toEqual([IssueState.Escalating])
   })
 
   it("marks issues resolved after 14 days of inactivity", () => {

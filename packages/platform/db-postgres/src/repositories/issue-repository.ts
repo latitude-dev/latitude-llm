@@ -1,7 +1,7 @@
 import { EvaluationIssueRepository } from "@domain/evaluations"
 import { type Issue, IssueRepository, issueSchema, MIN_OCCURRENCES_FOR_VISIBILITY } from "@domain/issues"
 import { type IssueId, NotFoundError, type ProjectId, SqlClient, type SqlClientShape } from "@domain/shared"
-import { and, desc, eq, or, sql } from "drizzle-orm"
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm"
 import { Effect, Layer } from "effect"
 import type { Operator } from "../client.ts"
 import { issues } from "../schema/issues.ts"
@@ -102,6 +102,27 @@ const issueRepositoryCoreLive = Layer.effect(
               return Effect.succeed(toDomainIssue(row))
             }),
           ),
+
+      findByIds: ({
+        projectId,
+        issueIds,
+      }: {
+        readonly projectId: ProjectId
+        readonly issueIds: readonly IssueId[]
+      }) => {
+        if (issueIds.length === 0) {
+          return Effect.succeed([])
+        }
+
+        return sqlClient
+          .query((db) =>
+            db
+              .select()
+              .from(issues)
+              .where(and(eq(issues.projectId, projectId), inArray(issues.id, issueIds))),
+          )
+          .pipe(Effect.map((rows) => rows.map(toDomainIssue)))
+      },
 
       findByUuid: ({ projectId, uuid }: { readonly projectId: ProjectId; readonly uuid: string }) =>
         sqlClient

@@ -14,8 +14,6 @@ import {
   SYSTEM_QUEUE_FLAGGER_CONTEXT_WINDOW,
   SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
   SYSTEM_QUEUE_FLAGGER_MODEL,
-  SYSTEM_QUEUE_FLAGGER_PROVIDER,
-  SYSTEM_QUEUE_FLAGGER_TEMPERATURE,
 } from "../constants.ts"
 import {
   matchesEmptyResponseSystemQueue,
@@ -263,9 +261,7 @@ const runLlmFlagger = (
     const ai = yield* AI
 
     const result = yield* ai.generate({
-      provider: SYSTEM_QUEUE_FLAGGER_PROVIDER,
-      model: SYSTEM_QUEUE_FLAGGER_MODEL,
-      temperature: SYSTEM_QUEUE_FLAGGER_TEMPERATURE,
+      ...SYSTEM_QUEUE_FLAGGER_MODEL,
       maxTokens: SYSTEM_QUEUE_FLAGGER_MAX_TOKENS,
       system: buildFlaggerSystemPrompt(input.queueSlug),
       prompt: buildFlaggerPrompt(trace),

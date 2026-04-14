@@ -18,6 +18,10 @@ export interface ListIssuesRepositoryInput {
 export interface IssueRepositoryShape {
   findById(id: IssueId): Effect.Effect<Issue, NotFoundError | RepositoryError>
   findByIdForUpdate(id: IssueId): Effect.Effect<Issue, NotFoundError | RepositoryError>
+  findByIds(input: {
+    readonly projectId: ProjectId
+    readonly issueIds: readonly IssueId[]
+  }): Effect.Effect<readonly Issue[], RepositoryError>
   findByUuid(input: {
     readonly projectId: ProjectId
     readonly uuid: string

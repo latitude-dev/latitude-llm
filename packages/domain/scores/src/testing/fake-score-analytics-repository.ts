@@ -31,6 +31,17 @@ export const createFakeScoreAnalyticsRepository = (overrides?: Partial<ScoreAnal
     rollupBySessionIds: () => Effect.succeed([]),
     aggregateByIssues: () => Effect.succeed([]),
     trendByIssue: () => Effect.succeed([]),
+    listIssueWindowMetrics: () => Effect.succeed([]),
+    histogramByIssues: () => Effect.succeed([]),
+    trendByIssues: () => Effect.succeed([]),
+    countDistinctTracesByTimeRange: () => Effect.succeed(0),
+    listTracesByIssue: () =>
+      Effect.succeed({
+        items: [],
+        hasMore: false,
+        limit: 25,
+        offset: 0,
+      }),
     delete: (id) =>
       Effect.sync(() => {
         const index = inserted.indexOf(id)

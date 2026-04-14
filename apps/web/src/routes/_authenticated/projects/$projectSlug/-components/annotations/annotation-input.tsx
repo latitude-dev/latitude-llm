@@ -1,7 +1,11 @@
 import { Button, cn, Icon, Select, type SelectOption, Textarea } from "@repo/ui"
-import { ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
+import { SparklesIcon, ThumbsDownIcon, ThumbsUpIcon } from "lucide-react"
 import { memo, useState } from "react"
-import { useIssuesCollection } from "../../../../../../domains/issues/issues.collection.ts"
+import { useDebounce } from "react-use"
+import { useIssue, useIssues } from "../../../../../../domains/issues/issues.collection.ts"
+
+const ISSUE_SELECTOR_BATCH_SIZE = 50
+const ISSUE_SELECTOR_SEARCH_DEBOUNCE_MS = 300
 
 interface AnnotationInputProps {
   readonly projectId: string
@@ -23,23 +27,66 @@ const IssueSelector = memo(function IssueSelector({
   readonly value: string | null
   readonly onChange: (id: string | null) => void
 }) {
-  const { data: issues = [], isLoading: isIssuesLoading } = useIssuesCollection(projectId)
+  const [searchInput, setSearchInput] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const { data: selectedIssue } = useIssue({
+    projectId,
+    issueId: value ?? "",
+    enabled: value !== null,
+  })
+  const {
+    data: issues = [],
+    isLoading: isIssuesLoading,
+    infiniteScroll,
+  } = useIssues({
+    projectId,
+    limit: ISSUE_SELECTOR_BATCH_SIZE,
+    ...(searchQuery ? { searchQuery } : {}),
+  })
 
-  const issueOptions: SelectOption<string>[] = issues.map((issue) => ({
-    label: issue.name,
-    value: issue.id,
-  }))
+  useDebounce(
+    () => {
+      const normalizedSearchQuery = searchInput.trim()
+      if (normalizedSearchQuery !== searchQuery) {
+        setSearchQuery(normalizedSearchQuery)
+      }
+    },
+    ISSUE_SELECTOR_SEARCH_DEBOUNCE_MS,
+    [searchInput, searchQuery],
+  )
+
+  const issueOptionsById = new Map<string, SelectOption<string>>()
+  if (selectedIssue) {
+    issueOptionsById.set(selectedIssue.id, {
+      label: selectedIssue.name,
+      value: selectedIssue.id,
+    })
+  }
+  for (const issue of issues) {
+    if (!issueOptionsById.has(issue.id)) {
+      issueOptionsById.set(issue.id, {
+        label: issue.name,
+        value: issue.id,
+      })
+    }
+  }
+  const issueOptions = [...issueOptionsById.values()]
 
   return (
     <Select<string>
       name="issue"
-      placeholder="Issue"
+      placeholderIcon={<Icon icon={SparklesIcon} />}
+      placeholder="Discover issue"
       options={issueOptions}
       value={value ?? undefined}
-      loading={isIssuesLoading && issues.length === 0}
       searchable
       searchPlaceholder="Search issues…"
       searchableEmptyMessage="No issues found"
+      searchLoading={isIssuesLoading}
+      onSearch={setSearchInput}
+      infiniteScroll={infiniteScroll}
+      contentClassName="w-80"
+      wrapSearchableOptionText
       removable
       onChange={(id) => onChange(id ?? null)}
       side="top"
@@ -94,7 +141,7 @@ export function AnnotationInput({
           minRows={2}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Leave a note about AI performance"
+          placeholder="Leave feedback on how the AI did"
           disabled={isLoading}
         />
       </div>
@@ -107,7 +154,7 @@ export function AnnotationInput({
 
         <div className="flex items-center gap-1 min-w-0">
           {passed === false && (
-            <div className="min-w-0 max-w-40">
+            <div className="w-48 shrink-0">
               <IssueSelector projectId={projectId} value={issueId} onChange={setIssueId} />
             </div>
           )}

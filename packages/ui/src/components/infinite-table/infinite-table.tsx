@@ -24,6 +24,7 @@ export function InfiniteTable<T>({
   isLoading,
   columns,
   getRowKey,
+  getRowClassName,
   onRowClick,
   rowInteractionRole = "button",
   getRowAriaLabel,
@@ -102,6 +103,7 @@ export function InfiniteTable<T>({
     hasSelection: !!selection,
     hasExpansion,
     hasSubheaderRow,
+    containerRef: scrollContainerRef,
   })
 
   useLayoutEffect(() => {
@@ -123,7 +125,7 @@ export function InfiniteTable<T>({
   const lastRow = virtualRows[virtualRows.length - 1]
   const paddingBottom = lastRow ? virtualizer.getTotalSize() - lastRow.end : 0
   const showBlankSlate = !isLoading && data.length === 0
-  const blankSlateText = blankSlate && blankSlate === "string" ? blankSlate : "No data found."
+  const blankSlateText = blankSlate && blankSlate === "string" ? blankSlate : "No data"
   const blankSlateContent =
     showBlankSlate && blankSlate !== undefined ? (
       typeof blankSlate === "string" ? (
@@ -160,7 +162,13 @@ export function InfiniteTable<T>({
                 )}
                 {columns.map((col, i) => {
                   const isSortable = !!col.sortKey && !!onSortChange
-                  const sortDir = sorting && sorting.column === col.sortKey ? sorting.direction : null
+                  const sortDir = col.sortKey
+                    ? sorting && sorting.column === col.sortKey
+                      ? sorting.direction
+                      : sorting === undefined && defaultSorting?.column === col.sortKey
+                        ? defaultSorting.direction
+                        : null
+                    : null
                   return (
                     <HeaderCell
                       key={col.key}
@@ -170,10 +178,10 @@ export function InfiniteTable<T>({
                       {...(col.width !== undefined ? { width: col.width } : {})}
                       showSubheaderSlot={hasSubheaderRow}
                       {...(hasSubheaderRow ? { subheader: col.renderSubheader?.(col, i) } : {})}
+                      {...(sortDir ? { sortDirection: sortDir } : {})}
                       {...(isSortable && col.sortKey
                         ? {
                             sortable: true,
-                            sortDirection: sortDir,
                             onSortClick: () => handleSortClick(col.sortKey as string),
                           }
                         : {})}
@@ -215,6 +223,7 @@ export function InfiniteTable<T>({
 
               const isExpanded = expandedRowKeys?.has(rowKey) ?? false
               const expanded = isExpanded && getExpandedRows ? getExpandedRows(row) : undefined
+              const isActive = activeRowKey === rowKey
 
               return (
                 <tbody key={rowKey} ref={virtualizer.measureElement} data-index={virtualRow.index}>
@@ -222,11 +231,15 @@ export function InfiniteTable<T>({
                     row={row}
                     rowKey={rowKey}
                     columns={columns}
+                    {...(() => {
+                      const rowClassName = getRowClassName?.(row, { isActive, isExpanded, isSubRow: false })
+                      return rowClassName ? { rowClassName } : {}
+                    })()}
                     hasSelection={!!selection}
                     hasExpansion={hasExpansion}
                     isExpandable={hasExpansion}
                     isExpanded={isExpanded}
-                    isActive={activeRowKey === rowKey}
+                    isActive={isActive}
                     {...(selection
                       ? {
                           checkedState: selection.getCheckedState?.(rowKey) ?? selection.isSelected(rowKey),
@@ -258,6 +271,14 @@ export function InfiniteTable<T>({
                           row={subRow}
                           rowKey={subKey}
                           columns={columns}
+                          {...(() => {
+                            const rowClassName = getRowClassName?.(subRow, {
+                              isActive: activeRowKey === subKey,
+                              isExpanded: false,
+                              isSubRow: true,
+                            })
+                            return rowClassName ? { rowClassName } : {}
+                          })()}
                           hasSelection={!!selection}
                           hasExpansion={hasExpansion}
                           isActive={activeRowKey === subKey}
