@@ -34,17 +34,20 @@ export interface EventPayloads {
   }
   OrganizationCreated: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly name: string
     readonly slug: string
   }
   ProjectCreated: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly projectId: string
     readonly name: string
     readonly slug: string
   }
   ProjectDeleted: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly projectId: string
   }
   UserSignedUp: {
@@ -58,28 +61,33 @@ export interface EventPayloads {
   }
   MemberInvited: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly email: string
     readonly role: string
   }
   ApiKeyCreated: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly apiKeyId: string
     readonly name: string
   }
   DatasetCreated: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly projectId: string
     readonly datasetId: string
     readonly name: string
   }
   EvaluationConfigured: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly projectId: string
     readonly evaluationId: string
     readonly issueId: string
   }
   AnnotationQueueItemCompleted: {
     readonly organizationId: string
+    readonly actorUserId: string
     readonly projectId: string
     readonly queueId: string
     readonly itemId: string

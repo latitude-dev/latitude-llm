@@ -58,6 +58,7 @@ export const completeQueueItemUseCase = (input: CompleteQueueItemInput) =>
           organizationId: sqlClient.organizationId,
           payload: {
             organizationId: sqlClient.organizationId,
+            actorUserId: input.userId,
             projectId: input.projectId,
             queueId: input.queueId,
             itemId: input.itemId,

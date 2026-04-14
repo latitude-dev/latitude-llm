@@ -46,7 +46,7 @@ export interface BetterAuthConfig {
       email: string
       role: string
       organization: { name: string }
-      inviter: { user: { name?: string | null; email: string } }
+      inviter: { user: { id: string; name?: string | null; email: string } }
     },
     request?: Request,
   ) => Promise<void>
@@ -173,6 +173,7 @@ export const createBetterAuth = (config: BetterAuthConfig) => {
               organization: { name: data.organization.name },
               inviter: {
                 user: {
+                  id: data.inviter.user.id,
                   name: data.inviter.user.name,
                   email: data.inviter.user.email,
                 },

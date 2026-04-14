@@ -203,6 +203,7 @@ export const getBetterAuth = () => {
             organizationId: "system",
             payload: {
               organizationId: "system",
+              actorUserId: data.inviter.user.id,
               email: data.email,
               role: data.role,
             },

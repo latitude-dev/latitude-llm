@@ -9,6 +9,7 @@ import { ApiKeyRepository } from "../ports/api-key-repository.ts"
 export interface GenerateApiKeyInput {
   readonly id?: ApiKeyId
   readonly name: string
+  readonly actorUserId?: string
 }
 
 export type GenerateApiKeyError = RepositoryError | ValidationError | InvalidApiKeyNameError | CryptoError
@@ -46,6 +47,7 @@ export const generateApiKeyUseCase = (input: GenerateApiKeyInput) =>
       organizationId,
       payload: {
         organizationId,
+        actorUserId: input.actorUserId ?? "",
         apiKeyId: apiKey.id,
         name: apiKey.name,
       },

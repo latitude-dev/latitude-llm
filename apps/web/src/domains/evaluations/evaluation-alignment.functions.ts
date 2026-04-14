@@ -118,7 +118,7 @@ export type EvaluationSummaryRecord = ReturnType<typeof toEvaluationSummaryRecor
 export const startEvaluationAlignment = createServerFn({ method: "POST" })
   .inputValidator(evaluationAlignmentJobInputSchema)
   .handler(async ({ data }): Promise<EvaluationAlignmentJobStatusRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
     const workflowStarter = await getWorkflowStarter()
     const projectId = ProjectId(data.projectId)
@@ -177,6 +177,7 @@ export const startEvaluationAlignment = createServerFn({ method: "POST" })
         organizationId,
         payload: {
           organizationId,
+          actorUserId: userId,
           projectId: data.projectId,
           evaluationId: jobId,
           issueId: data.issueId,

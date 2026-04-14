@@ -19,11 +19,27 @@ export interface TrackedEventInput {
 /**
  * Derives the PostHog distinctId for a backend event.
  *
- * Decision: backend events are org-attributed rather than user-attributed.
- * The domain-event payloads we ship today do not carry an actorUserId, and
- * revisiting that is out of scope for v1. Frontend events remain user-attributed
- * via posthog.identify; the two identity spaces are intentionally disjoint.
+ * When the event payload includes `actorUserId` (user-initiated actions), we
+ * use the real user id so PostHog can attribute the event to the same person
+ * identified on the frontend via posthog.identify(). This enables mixed
+ * frontend↔backend funnels ("viewed page → created API key").
+ *
+ * For system-initiated events without a user context (FirstTraceReceived,
+ * SpanIngested, etc.) we fall back to an org-scoped pseudo-id.
  */
+const resolveDistinctId = (input: TrackedEventInput): string => {
+  const actorUserId = input.payload.actorUserId
+  if (typeof actorUserId === "string" && actorUserId.length > 0) {
+    return actorUserId
+  }
+  // UserSignedUp and MemberJoined carry userId (the actor themselves)
+  const userId = input.payload.userId
+  if (typeof userId === "string" && userId.length > 0) {
+    return userId
+  }
+  return orgDistinctId(input.organizationId)
+}
+
 export const orgDistinctId = (organizationId: string): string => `org_${organizationId}`
 
 /**
@@ -35,7 +51,7 @@ export const mapEventToPostHog = (input: TrackedEventInput): PostHogCaptureInput
   if (!isPostHogTracked(input.eventName)) return null
 
   return {
-    distinctId: orgDistinctId(input.organizationId),
+    distinctId: resolveDistinctId(input),
     event: input.eventName,
     // Pass the original payload verbatim as properties. PostHog accepts
     // arbitrary JSON-serializable values; downstream analyses can project

@@ -54,6 +54,7 @@ export const createOrganization = createServerFn({ method: "POST" })
         organizationId: OrganizationId(organization.id),
         payload: {
           organizationId: organization.id,
+          actorUserId: userId,
           name: data.name,
           slug,
         },

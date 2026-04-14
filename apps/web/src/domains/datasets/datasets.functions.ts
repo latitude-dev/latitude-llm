@@ -414,7 +414,7 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<DatasetRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const orgId = OrganizationId(organizationId)
 
     const dataset = await Effect.runPromise(
@@ -437,6 +437,7 @@ export const createDatasetFunction = createServerFn({ method: "POST" })
         organizationId,
         payload: {
           organizationId,
+          actorUserId: userId,
           projectId: data.projectId,
           datasetId: dataset.id,
           name: dataset.name,

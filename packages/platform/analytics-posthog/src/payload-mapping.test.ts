@@ -9,21 +9,42 @@ import {
 describe("mapEventToPostHog", () => {
   const occurredAt = "2026-04-13T12:00:00.000Z"
 
-  it("maps OrganizationCreated with org-scoped distinctId, group, and timestamp", () => {
+  it("uses actorUserId as distinctId when present", () => {
     const mapped = mapEventToPostHog({
       eventName: "OrganizationCreated",
       organizationId: "org-123",
-      payload: { organizationId: "org-123", name: "Acme", slug: "acme" },
+      payload: { organizationId: "org-123", actorUserId: "user-42", name: "Acme", slug: "acme" },
       occurredAt,
     })
 
     expect(mapped).not.toBeNull()
     if (!mapped) return
-    expect(mapped.distinctId).toBe("org_org-123")
+    expect(mapped.distinctId).toBe("user-42")
     expect(mapped.event).toBe("OrganizationCreated")
-    expect(mapped.properties).toEqual({ organizationId: "org-123", name: "Acme", slug: "acme" })
     expect(mapped.groups).toEqual({ [POSTHOG_ORGANIZATION_GROUP]: "org-123" })
     expect(mapped.timestamp?.toISOString()).toBe(occurredAt)
+  })
+
+  it("falls back to org distinctId when no actorUserId", () => {
+    const mapped = mapEventToPostHog({
+      eventName: "ScoreCreated",
+      organizationId: "org-1",
+      payload: { organizationId: "org-1", projectId: "proj-1", scoreId: "s-1", issueId: null },
+      occurredAt,
+    })
+
+    expect(mapped?.distinctId).toBe("org_org-1")
+  })
+
+  it("uses userId for UserSignedUp events", () => {
+    const mapped = mapEventToPostHog({
+      eventName: "UserSignedUp",
+      organizationId: "system",
+      payload: { userId: "user-new", email: "a@b.com" },
+      occurredAt,
+    })
+
+    expect(mapped?.distinctId).toBe("user-new")
   })
 
   it("maps ProjectCreated", () => {
@@ -84,6 +105,7 @@ describe("mapOrganizationGroupIdentify", () => {
   it("builds a group-identify payload from OrganizationCreated", () => {
     const identify = mapOrganizationGroupIdentify({
       organizationId: "org-9",
+      actorUserId: "user-1",
       name: "Acme",
       slug: "acme",
     })

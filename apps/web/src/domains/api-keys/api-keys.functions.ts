@@ -54,13 +54,14 @@ export const createApiKey = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<ApiKeyRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     const apiKey = await Effect.runPromise(
       generateApiKeyUseCase({
         ...(data.id ? { id: ApiKeyId(data.id) } : {}),
         name: data.name,
+        actorUserId: userId,
       }).pipe(withPostgres(Layer.mergeAll(ApiKeyRepositoryLive, OutboxEventWriterLive), client, organizationId)),
     )
 

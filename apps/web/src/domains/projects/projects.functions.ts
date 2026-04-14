@@ -77,13 +77,14 @@ export const createProject = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<ProjectRecord> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     const project = await Effect.runPromise(
       createProjectUseCase({
         ...(data.id ? { id: ProjectId(data.id) } : {}),
         name: data.name,
+        actorUserId: userId,
       }).pipe(withPostgres(Layer.mergeAll(ProjectRepositoryLive, OutboxEventWriterLive), client, organizationId)),
     )
 
@@ -118,7 +119,7 @@ export const updateProject = createServerFn({ method: "POST" })
 export const deleteProject = createServerFn({ method: "POST" })
   .inputValidator(z.object({ id: z.string() }))
   .handler(async ({ data }): Promise<void> => {
-    const { organizationId } = await requireSession()
+    const { organizationId, userId } = await requireSession()
     const client = getPostgresClient()
 
     await Effect.runPromise(
@@ -137,6 +138,7 @@ export const deleteProject = createServerFn({ method: "POST" })
         organizationId,
         payload: {
           organizationId,
+          actorUserId: userId,
           projectId: data.id,
         },
       }),

@@ -36,6 +36,7 @@ export const createPostHogAnalyticsWorker = ({ consumer, posthog }: PostHogAnaly
             const identify = mapOrganizationGroupIdentify(
               payload.payload as {
                 readonly organizationId: string
+                readonly actorUserId: string
                 readonly name: string
                 readonly slug: string
               },
