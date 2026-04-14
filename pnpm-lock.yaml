@@ -1230,6 +1230,9 @@ importers:
       '@domain/datasets':
         specifier: workspace:*
         version: link:../../domain/datasets
+      '@domain/events':
+        specifier: workspace:*
+        version: link:../../domain/events
       '@domain/scores':
         specifier: workspace:*
         version: link:../../domain/scores
