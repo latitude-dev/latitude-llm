@@ -30,6 +30,7 @@ import {
 } from "../../../domains/api-keys/api-keys.collection.ts"
 import type { ApiKeyRecord } from "../../../domains/api-keys/api-keys.functions.ts"
 import { toUserMessage } from "../../../lib/errors.ts"
+import { createFormSubmitHandler } from "../../../lib/form-server-action.ts"
 
 export const Route = createFileRoute("/_authenticated/settings/api-keys")({
   component: ApiKeysSettingsPage,
@@ -39,18 +40,23 @@ function CreateApiKeyModal({ open, setOpen }: { open: boolean; setOpen: (open: b
   const { toast } = useToast()
   const form = useForm({
     defaultValues: { name: "" },
-    onSubmit: async ({ value }) => {
-      try {
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
         await insertApiKeyMutation(value.name)
-        setOpen(false)
-        toast({
-          title: "Success",
-          description: "API key created successfully.",
-        })
-      } catch (error) {
-        toast({ variant: "destructive", description: toUserMessage(error) })
-      }
-    },
+      },
+      {
+        onSuccess: async () => {
+          setOpen(false)
+          toast({
+            title: "Success",
+            description: "API key created successfully.",
+          })
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
   })
 
   return (
@@ -99,15 +105,24 @@ function UpdateApiKeyModal({ apiKey, onClose }: { apiKey: ApiKeyRecord; onClose:
   const { toast } = useToast()
   const form = useForm({
     defaultValues: { name: apiKey.name ?? "" },
-    onSubmit: async ({ value }) => {
-      const transaction = updateApiKeyMutation(apiKey.id, value.name)
-      await transaction.isPersisted.promise
-      toast({
-        title: "Success",
-        description: "API key name updated.",
-      })
-      onClose()
-    },
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
+        const transaction = updateApiKeyMutation(apiKey.id, value.name)
+        await transaction.isPersisted.promise
+      },
+      {
+        onSuccess: async () => {
+          toast({
+            title: "Success",
+            description: "API key name updated.",
+          })
+          onClose()
+        },
+        onError: (error) => {
+          toast({ variant: "destructive", description: toUserMessage(error) })
+        },
+      },
+    ),
   })
 
   return (

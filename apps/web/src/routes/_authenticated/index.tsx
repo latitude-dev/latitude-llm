@@ -35,6 +35,7 @@ import {
 } from "../../domains/projects/projects.collection.ts"
 import type { ProjectRecord } from "../../domains/projects/projects.functions.ts"
 import { toUserMessage } from "../../lib/errors.ts"
+import { createFormSubmitHandler } from "../../lib/form-server-action.ts"
 import { useAuthenticatedOrganizationId } from "./-route-data.ts"
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -221,15 +222,29 @@ function RenameProjectModal({ project, onClose }: { project: ProjectRecord; onCl
     defaultValues: {
       name: project.name,
     },
-    onSubmit: async ({ value }) => {
-      const transaction = renameProjectMutation(project.id, value.name)
-      await transaction.isPersisted.promise
-      toast({
-        title: "Success",
-        description: `Project renamed to "${value.name}".`,
-      })
-      onClose()
-    },
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
+        const transaction = renameProjectMutation(project.id, value.name)
+        await transaction.isPersisted.promise
+        return value.name
+      },
+      {
+        onSuccess: async (newName) => {
+          toast({
+            title: "Success",
+            description: `Project renamed to "${newName}".`,
+          })
+          onClose()
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Error renaming project",
+            description: toUserMessage(error),
+          })
+        },
+      },
+    ),
   })
 
   return (
@@ -284,19 +299,24 @@ function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => v
     defaultValues: {
       name: "",
     },
-    onSubmit: async ({ value }) => {
-      try {
+    onSubmit: createFormSubmitHandler(
+      async (value) => {
         const transaction = createProjectMutation(value.name)
         await transaction.isPersisted.promise
-        onClose()
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error creating project",
-          description: toUserMessage(error),
-        })
-      }
-    },
+      },
+      {
+        onSuccess: async () => {
+          onClose()
+        },
+        onError: (error) => {
+          toast({
+            variant: "destructive",
+            title: "Error creating project",
+            description: toUserMessage(error),
+          })
+        },
+      },
+    ),
   })
 
   return (
