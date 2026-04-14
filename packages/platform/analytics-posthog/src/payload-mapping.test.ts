@@ -56,7 +56,7 @@ describe("mapEventToPostHog", () => {
     // mapper must refuse to produce a capture payload.
     expect(
       mapEventToPostHog({
-        eventName: "TraceEnded",
+        eventName: "SpanIngested",
         organizationId: "org-1",
         payload: { organizationId: "org-1", projectId: "p", traceId: "t" },
         occurredAt,
