@@ -291,7 +291,7 @@ Active implementation work now starts with **PR 4**.
 - [x] **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses
   - keep the emitted payload trace-scoped: `{ organizationId, projectId, traceId }`
   - rely on the upstream `live-traces:end` debounce window rather than introducing a second timer
-- [ ] **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
+- [x] **P13-PR4-3**: Confirm constructor and bootstrap wiring still compose cleanly in `apps/workers/src/server.ts`
   - pass `eventsPublisher` into `createLiveTracesWorker`
   - keep the worker composition root thin
 - [ ] **P13-PR4-4**: Decide and implement the rollout behavior for sibling `TraceEnded` consumers, especially `live-annotation-queues:curate`, so Phase 13 does not accidentally ship partial unrelated behavior

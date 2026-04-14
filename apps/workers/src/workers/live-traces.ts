@@ -12,12 +12,15 @@ interface EndPayload {
   readonly traceId: string
 }
 
-const toTraceEndedEvent = (payload: EndPayload) =>
-  ({
-    name: "TraceEnded",
+const toTraceEndedEvent = (payload: EndPayload): DomainEvent<"TraceEnded", EventPayloads["TraceEnded"]> => ({
+  name: "TraceEnded",
+  organizationId: payload.organizationId,
+  payload: {
     organizationId: payload.organizationId,
-    payload,
-  }) satisfies DomainEvent<"TraceEnded", EventPayloads["TraceEnded"]>
+    projectId: payload.projectId,
+    traceId: payload.traceId,
+  },
+})
 
 export const createLiveTracesWorker = ({ consumer, eventsPublisher }: LiveTracesDeps) => {
   consumer.subscribe("live-traces", {
