@@ -1,11 +1,11 @@
 ---
 title: Developer Quick Start
-description: Connect your AI agent to Latitude V2 and see your first traces and scores
+description: Connect your AI agent to Latitude and see your first traces and scores
 ---
 
 # Developer Quick Start
 
-This guide walks you through connecting an existing AI agent to Latitude V2. By the end, you'll have live traces flowing into your project and understand how scores and annotations work.
+This guide walks you through connecting an existing AI agent to Latitude. By the end, you'll have live traces flowing into your project and understand how scores and annotations work.
 
 ## Prerequisites
 

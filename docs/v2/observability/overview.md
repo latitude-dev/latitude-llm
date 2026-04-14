@@ -5,7 +5,7 @@ description: Understand how Latitude captures and organizes your agent's interac
 
 # Observability Overview
 
-Latitude V2 captures every interaction your AI agent has — from individual LLM calls to multi-turn conversations — and makes them searchable, scoreable, and actionable.
+Latitude captures every interaction your AI agent has — from individual LLM calls to multi-turn conversations — and makes them searchable, scoreable, and actionable.
 
 ## Three Levels of Telemetry
 

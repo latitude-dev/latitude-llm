@@ -1,6 +1,6 @@
 ---
 title: Scores
-description: Understand how scores work as the universal measurement unit in Latitude V2
+description: Understand how scores work as the universal measurement unit in Latitude
 ---
 
 # Scores

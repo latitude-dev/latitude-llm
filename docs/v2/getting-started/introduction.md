@@ -1,15 +1,15 @@
 ---
 title: Introduction
-description: Welcome to Latitude V2 — the Agent Observability Platform
+description: Welcome to Latitude — the Agent Observability Platform
 ---
 
 # Introduction
 
-Latitude V2 is an open-source **agent observability platform**. It helps teams turn live agent traffic and human judgment into measurable, improvable quality — so you can ship AI features with confidence.
+Latitude is an open-source **agent observability platform**. It helps teams turn live agent traffic and human judgment into measurable, improvable quality — so you can ship AI features with confidence.
 
-## What Latitude V2 Does
+## What Latitude Does
 
-Latitude V2 gives you a closed-loop system for monitoring, evaluating, and improving AI agents in production:
+Latitude gives you a closed-loop system for monitoring, evaluating, and improving AI agents in production:
 
 - **Observe** — Capture every interaction your agents have with users through automatic telemetry. See spans, traces, and sessions in real time.
 - **Score** — Attach quantitative verdicts to every interaction. Scores come from automated evaluations, human annotations, or your own custom logic.
@@ -42,22 +42,6 @@ The result is a continuous improvement cycle where your agents get better with e
 | **Annotation** | A human review of a trace, producing a score through Latitude's review workflow |
 | **Annotation Queue** | A managed review backlog that routes traces to human reviewers |
 | **Simulation** | A test run of your agent against scenarios, evaluated locally or in CI |
-
-## What's New in V2
-
-If you're coming from Latitude V1, here's what's changed:
-
-| V1 | V2 |
-| --- | --- |
-| Prompt engineering platform | Agent observability platform |
-| Evaluations as LLM-as-judge prompts or rules | Evaluations as portable JavaScript scripts |
-| Composite scores | Canonical scores with pass/fail verdicts and feedback |
-| Human-in-the-loop as a single evaluation type | Annotations with draft workflows and managed queues |
-| Experiments (batch runs) | Simulations (local-first CLI with optional upload) |
-| No issue tracking | Automatic issue discovery from failure patterns |
-| — | Evaluation alignment metrics (MCC, confusion matrix) |
-
-Features that remain available in V1 — such as the Prompt Manager, Playground, AI Gateway, Datasets, and PromptL — are documented in the V1 tab.
 
 ## Next Steps
 

@@ -1,11 +1,11 @@
 ---
 title: No-Code Quick Start
-description: Get started with Latitude V2 through the web UI — no coding required
+description: Get started with Latitude through the web UI — no coding required
 ---
 
 # No-Code Quick Start
 
-This guide walks you through the Latitude V2 web interface. You'll learn how to navigate the product, review agent interactions, annotate conversations, and understand issues — all without writing code.
+This guide walks you through the Latitude web interface. You'll learn how to navigate the product, review agent interactions, annotate conversations, and understand issues — all without writing code.
 
 ## Prerequisites
 
@@ -94,7 +94,7 @@ Each evaluation shows:
 
 ## Understanding Scores
 
-Scores are the fundamental unit of measurement in Latitude V2. Every score has:
+Scores are the fundamental unit of measurement in Latitude. Every score has:
 
 - A **value** between 0 and 1
 - A **pass/fail** verdict

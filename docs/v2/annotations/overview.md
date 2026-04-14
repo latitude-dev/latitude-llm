@@ -1,6 +1,6 @@
 ---
 title: Annotations Overview
-description: Understand how human review workflows produce scores in Latitude V2
+description: Understand how human review workflows produce scores in Latitude
 ---
 
 # Annotations Overview
