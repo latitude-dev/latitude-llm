@@ -5,6 +5,7 @@ import { type TraceDetail, TraceRepository } from "@domain/spans"
 import { createFakeTraceRepository } from "@domain/spans/testing"
 import { Cause, Effect, Layer } from "effect"
 import { describe, expect, it } from "vitest"
+import { SYSTEM_QUEUE_FLAGGER_MODEL } from "../constants.ts"
 import { runSystemQueueFlaggerUseCase } from "./run-system-queue-flagger.ts"
 
 const INPUT = {
@@ -121,7 +122,7 @@ describe("runSystemQueueFlaggerUseCase", () => {
     expect(calls.generate).toHaveLength(1)
     expect(calls.generate[0]).toMatchObject({
       provider: "amazon-bedrock",
-      model: "eu.amazon.nova-micro-v1:0",
+      model: SYSTEM_QUEUE_FLAGGER_MODEL,
       temperature: 0,
       maxTokens: 256,
       telemetry: {
