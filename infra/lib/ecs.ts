@@ -336,6 +336,7 @@ function createTaskDefinition(
       secrets["datadog-site"].arn,
       secrets["latitude-telemetry-api-key"].arn,
       secrets["latitude-telemetry-project-slug"].arn,
+      secrets["turnstile-secret-key"].arn,
       s3Bucket.id,
     ])
     .apply(
@@ -368,6 +369,7 @@ function createTaskDefinition(
         datadogSiteArn,
         latitudeTelemetryApiKeyArn,
         latitudeTelemetryProjectSlugArn,
+        turnstileSecretKeyArn,
         s3BucketName,
       ]) => {
         const baseEnvironment: { name: string; value: string }[] = [
@@ -424,6 +426,7 @@ function createTaskDefinition(
           { name: "LAT_MAILGUN_REGION", valueFrom: mailgunRegionArn },
           { name: "LAT_LATITUDE_TELEMETRY_API_KEY", valueFrom: latitudeTelemetryApiKeyArn },
           { name: "LAT_LATITUDE_TELEMETRY_PROJECT_SLUG", valueFrom: latitudeTelemetryProjectSlugArn },
+          { name: "LAT_TURNSTILE_SECRET_KEY", valueFrom: turnstileSecretKeyArn },
         ]
 
         // Service-specific environment variables

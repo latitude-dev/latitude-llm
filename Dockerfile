@@ -72,6 +72,7 @@ FROM source AS build-web
 
 ARG VITE_LAT_API_URL
 ARG VITE_LAT_WEB_URL
+ARG VITE_LAT_TURNSTILE_SITE_KEY
 
 RUN pnpm --filter @app/web build
 

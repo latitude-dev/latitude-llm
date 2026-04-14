@@ -328,6 +328,17 @@ export function createApplicationSecrets(baseName: string, environment: string):
   secrets["latitude-telemetry-project-slug"] = latitudeTelemetryProjectSlug.secret
   secretVersions["latitude-telemetry-project-slug"] = latitudeTelemetryProjectSlug.secretVersion
 
+  const turnstileSecretKey = createSingleSecret(
+    baseName,
+    "turnstile-secret-key",
+    "Cloudflare Turnstile secret key for bot protection",
+    process.env.LAT_TURNSTILE_SECRET_KEY ?? "placeholder-change-me",
+    environment,
+    immutableSecretResourceOptions,
+  )
+  secrets["turnstile-secret-key"] = turnstileSecretKey.secret
+  secretVersions["turnstile-secret-key"] = turnstileSecretKey.secretVersion
+
   return {
     secrets,
     secretVersions,

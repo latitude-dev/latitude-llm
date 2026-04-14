@@ -370,6 +370,7 @@ jobs:
           NODE_ENV: production
           VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
           VITE_LAT_WEB_URL: ${{ vars.VITE_LAT_WEB_URL }}
+          VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
 
       - name: Upload sourcemaps to Datadog
         run: |
@@ -738,6 +739,7 @@ jobs:
           NODE_ENV: production
           VITE_LAT_API_URL: ${{ vars.VITE_LAT_API_URL }}
           VITE_LAT_WEB_URL: ${{ vars.VITE_LAT_WEB_URL }}
+          VITE_LAT_TURNSTILE_SITE_KEY: ${{ vars.VITE_LAT_TURNSTILE_SITE_KEY }}
 
       - name: Upload sourcemaps to Datadog
         run: |
