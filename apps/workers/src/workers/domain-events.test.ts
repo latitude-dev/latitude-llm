@@ -129,8 +129,8 @@ describe("domain-events dispatcher", () => {
     expect(systemAnnotationQueues?.options?.debounceMs).toBe(TRACE_END_DEBOUNCE_MS)
   })
 
-  it("rejects legacy TraceEnded events", async () => {
-    const { consumer } = setupDispatcher()
+  it("accepts TraceEnded without fan-out before the rollout lands", async () => {
+    const { consumer, published } = setupDispatcher()
 
     const envelope = makeEnvelope("TraceEnded", {
       organizationId: "org-1",
@@ -150,11 +150,8 @@ describe("domain-events dispatcher", () => {
       ),
     )
 
-    expect(result.ok).toBe(false)
-    if (!result.ok) {
-      expect(result.error._tag).toBe("UnhandledEventError")
-      expect(result.error.name).toBe("TraceEnded")
-    }
+    expect(result.ok).toBe(true)
+    expect(published).toEqual([])
   })
 
   it("routes ProjectCreated to projects:provision", async () => {

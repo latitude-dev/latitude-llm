@@ -83,6 +83,10 @@ export const createDomainEventsWorker = ({
         { concurrency: "unbounded" },
       ).pipe(Effect.asVoid),
 
+    // PR 4 activates the `TraceEnded` contract before the sibling consumer
+    // rollout moves fan-out off `SpanIngested`.
+    TraceEnded: () => Effect.void,
+
     ScoreCreated: (event) =>
       Effect.all([
         pub.publish("issues", "discovery", event.payload, {

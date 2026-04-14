@@ -285,7 +285,7 @@ Active implementation work now starts with **PR 4**.
   - update the named constant in `packages/domain/spans`
   - update any worker/test expectations that currently assume `30 seconds`
   - make the activated path match `specs/reliability.md`
-- [ ] **P13-PR4-1**: Replace the `live-traces:end` stub in `apps/workers/src/workers/live-traces.ts`
+- [x] **P13-PR4-1**: Replace the `live-traces:end` stub in `apps/workers/src/workers/live-traces.ts`
   - add `TraceEnded` to the typed domain-event payload contract in `packages/domain/events`
   - keep the worker orchestration-only
 - [ ] **P13-PR4-2**: Publish `TraceEnded` through `createEventsPublisher(queuePublisher)` when the debounce window elapses

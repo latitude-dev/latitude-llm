@@ -1,15 +1,26 @@
-import type { QueueConsumer } from "@domain/queue"
-import { createLogger } from "@repo/observability"
-import { Effect } from "effect"
-
-const logger = createLogger("live-traces")
+import type { DomainEvent, EventPayloads, EventsPublisher } from "@domain/events"
+import type { QueueConsumer, QueuePublishError } from "@domain/queue"
 
 interface LiveTracesDeps {
   consumer: QueueConsumer
+  eventsPublisher: EventsPublisher<QueuePublishError>
 }
 
-export const createLiveTracesWorker = ({ consumer }: LiveTracesDeps) => {
+interface EndPayload {
+  readonly organizationId: string
+  readonly projectId: string
+  readonly traceId: string
+}
+
+const toTraceEndedEvent = (payload: EndPayload) =>
+  ({
+    name: "TraceEnded",
+    organizationId: payload.organizationId,
+    payload,
+  }) satisfies DomainEvent<"TraceEnded", EventPayloads["TraceEnded"]>
+
+export const createLiveTracesWorker = ({ consumer, eventsPublisher }: LiveTracesDeps) => {
   consumer.subscribe("live-traces", {
-    end: () => Effect.sync(() => logger.info("::::: Stub handler for live-traces:end :::::")),
+    end: (payload: EndPayload) => eventsPublisher.publish(toTraceEndedEvent(payload)),
   })
 }
