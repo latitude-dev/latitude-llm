@@ -66,7 +66,7 @@ export function TracesView({
     value: number,
     baseline: Baselines[keyof Baselines] | undefined,
   ): "p99" | "p95" | "p90" | undefined {
-    if (!baseline) return undefined
+    if (!baseline || baseline.sampleCount === 0) return undefined
     if (baseline.p99 !== null && value >= baseline.p99) return "p99"
     if (baseline.p95 !== null && value >= baseline.p95) return "p95"
     if (value >= baseline.p90) return "p90"
@@ -132,11 +132,12 @@ export function TracesView({
         sortKey: "duration",
         width: 140,
         render: (t) => {
-          const level = getPercentileLevel(t.durationNs, baselines?.durationNs)
+          const hasDuration = t.durationNs > 0
+          const level = hasDuration ? getPercentileLevel(t.durationNs, baselines?.durationNs) : undefined
           return (
             <span className="flex items-center justify-end gap-1">
               {level && <Badge variant={getPercentileBadgeVariant(level)}>{level}</Badge>}
-              {formatDuration(t.durationNs)}
+              {hasDuration ? formatDuration(t.durationNs) : "-"}
             </span>
           )
         },
@@ -151,7 +152,10 @@ export function TracesView({
         sortKey: "ttft",
         width: 176,
         render: (t) => {
-          const level = getPercentileLevel(t.timeToFirstTokenNs, baselines?.timeToFirstTokenNs)
+          const level =
+            t.timeToFirstTokenNs > 0
+              ? getPercentileLevel(t.timeToFirstTokenNs, baselines?.timeToFirstTokenNs)
+              : undefined
           return (
             <span className="flex items-center justify-end gap-1">
               {level && <Badge variant={getPercentileBadgeVariant(level)}>{level}</Badge>}
@@ -176,16 +180,23 @@ export function TracesView({
         sortKey: "cost",
         width: 146,
         render: (t) => {
-          const level = getPercentileLevel(t.costTotalMicrocents, baselines?.costTotalMicrocents)
+          const hasCost = t.costTotalMicrocents > 0
+          const level = hasCost ? getPercentileLevel(t.costTotalMicrocents, baselines?.costTotalMicrocents) : undefined
           return (
             <span className="flex items-center justify-end gap-1">
               {level && <Badge variant={getPercentileBadgeVariant(level)}>{level}</Badge>}
-              {formatPrice(t.costTotalMicrocents / 100_000_000)}
+              {hasCost ? formatPrice(t.costTotalMicrocents / 100_000_000) : "-"}
             </span>
           )
         },
         renderSubheader: () => (
-          <TableMetricSubheader rollup={traceMetrics?.costTotalMicrocents} format="price" isLoading={metricsLoading} />
+          <TableMetricSubheader
+            rollup={
+              traceMetrics && traceMetrics.costTotalMicrocents.max > 0 ? traceMetrics.costTotalMicrocents : undefined
+            }
+            format="price"
+            isLoading={metricsLoading}
+          />
         ),
       },
       {
