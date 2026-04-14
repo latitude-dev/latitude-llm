@@ -1164,10 +1164,8 @@ OPENAI_API_KEY=sk-...`,
 }
 
 /** Official docs for coding agents implementing Latitude telemetry. */
-const LATITUDE_DOCS_TELEMETRY_QUICK_START =
-  "https://docs.latitude.so/guides/getting-started/quick-start-dev"
-const LATITUDE_DOCS_TELEMETRY_INTRO =
-  "https://docs.latitude.so/guides/getting-started/introduction"
+const LATITUDE_DOCS_TELEMETRY_QUICK_START = "https://docs.latitude.so/guides/getting-started/quick-start-dev"
+const LATITUDE_DOCS_TELEMETRY_INTRO = "https://docs.latitude.so/guides/getting-started/introduction"
 
 /** Public Agent Skill repo for wiring Latitude telemetry via `npx skills add`. */
 const LATITUDE_TELEMETRY_SKILL_REPO = "latitude-dev/telemetry-skill"
