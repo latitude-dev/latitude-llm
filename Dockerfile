@@ -37,6 +37,9 @@ COPY . .
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
   pnpm install --frozen-lockfile --ignore-scripts --offline
 
+# Build the telemetry workspace package so downstream apps can resolve it
+RUN pnpm --filter @latitude-data/telemetry build
+
 # ---------------------------------------------------------------------------
 # Build api — compile api app (turbo builds dependencies automatically)
 # ---------------------------------------------------------------------------
