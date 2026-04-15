@@ -21,7 +21,7 @@ A trace is composed of one or more **spans**: the individual operations your age
 - Retrieval operations
 - The final agent response
 
-Latitude materializes traces from raw spans, giving you:
+Traces are defined by your telemetry client and sent to Latitude with their spans already grouped. Latitude computes aggregate metrics from those spans, giving you:
 
 - **Root span name**: The top-level operation name
 - **Overall status**: OK or error, derived from constituent spans

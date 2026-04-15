@@ -13,16 +13,19 @@ Latitude organizes your agent's activity into three levels:
 
 ### Spans
 
-A **span** is the smallest unit of work: a single LLM call, a tool invocation, a retrieval step, or any instrumented operation in your agent's pipeline.
+A **span** is the smallest unit of work: a single LLM call, a tool invocation, an HTTP request, a retrieval step, or any instrumented operation in your agent's pipeline. Not every span represents an AI generation. A span might be a database query, an API call, or a custom function, none of which involve tokens or models.
 
-Each span captures:
+Every span captures:
 
 - Input and output content
 - Latency (start, end, duration)
-- Token usage and cost
-- Model and provider information
 - Status (success or error)
 - Custom metadata and tags
+
+Spans that represent LLM calls additionally capture:
+
+- Token usage and cost
+- Model and provider information
 
 ### Traces
 
@@ -37,7 +40,7 @@ Traces are the primary unit that most reliability features operate on:
 
 ### Sessions
 
-A **session** is a multi-turn conversation composed of related traces. When the same user has an ongoing conversation with your agent, each turn is a separate trace, but they all belong to the same session.
+A **session** is an **optional** grouping of related traces into a multi-turn conversation. Unlike spans and traces, which are always present, sessions only exist when your application provides a `session_id` with its telemetry. When the same user has an ongoing conversation with your agent, each turn is a separate trace, but they all belong to the same session.
 
 Sessions let you:
 
@@ -52,11 +55,9 @@ Your application sends telemetry to Latitude using OpenTelemetry-compatible inst
 Once connected:
 
 1. Your agent processes a request
-2. Instrumented operations emit **spans** to Latitude
-3. Latitude groups related spans into a **trace**
-4. If a `session_id` is provided, the trace is associated with a **session**
-5. After a period of inactivity (no new spans for the trace), Latitude considers the trace complete
-6. Trace completion triggers downstream reliability features: evaluations, annotation queue curation, and system queue classification
+2. Instrumented operations emit **spans** to Latitude, grouped into **traces** and optionally **sessions** as defined by your telemetry client
+3. If a `session_id` is provided, the trace is associated with a **session**
+4. Once a trace is considered complete (see below), Latitude triggers downstream reliability features
 
 ## Trace Completion
 

@@ -5,7 +5,7 @@ description: Understand multi-turn conversations and session-level aggregation
 
 # Sessions
 
-A session represents a multi-turn conversation between a user and your agent. While a trace captures a single interaction, a session groups related traces together to show the full conversation arc.
+A session is an **optional** grouping of related traces into a multi-turn conversation. While spans and traces are always present (they're part of the OpenTelemetry standard), sessions only exist when your application provides a `session_id` with its telemetry. They let you view the full conversation arc across multiple interactions.
 
 <Frame>
   <img src="/images/observability/sessions.png" alt="Sessions view showing grouped traces within a session" />
