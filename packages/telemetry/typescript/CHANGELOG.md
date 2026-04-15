@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0-alpha.5] - 2026-04-15
+
+### Fixed
+
+- **Standalone CI publish** — decoupled publish workflow from pnpm workspace so `pnpm publish` runs directly in the package directory instead of via `--filter` (which failed since the package is excluded from the workspace). Replaced `catalog:` version references with pinned values.
+
 ## [3.0.0-alpha.4] - 2026-04-14
 
 ### Fixed
