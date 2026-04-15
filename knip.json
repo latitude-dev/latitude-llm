@@ -55,7 +55,17 @@
     },
     "packages/telemetry/typescript": {
       "project": ["src/**/*.ts"],
-      "ignore": ["src/constants/**/*.ts"]
+      "ignore": ["src/constants/**/*.ts"],
+      "ignoreDependencies": [
+        "@anthropic-ai/sdk",
+        "@aws-sdk/client-bedrock-runtime",
+        "@google-cloud/vertexai",
+        "@langchain/openai",
+        "cohere-ai",
+        "langchain",
+        "llamaindex",
+        "openai"
+      ]
     }
   },
   "ignoreBinaries": ["tmuxinator", "pulumi"],

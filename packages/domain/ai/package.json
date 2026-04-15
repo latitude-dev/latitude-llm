@@ -17,7 +17,7 @@
     "test": "vitest run --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@latitude-data/telemetry": "catalog:",
+    "@latitude-data/telemetry": "workspace:*",
     "@repo/utils": "workspace:*",
     "effect": "catalog:",
     "rosetta-ai": "catalog:",

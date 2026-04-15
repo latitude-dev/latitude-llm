@@ -44,35 +44,29 @@ jobs:
             echo "should_publish=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Install telemetry dependencies
+      - name: Install dependencies
         if: steps.check_version.outputs.should_publish == 'true'
-        working-directory: packages/telemetry/typescript
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         if: steps.check_version.outputs.should_publish == 'true'
-        working-directory: packages/telemetry/typescript
-        run: pnpm build
+        run: pnpm --filter @latitude-data/telemetry build
 
       - name: Typecheck
         if: steps.check_version.outputs.should_publish == 'true'
-        working-directory: packages/telemetry/typescript
-        run: pnpm typecheck
+        run: pnpm --filter @latitude-data/telemetry typecheck
 
       - name: Lint
         if: steps.check_version.outputs.should_publish == 'true'
-        working-directory: packages/telemetry/typescript
-        run: pnpm check
+        run: pnpm --filter @latitude-data/telemetry check
 
       - name: Test
         if: steps.check_version.outputs.should_publish == 'true'
-        working-directory: packages/telemetry/typescript
-        run: pnpm test
+        run: pnpm --filter @latitude-data/telemetry test
 
       - name: Publish to npm
         if: steps.check_version.outputs.should_publish == 'true'
-        working-directory: packages/telemetry/typescript
-        run: pnpm publish --access public --no-git-checks
+        run: pnpm publish --access public --filter @latitude-data/telemetry --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

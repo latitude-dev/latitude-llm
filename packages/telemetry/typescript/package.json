@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "3.0.0-alpha.5",
+  "version": "3.0.0-alpha.4",
   "description": "Latitude Telemetry for TypeScript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "MIT",
@@ -42,7 +42,7 @@
     "test": "vitest run --pool=forks --passWithNoTests --dir src"
   },
   "dependencies": {
-    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/api": "catalog:",
     "@opentelemetry/context-async-hooks": "^2.6.0",
     "@opentelemetry/core": "^2.6.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.213.0",
@@ -62,18 +62,18 @@
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
     "@aws-sdk/client-bedrock-runtime": "^3.1021.0",
-    "@biomejs/biome": "2.4.6",
+    "@biomejs/biome": "catalog:",
     "@google-cloud/vertexai": "^1.10.4",
     "@langchain/core": "^1.1.39",
     "@langchain/openai": "^1.4.1",
-    "@types/node": "22.14.1",
+    "@types/node": "catalog:",
     "cohere-ai": "^7.21.0",
     "langchain": "^1.2.39",
     "llamaindex": "^0.12.1",
     "openai": "^6.33.0",
     "tsup": "^8.0.0",
-    "typescript": "5.9.3",
-    "vitest": "4.1.0"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "typescript": "^5.5.4"
