@@ -79,11 +79,9 @@ ARG VITE_LAT_POSTHOG_HOST
 RUN pnpm turbo run build --filter @app/web
 
 # ---------------------------------------------------------------------------
-# Build migrations — compile packages needed for migrations
+# Build migrations — source stage already has everything needed (tsx/drizzle-kit read .ts directly)
 # ---------------------------------------------------------------------------
 FROM source AS build-migrations
-
-RUN pnpm turbo run build --filter @platform/db-postgres --filter @platform/db-clickhouse --filter @platform/db-weaviate
 
 # ---------------------------------------------------------------------------
 # Runtime base — shared runtime settings and cleanup helper

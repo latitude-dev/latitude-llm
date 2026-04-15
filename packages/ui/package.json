@@ -12,7 +12,6 @@
     "./styles/globals.css": "./src/styles/globals.css"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "check": "biome check src",
     "format": "biome format --write src && biome check --fix src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
