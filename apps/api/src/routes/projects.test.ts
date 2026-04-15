@@ -62,4 +62,97 @@ describe("Projects Routes Integration", () => {
 
     expect(response.status).toBe(404)
   })
+
+  it<ApiTestContext>("GET /projects returns settings in project response", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    await createProjectRecord(database, tenant.organizationId, "Settings Project")
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.projects[0]).toHaveProperty("settings")
+  })
+
+  it<ApiTestContext>("PATCH /projects/:id updates keepMonitoring setting", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Monitor Project")
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${project.id}`, {
+        method: "PATCH",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ settings: { keepMonitoring: false } }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.settings).toEqual({ keepMonitoring: false })
+  })
+
+  it<ApiTestContext>("GET /projects/:id returns persisted settings after PATCH", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Persisted Settings")
+
+    await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${project.id}`, {
+        method: "PATCH",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ settings: { keepMonitoring: false } }),
+      }),
+    )
+
+    const response = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${project.id}`, {
+        headers: createApiKeyAuthHeaders(tenant.apiKeyToken),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    const body = await response.json()
+    expect(body.settings).toEqual({ keepMonitoring: false })
+  })
+
+  it<ApiTestContext>("PATCH /projects/:id updates name without affecting settings", async ({ app, database }) => {
+    const tenant = await createTenantSetup(database)
+    const project = await createProjectRecord(database, tenant.organizationId, "Unchanged Settings")
+
+    await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${project.id}`, {
+        method: "PATCH",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ settings: { keepMonitoring: false } }),
+      }),
+    )
+
+    const renameResponse = await app.fetch(
+      new Request(`http://localhost/v1/organizations/${tenant.organizationId}/projects/${project.id}`, {
+        method: "PATCH",
+        headers: {
+          ...createApiKeyAuthHeaders(tenant.apiKeyToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: "Renamed Project" }),
+      }),
+    )
+
+    expect(renameResponse.status).toBe(200)
+    const body = await renameResponse.json()
+    expect(body.name).toBe("Renamed Project")
+    expect(body.settings).toEqual({ keepMonitoring: false })
+  })
 })

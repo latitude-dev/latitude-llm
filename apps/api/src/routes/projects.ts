@@ -5,7 +5,7 @@ import {
   ProjectRepository,
   updateProjectUseCase,
 } from "@domain/projects"
-import { ProjectId } from "@domain/shared"
+import { ProjectId, projectSettingsSchema } from "@domain/shared"
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi"
 import { OutboxEventWriterLive, ProjectRepositoryLive, withPostgres } from "@platform/db-postgres"
 import { Effect, Layer } from "effect"
@@ -21,12 +21,22 @@ import {
 } from "../openapi/schemas.ts"
 import type { OrganizationScopedEnv } from "../types.ts"
 
+const SettingsSchema = z
+  .object({
+    keepMonitoring: z.boolean().optional().openapi({
+      description:
+        "When true, issue-linked evaluations stay active after resolution to detect regressions. Falls back to organization default when not set.",
+    }),
+  })
+  .openapi("ProjectSettings")
+
 const ResponseSchema = z
   .object({
     id: z.string(),
     organizationId: z.string(),
     name: z.string(),
     slug: z.string(),
+    settings: SettingsSchema.nullable(),
     deletedAt: z.string().nullable(),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -44,6 +54,7 @@ const CreateRequestSchema = z
 const UpdateRequestSchema = z
   .object({
     name: z.string().min(1).optional().openapi({ description: "New project name" }),
+    settings: SettingsSchema.optional().openapi({ description: "Project reliability settings" }),
   })
   .openapi("UpdateProjectBody")
 
@@ -52,6 +63,7 @@ const toResponse = (project: Project) => ({
   organizationId: project.organizationId as string,
   name: project.name,
   slug: project.slug,
+  settings: project.settings ?? null,
   deletedAt: project.deletedAt ? project.deletedAt.toISOString() : null,
   createdAt: project.createdAt.toISOString(),
   updatedAt: project.updatedAt.toISOString(),
@@ -177,10 +189,13 @@ export const createProjectsRoutes = () => {
     const id = ProjectId(idParam)
     const body = c.req.valid("json")
 
+    const settings = body.settings !== undefined ? projectSettingsSchema.parse(body.settings) : undefined
+
     const updatedProject = await Effect.runPromise(
       updateProjectUseCase({
         id,
         ...(body.name !== undefined ? { name: body.name } : {}),
+        ...(settings !== undefined ? { settings } : {}),
       }).pipe(withPostgres(ProjectRepositoryLive, c.var.postgresClient, c.var.organization.id)),
     )
 

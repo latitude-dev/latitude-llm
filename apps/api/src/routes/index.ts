@@ -7,6 +7,7 @@ import type { ApiOptions, AppEnv, ProtectedEnv } from "../types.ts"
 import { createAnnotationsRoutes } from "./annotations.ts"
 import { createApiKeysRoutes } from "./api-keys.ts"
 import { registerHealthRoute } from "./health.ts"
+import { createOrganizationSettingsRoutes } from "./organization-settings.ts"
 import { createProjectsRoutes } from "./projects.ts"
 import { createScoresRoutes } from "./scores.ts"
 
@@ -43,6 +44,7 @@ export const registerRoutes = (app: OpenAPIHono<AppEnv>, options: ApiOptions) =>
   routes.route("/:organizationId/projects/:projectId/scores", createScoresRoutes())
   routes.route("/:organizationId/projects/:projectId/annotations", createAnnotationsRoutes())
   routes.route("/:organizationId/api-keys", createApiKeysRoutes())
+  routes.route("/:organizationId/settings", createOrganizationSettingsRoutes())
 
   v1.route("/organizations", routes)
 
